@@ -45,7 +45,7 @@ Link to PRD: `docs/prds/260511-1706-scaffolding-mvp/PRD.md`
 - [x] **Phase 2 [M]: Database models + seed** — SQLAlchemy models (User, MasterProfile, TenantProfile, RefreshSession), Alembic migrations, Master seed script with env vars, phone uniqueness, Master unique constraint.
 - [x] **Phase 3 [M]: Auth module** — Login endpoint, JWT creation/validation, refresh token rotation, logout, bcrypt hashing, role-based dependency, integrations/n8n/identify endpoint with API Key.
 - [x] **Phase 4 [M]: Tenants CRUD** — Master endpoints for tenant management with soft-delete, metadata metrics, password auto/manual options on create.
-- [ ] **Phase 5 [S]: Profile + Dashboard** — Authenticated profile endpoints and tenant dashboard placeholder API.
+- [x] **Phase 5 [S]: Profile + Dashboard** — Authenticated profile endpoints and tenant dashboard placeholder API.
 - [ ] **Phase 6 [M]: Frontend: Login** — Vue auth components, Pinia store with JWT + refresh, router guards, role-based redirect.
 - [ ] **Phase 7 [M]: Frontend: Master Dashboard** — Tenant table with metrics, creation/editing forms with password options, activate/deactivate/delete actions.
 - [ ] **Phase 8 [S]: Frontend: Tenant Dashboard** — Placeholder UI with profile access and password change.
