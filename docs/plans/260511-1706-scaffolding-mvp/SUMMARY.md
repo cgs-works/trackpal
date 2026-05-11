@@ -41,8 +41,8 @@ Link to PRD: `docs/prds/260511-1706-scaffolding-mvp/PRD.md`
 
 ## Phases
 
-- [ ] **Phase 1 [M]: Project scaffolding** — UV, FastAPI app structure, Vue + Vite, monorepo layout, configs.
-- [ ] **Phase 2 [M]: Database models + seed** — SQLAlchemy models (User, MasterProfile, TenantProfile, RefreshSession), Alembic migrations, Master seed script with env vars, phone uniqueness, Master unique constraint.
+- [x] **Phase 1 [M]: Project scaffolding** — UV, FastAPI app structure, Vue + Vite, monorepo layout, configs.
+- [x] **Phase 2 [M]: Database models + seed** — SQLAlchemy models (User, MasterProfile, TenantProfile, RefreshSession), Alembic migrations, Master seed script with env vars, phone uniqueness, Master unique constraint.
 - [ ] **Phase 3 [M]: Auth module** — Login endpoint, JWT creation/validation, refresh token rotation, logout, bcrypt hashing, role-based dependency, integrations/n8n/identify endpoint with API Key.
 - [ ] **Phase 4 [M]: Tenants CRUD** — Master endpoints for tenant management with soft-delete, metadata metrics, password auto/manual options on create.
 - [ ] **Phase 5 [S]: Profile + Dashboard** — Authenticated profile endpoints and tenant dashboard placeholder API.
