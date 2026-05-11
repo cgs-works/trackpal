@@ -58,7 +58,9 @@ async def test_create_tenant_duplicate_phone(client, auth_headers, active_tenant
     assert response.json()["detail"] == "Phone already registered"
 
 
-async def test_list_tenants(client, auth_headers, active_tenant_user, deactivated_tenant_user):
+async def test_list_tenants(
+    client, auth_headers, active_tenant_user, deactivated_tenant_user
+):
     response = await client.get("/api/v1/tenants/", headers=auth_headers)
 
     assert response.status_code == 200
@@ -121,7 +123,9 @@ async def test_activate_tenant(client, auth_headers, deactivated_tenant_user):
     assert response.json()["is_active"] is True
 
 
-async def test_delete_tenant_inactive_only(client, auth_headers, deactivated_tenant_user):
+async def test_delete_tenant_inactive_only(
+    client, auth_headers, deactivated_tenant_user
+):
     response = await client.delete(
         f"/api/v1/tenants/{deactivated_tenant_user.id}", headers=auth_headers
     )
