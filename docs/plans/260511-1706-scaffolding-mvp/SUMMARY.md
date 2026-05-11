@@ -48,7 +48,7 @@ Link to PRD: `docs/prds/260511-1706-scaffolding-mvp/PRD.md`
 - [x] **Phase 5 [S]: Profile + Dashboard** — Authenticated profile endpoints and tenant dashboard placeholder API.
 - [x] **Phase 6 [M]: Frontend: Login** — Vue auth components, Pinia store with JWT + refresh, router guards, role-based redirect.
 - [x] **Phase 7 [M]: Frontend: Master Dashboard** — Tenant table with metrics, creation/editing forms with password options, activate/deactivate/delete actions.
-- [ ] **Phase 8 [S]: Frontend: Tenant Dashboard** — Placeholder UI with profile access and password change.
+- [x] **Phase 8 [S]: Frontend: Tenant Dashboard** — Placeholder UI with profile access and password change.
 - [ ] **Phase 9 [M]: n8n workflow** — Implement real WhatsApp bot workflow: webhook from Evolution API, identify via API Key, data table session management, interactive menu, CRUD tenants via HTTP.
 
 ## Key Changes
