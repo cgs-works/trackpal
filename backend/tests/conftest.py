@@ -7,6 +7,11 @@ from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.main import app
 from app.models import Base, MasterProfile, TenantProfile, User
+from app.services.evolution_client import evolution_client
+
+
+# Disable Evolution API calls during tests
+evolution_client.api_key = ""
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

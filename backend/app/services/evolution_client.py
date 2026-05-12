@@ -4,6 +4,8 @@ import httpx
 
 from app.core.config import settings
 
+logger = __import__("logging").getLogger(__name__)
+
 
 class EvolutionClient:
     def __init__(
@@ -23,6 +25,10 @@ class EvolutionClient:
 
     async def create_instance(self, instance_name: str) -> None:
         if not self.api_key:
+            logger.warning(
+                "EVOLUTION_API_KEY not configured; skipping instance creation for %s",
+                instance_name,
+            )
             return
 
         evolution_instance_name = self._instance_name(instance_name)
@@ -39,9 +45,14 @@ class EvolutionClient:
                 "/instance/create", json=payload, headers=self._headers
             )
             response.raise_for_status()
+        logger.info("Evolution instance created: %s", evolution_instance_name)
 
     async def setup_n8n_integration(self, instance_name: str) -> None:
         if not self.api_key:
+            logger.warning(
+                "EVOLUTION_API_KEY not configured; skipping n8n integration for %s",
+                instance_name,
+            )
             return
 
         evolution_instance_name = self._instance_name(instance_name)
@@ -59,6 +70,7 @@ class EvolutionClient:
                 headers=self._headers,
             )
             response.raise_for_status()
+        logger.info("n8n integration configured for instance: %s", evolution_instance_name)
 
 
 evolution_client = EvolutionClient()
