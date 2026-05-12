@@ -13,8 +13,9 @@ El archivo `render.yaml` en la raíz permite deploy automático conectando el re
 3. Configurar:
    - **Name**: `trackpal-api`
    - **Runtime**: `Python`
-   - **Build Command**: `pip install uv && uv sync --directory backend`
-   - **Start Command**: `uv run --directory backend alembic upgrade head && uv run --directory backend python scripts/seed.py && uv run --directory backend uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Root Directory**: `backend` (importante — Render ejecutará todo desde allí)
+   - **Build Command**: `pip install uv && uv sync`
+   - **Start Command**: `uv run alembic upgrade head && uv run python scripts/seed.py && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT`
    - **Plan**: Free
 
 ### Environment Variables (Render)
@@ -33,11 +34,11 @@ El archivo `render.yaml` en la raíz permite deploy automático conectando el re
 
 ### Post-deploy
 
-Render ejecuta automáticamente:
-1. `uv sync --directory backend` (instalar dependencias)
-2. `uv run --directory backend alembic upgrade head` (migraciones)
-3. `uv run --directory backend python scripts/seed.py` (seed del Master)
-4. `uv run --directory backend uvicorn app.main:app --host 0.0.0.0 --port $PORT` (servidor)
+Render ejecuta automáticamente desde `backend/` (por el Root Directory):
+1. `pip install uv && uv sync` (instalar dependencias)
+2. `uv run alembic upgrade head` (migraciones)
+3. `uv run python scripts/seed.py` (seed del Master)
+4. `uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT` (servidor)
 ```bash
 # Si Render tiene shell:
 uv run python scripts/seed.py
