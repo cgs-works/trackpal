@@ -2,6 +2,8 @@
 
 All endpoints are prefixed with `/api/v1/`.
 
+CORS: configured via `CORS_ORIGINS` env var (comma-separated, default `http://localhost:5173`).
+
 ## Auth
 
 | Method | Path | Auth | Description |
@@ -17,13 +19,13 @@ All endpoints are prefixed with `/api/v1/`.
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/tenants` | Create tenant. Accepts `full_name`, `email`, `phone`, `username`, `password` (optional). Auto-generates password if omitted. Returns `409` on duplicate username or phone. |
+| POST | `/tenants` | Create tenant. Requires `full_name`, `email`, `phone`, `username`, `evolution_instance_name`. Password optional (auto-generates if omitted). Also creates Evolution API instance + n8n integration. Returns `409` on duplicate username, phone, or Evolution API failure. |
 | GET | `/tenants` | List all tenants with meta (`total`, `active`, `inactive`). |
-| GET | `/tenants/{id}` | Get single tenant details (includes user.username). |
-| PATCH | `/tenants/{id}` | Update tenant fields. |
-| POST | `/tenants/{id}/deactivate` | Soft-delete tenant. Revokes all active refresh sessions. |
-| POST | `/tenants/{id}/activate` | Reactivate tenant. |
-| DELETE | `/tenants/{id}` | Permanently delete tenant. Only allowed if `is_active=False`. |
+| GET | `/tenants/{id}` | Get single tenant details (includes `user.username`). |
+| PUT | `/tenants/{id}` | Update tenant fields (`full_name`, `email`, `phone`, `evolution_instance_name`). Changing `evolution_instance_name` does NOT recreate the Evolution instance. |
+| PATCH | `/tenants/{id}/deactivate` | Soft-delete tenant. Revokes all active refresh sessions. |
+| PATCH | `/tenants/{id}/activate` | Reactivate tenant. |
+| DELETE | `/tenants/{id}` | Permanently delete tenant. Only allowed if `is_active=False`. Also deletes the Evolution API instance. Returns `409` on Evolution API failure. |
 
 ## Profile
 

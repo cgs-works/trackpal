@@ -105,6 +105,39 @@ Master                     FastAPI                  Supabase
   │<─────────────────────────┤                       │
 ```
 
+## Tenant deletion flow (with Evolution API cleanup)
+
+```
+Master                     FastAPI                  Supabase          Evolution API
+  │                          │                       │                    │
+  │ DELETE /tenants/{id}     │                       │                    │
+  │ (is_active=false)        │                       │                    │
+  ├─────────────────────────>│                       │                    │
+  │                          │ SELECT profile (get   │                    │
+  │                          │  evolution_instance)  │                    │
+  │                          ├──────────────────────>│                    │
+  │                          │<──────────────────────┤                    │
+  │                          │                       │                    │
+  │                          │ DELETE FROM users     │                    │
+  │                          │  WHERE id={id}        │                    │
+  │                          │  (flush, not commit)  │                    │
+  │                          ├──────────────────────>│                    │
+  │                          │                       │                    │
+  │                          │ DELETE /instance/     │                    │
+  │                          │  delete/tenant-{name} │                    │
+  │                          ├───────────────────────────────────────────>│
+  │                          │                       │                    │
+  │                          │  ── if Evolution fails ──                 │
+  │                          │  db.rollback() ──────>│                    │
+  │                          │  return 409           │                    │
+  │                          │                       │                    │
+  │                          │  ── if Evolution ok ──                    │
+  │                          │  db.commit() ────────>│                    │
+  │                          │                       │                    │
+  │ 204 No Content           │                       │                    │
+  │<─────────────────────────┤                       │                    │
+```
+
 ## Unified login via users table
 
 ```
