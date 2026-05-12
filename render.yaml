@@ -30,3 +30,5 @@ services:
         value: "https://rs-evoapi.wilfredocamacho.dev"
       - key: EVOLUTION_API_KEY
         sync: false
+      - key: CORS_ORIGINS
+        value: "http://localhost:5173,https://trackpal.pages.dev"
