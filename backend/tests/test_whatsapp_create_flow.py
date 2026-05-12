@@ -1541,10 +1541,111 @@ class TestFullCreateFlow:
         # But this depends on implementation - either validate at phone step
         # or at confirmation time.
         session = await session_service.get_session("+10000000000")
-        # If we validate at creation time and it fails, the session might be
-        # preserved or cleared depending on design. Either is acceptable as long
-        # as the error is communicated clearly.
-        assert isinstance(reply, str) and len(reply) > 0
+        assert session is not None
+        assert session.step == WhatsAppConsoleService.CREATE_STEP_PHONE
+        assert session.temp_data["username"] == "newuser"
+
+        # Correct phone and complete without restarting.
+        await console_service.process_message(
+            phone="+10000000000",
+            message="+529999999999",
+            is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000",
+            message="fixeduser",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000",
+            message="inst-fixed",
+            is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            is_master=True,
+            session_service=session_service,
+        )
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="CONFIRMAR",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        assert "creado" in reply.lower() or "éxito" in reply.lower()
+
+    async def test_create_time_duplicate_username_returns_to_username_step(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Create-time duplicate username can be corrected in-flow."""
+        await console_service.process_message(
+            phone="+10000000000", message="2", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="Test User", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="test@example.com", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="—", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="raceuser", is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="inst-race", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="1", is_master=True,
+            session_service=session_service,
+        )
+        tenant_service._existing_usernames.add("raceuser")
+
+        reply = await console_service.process_message(
+            phone="+10000000000", message="CONFIRMAR", is_master=True,
+            session_service=session_service, tenant_service=tenant_service,
+        )
+
+        assert "username" in reply.lower() or "usuario" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == WhatsAppConsoleService.CREATE_STEP_USERNAME
+        assert session.temp_data["full_name"] == "Test User"
+
+        await console_service.process_message(
+            phone="+10000000000", message="raceuser2", is_master=True,
+            session_service=session_service, tenant_service=tenant_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="inst-race2", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="1", is_master=True,
+            session_service=session_service,
+        )
+        reply = await console_service.process_message(
+            phone="+10000000000", message="CONFIRMAR", is_master=True,
+            session_service=session_service, tenant_service=tenant_service,
+        )
+        assert "creado" in reply.lower() or "éxito" in reply.lower()
 
     async def test_auto_password_shows_generated_password(
         self,

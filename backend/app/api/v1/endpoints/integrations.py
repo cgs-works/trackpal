@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,6 +79,33 @@ class _TenantConsoleAdapter:
         except ValueError as exc:
             return {"success": False, "error": str(exc)}
 
+    async def activate_tenant(self, tenant_id: str) -> dict:
+        try:
+            profile = await self._service.activate_tenant(self._db, UUID(tenant_id))
+            if profile is None:
+                return {"success": False, "error": "Tenant not found"}
+            return {"success": True, "tenant": _TenantConsoleItem(profile)}
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def deactivate_tenant(self, tenant_id: str) -> dict:
+        try:
+            profile = await self._service.deactivate_tenant(self._db, UUID(tenant_id))
+            if profile is None:
+                return {"success": False, "error": "Tenant not found"}
+            return {"success": True, "tenant": _TenantConsoleItem(profile)}
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def delete_tenant(self, tenant_id: str) -> dict:
+        try:
+            deleted = await self._service.delete_tenant(self._db, UUID(tenant_id))
+            if not deleted:
+                return {"success": False, "error": "Tenant not found"}
+            return {"success": True}
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
+
     async def update_tenant(self, tenant_id: str, payload: dict) -> dict:
         """Update a tenant from a WhatsApp-guided update payload dict.
 
@@ -87,7 +115,6 @@ class _TenantConsoleAdapter:
             error (str): Error message on failure.
         """
         from app.schemas.tenant import TenantUpdate
-        from uuid import UUID
 
         try:
             update_payload = TenantUpdate(**payload)
@@ -110,6 +137,19 @@ auth_service = AuthService()
 console_service = WhatsAppConsoleService()
 tenant_service = TenantService()
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+
+CONSOLE_STATE_UNAVAILABLE_REPLY = (
+    "⚠️ Console temporalmente no disponible. Intenta nuevamente en unos minutos."
+)
+
+
+def _normalize_whatsapp_phone(value: str) -> str:
+    raw = str(value or "").strip()
+    if "@" in raw:
+        raw = raw.split("@", 1)[0]
+    if ":" in raw:
+        raw = raw.split(":", 1)[0]
+    return raw
 
 
 @router.get("/n8n/identify", response_model=IdentifyResponse)
@@ -151,8 +191,10 @@ async def whatsapp_console(
             detail="Invalid API Key",
         )
 
+    phone = _normalize_whatsapp_phone(request.phone)
+
     # Identify caller by phone
-    identity = await auth_service.identify_by_phone(db, request.phone)
+    identity = await auth_service.identify_by_phone(db, phone)
 
     if not identity or identity.get("role") != "master":
         return WhatsAppConsoleResponse(
@@ -161,18 +203,19 @@ async def whatsapp_console(
 
     # Create session service when Redis is available
     redis = await get_redis()
-    session_service = None
-    if redis is not None:
-        session_service = WhatsAppSessionService(
-            redis_client=redis,
-            ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
-        )
+    if redis is None:
+        return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
+
+    session_service = WhatsAppSessionService(
+        redis_client=redis,
+        ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+    )
 
     # Create tenant adapter for console service
     adapter = _TenantConsoleAdapter(tenant_service, db)
 
     reply = await console_service.process_message(
-        phone=request.phone,
+        phone=phone,
         message=request.message,
         is_master=True,
         session_service=session_service,

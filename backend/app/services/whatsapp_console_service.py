@@ -859,8 +859,20 @@ class WhatsAppConsoleService:
 
                 return msg
             else:
-                # Creation failed — show error
+                # Creation failed — keep collected data and return to the
+                # field that the user can correct in-flow.
                 error = result.get("error", "Error desconocido al crear el tenant.")
+                error_lower = error.lower()
+                if "phone" in error_lower or "teléfono" in error_lower:
+                    session.step = self.CREATE_STEP_PHONE
+                    if session_service is not None:
+                        await session_service.save_session(session)
+                    return "❌ " + error + "\n\n" + self.CREATE_PROMPT_PHONE
+                if "username" in error_lower or "usuario" in error_lower:
+                    session.step = self.CREATE_STEP_USERNAME
+                    if session_service is not None:
+                        await session_service.save_session(session)
+                    return "❌ " + error + "\n\n" + self.CREATE_PROMPT_USERNAME
                 return (
                     "❌ " + error + "\n\n"
                     + await self._build_create_summary(session)
