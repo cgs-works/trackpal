@@ -15,7 +15,7 @@ El archivo `render.yaml` en la raíz permite deploy automático conectando el re
    - **Runtime**: `Python`
    - **Root Directory**: `backend` (importante — Render ejecutará todo desde allí)
    - **Build Command**: `pip install uv && uv sync`
-   - **Start Command**: `uv run alembic upgrade head && uv run python scripts/seed.py && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Start Command**: `uv run alembic upgrade head && uv run python -m scripts.seed && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT`
    - **Plan**: Free
 
 ### Environment Variables (Render)
