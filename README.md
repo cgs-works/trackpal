@@ -15,7 +15,7 @@ SaaS de gestión de suscripciones (subscription management). Multi-tenant: Maste
 # Backend
 cd backend
 uv sync
-cp .env.example .env   # configurar DATABASE_URL, SECRET_KEY, N8N_API_KEY
+cp .env.example .env   # configurar DATABASE_URL, SECRET_KEY, N8N_API_KEY, EVOLUTION_API_URL, EVOLUTION_API_KEY
 uv run alembic upgrade head
 uv run python scripts/seed.py
 uv run uvicorn app.main:app --reload

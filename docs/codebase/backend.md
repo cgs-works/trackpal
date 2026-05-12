@@ -25,7 +25,11 @@ backend/
 │   │   └── refresh_session.py
 │   ├── schemas/             # Pydantic V2 request/response models
 │   ├── services/            # Business logic layer
-│   ├── crud/                # Data access helpers
+│   │   ├── auth_service.py
+│   │   ├── tenant_service.py
+│   │   ├── profile_service.py
+│   │   └── evolution_client.py
+│   ├── crud/
 │   └── __init__.py
 ├── alembic/                 # Async Alembic migrations
 ├── scripts/
@@ -42,7 +46,7 @@ backend/
 
 ### Core
 
-- **`config.py`** — reads `DATABASE_URL`, `SECRET_KEY`, `N8N_API_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS` from env.
+- **`config.py`** — reads `DATABASE_URL`, `SECRET_KEY`, `N8N_API_KEY`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS` from env.
 - **`security.py`** — wraps `PyJWT` (HS256), `passlib[bcrypt]` for password hashing.
 - **`database.py`** — creates async engine + `sessionmaker` bound to `AsyncSession`.
 
@@ -57,6 +61,19 @@ backend/
 - **`AuthService`** — `authenticate()` (login), `create_tokens()` (JWT + refresh session), `refresh_access_token()` (rotation + inactive check), `revoke_refresh_token()` (logout), `identify_by_phone()` (n8n hook).
 - **`TenantService`** — CRUD with deactivate (revokes refresh sessions), activate, delete (only inactive), phone uniqueness, username uniqueness, password auto-generation.
 - **`ProfileService`** — get/update profile (cross-table phone uniqueness), change password.
+- **`EvolutionClient`** — async HTTP client for Evolution API. Creates WhatsApp instances via `/instance/create` and configures n8n integration (`/n8n/create/{name}`) with trigger keyword `/menu`. Called automatically during tenant creation with transaction safety (rollback on Evolution failure).
+
+### Tenant creation flow
+
+```
+POST /api/v1/tenants
+  → Validate username/phone uniqueness
+  → Create User + TenantProfile (db.flush())
+  → EvolutionClient.create_instance(name)  — POST /instance/create
+  → EvolutionClient.setup_n8n(name) — POST /n8n/create/{name}
+  → If Evolution fails: db.rollback(), return 409
+  → If success: db.commit(), return 201
+```
 
 ## Tests
 
