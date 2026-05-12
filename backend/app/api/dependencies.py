@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import decode_token, verify_n8n_api_key
 from app.crud import users as user_crud
-from app.models import User
+from app.models import TenantProfile, User
+from sqlalchemy import select
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -36,6 +37,16 @@ async def get_current_user(
     user = await user_crud.get(db, parsed_user_id)
     if user is None:
         raise credentials_exception
+    if user.role == "tenant":
+        result = await db.execute(
+            select(TenantProfile).where(TenantProfile.id == user.id)
+        )
+        profile = result.scalar_one_or_none()
+        if profile and not profile.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Account is deactivated",
+            )
     return user
 
 

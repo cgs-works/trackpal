@@ -102,6 +102,16 @@ class AuthService:
             await db.commit()
             return None
 
+        # Reject inactive tenants during token refresh
+        if user.role == "tenant":
+            result = await db.execute(
+                select(TenantProfile).where(TenantProfile.id == user.id)
+            )
+            profile = result.scalar_one_or_none()
+            if profile and not profile.is_active:
+                await db.commit()
+                return None
+
         return await self.create_tokens(db, user)
 
     async def revoke_refresh_token(self, db: AsyncSession, refresh_token: str) -> bool:

@@ -1,13 +1,13 @@
 import secrets
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.security import get_password_hash
 from app.crud import users as user_crud
-from app.models import TenantProfile, User
+from app.models import RefreshSession, TenantProfile, User
 from app.schemas.tenant import TenantCreate, TenantUpdate
 
 
@@ -101,6 +101,15 @@ class TenantService:
         if profile is None:
             return None
         profile.is_active = False
+        # Revoke all active refresh sessions for this tenant
+        await db.execute(
+            update(RefreshSession)
+            .where(
+                RefreshSession.user_id == tenant_id,
+                RefreshSession.revoked == False,
+            )
+            .values(revoked=True)
+        )
         await db.commit()
         return await self.get_tenant(db, tenant_id)
 
