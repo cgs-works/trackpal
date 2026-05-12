@@ -1,0 +1,293 @@
+{
+  "updatedAt": "2026-05-12T00:32:10.057Z",
+  "createdAt": "2026-05-12T00:22:03.372Z",
+  "id": "vtqUvdkNnTNcKnwj",
+  "name": "Trackpal WhatsApp Bot",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trackpal-whatsapp-bot",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "24b51be7-2758-4357-93d0-69b8c7441300"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json; const data = payload.data || {}; const msg = data.message || {}; const from = msg.from || msg.key?.remoteJid || ''; return [{ json: { phone: String(from).replace('@c.us','').replace('@s.whatsapp.net',''), message: String(msg.body || msg.message?.conversation || '').trim(), instance: data.instance || payload.instance || 'default', raw: payload } }];"
+      },
+      "id": "2",
+      "name": "Parse input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=YOUR_TRACKPAL_API_URL/api/v1/integrations/n8n/identify?phone={{encodeURIComponent($json.phone)}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "YOUR_TRACKPAL_API_KEY"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3",
+      "name": "Identify user",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Parse input').first().json; const id = $json; if (!id || id.statusCode === 404 || !id.role) { return [{ json: { ...input, identity: null, role: null, allowed: false, error: 'Usuario no encontrado' } }]; } return [{ json: { ...input, identity: id, role: id.role || null, allowed: id.role === 'master' } }];"
+      },
+      "id": "4",
+      "name": "Merge identity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.role}}",
+              "rightValue": "master",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Route by role",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$json, reply: 'Este servicio solo esta disponible para el Master' } }];"
+      },
+      "id": "6",
+      "name": "Access denied text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json; const msg = p.message; const menu = `📋 Master Trackpal\\n1. Crear tenant\\n2. Listar tenants\\n3. Ver tenant\\n4. Editar tenant\\n5. Desactivar tenant\\n6. Reactivar tenant\\n7. Eliminar tenant\\n8. Ayuda\\n─────────────────\\nElige una opcion:`; const help = `📋 AYUDA\\n\\nEnvia el numero de la opcion que deseas:\\n1 - Crear un nuevo tenant\\n2 - Listar todos los tenants\\n3 - Ver detalle de un tenant\\n4 - Editar un tenant\\n5 - Desactivar un tenant\\n6 - Reactivar un tenant\\n7 - Eliminar un tenant (solo si esta inactivo)\\n8 - Mostrar esta ayuda`; const opt = parseInt(msg); if (opt === 8) return [{ json: { ...p, reply: help, session: null } }]; if (opt >= 1 && opt <= 7) { const prompts = ['','👤 Ingresa el nombre completo del tenant:','📋 Listando tenants...','🔍 Ingresa el ID del tenant:','✏️ Ingresa el ID del tenant a editar:','⛔ Ingresa el ID del tenant a desactivar:','✅ Ingresa el ID del tenant a reactivar:','🗑️ Ingresa el ID del tenant a eliminar:']; const steps = ['','awaiting_full_name','list_tenants','awaiting_tenant_id','awaiting_tenant_id','awaiting_tenant_id','awaiting_tenant_id','awaiting_tenant_id']; return [{ json: { ...p, reply: prompts[opt], step: steps[opt], option: opt, session: { phone: p.phone, step: steps[opt], option: opt, temp_data: '{}' } } }]; } return [{ json: { ...p, reply: menu, session: null } }];"
+      },
+      "id": "7",
+      "name": "Menu router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=YOUR_EVOLUTION_API_URL/message/sendText/{{$json.instance}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_EVOLUTION_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\\\"number\\\":\\\"{{$json.phone.replace('+', '')}}\\\",\\\"text\\\":\\\"{{$json.reply}}\\\"}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "8",
+      "name": "Evolution API Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1340,
+        40
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse input": {
+      "main": [
+        [
+          {
+            "node": "Identify user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identify user": {
+      "main": [
+        [
+          {
+            "node": "Merge identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge identity": {
+      "main": [
+        [
+          {
+            "node": "Route by role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by role": {
+      "main": [
+        [
+          {
+            "node": "Menu router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Access denied text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Menu router": {
+      "main": [
+        [
+          {
+            "node": "Evolution API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Access denied text": {
+      "main": [
+        [
+          {
+            "node": "Evolution API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "7a39af82-2b8a-4d66-bb76-cc3243931da0",
+  "activeVersionId": null,
+  "versionCounter": 4,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T00:22:03.372Z",
+      "createdAt": "2026-05-12T00:22:03.372Z",
+      "role": "workflow:owner",
+      "workflowId": "vtqUvdkNnTNcKnwj",
+      "projectId": "FQYppnH4c5K6DQSI",
+      "project": {
+        "updatedAt": "2025-12-28T20:34:07.871Z",
+        "createdAt": "2025-12-28T20:31:51.280Z",
+        "id": "FQYppnH4c5K6DQSI",
+        "name": "Wilfredo Camacho <neutrobox@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "787134c3-b53e-4c60-bc5f-f028b56d2a1a"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

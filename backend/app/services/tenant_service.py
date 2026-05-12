@@ -15,6 +15,10 @@ class TenantService:
     async def create_tenant(
         self, db: AsyncSession, payload: TenantCreate
     ) -> tuple[TenantProfile, str | None]:
+        existing_username = await user_crud.get_by_username(db, payload.username)
+        if existing_username:
+            raise ValueError("Username already registered")
+
         if payload.phone:
             existing = await user_crud.get_by_phone(db, payload.phone)
             if existing:

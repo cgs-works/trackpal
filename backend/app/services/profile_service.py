@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
+from app.crud import users as user_crud
 from app.models import MasterProfile, TenantProfile, User
 from app.schemas.me import ProfileUpdate
 
@@ -34,6 +35,11 @@ class ProfileService:
             if user.role == "master"
             else {"full_name", "email", "phone"}
         )
+        if "phone" in update_data and update_data["phone"] != profile.phone:
+            existing = await user_crud.get_by_phone(db, update_data["phone"])
+            if existing and existing[0].id != user.id:
+                raise ValueError("Phone already registered")
+
         for field, value in update_data.items():
             if field in allowed_fields:
                 setattr(profile, field, value)

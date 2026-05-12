@@ -36,7 +36,13 @@ async def get_profile(db: DbDep, current_user: CurrentUser):
 async def update_profile(
     payload: ProfileUpdate, db: DbDep, current_user: CurrentUser
 ):
-    profile = await profile_service.update_profile(db, current_user, payload)
+    try:
+        profile = await profile_service.update_profile(db, current_user, payload)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
