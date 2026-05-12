@@ -64,13 +64,20 @@ WhatsApp User            Evolution API          n8n Workflow            Trackpal
      │                       │                     ├──────────────────────>│
      │                       │                     │<──────────────────────┤
      │                       │                     │                       │
-     │                       │                     │ Route by role         │
-     │                       │                     │ Menu router           │
+     │                       │                     │ Session lookup        │
+     │                       │                     │ (Data Table Get)      │
      │                       │                     │                       │
-     │                       │                     │ If action=list:       │
-     │                       │                     │ GET /tenants          │
+     │                       │                     │ Step handler / Menu   │
+     │                       │                     │ (Code node)           │
+     │                       │                     │                       │
+     │                       │                     │ CRUD via API:         │
+     │                       │                     │ POST/GET/PATCH/DELETE │
+     │                       │                     │ /tenants/*            │
      │                       │                     ├──────────────────────>│
      │                       │                     │<──────────────────────┤
+     │                       │                     │                       │
+     │                       │                     │ Session update/delete │
+     │                       │                     │ (Data Table Upsert/Del)│
      │                       │                     │                       │
      │                       │                     │ POST /message/sendText│
      │                       │<────────────────────┤                       │

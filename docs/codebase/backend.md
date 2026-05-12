@@ -60,7 +60,7 @@ backend/
 
 ## Tests
 
-28 tests across 3 files. Uses `aiosqlite` in-memory DB via `AsyncEngine` with `create_all`/`drop_all` per module. Fixtures provide authenticated client for master and tenant roles.
+34 tests across 3 files. Uses `aiosqlite` in-memory DB via `AsyncEngine` with `create_all`/`drop_all` per module. Fixtures provide authenticated client for master and tenant roles.
 
 ```bash
 uv run pytest -v

@@ -33,7 +33,7 @@ trackpal/
 ├── backend/         # FastAPI + SQLAlchemy async
 │   ├── app/         # Application code
 │   ├── alembic/     # Migrations
-│   ├── tests/       # pytest suite (28 tests)
+│   ├── tests/       # pytest suite (34 tests)
 │   └── scripts/     # seed.py
 ├── frontend/        # Vue 3 + Vite
 │   └── src/
