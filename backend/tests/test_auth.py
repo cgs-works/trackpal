@@ -127,6 +127,69 @@ async def test_identify_invalid_api_key(client, master_user):
     assert response.status_code == 401
 
 
+async def test_refresh_token_as_bearer_fails(client, master_user):
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "master", "password": "master-password"},
+    )
+    refresh_token = login_response.json()["refresh_token"]
+
+    response = await client.get(
+        "/api/v1/tenants/",
+        headers={"Authorization": f"Bearer {refresh_token}"},
+    )
+
+    assert response.status_code == 401
+
+
+async def test_deactivated_tenant_old_access_token_fails(
+    client, active_tenant_user, auth_headers
+):
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "tenant", "password": "tenant-password"},
+    )
+    old_access_token = login_response.json()["access_token"]
+
+    # Deactivate the tenant
+    await client.patch(
+        f"/api/v1/tenants/{active_tenant_user.id}/deactivate",
+        headers=auth_headers,
+    )
+
+    # Old access token should be rejected
+    response = await client.get(
+        "/api/v1/me",
+        headers={"Authorization": f"Bearer {old_access_token}"},
+    )
+
+    assert response.status_code == 401
+
+
+async def test_deactivated_tenant_old_refresh_token_fails(
+    client, active_tenant_user, auth_headers
+):
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "tenant", "password": "tenant-password"},
+    )
+    old_refresh_token = login_response.json()["refresh_token"]
+
+    # Deactivate the tenant
+    await client.patch(
+        f"/api/v1/tenants/{active_tenant_user.id}/deactivate",
+        headers=auth_headers,
+    )
+
+    # Old refresh token should be rejected
+    response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": old_refresh_token},
+    )
+
+    assert response.status_code == 401
+
+
 async def test_identify_deactivated_tenant(client, deactivated_tenant_user):
     response = await client.get(
         "/api/v1/integrations/n8n/identify",

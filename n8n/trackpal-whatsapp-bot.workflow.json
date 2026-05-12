@@ -44,19 +44,89 @@
     {
       "parameters": { "jsCode": "const p = $('Menu router').first().json; const data = $json.data || []; let text = `📋 Tenants (${data.length}):`; data.slice(0,10).forEach(t => { text += `\\n🆔 ${String(t.id).substring(0,8)}... ${t.full_name} ${t.is_active ? '✅' : '⛔'}`; }); if (data.length > 10) text += `\\n... y ${data.length-10} mas`; return [{json:{...p, reply:text, session:null}}];" },
       "id": "11", "name": "Format list response", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1780, -200]
+    },
+    {
+      "name": "Session lookup", "type": "n8n-nodes-base.dataTable", "typeVersion": 1.1, "position": [1100, -80],
+      "parameters": { "resource": "row", "operation": "get", "dataTableId": { "mode": "id", "value": "tOsSN3fuGDtB0Svf" }, "filters": { "type": "and", "filters": [{ "columnName": "phone", "condition": "equals", "value": "={{$json.phone}}" }] }, "limit": 1, "sortBy": "created_at:desc" }
+    },
+    {
+      "name": "Has session?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1320, -80],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{$json.length > 0}}", "rightValue": "true", "operator": { "type": "boolean", "operation": "equals" } }], "combinator": "and" }, "options": {} }
+    },
+    {
+      "name": "Step handler", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1540, -80],
+      "parameters": { "jsCode": "const input = $json; const session = Array.isArray(input) && input.length > 0 ? input[0] : null;\nif (!session || !session.step) {\n  return [{json: {...input, reply: 'Menu router', action: null, session: null}}];\n}\nconst step = session.step;\nconst td = session.temp_data ? JSON.parse(typeof session.temp_data === 'string' ? session.temp_data : '{}') : {};\nconst phone = session.phone;\nconst msg = input.message;\nconst instance = input.instance;\nconst ps = {\n  'awaiting_full_name': '👤 Nombre completo:',\n  'awaiting_email': '📧 Email:',\n  'awaiting_username': '🔑 Username:',\n  'awaiting_password_choice': '🔐 Contraseña?\\n1 - Automatica\\n2 - Manual',\n  'awaiting_password_manual': '✏️ Escribe la contraseña:',\n  'awaiting_tenant_id_view': '🔍 ID del tenant:',\n  'awaiting_tenant_id_edit': '✏️ ID del tenant a editar:',\n  'awaiting_edit_fields': '✏️ Campos JSON (full_name, email, phone):',\n  'awaiting_tenant_id_deactivate': '⛔ ID del tenant a desactivar:',\n  'awaiting_tenant_id_reactivate': '✅ ID del tenant a reactivar:',\n  'awaiting_tenant_id_delete': '🗑️ ID del tenant a eliminar:'\n};\n// Handle each step\nif (step === 'awaiting_full_name') {\n  td.full_name = msg;\n  return [{json: {phone, instance, reply: ps.awaiting_email, step: 'awaiting_email', temp_data: JSON.stringify(td), action: null}}];\n}\nif (step === 'awaiting_email') {\n  td.email = msg;\n  return [{json: {phone, instance, reply: ps.awaiting_username, step: 'awaiting_username', temp_data: JSON.stringify(td), action: null}}];\n}\nif (step === 'awaiting_username') {\n  td.username = msg;\n  return [{json: {phone, instance, reply: ps.awaiting_password_choice, step: 'awaiting_password_choice', temp_data: JSON.stringify(td), action: null}}];\n}\nif (step === 'awaiting_password_choice') {\n  if (msg === '1') {\n    const payload = {full_name: td.full_name, email: td.email, username: td.username};\n    return [{json: {phone, instance, reply: '✅ Creando tenant...', action: 'create_tenant', create_payload: JSON.stringify(payload), step: null, temp_data: null}}];\n  } else {\n    td.password_choice = 'manual';\n    return [{json: {phone, instance, reply: ps.awaiting_password_manual, step: 'awaiting_password_manual', temp_data: JSON.stringify(td), action: null}}];\n  }\n}\nif (step === 'awaiting_password_manual') {\n  const payload = {full_name: td.full_name, email: td.email, username: td.username, password: msg};\n  return [{json: {phone, instance, reply: '✅ Creando tenant...', action: 'create_tenant', create_payload: JSON.stringify(payload), step: null, temp_data: null}}];\n}\nconst singleStepActions = {\n  'awaiting_tenant_id_view': {action: 'get_tenant'}, 'awaiting_tenant_id_deactivate': {action: 'deactivate_tenant'}, 'awaiting_tenant_id_reactivate': {action: 'reactivate_tenant'}, 'awaiting_tenant_id_delete': {action: 'delete_tenant'}\n};\nif (singleStepActions[step]) {\n  return [{json: {phone, instance, reply: 'Procesando...', action: singleStepActions[step].action, tenant_id: msg, step: null, temp_data: null}}];\n}\nif (step === 'awaiting_tenant_id_edit') {\n  td.tenant_id = msg;\n  return [{json: {phone, instance, reply: ps.awaiting_edit_fields, step: 'awaiting_edit_fields', temp_data: JSON.stringify(td), action: null}}];\n}\nif (step === 'awaiting_edit_fields') {\n  return [{json: {phone, instance, reply: 'Editando...', action: 'edit_tenant', tenant_id: td.tenant_id, edit_payload: msg, step: null, temp_data: null}}];\n}\nreturn [{json: {phone, instance, reply: 'Menu router', action: null, session: null}}];" }
+    },
+    {
+      "name": "Action router", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1760, -80],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{$json.action != null && $json.action != ''}}", "rightValue": "true", "operator": { "type": "boolean", "operation": "equals" } }], "combinator": "and" }, "options": {} }
+    },
+    {
+      "name": "CRUD action", "type": "n8n-nodes-base.switch", "typeVersion": 2, "position": [1980, -80],
+      "parameters": { "dataType": "string", "value1": "={{$json.action}}", "rules": [{ "value": "create_tenant", "output": "create" }, { "value": "get_tenant", "output": "get" }, { "value": "edit_tenant", "output": "edit" }, { "value": "deactivate_tenant", "output": "deactivate" }, { "value": "reactivate_tenant", "output": "reactivate" }, { "value": "delete_tenant", "output": "delete" }], "fallbackOutput": "unknown", "options": {} }
+    },
+    {
+      "name": "Create tenant API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [2200, -280],
+      "parameters": { "method": "POST", "url": "=YOUR_TRACKPAL_API_URL/tenants", "sendHeaders": true, "headerParameters": { "parameters": [{ "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" }, { "name": "Content-Type", "value": "application/json" }] }, "sendBody": true, "specifyBody": "json", "jsonBody": "={{$json.create_payload}}", "options": { "response": { "response": { "neverError": true } } } }
+    },
+    {
+      "name": "Get tenant API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [2200, -160],
+      "parameters": { "method": "GET", "url": "=YOUR_TRACKPAL_API_URL/tenants/{{$json.tenant_id}}", "sendHeaders": true, "headerParameters": { "parameters": [{ "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" }] }, "options": { "response": { "response": { "neverError": true } } } }
+    },
+    {
+      "name": "Edit tenant API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [2200, -40],
+      "parameters": { "method": "PATCH", "url": "=YOUR_TRACKPAL_API_URL/tenants/{{$json.tenant_id}}", "sendHeaders": true, "headerParameters": { "parameters": [{ "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" }, { "name": "Content-Type", "value": "application/json" }] }, "sendBody": true, "specifyBody": "json", "jsonBody": "={{$json.edit_payload}}", "options": { "response": { "response": { "neverError": true } } } }
+    },
+    {
+      "name": "Deactivate tenant API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [2200, 80],
+      "parameters": { "method": "POST", "url": "=YOUR_TRACKPAL_API_URL/tenants/{{$json.tenant_id}}/deactivate", "sendHeaders": true, "headerParameters": { "parameters": [{ "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" }] }, "options": { "response": { "response": { "neverError": true } } } }
+    },
+    {
+      "name": "Reactivate tenant API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [2200, 200],
+      "parameters": { "method": "POST", "url": "=YOUR_TRACKPAL_API_URL/tenants/{{$json.tenant_id}}/activate", "sendHeaders": true, "headerParameters": { "parameters": [{ "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" }] }, "options": { "response": { "response": { "neverError": true } } } }
+    },
+    {
+      "name": "Delete tenant API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [2200, 320],
+      "parameters": { "method": "DELETE", "url": "=YOUR_TRACKPAL_API_URL/tenants/{{$json.tenant_id}}", "sendHeaders": true, "headerParameters": { "parameters": [{ "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" }] }, "options": { "response": { "response": { "neverError": true } } } }
+    },
+    {
+      "name": "Format CRUD response", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [2420, -280],
+      "parameters": { "jsCode": "const p = $json; const action = p.action; const status = p.statusCode || 200; const data = p.data || p;\nconst create_resp = status >= 200 && status < 300 && data ? `✅ Tenant creado: ${data.full_name || ''}\\nUsuario: ${data.username || ''}\\nID: ${String(data.id || '').substring(0,8)}...` : `❌ Error: ${p.detail || p.message || 'Error desconocido'}`;\nconst view_resp = status >= 200 && status < 300 && data ? `📋 ${data.full_name || ''}\\nEmail: ${data.email || '-'}\\nTel: ${data.phone || '-'}\\nUsuario: ${data.username || '-'}\\nEstado: ${data.is_active ? '✅ Activo' : '⛔ Inactivo'}` : `❌ Error: ${p.detail || 'No encontrado'}`;\nconst edit_resp = status >= 200 && status < 300 ? `✅ Tenant actualizado correctamente` : `❌ Error: ${p.detail || 'Error al actualizar'}`;\nconst deactivate_resp = status >= 200 && status < 300 ? `⛔ Tenant desactivado correctamente` : `❌ Error: ${p.detail || 'No se pudo desactivar'}`;\nconst reactivate_resp = status >= 200 && status < 300 ? `✅ Tenant reactivado correctamente` : `❌ Error: ${p.detail || 'No se pudo reactivar'}`;\nconst delete_resp = status >= 200 && status < 300 ? `🗑️ Tenant eliminado correctamente` : `❌ Error: ${p.detail || 'No se pudo eliminar'}`;\nconst map = {create_tenant: create_resp, get_tenant: view_resp, edit_tenant: edit_resp, deactivate_tenant: deactivate_resp, reactivate_tenant: reactivate_resp, delete_tenant: delete_resp};\nreturn [{json: {phone: p.phone, instance: p.instance, reply: map[p.action] || '✅ Operacion completada', session: null}}];" }
+    },
+    {
+      "name": "Delete session", "type": "n8n-nodes-base.dataTable", "typeVersion": 1.1, "position": [2640, -280],
+      "parameters": { "resource": "row", "operation": "delete", "dataTableId": { "mode": "id", "value": "tOsSN3fuGDtB0Svf" }, "filters": { "type": "and", "filters": [{ "columnName": "phone", "condition": "equals", "value": "={{$json.phone}}" }] } }
+    },
+    {
+      "name": "Update session step", "type": "n8n-nodes-base.dataTable", "typeVersion": 1.1, "position": [1980, 120],
+      "parameters": { "resource": "row", "operation": "upsert", "dataTableId": { "mode": "id", "value": "tOsSN3fuGDtB0Svf" }, "columns": { "mode": "raw", "value": [{ "column": "phone", "value": "={{$json.phone}}" }, { "column": "step", "value": "={{$json.step}}" }, { "column": "temp_data", "value": "={{$json.temp_data}}" }], "mappingMode": "defineBelow", "mapping": [{ "column": "phone", "value": "={{$json.phone}}" }] } }
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{"node": "Parse input", "type": "main", "index": 0}]] },
-    "Parse input": { "main": [[{"node": "Identify user", "type": "main", "index": 0}]] },
-    "Identify user": { "main": [[{"node": "Merge identity", "type": "main", "index": 0}]] },
-    "Merge identity": { "main": [[{"node": "Route by role", "type": "main", "index": 0}]] },
-    "Route by role": { "main": [[{"node": "Menu router", "type": "main", "index": 0}], [{"node": "Access denied text", "type": "main", "index": 0}]] },
-    "Menu router": { "main": [[{"node": "Is list action?", "type": "main", "index": 0}]] },
-    "Is list action?": { "main": [[{"node": "List tenants API", "type": "main", "index": 0}], [{"node": "Evolution API Send", "type": "main", "index": 0}]] },
-    "List tenants API": { "main": [[{"node": "Format list response", "type": "main", "index": 0}]] },
-    "Format list response": { "main": [[{"node": "Evolution API Send", "type": "main", "index": 0}]] },
-    "Access denied text": { "main": [[{"node": "Evolution API Send", "type": "main", "index": 0}]] }
+    "Webhook": { "main": [[{ "node": "Parse input", "type": "main", "index": 0 }]] },
+    "Parse input": { "main": [[{ "node": "Identify user", "type": "main", "index": 0 }]] },
+    "Identify user": { "main": [[{ "node": "Merge identity", "type": "main", "index": 0 }]] },
+    "Merge identity": { "main": [[{ "node": "Route by role", "type": "main", "index": 0 }]] },
+    "Route by role": { "main": [[{ "node": "Session lookup", "type": "main", "index": 0 }], [{ "node": "Access denied text", "type": "main", "index": 0 }]] },
+    "Menu router": { "main": [[{ "node": "Is list action?", "type": "main", "index": 0 }]] },
+    "Is list action?": { "main": [[{ "node": "List tenants API", "type": "main", "index": 0 }], [{ "node": "Evolution API Send", "type": "main", "index": 0 }]] },
+    "List tenants API": { "main": [[{ "node": "Format list response", "type": "main", "index": 0 }]] },
+    "Format list response": { "main": [[{ "node": "Evolution API Send", "type": "main", "index": 0 }]] },
+    "Access denied text": { "main": [[{ "node": "Evolution API Send", "type": "main", "index": 0 }]] },
+    "Session lookup": { "main": [[{ "node": "Has session?", "type": "main", "index": 0 }]] },
+    "Has session?": { "main": [[{ "node": "Step handler", "type": "main", "index": 0 }], [{ "node": "Menu router", "type": "main", "index": 0 }]] },
+    "Step handler": { "main": [[{ "node": "Action router", "type": "main", "index": 0 }]] },
+    "Action router": { "main": [[{ "node": "CRUD action", "type": "main", "index": 0 }], [{ "node": "Update session step", "type": "main", "index": 0 }]] },
+    "CRUD action": { "main": [[{ "node": "Create tenant API", "type": "main", "index": 0 }], [{ "node": "Get tenant API", "type": "main", "index": 0 }], [{ "node": "Edit tenant API", "type": "main", "index": 0 }], [{ "node": "Deactivate tenant API", "type": "main", "index": 0 }], [{ "node": "Reactivate tenant API", "type": "main", "index": 0 }], [{ "node": "Delete tenant API", "type": "main", "index": 0 }]] },
+    "Update session step": { "main": [[{ "node": "Evolution API Send", "type": "main", "index": 0 }]] },
+    "Create tenant API": { "main": [[{ "node": "Format CRUD response", "type": "main", "index": 0 }]] },
+    "Get tenant API": { "main": [[{ "node": "Format CRUD response", "type": "main", "index": 0 }]] },
+    "Edit tenant API": { "main": [[{ "node": "Format CRUD response", "type": "main", "index": 0 }]] },
+    "Deactivate tenant API": { "main": [[{ "node": "Format CRUD response", "type": "main", "index": 0 }]] },
+    "Reactivate tenant API": { "main": [[{ "node": "Format CRUD response", "type": "main", "index": 0 }]] },
+    "Delete tenant API": { "main": [[{ "node": "Format CRUD response", "type": "main", "index": 0 }]] },
+    "Format CRUD response": { "main": [[{ "node": "Delete session", "type": "main", "index": 0 }]] },
+    "Delete session": { "main": [[{ "node": "Evolution API Send", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner", "availableInMCP": false }
 }

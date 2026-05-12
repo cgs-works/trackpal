@@ -46,6 +46,17 @@ async def test_create_tenant_auto_password(client, auth_headers):
     assert len(data["plain_password"]) >= 6
 
 
+async def test_create_tenant_duplicate_username(client, auth_headers):
+    await _create_tenant(client, auth_headers, username="dup-user", phone="+15550000999")
+
+    response = await _create_tenant(
+        client, auth_headers, username="dup-user", phone="+15550000998"
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Username already registered"
+
+
 async def test_create_tenant_duplicate_phone(client, auth_headers, active_tenant_user):
     response = await _create_tenant(
         client,

@@ -40,6 +40,34 @@ async def test_get_profile_tenant(client, active_tenant_user):
     assert data["is_active"] is True
 
 
+async def test_update_profile_phone_conflict(client, master_user, active_tenant_user):
+    master_headers = await _login(client, "master", "master-password")
+
+    # Try to update master's phone to tenant's existing phone
+    response = await client.put(
+        "/api/v1/me",
+        json={"phone": "+20000000000"},
+        headers=master_headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Phone already registered"
+
+
+async def test_update_profile_phone_same_value(client, master_user):
+    master_headers = await _login(client, "master", "master-password")
+
+    # Update with same phone (no conflict)
+    response = await client.put(
+        "/api/v1/me",
+        json={"phone": "+10000000000"},
+        headers=master_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["phone"] == "+10000000000"
+
+
 async def test_update_profile(client, master_user, active_tenant_user):
     master_headers = await _login(client, "master", "master-password")
     tenant_headers = await _login(client, "tenant", "tenant-password")
