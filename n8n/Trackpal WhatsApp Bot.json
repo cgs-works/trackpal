@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json; const data = payload.data || {}; const msg = data.message || {}; const from = msg.from || msg.key?.remoteJid || ''; return [{ json: { phone: String(from).replace('@c.us','').replace('@s.whatsapp.net',''), message: String(msg.body || msg.message?.conversation || '').trim(), instance: data.instance || payload.instance || 'default', raw: payload } }];"
+        "jsCode": "const payload = $json; const data = payload.data || {}; const msg = data.message || {}; const from = msg.from || msg.key?.remoteJid || \"\"; return [{ json: { phone: String(from).replace(\"@c.us\",\"\").replace(\"@s.whatsapp.net\",\"\"), message: String(msg.body || msg.message?.conversation || \"\").trim(), instance: data.instance || payload.instance || \"default\", raw: payload } }];"
       },
       "id": "2",
       "name": "Parse input",
@@ -33,13 +33,43 @@
     },
     {
       "parameters": {
-        "url": "=https://c502-146-70-183-190.ngrok-free.app/api/v1/integrations/n8n/identify?phone={{encodeURIComponent($json.phone)}}",
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "=$json.instance",
+              "rightValue": "Sublify",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "12",
+      "name": "Is Sublify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=YOUR_TRACKPAL_API_URL/api/v1/integrations/n8n/identify?phone={{encodeURIComponent($json.phone)}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "fXzqZpBtpAKC9ipa7St83cAYJadAK72P"
+              "value": "YOUR_TRACKPAL_API_KEY"
             }
           ]
         },
@@ -56,21 +86,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        448,
-        0
+        672,
+        -80
       ]
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json; const id = $json; if (!id || id.statusCode === 404 || !id.role) { return [{ json: { ...input, identity: null, role: null, allowed: false, error: 'Usuario no encontrado' } }]; } return [{ json: { ...input, identity: id, role: id.role || null, allowed: id.role === 'master' } }];"
+        "jsCode": "const input = $(\"Parse input\").first().json; const id = $json; if (!id || id.statusCode === 404 || !id.role) { return [{ json: { ...input, identity: null, role: null, allowed: false, error: \"Usuario no encontrado\" } }]; } return [{ json: { ...input, identity: id, role: id.role || null, allowed: id.role === \"master\" } }];"
       },
       "id": "4",
       "name": "Merge identity",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        0
+        896,
+        -80
       ]
     },
     {
@@ -79,16 +109,18 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
-              "leftValue": "={{$json.role}}",
+              "leftValue": "=$json.role",
               "rightValue": "master",
               "operator": {
                 "type": "string",
                 "operation": "equals"
-              }
+              },
+              "id": "fedfdf91-a614-4b87-af4c-2bef6e81c5c0"
             }
           ],
           "combinator": "and"
@@ -100,52 +132,52 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        880,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: { ...$json, reply: 'Este servicio solo esta disponible para el Master' } }];"
-      },
-      "id": "6",
-      "name": "Access denied text",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1104,
-        208
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const p = $json; const phone = p.phone; const msg = p.message; const menu = `📋 Master Trackpal\\n1. Crear tenant\\n2. Listar tenants\\n3. Ver tenant\\n4. Editar tenant\\n5. Desactivar tenant\\n6. Reactivar tenant\\n7. Eliminar tenant\\n8. Ayuda`; const help = `📋 AYUDA\\n\\nOpciones:\\n1 - Crear tenant\\n2 - Listar tenants\\n3 - Ver tenant\\n4 - Editar tenant\\n5 - Desactivar tenant\\n6 - Reactivar tenant\\n7 - Eliminar tenant (solo inactivo)\\n8 - Ayuda`; const s = {'2':'list_tenants','3':'awaiting_tenant_id_view','4':'awaiting_tenant_id_edit','5':'awaiting_tenant_id_deactivate','6':'awaiting_tenant_id_reactivate','7':'awaiting_tenant_id_delete'}; const ps = {'awaiting_full_name':'👤 Nombre completo:','awaiting_email':'📧 Email:','awaiting_username':'🔑 Username:','awaiting_password_choice':'🔐 Contraseña?\\n1 - Automatica\\n2 - Manual','awaiting_password_manual':'✏️ Contraseña:','awaiting_tenant_id_view':'🔍 ID del tenant:','awaiting_tenant_id_edit':'✏️ ID del tenant:','awaiting_edit_fields':'✏️ Campos JSON (full_name, email, phone):','awaiting_tenant_id_deactivate':'⛔ ID del tenant:','awaiting_tenant_id_reactivate':'✅ ID del tenant:','awaiting_tenant_id_delete':'🗑️ ID del tenant:'}; const opt = parseInt(msg); if (opt === 8) return [{json:{...p, reply:help, action:null, session:null}}]; if (s[opt]) { const step = s[opt]; return [{json:{...p, reply:ps[step], action:opt===2?'list':'', step:step, session:{phone, step:step, temp_data:'{}'}}}]; } if (opt === 1) { return [{json:{...p, reply:ps.awaiting_full_name, step:'awaiting_full_name', action:null, session:{phone, step:'awaiting_full_name', temp_data:'{}'}}}]; } return [{json:{...p, reply:menu, action:null, session:null}}];"
-      },
-      "id": "7",
-      "name": "Menu router",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
         1104,
         -80
       ]
     },
     {
       "parameters": {
+        "jsCode": "return [{ json: { ...$json, reply: \"Este servicio solo esta disponible para el Master\" } }];"
+      },
+      "id": "6",
+      "name": "Access denied text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json; const phone = p.phone; const msg = p.message; const menu = ..."
+      },
+      "id": "7",
+      "name": "Menu router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -240
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "=https://rs-evoapi.wilfredocamacho.dev/message/sendText/{{$json.instance}}",
+        "url": "=YOUR_EVOLUTION_API_URL/message/sendText/{{$json.instance}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "B68769E2D248462C8F38DAF3CB7AE194"
+              "value": "YOUR_EVOLUTION_API_KEY"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\\\"number\\\":\\\"{{$json.phone.replace('+', '')}}\\\",\\\"text\\\":\\\"{{$json.reply}}\\\"}",
+        "jsonBody": "={\"number\":\"{{$json.phone.replace(\"+\", \"\")}}\",\"text\":\"{{$json.reply}}\"}",
         "options": {
           "response": {
             "response": {
@@ -159,8 +191,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1600,
-        48
+        1824,
+        -80
       ]
     },
     {
@@ -173,7 +205,7 @@
           },
           "conditions": [
             {
-              "leftValue": "={{$json.action}}",
+              "leftValue": "=$json.action",
               "rightValue": "list",
               "operator": {
                 "type": "string",
@@ -190,19 +222,19 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1344,
-        -128
+        1568,
+        -280
       ]
     },
     {
       "parameters": {
-        "url": "=https://c502-146-70-183-190.ngrok-free.app/api/v1/tenants",
+        "url": "=YOUR_TRACKPAL_API_URL/api/v1/tenants",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "fXzqZpBtpAKC9ipa7St83cAYJadAK72P"
+              "value": "YOUR_TRACKPAL_API_KEY"
             }
           ]
         },
@@ -219,25 +251,24 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1568,
-        -208
+        1792,
+        -360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const p = $('Menu router').first().json; const data = $json.data || []; let text = `📋 Tenants (${data.length}):`; data.slice(0,10).forEach(t => { text += `\\n🆔 ${String(t.id).substring(0,8)}... ${t.full_name} ${t.is_active ? '✅' : '⛔'}`; }); if (data.length > 10) text += `\\n... y ${data.length-10} mas`; return [{json:{...p, reply:text, session:null}}];"
+        "jsCode": "const p = $(\"Menu router\").first().json; const data = $json.data || []; let text = ..."
       },
       "id": "11",
       "name": "Format list response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1792,
-        -208
+        2016,
+        -360
       ]
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -254,11 +285,23 @@
       "main": [
         [
           {
-            "node": "Identify user",
+            "node": "Is Sublify?",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Is Sublify?": {
+      "main": [
+        [
+          {
+            "node": "Identify user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     },
     "Identify user": {
@@ -363,18 +406,5 @@
         ]
       ]
     }
-  },
-  "active": false,
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate",
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
-  },
-  "versionId": "c4f965df-0f37-4186-be50-19953e49f2b4",
-  "meta": {
-    "instanceId": "3a9ddc93932fcd7821c6e13a050d0af56c3c9456de8be4d2e7e266d4e0cdbf67"
-  },
-  "id": "mN3k0vVO9kgBYQtV",
-  "tags": []
+  }
 }

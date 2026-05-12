@@ -2,140 +2,120 @@
 
 ## Overview
 
-Single n8n workflow que orquesta la interacción del Master con Trackpal vía WhatsApp.
+Single n8n workflow that orchestrates the Master's interaction with Trackpal via WhatsApp.
 
-- **Instancia**: `https://rs-n8n.wilfredocamacho.dev`
-- **Workflow**: `Trackpal WhatsApp Bot` (ID: `vtqUvdkNnTNcKnwj`)
+- **Instance**: `https://rs-n8n.wilfredocamacho.dev`
+- **Workflow**: `Trackpal WhatsApp Bot` (ID: `mN3k0vVO9kgBYQtV`)
 - **Webhook**: `POST /webhook/trackpal-whatsapp-bot`
-- **Workflow export**: `n8n/trackpal-whatsapp-bot.workflow.json`
+- **Workflow export**: `n8n/Trackpal WhatsApp Bot.json`
 
 ## Node flow
 
 ```
-WhatsApp → Evolution API → Webhook (1)
-                             ↓
-                       Parse input (2)
-                             ↓
-                       Identify user (3)
-                        → GET Trackpal API /identify?phone=
-                        → Header: X-API-Key
-                             ↓
-                       Merge identity (4)
-                             ↓
-                       Route by role (5) [IF]
-                        ├─ true (master) → Session lookup (12) [Data Table Get]
-                        │     ↓
-                        │  Has session? (13) [IF]
-                        │   ├─ true → Step handler (14) [Code]
-                        │   │    → Action router (15) [IF]
-                        │   │      ├─ true (has CRUD action) → CRUD action (16) [Switch]
-                        │   │      │   ├─ create_tenant → Create tenant API (17) [HTTP POST]
-                        │   │      │   ├─ get_tenant → Get tenant API (18) [HTTP GET]
-                        │   │      │   ├─ edit_tenant → Edit tenant API (19) [HTTP PATCH]
-                        │   │      │   ├─ deactivate → Deactivate API (20) [HTTP POST]
-                        │   │      │   ├─ reactivate → Reactivate API (21) [HTTP POST]
-                        │   │      │   └─ delete → Delete API (22) [HTTP DELETE]
-                        │   │      │     ↓ (todas)
-                        │   │      │  Format CRUD response (23) [Code]
-                        │   │      │     ↓
-                        │   │      │  Delete session (24) [Data Table Delete]
-                        │   │      │     ↓
-                        │   │      │  Evolution API Send (8)
-                        │   │      └─ false → Update session step (25) [Data Table Upsert]
-                        │   │           ↓
-                        │   │        Evolution API Send (8)
-                        │   └─ false (no session) → Menu router (7) [Code]
-                        │        → Is list action? (9) [IF]
-                        │          ├─ true → List tenants API (10) [HTTP GET]
-                        │          │           → Format list (11) [Code]
-                        │          │             ↓
-                        │          │       Evolution API Send (8)
-                        │          └─ false → Evolution API Send (8)
-                        └─ false → Access denied (6) [Code]
-                                      ↓
-                               Evolution API Send (8)
+WhatsApp → Evolution API (n8n integration, keyword trigger: "/menu")
+             ↓
+       Webhook (1)
+             ↓
+       Parse input (2) [Code]
+         → Extracts: phone, message, instance name
+             ↓
+       Is Sublify? (12) [IF]
+         → Checks $json.instance === "Sublify"
+         ├─ true → Continue to identify
+         └─ false → Workflow ends silently
+             ↓
+       Identify user (3) [HTTP GET]
+         → GET YOUR_TRACKPAL_API_URL/api/v1/integrations/n8n/identify?phone=
+         → Header: X-API-Key
+             ↓
+       Merge identity (4) [Code]
+         → Combines original input + identity data
+         → Sets allowed = (role === "master")
+             ↓
+       Route by role (5) [IF]
+         ├─ true (master) → Menu router (7) [Code]
+         │    → Generates interactive menu or routes by step
+         │    → Detects numeric menu options (1-8)
+         │    → Manages multi-turn flows via session object
+         │      ↓
+         │   Is list action? (9) [IF]
+         │    ├─ true → List tenants API (10) [HTTP GET]
+         │    │           → Format list (11) [Code]
+         │    │             ↓
+         │    │       Evolution API Send (8)
+         │    └─ false → Evolution API Send (8)
+         └─ false → Access denied (6) [Code]
+                      ↓
+               Evolution API Send (8)
 ```
 
-## Session management
+## Instance filtering
 
-Multi-step operations (create, view, edit, deactivate, reactivate, delete) use session state carried in `session` property:
+The workflow is restricted to the **"Sublify"** Evolution instance only. Messages from other instances (e.g., future tenant instances) are silently ignored — they will have their own workflows later.
+
+```javascript
+// Node "Is Sublify?" (IF)
+condition: $json.instance === "Sublify"
+```
+
+## Menu options (Master)
+
+| Option | Action | Description |
+|---|---|---|
+| 1 | Crear tenant | Multi-step: full_name → email → username → password choice → create |
+| 2 | Listar tenants | GET /api/v1/tenants, returns formatted list |
+| 3 | Ver tenant | Asks for tenant ID, then GET /tenants/{id} |
+| 4 | Editar tenant | Asks for tenant ID, then edit fields |
+| 5 | Desactivar tenant | PATCH /tenants/{id}/deactivate |
+| 6 | Reactivar tenant | PATCH /tenants/{id}/activate |
+| 7 | Eliminar tenant | DELETE /tenants/{id} (only if inactive) |
+| 8 | Ayuda | Shows help text |
+
+## Session management (multi-step flows)
+
+Multi-step flows (create, edit) use a `session` object passed through the workflow JSON. The object contains:
 
 ```json
 {
-  "phone": "521234567890",
+  "phone": "+521234567890",
   "step": "awaiting_full_name",
   "temp_data": "{}"
 }
 ```
 
-### Steps
-
-| Step | Description |
-|---|---|
-| `awaiting_full_name` | Crear tenant: esperando nombre completo |
-| `awaiting_email` | Crear tenant: esperando email |
-| `awaiting_username` | Crear tenant: esperando username |
-| `awaiting_password_choice` | Crear tenant: auto o manual? |
-| `awaiting_password_manual` | Crear tenant: contraseña manual |
-| `awaiting_tenant_id_view` | Ver tenant: esperando ID |
-| `awaiting_tenant_id_edit` | Editar tenant: esperando ID |
-| `awaiting_edit_fields` | Editar tenant: esperando campos JSON |
-| `awaiting_tenant_id_deactivate` | Desactivar: esperando ID |
-| `awaiting_tenant_id_reactivate` | Reactivar: esperando ID |
-| `awaiting_tenant_id_delete` | Eliminar: esperando ID |
-
-### Create tenant session flow
-
-```
-User: "1" (Crear)
-  → Step handler: reply "Nombre completo:" → Upsert session step={awaiting_full_name}
-User: "Juan Perez"
-  → Step handler: store full_name → reply "Email:" → Upsert session step={awaiting_email}
-User: "juan@email.com"
-  → Step handler: store email → reply "Username:" → Upsert session step={awaiting_username}
-User: "jperez"
-  → Step handler: store username → reply "Contraseña?" → Upsert session step={awaiting_password_choice}
-User: "1" (auto)
-  → Step handler: POST /api/v1/tenants {full_name, email, username}
-  → Format CRUD response → Delete session → Send result
-User: "2" (manual)
-  → Step handler: reply "Escribe la contraseña:" → Upsert session step={awaiting_password_manual}
-User: "mypass123"
-  → Step handler: POST /api/v1/tenants {full_name, email, username, password}
-  → Format CRUD response → Delete session → Send result
-```
-
-### Single-step actions (view, deactivate, reactivate, delete)
-
-```
-User: "3" (Ver)
-  → Step handler: reply "ID del tenant:" → Upsert session step={awaiting_tenant_id_view}
-User: "<tenant_id>"
-  → Step handler: GET /api/v1/tenants/{id} → Format → Delete session → Send result
-```
+- On each message, the workflow checks the session step
+- If no session exists, the user sees the main menu
+- Session state is not persisted across workflow executions (stateless per webhook call)
 
 ## Configuration
 
-Antes de activar el workflow, reemplazar los placeholders en el export JSON:
+To deploy this workflow, replace the placeholders in the JSON with your actual values:
 
-| Placeholder | Descripción |
+| Placeholder | Description |
 |---|---|
-| `YOUR_TRACKPAL_API_URL` | URL base de la API (ej: `https://xxxx.ngrok-free.app/api/v1`) |
-| `YOUR_TRACKPAL_API_KEY` | API key configurada en `N8N_API_KEY` del backend |
-| `YOUR_EVOLUTION_API_URL` | URL de Evolution API (ej: `https://evo.midominio.com`) |
-| `YOUR_EVOLUTION_API_KEY` | API key de Evolution API |
+| `YOUR_TRACKPAL_API_URL` | Trackpal backend URL (e.g. `https://trackpal-backend.onrender.com`) |
+| `YOUR_TRACKPAL_API_KEY` | N8N_API_KEY from backend config |
+| `YOUR_EVOLUTION_API_URL` | Evolution API URL (e.g. `https://rs-evoapi.wilfredocamacho.dev`) |
+| `YOUR_EVOLUTION_API_KEY` | Evolution API key |
+| `YOUR_N8N_URL` | n8n instance URL |
 
-## Data table
+## Evolution API integration
 
-- **Nombre**: `wa_sessions`
-- **Columnas**: `phone` (string), `step` (string), `temp_data` (string), `created_at` (date), `updated_at` (date)
-- **ID**: `tOsSN3fuGDtB0Svf`
+The workflow is triggered via Evolution API's **n8n integration** (not the generic webhook). Configured per instance:
 
-## Development
-
-El webhook de Evolution API debe configurarse para POSTear a:
 ```
-https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot
+POST /n8n/create/{instanceName}
+{
+  "enabled": true,
+  "webhookUrl": "https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot",
+  "triggerType": "keyword",
+  "triggerOperator": "startsWith",
+  "triggerValue": "/menu"
+}
 ```
 
-La URL de Trackpal API actualmente apunta a un túnel ngrok que cambia al reiniciar. Al desplegar la API con URL fija, actualizar en los nodos "Identify user" y "List tenants API".
+Only messages starting with `/menu` are sent to n8n, reducing unnecessary traffic.
+
+## Phone number format
+
+Evolution API sends phone numbers with `@c.us` or `@s.whatsapp.net` suffix. The workflow strips these. The Evolution API Send node also strips the `+` prefix before sending replies.
