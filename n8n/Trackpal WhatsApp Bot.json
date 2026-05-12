@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json; const data = payload.data || {}; const msg = data.message || {}; const from = msg.from || msg.key?.remoteJid || \"\"; return [{ json: { phone: String(from).replace(\"@c.us\",\"\").replace(\"@s.whatsapp.net\",\"\"), message: String(msg.body || msg.message?.conversation || \"\").trim(), instance: data.instance || payload.instance || \"default\", raw: payload } }];"
+        "jsCode": "const payload = ;\n\n// Evolution API n8n integration format (n8n/create endpoint)\nconst chatInput = payload.chatInput || '';\nconst remoteJid = payload.remoteJid || '';\nconst instanceName = payload.instanceName || '';\n\n// Generic webhook format (fallback)\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = remoteJid || String(from).replace('@c.us','').replace('@s.whatsapp.net','');\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"
       },
       "id": "2",
       "name": "Parse input",
