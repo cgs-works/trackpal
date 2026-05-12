@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     secret_key: str
     n8n_api_key: str
     cors_origins: str = "http://localhost:5173"
-    evolution_api_url: str = "https://rs-evoapi.wilfredocamacho.dev"
+    evolution_api_url: str = ""
     evolution_api_key: str = ""
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7

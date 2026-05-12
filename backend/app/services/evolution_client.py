@@ -30,6 +30,12 @@ class EvolutionClient:
                 instance_name,
             )
             return
+        if not self.base_url:
+            logger.warning(
+                "EVOLUTION_API_URL not configured; skipping instance creation for %s",
+                instance_name,
+            )
+            return
 
         evolution_instance_name = self._instance_name(instance_name)
         payload = {
@@ -51,6 +57,12 @@ class EvolutionClient:
         if not self.api_key:
             logger.warning(
                 "EVOLUTION_API_KEY not configured; skipping n8n integration for %s",
+                instance_name,
+            )
+            return
+        if not self.base_url:
+            logger.warning(
+                "EVOLUTION_API_URL not configured; skipping n8n integration for %s",
                 instance_name,
             )
             return
