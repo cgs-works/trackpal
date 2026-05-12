@@ -61,6 +61,24 @@ Cuando el Master crea un tenant, el menú pregunta:
 El estado de la conversación se gestiona con data table de n8n
 (`phone`, `step`, `temp_data`).
 
+## Workflow MVP creado en n8n
+
+- Instancia n8n: `https://rs-n8n.wilfredocamacho.dev`
+- Workflow: `Trackpal WhatsApp Bot`
+- Workflow ID: `vtqUvdkNnTNcKnwj`
+- Webhook path: `trackpal-whatsapp-bot`
+- Trackpal API configurada para el workflow: `https://c502-146-70-183-190.ngrok-free.app/api/v1`
+- Data table: `wa_sessions` (`phone`, `step`, `temp_data`, `created_at`, `updated_at`)
+
+Notas operativas:
+
+- El URL de ngrok puede cambiar al reiniciar el túnel; si cambia, se debe
+  actualizar `TRACKPAL_API_URL` en el entorno de n8n.
+- La licencia actual de n8n no permite gestionar variables desde la API
+  pública (`/api/v1/variables`). Las variables requeridas por el workflow
+  deben estar disponibles como variables de entorno del proceso n8n:
+  `TRACKPAL_API_URL`, `N8N_API_KEY` y `EVOLUTION_API_URL`.
+
 ## Rutas del frontend (Vue Router)
 
 | Ruta                | Acceso  | Descripción                              |
