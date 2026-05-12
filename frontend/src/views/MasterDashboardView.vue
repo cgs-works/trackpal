@@ -115,7 +115,7 @@ function validateForm() {
     return false
   }
 
-  if (isEditMode.value && !form.value.evolution_instance_name) {
+  if (!form.value.evolution_instance_name) {
     modalError.value = 'Evolution instance name is required.'
     return false
   }
@@ -146,6 +146,7 @@ async function handleSubmit() {
         email: form.value.email,
         phone: form.value.phone,
         username: form.value.username,
+        evolution_instance_name: form.value.evolution_instance_name,
       }
 
       if (form.value.password) {
@@ -318,15 +319,13 @@ onMounted(loadTenants)
           <input id="password" v-model="form.password" type="password" autocomplete="new-password">
         </template>
 
-        <template v-else>
-          <label for="evolution_instance_name">Evolution Instance</label>
-          <input
-            id="evolution_instance_name"
-            v-model.trim="form.evolution_instance_name"
-            type="text"
-            required
-          >
-        </template>
+        <label for="evolution_instance_name">Evolution Instance</label>
+        <input
+          id="evolution_instance_name"
+          v-model.trim="form.evolution_instance_name"
+          type="text"
+          required
+        >
 
         <div class="modal-actions">
           <button class="button button-secondary" type="button" @click="closeModal">Cancel</button>

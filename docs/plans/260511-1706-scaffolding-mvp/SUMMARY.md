@@ -50,6 +50,7 @@ Link to PRD: `docs/prds/260511-1706-scaffolding-mvp/PRD.md`
 - [x] **Phase 7 [M]: Frontend: Master Dashboard** — Tenant table with metrics, creation/editing forms with password options, activate/deactivate/delete actions.
 - [x] **Phase 8 [S]: Frontend: Tenant Dashboard** — Placeholder UI with profile access and password change.
 - [x] **Phase 9 [M]: n8n workflow** — Implement real WhatsApp bot workflow: webhook from Evolution API, identify via API Key, data table session management, interactive menu, CRUD tenants via HTTP.
+- [x] **Phase 10 [M]: Evolution API instance on tenant creation** — Creation form requires evolution_instance_name, backend auto-creates Evolution instance + n8n integration on tenant signup, transaction safety (rollback on Evolution failure).
 
 ## Key Changes
 

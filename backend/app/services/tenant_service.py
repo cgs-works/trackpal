@@ -9,6 +9,7 @@ from app.core.security import get_password_hash
 from app.crud import users as user_crud
 from app.models import RefreshSession, TenantProfile, User
 from app.schemas.tenant import TenantCreate, TenantUpdate
+from app.services.evolution_client import evolution_client
 
 
 class TenantService:
@@ -46,6 +47,15 @@ class TenantService:
             is_active=True,
         )
         db.add(profile)
+        await db.flush()
+
+        try:
+            await evolution_client.create_instance(payload.evolution_instance_name)
+            await evolution_client.setup_n8n_integration(payload.evolution_instance_name)
+        except Exception as exc:
+            await db.rollback()
+            raise ValueError(f"Failed to create Evolution instance: {exc}") from exc
+
         await db.commit()
 
         created_profile = await self.get_tenant(db, user.id)
@@ -83,6 +93,8 @@ class TenantService:
             return None
 
         update_data = payload.model_dump(exclude_unset=True)
+        # Changing evolution_instance_name only updates the stored value; it does not
+        # recreate or rename the instance in Evolution API.
         if "phone" in update_data and update_data["phone"] != profile.phone:
             existing = await user_crud.get_by_phone(db, update_data["phone"])
             if existing and existing[0].id != tenant_id:

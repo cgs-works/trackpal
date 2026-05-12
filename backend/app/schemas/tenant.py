@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TenantCreate(BaseModel):
@@ -12,7 +12,7 @@ class TenantCreate(BaseModel):
     phone: str | None = None
     username: str
     password: str | None = None
-    evolution_instance_name: str | None = None
+    evolution_instance_name: str = Field(min_length=1)
 
     @field_validator("password")
     @classmethod
