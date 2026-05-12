@@ -24,15 +24,9 @@ class EvolutionClient:
         return {"Content-Type": "application/json", "apikey": self.api_key}
 
     async def create_instance(self, instance_name: str) -> None:
-        if not self.api_key:
+        if not self.api_key or not self.base_url:
             logger.warning(
-                "EVOLUTION_API_KEY not configured; skipping instance creation for %s",
-                instance_name,
-            )
-            return
-        if not self.base_url:
-            logger.warning(
-                "EVOLUTION_API_URL not configured; skipping instance creation for %s",
+                "Evolution API not configured; skipping instance creation for %s",
                 instance_name,
             )
             return
@@ -54,15 +48,9 @@ class EvolutionClient:
         logger.info("Evolution instance created: %s", evolution_instance_name)
 
     async def setup_n8n_integration(self, instance_name: str) -> None:
-        if not self.api_key:
+        if not self.api_key or not self.base_url:
             logger.warning(
-                "EVOLUTION_API_KEY not configured; skipping n8n integration for %s",
-                instance_name,
-            )
-            return
-        if not self.base_url:
-            logger.warning(
-                "EVOLUTION_API_URL not configured; skipping n8n integration for %s",
+                "Evolution API not configured; skipping n8n integration for %s",
                 instance_name,
             )
             return
@@ -83,6 +71,29 @@ class EvolutionClient:
             )
             response.raise_for_status()
         logger.info("n8n integration configured for instance: %s", evolution_instance_name)
+
+    async def delete_instance(self, instance_name: str) -> None:
+        if not self.api_key or not self.base_url:
+            logger.warning(
+                "Evolution API not configured; skipping instance deletion for %s",
+                instance_name,
+            )
+            return
+
+        evolution_instance_name = self._instance_name(instance_name)
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
+            response = await client.delete(
+                f"/instance/delete/{quote(evolution_instance_name, safe='')}",
+                headers=self._headers,
+            )
+            if response.status_code == 404:
+                logger.warning(
+                    "Evolution instance not found (already deleted): %s",
+                    evolution_instance_name,
+                )
+                return
+            response.raise_for_status()
+        logger.info("Evolution instance deleted: %s", evolution_instance_name)
 
 
 evolution_client = EvolutionClient()

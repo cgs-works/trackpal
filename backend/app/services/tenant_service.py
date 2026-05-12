@@ -142,9 +142,20 @@ class TenantService:
         if profile.is_active:
             raise ValueError("Cannot delete active tenant. Deactivate first.")
 
+        instance_name = profile.evolution_instance_name
         user = await user_crud.get(db, tenant_id)
         if user is None:
             return False
+
         await db.delete(user)
+        await db.flush()
+
+        try:
+            if instance_name:
+                await evolution_client.delete_instance(instance_name)
+        except Exception as exc:
+            await db.rollback()
+            raise ValueError(f"Failed to delete Evolution instance: {exc}") from exc
+
         await db.commit()
         return True
