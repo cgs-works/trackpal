@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     master_password: str = "changeme"
     master_name: str = "Master Trackpal"
     master_phone: str = "+1234567890"
+    redis_url: str = ""
+    whatsapp_session_ttl_minutes: int = 30
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

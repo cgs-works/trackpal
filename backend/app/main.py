@@ -5,13 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.redis_client import close_redis, init_redis
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    await init_redis()
     yield
     # Shutdown
+    await close_redis()
 
 
 app = FastAPI(title="Trackpal API", version="0.1.0", lifespan=lifespan)

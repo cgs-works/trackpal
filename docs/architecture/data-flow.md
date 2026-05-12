@@ -45,7 +45,13 @@ Client                     FastAPI                     Supabase
   │<─────────────────────────┤                          │
 ```
 
-## n8n → Evolution API → WhatsApp flow
+## n8n → Evolution API → WhatsApp flow (legacy)
+
+> **Architecture update (Phase 1, 2026-05-12):** For the WhatsApp Master Console, n8n is being simplified to **transport-only**. The flow below is the current/legacy implementation where n8n manages session state and calls CRUD endpoints directly. In the new architecture (Phase 3+), the flow becomes:
+>
+> `WhatsApp → Evolution API → n8n (parse + identify) → POST /api/v1/integrations/n8n/console → Backend (Redis session + flow logic) → reply text → n8n → Evolution API → WhatsApp`
+>
+> See ADR-0004 for the complete decision.
 
 ```
 WhatsApp User            Evolution API          n8n Workflow            Trackpal API
