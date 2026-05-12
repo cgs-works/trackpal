@@ -10,11 +10,9 @@ class EvolutionClient:
         self,
         base_url: str = settings.evolution_api_url,
         api_key: str = settings.evolution_api_key,
-        webhook_secret: str = settings.evolution_webhook_secret,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
-        self.webhook_secret = webhook_secret
 
     def _instance_name(self, instance_name: str) -> str:
         return instance_name if instance_name.startswith("tenant-") else f"tenant-{instance_name}"
@@ -35,12 +33,6 @@ class EvolutionClient:
             "rejectCall": True,
             "alwaysOnline": True,
             "readMessages": True,
-            "webhook": {
-                "url": "https://trackpal-api.onrender.com/api/v1/webhooks/evolution",
-                "headers": {"X-Webhook-Secret": self.webhook_secret},
-                "byEvents": True,
-                "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
-            },
         }
         async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
             response = await client.post(
