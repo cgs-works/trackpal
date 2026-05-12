@@ -67,17 +67,43 @@ El estado de la conversación se gestiona con data table de n8n
 - Workflow: `Trackpal WhatsApp Bot`
 - Workflow ID: `vtqUvdkNnTNcKnwj`
 - Webhook path: `trackpal-whatsapp-bot`
-- Trackpal API configurada para el workflow: `https://c502-146-70-183-190.ngrok-free.app/api/v1`
-- Data table: `wa_sessions` (`phone`, `step`, `temp_data`, `created_at`, `updated_at`)
+- Webhook URL: `https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot`
+- Data table: `wa_sessions` (ID: `tOsSN3fuGDtB0Svf`, columnas: `phone`, `step`, `temp_data`, `created_at`, `updated_at`)
+- 8 nodos: Webhook → Parse input → Identify user → Merge identity → Route by role → (Menu router | Access denied) → Evolution API Send
 
-Notas operativas:
+### Valores hardcodeados en el workflow
 
-- El URL de ngrok puede cambiar al reiniciar el túnel; si cambia, se debe
-  actualizar `TRACKPAL_API_URL` en el entorno de n8n.
-- La licencia actual de n8n no permite gestionar variables desde la API
-  pública (`/api/v1/variables`). Las variables requeridas por el workflow
-  deben estar disponibles como variables de entorno del proceso n8n:
-  `TRACKPAL_API_URL`, `N8N_API_KEY` y `EVOLUTION_API_URL`.
+Dado que la licencia de n8n no permite gestionar variables desde la API pública, todos los valores están hardcodeados directamente en los nodos:
+
+| Variable | Valor hardcodeado |
+|---|---|
+| Trackpal API URL | `https://c502-146-70-183-190.ngrok-free.app/api/v1` |
+| Trackpal X-API-Key | `fXzqZpBtpAKC9ipa7St83cAYJadAK72P` |
+| Evolution API URL | `https://rs-evoapi.wilfredocamacho.dev` |
+| Evolution API Key | `B68769E2D248462C8F38DAF3CB7AE194` |
+
+### Nodos del workflow
+
+1. **Webhook** — POST en `/webhook/trackpal-whatsapp-bot`. Recibe payload de Evolution API.
+2. **Parse input** (Code) — Extrae `phone`, `message` (cuerpo del texto), e `instance` del payload de Evolution API. Limpia sufijos `@c.us` / `@s.whatsapp.net` del número.
+3. **Identify user** (HTTP Request) — `GET` a Trackpal API `/integrations/n8n/identify?phone={{phone}}` con header `X-API-Key: fXzqZpBtpAKC9ipa7St83cAYJadAK72P`.
+4. **Merge identity** (Code) — Combina datos de entrada con la respuesta de identidad. Maneja 404 (usuario no encontrado).
+5. **Route by role** (IF) — Si `role === "master"` continúa; si no, envía mensaje de acceso denegado.
+6. **Menu router** (Code) — Analiza el mensaje numérico (1-8):
+   - Menú principal con 8 opciones (Crear, Listar, Ver, Editar, Desactivar, Reactivar, Eliminar, Ayuda)
+   - Si es opción 1 (Crear): establece step `awaiting_full_name`, guarda sesión
+   - Si es opción 2 (Listar): step `list_tenants`
+   - Si es opciones 3-7: step `awaiting_tenant_id`
+   - Si es opción 8: muestra ayuda
+   - Si no es válido: muestra menú nuevamente
+7. **Access denied text** (Code) — Mensaje de error para no-Master.
+8. **Evolution API Send** (HTTP Request) — `POST` a Evolution API `/message/sendText/{instance}` con header `apikey: B68769E2D248462C8F38DAF3CB7AE194`. Envía el texto manteniendo sesión.
+
+### Notas operativas
+
+- El URL de ngrok (`https://c502-146-70-183-190.ngrok-free.app`) cambia al reiniciar el túnel. Si cambia, se debe actualizar manualmente en el nodo "Identify user".
+- El formato de número de teléfono en Evolution API no usa signo `+`. El workflow remueve `+` automáticamente antes de enviar.
+- La funcionalidad completa de multi-paso (crear tenant con varios campos, CRUD completo) requiere nodos adicionales para manejar cada step de la sesión. Actualmente el workflow soporta el menú principal y enruta por opción.
 
 ## Rutas del frontend (Vue Router)
 
