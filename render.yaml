@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: trackpal-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install uv && uv sync
+    startCommand: uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # set manually in Render dashboard
+      - key: SECRET_KEY
+        generateValue: true
+      - key: N8N_API_KEY
+        sync: false
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: MASTER_USERNAME
+        value: "master"
+      - key: MASTER_PASSWORD
+        sync: false
+      - key: MASTER_NAME
+        value: "Master Trackpal"
+      - key: MASTER_PHONE
+        sync: false

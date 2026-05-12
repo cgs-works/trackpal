@@ -29,3 +29,9 @@
 | [/docs/adr/0001-stack-y-arquitectura.md](/docs/adr/0001-stack-y-arquitectura.md) | Stack and architecture decisions |
 | [/docs/adr/0002-modelo-de-autenticacion.md](/docs/adr/0002-modelo-de-autenticacion.md) | Unified auth model with profiles |
 | [/docs/adr/0003-integracion-n8n-y-evolution-api.md](/docs/adr/0003-integracion-n8n-y-evolution-api.md) | n8n and Evolution API integration |
+
+## Operations
+
+| File | Description |
+|---|---|
+| [deployment.md](deployment.md) | Deployment guide for Render and Cloudflare Pages |
