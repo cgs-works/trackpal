@@ -81,7 +81,7 @@ async def test_missing_api_key_returns_401(client):
     """No X-API-Key header → 401."""
     response = await client.post(
         ENDPOINT,
-        json={"phone": "+10000000000", "message": "hola"},
+        json={"phone": "+12015550001", "message": "hola"},
     )
     assert response.status_code == 401
     assert "Invalid API Key" in response.json()["detail"]
@@ -91,7 +91,7 @@ async def test_wrong_api_key_returns_401(client):
     """Wrong X-API-Key header → 401."""
     response = await client.post(
         ENDPOINT,
-        json={"phone": "+10000000000", "message": "hola"},
+        json={"phone": "+12015550001", "message": "hola"},
         headers={"X-API-Key": "wrong-key"},
     )
     assert response.status_code == 401
@@ -130,7 +130,7 @@ async def test_master_phone_returns_state_unavailable_when_redis_missing(client,
     """Master phone + no Redis → relayable safe error, not stateless flow."""
     response = await client.post(
         ENDPOINT,
-        json={"phone": "+10000000000", "message": "hola"},
+        json={"phone": "+12015550001", "message": "hola"},
         headers={"X-API-Key": settings.n8n_api_key},
     )
     assert response.status_code == 200
@@ -143,7 +143,7 @@ async def test_master_phone_jid_is_normalized_before_identify(client, master_use
     """JID-style phone from n8n/Evolution identifies stored master phone."""
     response = await client.post(
         ENDPOINT,
-        json={"phone": "+10000000000@s.whatsapp.net", "message": "hola"},
+        json={"phone": "+12015550001@s.whatsapp.net", "message": "hola"},
         headers={"X-API-Key": settings.n8n_api_key},
     )
     assert response.status_code == 200
@@ -178,7 +178,7 @@ async def test_response_shape(client, master_user):
     """Response contains exactly the expected fields."""
     response = await client.post(
         ENDPOINT,
-        json={"phone": "+10000000000", "message": "hola"},
+        json={"phone": "+12015550001", "message": "hola"},
         headers={"X-API-Key": settings.n8n_api_key},
     )
     assert response.status_code == 200
@@ -198,7 +198,7 @@ async def test_primary_flow_with_fake_manager_returns_menu(client, master_user):
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "menu"},
+            json={"phone": "+12015550001", "message": "menu"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -220,7 +220,7 @@ async def test_failover_missing_session_returns_contingency_reset(client, master
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "nombre del tenant"},
+            json={"phone": "+12015550001", "message": "nombre del tenant"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -239,7 +239,7 @@ async def test_failover_missing_session_with_menu_choice_still_resets(client, ma
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "2"},
+            json={"phone": "+12015550001", "message": "2"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -263,7 +263,7 @@ async def test_failover_reset_creates_session_on_backup(client, master_user):
         # First message — triggers reset, creates fresh session on backup
         resp1 = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
         assert resp1.status_code == 200
@@ -273,7 +273,7 @@ async def test_failover_reset_creates_session_on_backup(client, master_user):
         # Use "menu" (a reset command) to trigger MAIN_MENU, not FALLBACK_NO_FLOW.
         resp2 = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "menu"},
+            json={"phone": "+12015550001", "message": "menu"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
         assert resp2.status_code == 200
@@ -289,7 +289,7 @@ async def test_both_redis_unavailable_returns_temporary_unavailable(client, mast
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -305,7 +305,7 @@ async def test_both_unavailable_still_returns_200_for_relayable_reply(client, ma
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200  # Not 500
@@ -317,7 +317,7 @@ async def test_invalid_api_key_still_401_with_fake_manager(client, master_user):
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": "wrong-key"},
         )
     assert response.status_code == 401
@@ -350,7 +350,7 @@ async def test_redis_connection_error_returns_temporary_unavailable(client, mast
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -363,7 +363,7 @@ async def test_redis_timeout_error_returns_temporary_unavailable(client, master_
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -376,7 +376,7 @@ async def test_redis_os_error_returns_temporary_unavailable(client, master_user)
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
@@ -389,7 +389,7 @@ async def test_redis_generic_exception_returns_temporary_unavailable(client, mas
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+10000000000", "message": "hola"},
+            json={"phone": "+12015550001", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200

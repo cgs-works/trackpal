@@ -206,12 +206,12 @@ def console_service() -> WhatsAppConsoleService:
 
 @pytest.fixture
 def tenant_service() -> FakeTenantService:
-    svc = FakeTenantService(existing_usernames={"existing-user"})
+    svc = FakeTenantService(existing_usernames={"existinguser"})
     # Also seed the tenants dict so get_tenants() returns the existing user
     existing = FakeTenant(
         id="existing-id",
         full_name="Existing User",
-        username="existing-user",
+        username="existinguser",
         evolution_instance_name="inst-existing",
     )
     svc._tenants["existing-id"] = existing
@@ -416,6 +416,88 @@ class TestFullNameStepRegression:
         assert "Ayuda" in reply
         assert "comandos disponibles" in reply
 
+    async def test_full_name_with_punctuation_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Full name with punctuation must be rejected, stay on step."""
+        await self._start_create_flow(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Juan Pérez!",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "letras" in reply.lower() or "solo" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "full_name"
+        assert "full_name" not in session.temp_data
+
+    async def test_full_name_leading_space_normalized(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Full name with leading space is stripped by message layer;
+        validation accepts stripped value and advances to email step."""
+        await self._start_create_flow(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="  Juan Pérez",
+            is_master=True,
+            session_service=session_service,
+        )
+        # Stripped value is valid, advances to email
+        assert "email" in reply.lower() or "correo" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "email"
+        assert session.temp_data["full_name"] == "Juan Pérez"
+
+    async def test_full_name_trailing_space_normalized(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Full name with trailing space is stripped by message layer;
+        validation accepts stripped value and advances."""
+        await self._start_create_flow(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Juan Pérez ",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "email" in reply.lower() or "correo" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "email"
+        assert session.temp_data["full_name"] == "Juan Pérez"
+
+    async def test_full_name_multiple_internal_spaces_collapsed(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Internal multiple spaces collapse to one in stored value."""
+        await self._start_create_flow(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Juan   Pérez",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "email" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.temp_data["full_name"] == "Juan Pérez"
+
 
 # ===========================================================================
 # Email step
@@ -517,6 +599,108 @@ class TestEmailStep:
         assert session is not None
         assert session.temp_data["email"] is None
 
+    async def test_email_invalid_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Invalid email must be rejected, stay on email step,
+        preserve previously collected full_name."""
+        await self._start_and_set_name(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="not-an-email",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "email" in reply.lower() or "correo" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "email"
+        assert "email" not in session.temp_data
+        # Previously collected full_name must be preserved
+        assert session.temp_data.get("full_name") == "Juan Pérez"
+
+    async def test_email_with_spaces_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Email with spaces must be rejected."""
+        await self._start_and_set_name(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="juan @example.com",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "email" in reply.lower() or "correo" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "email"
+
+    async def test_email_normalized(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Valid email with mixed case is normalized to lowercase."""
+        await self._start_and_set_name(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Juan.Perez@Example.COM",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "teléfono" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.temp_data["email"] == "Juan.Perez@example.com"
+
+    async def test_email_invalid_then_correction_advances(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Invalid email stays on step with prior fields preserved;
+        corrected email advances to phone step."""
+        await self._start_and_set_name(console_service, session_service)
+
+        # Send invalid email
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="not-an-email",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "email" in reply.lower() or "correo" in reply.lower()
+
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "email"
+        assert "email" not in session.temp_data
+        # Prior full_name preserved
+        assert session.temp_data.get("full_name") == "Juan Pérez"
+
+        # Send corrected email
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="juan.corrected@example.com",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "teléfono" in reply.lower()
+
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "phone"
+        assert session.temp_data["email"] == "juan.corrected@example.com"
+        # full_name still preserved
+        assert session.temp_data.get("full_name") == "Juan Pérez"
+
 
 # ===========================================================================
 # Phone step
@@ -559,7 +743,7 @@ class TestPhoneStep:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="+521234567890",
+            message="+525512345678",
             is_master=True,
             session_service=session_service,
         )
@@ -567,7 +751,8 @@ class TestPhoneStep:
         session = await session_service.get_session("+10000000000")
         assert session is not None
         assert session.step == "username"
-        assert session.temp_data["phone"] == "+521234567890"
+        # Phone is stored canonical digits-only (no +)
+        assert session.temp_data["phone"] == "525512345678"
 
     async def test_phone_skip_with_dash(
         self,
@@ -605,6 +790,87 @@ class TestPhoneStep:
         assert session is not None
         assert session.temp_data["phone"] is None
 
+    async def test_phone_invalid_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Non-numeric phone must be rejected, stay on phone step,
+        preserve previously collected email."""
+        await self._start_through_email(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="abc",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "phone"
+        assert "phone" not in session.temp_data
+        # Previously collected email must be preserved
+        assert session.temp_data.get("email") == "juan@example.com"
+
+    async def test_phone_no_country_code_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Phone without international country code must be rejected."""
+        await self._start_through_email(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1234567890",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "teléfono" in reply.lower() or "internacional" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "phone"
+
+    async def test_phone_canonical_digits_only(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Valid phone with + is stored as digits-only."""
+        await self._start_through_email(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="+525512345678",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "usuario" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        # Stored canonical digits-only (no +)
+        assert session.temp_data["phone"] == "525512345678"
+
+    async def test_phone_without_plus_stored_digits_only(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Valid phone without + prefix is stored as digits-only."""
+        await self._start_through_email(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="525512345678",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "usuario" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.temp_data["phone"] == "525512345678"
+
 
 # ===========================================================================
 # Username step
@@ -618,7 +884,7 @@ class TestUsernameStep:
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
-        phone: str = "+521234567890",
+        phone: str = "+525512345678",
     ) -> None:
         await console_service.process_message(
             phone="+10000000000",
@@ -674,7 +940,7 @@ class TestUsernameStep:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="existing-user",
+            message="existinguser",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -687,6 +953,10 @@ class TestUsernameStep:
         assert session.step == "username"
         # temp_data should NOT have username set
         assert "username" not in session.temp_data
+        # Prior collected fields must be preserved
+        assert session.temp_data.get("full_name") == "Juan Pérez"
+        assert session.temp_data.get("email") == "juan@example.com"
+        assert session.temp_data.get("phone") == "525512345678"
 
     async def test_username_duplicate_then_valid(
         self,
@@ -700,7 +970,7 @@ class TestUsernameStep:
         # Send duplicate username
         await console_service.process_message(
             phone="+10000000000",
-            message="existing-user",
+            message="existinguser",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -709,7 +979,7 @@ class TestUsernameStep:
         # Send valid username
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="new-valid-user",
+            message="newvaliduser",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -718,7 +988,7 @@ class TestUsernameStep:
         session = await session_service.get_session("+10000000000")
         assert session is not None
         assert session.step == "evolution_instance"
-        assert session.temp_data["username"] == "new-valid-user"
+        assert session.temp_data["username"] == "newvaliduser"
 
     async def test_username_empty_reprompts(
         self,
@@ -753,6 +1023,257 @@ class TestUsernameStep:
         session = await session_service.get_session("+10000000000")
         assert session is not None
         assert session.step == "username"
+
+    # ------------------------------------------------------------------
+    # REGRESSION: Invalid username patterns from PRD
+    # ------------------------------------------------------------------
+
+    async def _progress_to_username(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Helper: progress to the username step with basic valid data."""
+        await console_service.process_message(
+            phone="+10000000000", message="2", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="Test User", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="test@example.com", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="—", is_master=True,
+            session_service=session_service,
+        )
+
+    async def test_username_slash_menu_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: '/menu' must be rejected as username, stay on step."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="/menu",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "letra" in reply.lower() or "minúscula" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+        assert "username" not in session.temp_data
+
+    async def test_username_zero_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: '0' is a global reset command; returns to menu
+        instead of being accepted as username."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="0",
+            is_master=True,
+            session_service=session_service,
+        )
+        # '0' triggers global reset, returns main menu
+        assert "Trackpal Master Console" in reply
+        # Session cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
+
+    async def test_username_uppercase_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: Uppercase username must be rejected."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="TestUser",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "letra" in reply.lower() or "minúscula" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+
+    async def test_username_with_spaces_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: Username with spaces must be rejected."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="hola mundo",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "letra" in reply.lower() or "minúscula" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+
+    async def test_username_with_punctuation_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: Username with punctuation must be rejected."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="admin!",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "letra" in reply.lower() or "minúscula" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+
+    async def test_username_too_long_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Username exceeding 20 chars must be rejected."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="abcdefghij1234567890extra",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "20" in reply or "máximo" in reply.lower() or "larga" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+
+    async def test_username_starts_with_number_rejected(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Username starting with digit must be rejected."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1testuser",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "letra" in reply.lower() or "minúscula" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+
+    async def test_username_cancelar_returns_to_menu(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: 'cancelar' triggers global reset, returns to menu,
+        NOT persisted as username."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="cancelar",
+            is_master=True,
+            session_service=session_service,
+        )
+        # Global reset returns main menu
+        assert "Trackpal Master Console" in reply
+        # Session cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
+
+    async def test_username_invalid_syntax_does_not_persist_in_temp_data(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: /menu is rejected by syntax validation, not stored."""
+        await self._progress_to_username(console_service, session_service)
+
+        await console_service.process_message(
+            phone="+10000000000",
+            message="/menu",
+            is_master=True,
+            session_service=session_service,
+        )
+
+        # username must not be in temp_data
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert "username" not in session.temp_data
+        # Prior fields must remain intact
+        assert session.temp_data.get("full_name") == "Test User"
+        assert session.temp_data.get("email") == "test@example.com"
+
+    async def test_invalid_username_does_not_call_duplicate_check(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Invalid syntax must NOT trigger duplicate lookup."""
+        await self._progress_to_username(console_service, session_service)
+
+        # '/menu' is syntactically invalid, not a duplicate
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="/menu",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        # Should show syntax error, NOT duplicate error
+        assert "letra" in reply.lower() or "minúscula" in reply.lower()
+        assert "registrado" not in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "username"
+
+    async def test_valid_username_with_underscore_accepted(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Username with underscore is valid."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="test_user",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "evolution" in reply.lower()
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "evolution_instance"
+        assert session.temp_data["username"] == "test_user"
 
 
 # ===========================================================================
@@ -789,7 +1310,7 @@ class TestEvolutionInstanceStep:
         )
         await console_service.process_message(
             phone="+10000000000",
-            message="+521234567890",
+            message="+525512345678",
             is_master=True,
             session_service=session_service,
         )
@@ -873,7 +1394,7 @@ class TestPasswordModeStep:
         )
         await console_service.process_message(
             phone="+10000000000",
-            message="+521234567890",
+            message="+525512345678",
             is_master=True,
             session_service=session_service,
         )
@@ -985,7 +1506,7 @@ class TestManualPasswordStep:
         )
         await console_service.process_message(
             phone="+10000000000",
-            message="+521234567890",
+            message="+525512345678",
             is_master=True,
             session_service=session_service,
         )
@@ -1102,7 +1623,7 @@ class TestConfirmationStep:
         )
         await console_service.process_message(
             phone="+10000000000",
-            message="+521234567890",
+            message="+525512345678",
             is_master=True,
             session_service=session_service,
         )
@@ -1140,7 +1661,8 @@ class TestConfirmationStep:
         assert session.step == "confirm"
         assert session.temp_data["full_name"] == "Juan Pérez"
         assert session.temp_data["email"] == "juan@example.com"
-        assert session.temp_data["phone"] == "+521234567890"
+        # Phone stored canonical digits-only (no + prefix)
+        assert session.temp_data["phone"] == "525512345678"
         assert session.temp_data["username"] == "juanperez"
         assert session.temp_data["evolution_instance_name"] == "inst-juan"
         assert session.temp_data["password_mode"] == "auto"
@@ -1459,7 +1981,7 @@ class TestFullCreateFlow:
         # Send duplicate username
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="existing-user",
+            message="existinguser",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -1469,7 +1991,7 @@ class TestFullCreateFlow:
         # Send valid username
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="unique-user",
+            message="uniqueuser",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -1505,8 +2027,8 @@ class TestFullCreateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Duplicate phone error during creation is handled."""
-        # First, create a tenant with a phone
-        tenant_service._existing_phones.add("+521111111111")
+        # First, create a tenant with a phone (canonical digits-only)
+        tenant_service._existing_phones.add("525511111111")
 
         await console_service.process_message(
             phone="+10000000000",
@@ -1528,7 +2050,7 @@ class TestFullCreateFlow:
         )
         await console_service.process_message(
             phone="+10000000000",
-            message="+521111111111",
+            message="+525511111111",
             is_master=True,
             session_service=session_service,
         )
@@ -1767,6 +2289,102 @@ class TestFullCreateFlow:
         session = await session_service.get_session("+10000000000")
         assert session is None
 
+    async def test_full_flow_normalized_values(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Full create flow normalizes mixed-case email, phone without +,
+        and full name with multiple internal spaces.
+
+        The created FakeTenant must store canonical forms.
+        """
+        # Step 1: Start
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "nombre completo" in reply.lower()
+
+        # Step 2: Full name with multiple internal spaces
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="María   García   Ana",  # multiple spaces
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "email" in reply.lower()
+
+        # Step 3: Email with mixed case
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Maria.Garcia@Example.COM",  # mixed case
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "teléfono" in reply.lower()
+
+        # Step 4: Phone without + prefix
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="525511112233",  # no +
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "usuario" in reply.lower()
+
+        # Step 5: Username
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="mariagarcia",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        assert "evolution" in reply.lower()
+
+        # Step 6: Evolution Instance
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="inst-maria",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "contraseña" in reply.lower()
+
+        # Step 7: Password mode (auto)
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "CONFIRMAR" in reply or "confirmar" in reply
+
+        # Step 8: Confirm
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="CONFIRMAR",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        assert "creado" in reply.lower() or "éxito" in reply.lower()
+
+        # Verify the created tenant has normalized values
+        tenants = await tenant_service.get_tenants()
+        created = [t for t in tenants if t.username == "mariagarcia"]
+        assert len(created) == 1
+        tenant = created[0]
+
+        # Canonical assertions
+        assert tenant.full_name == "María García Ana"  # spaces collapsed
+        assert tenant.email == "Maria.Garcia@example.com"  # domain lowercased
+        assert tenant.phone == "525511112233"  # digits-only, no +
+
 
 # ===========================================================================
 # Error handling during creation
@@ -1878,7 +2496,7 @@ class TestCreateErrorHandling:
         )
         await console_service.process_message(
             phone="+10000000000",
-            message="+521234567890",
+            message="+525512345678",
             is_master=True,
             session_service=session_service,
         )
@@ -1922,7 +2540,7 @@ class TestTTLNoiseDuringCreateFlow:
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="+521234567890", is_master=True,
+            phone="+10000000000", message="+525512345678", is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
@@ -1973,7 +2591,7 @@ class TestTTLNoiseDuringCreateFlow:
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="+521234567890", is_master=True,
+            phone="+10000000000", message="+525512345678", is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
@@ -2025,7 +2643,7 @@ class TestTTLNoiseDuringCreateFlow:
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="+521234567890", is_master=True,
+            phone="+10000000000", message="+525512345678", is_master=True,
             session_service=session_service,
         )
 

@@ -19,7 +19,13 @@ backend/
 │   │   │                    #   CORS_ORIGINS, EVOLUTION_API_URL, EVOLUTION_API_KEY, JWT TTLs,
 │   │   │                    #   Master creds, Redis HA URLs/pool/breaker/TTL)
 │   │   ├── database.py      # AsyncSession factory
-│   │   ├── phone.py         # PhoneNormalizer.normalize_phone() — canonical digits-only phone
+│   │   ├── phone.py         # normalize_phone() — canonical digits-only phone; uses shared
+│   │   │                    #   _strip_phone_suffixes() from input_validation to strip JID/device suffixes
+│   │   ├── input_validation.py  # Centralized reusable validation policy for username, email, phone,
+│   │   │                       #   and full_name. Exports standalone functions (validate_username,
+│   │   │                       #   validate_full_name, validate_email, validate_phone) and
+│   │   │                       #   InputValidationError exception. Used by schemas, services, seed,
+│   │   │                       #   and WhatsApp console flows
 │   │   ├── redis_client.py  # RedisConnectionManager + FailoverPolicy — active-passive HA,
 │   │   │                    #   primary/backup pools, circuit breaker, half-open recovery
 │   │   └── security.py      # JWT create/decode, bcrypt hash/verify, API key verify
@@ -51,6 +57,7 @@ backend/
 │   ├── conftest.py          # Async fixtures (test DB, client, auth headers; Evolution API disabled)
 │   ├── test_auth.py         # Login, refresh, logout, identify, refresh-token-as-bearer rejection
 │   ├── test_contingency_reply_policy.py  # Degraded state reply texts
+│   ├── test_input_validation_policy.py   # Central policy: username, email, phone, full_name rules
 │   ├── test_phone_normalization_migration.py  # Phone canonicalisation DB migration test
 │   ├── test_phone_normalizer.py          # Phone canonicalization
 │   ├── test_profile.py      # Profile get/update, password change, dashboard, phone conflict
@@ -72,7 +79,13 @@ backend/
 ### Core
 
 - **`config.py`** — reads `DATABASE_URL`, `SECRET_KEY`, `N8N_API_KEY`, `CORS_ORIGINS`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, Master seed credentials, and Redis HA settings (`REDIS_PRIMARY_URL`, `REDIS_BACKUP_URL`, `REDIS_POOL_SIZE`, socket/connect timeout, health check interval, failover threshold, breaker open seconds, session TTL) from env.
-- **`phone.py`** — `PhoneNormalizer.normalize_phone(value)` strips `+`, all non-digits, JID suffixes (`@c.us`, `@s.whatsapp.net`), and device suffixes (`:device`). Returns canonical digits-only string or `None`. Applied in schemas, services, and identity lookup.
+- **`phone.py`** — `normalize_phone(value)` uses shared `_strip_phone_suffixes()` from `input_validation` to strip JID suffixes (`@c.us`, `@s.whatsapp.net`) and device suffixes (`:device`), then removes all non-digits. Returns canonical digits-only string or `None`. Applied in schemas, services, and identity lookup.
+- **`input_validation.py`** — Central policy module with standalone functions (`validate_username`, `validate_full_name`, `validate_email`, `validate_phone`) and an `InputValidationError(field, message, code)` exception. Rules:
+  - **username**: lowercase ASCII letters, digits, `_`; must start with letter; max 20 chars; leading/trailing whitespace rejected.
+  - **full_name**: Unicode/accented letters, digits, and spaces allowed; leading/trailing whitespace rejected; multiple internal spaces collapsed to one.
+  - **email**: syntax validation + normalization via `email-validator` with `check_deliverability=False`. Optional `None` when not required.
+  - **phone**: validates via `phonenumbers` (E.164-interpretable input); accepts optional leading `+`; rejects extensions, noisy suffixes, and invalid characters; strips WhatsApp JID (`@c.us`, `@s.whatsapp.net`) and device (`:`) suffixes before parsing; returns digits-only canonical form (no `+` prefix).
+Used by Pydantic schemas, service layer, seed script, and WhatsApp console flows.
 - **`redis_client.py`** — `RedisConnectionManager` owns primary and backup `Redis` clients (pools) for the process lifetime. `FailoverPolicy` implements circuit breaker (CLOSED → OPEN → HALF_OPEN) based on consecutive failure threshold and open window. `execute()` routes operations to the active store, records success/failure, and falls back to backup when the breaker opens.
 - **`security.py`** — uses `PyJWT` (HS256) for tokens, `bcrypt` directly for password hashing (no passlib).
 - **`database.py`** — creates async engine + `sessionmaker` bound to `AsyncSession`.
@@ -86,11 +99,11 @@ backend/
 ### Services
 
 - **`AuthService`** — `authenticate()` (login), `create_tokens()` (JWT + refresh session), `refresh_access_token()` (rotation + inactive check), `revoke_refresh_token()` (logout), `identify_by_phone()` (n8n hook, normalizes phone before lookup).
-- **`TenantService`** — CRUD with deactivate (revokes refresh sessions), activate, delete (only inactive, also removes Evolution instance), phone uniqueness, username uniqueness, password auto-generation.
-- **`ProfileService`** — get/update profile (cross-table phone uniqueness), change password.
+- **`TenantService`** — CRUD with deactivate (revokes refresh sessions), activate, delete (only inactive, also removes Evolution instance), phone uniqueness, username uniqueness, password auto-generation. Enforces `input_validation` policy defensively before persistence.
+- **`ProfileService`** — get/update profile (cross-table phone uniqueness), change password. Enforces `input_validation` policy defensively before persistence.
 - **`EvolutionClient`** — async HTTP client for Evolution API. Creates WhatsApp instances (`/instance/create`), configures n8n integration (`/n8n/create/{name}`), and deletes instances (`/instance/delete/{name}`) on tenant removal. Transaction safety: rollback DB on Evolution failure. Skipped with warning if `EVOLUTION_API_URL` or `EVOLUTION_API_KEY` not configured.
 - **`WhatsAppSessionService`** — manages ephemeral conversation state in Redis via `RedisConnectionManager.execute()`. Stores `ConversationSession` as JSON under `session:{phone}`. Supports `get_session`, `create_session`, `save_session` (with `touch_ttl` parameter), `update_session`, and `clear_session`. TTL refreshed only on valid flow progress. Exposes `used_backup` signal for contingency detection.
-- **`WhatsAppConsoleService`** — routes WhatsApp messages through conversation flows. Handles menu display, numeric selection, create/edit/deactivate/delete tenant flows, help, fallback, global reset, contingency reset (backup missing session), and TTL refresh discipline. Returns deterministic reply text for n8n transport.
+- **`WhatsAppConsoleService`** — routes WhatsApp messages through conversation flows. Handles menu display, numeric selection, create/edit/deactivate/delete tenant flows, help, fallback, global reset, contingency reset (backup missing session), and TTL refresh discipline. Returns deterministic reply text for n8n transport. Validates each field step via `input_validation` policy and reprompts on failure without losing previously collected data.
 - **`ContingencyReplyPolicy`** — defines two relayable replies: `SESSION_RESET` (failover backup lacks session) and `TEMPORARY_UNAVAILABLE` (both Redis stores down).
 
 ### Database migrations
@@ -101,6 +114,8 @@ Alembic is configured to read `DATABASE_URL` from the environment variable at ru
 
 ```
 POST /api/v1/tenants
+  → Pydantic schema validates fields (422 on invalid format)
+  → TenantService normalizes via input_validation policy
   → Validate username/phone uniqueness
   → Create User + TenantProfile (db.flush())
   → EvolutionClient.create_instance(name)    — POST /instance/create
@@ -146,7 +161,7 @@ DELETE /api/v1/tenants/{id}
 
 ## Tests
 
-368 tests across 15 test files. Uses `aiosqlite` in-memory DB. Evolution API calls are disabled in tests by clearing `evolution_client.api_key`. Redis operations use fake/test doubles — no Redis cloud dependency.
+542 tests across 16 test files. Uses `aiosqlite` in-memory DB. Evolution API calls are disabled in tests by clearing `evolution_client.api_key`. Redis operations use fake/test doubles — no Redis cloud dependency.
 
 ```bash
 cd backend && uv run pytest -v

@@ -10,6 +10,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from app.core.input_validation import (
+    InputValidationError,
+    validate_email,
+    validate_full_name,
+    validate_phone,
+    validate_username,
+)
 from app.core.redis_client import RedisUnavailableError
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
 
@@ -180,6 +187,33 @@ class WhatsAppConsoleService:
         "Intenta de nuevo."
     )
 
+    # Validation error templates (mapped from field validation policy)
+    _VALIDATION_MESSAGES = {
+        "full_name_required": "El nombre completo no puede estar vacío.",
+        "full_name_leading_trailing_spaces": (
+            "El nombre completo no debe comenzar o terminar con espacios."
+        ),
+        "full_name_invalid_chars": (
+            "El nombre completo solo puede contener letras, números y espacios."
+        ),
+        "email_invalid": "El email ingresado no es válido.",
+        "email_required": "El email no puede estar vacío.",
+        "phone_required": "El teléfono no puede estar vacío.",
+        "phone_no_digits": "El teléfono debe contener al menos un dígito.",
+        "phone_invalid": (
+            "El teléfono ingresado no es un número internacional válido."
+        ),
+        "phone_parse_error": "El teléfono ingresado no pudo ser procesado.",
+        "username_required": "El nombre de usuario no puede estar vacío.",
+        "username_too_long": (
+            "El nombre de usuario debe tener máximo 20 caracteres."
+        ),
+        "username_invalid": (
+            "El nombre de usuario debe empezar con una letra minúscula y "
+            "contener solo letras minúsculas, números y guiones bajos."
+        ),
+    }
+
     SKIP_WORDS = {"—", "skip", "ninguno", "none", "-"}
 
     # Edit flow identifiers
@@ -294,6 +328,17 @@ class WhatsAppConsoleService:
         "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas "
         "o minúsculas)."
     )
+
+    # ------------------------------------------------------------------
+    # Validation error formatting
+    # ------------------------------------------------------------------
+
+    def _validation_error_reply(
+        self, exc: InputValidationError, reprompt: str
+    ) -> str:
+        """Format an ``InputValidationError`` into a Spanish reply + reprompt."""
+        msg = self._VALIDATION_MESSAGES.get(exc.code, exc.message)
+        return "❌ " + msg + "\n\n" + reprompt
 
     # ------------------------------------------------------------------
     # Public API
@@ -633,15 +678,13 @@ class WhatsAppConsoleService:
         session,
         session_service,
     ) -> str:
-        """Store full name and transition to email prompt."""
-        full_name = msg.strip()
-        if not full_name:
-            return (
-                "❌ El nombre completo no puede estar vacío.\n\n"
-                + self.CREATE_PROMPT_FULL_NAME
-            )
+        """Validate full name, store normalized, transition to email."""
+        try:
+            normalized = validate_full_name(msg)
+        except InputValidationError as exc:
+            return self._validation_error_reply(exc, self.CREATE_PROMPT_FULL_NAME)
 
-        session.temp_data["full_name"] = full_name
+        session.temp_data["full_name"] = normalized
         session.step = self.CREATE_STEP_EMAIL
         if session_service is not None:
             await session_service.save_session(session)
@@ -655,12 +698,19 @@ class WhatsAppConsoleService:
         session,
         session_service,
     ) -> str:
-        """Store email (or None if skipped) and transition to phone prompt."""
+        """Validate email, store normalized (or None if skipped),
+        transition to phone prompt."""
         stripped = msg.strip()
         if not stripped or stripped.lower() in self.SKIP_WORDS:
             session.temp_data["email"] = None
         else:
-            session.temp_data["email"] = stripped
+            try:
+                normalized = validate_email(stripped, required=False)
+            except InputValidationError as exc:
+                return self._validation_error_reply(
+                    exc, self.CREATE_PROMPT_EMAIL
+                )
+            session.temp_data["email"] = normalized
 
         session.step = self.CREATE_STEP_PHONE
         if session_service is not None:
@@ -675,12 +725,19 @@ class WhatsAppConsoleService:
         session,
         session_service,
     ) -> str:
-        """Store phone (or None if skipped) and transition to username prompt."""
+        """Validate phone, store canonical digits-only (or None if skipped),
+        transition to username prompt."""
         stripped = msg.strip()
         if not stripped or stripped.lower() in self.SKIP_WORDS:
             session.temp_data["phone"] = None
         else:
-            session.temp_data["phone"] = stripped
+            try:
+                normalized = validate_phone(stripped, required=False)
+            except InputValidationError as exc:
+                return self._validation_error_reply(
+                    exc, self.CREATE_PROMPT_PHONE
+                )
+            session.temp_data["phone"] = normalized
 
         session.step = self.CREATE_STEP_USERNAME
         if session_service is not None:
@@ -696,26 +753,28 @@ class WhatsAppConsoleService:
         session_service,
         tenant_service,
     ) -> str:
-        """Store username and transition to evolution instance prompt.
+        """Validate username, store normalized, check duplicates,
+        transition to evolution instance prompt.
 
-        If a ``tenant_service`` is available, the username is validated for
-        duplicates *before* advancing the flow.  When the username is a
-        duplicate, the error is shown and the step stays at ``username``.
+        Syntax validation happens *before* duplicate check so that
+        syntactically invalid values do not trigger a database lookup.
         """
-        username = msg.strip()
-        if not username:
-            return self.CREATE_ERROR_USERNAME_EMPTY
+        # Central syntax validation first (no duplicate lookup on bad syntax)
+        try:
+            normalized = validate_username(msg)
+        except InputValidationError as exc:
+            return self._validation_error_reply(exc, self.CREATE_PROMPT_USERNAME)
 
-        # Validate duplicate username via targeted query (not fetching all tenants)
+        # Validate duplicate username via targeted query
         if tenant_service is not None and hasattr(tenant_service, "get_tenant_by_username"):
-            existing = await tenant_service.get_tenant_by_username(username)
+            existing = await tenant_service.get_tenant_by_username(normalized)
             if existing is not None:
                 return (
-                    "❌ El nombre de usuario *" + username + "* ya está registrado.\n\n"
+                    "❌ El nombre de usuario *" + normalized + "* ya está registrado.\n\n"
                     "Por favor, elige otro nombre de usuario."
                 )
 
-        session.temp_data["username"] = username
+        session.temp_data["username"] = normalized
         session.step = self.CREATE_STEP_EVOLUTION_INSTANCE
         if session_service is not None:
             await session_service.save_session(session)
@@ -1164,9 +1223,10 @@ class WhatsAppConsoleService:
     ) -> str:
         """Handle the new value for the field being edited.
 
-        Validates, updates via tenant_service, and returns the updated
-        Tenant detail screen on success.  On validation error, reprompts
-        without losing the selected tenant context.
+        Validates the value using the central policy, then updates via
+        ``tenant_service`` and returns the updated detail screen on
+        success.  On validation error, reprompts without losing the
+        selected tenant context.
         """
         field = session.temp_data.get("edit_field")
         if not field:
@@ -1174,13 +1234,35 @@ class WhatsAppConsoleService:
 
         new_value = msg.strip()
 
-        # Validate required fields
-        if field == "full_name" and not new_value:
-            return (
-                "❌ El nombre completo no puede estar vacío.\n\n"
-                + self.EDIT_FIELD_PROMPTS["full_name"]
-            )
-        if field == "evolution_instance_name" and not new_value:
+        # Validate field value using central policy
+        if field == "full_name":
+            try:
+                new_value = validate_full_name(msg)
+            except InputValidationError as exc:
+                return self._validation_error_reply(
+                    exc, self.EDIT_FIELD_PROMPTS["full_name"]
+                )
+        elif field == "email":
+            if not new_value:
+                new_value = None  # Clear optional field
+            else:
+                try:
+                    new_value = validate_email(new_value, required=False)
+                except InputValidationError as exc:
+                    return self._validation_error_reply(
+                        exc, self.EDIT_FIELD_PROMPTS["email"]
+                    )
+        elif field == "phone":
+            if not new_value:
+                new_value = None  # Clear optional field
+            else:
+                try:
+                    new_value = validate_phone(new_value, required=False)
+                except InputValidationError as exc:
+                    return self._validation_error_reply(
+                        exc, self.EDIT_FIELD_PROMPTS["phone"]
+                    )
+        elif field == "evolution_instance_name" and not new_value:
             return (
                 "❌ El nombre de instancia Evolution no puede estar vacío.\n\n"
                 + self.EDIT_FIELD_PROMPTS["evolution_instance_name"]

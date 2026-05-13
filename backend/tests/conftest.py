@@ -61,7 +61,7 @@ async def master_user(db_session):
     )
     db_session.add(user)
     await db_session.flush()
-    db_session.add(MasterProfile(id=user.id, name="Master User", phone="+10000000000"))
+    db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
     await db_session.commit()
     return user
 
@@ -79,7 +79,7 @@ async def active_tenant_user(db_session):
         TenantProfile(
             id=user.id,
             full_name="Active Tenant",
-            phone="+20000000000",
+            phone="+12015550002",
             is_active=True,
         )
     )
@@ -100,7 +100,7 @@ async def deactivated_tenant_user(db_session):
         TenantProfile(
             id=user.id,
             full_name="Inactive Tenant",
-            phone="+30000000000",
+            phone="+12015550003",
             is_active=False,
         )
     )
