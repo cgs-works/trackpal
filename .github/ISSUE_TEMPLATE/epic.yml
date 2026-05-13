@@ -1,0 +1,87 @@
+name: Epic
+description: A large initiative composed of multiple features, tasks, or bugs
+title: "[Epic]: "
+labels: [epic]
+projects: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use for tracking large bodies of work. An epic should have a clear
+        goal, defined scope, and link to child issues.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What does success look like? One or two sentences.
+      placeholder: Enable tenants to manage their customers and subscriptions entirely from their dashboard, without involving the Master.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+      description: What is explicitly included
+      placeholder: |
+        - Customer CRUD (backend + frontend)
+        - Subscription CRUD (backend + frontend)
+        - Service catalog seeding
+        - Tenant dashboard navigation updates
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What is explicitly NOT included
+      placeholder: |
+        - WhatsApp-based customer management
+        - Billing/invoicing
+        - Multi-language support
+    validations:
+      required: false
+
+  - type: textarea
+    id: issues
+    attributes:
+      label: Related issues
+      description: Checklist of child issues tracking this epic
+      placeholder: |
+        - [ ] #<issue-number> Customer CRUD backend
+        - [ ] #<issue-number> Customer CRUD frontend
+        - [ ] #<issue-number> Subscription CRUD backend
+        - [ ] #<issue-number> Subscription CRUD frontend
+      render: markdown
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - backend
+        - frontend
+        - n8n
+        - infra
+        - docs
+        - testing
+        - devops
+        - security
+        - design
+    validations:
+      required: true
+
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone
+      description: Milestone this epic belongs to (e.g. MVP, v1.1)
+      placeholder: MVP
+    validations:
+      required: false

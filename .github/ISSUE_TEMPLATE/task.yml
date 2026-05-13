@@ -1,0 +1,65 @@
+name: Task
+description: A concrete implementation task, chore, or technical debt item
+title: "[Task]: "
+labels: [task, p2]
+projects: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use for technical work that is not a bug or user-facing feature:
+        refactors, dependency upgrades, tooling, CI, documentation, tests.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done and why
+      placeholder: Upgrade SQLAlchemy from 2.0.25 to 2.0.36 to pick up the async connection pool fix.
+    validations:
+      required: true
+
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: Definition of done
+      description: Concrete checklist for completion
+      placeholder: |
+        - [ ] Dependency updated in pyproject.toml
+        - [ ] No breaking changes in existing queries
+        - [ ] Full test suite passes
+        - [ ] Smoke test on staging
+      render: markdown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - backend
+        - frontend
+        - n8n
+        - infra
+        - docs
+        - testing
+        - devops
+        - security
+        - design
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Effort
+      options:
+        - small (hours)
+        - medium (1-2 days)
+        - large (3-5 days)
+        - unknown
+    validations:
+      required: true

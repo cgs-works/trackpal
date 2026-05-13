@@ -1,0 +1,75 @@
+name: Feature Request
+description: Propose a new feature or improvement for Trackpal
+title: "[Feature]: "
+labels: [feature, p2]
+projects: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature. Please describe the problem first,
+        then your proposed solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve? Who is affected?
+      placeholder: Tenants currently have no way to view their customer list from the dashboard. They have to ask the Master via WhatsApp.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What do you want to happen? Be specific.
+      placeholder: Add a Customers view to the Tenant Dashboard with a table showing name, phone, active subscriptions, and a search bar.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else have you considered?
+      placeholder: |
+        - Adding customer management to WhatsApp instead
+        - Exporting a CSV from the backend
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist of conditions that must be met
+      placeholder: |
+        - [ ] Customer list shows paginated table
+        - [ ] Each row shows name, phone, active subscriptions count
+        - [ ] Search filters by name or phone
+        - [ ] API endpoint returns 200 with customers
+        - [ ] Tests cover list, search, and pagination edge cases
+      render: markdown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system does this affect?
+      multiple: true
+      options:
+        - backend
+        - frontend
+        - n8n
+        - infra
+        - docs
+        - testing
+        - devops
+        - security
+        - design
+    validations:
+      required: true
