@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from app.core.phone import normalize_phone
 
 
 class ProfileResponse(BaseModel):
@@ -24,6 +26,11 @@ class ProfileUpdate(BaseModel):
     email: str | None = None
     phone: str | None = None
     name: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone_field(cls, v: str | None) -> str | None:
+        return normalize_phone(v)
 
 
 class PasswordChange(BaseModel):

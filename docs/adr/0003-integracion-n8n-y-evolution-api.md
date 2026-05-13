@@ -58,53 +58,38 @@ Cuando el Master crea un tenant, el menú pregunta:
 
 ## Sesiones
 
-El estado de la conversación se gestiona con data table de n8n
-(`phone`, `step`, `temp_data`).
+El estado de la conversación se gestiona **exclusivamente en Redis**
+por el backend FastAPI (ver ADR-0004). n8n ya no mantiene data tables
+de sesión. La canonicalización del phone (solo dígitos, sin `+`) la
+realiza el backend vía `PhoneNormalizer.normalize_phone()`.
 
-## Workflow MVP creado en n8n
+## Workflow actual — Transport-only
+
+El workflow transporta mensajes entre Evolution API y el backend sin
+interpretar lógica de negocio. El backend (vía `WhatsAppConsoleService`)
+posee toda la lógica conversacional, menús, estado de sesión en Redis
+y decisiones CRUD.
 
 - Instancia n8n: `https://rs-n8n.wilfredocamacho.dev`
 - Workflow: `Trackpal WhatsApp Bot`
-- Workflow ID: `vtqUvdkNnTNcKnwj`
-- Workflow exportado: `n8n/trackpal-whatsapp-bot.workflow.json`
+- Workflow export: `n8n/Trackpal WhatsApp Bot.json`
 - Webhook path: `trackpal-whatsapp-bot`
-- Webhook URL: `https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot`
-- Data table: `wa_sessions` (ID: `tOsSN3fuGDtB0Svf`, columnas: `phone`, `step`, `temp_data`, `created_at`, `updated_at`)
-- 8 nodos: Webhook → Parse input → Identify user → Merge identity → Route by role → (Menu router | Access denied) → Evolution API Send
+- 5 nodos: Webhook → Parse input → Console call → Merge reply → Evolution API Send
 
-### Valores configurables en el workflow exportado
-
-Dado que la licencia de n8n no permite gestionar variables desde la API pública, el workflow exportado usa placeholders que deben reemplazarse al importarlo/desplegarlo:
-
-| Variable | Placeholder |
-|---|---|
-| Trackpal API URL | `YOUR_TRACKPAL_API_URL/api/v1` |
-| Trackpal X-API-Key | `YOUR_TRACKPAL_API_KEY` |
-| Evolution API URL | `YOUR_EVOLUTION_API_URL` |
-| Evolution API Key | `YOUR_EVOLUTION_API_KEY` |
-
-### Nodos del workflow
+### Nodos del workflow transport-only
 
 1. **Webhook** — POST en `/webhook/trackpal-whatsapp-bot`. Recibe payload de Evolution API.
 2. **Parse input** (Code) — Extrae `phone`, `message` (cuerpo del texto), e `instance` del payload de Evolution API. Limpia sufijos `@c.us` / `@s.whatsapp.net` del número.
-3. **Identify user** (HTTP Request) — `GET` a Trackpal API `/integrations/n8n/identify?phone={{phone}}` con header `X-API-Key: YOUR_TRACKPAL_API_KEY`.
-4. **Merge identity** (Code) — Combina datos de entrada con la respuesta de identidad. Maneja 404 (usuario no encontrado).
-5. **Route by role** (IF) — Si `role === "master"` continúa; si no, envía mensaje de acceso denegado.
-6. **Menu router** (Code) — Analiza el mensaje numérico (1-8):
-   - Menú principal con 8 opciones (Crear, Listar, Ver, Editar, Desactivar, Reactivar, Eliminar, Ayuda)
-   - Si es opción 1 (Crear): establece step `awaiting_full_name`, guarda sesión
-   - Si es opción 2 (Listar): step `list_tenants`
-   - Si es opciones 3-7: step `awaiting_tenant_id`
-   - Si es opción 8: muestra ayuda
-   - Si no es válido: muestra menú nuevamente
-7. **Access denied text** (Code) — Mensaje de error para no-Master.
-8. **Evolution API Send** (HTTP Request) — `POST` a Evolution API `/message/sendText/{instance}` con header `apikey: YOUR_EVOLUTION_API_KEY`. Envía el texto manteniendo sesión.
+3. **Console call** (HTTP POST) — `POST /api/v1/integrations/n8n/console` con body `{phone, message, instance}` y header `X-API-Key`. El backend maneja toda la sesión y lógica.
+4. **Merge reply** (Code) — Combina `phone`/`instance` originales con `reply` del backend.
+5. **Evolution API Send** (HTTP Request) — `POST /message/sendText/{instance}` con el texto de respuesta.
 
 ### Notas operativas
 
-- El placeholder `YOUR_TRACKPAL_API_URL` debe apuntar al backend FastAPI público. Si se usa ngrok, se debe actualizar manualmente en el nodo "Identify user" cuando cambie el túnel.
-- El formato de número de teléfono en Evolution API no usa signo `+`. El workflow remueve `+` automáticamente antes de enviar.
-- La funcionalidad completa de multi-paso (crear tenant con varios campos, CRUD completo) requiere nodos adicionales para manejar cada step de la sesión. Actualmente el workflow soporta el menú principal y enruta por opción.
+- El placeholder `YOUR_TRACKPAL_API_URL` debe apuntar al backend FastAPI público.
+- La canonicalización completa del phone (dígitos, sin `+`, sin sufijos JID) la realiza el backend vía `PhoneNormalizer.normalize_phone()`.
+- La sesión conversacional se almacena en Redis con TTL de 15 minutos (ver ADR-0004 para la estrategia HA completa).
+- Detalles completos del workflow en `docs/architecture/n8n-workflow.md`.
 
 ## Rutas del frontend (Vue Router)
 

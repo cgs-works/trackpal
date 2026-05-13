@@ -31,6 +31,15 @@ El archivo `render.yaml` en la raíz permite deploy automático conectando el re
 | `MASTER_PASSWORD` | `<tu-password>` | Para el seed del Master |
 | `MASTER_NAME` | `Master Trackpal` | |
 | `MASTER_PHONE` | `+521234567890` | Tu WhatsApp conectado a Evolution API |
+| `REDIS_PRIMARY_URL` | `redis://...` | Redis principal (obligatorio para HA). Soporta `redis://` y `rediss://` |
+| `REDIS_BACKUP_URL` | `redis://...` | Redis backup (opcional, para failover HA). Soporta `redis://` y `rediss://` |
+| `REDIS_POOL_SIZE` | `20` | Conexiones máximas por pool |
+| `REDIS_SOCKET_TIMEOUT_SECONDS` | `5.0` | Timeout de socket Redis |
+| `REDIS_CONNECT_TIMEOUT_SECONDS` | `5.0` | Timeout de conexión Redis |
+| `REDIS_HEALTH_CHECK_INTERVAL_SECONDS` | `30.0` | Intervalo health check Redis |
+| `REDIS_FAILOVER_FAILURE_THRESHOLD` | `3` | Fallos consecutivos antes de failover |
+| `REDIS_BREAKER_OPEN_SECONDS` | `30` | Ventana breaker abierto (segundos) |
+| `WHATSAPP_SESSION_TTL_MINUTES` | `15` | TTL de sesión conversacional |
 
 ### Post-deploy
 

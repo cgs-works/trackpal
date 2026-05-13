@@ -23,7 +23,7 @@ async def test_create_tenant(client, auth_headers):
     data = response.json()
     assert data["full_name"] == "Tenant One"
     assert data["email"] == "tenant@example.com"
-    assert data["phone"] == "+15550000001"
+    assert data["phone"] == "15550000001"  # canonical: no + prefix
     assert data["username"] == "tenant-one"
     assert data["is_active"] is True
     assert data["plain_password"] is None
@@ -47,10 +47,10 @@ async def test_create_tenant_auto_password(client, auth_headers):
 
 
 async def test_create_tenant_duplicate_username(client, auth_headers):
-    await _create_tenant(client, auth_headers, username="dup-user", phone="+15550000999")
+    await _create_tenant(client, auth_headers, username="dup-user", phone="15550000999")
 
     response = await _create_tenant(
-        client, auth_headers, username="dup-user", phone="+15550000998"
+        client, auth_headers, username="dup-user", phone="15550000998"
     )
 
     assert response.status_code == 409
@@ -112,7 +112,7 @@ async def test_update_tenant(client, auth_headers, active_tenant_user):
     data = response.json()
     assert data["full_name"] == "Updated Tenant"
     assert data["email"] == "updated@example.com"
-    assert data["phone"] == "+15550000003"
+    assert data["phone"] == "15550000003"  # canonical: no + prefix
     assert data["evolution_instance_name"] == "updated-instance"
 
 
@@ -156,6 +156,82 @@ async def test_delete_active_tenant_fails(client, auth_headers, active_tenant_us
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Cannot delete active tenant. Deactivate first."
+
+
+async def test_create_tenant_phone_is_canonical(client, auth_headers, db_session):
+    """Phone stored without + prefix when created with + input."""
+    from uuid import UUID
+
+    response = await _create_tenant(
+        client,
+        auth_headers,
+        username="canonical-phone-test",
+        phone="+15559999999",
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["phone"] == "15559999999"  # canonical: no + prefix
+
+    # Verify in database directly
+    from app.models import TenantProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(TenantProfile).where(TenantProfile.id == UUID(data["id"]))
+    )
+    profile = result.scalar_one_or_none()
+    assert profile is not None
+    assert profile.phone == "15559999999"
+
+
+async def test_create_tenant_phone_jid_becomes_canonical(client, auth_headers, db_session):
+    """JID suffix phone stored as canonical digits-only."""
+    from uuid import UUID
+
+    response = await _create_tenant(
+        client,
+        auth_headers,
+        username="canonical-jid-test",
+        phone="+15558888888@s.whatsapp.net",
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["phone"] == "15558888888"
+
+    from app.models import TenantProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(TenantProfile).where(TenantProfile.id == UUID(data["id"]))
+    )
+    profile = result.scalar_one_or_none()
+    assert profile.phone == "15558888888"
+
+
+async def test_update_tenant_phone_is_canonical(client, auth_headers, active_tenant_user, db_session):
+    """Updated phone stored without + prefix."""
+    from uuid import UUID
+
+    response = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={
+            "full_name": "Updated Tenant",
+            "phone": "+15557777777",
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["phone"] == "15557777777"
+
+    from app.models import TenantProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(TenantProfile).where(TenantProfile.id == UUID(str(active_tenant_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    assert profile.phone == "15557777777"
 
 
 async def test_tenant_endpoints_require_master(client, active_tenant_user):

@@ -198,3 +198,88 @@ async def test_identify_deactivated_tenant(client, deactivated_tenant_user):
     )
 
     assert response.status_code == 404
+
+
+async def test_identify_plus_prefix_with_canonical_db(client, db_session, master_user):
+    """Identify with + prefix works when DB stores canonical phone.
+
+    Sets master's phone to canonical digits-only, then identifies
+    with + prefix input.
+    """
+    from uuid import UUID
+    from app.models import MasterProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    profile.phone = "10000000000"
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/v1/integrations/n8n/identify",
+        params={"phone": "+10000000000"},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "master"
+    assert response.json()["role"] == "master"
+
+
+async def test_identify_jid_suffix_with_canonical_db(client, db_session, master_user):
+    """JID suffix input identifies canonical DB phone."""
+    from uuid import UUID
+    from app.models import MasterProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    profile.phone = "10000000000"
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/v1/integrations/n8n/identify",
+        params={"phone": "10000000000@s.whatsapp.net"},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "master"
+
+
+async def test_identify_plus_jid_suffix_with_canonical_db(client, db_session, master_user):
+    """+ prefix + JID suffix identifies canonical DB phone."""
+    from uuid import UUID
+    from app.models import MasterProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    profile.phone = "10000000000"
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/v1/integrations/n8n/identify",
+        params={"phone": "+10000000000@s.whatsapp.net"},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "master"
+
+
+async def test_identify_plus_prefix_finds_prefixed_db(
+    client, master_user
+):
+    """+ prefix input still finds DB phone with + prefix (pre-migration)."""
+    response = await client.get(
+        "/api/v1/integrations/n8n/identify",
+        params={"phone": "+10000000000"},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "master"

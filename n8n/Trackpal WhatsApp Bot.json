@@ -1,1 +1,116 @@
-{"name": "Trackpal WhatsApp Bot", "nodes": [{"parameters": {"httpMethod": "POST", "path": "trackpal-whatsapp-bot", "responseMode": "lastNode", "options": {}}, "id": "1", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [0, 0], "webhookId": "a4adb69b-b32f-4a0c-bae4-de67394ec149"}, {"parameters": {"jsCode": "const payload = $json;\n\n// Evolution API n8n integration format (n8n/create endpoint)\n// Fields arrive inside payload.body\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\n\n// Generic webhook format (fallback)\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = remoteJid || String(from).replace('@c.us','').replace('@s.whatsapp.net','');\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"}, "id": "2", "name": "Parse input", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [224, 0]}, {"parameters": {"conditions": {"options": {"caseSensitive": true}, "conditions": [{"leftValue": "=$json.instance", "rightValue": "Sublify", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"}, "options": {}}, "id": "12", "name": "Is Sublify?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [448, -80]}, {"parameters": {"method": "GET", "url": "=YOUR_TRACKPAL_API_URL/api/v1/integrations/n8n/identify?phone={{encodeURIComponent($json.phone)}}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY"}]}, "options": {"response": {"response": {"neverError": true}}}}, "id": "3", "name": "Identify user", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [672, -80]}, {"parameters": {"jsCode": "const input = $(\"Parse input\").first().json; const id = $json; if (!id || id.statusCode === 404 || !id.role) { return [{ json: { ...input, identity: null, role: null, allowed: false, error: \"Usuario no encontrado\" } }]; } return [{ json: { ...input, identity: id, role: id.role || null, allowed: id.role === \"master\" } }];"}, "id": "4", "name": "Merge identity", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [896, -80]}, {"parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1}, "conditions": [{"leftValue": "=$json.role", "rightValue": "master", "operator": {"type": "string", "operation": "equals"}, "id": "fedfdf91-a614-4b87-af4c-2bef6e81c5c0"}], "combinator": "and"}, "options": {}}, "id": "5", "name": "Route by role", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1104, -80]}, {"parameters": {"jsCode": "return [{ json: { ...$json, reply: \"Este servicio solo esta disponible para el Master\" } }];"}, "id": "6", "name": "Access denied text", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1328, 128]}, {"parameters": {"jsCode": "const p = $json; const phone = p.phone; const msg = p.message; const menu = ..."}, "id": "7", "name": "Menu router", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1344, -240]}, {"parameters": {"method": "POST", "url": "=YOUR_EVOLUTION_API_URL/message/sendText/{{$json.instance}}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "apikey", "value": "YOUR_EVOLUTION_API_KEY"}]}, "sendBody": true, "specifyBody": "keypair", "options": {"response": {"response": {"neverError": true}}}, "bodyParameters": {"parameters": [{"name": "number", "value": "={{$json.phone.replace('+', '')}}"}, {"name": "text", "value": "={{$json.reply}}"}]}}, "id": "8", "name": "Evolution API Send", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [1824, -80]}, {"parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"}, "conditions": [{"leftValue": "=$json.action", "rightValue": "list", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"}, "options": {}}, "id": "9", "name": "Is list action?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1568, -280]}, {"parameters": {"url": "=YOUR_TRACKPAL_API_URL/api/v1/tenants", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY"}]}, "options": {"response": {"response": {"neverError": true}}}}, "id": "10", "name": "List tenants API", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.4, "position": [1792, -360]}, {"parameters": {"jsCode": "const p = $(\"Menu router\").first().json; const data = $json.data || []; let text = ..."}, "id": "11", "name": "Format list response", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [2016, -360]}], "connections": {"Webhook": {"main": [[{"node": "Parse input", "type": "main", "index": 0}]]}, "Parse input": {"main": [[{"node": "Is Sublify?", "type": "main", "index": 0}]]}, "Is Sublify?": {"main": [[{"node": "Identify user", "type": "main", "index": 0}], []]}, "Identify user": {"main": [[{"node": "Merge identity", "type": "main", "index": 0}]]}, "Merge identity": {"main": [[{"node": "Route by role", "type": "main", "index": 0}]]}, "Route by role": {"main": [[{"node": "Access denied text", "type": "main", "index": 0}], [{"node": "Menu router", "type": "main", "index": 0}]]}, "Menu router": {"main": [[{"node": "Is list action?", "type": "main", "index": 0}]]}, "Is list action?": {"main": [[{"node": "List tenants API", "type": "main", "index": 0}], [{"node": "Evolution API Send", "type": "main", "index": 0}]]}, "List tenants API": {"main": [[{"node": "Format list response", "type": "main", "index": 0}]]}, "Format list response": {"main": [[{"node": "Evolution API Send", "type": "main", "index": 0}]]}, "Access denied text": {"main": [[{"node": "Evolution API Send", "type": "main", "index": 0}]]}}}
+{
+  "name": "Trackpal WhatsApp Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "trackpal-whatsapp-bot",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "webhookId": "a4adb69b-b32f-4a0c-bae4-de67394ec149"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\n// Evolution API n8n integration format (n8n/create endpoint)\n// Fields arrive inside payload.body\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\n\n// Generic webhook format (fallback)\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"
+      },
+      "id": "2",
+      "name": "Parse input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=YOUR_TRACKPAL_API_URL/api/v1/integrations/n8n/console",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ phone: $json.phone, message: $json.message, instance: $json.instance }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3",
+      "name": "Console call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [448, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $(\"Parse input\").first().json;\nconst reply = $json.reply || '';\nreturn [{ json: { ...input, reply } }];"
+      },
+      "id": "4",
+      "name": "Merge reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [672, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=YOUR_EVOLUTION_API_URL/message/sendText/{{$json.instance}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "YOUR_EVOLUTION_API_KEY" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: String($json.phone || '').replace('+', ''), text: String($json.reply || '') }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "5",
+      "name": "Evolution API Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [896, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Parse input", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse input": {
+      "main": [
+        [{ "node": "Console call", "type": "main", "index": 0 }]
+      ]
+    },
+    "Console call": {
+      "main": [
+        [{ "node": "Merge reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge reply": {
+      "main": [
+        [{ "node": "Evolution API Send", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
