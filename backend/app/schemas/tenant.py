@@ -24,10 +24,8 @@ class TenantCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str | None) -> str | None:
-        if v is not None:
-            v = v.strip()
-            if v == "" or len(v) < 6:
-                raise ValueError("Password must be at least 6 characters")
+        if v is not None and len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
         return v
 
     @field_validator("username")
