@@ -2,6 +2,15 @@
 
 <!-- One or two sentences describing what this PR does and why. -->
 
+## Type of Change
+
+- [ ] New feature
+- [ ] Bug fix
+- [ ] Refactor
+- [ ] Chore (deps, tooling, CI)
+- [ ] Docs
+- [ ] Other:
+
 ## Changes
 
 <!-- List key changes, files, or modules touched. -->
@@ -16,7 +25,8 @@ Closes #
 
 <!-- How was this tested? What commands to run? -->
 
-- [ ] Tests pass
+- [ ] Backend tests: `cd backend && uv run pytest -v`
+- [ ] Frontend build: `cd frontend && npm run build`
 - [ ] Manual verification (describe)
 
 ## Checklist
