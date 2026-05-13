@@ -12,28 +12,39 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [0, 0],
-      "webhookId": "a4adb69b-b32f-4a0c-bae4-de67394ec149"
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\n// Evolution API n8n integration format (n8n/create endpoint)\n// Fields arrive inside payload.body\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\n\n// Generic webhook format (fallback)\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"
+        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"
       },
       "id": "2",
       "name": "Parse input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [224, 0]
+      "position": [
+        224,
+        0
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=YOUR_TRACKPAL_API_URL/api/v1/integrations/n8n/console",
+        "url": "={{$env.TRACKPAL_BACKEND_URL}}/api/v1/integrations/n8n/console",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "X-API-Key", "value": "YOUR_TRACKPAL_API_KEY" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "X-API-Key",
+              "value": "{{$env.TRACKPAL_N8N_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -51,26 +62,35 @@
       "name": "Console call",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [448, 0]
+      "position": [
+        672,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const input = $(\"Parse input\").first().json;\nconst reply = $json.reply || '';\nreturn [{ json: { ...input, reply } }];"
+        "jsCode": "const input = $('Parse input').first().json; const reply = $json.reply || ''; return [{ json: { ...input, reply } }];"
       },
       "id": "4",
       "name": "Merge reply",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [672, 0]
+      "position": [
+        896,
+        0
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=YOUR_EVOLUTION_API_URL/message/sendText/{{$json.instance}}",
+        "url": "={{$env.TRACKPAL_EVOLUTION_API_URL}}/message/sendText/{{$json.instance}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "YOUR_EVOLUTION_API_KEY" }
+            {
+              "name": "apikey",
+              "value": "{{$env.TRACKPAL_EVOLUTION_API_KEY}}"
+            }
           ]
         },
         "sendBody": true,
@@ -88,29 +108,67 @@
       "name": "Evolution API Send",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [896, 0]
+      "position": [
+        1120,
+        0
+      ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
-        [{ "node": "Parse input", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse input",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse input": {
       "main": [
-        [{ "node": "Console call", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Console call",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Console call": {
       "main": [
-        [{ "node": "Merge reply", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Merge reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Merge reply": {
       "main": [
-        [{ "node": "Evolution API Send", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Evolution API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
-  }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "31e47995-0cb0-4c0b-8e11-bf937e043bc1",
+  "id": "mN3k0vVO9kgBYQtV",
+  "tags": []
 }

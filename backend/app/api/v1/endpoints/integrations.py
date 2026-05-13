@@ -14,7 +14,9 @@ from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
 from app.services.tenant_service import TenantService
+from app.services.whatsapp_auth_session_service import WhatsAppAuthSessionService
 from app.services.whatsapp_console_service import WhatsAppConsoleService
+from app.services.whatsapp_master_console_facade import WhatsAppMasterConsoleFacade
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
@@ -192,15 +194,7 @@ async def whatsapp_console(
 
     phone = normalize_phone(request.phone) or ""
 
-    # Identify caller by phone
-    identity = await auth_service.identify_by_phone(db, phone)
-
-    if not identity or identity.get("role") != "master":
-        return WhatsAppConsoleResponse(
-            reply=console_service.ACCESS_DENIED,
-        )
-
-    # Create session service when Redis is available
+    # Create Redis-dependent services when available
     manager = get_redis_manager()
     if manager is None:
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
@@ -210,22 +204,37 @@ async def whatsapp_console(
         ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
     )
 
+    auth_session_service = WhatsAppAuthSessionService(
+        connection_manager=manager,
+        session_ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+        fail_threshold=settings.whatsapp_auth_fail_threshold,
+        lock_minutes=settings.whatsapp_auth_lock_minutes,
+        fail_window_minutes=settings.whatsapp_auth_fail_window_minutes,
+    )
+
     # Create tenant adapter for console service
     adapter = _TenantConsoleAdapter(tenant_service, db)
 
+    # Create facade orchestrator
+    facade = WhatsAppMasterConsoleFacade(
+        console_service=console_service,
+        session_service=session_service,
+        auth_session_service=auth_session_service,
+        tenant_service=adapter,
+    )
+
     try:
-        reply = await console_service.process_message(
+        reply = await facade.process_message(
             phone=phone,
             message=request.message,
-            is_master=True,
-            session_service=session_service,
-            tenant_service=adapter,
+            db=db,
         )
-    except Exception:
-        # Both Redis stores are unavailable, connection/timeout errors,
-        # or any other transient infrastructure failure.
-        # Return relayable unavailable reply — never degrade to stateless
-        # and never return HTTP 500 to n8n.
+    except (RuntimeError, ConnectionError, TimeoutError, OSError):
+        # Redis infrastructure failure — both stores unavailable,
+        # connection/timeout/OS errors. Return relayable unavailable
+        # reply — never degrade to stateless and never return HTTP
+        # 500 to n8n. Application-level bugs (AttributeError,
+        # TypeError, etc.) propagate as HTTP 500 for observability.
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
     return WhatsAppConsoleResponse(reply=reply)

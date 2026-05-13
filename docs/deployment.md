@@ -40,6 +40,9 @@ El archivo `render.yaml` en la raíz permite deploy automático conectando el re
 | `REDIS_FAILOVER_FAILURE_THRESHOLD` | `3` | Fallos consecutivos antes de failover |
 | `REDIS_BREAKER_OPEN_SECONDS` | `30` | Ventana breaker abierto (segundos) |
 | `WHATSAPP_SESSION_TTL_MINUTES` | `15` | TTL de sesión conversacional |
+| `WHATSAPP_AUTH_FAIL_THRESHOLD` | `5` | Intentos fallidos antes de bloqueo temporal |
+| `WHATSAPP_AUTH_LOCK_MINUTES` | `5` | Duración del bloqueo temporal (minutos) |
+| `WHATSAPP_AUTH_FAIL_WINDOW_MINUTES` | `15` | Ventana de contador de fallos (minutos) |
 
 ### Post-deploy
 
@@ -87,21 +90,27 @@ La URL será similar a: `https://trackpal.pages.dev`
 
 ## n8n Workflow
 
-Después del deploy:
+El workflow export (`n8n/Trackpal WhatsApp Bot.json`) usa `{{$env.*}}` expressions para evitar secretos en repositorio.
 
-1. Reemplazar placeholders en el workflow export (`n8n/trackpal-whatsapp-bot.workflow.json`):
-   - `YOUR_TRACKPAL_API_URL` → `https://trackpal-api.onrender.com/api/v1`
-   - `YOUR_TRACKPAL_API_KEY` → mismo valor que `N8N_API_KEY`
-   - `YOUR_EVOLUTION_API_URL` → tu instancia de Evolution API
-   - `YOUR_EVOLUTION_API_KEY` → API key de Evolution API
+### Variables de entorno en n8n
 
-2. Importar el JSON en n8n o editar los nodos manualmente
+Configurar en n8n (Settings → Environment Variables o `~/.n8n/.env`):
 
+| Env var | Valor ejemplo |
+|---|---|
+| `TRACKPAL_BACKEND_URL` | `https://trackpal-api.onrender.com` |
+| `TRACKPAL_N8N_API_KEY` | mismo valor que `N8N_API_KEY` del backend |
+| `TRACKPAL_EVOLUTION_API_URL` | `https://rs-evoapi.wilfredocamacho.dev` |
+| `TRACKPAL_EVOLUTION_API_KEY` | API key de Evolution API |
+
+### Pasos
+
+1. Configurar las variables de entorno en n8n
+2. Importar el JSON (`n8n/Trackpal WhatsApp Bot.json`) en n8n o editar los nodos manualmente
 3. Configurar el webhook de Evolution API para apuntar a:
    ```
    https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot
    ```
-
 4. Activar el workflow
 
 ---

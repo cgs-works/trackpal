@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     redis_failover_failure_threshold: int = 3
     redis_breaker_open_seconds: int = 30
     whatsapp_session_ttl_minutes: int = 15
+    whatsapp_auth_fail_threshold: int = 5
+    whatsapp_auth_lock_minutes: int = 5
+    whatsapp_auth_fail_window_minutes: int = 15
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
