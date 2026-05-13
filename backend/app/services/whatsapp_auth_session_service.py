@@ -199,12 +199,13 @@ class WhatsAppAuthSessionService:
 
     async def record_failed_attempt(
         self, phone: str, *, now: datetime | None = None
-    ) -> tuple[int, bool]:
+    ) -> tuple[int, WhatsAppAuthLockState | None]:
         """Record a failed login attempt.
 
-        Returns ``(count, locked)`` where *count* is the consecutive
-        failure count *after* recording this attempt, and *locked* is
-        ``True`` when the phone is now locked out.
+        Returns ``(count, lock_state)`` where *count* is the
+        consecutive failure count *after* recording this attempt, and
+        *lock_state* is the ``WhatsAppAuthLockState`` when the phone
+        becomes locked out, or ``None`` otherwise.
 
         When *count* reaches the threshold, a lock is created and the
         fail counter is cleared.
@@ -215,7 +216,7 @@ class WhatsAppAuthSessionService:
         fail_key = self._fail_key(phone)
         lock_key = self._lock_key(phone)
 
-        async def _record(client: Any) -> tuple[int, bool]:
+        async def _record(client: Any) -> tuple[int, WhatsAppAuthLockState | None]:
             # Fetch existing fail state
             raw = await client.get(fail_key)
             state: WhatsAppAuthFailState | None = self._deserialise(raw, WhatsAppAuthFailState)
@@ -239,7 +240,7 @@ class WhatsAppAuthSessionService:
                 await client.set(lock_key, self._serialise(lock), ex=int(self._lock_minutes * 60))
                 # Clear fail counter
                 await client.delete(fail_key)
-                return (state.count, True)
+                return (state.count, lock)
 
             # Persist updated fail state with TTL
             ttl_remaining = self._fail_window_seconds
@@ -247,7 +248,7 @@ class WhatsAppAuthSessionService:
                 elapsed = (now - state.first_failed_at).total_seconds()
                 remaining = self._fail_window_seconds - elapsed
                 if remaining > 0:
-                    ttl_remaining = int(remaining)
+                    ttl_remaining = max(1, int(remaining))
                 else:
                     # Window expired — reset
                     state = WhatsAppAuthFailState(
@@ -258,6 +259,6 @@ class WhatsAppAuthSessionService:
                     ttl_remaining = self._fail_window_seconds
 
             await client.set(fail_key, self._serialise(state), ex=ttl_remaining)
-            return (state.count, False)
+            return (state.count, None)
 
         return await self._manager.execute("record_failed_attempt", _record)

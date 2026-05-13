@@ -314,33 +314,34 @@ class TestRecordFailedAttempt:
     async def test_first_failure_returns_count_1_not_locked(
         self, service: WhatsAppAuthSessionService
     ) -> None:
-        count, locked = await service.record_failed_attempt("+1234567890")
+        count, lock_state = await service.record_failed_attempt("+1234567890")
         assert count == 1
-        assert locked is False
+        assert lock_state is None
 
     async def test_repeated_failures_increment_count(
         self, service: WhatsAppAuthSessionService
     ) -> None:
         await service.record_failed_attempt("+1234567890")
-        count, locked = await service.record_failed_attempt("+1234567890")
+        count, lock_state = await service.record_failed_attempt("+1234567890")
         assert count == 2
-        assert locked is False
+        assert lock_state is None
 
     async def test_lockout_after_threshold(
         self, service: WhatsAppAuthSessionService
     ) -> None:
         # Our fixture uses fail_threshold=3
-        count1, locked1 = await service.record_failed_attempt("+1234567890")
+        count1, lock_state1 = await service.record_failed_attempt("+1234567890")
         assert count1 == 1
-        assert locked1 is False
+        assert lock_state1 is None
 
-        count2, locked2 = await service.record_failed_attempt("+1234567890")
+        count2, lock_state2 = await service.record_failed_attempt("+1234567890")
         assert count2 == 2
-        assert locked2 is False
+        assert lock_state2 is None
 
-        count3, locked3 = await service.record_failed_attempt("+1234567890")
+        count3, lock_state3 = await service.record_failed_attempt("+1234567890")
         assert count3 == 3
-        assert locked3 is True
+        assert lock_state3 is not None
+        assert lock_state3.is_locked is True
 
     async def test_lockout_creates_lock_state(
         self, service: WhatsAppAuthSessionService

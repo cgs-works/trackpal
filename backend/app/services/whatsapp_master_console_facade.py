@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.crud import users as user_crud
 from app.services.auth_service import AuthService
 from app.services.whatsapp_auth_session_service import (
     WhatsAppAuthSession,
@@ -226,12 +227,10 @@ class WhatsAppMasterConsoleFacade:
         # if the username doesn't exist, so they can correct it immediately
         # instead of getting trapped in the password step.
         if db is not None:
-            from app.crud import users as user_crud
             existing_user = await user_crud.get_by_username(db, msg_lower)
             if existing_user is None:
-                _, locked = await self._auth_session_service.record_failed_attempt(phone)
-                if locked:
-                    lock_state = await self._auth_session_service.get_lock_state(phone)
+                _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
+                if lock_state is not None:
                     remaining = self._compute_remaining_minutes(lock_state)
                     await self._session_service.clear_session(phone)
                     return LOCKOUT_TEMPLATE.format(minutes=remaining)
@@ -276,23 +275,20 @@ class WhatsAppMasterConsoleFacade:
         if user is None:
             # Authentication failed — unknown username or wrong password
             # First check if username exists at all
-            from app.crud import users as user_crud
             existing_user = await user_crud.get_by_username(db, username)
 
             if existing_user is None:
                 # Unknown username — record failure
-                _, locked = await self._auth_session_service.record_failed_attempt(phone)
-                if locked:
-                    lock_state = await self._auth_session_service.get_lock_state(phone)
+                _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
+                if lock_state is not None:
                     remaining = self._compute_remaining_minutes(lock_state)
                     await self._session_service.clear_session(phone)
                     return LOCKOUT_TEMPLATE.format(minutes=remaining)
                 return UNKNOWN_USERNAME_TEMPLATE.format(username=username)
 
             # Wrong password — record failure
-            _, locked = await self._auth_session_service.record_failed_attempt(phone)
-            if locked:
-                lock_state = await self._auth_session_service.get_lock_state(phone)
+            _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
+            if lock_state is not None:
                 remaining = self._compute_remaining_minutes(lock_state)
                 # Clear conversation session
                 await self._session_service.clear_session(phone)
@@ -302,10 +298,9 @@ class WhatsAppMasterConsoleFacade:
 
         if user.role != "master":
             # Role not allowed — record failure
-            _, locked = await self._auth_session_service.record_failed_attempt(phone)
+            _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
             await self._session_service.clear_session(phone)
-            if locked:
-                lock_state = await self._auth_session_service.get_lock_state(phone)
+            if lock_state is not None:
                 remaining = self._compute_remaining_minutes(lock_state)
                 return LOCKOUT_TEMPLATE.format(minutes=remaining)
             return ROLE_NOT_ALLOWED
