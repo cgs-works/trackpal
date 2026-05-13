@@ -706,14 +706,10 @@ class WhatsAppConsoleService:
         if not username:
             return self.CREATE_ERROR_USERNAME_EMPTY
 
-        # Validate duplicate username if tenant_service is available
-        if tenant_service is not None and hasattr(tenant_service, "get_tenants"):
-            # Check against existing usernames via a tenant lookup
-            existing_tenants = await tenant_service.get_tenants()
-            existing_usernames = {
-                t.username for t in existing_tenants
-            } if existing_tenants else set()
-            if username in existing_usernames:
+        # Validate duplicate username via targeted query (not fetching all tenants)
+        if tenant_service is not None and hasattr(tenant_service, "get_tenant_by_username"):
+            existing = await tenant_service.get_tenant_by_username(username)
+            if existing is not None:
                 return (
                     "❌ El nombre de usuario *" + username + "* ya está registrado.\n\n"
                     "Por favor, elige otro nombre de usuario."

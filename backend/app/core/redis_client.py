@@ -76,18 +76,27 @@ class FailoverPolicy:
 
     @property
     def state(self) -> FailoverState:
-        """Current state, with automatic CLOSED→HALF_OPEN transition.
+        """Current state.
 
-        When the open window has elapsed the internal state transitions
-        to ``HALF_OPEN`` so events and callers see the new state.
+        This property is **read-only** — it never mutates internal
+        state.  Open-window expiry is checked via
+        :meth:`_check_open_window`, called explicitly from
+        :meth:`~RedisConnectionManager.execute`.
+        """
+        return self._state
+
+    def _check_open_window(self) -> None:
+        """Transition OPEN→HALF_OPEN when the open window has elapsed.
+
+        Called once per real-traffic operation inside :meth:`execute`
+        so the state transition happens at a well-defined point rather
+        than as a side-effect of reading the ``state`` property.
         """
         if self._state is FailoverState.OPEN and self._opened_at is not None:
             elapsed = time.monotonic() - self._opened_at
             if elapsed >= self._open_window_seconds:
                 self._state = FailoverState.HALF_OPEN
                 self._opened_at = None
-                return FailoverState.HALF_OPEN
-        return self._state
 
     @property
     def consecutive_failures(self) -> int:
@@ -186,6 +195,14 @@ class RedisConnectionManager:
         Seconds breaker stays open before transitioning to half-open.
     """
 
+    #: Exception types that indicate a Redis infrastructure failure
+    #: (as opposed to application-level bugs in the callable).
+    _REDIS_INFRA_ERRORS: tuple[type[Exception], ...] = (
+        ConnectionError,
+        TimeoutError,
+        OSError,
+    )
+
     def __init__(
         self,
         primary_url: str,
@@ -251,6 +268,23 @@ class RedisConnectionManager:
 
         self._initialised = True
 
+    @staticmethod
+    def _is_redis_infra_error(exc: Exception) -> bool:
+        """Return True when *exc* signals a Redis infrastructure failure.
+
+        Matches both built-in socket-level exceptions (``ConnectionError``,
+        ``TimeoutError``, ``OSError``) and redis-py-specific exceptions
+        (``redis.exceptions.ConnectionError``, etc.).  Application-level
+        bugs like ``AttributeError``, ``TypeError`` and ``ValueError`` are
+        excluded and propagate as-is.
+        """
+        if isinstance(exc, RedisConnectionManager._REDIS_INFRA_ERRORS):
+            return True
+        # redis-py 4+ raises redis.exceptions subclasses that do NOT
+        # inherit from the builtin ConnectionError/TimeoutError.
+        module = type(exc).__module__
+        return module.startswith("redis.")
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -304,6 +338,10 @@ class RedisConnectionManager:
             When the active Redis store raises a connection/timeout/OS
             or generic Redis error.
         """
+        # Check open-window expiry at a well-defined point (no side-effect
+        # in the ``state`` property).
+        self._policy._check_open_window()
+
         state = self._policy.state
 
         try:
@@ -318,7 +356,9 @@ class RedisConnectionManager:
         except RuntimeError:
             raise  # configuration errors propagate as-is
         except Exception as exc:
-            raise RedisUnavailableError(str(exc)) from exc
+            if self._is_redis_infra_error(exc):
+                raise RedisUnavailableError(str(exc)) from exc
+            raise  # application bugs propagate as-is
 
     async def _execute_primary(
         self,
@@ -334,6 +374,8 @@ class RedisConnectionManager:
             self._policy.record_success()
             return result
         except Exception as exc:
+            if not self._is_redis_infra_error(exc):
+                raise  # application bugs propagate without failover accounting
             self._policy.record_failure()
             # If breaker just opened and backup exists, retry there
             if self._policy.state is FailoverState.OPEN and self.backup is not None:
@@ -365,6 +407,8 @@ class RedisConnectionManager:
             self._policy.record_success()  # closes breaker
             return result
         except Exception as exc:
+            if not self._is_redis_infra_error(exc):
+                raise  # application bugs propagate without failover accounting
             self._policy.record_failure()  # re-opens breaker
             # Fall back to backup if available
             if self.backup is not None:

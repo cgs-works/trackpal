@@ -118,18 +118,40 @@ def upgrade() -> None:
             f"Resolve before applying migration."
         )
 
-    # ---- Apply updates ----
-    for upd in master_updates:
-        conn.execute(
-            sa.text("UPDATE master_profiles SET phone = :new_phone WHERE id = :id"),
-            {"new_phone": upd["new_phone"], "id": upd["id"]},
+    # ---- Apply bulk updates (single SQL statement per table via VALUES) ----
+    if master_updates:
+        value_rows = ", ".join(
+            f"(:id_{i}, :phone_{i})"
+            for i in range(len(master_updates))
         )
+        update_sql = (
+            "UPDATE master_profiles "
+            "SET phone = v.new_phone "
+            f"FROM (VALUES {value_rows}) AS v(id, new_phone) "
+            "WHERE master_profiles.id = v.id"
+        )
+        params = {}
+        for i, upd in enumerate(master_updates):
+            params[f"id_{i}"] = upd["id"]
+            params[f"phone_{i}"] = upd["new_phone"]
+        conn.execute(sa.text(update_sql), params)
 
-    for upd in tenant_updates:
-        conn.execute(
-            sa.text("UPDATE tenant_profiles SET phone = :new_phone WHERE id = :id"),
-            {"new_phone": upd["new_phone"], "id": upd["id"]},
+    if tenant_updates:
+        value_rows = ", ".join(
+            f"(:id_{i}, :phone_{i})"
+            for i in range(len(tenant_updates))
         )
+        update_sql = (
+            "UPDATE tenant_profiles "
+            "SET phone = v.new_phone "
+            f"FROM (VALUES {value_rows}) AS v(id, new_phone) "
+            "WHERE tenant_profiles.id = v.id"
+        )
+        params = {}
+        for i, upd in enumerate(tenant_updates):
+            params[f"id_{i}"] = upd["id"]
+            params[f"phone_{i}"] = upd["new_phone"]
+        conn.execute(sa.text(update_sql), params)
 
 
 def downgrade() -> None:

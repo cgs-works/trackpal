@@ -53,6 +53,14 @@ class _TenantConsoleAdapter:
             return None
         return _TenantConsoleItem(profile)
 
+    async def get_tenant_by_username(self, username: str) -> _TenantConsoleItem | None:
+        """Return a single tenant whose username matches, or None."""
+        from app.crud import users as user_crud
+        user = await user_crud.get_by_username(self._db, username)
+        if user is None or user.role != "tenant":
+            return None
+        return await self.get_tenant(str(user.id))
+
     async def create_tenant(self, payload: dict) -> dict:
         """Create a tenant from a WhatsApp-guided payload dict.
 

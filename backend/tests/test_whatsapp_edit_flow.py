@@ -76,6 +76,13 @@ class FakeTenantService:
     async def get_tenant(self, tenant_id: str) -> FakeTenant | None:
         return self._tenants.get(tenant_id)
 
+    async def get_tenant_by_username(self, username: str) -> FakeTenant | None:
+        """Return tenant whose username matches, or None."""
+        for t in self._tenants.values():
+            if t.username == username:
+                return t
+        return None
+
     async def update_tenant(self, tenant_id: str, payload: dict) -> dict:
         """Simulate ``TenantService.update_tenant``.
 

@@ -171,21 +171,25 @@ class TestHalfOpenTransition:
         # Advance time past the window
         time.sleep(0.02)
 
-        state = policy.state
-        assert state == FailoverState.HALF_OPEN
+        # Transition must happen via explicit check, not as side-effect of
+        # reading the ``state`` property.
+        policy._check_open_window()
+        assert policy.state == FailoverState.HALF_OPEN
 
     def test_half_open_returns_primary(self, monkeypatch):
         """In half-open, should_use_backup returns False (try primary)."""
         policy = FailoverPolicy(failure_threshold=1, open_window_seconds=0.01)
         policy.record_failure()
         time.sleep(0.02)
+        policy._check_open_window()
         assert policy.state == FailoverState.HALF_OPEN
         assert policy.should_use_backup() is False
 
     def test_closed_does_not_transition_without_failures(self):
-        """No automatic transition when no failures occurred."""
+        """No transition when no failures occurred."""
         policy = FailoverPolicy(open_window_seconds=0.01)
         time.sleep(0.02)
+        policy._check_open_window()
         assert policy.state == FailoverState.CLOSED
 
 
@@ -199,6 +203,7 @@ class TestHalfOpenSuccess:
         policy = FailoverPolicy(failure_threshold=1, open_window_seconds=0.01)
         policy.record_failure()
         time.sleep(0.02)
+        policy._check_open_window()
         assert policy.state == FailoverState.HALF_OPEN
 
         policy.record_success()
@@ -229,6 +234,7 @@ class TestHalfOpenFailure:
         policy = FailoverPolicy(failure_threshold=1, open_window_seconds=0.01)
         policy.record_failure()
         time.sleep(0.02)
+        policy._check_open_window()
         assert policy.state == FailoverState.HALF_OPEN
 
         policy.record_failure()
