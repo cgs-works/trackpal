@@ -7,7 +7,7 @@ to ``WhatsAppConsoleService`` for authenticated operations.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -82,6 +82,32 @@ HELP_COMMANDS = {"5", "ayuda"}
 
 
 # ====================================================================
+# Protocol for the tenant-service dependency
+# ====================================================================
+
+
+@runtime_checkable
+class TenantServiceProtocol(Protocol):
+    """Minimal interface that the facade requires from a tenant service.
+
+    The facade passes *tenant_service* through to
+    ``WhatsAppConsoleService`` without calling methods directly.
+    This protocol captures the subset of methods that the console
+    service actually invokes, enabling static type checking without
+    circular imports between endpoint and service layers.
+    """
+
+    async def get_tenants(self) -> list[Any]: ...
+    async def get_tenant(self, tenant_id: str) -> Any | None: ...
+    async def get_tenant_by_username(self, username: str) -> Any | None: ...
+    async def create_tenant(self, payload: dict) -> dict: ...
+    async def activate_tenant(self, tenant_id: str) -> dict: ...
+    async def deactivate_tenant(self, tenant_id: str) -> dict: ...
+    async def delete_tenant(self, tenant_id: str) -> dict: ...
+    async def update_tenant(self, tenant_id: str, payload: dict) -> dict: ...
+
+
+# ====================================================================
 # Facade
 # ====================================================================
 
@@ -101,7 +127,7 @@ class WhatsAppMasterConsoleFacade:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
-        tenant_service: Any,
+        tenant_service: TenantServiceProtocol | None,
     ) -> None:
         self._console_service = console_service
         self._session_service = session_service
@@ -229,11 +255,9 @@ class WhatsAppMasterConsoleFacade:
         if db is not None:
             existing_user = await user_crud.get_by_username(db, msg_lower)
             if existing_user is None:
-                _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
-                if lock_state is not None:
-                    remaining = self._compute_remaining_minutes(lock_state)
-                    await self._session_service.clear_session(phone)
-                    return LOCKOUT_TEMPLATE.format(minutes=remaining)
+                lockout_reply = await self._record_failure_and_check_lockout(phone)
+                if lockout_reply is not None:
+                    return lockout_reply
                 return UNKNOWN_USERNAME_TEMPLATE.format(username=msg_lower)
 
         session.temp_data["username"] = msg_lower
@@ -279,30 +303,24 @@ class WhatsAppMasterConsoleFacade:
 
             if existing_user is None:
                 # Unknown username — record failure
-                _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
-                if lock_state is not None:
-                    remaining = self._compute_remaining_minutes(lock_state)
-                    await self._session_service.clear_session(phone)
-                    return LOCKOUT_TEMPLATE.format(minutes=remaining)
+                lockout_reply = await self._record_failure_and_check_lockout(phone)
+                if lockout_reply is not None:
+                    return lockout_reply
                 return UNKNOWN_USERNAME_TEMPLATE.format(username=username)
 
             # Wrong password — record failure
-            _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
-            if lock_state is not None:
-                remaining = self._compute_remaining_minutes(lock_state)
-                # Clear conversation session
-                await self._session_service.clear_session(phone)
-                return LOCKOUT_TEMPLATE.format(minutes=remaining)
+            lockout_reply = await self._record_failure_and_check_lockout(phone)
+            if lockout_reply is not None:
+                return lockout_reply
 
             return WRONG_PASSWORD_TEMPLATE.format(username=username)
 
         if user.role != "master":
             # Role not allowed — record failure
-            _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
+            lockout_reply = await self._record_failure_and_check_lockout(phone)
             await self._session_service.clear_session(phone)
-            if lock_state is not None:
-                remaining = self._compute_remaining_minutes(lock_state)
-                return LOCKOUT_TEMPLATE.format(minutes=remaining)
+            if lockout_reply is not None:
+                return lockout_reply
             return ROLE_NOT_ALLOWED
 
         # Success — create auth session, clear conversation session,
@@ -323,6 +341,22 @@ class WhatsAppMasterConsoleFacade:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    async def _record_failure_and_check_lockout(
+        self, phone: str
+    ) -> str | None:
+        """Record a failed login attempt and return lockout reply if threshold reached.
+
+        Returns the lockout reply string when the phone is now locked
+        out (and conversation session has been cleared), or ``None``
+        when the caller should continue with its own error reply.
+        """
+        _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
+        if lock_state is not None:
+            remaining = self._compute_remaining_minutes(lock_state)
+            await self._session_service.clear_session(phone)
+            return LOCKOUT_TEMPLATE.format(minutes=remaining)
+        return None
 
     @staticmethod
     def _compute_remaining_minutes(lock_state: Any) -> int:

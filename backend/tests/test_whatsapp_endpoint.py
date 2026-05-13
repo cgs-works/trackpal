@@ -60,7 +60,7 @@ class _FakeManager:
     used_backup:
         When ``True`` simulates failover active (backup in use).
     fail_on_execute:
-        When ``True`` raises ``RuntimeError`` to simulate both stores down.
+        When ``True`` raises ``RedisUnavailableError`` to simulate both stores down.
     """
 
     def __init__(
@@ -69,9 +69,11 @@ class _FakeManager:
         used_backup: bool = False,
         fail_on_execute: bool = False,
     ) -> None:
+        from app.core.redis_client import RedisUnavailableError
         self._redis = _FakeRedis()
         self._used_backup = used_backup
         self._fail_on_execute = fail_on_execute
+        self._RedisUnavailableError = RedisUnavailableError
 
     @property
     def used_backup(self) -> bool:
@@ -79,7 +81,7 @@ class _FakeManager:
 
     async def execute(self, operation_name: str, async_callable: Any) -> Any:
         if self._fail_on_execute:
-            raise RuntimeError("Both Redis stores unavailable")
+            raise self._RedisUnavailableError("Both Redis stores unavailable")
         return await async_callable(self._redis)
 
 
@@ -461,9 +463,10 @@ async def test_redis_os_error_returns_temporary_unavailable(client, master_user)
     assert "no disponible" in response.json()["reply"].lower()
 
 
-async def test_redis_generic_exception_returns_temporary_unavailable(client, master_user):
-    """Any unexpected exception from Redis yields relayable unavailable reply."""
-    fake_mgr = _FakeManagerRaising(RuntimeError("unexpected infrastructure error"))
+async def test_redis_unavailable_error_returns_temporary_unavailable(client, master_user):
+    """RedisUnavailableError from Redis yields relayable unavailable reply."""
+    from app.core.redis_client import RedisUnavailableError
+    fake_mgr = _FakeManagerRaising(RedisUnavailableError("both Redis stores down"))
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,

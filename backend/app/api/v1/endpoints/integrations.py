@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.phone import normalize_phone
-from app.core.redis_client import get_redis_manager
+from app.core.redis_client import RedisUnavailableError, get_redis_manager
 from app.core.security import verify_n8n_api_key
 from app.schemas.auth import IdentifyResponse
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
@@ -229,7 +229,7 @@ async def whatsapp_console(
             message=request.message,
             db=db,
         )
-    except (RuntimeError, ConnectionError, TimeoutError, OSError):
+    except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
         # Redis infrastructure failure — both stores unavailable,
         # connection/timeout/OS errors. Return relayable unavailable
         # reply — never degrade to stateless and never return HTTP
