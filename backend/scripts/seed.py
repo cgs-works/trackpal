@@ -6,16 +6,24 @@ import os
 import sqlalchemy
 
 from app.core.database import AsyncSessionLocal
-from app.core.phone import normalize_phone
+from app.core.input_validation import (
+    validate_full_name,
+    validate_phone,
+    validate_username,
+)
 from app.core.security import get_password_hash
 from app.models import MasterProfile, User
 
 
 async def seed():
-    username = os.environ["MASTER_USERNAME"]
+    username_raw = os.environ["MASTER_USERNAME"]
     password = os.environ["MASTER_PASSWORD"]
-    name = os.environ["MASTER_NAME"]
-    phone = normalize_phone(os.environ.get("MASTER_PHONE"))
+    name_raw = os.environ["MASTER_NAME"]
+    phone_raw = os.environ.get("MASTER_PHONE")
+
+    username = validate_username(username_raw)
+    name = validate_full_name(name_raw)
+    phone = validate_phone(phone_raw, required=False)
 
     async with AsyncSessionLocal() as db:
         existing = await db.execute(

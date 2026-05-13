@@ -1,0 +1,109 @@
+name: Bug Report
+description: Report a reproducible bug to help us improve Trackpal
+title: "[Bug]: "
+labels: [bug, p2]
+projects: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Clear and concise description of the bug
+      placeholder: When I try to create a tenant via WhatsApp, the flow hangs after entering the phone number.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps to trigger the bug
+      placeholder: |
+        1. Open WhatsApp and send `/menu` to the bot
+        2. Select option 2 (Create tenant)
+        3. Enter full name
+        4. Enter phone number
+        5. See error: "Something went wrong"
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead
+      placeholder: The flow should continue to the email prompt.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened
+      placeholder: The flow returned "Something went wrong" and returned to the main menu.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Relevant context about the environment
+      placeholder: |
+        - Backend: render.com (staging)
+        - Frontend: cloudflare-pages (staging)
+        - n8n: self-hosted v1.80.0
+        - Evolution API: v2.1.0
+        - WhatsApp: iOS 18.3
+        - Browser (if frontend): Chrome 125
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system is affected?
+      multiple: false
+      options:
+        - backend
+        - frontend
+        - n8n
+        - infra
+        - docs
+        - testing
+        - devops
+        - security
+        - design
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - critical (production blocked)
+        - major (feature broken)
+        - minor (cosmetic / edge case)
+        - cosmetic (typo / style)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Relevant log output, error messages, or screenshots
+      placeholder: Paste log output or drag screenshots here
+      render: shell
+    validations:
+      required: false

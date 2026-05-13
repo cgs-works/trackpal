@@ -68,7 +68,10 @@ class FakeTenantService:
             for t in tenants:
                 self._tenants[str(t.id)] = t
                 if t.phone:
-                    self._phones_in_use.add(t.phone)
+                    # Store canonical digits-only for duplicate tracking
+                    import re
+                    canonical = re.sub(r"\D", "", t.phone)
+                    self._phones_in_use.add(canonical)
 
     async def get_tenants(self) -> list[FakeTenant]:
         return list(self._tenants.values())
@@ -94,10 +97,12 @@ class FakeTenantService:
         if tenant is None:
             return {"success": False, "error": "Tenant not found"}
 
-        # Validate phone uniqueness
+        # Validate phone uniqueness (canonical digits-only for matching)
         if "phone" in payload and payload["phone"] is not None:
-            new_phone = payload["phone"]
-            if new_phone != tenant.phone and new_phone in self._phones_in_use:
+            import re
+            new_phone = re.sub(r"\D", "", payload["phone"])
+            old_phone_canonical = re.sub(r"\D", "", tenant.phone or "")
+            if new_phone != old_phone_canonical and new_phone in self._phones_in_use:
                 return {"success": False, "error": "Phone already registered"}
 
         # Apply updates (excluding None values)
@@ -187,7 +192,7 @@ def sample_tenants() -> list[FakeTenant]:
             full_name="Alpha Corp",
             is_active=True,
             email="alpha@example.com",
-            phone="+1111111111",
+            phone="525512345678",
             username="alpha",
             evolution_instance_name="inst-alpha",
             created_at=datetime(2025, 1, 15),
@@ -197,7 +202,7 @@ def sample_tenants() -> list[FakeTenant]:
             full_name="Beta Inc",
             is_active=True,
             email="beta@example.com",
-            phone="+2222222222",
+            phone="525598765432",
             username="beta",
             evolution_instance_name="inst-beta",
             created_at=datetime(2025, 3, 20),
@@ -603,18 +608,18 @@ class TestEditNewValue:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="+3333333333",
+            message="+525500001111",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
         )
 
         assert "Detalle del Tenant" in reply
-        assert "+3333333333" in reply
+        assert "525500001111" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
-        assert tenant.phone == "+3333333333"
+        assert tenant.phone == "525500001111"
 
     async def test_valid_evolution_instance_update(
         self,
@@ -659,7 +664,7 @@ class TestEditNewValue:
         assert "New Name" in reply
         # Original values should still be present
         assert "alpha@example.com" in reply
-        assert "+1111111111" in reply
+        assert "525512345678" in reply
         assert "inst-alpha" in reply
 
     async def test_empty_full_name_reprompts(
@@ -693,6 +698,141 @@ class TestEditNewValue:
         assert tenant is not None
         assert tenant.full_name == "Alpha Corp"
 
+    async def test_invalid_full_name_reprompts(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Invalid full name in edit is rejected with error message."""
+        await self._select_field(console_service, session_service, tenant_service, "1")
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Alpha Corp!",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+
+        # Should show validation error and reprompt
+        assert "letras" in reply.lower() or "solo" in reply.lower()
+        assert "nombre" in reply.lower()
+
+        # Should stay in edit flow, same step
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.flow == "edit_tenant"
+        assert session.step == "new_value"
+        assert session.temp_data.get("edit_field") == "full_name"
+        # selected_tenant_id must be preserved
+        assert session.selected_tenant_id == TENANT_1_ID
+
+        # Tenant should NOT be updated
+        tenant = await tenant_service.get_tenant(TENANT_1_ID)
+        assert tenant is not None
+        assert tenant.full_name == "Alpha Corp"
+
+    async def test_invalid_email_reprompts(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Invalid email in edit is rejected, stays on step, preserves context."""
+        await self._select_field(console_service, session_service, tenant_service, "2")
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="not-an-email",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+
+        # Should show validation error
+        assert "email" in reply.lower() or "correo" in reply.lower()
+
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "new_value"
+        assert session.temp_data.get("edit_field") == "email"
+        # Preserve selected tenant context
+        assert session.selected_tenant_id == TENANT_1_ID
+
+    async def test_invalid_phone_reprompts(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Invalid phone in edit is rejected, stays on step, preserves context."""
+        await self._select_field(console_service, session_service, tenant_service, "3")
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="abc",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+
+        # Should show validation error
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
+
+        session = await session_service.get_session("+10000000000")
+        assert session is not None
+        assert session.step == "new_value"
+        assert session.temp_data.get("edit_field") == "phone"
+        # Preserve selected tenant context
+        assert session.selected_tenant_id == TENANT_1_ID
+
+    async def test_edit_valid_email_normalized(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Valid email with mixed case is normalized in edit."""
+        await self._select_field(console_service, session_service, tenant_service, "2")
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="NewAlpha@Example.COM",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+
+        assert "Detalle del Tenant" in reply
+        tenant = await tenant_service.get_tenant(TENANT_1_ID)
+        assert tenant is not None
+        # Email normalized (domain lowercase, local part preserved)
+        assert tenant.email == "NewAlpha@example.com"
+
+    async def test_edit_valid_phone_normalized(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        tenant_service: FakeTenantService,
+    ) -> None:
+        """Valid phone with + is stored digits-only in edit."""
+        await self._select_field(console_service, session_service, tenant_service, "3")
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="+525500001111",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+
+        assert "Detalle del Tenant" in reply
+        tenant = await tenant_service.get_tenant(TENANT_1_ID)
+        assert tenant is not None
+        # Phone stored canonical digits-only (no + prefix)
+        assert tenant.phone == "525500001111"
+
     async def test_duplicate_phone_reprompts(
         self,
         console_service: WhatsAppConsoleService,
@@ -705,7 +845,7 @@ class TestEditNewValue:
         # Try to update to a phone already in use by Beta Inc
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="+2222222222",
+            message="+525598765432",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -724,7 +864,7 @@ class TestEditNewValue:
         # Tenant phone should NOT have changed
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
-        assert tenant.phone == "+1111111111"
+        assert tenant.phone == "525512345678"
 
     async def test_duplicate_phone_then_valid(
         self,
@@ -738,7 +878,7 @@ class TestEditNewValue:
         # Send duplicate phone
         await console_service.process_message(
             phone="+10000000000",
-            message="+2222222222",
+            message="+525598765432",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -747,7 +887,7 @@ class TestEditNewValue:
         # Send valid phone
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="+3333333333",
+            message="+525500001111",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -755,11 +895,11 @@ class TestEditNewValue:
 
         # Should show updated detail
         assert "Detalle del Tenant" in reply
-        assert "+3333333333" in reply
+        assert "525500001111" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
-        assert tenant.phone == "+3333333333"
+        assert tenant.phone == "525500001111"
 
     async def test_cancel_during_new_value(
         self,
@@ -917,7 +1057,7 @@ class TestEditFlowFullScenario:
         assert tenant is not None
         assert tenant.full_name == "New Alpha Name"
         assert tenant.email == "newalpha@newdomain.com"
-        assert tenant.phone == "+1111111111"  # Unchanged
+        assert tenant.phone == "525512345678"  # Unchanged
 
     async def test_edit_invalid_input_does_not_lose_selected_tenant(
         self,

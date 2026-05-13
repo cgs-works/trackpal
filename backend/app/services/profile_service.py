@@ -1,6 +1,12 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.input_validation import (
+    InputValidationError,
+    validate_email,
+    validate_full_name,
+    validate_phone,
+)
 from app.core.security import get_password_hash, verify_password
 from app.crud import users as user_crud
 from app.models import MasterProfile, TenantProfile, User
@@ -30,15 +36,31 @@ class ProfileService:
             return None
 
         update_data = payload.model_dump(exclude_unset=True)
+
+        # Defensive normalization at service layer
+        if "full_name" in update_data and update_data["full_name"] is not None:
+            update_data["full_name"] = validate_full_name(update_data["full_name"])
+        if "name" in update_data and update_data["name"] is not None:
+            update_data["name"] = validate_full_name(update_data["name"])
+        if "email" in update_data:
+            update_data["email"] = validate_email(update_data["email"])
+        if "phone" in update_data:
+            if update_data["phone"] is not None:
+                update_data["phone"] = validate_phone(update_data["phone"])
+            # phone=None is allowed (clearing optional field)
+
         allowed_fields = (
             {"name", "phone"}
             if user.role == "master"
             else {"full_name", "email", "phone"}
         )
+
+        # Duplicate check using normalized phone
         if "phone" in update_data and update_data["phone"] != profile.phone:
-            existing = await user_crud.get_by_phone(db, update_data["phone"])
-            if existing and existing[0].id != user.id:
-                raise ValueError("Phone already registered")
+            if update_data["phone"] is not None:
+                existing = await user_crud.get_by_phone(db, update_data["phone"])
+                if existing and existing[0].id != user.id:
+                    raise ValueError("Phone already registered")
 
         for field, value in update_data.items():
             if field in allowed_fields:

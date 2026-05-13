@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Trackpal Discussion
+    url: https://github.com/neutrobox/trackpal/discussions
+    about: Please ask and answer questions here before opening a feature request.

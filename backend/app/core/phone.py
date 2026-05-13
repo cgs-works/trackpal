@@ -10,7 +10,11 @@ Usage::
     canonical = normalize_phone("+1234567890@c.us")  # "1234567890"
 """
 
+from __future__ import annotations
+
 import re
+
+from app.core.input_validation import _strip_phone_suffixes
 
 
 def normalize_phone(value: str | None) -> str | None:
@@ -34,13 +38,8 @@ def normalize_phone(value: str | None) -> str | None:
     if not raw:
         return None
 
-    # Strip WhatsApp JID suffix (e.g. @c.us, @s.whatsapp.net)
-    if "@" in raw:
-        raw = raw.split("@", 1)[0]
-
-    # Strip device suffix after :
-    if ":" in raw:
-        raw = raw.split(":", 1)[0]
+    # Strip WhatsApp JID suffix and device suffix via shared helper
+    raw = _strip_phone_suffixes(raw)
 
     # Keep only digits
     digits = re.sub(r"\D", "", raw)

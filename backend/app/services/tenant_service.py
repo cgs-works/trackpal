@@ -5,6 +5,13 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.input_validation import (
+    InputValidationError,
+    validate_email,
+    validate_full_name,
+    validate_phone,
+    validate_username,
+)
 from app.core.security import get_password_hash
 from app.crud import users as user_crud
 from app.models import RefreshSession, TenantProfile, User
@@ -16,12 +23,18 @@ class TenantService:
     async def create_tenant(
         self, db: AsyncSession, payload: TenantCreate
     ) -> tuple[TenantProfile, str | None]:
-        existing_username = await user_crud.get_by_username(db, payload.username)
+        # Defensive normalization at service layer (safety net)
+        username = validate_username(payload.username)
+        full_name = validate_full_name(payload.full_name)
+        email = validate_email(payload.email)
+        phone = validate_phone(payload.phone)
+
+        existing_username = await user_crud.get_by_username(db, username)
         if existing_username:
             raise ValueError("Username already registered")
 
-        if payload.phone:
-            existing = await user_crud.get_by_phone(db, payload.phone)
+        if phone:
+            existing = await user_crud.get_by_phone(db, phone)
             if existing:
                 raise ValueError("Phone already registered")
 
@@ -31,7 +44,7 @@ class TenantService:
             plain_password = secrets.token_urlsafe(16)
 
         user = User(
-            username=payload.username,
+            username=username,
             password_hash=get_password_hash(plain_password),
             role="tenant",
         )
@@ -40,9 +53,9 @@ class TenantService:
 
         profile = TenantProfile(
             id=user.id,
-            full_name=payload.full_name,
-            email=payload.email,
-            phone=payload.phone,
+            full_name=full_name,
+            email=email,
+            phone=phone,
             evolution_instance_name=payload.evolution_instance_name,
             is_active=True,
         )
@@ -93,12 +106,24 @@ class TenantService:
             return None
 
         update_data = payload.model_dump(exclude_unset=True)
+
+        # Defensive normalization at service layer
+        if "full_name" in update_data and update_data["full_name"] is not None:
+            update_data["full_name"] = validate_full_name(update_data["full_name"])
+        if "email" in update_data:
+            update_data["email"] = validate_email(update_data["email"])
+        if "phone" in update_data:
+            if update_data["phone"] is not None:
+                update_data["phone"] = validate_phone(update_data["phone"])
+            # phone=None is allowed (clearing optional field)
+
         # Changing evolution_instance_name only updates the stored value; it does not
         # recreate or rename the instance in Evolution API.
         if "phone" in update_data and update_data["phone"] != profile.phone:
-            existing = await user_crud.get_by_phone(db, update_data["phone"])
-            if existing and existing[0].id != tenant_id:
-                raise ValueError("Phone already registered")
+            if update_data["phone"] is not None:
+                existing = await user_crud.get_by_phone(db, update_data["phone"])
+                if existing and existing[0].id != tenant_id:
+                    raise ValueError("Phone already registered")
 
         for field, value in update_data.items():
             setattr(profile, field, value)

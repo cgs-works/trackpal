@@ -98,7 +98,7 @@ async def test_logout(client, master_user):
 async def test_identify_by_phone(client, master_user):
     response = await client.get(
         "/api/v1/integrations/n8n/identify",
-        params={"phone": "+10000000000"},
+        params={"phone": "+12015550001"},
         headers={"X-API-Key": settings.n8n_api_key},
     )
 
@@ -249,6 +249,29 @@ async def test_identify_jid_suffix_with_canonical_db(client, db_session, master_
     assert response.json()["username"] == "master"
 
 
+async def test_identify_no_plus_with_canonical_db(client, db_session, master_user):
+    """Phone without + prefix identifies canonical DB phone."""
+    from uuid import UUID
+    from app.models import MasterProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    profile.phone = "10000000000"
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/v1/integrations/n8n/identify",
+        params={"phone": "10000000000"},  # no + prefix
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "master"
+    assert response.json()["role"] == "master"
+
+
 async def test_identify_plus_jid_suffix_with_canonical_db(client, db_session, master_user):
     """+ prefix + JID suffix identifies canonical DB phone."""
     from uuid import UUID
@@ -277,7 +300,7 @@ async def test_identify_plus_prefix_finds_prefixed_db(
     """+ prefix input still finds DB phone with + prefix (pre-migration)."""
     response = await client.get(
         "/api/v1/integrations/n8n/identify",
-        params={"phone": "+10000000000"},
+        params={"phone": "+12015550001"},
         headers={"X-API-Key": settings.n8n_api_key},
     )
 

@@ -62,6 +62,7 @@
 | `backend/app/services/evolution_client.py` | Async HTTP client for Evolution API (create/setup/delete instances) |
 | `backend/app/api/v1/endpoints/integrations.py` | GET /integrations/n8n/identify, POST /integrations/n8n/console |
 | `backend/app/core/phone.py` | PhoneNormalizer — canonical digits-only phone for identity, session key, storage |
+| `backend/app/core/input_validation.py` | InputValidationPolicy — centralized validation for username, email, phone, full_name; reused by schemas, services, and WhatsApp console |
 | `backend/app/core/redis_client.py` | RedisConnectionManager + FailoverPolicy — active-passive HA, circuit breaker |
 | `backend/app/services/whatsapp_session_service.py` | WhatsAppSessionService — ephemeral session CRUD over Redis with TTL |
 | `backend/app/services/whatsapp_console_service.py` | WhatsAppConsoleService — conversation routing, menus, multi-step CRUD flows |
@@ -179,9 +180,10 @@
 | `backend/tests/test_whatsapp_lifecycle_flow.py` | ~100 | Deactivate/delete confirmation flows |
 | `backend/tests/test_whatsapp_endpoint.py` | ~100 | /integrations/n8n/console endpoint: contingency, HA, total failure |
 | `backend/tests/test_contingency_reply_policy.py` | ~30 | SESSION_RESET, TEMPORARY_UNAVAILABLE constants |
+| `backend/tests/test_input_validation_policy.py` | ~380 | Central validation policy: username, email, phone, full_name valid/invalid cases, canonicalization, edge limits |
 | `backend/tests/conftest.py` | ~90 | Fixtures: in-memory DB, master/tenant/deactivated users, auth headers |
 
-**Total: 340 tests** — all passing async with aiosqlite in-memory database. Redis operations use fake/test doubles.
+**Total: 524 tests** — all passing async with aiosqlite in-memory database. Redis operations use fake/test doubles.
 
 ---
 
