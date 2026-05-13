@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.redis_client import get_redis
+from app.core.phone import normalize_phone
+from app.core.redis_client import get_redis_manager
 from app.core.security import verify_n8n_api_key
 from app.schemas.auth import IdentifyResponse
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
+from app.services.contingency_reply_policy import ContingencyReplyPolicy
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_session_service import WhatsAppSessionService
@@ -138,18 +140,7 @@ console_service = WhatsAppConsoleService()
 tenant_service = TenantService()
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 
-CONSOLE_STATE_UNAVAILABLE_REPLY = (
-    "⚠️ Console temporalmente no disponible. Intenta nuevamente en unos minutos."
-)
-
-
-def _normalize_whatsapp_phone(value: str) -> str:
-    raw = str(value or "").strip()
-    if "@" in raw:
-        raw = raw.split("@", 1)[0]
-    if ":" in raw:
-        raw = raw.split(":", 1)[0]
-    return raw
+CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
 
 @router.get("/n8n/identify", response_model=IdentifyResponse)
@@ -191,7 +182,7 @@ async def whatsapp_console(
             detail="Invalid API Key",
         )
 
-    phone = _normalize_whatsapp_phone(request.phone)
+    phone = normalize_phone(request.phone) or ""
 
     # Identify caller by phone
     identity = await auth_service.identify_by_phone(db, phone)
@@ -202,23 +193,31 @@ async def whatsapp_console(
         )
 
     # Create session service when Redis is available
-    redis = await get_redis()
-    if redis is None:
+    manager = get_redis_manager()
+    if manager is None:
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
     session_service = WhatsAppSessionService(
-        redis_client=redis,
+        connection_manager=manager,
         ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
     )
 
     # Create tenant adapter for console service
     adapter = _TenantConsoleAdapter(tenant_service, db)
 
-    reply = await console_service.process_message(
-        phone=phone,
-        message=request.message,
-        is_master=True,
-        session_service=session_service,
-        tenant_service=adapter,
-    )
+    try:
+        reply = await console_service.process_message(
+            phone=phone,
+            message=request.message,
+            is_master=True,
+            session_service=session_service,
+            tenant_service=adapter,
+        )
+    except Exception:
+        # Both Redis stores are unavailable, connection/timeout errors,
+        # or any other transient infrastructure failure.
+        # Return relayable unavailable reply — never degrade to stateless
+        # and never return HTTP 500 to n8n.
+        return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
+
     return WhatsAppConsoleResponse(reply=reply)

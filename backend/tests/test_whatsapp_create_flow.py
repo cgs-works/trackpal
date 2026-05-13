@@ -28,21 +28,39 @@ class FakeRedis:
 
     def __init__(self) -> None:
         self._store: dict[str, str] = {}
+        self._ttls: dict[str, int] = {}
 
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
     async def set(self, key: str, value: str, ex: int | None = None) -> None:
         self._store[key] = value
+        if ex is not None:
+            self._ttls[key] = ex
 
     async def delete(self, key: str) -> int:
+        self._ttls.pop(key, None)
         return 1 if self._store.pop(key, None) is not None else 0
 
     async def exists(self, key: str) -> int:
         return 1 if key in self._store else 0
 
+    def get_ttl(self, key: str) -> int | None:
+        """Return the TTL set for *key* (test helper)."""
+        return self._ttls.get(key)
+
     def __getattr__(self, name: str) -> Any:
         raise AttributeError(f"FakeRedis does not implement '{name}'")
+
+
+class FakeManager:
+    """Duck-typed connection manager that delegates execute() to FakeRedis."""
+
+    def __init__(self, fake_redis: FakeRedis | None = None) -> None:
+        self._redis = fake_redis or FakeRedis()
+
+    async def execute(self, operation_name: str, async_callable: Any) -> Any:
+        return await async_callable(self._redis)
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +187,10 @@ def fake_redis() -> FakeRedis:
 
 @pytest.fixture
 def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
-    return WhatsAppSessionService(redis_client=fake_redis, ttl_seconds=1800)
+    return WhatsAppSessionService(
+        connection_manager=FakeManager(fake_redis=fake_redis),
+        ttl_seconds=900,
+    )
 
 
 @pytest.fixture
@@ -1864,3 +1885,155 @@ class TestCreateErrorHandling:
             session_service=session_service,
         )
         assert "usuario" in reply.lower()
+
+
+# ---------------------------------------------------------------------------
+# TTL noise guards during create flow
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+class TestTTLNoiseDuringCreateFlow:
+    """Invalid/noise input during create flow must not extend TTL."""
+
+    async def test_invalid_password_mode_does_not_refresh_ttl(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        fake_redis: FakeRedis,
+    ) -> None:
+        """Invalid selection at password_mode step must not reset TTL."""
+        # Progress to password_mode step
+        await console_service.process_message(
+            phone="+10000000000", message="2", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="Test User", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="test@example.com", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="+521234567890", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="testuser", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="inst-test", is_master=True,
+            session_service=session_service,
+        )
+
+        key = session_service._session_key("+10000000000")
+        # TTL was refreshed on last valid step — now simulate elapsed time
+        fake_redis._ttls[key] = 400
+
+        # Send invalid password mode input
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="3",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "inválida" in reply.lower() or "Opción" in reply
+
+        # TTL should NOT have been refreshed
+        assert fake_redis.get_ttl(key) == 400, (
+            f"Expected TTL 400 (unchanged), got {fake_redis.get_ttl(key)}"
+        )
+
+    async def test_invalid_confirm_does_not_refresh_ttl(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        fake_redis: FakeRedis,
+    ) -> None:
+        """Non-CONFIRMAR at confirm step must not extend TTL."""
+        # Progress to confirm step with auto password
+        await console_service.process_message(
+            phone="+10000000000", message="2", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="Test User", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="test@example.com", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="+521234567890", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="testuser", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="inst-test", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="1", is_master=True,
+            session_service=session_service,
+        )
+
+        key = session_service._session_key("+10000000000")
+        fake_redis._ttls[key] = 300
+
+        # Send invalid confirmation
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="no",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "CONFIRMAR" in reply or "confirmar" in reply
+
+        # TTL unchanged
+        assert fake_redis.get_ttl(key) == 300
+
+    async def test_empty_input_during_username_does_not_refresh_ttl(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        fake_redis: FakeRedis,
+    ) -> None:
+        """Empty/whitespace at username step must not extend TTL."""
+        # Progress to username step
+        await console_service.process_message(
+            phone="+10000000000", message="2", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="Test User", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="test@example.com", is_master=True,
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000", message="+521234567890", is_master=True,
+            session_service=session_service,
+        )
+
+        key = session_service._session_key("+10000000000")
+        fake_redis._ttls[key] = 500
+
+        # Send empty input at username step
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="",
+            is_master=True,
+            session_service=session_service,
+        )
+        assert "usuario" in reply.lower()
+
+        # TTL unchanged
+        assert fake_redis.get_ttl(key) == 500

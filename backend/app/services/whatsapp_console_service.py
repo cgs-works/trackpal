@@ -10,6 +10,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from app.core.redis_client import RedisUnavailableError
+from app.services.contingency_reply_policy import ContingencyReplyPolicy
+
 
 class WhatsAppConsoleService:
     """Route incoming WhatsApp messages for the Master Console.
@@ -327,87 +330,105 @@ class WhatsAppConsoleService:
 
         msg = message.strip()
 
-        # ------------------------------------------------------------------
-        # Global reset — always works regardless of session state
-        # ------------------------------------------------------------------
-        if msg.lower() in self.RESET_COMMANDS:
+        try:
+            # ------------------------------------------------------------------
+            # Global reset — always works regardless of session state
+            # ------------------------------------------------------------------
+            if msg.lower() in self.RESET_COMMANDS:
+                if session_service is not None:
+                    await session_service.clear_session(phone)
+                return self.MAIN_MENU
+
+            # ------------------------------------------------------------------
+            # Retrieve current session (if available)
+            # ------------------------------------------------------------------
+            session = None
             if session_service is not None:
-                await session_service.clear_session(phone)
-            return self.MAIN_MENU
+                session = await session_service.get_session(phone)
 
-        # ------------------------------------------------------------------
-        # Retrieve current session (if available)
-        # ------------------------------------------------------------------
-        session = None
-        if session_service is not None:
-            session = await session_service.get_session(phone)
+            has_active_flow = (
+                session is not None
+                and bool(session.flow)
+            )
 
-        has_active_flow = (
-            session is not None
-            and bool(session.flow)
-        )
+            # ------------------------------------------------------------------
+            # Contingency reset — failover active, session missing on backup
+            # ------------------------------------------------------------------
+            if (
+                session is None
+                and session_service is not None
+                and session_service.used_backup
+                and msg.lower() not in self.RESET_COMMANDS
+            ):
+                # Create fresh session on backup so the next message does not
+                # loop back to the reset reply.
+                await session_service.create_session(phone)
+                return ContingencyReplyPolicy.SESSION_RESET
 
-        # ------------------------------------------------------------------
-        # Help — reachable from any state
-        # ------------------------------------------------------------------
-        if msg.lower() in self.HELP_COMMANDS:
-            return self.HELP_TEXT
+            # ------------------------------------------------------------------
+            # Help — reachable from any state
+            # ------------------------------------------------------------------
+            if msg.lower() in self.HELP_COMMANDS:
+                return self.HELP_TEXT
 
-        # ------------------------------------------------------------------
-        # Active flow routing
-        # ------------------------------------------------------------------
-        if has_active_flow:
-            if session.flow == self.LIST_FLOW and session.step == self.SELECT_STEP:
-                return await self._handle_list_selection(
-                    phone, msg, session, session_service, tenant_service
-                )
-            elif session.flow == self.CREATE_FLOW:
-                return await self._handle_create_step(
-                    phone, msg, session, session_service, tenant_service
-                )
-            elif session.flow == self.DETAIL_FLOW and session.step == self.ACTIONS_STEP:
-                return await self._handle_detail_action(
-                    phone, msg, session, session_service, tenant_service
-                )
-            elif session.flow == self.EDIT_FLOW:
-                return await self._handle_edit_step(
-                    phone, msg, session, session_service, tenant_service
-                )
-            elif session.flow == self.DEACTIVATE_FLOW and session.step == self.CONFIRM_DEACTIVATE_STEP:
-                return await self._handle_deactivate_confirm(
-                    phone, msg, session, session_service, tenant_service
-                )
-            elif session.flow == self.DELETE_FLOW and session.step == self.CONFIRM_DELETE_STEP:
-                return await self._handle_delete_confirm(
-                    phone, msg, session, session_service, tenant_service
-                )
-            return self.FALLBACK_ACTIVE_FLOW
+            # ------------------------------------------------------------------
+            # Active flow routing
+            # ------------------------------------------------------------------
+            if has_active_flow:
+                if session.flow == self.LIST_FLOW and session.step == self.SELECT_STEP:
+                    return await self._handle_list_selection(
+                        phone, msg, session, session_service, tenant_service
+                    )
+                elif session.flow == self.CREATE_FLOW:
+                    return await self._handle_create_step(
+                        phone, msg, session, session_service, tenant_service
+                    )
+                elif session.flow == self.DETAIL_FLOW and session.step == self.ACTIONS_STEP:
+                    return await self._handle_detail_action(
+                        phone, msg, session, session_service, tenant_service
+                    )
+                elif session.flow == self.EDIT_FLOW:
+                    return await self._handle_edit_step(
+                        phone, msg, session, session_service, tenant_service
+                    )
+                elif session.flow == self.DEACTIVATE_FLOW and session.step == self.CONFIRM_DEACTIVATE_STEP:
+                    return await self._handle_deactivate_confirm(
+                        phone, msg, session, session_service, tenant_service
+                    )
+                elif session.flow == self.DELETE_FLOW and session.step == self.CONFIRM_DELETE_STEP:
+                    return await self._handle_delete_confirm(
+                        phone, msg, session, session_service, tenant_service
+                    )
+                return self.FALLBACK_ACTIVE_FLOW
 
-        # ------------------------------------------------------------------
-        # No active flow
-        # ------------------------------------------------------------------
+            # ------------------------------------------------------------------
+            # No active flow
+            # ------------------------------------------------------------------
 
-        # Empty/blank input — show the menu
-        if not msg:
-            return self.MAIN_MENU
+            # Empty/blank input — show the menu
+            if not msg:
+                return self.MAIN_MENU
 
-        # Menu options 1-4 — when tenant_service is available, options 1,
-        # 3, and 4 trigger the list flow.  Option 2 starts the create flow.
-        # Without tenant_service, all numeric options return the main menu
-        # (backward compatible).
-        if msg in {"1", "2", "3", "4"}:
-            if msg in {"1", "3", "4"} and tenant_service is not None:
-                return await self._handle_list_tenants(
-                    phone, session_service, tenant_service
-                )
-            if msg == "2":
-                return await self._start_create_flow(
-                    phone, session_service
-                )
-            return self.MAIN_MENU
+            # Menu options 1-4 — when tenant_service is available, options 1,
+            # 3, and 4 trigger the list flow.  Option 2 starts the create flow.
+            # Without tenant_service, all numeric options return the main menu
+            # (backward compatible).
+            if msg in {"1", "2", "3", "4"}:
+                if msg in {"1", "3", "4"} and tenant_service is not None:
+                    return await self._handle_list_tenants(
+                        phone, session_service, tenant_service
+                    )
+                if msg == "2":
+                    return await self._start_create_flow(
+                        phone, session_service
+                    )
+                return self.MAIN_MENU
 
-        # Truly unrecognised input
-        return self.FALLBACK_NO_FLOW
+            # Truly unrecognised input
+            return self.FALLBACK_NO_FLOW
+
+        except RedisUnavailableError:
+            return ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
     # ------------------------------------------------------------------
     # Tenant list helpers

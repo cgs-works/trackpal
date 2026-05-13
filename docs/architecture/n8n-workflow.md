@@ -1,6 +1,6 @@
 # n8n WhatsApp Workflow
 
-> **Architecture (Phase 3, 2026-05-12):** For the WhatsApp Master Console, n8n is **transport-only**. The backend owns conversation logic, menu routing, and session state (see ADR-0004). n8n only: receive message → call backend console endpoint → send reply — without interpreting product logic.
+> **Architecture (Phase 3+, 2026-05-12):** For the WhatsApp Master Console, n8n is **transport-only**. The backend owns conversation logic, menu routing, Redis-backed session state with active-passive HA, and circuit-breaker failover (see ADR-0004). n8n only: receive message → call backend console endpoint → send reply — without interpreting product logic.
 
 ## Overview
 
@@ -123,6 +123,8 @@ To deploy this workflow, replace the placeholders in the JSON with your actual v
 ## Phone number format
 
 Evolution API sends phone numbers with `@c.us` or `@s.whatsapp.net` suffix. The workflow strips these. The Evolution API Send node also strips the `+` prefix before sending replies.
+
+**Backend canonicalization**: The backend applies `PhoneNormalizer.normalize_phone()` on every incoming phone value. This removes `+`, all non-digits, WhatsApp JID suffixes, and device suffixes — producing a canonical digits-only string for identity lookup, Redis session keying, and database storage. The n8n workflow does not need to do full canonicalization beyond the basic suffix strip.
 
 ## What changed from the legacy workflow
 

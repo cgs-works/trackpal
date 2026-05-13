@@ -65,7 +65,7 @@ async def test_update_profile_phone_same_value(client, master_user):
     )
 
     assert response.status_code == 200
-    assert response.json()["phone"] == "+10000000000"
+    assert response.json()["phone"] == "10000000000"  # canonical: no + prefix
 
 
 async def test_update_profile(client, master_user, active_tenant_user):
@@ -109,6 +109,52 @@ async def test_change_password_wrong_old(client, active_tenant_user):
     )
 
     assert response.status_code == 400
+
+
+async def test_update_profile_phone_is_canonical(client, master_user, db_session):
+    """Updated profile phone stored canonical without + prefix."""
+    from uuid import UUID
+    master_headers = await _login(client, "master", "master-password")
+
+    response = await client.put(
+        "/api/v1/me",
+        json={"phone": "+15556666666"},
+        headers=master_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["phone"] == "15556666666"
+
+    from app.models import MasterProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    assert profile.phone == "15556666666"
+
+
+async def test_update_profile_phone_jid_becomes_canonical(client, master_user, db_session):
+    """JID-style phone input stored canonical."""
+    from uuid import UUID
+    master_headers = await _login(client, "master", "master-password")
+
+    response = await client.put(
+        "/api/v1/me",
+        json={"phone": "+15557777777@s.whatsapp.net"},
+        headers=master_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["phone"] == "15557777777"
+
+    from app.models import MasterProfile
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
+    )
+    profile = result.scalar_one_or_none()
+    assert profile.phone == "15557777777"
 
 
 async def test_dashboard_master(

@@ -32,3 +32,22 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: "http://localhost:5173,https://trackpal.pages.dev"
+      # Redis HA configuration (set these in Render dashboard)
+      - key: REDIS_PRIMARY_URL
+        sync: false
+      - key: REDIS_BACKUP_URL
+        sync: false
+      - key: REDIS_POOL_SIZE
+        value: "20"
+      - key: REDIS_SOCKET_TIMEOUT_SECONDS
+        value: "5.0"
+      - key: REDIS_CONNECT_TIMEOUT_SECONDS
+        value: "5.0"
+      - key: REDIS_HEALTH_CHECK_INTERVAL_SECONDS
+        value: "30.0"
+      - key: REDIS_FAILOVER_FAILURE_THRESHOLD
+        value: "3"
+      - key: REDIS_BREAKER_OPEN_SECONDS
+        value: "30"
+      - key: WHATSAPP_SESSION_TTL_MINUTES
+        value: "15"

@@ -6,6 +6,7 @@ import os
 import sqlalchemy
 
 from app.core.database import AsyncSessionLocal
+from app.core.phone import normalize_phone
 from app.core.security import get_password_hash
 from app.models import MasterProfile, User
 
@@ -14,7 +15,7 @@ async def seed():
     username = os.environ["MASTER_USERNAME"]
     password = os.environ["MASTER_PASSWORD"]
     name = os.environ["MASTER_NAME"]
-    phone = os.environ.get("MASTER_PHONE")
+    phone = normalize_phone(os.environ.get("MASTER_PHONE"))
 
     async with AsyncSessionLocal() as db:
         existing = await db.execute(

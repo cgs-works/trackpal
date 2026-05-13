@@ -8,6 +8,7 @@ Stack: **Python FastAPI + SQLAlchemy async + Supabase PostgreSQL**
 backend/
 ├── app/
 │   ├── main.py              # FastAPI app, CORS (from CORS_ORIGINS), lifespan, router mount
+│   │                        #   lifespan: init_redis() / close_redis()
 │   ├── api/
 │   │   ├── dependencies.py  # get_current_user, require_role, verify_n8n_api_key_header
 │   │   └── v1/
@@ -15,8 +16,12 @@ backend/
 │   │       └── endpoints/   # One file per resource
 │   ├── core/
 │   │   ├── config.py        # Pydantic Settings (env vars: DATABASE_URL, SECRET_KEY, N8N_API_KEY,
-│   │   │                    #   CORS_ORIGINS, EVOLUTION_API_URL, EVOLUTION_API_KEY, JWT TTLs, Master creds)
+│   │   │                    #   CORS_ORIGINS, EVOLUTION_API_URL, EVOLUTION_API_KEY, JWT TTLs,
+│   │   │                    #   Master creds, Redis HA URLs/pool/breaker/TTL)
 │   │   ├── database.py      # AsyncSession factory
+│   │   ├── phone.py         # PhoneNormalizer.normalize_phone() — canonical digits-only phone
+│   │   ├── redis_client.py  # RedisConnectionManager + FailoverPolicy — active-passive HA,
+│   │   │                    #   primary/backup pools, circuit breaker, half-open recovery
 │   │   └── security.py      # JWT create/decode, bcrypt hash/verify, API key verify
 │   ├── models/
 │   │   ├── base.py          # Base declarative + TimestampMixin
@@ -24,12 +29,18 @@ backend/
 │   │   ├── master_profile.py
 │   │   ├── tenant_profile.py
 │   │   └── refresh_session.py
-│   ├── schemas/             # Pydantic V2 request/response models
+│   ├── schemas/             # Pydantic V2 request/response models (normalize phone on input)
 │   ├── services/            # Business logic layer
-│   │   ├── auth_service.py
+│   │   ├── auth_service.py  # identify_by_phone() normalizes phone before lookup
 │   │   ├── tenant_service.py
 │   │   ├── profile_service.py
-│   │   └── evolution_client.py
+│   │   ├── evolution_client.py
+│   │   ├── whatsapp_session_service.py   # WhatsAppSessionService — Redis-backed session CRUD,
+│   │   │                                 #   TTL management, failover-aware used_backup signal
+│   │   ├── whatsapp_console_service.py   # WhatsAppConsoleService — conversation routing,
+│   │   │                                 #   menus, multi-step CRUD flows, reset/help/fallback
+│   │   └── contingency_reply_policy.py   # ContingencyReplyPolicy — relayable texts for
+│   │                                     #   backup-session-reset / total-unavailability
 │   ├── crud/                # Data access helpers
 │   └── __init__.py
 ├── alembic/                 # Async Alembic migrations (reads DATABASE_URL from env)
@@ -39,8 +50,20 @@ backend/
 ├── tests/
 │   ├── conftest.py          # Async fixtures (test DB, client, auth headers; Evolution API disabled)
 │   ├── test_auth.py         # Login, refresh, logout, identify, refresh-token-as-bearer rejection
+│   ├── test_contingency_reply_policy.py  # Degraded state reply texts
+│   ├── test_phone_normalization_migration.py  # Phone canonicalisation DB migration test
+│   ├── test_phone_normalizer.py          # Phone canonicalization
 │   ├── test_profile.py      # Profile get/update, password change, dashboard, phone conflict
-│   └── test_tenants.py      # CRUD, soft-delete, role enforcement, duplicate username
+│   ├── test_redis_connection_manager.py  # Primary/backup pools, execute routing
+│   ├── test_redis_failover_policy.py     # Circuit breaker, half-open, threshold
+│   ├── test_tenants.py      # CRUD, soft-delete, role enforcement, duplicate username
+│   ├── test_whatsapp_create_flow.py      # Multi-step create tenant flow
+│   ├── test_whatsapp_edit_flow.py        # Multi-step edit tenant flow
+│   ├── test_whatsapp_endpoint.py         # /integrations/n8n/console endpoint
+│   ├── test_whatsapp_lifecycle_flow.py   # Deactivate/delete lifecycle flows
+│   ├── test_whatsapp_list_select_flow.py # Tenant list + detail selection flow
+│   ├── test_whatsapp_menu_flow.py        # Menu, reset, help, fallback, TTL not refreshed on noise
+│   └── test_whatsapp_session_service.py  # Session CRUD, TTL, explicit delete, used_backup
 └── pyproject.toml           # UV project config, dependencies
 ```
 
@@ -48,7 +71,9 @@ backend/
 
 ### Core
 
-- **`config.py`** — reads `DATABASE_URL`, `SECRET_KEY`, `N8N_API_KEY`, `CORS_ORIGINS`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, Master seed credentials from env.
+- **`config.py`** — reads `DATABASE_URL`, `SECRET_KEY`, `N8N_API_KEY`, `CORS_ORIGINS`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, Master seed credentials, and Redis HA settings (`REDIS_PRIMARY_URL`, `REDIS_BACKUP_URL`, `REDIS_POOL_SIZE`, socket/connect timeout, health check interval, failover threshold, breaker open seconds, session TTL) from env.
+- **`phone.py`** — `PhoneNormalizer.normalize_phone(value)` strips `+`, all non-digits, JID suffixes (`@c.us`, `@s.whatsapp.net`), and device suffixes (`:device`). Returns canonical digits-only string or `None`. Applied in schemas, services, and identity lookup.
+- **`redis_client.py`** — `RedisConnectionManager` owns primary and backup `Redis` clients (pools) for the process lifetime. `FailoverPolicy` implements circuit breaker (CLOSED → OPEN → HALF_OPEN) based on consecutive failure threshold and open window. `execute()` routes operations to the active store, records success/failure, and falls back to backup when the breaker opens.
 - **`security.py`** — uses `PyJWT` (HS256) for tokens, `bcrypt` directly for password hashing (no passlib).
 - **`database.py`** — creates async engine + `sessionmaker` bound to `AsyncSession`.
 
@@ -60,10 +85,13 @@ backend/
 
 ### Services
 
-- **`AuthService`** — `authenticate()` (login), `create_tokens()` (JWT + refresh session), `refresh_access_token()` (rotation + inactive check), `revoke_refresh_token()` (logout), `identify_by_phone()` (n8n hook).
+- **`AuthService`** — `authenticate()` (login), `create_tokens()` (JWT + refresh session), `refresh_access_token()` (rotation + inactive check), `revoke_refresh_token()` (logout), `identify_by_phone()` (n8n hook, normalizes phone before lookup).
 - **`TenantService`** — CRUD with deactivate (revokes refresh sessions), activate, delete (only inactive, also removes Evolution instance), phone uniqueness, username uniqueness, password auto-generation.
 - **`ProfileService`** — get/update profile (cross-table phone uniqueness), change password.
 - **`EvolutionClient`** — async HTTP client for Evolution API. Creates WhatsApp instances (`/instance/create`), configures n8n integration (`/n8n/create/{name}`), and deletes instances (`/instance/delete/{name}`) on tenant removal. Transaction safety: rollback DB on Evolution failure. Skipped with warning if `EVOLUTION_API_URL` or `EVOLUTION_API_KEY` not configured.
+- **`WhatsAppSessionService`** — manages ephemeral conversation state in Redis via `RedisConnectionManager.execute()`. Stores `ConversationSession` as JSON under `session:{phone}`. Supports `get_session`, `create_session`, `save_session` (with `touch_ttl` parameter), `update_session`, and `clear_session`. TTL refreshed only on valid flow progress. Exposes `used_backup` signal for contingency detection.
+- **`WhatsAppConsoleService`** — routes WhatsApp messages through conversation flows. Handles menu display, numeric selection, create/edit/deactivate/delete tenant flows, help, fallback, global reset, contingency reset (backup missing session), and TTL refresh discipline. Returns deterministic reply text for n8n transport.
+- **`ContingencyReplyPolicy`** — defines two relayable replies: `SESSION_RESET` (failover backup lacks session) and `TEMPORARY_UNAVAILABLE` (both Redis stores down).
 
 ### Database migrations
 
@@ -105,10 +133,20 @@ DELETE /api/v1/tenants/{id}
 | `EVOLUTION_API_KEY` | No | `""` | Evolution API key |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | `30` | JWT access token TTL |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | No | `7` | Refresh token TTL |
+| `REDIS_URL` | No | `""` | Redis URL (legacy fallback) |
+| `REDIS_PRIMARY_URL` | No | `""` | Redis primary URL (`redis://` or `rediss://`) |
+| `REDIS_BACKUP_URL` | No | `""` | Redis backup URL (`redis://` or `rediss://`) |
+| `REDIS_POOL_SIZE` | No | `20` | Max connections per pool |
+| `REDIS_SOCKET_TIMEOUT_SECONDS` | No | `5.0` | Socket timeout (seconds) |
+| `REDIS_CONNECT_TIMEOUT_SECONDS` | No | `5.0` | Connection timeout (seconds) |
+| `REDIS_HEALTH_CHECK_INTERVAL_SECONDS` | No | `30.0` | Health check interval (seconds) |
+| `REDIS_FAILOVER_FAILURE_THRESHOLD` | No | `3` | Consecutive failures before breaker opens |
+| `REDIS_BREAKER_OPEN_SECONDS` | No | `30` | Breaker open window (seconds) |
+| `WHATSAPP_SESSION_TTL_MINUTES` | No | `15` | WhatsApp session TTL (minutes) |
 
 ## Tests
 
-34 tests across 3 files. Uses `aiosqlite` in-memory DB. Evolution API calls are disabled in tests by clearing `evolution_client.api_key`.
+368 tests across 15 test files. Uses `aiosqlite` in-memory DB. Evolution API calls are disabled in tests by clearing `evolution_client.api_key`. Redis operations use fake/test doubles — no Redis cloud dependency.
 
 ```bash
 cd backend && uv run pytest -v

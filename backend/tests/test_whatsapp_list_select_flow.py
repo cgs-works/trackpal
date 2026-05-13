@@ -92,6 +92,16 @@ class FakeRedis:
         raise AttributeError(f"FakeRedis does not implement '{name}'")
 
 
+class FakeManager:
+    """Duck-typed connection manager that delegates execute() to FakeRedis."""
+
+    def __init__(self, fake_redis: FakeRedis | None = None) -> None:
+        self._redis = fake_redis or FakeRedis()
+
+    async def execute(self, operation_name: str, async_callable: Any) -> Any:
+        return await async_callable(self._redis)
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -108,7 +118,10 @@ def fake_redis() -> FakeRedis:
 
 @pytest.fixture
 def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
-    return WhatsAppSessionService(redis_client=fake_redis, ttl_seconds=1800)
+    return WhatsAppSessionService(
+        connection_manager=FakeManager(fake_redis=fake_redis),
+        ttl_seconds=900,
+    )
 
 
 @pytest.fixture

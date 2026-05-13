@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.phone import normalize_phone
+
 
 class TenantCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -21,6 +23,11 @@ class TenantCreate(BaseModel):
             raise ValueError("Password must be at least 6 characters")
         return v
 
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone_field(cls, v: str | None) -> str | None:
+        return normalize_phone(v)
+
 
 class TenantUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -29,6 +36,11 @@ class TenantUpdate(BaseModel):
     email: str | None = None
     phone: str | None = None
     evolution_instance_name: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone_field(cls, v: str | None) -> str | None:
+        return normalize_phone(v)
 
 
 class TenantResponse(BaseModel):

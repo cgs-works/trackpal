@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.phone import normalize_phone
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -128,7 +129,10 @@ class AuthService:
         return False
 
     async def identify_by_phone(self, db: AsyncSession, phone: str) -> dict | None:
-        result = await user_crud.get_by_phone(db, phone)
+        canonical = normalize_phone(phone)
+        if canonical is None:
+            return None
+        result = await user_crud.get_by_phone(db, canonical)
         if not result:
             return None
         user, _ = result

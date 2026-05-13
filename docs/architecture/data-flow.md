@@ -144,6 +144,145 @@ Master                     FastAPI                  Supabase          Evolution 
   │<─────────────────────────┤                       │                    │
 ```
 
+## Redis HA active-passive failover flow
+
+> **Implemented in:** Redis Session HA phase (2026-05-12).
+> See ADR-0004 for the complete decision.
+
+```
+                         ┌──────────────────────────────────────────────────┐
+                         │           RedisConnectionManager                │
+                         │  (process-lifetime pools + FailoverPolicy)     │
+                         │                                                  │
+                         │  ┌──────────────┐      ┌──────────────┐        │
+                         │  │  Primary     │      │  Backup      │        │
+                         │  │  (CLOSED)    │      │  (standby)   │        │
+                         │  │  redis://    │      │  redis://    │        │
+                         │  │  or rediss://│      │  or rediss://│        │
+                         │  └──────┬───────┘      └──────┬───────┘        │
+                         │         │                     │                │
+                         │         │  FailoverPolicy     │                │
+                         │         │  ┌─────────────────┐│                │
+                         │         │  │ CLOSED (normal) ││                │
+                         │         │  │ OPEN (backup)   ││                │
+                         │         │  │ HALF_OPEN (probe)││               │
+                         │         │  └─────────────────┘│                │
+                         └──────────────────────────────────────────────────┘
+                                       │
+                                       │ execute(operation, callable)
+                                       v
+                         ┌──────────────────────────────────────────────────┐
+                         │        WhatsAppSessionService                    │
+                         │  session:{phone} → ConversationSession (JSON)  │
+                         │  TTL: 15 minutes (900s, default)                │
+                         │  touch_ttl: only on valid flow progress         │
+                         │  used_backup: delegated to FailoverPolicy       │
+                         └──────────────────────────────────────────────────┘
+```
+
+### Normal operation (CLOSED)
+
+```
+WhatsAppConsoleService           RedisConnectionManager           Primary Redis
+      │                                   │                           │
+      │ process_message()                 │                           │
+      ├──────────────────────────────────>│                           │
+      │                                   │ execute("get_session",_)  │
+      │                                   ├──────────────────────────>│
+      │                                   │<──────────────────────────┤
+      │                                   │ record_success()          │
+      │                                   │ (failures reset to 0)     │
+      │                                   │                           │
+      │                                   │ execute("save_session",_) │
+      │                                   ├──────────────────────────>│
+      │                                   │<──────────────────────────┤
+      │                                   │                           │
+      │ reply ← ContingencyReplyPolicy or │                           │
+      │        console flow text          │                           │
+      │<──────────────────────────────────┤                           │
+```
+
+### Failover (breaker OPEN)
+
+```
+WhatsAppConsoleService           RedisConnectionManager           Primary Redis      Backup Redis
+      │                                   │                           │                │
+      │ process_message()                 │                           │                │
+      ├──────────────────────────────────>│                           │                │
+      │                                   │ execute("get_session",_)  │                │
+      │                                   ├──────────────────────────>│                │
+      │                                   │<────── ConnectionError ──┤                │
+      │                                   │                           │                │
+      │                                   │ record_failure()          │                │
+      │                                   │ consecutive=1→2→3         │                │
+      │                                   │ (threshold=3 → OPEN)     │                │
+      │                                   │                           │                │
+      │                                   │ execute("get_session",_)  │                │
+      │                                   ├──────────────────────────────────────────>│
+      │                                   │<──────────────────────────────────────────┤
+      │                                   │                           │                │
+      │  ── if session found on backup ──                              │                │
+      │  reply ← console flow text                                     │                │
+      │                                                                                │
+      │  ── if session NOT found on backup ──                                          │
+      │  create fresh session (for next message)                                       │
+      │  reply ← ContingencyReplyPolicy.SESSION_RESET                                  │
+      │                                   │                           │                │
+```
+
+### Recovery (HALF_OPEN → CLOSED)
+
+```
+WhatsAppConsoleService           RedisConnectionManager           Primary Redis
+      │                                   │                           │
+      │ process_message()                 │                           │
+      ├──────────────────────────────────>│                           │
+      │                                   │ 30s elapsed after OPEN    │
+      │                                   │ state → HALF_OPEN         │
+      │                                   │                           │
+      │                                   │ execute("get_session",_)  │
+      │                                   ├──────────────────────────>│
+      │                                   │<────── success ──────────┤
+      │                                   │                           │
+      │                                   │ record_success()          │
+      │                                   │ (CLOSED, back to primary) │
+      │                                   │                           │
+```
+
+### Both Redis stores unavailable
+
+When both primary and backup Redis are unreachable (or only primary is
+configured and it fails), the ``RedisConnectionManager.execute()`` raises
+``RedisUnavailableError`` which ``WhatsAppConsoleService`` catches and
+returns ``ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE``. The backend never
+degrades to stateless operation.
+
+## Phone canonicalization flow
+
+Every incoming phone value follows a deterministic pipeline:
+
+```
+n8n / API request → normalize_phone(value)
+                          │
+                          ├── Strip "+" prefix
+                          ├── Strip JID suffix ("@c.us", "@s.whatsapp.net")
+                          ├── Strip device suffix (":" + digits)
+                          ├── Strip all non-digits (spaces, dashes, parens)
+                          │
+                          └── Return digits-only string or None
+                                │
+                                ├── Used for: AuthService.identify_by_phone()
+                                ├── Used for: Redis session key ("session:{phone}")
+                                └── Stored in: master_profiles.phone / tenant_profiles.phone
+```
+
+Applied at every entry point:
+- `POST /api/v1/integrations/n8n/identify?phone=` — identifies caller
+- `POST /api/v1/integrations/n8n/console` — normalises phone before session lookup
+- Pydantic schemas `TenantCreate`, `TenantUpdate` — normalise phone on input
+- `AuthService.identify_by_phone()` — normalises before DB lookup
+- `WhatsAppSessionService._session_key()` — key is based on canonicalised phone
+
 ## Unified login via users table
 
 ```
