@@ -164,6 +164,11 @@ trackpal/
 - Un solo Master (seed idempotente + validación en service layer).
 - Todos los IDs son UUID v4.
 - Contraseñas hasheadas con bcrypt (sin passlib).
+- **Input Validation Policy** — validación centralizada en backend, reutilizable por dashboard, API y WhatsApp. _Avoid_: validación por canal, reglas duplicadas en n8n/frontend.
+- **Username** — solo letras minúsculas, números y `_`, máximo 20 caracteres, debe iniciar con letra. _Avoid_: username libre, comandos tipo `/menu`, espacios, mayúsculas.
+- **Email** — validación de sintaxis + normalización; no se exige deliverability/DNS por request. _Avoid_: regex casero mínima, validación dependiente de red.
+- **Phone** — entrada obligatoriamente interpretable como E.164, pero puede recibirse sin `+`; se canonicaliza a dígitos para almacenamiento y lookup. _Avoid_: heurística de país, formatos ambiguos por canal.
+- **Full Name** — permite letras, números y espacios; no permite espacio inicial/final; espacios internos múltiples se colapsan a uno antes de guardar. _Avoid_: conservar whitespace sucio, comandos o payloads crudos como nombre.
 
 ### Current Gaps (Out of Scope MVP)
 - Customer entity and CRUD
