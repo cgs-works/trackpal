@@ -199,6 +199,19 @@ class WhatsAppMasterConsoleFacade:
                         session_service=self._session_service,
                         tenant_service=self._tenant_service,
                     )
+                elif self._session_service.used_backup:
+                    # Failover: session missing may be due to backup
+                    # Redis rather than genuine top-level context.
+                    # Preserve auth, refresh TTL, delegate as cancel/menu
+                    # path so the user is not forcefully logged out.
+                    await self._auth_session_service.touch_auth_session(phone)
+                    return await self._console_service.process_message(
+                        phone=phone,
+                        message=message,
+                        is_master=True,
+                        session_service=self._session_service,
+                        tenant_service=self._tenant_service,
+                    )
                 else:
                     # Top-level → full logout
                     return await self._perform_logout(
@@ -240,18 +253,25 @@ class WhatsAppMasterConsoleFacade:
 
         # 3. Call Evolution close if we have an instance
         if instance is not None:
-            digits = normalize_phone(phone) or phone
-            remote_jid = f"{digits}@s.whatsapp.net"
-            try:
-                await evolution_client.close_chat_session(
-                    instance=instance,
-                    remote_jid=remote_jid,
-                )
-            except httpx.HTTPError:
+            digits = normalize_phone(phone)
+            if digits:
+                remote_jid = f"{digits}@s.whatsapp.net"
+                try:
+                    await evolution_client.close_chat_session(
+                        instance=instance,
+                        remote_jid=remote_jid,
+                    )
+                except httpx.HTTPError:
+                    logger.warning(
+                        "Evolution API call failed during logout for phone=%s instance=%s",
+                        phone,
+                        instance,
+                        exc_info=True,
+                    )
+            else:
                 logger.warning(
-                    "Evolution API call failed during logout for phone=%s instance=%s",
+                    "Cannot close Evolution session: normalize_phone returned no digits for phone=%s",
                     phone,
-                    instance,
                 )
 
         # 4. Confirmation reply

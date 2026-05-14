@@ -19,7 +19,7 @@ Implemented contextual semantics for command `0` in the WhatsApp Master Console:
 - `backend/app/services/evolution_client.py` — added `close_chat_session()` method
 - `backend/tests/test_evolution_client.py` (new) — 6 unit tests
 
-**Endpoint contract:** `PUT /chat/{instance}/update` with `{"remoteJid": "...", "status": "closed"}`
+**Endpoint contract:** `POST /n8n/changeStatus/{instance}` with `{"remoteJid": "...", "status": "closed"}`
 
 ### Phase 2 — Facade logout orchestration
 **Files changed:**
@@ -58,7 +58,7 @@ None.
 
 ## Notable Decisions
 
-- **Evolution API endpoint:** Used `PUT /chat/{instance}/update` with `remoteJid` and `status: "closed"` (standard Evolution API pattern). If the actual deployed Evolution version uses a different endpoint, only `evolution_client.py` needs changing.
+- **Evolution API endpoint:** Used `POST /n8n/changeStatus/{instance}` with `remoteJid` and `status: "closed"` (standard Evolution API n8n webhook pattern). If the actual deployed Evolution version uses a different endpoint, only `evolution_client.py` needs changing.
 - **Context detection:** "Main menu context" approximated as "authenticated + no active flow in Redis". This matches how the console models state — flow state only exists when inside a sub-flow.
 - **Logout confirmation:** Spanish text: "Has cerrado sesión en la consola Master. Escribe *menu* para iniciar sesión de nuevo."
 - **Cancel message:** "🚫 Operación cancelada." + MAIN_MENU (in same reply).

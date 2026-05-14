@@ -60,9 +60,9 @@ class FakeRedis:
 
 
 class FakeManager:
-    def __init__(self, fake_redis: FakeRedis | None = None) -> None:
+    def __init__(self, fake_redis: FakeRedis | None = None, *, used_backup: bool = False) -> None:
         self._redis = fake_redis or FakeRedis()
-        self._used_backup = False
+        self._used_backup = used_backup
 
     @property
     def used_backup(self) -> bool:
@@ -655,3 +655,192 @@ class TestLoginReset:
         conv = await session_service.get_session("+9999999999")
         assert conv is None
         assert "usuario" in reply.lower()
+
+
+# ===========================================================================
+# Tests: Failover — backup Redis, no session, authenticated "0"
+# ===========================================================================
+
+class TestFailoverBackupNoSession:
+    """Authenticated + ``0`` + ``used_backup=True`` + no conv session → cancel/menu path, not logout."""
+
+    async def test_auth_session_preserved_on_failover(
+        self,
+        console_service: WhatsAppConsoleService,
+        auth_session_service: WhatsAppAuthSessionService,
+    ) -> None:
+        """Auth session is NOT cleared when on backup and conv session is missing."""
+        fake_redis = FakeRedis()
+        manager = FakeManager(fake_redis=fake_redis, used_backup=True)
+        session_service = WhatsAppSessionService(
+            connection_manager=manager,
+            ttl_seconds=900,
+        )
+        auth_service = WhatsAppAuthSessionService(
+            connection_manager=manager,
+            session_ttl_seconds=900,
+            fail_threshold=5,
+            lock_minutes=5,
+            fail_window_minutes=15,
+        )
+
+        await _setup_auth_session(auth_service, phone="+12015550001")
+
+        facade = _make_facade(console_service, session_service, auth_service)
+
+        with patch(
+            "app.services.evolution_client.evolution_client.close_chat_session"
+        ) as mock_close:
+            reply = await facade.process_message(
+                phone="+12015550001",
+                message="0",
+                instance="inst-test",
+                db=None,
+            )
+
+        # Auth session must remain
+        auth = await auth_service.get_auth_session("+12015550001")
+        assert auth is not None, "Auth session must survive failover 0"
+
+        # Evolution close should NOT be called (not a real logout)
+        mock_close.assert_not_called()
+
+        # Reply should be menu/cancel path (MAIN_MENU from console service)
+        assert "Master Console" in reply or "Trackpal" in reply
+
+    async def test_session_touched_on_failover(
+        self,
+        console_service: WhatsAppConsoleService,
+        auth_session_service: WhatsAppAuthSessionService,
+    ) -> None:
+        """Auth session TTL is refreshed on failover path."""
+        fake_redis = FakeRedis()
+        manager = FakeManager(fake_redis=fake_redis, used_backup=True)
+        session_service = WhatsAppSessionService(
+            connection_manager=manager,
+            ttl_seconds=900,
+        )
+        auth_service = WhatsAppAuthSessionService(
+            connection_manager=manager,
+            session_ttl_seconds=900,
+            fail_threshold=5,
+            lock_minutes=5,
+            fail_window_minutes=15,
+        )
+
+        await _setup_auth_session(auth_service, phone="+12015550001")
+
+        facade = _make_facade(console_service, session_service, auth_service)
+
+        with patch.object(auth_service, "touch_auth_session") as mock_touch:
+            with patch(
+                "app.services.evolution_client.evolution_client.close_chat_session"
+            ):
+                await facade.process_message(
+                    phone="+12015550001",
+                    message="0",
+                    instance="inst-test",
+                    db=None,
+                )
+
+            mock_touch.assert_awaited_once_with("+12015550001")
+
+
+# ===========================================================================
+# Tests: Invalid / empty phone during _perform_logout
+# ===========================================================================
+
+class TestLogoutInvalidPhone:
+    """Invalid or empty phone in _perform_logout must skip Evolution call but still logout."""
+
+    async def test_empty_phone_skips_evolution(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        auth_session_service: WhatsAppAuthSessionService,
+    ) -> None:
+        """Empty phone (or None from normalize_phone) must skip Evolution close call."""
+        await _setup_auth_session(auth_session_service, phone="invalid")
+
+        facade = _make_facade(console_service, session_service, auth_session_service)
+
+        with patch(
+            "app.services.evolution_client.evolution_client.close_chat_session"
+        ) as mock_close:
+            reply = await facade._perform_logout(
+                phone="invalid",
+                instance="inst-test",
+            )
+
+            # Evolution close must NOT be called (no digits in "invalid")
+            mock_close.assert_not_called()
+
+        # Redis keys still cleared and confirmation returned
+        assert "sesión" in reply.lower() or "cerrada" in reply.lower()
+
+    async def test_no_digits_phone_logs_warning(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        auth_session_service: WhatsAppAuthSessionService,
+        caplog: Any,
+    ) -> None:
+        """Warning is logged when phone has no digits."""
+        await _setup_auth_session(auth_session_service, phone="abc")
+
+        facade = _make_facade(console_service, session_service, auth_session_service)
+
+        import logging
+        with caplog.at_level(logging.WARNING):
+            await facade._perform_logout(
+                phone="abc",
+                instance="inst-test",
+            )
+
+        # Warning should mention the phone and the skip
+        assert any(
+            "normalize_phone returned no digits" in rec.message
+            for rec in caplog.records
+        ), "Warning about no digits should be logged"
+
+
+# ===========================================================================
+# Tests: HTTPError logging context in _perform_logout
+# ===========================================================================
+
+class TestLogoutHttpErrorLogging:
+    """HTTPError during Evolution close should include exception context."""
+
+    async def test_http_error_logs_exc_info(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        auth_session_service: WhatsAppAuthSessionService,
+        caplog: Any,
+    ) -> None:
+        """HTTPError caught during _perform_logout includes exc_info in log record."""
+        await _setup_auth_session(auth_session_service, phone="+12015550001")
+
+        facade = _make_facade(console_service, session_service, auth_session_service)
+
+        with patch(
+            "app.services.evolution_client.evolution_client.close_chat_session",
+            side_effect=httpx.HTTPError("Connection refused"),
+        ):
+            import logging
+            with caplog.at_level(logging.WARNING):
+                await facade._perform_logout(
+                    phone="+12015550001",
+                    instance="inst-test",
+                )
+
+        # Find the relevant log record
+        matching = [
+            rec for rec in caplog.records
+            if "Evolution API call failed during logout" in rec.message
+        ]
+        assert len(matching) >= 1, "Warning about Evolution failure should be logged"
+        record = matching[0]
+        assert record.exc_info is not None and record.exc_info[0] is not None, (
+            "exc_info should be set on the log record"
+        )
