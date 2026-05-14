@@ -378,6 +378,7 @@ class TestDeactivateFlow:
             tenant_service=tenant_service,
         )
         assert "Trackpal Master Console" in reply
+        assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
 
         session = await session_service.get_session("+10000000000")
         assert session is None
@@ -406,6 +407,7 @@ class TestDeactivateFlow:
             tenant_service=tenant_service,
         )
         assert "Trackpal Master Console" in reply
+        assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
 
         session = await session_service.get_session("+10000000000")
         assert session is None

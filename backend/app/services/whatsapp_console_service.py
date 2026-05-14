@@ -38,7 +38,7 @@ class WhatsAppConsoleService:
         "3️⃣ Desactivar Tenant\n"
         "4️⃣ Eliminar Tenant\n"
         "5️⃣ Ayuda\n\n"
-        "0️⃣ Cancelar / Menú\n\n"
+        "0️⃣ Cerrar sesión\n\n"
         "Responde con el número de la opción deseada."
     )
 
@@ -54,16 +54,18 @@ class WhatsAppConsoleService:
         "3️⃣ *Desactivar Tenant* — Desactiva un tenant activo.\n"
         "4️⃣ *Eliminar Tenant* — Elimina un tenant inactivo.\n"
         "5️⃣ *Ayuda* — Muestra este mensaje de ayuda.\n"
-        "0️⃣ *Cancelar / Menú* — Vuelve al menú principal.\n\n"
-        "En cualquier momento puedes enviar \"0\", \"menu\", \"menú\" "
-        "o \"cancelar\" para volver al menú principal."
+        "0️⃣ *Cerrar sesión* — Cierra tu sesión en la consola Master.\n\n"
+        "En el menú principal, escribe *0* para cerrar sesión.\n"
+        "Dentro de un flujo, *0* o *cancelar* cancelan la operación.\n"
+        "Escribe *menu* para volver al menú principal."
     )
 
     FALLBACK_NO_FLOW = (
         "❌ No entendí tu mensaje.\n\n"
         "Responde con:\n"
         "• Un número del *1* al *5* para elegir una opción del menú\n"
-        "• *0* o *menu* para volver al menú principal\n"
+        "• *menu* para volver al menú principal\n"
+        "• *0* para cerrar sesión\n"
         "• *ayuda* para ver los comandos disponibles"
     )
 
@@ -324,10 +326,24 @@ class WhatsAppConsoleService:
         "El tenant *{name}* ha sido eliminado permanentemente."
     )
 
+    EDIT_SUCCESS_MESSAGE = (
+        "✅ *Tenant actualizado exitosamente*\n\n"
+        "El tenant *{name}* ha sido actualizado correctamente."
+    )
+
     CONFIRM_REPROMPT = (
         "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas "
         "o minúsculas)."
     )
+
+    # ------------------------------------------------------------------
+    # Reply composition helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _with_main_menu(message: str) -> str:
+        """Append the global ``MAIN_MENU`` to *message*, separated by two newlines."""
+        return message.rstrip() + "\n\n" + WhatsAppConsoleService.MAIN_MENU
 
     # ------------------------------------------------------------------
     # Validation error formatting
@@ -377,14 +393,6 @@ class WhatsAppConsoleService:
 
         try:
             # ------------------------------------------------------------------
-            # Global reset — always works regardless of session state
-            # ------------------------------------------------------------------
-            if msg.lower() in self.RESET_COMMANDS:
-                if session_service is not None:
-                    await session_service.clear_session(phone)
-                return self.MAIN_MENU
-
-            # ------------------------------------------------------------------
             # Retrieve current session (if available)
             # ------------------------------------------------------------------
             session = None
@@ -395,6 +403,16 @@ class WhatsAppConsoleService:
                 session is not None
                 and bool(session.flow)
             )
+
+            # ------------------------------------------------------------------
+            # Contextual reset — flow-aware
+            # ------------------------------------------------------------------
+            if msg.lower() in self.RESET_COMMANDS:
+                if session_service is not None:
+                    await session_service.clear_session(phone)
+                if has_active_flow:
+                    return self._with_main_menu("🚫 Operación cancelada.")
+                return self.MAIN_MENU
 
             # ------------------------------------------------------------------
             # Contingency reset — failover active, session missing on backup
@@ -933,7 +951,7 @@ class WhatsAppConsoleService:
                 else:
                     msg += "\n🔑 Contraseña configurada manualmente.\n"
 
-                return msg
+                return self._with_main_menu(msg)
             else:
                 # Creation failed — keep collected data and return to the
                 # field that the user can correct in-flow.
@@ -1029,7 +1047,9 @@ class WhatsAppConsoleService:
                 if result.get("success"):
                     if session_service is not None:
                         await session_service.clear_session(phone)
-                    return self.REACTIVATE_SUCCESS_MESSAGE.format(name=tenant.full_name)
+                    return self._with_main_menu(
+                        self.REACTIVATE_SUCCESS_MESSAGE.format(name=tenant.full_name)
+                    )
                 error = result.get("error", "Error desconocido al reactivar.")
                 return "❌ " + error
             return self.EDIT_DETAIL_FALLBACK
@@ -1098,7 +1118,9 @@ class WhatsAppConsoleService:
             if result.get("success"):
                 if session_service is not None:
                     await session_service.clear_session(phone)
-                return self.DEACTIVATE_SUCCESS_MESSAGE.format(name=tenant_name)
+                return self._with_main_menu(
+                    self.DEACTIVATE_SUCCESS_MESSAGE.format(name=tenant_name)
+                )
             else:
                 error = result.get("error", "Error desconocido al desactivar.")
                 return "❌ " + error + "\n\n" + self.DEACTIVATE_CONFIRM_PROMPT.format(name=tenant_name)
@@ -1135,7 +1157,9 @@ class WhatsAppConsoleService:
             if result.get("success"):
                 if session_service is not None:
                     await session_service.clear_session(phone)
-                return self.DELETE_SUCCESS_MESSAGE.format(name=tenant_name)
+                return self._with_main_menu(
+                    self.DELETE_SUCCESS_MESSAGE.format(name=tenant_name)
+                )
             else:
                 error = result.get("error", "Error desconocido al eliminar.")
                 return "❌ " + error
@@ -1279,15 +1303,18 @@ class WhatsAppConsoleService:
         if tenant_service is not None and hasattr(tenant_service, "update_tenant"):
             result = await tenant_service.update_tenant(tenant_id, payload)
             if result.get("success"):
+                if session_service is not None:
+                    await session_service.clear_session(phone)
+
                 updated_tenant = result.get("tenant")
-                if updated_tenant is not None:
-                    # Transition back to detail screen
-                    session.flow = self.DETAIL_FLOW
-                    session.step = self.ACTIONS_STEP
-                    session.temp_data = {}
-                    if session_service is not None:
-                        await session_service.save_session(session)
-                    return self._format_tenant_detail(updated_tenant)
+                tenant_name = (
+                    getattr(updated_tenant, "full_name", None)
+                    or (isinstance(updated_tenant, dict) and updated_tenant.get("full_name"))
+                    or tenant_id
+                )
+                return self._with_main_menu(
+                    self.EDIT_SUCCESS_MESSAGE.format(name=tenant_name)
+                )
 
             # Update failed — show error and reprompt
             error = result.get("error", "Error desconocido al actualizar.")

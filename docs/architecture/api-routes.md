@@ -11,7 +11,7 @@ CORS: configured via `CORS_ORIGINS` env var (comma-separated, default `http://lo
 | POST | `/auth/login` | Public | Returns `access_token`, `refresh_token`, `user`. Rejects deactivated tenants. |
 | POST | `/auth/refresh` | Public* | Rotates refresh token. Returns new token pair. Rejects inactive tenants. |
 | POST | `/auth/logout` | Public* | Revokes the provided refresh token. |
-| POST | `/integrations/n8n/console` | X-API-Key | WhatsApp Master Console entrypoint. Body `{phone, message, instance}`. Backend handles auth gating (lockout check → auth session → conversational login → menu/CRUD). Returns `{reply}`. See [data-flow.md](data-flow.md) for full flow. |
+| POST | `/integrations/n8n/console` | X-API-Key | WhatsApp Master Console entrypoint. Body `{phone, message, instance}`. Backend handles auth gating (lockout check → auth session → conversational login → menu/CRUD) and contextual logout (top-level ``0`` performs full logout via Redis + ``POST /n8n/changeStatus/{instance}``; sub-flow ``0`` cancels flow). Returns `{reply}`. See [data-flow.md](data-flow.md) for full flow. |
 | GET | `/integrations/n8n/identify?phone=` | X-API-Key | Identifies user by phone (legacy — not used by Master Console since credential auth). Returns `user_id`, `role`, `username`. Rejects deactivated tenants. 404 if not found. |
 
 \* These endpoints require a valid refresh token in the body, not a Bearer header.
