@@ -92,26 +92,34 @@ La URL será similar a: `https://trackpal.pages.dev`
 
 El workflow export (`n8n/Trackpal WhatsApp Bot.json`) usa `{{$env.*}}` expressions para evitar secretos en repositorio.
 
-### Variables de entorno en n8n
+> **Nota sobre licencia community:** La edición community de n8n no expone la UI de Environment Variables (Settings → Environment Variables). Esa funcionalidad requiere una licencia commercial (pro/enterprise). Por eso el workflow en producción usa un nodo **Config** tipo Set en lugar de `$env.*`.
 
-Configurar en n8n (Settings → Environment Variables o `~/.n8n/.env`):
+### Config node (producción)
 
-| Env var | Valor ejemplo |
+El workflow activo en `rs-n8n.wilfredocamacho.dev` usa un nodo **Config** (Set, no conectado al flujo) con estos valores:
+
+| Clave | Descripción |
 |---|---|
-| `TRACKPAL_BACKEND_URL` | `https://trackpal-api.onrender.com` |
-| `TRACKPAL_N8N_API_KEY` | mismo valor que `N8N_API_KEY` del backend |
-| `TRACKPAL_EVOLUTION_API_URL` | `https://rs-evoapi.wilfredocamacho.dev` |
-| `TRACKPAL_EVOLUTION_API_KEY` | API key de Evolution API |
+| `trackpal_backend_url` | URL base del backend (ej. `https://trackpal-api.onrender.com`) |
+| `trackpal_n8n_api_key` | Mismo valor que `N8N_API_KEY` del backend |
+| `evolution_api_url` | URL base de Evolution API (ej. `https://rs-evoapi.wilfredocamacho.dev`) |
+| `evolution_api_key` | API key de Evolution API |
+| `default_instance` | Nombre de instancia Evolution API por defecto |
 
-### Pasos
+Los nodos HTTP (`Console call`, `Evolution API Send`) referencian estos valores con `$('Config').first().json.*` en lugar de `$env.*`.
 
-1. Configurar las variables de entorno en n8n
-2. Importar el JSON (`n8n/Trackpal WhatsApp Bot.json`) en n8n o editar los nodos manualmente
-3. Configurar el webhook de Evolution API para apuntar a:
+### Pasos para instancia nueva (community edition)
+
+1. Importar el JSON (`n8n/Trackpal WhatsApp Bot.json`) en n8n.
+2. Crear un nodo **Set** llamado **Config** (no conectado a ningún edge) con los pares clave-valor de la tabla anterior.
+3. En los nodos `Console call` y `Evolution API Send`, reemplazar `{{$env.TRACKPAL_*}}` con `{{$('Config').first().json.*}}`.
+4. Configurar el webhook de Evolution API para apuntar a:
    ```
    https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot
    ```
-4. Activar el workflow
+5. Activar el workflow.
+
+> **Alternativa (licencia commercial):** Si tenés una licencia pro/enterprise de n8n, podés usar Settings → Environment Variables y mantener las `$env.*` expressions sin modificar el JSON.
 
 ---
 
