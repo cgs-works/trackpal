@@ -202,15 +202,12 @@ class WhatsAppMasterConsoleFacade:
                 elif self._session_service.used_backup:
                     # Failover: session missing may be due to backup
                     # Redis rather than genuine top-level context.
-                    # Preserve auth, refresh TTL, delegate as cancel/menu
-                    # path so the user is not forcefully logged out.
+                    # Preserve auth, refresh TTL, and return the same
+                    # cancel + main-menu reply shape required for active
+                    # CRUD flows.
                     await self._auth_session_service.touch_auth_session(phone)
-                    return await self._console_service.process_message(
-                        phone=phone,
-                        message=message,
-                        is_master=True,
-                        session_service=self._session_service,
-                        tenant_service=self._tenant_service,
+                    return self._console_service._with_main_menu(
+                        "🚫 Operación cancelada."
                     )
                 else:
                     # Top-level → full logout

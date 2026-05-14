@@ -705,7 +705,8 @@ class TestFailoverBackupNoSession:
         # Evolution close should NOT be called (not a real logout)
         mock_close.assert_not_called()
 
-        # Reply should be menu/cancel path (MAIN_MENU from console service)
+        # Reply should preserve cancel + menu single-reply shape.
+        assert "Operación cancelada" in reply
         assert "Master Console" in reply or "Trackpal" in reply
 
     async def test_session_touched_on_failover(
@@ -744,6 +745,39 @@ class TestFailoverBackupNoSession:
                 )
 
             mock_touch.assert_awaited_once_with("+12015550001")
+
+    async def test_failover_returns_cancel_plus_menu_shape(
+        self,
+        console_service: WhatsAppConsoleService,
+        auth_session_service: WhatsAppAuthSessionService,
+    ) -> None:
+        """Failover path returns cancel message and main menu in one reply."""
+        fake_redis = FakeRedis()
+        manager = FakeManager(fake_redis=fake_redis, used_backup=True)
+        session_service = WhatsAppSessionService(
+            connection_manager=manager,
+            ttl_seconds=900,
+        )
+        auth_service = WhatsAppAuthSessionService(
+            connection_manager=manager,
+            session_ttl_seconds=900,
+            fail_threshold=5,
+            lock_minutes=5,
+            fail_window_minutes=15,
+        )
+
+        await _setup_auth_session(auth_service, phone="+12015550001")
+
+        facade = _make_facade(console_service, session_service, auth_service)
+
+        reply = await facade.process_message(
+            phone="+12015550001",
+            message="0",
+            instance="inst-test",
+            db=None,
+        )
+
+        assert reply == console_service._with_main_menu("🚫 Operación cancelada.")
 
 
 # ===========================================================================
