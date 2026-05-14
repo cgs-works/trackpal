@@ -8,38 +8,39 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "1",
+      "id": "b55ba1f9-3a45-4d1d-acd3-1376220bf089",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        0
-      ]
+        944,
+        -112
+      ],
+      "webhookId": "a9978bf7-c6b1-4abb-9e40-b375cb55eb60"
     },
     {
       "parameters": {
         "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"
       },
-      "id": "2",
+      "id": "b2df9013-890c-43b0-96d8-8d4193ffd2ca",
       "name": "Parse input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        0
+        1248,
+        -112
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.TRACKPAL_BACKEND_URL}}/api/v1/integrations/n8n/console",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/integrations/n8n/console",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "{{$env.TRACKPAL_N8N_API_KEY}}"
+              "value": "={{ $('Config').first().json.trackpal_n8n_api_key }}"
             },
             {
               "name": "Content-Type",
@@ -58,38 +59,38 @@
           }
         }
       },
-      "id": "3",
+      "id": "7ff2b797-4397-476d-8b5c-6f9f31679869",
       "name": "Console call",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        672,
-        0
+        1536,
+        -112
       ]
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json; const reply = $json.reply || ''; return [{ json: { ...input, reply } }];"
+        "jsCode": "const input = $('Parse input').first().json; const reply = (typeof $json.reply === 'string' && $json.reply.trim()) ? $json.reply : 'Servicio temporalmente no disponible. Intenta nuevamente.'; return [{ json: { ...input, reply } }];"
       },
-      "id": "4",
+      "id": "848595b6-8983-478c-8350-1c5c989745ee",
       "name": "Merge reply",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        896,
-        0
+        1808,
+        -112
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.TRACKPAL_EVOLUTION_API_URL}}/message/sendText/{{$json.instance}}",
+        "url": "={{ $('Config').first().json.evolution_api_url }}/message/sendText/{{$json.instance || $('Config').first().json.default_instance }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "{{$env.TRACKPAL_EVOLUTION_API_KEY}}"
+              "value": "={{ $('Config').first().json.evolution_api_key }}"
             }
           ]
         },
@@ -104,13 +105,56 @@
           }
         }
       },
-      "id": "5",
+      "id": "4a3c8877-d226-437e-9fc8-388257f73b89",
       "name": "Evolution API Send",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1120,
-        0
+        2064,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "trackpal_backend_url",
+              "type": "string",
+              "value": "https://trackpal-backend.onrender.com"
+            },
+            {
+              "name": "trackpal_n8n_api_key",
+              "type": "string",
+              "value": "placeholder"
+            },
+            {
+              "name": "evolution_api_url",
+              "type": "string",
+              "value": "https://rs-evoapi.wilfredocamacho.dev"
+            },
+            {
+              "name": "evolution_api_key",
+              "type": "string",
+              "value": "placeholder"
+            },
+            {
+              "name": "default_instance",
+              "type": "string",
+              "value": "Sublify"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "8fa12de8-d1df-4c00-98a9-703bedd4b6fa",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1536,
+        -272
       ]
     }
   ],
@@ -121,17 +165,6 @@
         [
           {
             "node": "Parse input",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse input": {
-      "main": [
-        [
-          {
-            "node": "Console call",
             "type": "main",
             "index": 0
           }
@@ -159,6 +192,28 @@
           }
         ]
       ]
+    },
+    "Parse input": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Console call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -168,7 +223,10 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "31e47995-0cb0-4c0b-8e11-bf937e043bc1",
+  "versionId": "70baf2f1-8eea-42dc-aa3a-1c73428007ef",
+  "meta": {
+    "instanceId": "3a9ddc93932fcd7821c6e13a050d0af56c3c9456de8be4d2e7e266d4e0cdbf67"
+  },
   "id": "mN3k0vVO9kgBYQtV",
   "tags": []
 }
