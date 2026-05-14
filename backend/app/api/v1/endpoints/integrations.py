@@ -227,6 +227,7 @@ async def whatsapp_console(
         reply = await facade.process_message(
             phone=phone,
             message=request.message,
+            instance=request.instance,
             db=db,
         )
     except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):

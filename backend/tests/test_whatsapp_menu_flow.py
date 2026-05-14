@@ -148,7 +148,7 @@ class TestMainMenu:
         assert "Desactivar Tenant" in reply
         assert "Eliminar Tenant" in reply
         assert "Ayuda" in reply
-        assert "Cancelar / Menú" in reply
+        assert "Cerrar sesión" in reply
 
     async def test_menu_contains_numeric_options(
         self, console_service: WhatsAppConsoleService
@@ -198,7 +198,7 @@ class TestHelp:
         assert "Crear Tenant" in reply
         assert "Desactivar Tenant" in reply
         assert "Eliminar Tenant" in reply
-        assert "Cancelar / Menú" in reply
+        assert "cerrar sesión" in reply.lower() or "sesión" in reply.lower()
         assert "menu" in reply.lower()
 
 
@@ -376,6 +376,7 @@ class TestFallbackActiveFlow:
             session_service=session_service,
         )
         assert "Trackpal Master Console" in reply
+        assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
         # Session should be cleared
         fetched = await session_service.get_session("+10000000000")
         assert fetched is None

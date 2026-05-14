@@ -96,4 +96,50 @@ class EvolutionClient:
         logger.info("Evolution instance deleted: %s", evolution_instance_name)
 
 
+    async def close_chat_session(
+        self, *, instance: str, remote_jid: str
+    ) -> None:
+        """Mark a WhatsApp chat/session as ``closed`` for a specific (instance, remoteJid) pair.
+
+        Sends ``POST /n8n/changeStatus/{instance}`` with payload:
+
+        .. code-block:: json
+
+            {"remoteJid": "<remote_jid>", "status": "closed"}
+
+        No-op when Evolution API is not configured (empty ``base_url`` or ``api_key``).
+
+        Args:
+            instance: Evolution API instance name.
+            remote_jid: Full WhatsApp JID of the contact (e.g. ``1234567890@s.whatsapp.net``).
+
+        Raises:
+            httpx.HTTPStatusError: On non-2xx response.
+        """
+        if not self.api_key or not self.base_url:
+            logger.warning(
+                "Evolution API not configured; skipping close_chat_session for %s / %s",
+                instance,
+                remote_jid,
+            )
+            return
+
+        payload = {
+            "remoteJid": remote_jid,
+            "status": "closed",
+        }
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
+            response = await client.post(
+                f"/n8n/changeStatus/{quote(instance, safe='')}",
+                json=payload,
+                headers=self._headers,
+            )
+            response.raise_for_status()
+        logger.info(
+            "Chat session closed for instance=%s remoteJid=%s",
+            instance,
+            remote_jid,
+        )
+
+
 evolution_client = EvolutionClient()

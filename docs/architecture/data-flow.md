@@ -195,14 +195,23 @@ Even if a user sends `1`, `2`, `menu`, or any CRUD-triggering option
 ### Auth session vs conversation session
 
 - **Auth session** (`wa:auth:{phone}`, TTL 15 min sliding) — proof of
-  authenticated identity. Reset commands (`0`, `menu`, `cancelar`)
-  do **not** clear this session.
+  authenticated identity. Persists across menu navigation and CRUD flows.
 - **Conversation session** (`session:{phone}`, TTL 15 min sliding) —
-  conversational flow state (step, temp data, selection map). Reset
-  commands clear this session and return to the main menu.
+  conversational flow state (step, temp data, selection map). Cleared on
+  reset commands, flow completion, or cancellation.
 
 The two are independent. Expiry or absence of either blocks console
 access appropriately.
+
+### Reset command behaviour per context
+
+| Context | Command | Auth session | Conversation session |
+|---|---|---|---|
+| Authenticated, top-level | ``0`` | **Cleared** (full logout) | **Cleared** |
+| Authenticated, top-level | ``menu``\/``cancelar`` | **Persists** | **Cleared** (return to menu) |
+| Authenticated, sub-flow | ``0`` | **Refreshed** (``touch_auth_session``) | **Cleared** by console service |
+| Authenticated, sub-flow | ``menu``\/``cancelar`` | **Persists** | **Cleared** (return to menu) |
+| Unauthenticated (login) | ``0``\/``menu``\/``cancelar`` | **Cleared** (safety reset) | **Cleared** |
 
 ### Security trade-off (accepted)
 
@@ -218,6 +227,53 @@ access appropriately.
 - **Future hardening:** Consider OTP, magic link, or QR-based
   device-trust for higher-security environments (explicitly out of
   scope for this iteration — see PRD).
+
+## Logout flow (WhatsApp Master Console)
+
+When the authenticated Master user sends ``0`` at the top-level menu, the
+backend performs a full logout:
+
+```
+WhatsApp User            Backend (Facade)          Redis                 Evolution API
+     │                         │                    │                        │
+     │ sends "0"               │                    │                        │
+     ├────────────────────────>│                    │                        │
+     │                         │ Check auth session │                        │
+     │                         │ (wa:auth:{phone})  │                        │
+     │                         ├───────────────────>│                        │
+     │                         │<───────────────────┤                        │
+     │                         │                    │                        │
+     │                         │ Check conv session │                        │
+     │                         │ (session:{phone})  │                        │
+     │                         ├───────────────────>│                        │
+     │                         │<───────────────────┤                        │
+     │                         │ no active flow     │                        │
+     │                         │                    │                        │
+     │                         │ Clear auth session │                        │
+     │                         │ (DEL wa:auth:..)   │                        │
+     │                         ├───────────────────>│                        │
+     │                         │<───────────────────┤                        │
+     │                         │                    │                        │
+     │                         │ Clear conv session │                        │
+     │                         │ (DEL session:..)   │                        │
+     │                         ├───────────────────>│                        │
+     │                         │<───────────────────┤                        │
+     │                         │                    │                        │
+     │                         │ POST /n8n/         │                        │
+     │                         │ changeStatus/      │                        │
+     │                         │ {instance}         │                        │
+     │                         │ {remoteJid,        │                        │
+     │                         │  status:"closed"}   │                        │
+     │                         ├───────────────────────────────────────────────>│
+     │                         │<───────────────────────────────────────────────┤
+     │                         │                    │                        │
+     │ "Sesión cerrada"       │                    │                        │
+     │<────────────────────────┤                    │                        │
+```
+
+If the Evolution API call fails (e.g. instance not found), the error is
+logged as a warning and the logout still completes — the user is logged out
+locally regardless of the Evolution API outcome.
 
 ## Tenant deactivation flow
 

@@ -154,6 +154,57 @@ Evolution API sends phone numbers with `@c.us` or `@s.whatsapp.net` suffix. The 
 
 **Backend canonicalization**: The backend applies `PhoneNormalizer.normalize_phone()` on every incoming phone value. This removes `+`, all non-digits, WhatsApp JID suffixes, and device suffixes — producing a canonical digits-only string for identity lookup, Redis session keying, and database storage. The n8n workflow does not need to do full canonicalization beyond the basic suffix strip.
 
+## Contextual meaning of `0` in the Master Console
+
+The backend interprets command `0` differently based on context. This logic
+is fully implemented in the backend's ``WhatsAppMasterConsoleFacade`` and
+``WhatsAppConsoleService``. n8n is not involved in determining the meaning
+of ``0`` — it only transports the message and relays the reply.
+
+### Authenticated + at top-level (no active CRUD flow)
+
+``0`` performs a **full logout** (see ``_perform_logout()`` in the facade):
+
+1. Clears the Redis auth session (``wa:auth:{phone}``)
+2. Clears the conversation session (``session:{phone}``)
+3. Calls Evolution API ``POST /n8n/changeStatus/{instance}`` with payload
+   ``{"remoteJid": "<digits>@s.whatsapp.net", "status": "closed"}``
+   to mark the chat as closed for the active instance + contact
+4. Returns a logout confirmation reply (``LOGOUT_CONFIRMATION``)
+
+After logout, the user must write *menu* to log in again.
+
+### Authenticated + inside a CRUD sub-flow (has an active conversation flow)
+
+``0`` **cancels** the current operation:
+
+1. Refreshes the auth session TTL (``touch_auth_session()``) so long-running
+   CRUD flows don't expire the master session
+2. Delegates the ``0`` message to ``WhatsAppConsoleService.process_message()``,
+   which clears the conversation session and returns the main menu
+
+The auth session **persists** — the user stays logged in. ``menu`` and
+``cancelar`` also work here, but they go through the ``WhatsAppConsoleService``
+RESET_COMMANDS path (which clears only the conversation session and returns the
+main menu without touching the auth session).
+
+### Unauthenticated (login flow)
+
+``0``, *menu*, or *cancelar* resets the login flow:
+
+1. Clears **both** the auth session (``wa:auth:{phone}``) and conversation
+   session (``session:{phone}``) — a safety measure in case a stale session
+   exists
+2. Returns the username prompt (``USERNAME_PROMPT``)
+
+### Summary table
+
+| Context | ``0`` | ``menu`` / ``cancelar`` |
+|---|---|---|
+| Authenticated, top-level | Full logout — clears auth + conv sessions, calls Evolution API close | Clears conv session only, returns main menu (auth session stays) |
+| Authenticated, sub-flow | Cancels flow — refreshes auth TTL, clears conv session, returns main menu | Same (console service handles RESET_COMMANDS) |
+| Unauthenticated (login) | Clears both auth + conv sessions, returns to username prompt | Same |
+
 ## What changed from the legacy workflow
 
 The pre-Phase-3 workflow included:

@@ -557,22 +557,19 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        # Should return the updated detail screen
-        assert "Detalle del Tenant" in reply
+        # Should return success message + main menu
+        assert "Tenant actualizado exitosamente" in reply
         assert "Alpha Corp Renamed" in reply
-        assert "✅ Activo" in reply
+        assert "Trackpal Master Console" in reply
 
         # Tenant should be updated in the fake service
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         assert tenant.full_name == "Alpha Corp Renamed"
 
-        # Session should be back to detail flow
+        # Session should be cleared
         session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.flow == "tenant_detail"
-        assert session.step == "actions"
-        assert session.selected_tenant_id == TENANT_1_ID
+        assert session is None
 
     async def test_valid_email_update(
         self,
@@ -590,13 +587,17 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Detalle del Tenant" in reply
-        assert "newalpha@example.com" in reply
-        assert "✅ Activo" in reply
+        assert "Tenant actualizado exitosamente" in reply
+        assert "Alpha Corp" in reply
+        assert "Trackpal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         assert tenant.email == "newalpha@example.com"
+
+        # Session should be cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
 
     async def test_valid_phone_update(
         self,
@@ -614,12 +615,17 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Detalle del Tenant" in reply
-        assert "525500001111" in reply
+        assert "Tenant actualizado exitosamente" in reply
+        assert "Alpha Corp" in reply
+        assert "Trackpal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         assert tenant.phone == "525500001111"
+
+        # Session should be cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
 
     async def test_valid_evolution_instance_update(
         self,
@@ -637,20 +643,25 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Detalle del Tenant" in reply
-        assert "inst-alpha-renamed" in reply
+        assert "Tenant actualizado exitosamente" in reply
+        assert "Alpha Corp" in reply
+        assert "Trackpal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         assert tenant.evolution_instance_name == "inst-alpha-renamed"
 
-    async def test_update_shows_updated_fields_in_detail(
+        # Session should be cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
+
+    async def test_update_shows_success_with_tenant_name(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         tenant_service: FakeTenantService,
     ) -> None:
-        """After update, the returned detail reflects all current values."""
+        """After update, reply contains success message and main menu."""
         await self._select_field(console_service, session_service, tenant_service, "1")
 
         reply = await console_service.process_message(
@@ -661,11 +672,9 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
+        assert "Tenant actualizado exitosamente" in reply
         assert "New Name" in reply
-        # Original values should still be present
-        assert "alpha@example.com" in reply
-        assert "525512345678" in reply
-        assert "inst-alpha" in reply
+        assert "Trackpal Master Console" in reply
 
     async def test_empty_full_name_reprompts(
         self,
@@ -804,7 +813,8 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Detalle del Tenant" in reply
+        assert "Tenant actualizado exitosamente" in reply
+        assert "Trackpal Master Console" in reply
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         # Email normalized (domain lowercase, local part preserved)
@@ -827,7 +837,8 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Detalle del Tenant" in reply
+        assert "Tenant actualizado exitosamente" in reply
+        assert "Trackpal Master Console" in reply
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         # Phone stored canonical digits-only (no + prefix)
@@ -893,13 +904,17 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        # Should show updated detail
-        assert "Detalle del Tenant" in reply
-        assert "525500001111" in reply
+        # Should show success with main menu
+        assert "Tenant actualizado exitosamente" in reply
+        assert "Trackpal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         assert tenant.phone == "525500001111"
+
+        # Session should be cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
 
     async def test_cancel_during_new_value(
         self,
@@ -1024,10 +1039,25 @@ class TestEditFlowFullScenario:
             session_service=session_service,
             tenant_service=tenant_service,
         )
+        assert "Tenant actualizado exitosamente" in reply
         assert "New Alpha Name" in reply
-        assert "Detalle del Tenant" in reply
+        assert "Trackpal Master Console" in reply
 
-        # Now edit email from the updated detail
+        # Session cleared after first edit — re-navigate from main menu
+        await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
+        await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="1",
@@ -1049,9 +1079,20 @@ class TestEditFlowFullScenario:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "newalpha@newdomain.com" in reply
-        assert "New Alpha Name" in reply  # Previous edit preserved
+        assert "Tenant actualizado exitosamente" in reply
+        assert "New Alpha Name" in reply  # Previous edit preserved in DB
+        assert "Trackpal Master Console" in reply
 
+        # Verify persisted changes
+        tenant = await tenant_service.get_tenant(TENANT_1_ID)
+        assert tenant is not None
+        assert tenant.full_name == "New Alpha Name"
+        assert tenant.email == "newalpha@newdomain.com"
+        assert tenant.phone == "525512345678"  # Unchanged
+
+        # Session should be cleared after second edit too
+        session = await session_service.get_session("+10000000000")
+        assert session is None
         # Verify persisted changes
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None

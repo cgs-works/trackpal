@@ -219,7 +219,6 @@ class TestLoginFlow:
         )
 
         assert "Master Console" in reply or "Trackpal" in reply
-        assert "menú" in reply.lower() or "menu" in reply.lower()
 
         # Verify auth session was created
         auth_session = await auth_session_service.get_auth_session("+12015550001")

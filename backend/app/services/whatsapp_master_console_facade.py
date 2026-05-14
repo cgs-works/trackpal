@@ -1,18 +1,23 @@
 """Orchestrator for the WhatsApp Master Console.
 
-Handles login flow, lockout, auth session verification, and delegates
-to ``WhatsAppConsoleService`` for authenticated operations.
+Handles login flow, lockout, auth session verification, logout
+orchestration, and delegates to ``WhatsAppConsoleService`` for
+authenticated CRUD operations.
 """
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, Protocol, runtime_checkable
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.phone import normalize_phone
 from app.crud import users as user_crud
 from app.services.auth_service import AuthService
+from app.services.evolution_client import evolution_client
 from app.services.whatsapp_auth_session_service import (
     WhatsAppAuthSession,
     WhatsAppAuthSessionService,
@@ -20,6 +25,7 @@ from app.services.whatsapp_auth_session_service import (
 from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
+logger = logging.getLogger(__name__)
 
 # ====================================================================
 # Reply templates (Spanish)
@@ -52,6 +58,12 @@ WRONG_PASSWORD_TEMPLATE = (
 ROLE_NOT_ALLOWED = (
     "❌ Acceso denegado. Solo los usuarios con rol "
     "Master pueden usar esta consola."
+)
+
+LOGOUT_CONFIRMATION = (
+    "🔒 *Sesión cerrada*\n\n"
+    "Has cerrado sesión en la consola Master.\n\n"
+    "Escribe *menu* para iniciar sesión de nuevo."
 )
 
 LOCKOUT_TEMPLATE = (
@@ -143,6 +155,8 @@ class WhatsAppMasterConsoleFacade:
         self,
         phone: str,
         message: str,
+        *,
+        instance: str | None = None,
         db: AsyncSession | None = None,
     ) -> str:
         """Process a WhatsApp message through the auth-gated console.
@@ -150,6 +164,8 @@ class WhatsAppMasterConsoleFacade:
         Args:
             phone: Normalised phone number of the sender.
             message: Text of the WhatsApp message.
+            instance: Optional Evolution API instance name for context.
+                      Used to close the chat session on logout.
             db: Database session (required for credential verification).
 
         Returns:
@@ -161,10 +177,36 @@ class WhatsAppMasterConsoleFacade:
             remaining = self._compute_remaining_minutes(lock_state)
             return LOCKOUT_TEMPLATE.format(minutes=remaining)
 
-        # 2. Check auth session — refresh TTL on every authenticated message
-        #    (sliding window: 15 min from last activity, not from login).
+        # 2. Check auth session
         auth_session = await self._auth_session_service.get_auth_session(phone)
         if auth_session is not None and auth_session.role == "master":
+            msg_stripped = message.strip()
+
+            # 2a. Contextual "0" handling (logout vs cancel)
+            if msg_stripped == "0":
+                conv_session = await self._session_service.get_session(phone)
+                has_active_flow = conv_session is not None and bool(conv_session.flow)
+
+                if has_active_flow:
+                    # Inside active flow → cancel (no logout)
+                    # Refresh auth session TTL so long-running CRUD flows
+                    # don't expire the master session.
+                    await self._auth_session_service.touch_auth_session(phone)
+                    return await self._console_service.process_message(
+                        phone=phone,
+                        message=message,
+                        is_master=True,
+                        session_service=self._session_service,
+                        tenant_service=self._tenant_service,
+                    )
+                else:
+                    # Top-level → full logout
+                    return await self._perform_logout(
+                        phone=phone,
+                        instance=instance,
+                    )
+
+            # 2b. Normal authenticated message — refresh TTL and delegate
             await self._auth_session_service.touch_auth_session(phone)
             return await self._console_service.process_message(
                 phone=phone,
@@ -176,6 +218,44 @@ class WhatsAppMasterConsoleFacade:
 
         # 3. No auth session → run login flow
         return await self._run_login_flow(phone, message, db)
+
+    # ------------------------------------------------------------------
+    # Logout
+    # ------------------------------------------------------------------
+
+    async def _perform_logout(self, phone: str, instance: str | None) -> str:
+        """Perform a full logout: clear Redis keys and optionally close Evolution session.
+
+        1) Clear Auth Session (``wa:auth:{phone}``)
+        2) Clear Conversation Session (``session:{phone}``)
+        3) If *instance* is provided, call Evolution API to mark the
+           chat as ``closed`` for the active instance and current contact.
+        4) Return a logout confirmation reply.
+        """
+        # 1. Clear auth session
+        await self._auth_session_service.clear_auth_session(phone)
+
+        # 2. Clear conversation session
+        await self._session_service.clear_session(phone)
+
+        # 3. Call Evolution close if we have an instance
+        if instance is not None:
+            digits = normalize_phone(phone) or phone
+            remote_jid = f"{digits}@s.whatsapp.net"
+            try:
+                await evolution_client.close_chat_session(
+                    instance=instance,
+                    remote_jid=remote_jid,
+                )
+            except httpx.HTTPError:
+                logger.warning(
+                    "Evolution API call failed during logout for phone=%s instance=%s",
+                    phone,
+                    instance,
+                )
+
+        # 4. Confirmation reply
+        return LOGOUT_CONFIRMATION
 
     # ------------------------------------------------------------------
     # Login flow
@@ -193,6 +273,7 @@ class WhatsAppMasterConsoleFacade:
 
         # Global commands always work
         if msg_lower in RESET_COMMANDS:
+            await self._auth_session_service.clear_auth_session(phone)
             await self._session_service.clear_session(phone)
             return USERNAME_PROMPT
 
@@ -243,6 +324,7 @@ class WhatsAppMasterConsoleFacade:
         # Check for reset/help again (already handled in _run_login_flow,
         # but just in case)
         if msg_lower in RESET_COMMANDS:
+            await self._auth_session_service.clear_auth_session(phone)
             await self._session_service.clear_session(phone)
             return USERNAME_PROMPT
 
@@ -282,6 +364,7 @@ class WhatsAppMasterConsoleFacade:
 
         # Check for reset/help again
         if msg_stripped.lower() in RESET_COMMANDS:
+            await self._auth_session_service.clear_auth_session(phone)
             await self._session_service.clear_session(phone)
             return USERNAME_PROMPT
 
