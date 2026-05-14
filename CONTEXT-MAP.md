@@ -59,17 +59,35 @@
 
 | File | Role |
 |---|---|
-| `backend/app/services/evolution_client.py` | Async HTTP client for Evolution API (create/setup/delete instances) |
+| `backend/app/services/evolution_client.py` | Async HTTP client for Evolution API (create/setup/delete instances, prefijo `tenant-`) |
 | `backend/app/api/v1/endpoints/integrations.py` | GET /integrations/n8n/identify, POST /integrations/n8n/console |
 | `backend/app/core/phone.py` | PhoneNormalizer — canonical digits-only phone for identity, session key, storage |
 | `backend/app/core/input_validation.py` | InputValidationPolicy — centralized validation for username, email, phone, full_name; reused by schemas, services, and WhatsApp console |
-| `backend/app/core/redis_client.py` | RedisConnectionManager + FailoverPolicy — active-passive HA, circuit breaker |
-| `backend/app/services/whatsapp_session_service.py` | WhatsAppSessionService — ephemeral session CRUD over Redis with TTL |
-| `backend/app/services/whatsapp_console_service.py` | WhatsAppConsoleService — conversation routing, menus, multi-step CRUD flows |
-| `backend/app/services/contingency_reply_policy.py` | ContingencyReplyPolicy — relayable texts for degraded Redis states |
+| `backend/app/core/redis_client.py` | RedisConnectionManager + FailoverPolicy — active-passive HA, circuit breaker (CLOSED/OPEN/HALF_OPEN) |
+| `backend/app/schemas/whatsapp.py` | WhatsAppConsoleRequest, WhatsAppConsoleResponse — Pydantic schemas for n8n transport |
+| `backend/app/services/whatsapp_session_service.py` | WhatsAppSessionService + ConversationSession — ephemeral console session CRUD over Redis with TTL |
+| `backend/app/services/whatsapp_console_service.py` | WhatsAppConsoleService — conversation routing, menus, multi-step CRUD flows (create/edit/list/deactivate/delete) |
+| `backend/app/services/whatsapp_auth_session_service.py` | WhatsAppAuthSessionService — auth session + fail counter + lockout management in Redis (wa:auth:*, wa:auth:fail:*, wa:auth:lock:*) |
+| `backend/app/services/whatsapp_master_console_facade.py` | WhatsAppMasterConsoleFacade — auth-gated orchestrator: lockout check → auth check → login flow → console delegation |
+| `backend/app/services/contingency_reply_policy.py` | ContingencyReplyPolicy — relayable texts for degraded Redis states (SESSION_RESET, TEMPORARY_UNAVAILABLE) |
 | `n8n/Trackpal WhatsApp Bot.json` | n8n workflow export: webhook → parse → console call → merge → send |
 | `docs/architecture/n8n-workflow.md` | Full workflow documentation with node descriptions |
-| `backend/tests/conftest.py` | Evolution API disabled in tests (clears api_key) |
+| `backend/tests/test_whatsapp_session_service.py` | Session CRUD, TTL, explicit delete, used_backup, serialization |
+| `backend/tests/test_whatsapp_auth_session_service.py` | Auth session + fail counter + lockout threshold + TTL |
+| `backend/tests/test_whatsapp_credential_auth_flow.py` | Full conversational login flow: username/password/lockout/role check |
+| `backend/tests/test_whatsapp_menu_flow.py` | Menu, reset, help, fallback, TTL not refreshed, no-session-service |
+| `backend/tests/test_whatsapp_create_flow.py` | Multi-step create tenant flow (full_name → email → phone → username → evolution_instance → password_mode → confirm) |
+| `backend/tests/test_whatsapp_edit_flow.py` | Multi-step edit tenant flow (select field → new value → update) |
+| `backend/tests/test_whatsapp_list_select_flow.py` | Tenant list + detail selection, detail actions |
+| `backend/tests/test_whatsapp_lifecycle_flow.py` | Deactivate/delete confirmation flows (CONFIRMAR) |
+| `backend/tests/test_whatsapp_endpoint.py` | /integrations/n8n/console endpoint: contingency, HA, total failure |
+| `backend/tests/test_contingency_reply_policy.py` | SESSION_RESET, TEMPORARY_UNAVAILABLE constants validation |
+| `backend/tests/test_phone_normalizer.py` | Phone canonicalization: +, JID, device suffix, None, blank |
+| `backend/tests/test_phone_normalization_migration.py` | Phone normalization migration: +-strip, suffixes |
+| `backend/tests/test_input_validation_policy.py` | Central validation policy: username, email, phone, full_name valid/invalid cases, canonicalization, edge limits |
+| `backend/tests/test_redis_failover_policy.py` | Circuit breaker: CLOSED, OPEN, HALF_OPEN, threshold, window |
+| `backend/tests/test_redis_connection_manager.py` | Primary/backup pools, execute routing, failover, no-redis |
+| `backend/tests/conftest.py` | Fixtures: in-memory DB, master/tenant/deactivated users, auth headers; Evolution API disabled (clears api_key) |
 
 ### API Layer
 
@@ -87,6 +105,7 @@
 | `backend/app/core/database.py` | AsyncSession factory (engine + sessionmaker) |
 | `backend/app/core/config.py` | Pydantic Settings from environment variables |
 | `backend/alembic/versions/cd1efe74cae4_initial_schema.py` | Initial migration: users, master_profiles, tenant_profiles, refresh_sessions |
+| `backend/alembic/versions/cd2efe74cae5_normalize_phone_values.py` | Migración: normaliza teléfonos existentes a digits-only (sin `+`) |
 | `backend/alembic/env.py` | Async Alembic configuration (reads DATABASE_URL from env) |
 
 ### Frontend Core
@@ -119,11 +138,21 @@
 | `docs/architecture/n8n-workflow.md` | n8n WhatsApp workflow detailed documentation |
 | `docs/codebase/backend.md` | Backend structure, key modules, services, tests |
 | `docs/codebase/frontend.md` | Frontend structure, routes, auth store, API service |
-| `docs/prds/260511-1706-scaffolding-mvp/PRD.md` | Product Requirements Document (MVP) |
-| `docs/plans/260511-1706-scaffolding-mvp/SUMMARY.md` | Implementation plan (10 phases, all complete) |
 | `docs/adr/0001-stack-y-arquitectura.md` | Stack and architecture decision |
 | `docs/adr/0002-modelo-de-autenticacion.md` | Unified auth model with profiles |
 | `docs/adr/0003-integracion-n8n-y-evolution-api.md` | n8n and Evolution API integration |
+| `docs/prds/260511-1706-scaffolding-mvp/PRD.md` | Product Requirements Document (MVP) |
+| `docs/prds/260512-0143-whatsapp-master-console/PRD.md` | PRD: Backend-driven Master Console via WhatsApp |
+| `docs/prds/260512-2005-redis-session-ha/PRD.md` | PRD: Redis high-availability for WhatsApp Master Console |
+| `docs/prds/260513-1049-input-validation-policy/PRD.md` | PRD: Centralized backend-owned validation for identity/contact fields |
+| `docs/prds/260513-1732-whatsapp-credential-auth/PRD.md` | PRD: Conversational username+password login for Master Console |
+| `docs/plans/archived/260511-1706-scaffolding-mvp/SUMMARY.md` | 9-phase implementation plan (archived, complete) |
+| `docs/plans/archived/260512-0143-whatsapp-master-console/SUMMARY.md` | 8-phase execution plan (archived, complete) |
+| `docs/plans/archived/260512-2005-redis-session-ha/SUMMARY.md` | 6-phase execution plan (archived, complete) |
+| `docs/plans/archived/260513-1049-input-validation-policy/SUMMARY.md` | 6-phase execution plan (archived, complete) |
+| `docs/plans/archived/260513-1732-whatsapp-credential-auth/SUMMARY.md` | 5-phase execution plan (archived, complete) |
+| `backend/scripts/seed.py` | Master user seed (idempotent: skip si ya existe master) |
+| `backend/app/crud/users.py` | Data access helpers: get_by_username, get, get_by_phone (cross-table) |
 | `README.md` | Project overview, quick start, stack |
 
 ---
@@ -147,6 +176,11 @@
 │  backend/app/services/tenant_service.py     (tenant CRUD)           │
 │  backend/app/services/profile_service.py    (profile management)    │
 │  backend/app/services/evolution_client.py   (Evolution API client)  │
+│  backend/app/services/whatsapp_console_service.py                   │
+│  backend/app/services/whatsapp_session_service.py                   │
+│  backend/app/services/whatsapp_auth_session_service.py              │
+│  backend/app/services/whatsapp_master_console_facade.py             │
+│  backend/app/services/contingency_reply_policy.py                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                        DATA LAYER                                   │
 │  backend/app/models/*.py                    (SQLAlchemy ORM)        │
@@ -157,6 +191,12 @@
 │                        INTEGRATION LAYER                            │
 │  n8n/Trackpal WhatsApp Bot.json            (workflow export)        │
 │  backend/app/api/v1/endpoints/integrations.py (n8n hook)            │
+├─────────────────────────────────────────────────────────────────────┤
+│                        INFRASTRUCTURE LAYER                         │
+│  backend/app/core/redis_client.py          (Redis HA: active-passive│
+│                                              circuit breaker)       │
+│  backend/app/core/phone.py                 (Phone normalizer)       │
+│  backend/app/core/input_validation.py      (Validation policy)      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -181,9 +221,12 @@
 | `backend/tests/test_whatsapp_endpoint.py` | ~100 | /integrations/n8n/console endpoint: contingency, HA, total failure |
 | `backend/tests/test_contingency_reply_policy.py` | ~30 | SESSION_RESET, TEMPORARY_UNAVAILABLE constants |
 | `backend/tests/test_input_validation_policy.py` | ~380 | Central validation policy: username, email, phone, full_name valid/invalid cases, canonicalization, edge limits |
+| `backend/tests/test_whatsapp_auth_session_service.py` | ~250 | Auth session CRUD, fail counter, lockout threshold, TTL sliding window |
+| `backend/tests/test_whatsapp_credential_auth_flow.py` | ~180 | Full conversational login flow: username/password/lockout/role not allowed |
+| `backend/tests/test_phone_normalization_migration.py` | ~100 | Phone normalization migration: +-strip, JID suffixes, device suffixes |
 | `backend/tests/conftest.py` | ~90 | Fixtures: in-memory DB, master/tenant/deactivated users, auth headers |
 
-**Total: 524 tests** — all passing async with aiosqlite in-memory database. Redis operations use fake/test doubles.
+**Total: 143+ test functions** (18 test files) — all passing async with aiosqlite in-memory database. Redis operations use fake/test doubles. Tests expand via parametrization (e.g., test_input_validation_policy.py: 43 test functions covering 380+ lines of edge cases).
 
 ---
 
@@ -202,11 +245,21 @@ Master → PATCH /tenants/{id}/deactivate → TenantService.deactivate_tenant()
   → profile.is_active = False → revoke all refresh sessions → commit
 ```
 
-### WhatsApp Message (Console / Transport-only)
+### WhatsApp Message (Console / Auth-gated)
 ```
-WhatsApp → Evolution API → n8n webhook → parse → POST /integrations/n8n/console
-  → Backend: normalize phone → identify Master → Redis session (HA, circuit breaker)
-  → WhatsAppConsoleService routing → Redis session write (TTL 15 min)
+WhatsApp → Evolution API → n8n webhook → POST /integrations/n8n/console
+  → Backend:
+    1. Normalize phone (digits-only)
+    2. Check Lockout → si locked → return LOCKOUT_TEMPLATE
+    3. Check Auth Session (wa:auth:{phone}) → si existe + role=master
+       → refresh TTL sliding window
+       → delegate to WhatsAppConsoleService
+         → Console Session (session:{phone}) con flow/step/temp_data
+         → TenantService via TenantConsoleAdapter
+    4. Si no hay Auth Session → run login flow
+       → username step → password step → verify credentials (AuthService)
+       → success → create Auth Session → return MAIN_MENU
+       → failure → record fail counter → lockout si threshold (5/15min)
   → reply text → n8n → Evolution API → WhatsApp
 ```
 
