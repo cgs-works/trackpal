@@ -19,6 +19,13 @@ Busca en `master_profiles.phone` y `tenant_profiles.phone`. Retorna
 `user_id`, `role`, `username`. Si el tenant está desactivado o el
 teléfono no existe, retorna 404.
 
+> **Nota para Master Console:** El flujo transport-only (Phase 3+) **no
+> llama a `/identify`** para autorización. La consola usa autenticación
+> por credenciales (username + password) con sesión efímera en Redis
+> (`wa:auth:{phone}`). El endpoint `/identify` se mantiene para otros
+> usos (ej. identificación general de contacto) pero no interviene en
+> el flujo de la consola Master.
+
 ## Flujo
 
 ```
@@ -69,6 +76,17 @@ El workflow transporta mensajes entre Evolution API y el backend sin
 interpretar lógica de negocio. El backend (vía `WhatsAppConsoleService`)
 posee toda la lógica conversacional, menús, estado de sesión en Redis
 y decisiones CRUD.
+
+- **Sin filtro de instancias:** n8n no discrimina por instancia de
+  Evolution API. Todas las instancias llegan al mismo webhook y el
+  backend maneja cualquier distinción necesaria.
+- **Sin `/identify` para consola:** El workflow no llama a
+  `GET /identify` para autorizar al Master. La autenticación se realiza
+  mediante credenciales (username + password) directamente en el backend
+  a través del endpoint `/console`.
+- **Sin estado de sesión en n8n:** El workflow no mantiene data tables
+  de sesión. Todo el estado conversacional y de autenticación reside en
+  Redis, gestionado por el backend.
 
 - Instancia n8n: `https://rs-n8n.wilfredocamacho.dev`
 - Workflow: `Trackpal WhatsApp Bot`

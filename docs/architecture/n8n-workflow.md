@@ -68,9 +68,9 @@ return [{ json: { phone, message, instance, raw: payload } }];
 ### 3. Console call (HTTP POST)
 Calls the backend WhatsApp Master Console endpoint. The backend handles all auth, session state, menu routing, and CRUD logic.
 
-- URL: `{{YOUR_TRACKPAL_API_URL}}/api/v1/integrations/n8n/console`
+- URL: `{{$env.TRACKPAL_BACKEND_URL}}/api/v1/integrations/n8n/console`
 - Method: `POST`
-- Headers: `X-API-Key`, `Content-Type: application/json`
+- Headers: `X-API-Key` (value from `{{$env.TRACKPAL_N8N_API_KEY}}`), `Content-Type: application/json`
 - Body: `{ phone, message, instance }`
 - Response: `{ reply }`
 
@@ -86,9 +86,9 @@ return [{ json: { ...input, reply } }];
 ### 5. Evolution API Send (HTTP POST)
 Sends the backend reply text back to the WhatsApp user through Evolution API.
 
-- URL: `{{YOUR_EVOLUTION_API_URL}}/message/sendText/{{$json.instance}}`
+- URL: `{{$env.TRACKPAL_EVOLUTION_API_URL}}/message/sendText/{{$json.instance}}`
 - Method: `POST`
-- Headers: `apikey`
+- Headers: `apikey` (value from `{{$env.TRACKPAL_EVOLUTION_API_KEY}}`)
 - Body: `{ number, text }`
 
 ## Evolution API integration
@@ -110,15 +110,27 @@ Only messages starting with `/menu` are sent to n8n, reducing unnecessary traffi
 
 ## Configuration
 
-To deploy this workflow, replace the placeholders in the JSON with your actual values:
+The workflow uses n8n `$env.*` expressions so the export contains no secrets and is safe to commit. Set these environment variables in your n8n instance (Settings → Environment Variables or `~/.n8n/.env`):
 
-| Placeholder | Description |
+| Env var | Description |
 |---|---|
-| `YOUR_TRACKPAL_API_URL` | Trackpal backend URL (e.g. `https://trackpal-backend.onrender.com`) |
-| `YOUR_TRACKPAL_API_KEY` | N8N_API_KEY from backend config |
-| `YOUR_EVOLUTION_API_URL` | Evolution API URL (e.g. `https://rs-evoapi.wilfredocamacho.dev`) |
-| `YOUR_EVOLUTION_API_KEY` | Evolution API key |
-| `YOUR_N8N_URL` | n8n instance URL |
+| `TRACKPAL_BACKEND_URL` | Trackpal backend base URL (e.g. `https://trackpal-backend.onrender.com`) |
+| `TRACKPAL_N8N_API_KEY` | N8N_API_KEY from backend config |
+| `TRACKPAL_EVOLUTION_API_URL` | Evolution API base URL (e.g. `https://rs-evoapi.wilfredocamacho.dev`) |
+| `TRACKPAL_EVOLUTION_API_KEY` | Evolution API key |
+
+> **Note:** n8n resolves `$env.VAR_NAME` from its environment at runtime. This keeps secrets out of the exported JSON.
+
+### Verification: no secrets in export
+
+After modifying the workflow, run this to check no real secrets remain:
+
+```bash
+# Check for any remaining production URLs or API key values
+rg -n "onrender\.com|X-API-Key\"\s*:\s*\"[A-Za-z0-9]|apikey\"\s*:\s*\"[A-Za-z0-9]" "n8n/Trackpal WhatsApp Bot.json"
+```
+
+Expected: matches only for header *names*, not real secret *values*. The only `X-API-Key` or `apikey` values should be `{{$env.TRACKPAL_N8N_API_KEY}}` and `{{$env.TRACKPAL_EVOLUTION_API_KEY}}` respectively.
 
 ## Phone number format
 

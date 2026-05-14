@@ -64,13 +64,15 @@ backend/
 │   ├── test_redis_connection_manager.py  # Primary/backup pools, execute routing
 │   ├── test_redis_failover_policy.py     # Circuit breaker, half-open, threshold
 │   ├── test_tenants.py      # CRUD, soft-delete, role enforcement, duplicate username
-│   ├── test_whatsapp_create_flow.py      # Multi-step create tenant flow
-│   ├── test_whatsapp_edit_flow.py        # Multi-step edit tenant flow
-│   ├── test_whatsapp_endpoint.py         # /integrations/n8n/console endpoint
-│   ├── test_whatsapp_lifecycle_flow.py   # Deactivate/delete lifecycle flows
-│   ├── test_whatsapp_list_select_flow.py # Tenant list + detail selection flow
-│   ├── test_whatsapp_menu_flow.py        # Menu, reset, help, fallback, TTL not refreshed on noise
-│   └── test_whatsapp_session_service.py  # Session CRUD, TTL, explicit delete, used_backup
+│   ├── test_whatsapp_auth_session_service.py      # Auth session CRUD, failure counter, lockout
+│   ├── test_whatsapp_create_flow.py                # Multi-step create tenant flow
+│   ├── test_whatsapp_credential_auth_flow.py       # Conversational login, lockout, bypass regression
+│   ├── test_whatsapp_edit_flow.py                  # Multi-step edit tenant flow
+│   ├── test_whatsapp_endpoint.py                   # /integrations/n8n/console endpoint
+│   ├── test_whatsapp_lifecycle_flow.py             # Deactivate/delete lifecycle flows
+│   ├── test_whatsapp_list_select_flow.py           # Tenant list + detail selection flow
+│   ├── test_whatsapp_menu_flow.py                  # Menu, reset, help, fallback, TTL not refreshed on noise
+│   └── test_whatsapp_session_service.py            # Session CRUD, TTL, explicit delete, used_backup
 └── pyproject.toml           # UV project config, dependencies
 ```
 
@@ -102,6 +104,8 @@ Used by Pydantic schemas, service layer, seed script, and WhatsApp console flows
 - **`TenantService`** — CRUD with deactivate (revokes refresh sessions), activate, delete (only inactive, also removes Evolution instance), phone uniqueness, username uniqueness, password auto-generation. Enforces `input_validation` policy defensively before persistence.
 - **`ProfileService`** — get/update profile (cross-table phone uniqueness), change password. Enforces `input_validation` policy defensively before persistence.
 - **`EvolutionClient`** — async HTTP client for Evolution API. Creates WhatsApp instances (`/instance/create`), configures n8n integration (`/n8n/create/{name}`), and deletes instances (`/instance/delete/{name}`) on tenant removal. Transaction safety: rollback DB on Evolution failure. Skipped with warning if `EVOLUTION_API_URL` or `EVOLUTION_API_KEY` not configured.
+- **`WhatsAppAuthSessionService`** — manages Redis-backed authenticated session + lockout state. Three primitives keyed by canonical phone: `wa:auth:{phone}` (auth session, TTL 15 min sliding), `wa:auth:fail:{phone}` (failure counter window, default 15 min), `wa:auth:lock:{phone}` (temporary lockout after threshold, default 5 min). No password stored in payloads. Uses `RedisConnectionManager.execute()` for HA-aware operations.
+- **`WhatsAppMasterConsoleFacade`** — orchestrator for auth-gated WhatsApp Master Console. Entry point for `POST /api/v1/integrations/n8n/console`. Three-step gate: (1) check lockout, (2) check auth session (`wa:auth:{phone}`) → delegate to `WhatsAppConsoleService` for menu/CRUD, (3) run conversational login flow (username → password → credential verification → create auth session). Global commands (`0`, `menu`, `cancelar`) work during login. Reset clears conversation session only, not auth session.
 - **`WhatsAppSessionService`** — manages ephemeral conversation state in Redis via `RedisConnectionManager.execute()`. Stores `ConversationSession` as JSON under `session:{phone}`. Supports `get_session`, `create_session`, `save_session` (with `touch_ttl` parameter), `update_session`, and `clear_session`. TTL refreshed only on valid flow progress. Exposes `used_backup` signal for contingency detection.
 - **`WhatsAppConsoleService`** — routes WhatsApp messages through conversation flows. Handles menu display, numeric selection, create/edit/deactivate/delete tenant flows, help, fallback, global reset, contingency reset (backup missing session), and TTL refresh discipline. Returns deterministic reply text for n8n transport. Validates each field step via `input_validation` policy and reprompts on failure without losing previously collected data.
 - **`ContingencyReplyPolicy`** — defines two relayable replies: `SESSION_RESET` (failover backup lacks session) and `TEMPORARY_UNAVAILABLE` (both Redis stores down).
@@ -158,10 +162,13 @@ DELETE /api/v1/tenants/{id}
 | `REDIS_FAILOVER_FAILURE_THRESHOLD` | No | `3` | Consecutive failures before breaker opens |
 | `REDIS_BREAKER_OPEN_SECONDS` | No | `30` | Breaker open window (seconds) |
 | `WHATSAPP_SESSION_TTL_MINUTES` | No | `15` | WhatsApp session TTL (minutes) |
+| `WHATSAPP_AUTH_FAIL_THRESHOLD` | No | `5` | Consecutive login failures before temporary lockout |
+| `WHATSAPP_AUTH_LOCK_MINUTES` | No | `5` | Lockout duration (minutes) after threshold reached |
+| `WHATSAPP_AUTH_FAIL_WINDOW_MINUTES` | No | `15` | Failure counter window (minutes); resets after this time without reaching threshold |
 
 ## Tests
 
-542 tests across 16 test files. Uses `aiosqlite` in-memory DB. Evolution API calls are disabled in tests by clearing `evolution_client.api_key`. Redis operations use fake/test doubles — no Redis cloud dependency.
+589 tests across 18 test files. Uses `aiosqlite` in-memory DB. Evolution API calls are disabled in tests by clearing `evolution_client.api_key`. Redis operations use fake/test doubles — no Redis cloud dependency.
 
 ```bash
 cd backend && uv run pytest -v

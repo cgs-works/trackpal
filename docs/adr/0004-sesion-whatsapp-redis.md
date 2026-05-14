@@ -92,15 +92,24 @@ WhatsApp → Evolution API → n8n (transport only)
                              ↓
                     Backend:
                       1. Normaliza phone (PhoneNormalizer)
-                      2. Identifica al Master por phone canonicalizado
-                      3. Lee sesión actual de Redis (o crea nueva)
-                      4. Procesa mensaje según flow/step actual
-                      5. Actualiza sesión en Redis con TTL renovado
-                         (solo en pasos válidos del flujo)
+                      2. Verifica lockout — si bloqueado, devuelve aviso
+                      3. Verifica wa:auth:{phone} (auth session)
+                         ─ Si existe y role=master → delega a CRUD/menu
+                         ─ Si no existe → ejecuta flujo login
+                      4. Flujo login: solicita username → password →
+                         verifica credenciales → crea wa:auth:{phone}
+                         con TTL 15 min → muestra menú principal
+                      5. CRUD/menu: lee sesión conversacional (session:{phone}),
+                         procesa según flow/step, actualiza Redis con TTL
                       6. Produce texto de respuesta
                              ↓
                     n8n envía respuesta via Evolution API
 ```
+
+> **Nota:** El phone canonicalizado es ahora **contexto de sesión**, no
+> identidad primaria. La autorización depende de la existencia de
+> `wa:auth:{phone}` (creada tras login con credenciales), no del número
+> en sí mismo.
 
 ## Implicaciones
 
@@ -124,6 +133,18 @@ WhatsApp → Evolution API → n8n (transport only)
 - La configuración de Redis HA (URLs, pool size, timeouts, breaker,
   TTL) se agrega al módulo `core/config.py` usando el patrón Pydantic
   Settings del proyecto.
+
+### Trade-off de seguridad (aceptado)
+
+- **Contraseña por WhatsApp:** La contraseña se transmite por el canal
+  E2E de WhatsApp (relay de Evolution API). Es un trade-off aceptado
+  por flexibilidad operativa: la consola Master se puede usar desde
+  cualquier dispositivo con WhatsApp sin VPN ni dashboard.
+- **Mitigaciones:** Bloqueo temporal tras 5 intentos fallidos (ventana
+  de 5 min). Sesión de autenticación con TTL de 15 min (sliding). Sin
+  almacenamiento de contraseñas en Redis. Verificación de rol `master`.
+- **Futuro:** Considerar OTP, magic link o QR para entornos de mayor
+  seguridad (fuera del alcance de esta iteración — ver PRD).
 
 ## Módulos nuevos
 

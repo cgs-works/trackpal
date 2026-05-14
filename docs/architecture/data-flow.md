@@ -47,11 +47,11 @@ Client                     FastAPI                     Supabase
 
 ## n8n → Evolution API → WhatsApp flow (legacy)
 
-> **Architecture update (Phase 1, 2026-05-12):** For the WhatsApp Master Console, n8n is being simplified to **transport-only**. The flow below is the current/legacy implementation where n8n manages session state and calls CRUD endpoints directly. In the new architecture (Phase 3+), the flow becomes:
+> **Legacy (pre-May 2026):** This is the original implementation where n8n managed session state and called CRUD endpoints directly. **Current architecture** (WhatsApp Credential Auth, 2026-05-13) uses n8n as **transport-only**:
 >
-> `WhatsApp → Evolution API → n8n (parse + identify) → POST /api/v1/integrations/n8n/console → Backend (Redis session + flow logic) → reply text → n8n → Evolution API → WhatsApp`
+> `WhatsApp → Evolution API → n8n (parse) → POST /api/v1/integrations/n8n/console → Backend (Redis auth + session + logic) → reply → n8n → Evolution API → WhatsApp`
 >
-> See ADR-0004 for the complete decision.
+> The backend gates console behind Redis auth session (`wa:auth:{phone}`) created after conversational username+password login. See the [WhatsApp Master Console (credential auth)](#whatsapp-master-console-credential-auth) section below for the current flow, ADR-0004 for session architecture, and ADR-0003 for transport-only n8n.
 
 ```
 WhatsApp User            Evolution API          n8n Workflow            Trackpal API
@@ -90,6 +90,134 @@ WhatsApp User            Evolution API          n8n Workflow            Trackpal
      │<──────────────────────┤                     │                       │
      │ receives reply        │                     │                       │
 ```
+
+## WhatsApp Master Console (credential auth)
+
+> **Implemented in:** WhatsApp Credential Auth phase (2026-05-13).
+> See ADR-0004 for session architecture and ADR-0003 for transport-only n8n.
+
+The WhatsApp Master Console now requires conversational **username + password**
+login. The flow is:
+
+```
+WhatsApp User            Evolution API          n8n (transport only)      Trackpal Backend    Redis
+     │                       │                     │                       │                    │
+     │ sends message         │                     │                       │                    │
+     ├──────────────────────>│                     │                       │                    │
+     │                       │ POST /webhook/      │                       │                    │
+     │                       │ /trackpal-whatsapp- │                       │                    │
+     │                       │ bot (payload)       │                       │                    │
+     │                       ├────────────────────>│                       │                    │
+     │                       │                     │ Parse input           │                    │
+     │                       │                     │ (phone, message,      │                    │
+     │                       │                     │  instance)            │                    │
+     │                       │                     │                       │                    │
+     │                       │                     │ POST /n8n/console     │                    │
+     │                       │                     │ {phone, message,      │                    │
+     │                       │                     │  instance}            │                    │
+     │                       │                     ├──────────────────────>│                    │
+     │                       │                     │                       │ Check lockout      │
+     │                       │                     │                       ├───────────────────>│
+     │                       │                     │                       │<───────────────────┤
+     │                       │                     │                       │                    │
+     │                       │                     │                       │ Check auth session │
+     │                       │                     │                       │ (wa:auth:{phone})  │
+     │                       │                     │                       ├───────────────────>│
+     │                       │                     │                       │<───────────────────┤
+     │                       │                     │                       │                    │
+     │                       │                     │  ── if no auth session ──                │
+     │                       │                     │                       │                    │
+     │                       │                     │                       │ Create flow session│
+     │                       │                     │                       │ (session:{phone})  │
+     │                       │                     │                       ├───────────────────>│
+     │                       │                     │                       │<───────────────────┤
+     │                       │                     │                       │                    │
+     │                       │                     │  "¿Cuál es tu nombre  │                    │
+     │                       │                     │   de usuario?"        │                    │
+     │                       │                     │<──────────────────────┤                    │
+     │                       │<────────────────────┤                       │                    │
+     │<──────────────────────┤                     │                       │                    │
+     │                       │                     │                       │                    │
+     │  user replies username│                     │                       │                    │
+     ├──────────────────────>│                     │                       │                    │
+     │                       ├────────────────────>│                       │                    │
+     │                       │                     ├──────────────────────>│                    │
+     │                       │                     │                       │ Store username     │
+     │                       │                     │                       ├───────────────────>│
+     │                       │                     │                       │<───────────────────┤
+     │                       │                     │  "Introduce tu        │                    │
+     │                       │                     │   contraseña"         │                    │
+     │                       │                     │<──────────────────────┤                    │
+     │                       │<────────────────────┤                       │                    │
+     │<──────────────────────┤                     │                       │                    │
+     │                       │                     │                       │                    │
+     │  user replies password│                     │                       │                    │
+     ├──────────────────────>│                     │                       │                    │
+     │                       ├────────────────────>│                       │                    │
+     │                       │                     ├──────────────────────>│                    │
+     │                       │                     │                       │                    │
+     │                       │                     │                       │ AuthService.       │
+     │                       │                     │                       │ authenticate(db,   │
+     │                       │                     │                       │   username, pass)  │
+     │                       │                     │                       │ ── Supabase ──>   │
+     │                       │                     │                       │                    │
+     │                       │                     │                       │  ── on success ──  │
+     │                       │                     │                       │                    │
+     │                       │                     │                       │ Create auth session│
+     │                       │                     │                       │ (wa:auth:{phone})  │
+     │                       │                     │                       │  TTL=15min         │
+     │                       │                     │                       ├───────────────────>│
+     │                       │                     │                       │<───────────────────┤
+     │                       │                     │                       │                    │
+     │                       │                     │                       │ Clear flow session │
+     │                       │                     │                       ├───────────────────>│
+     │                       │                     │                       │                    │
+     │                       │                     │  "[Menú principal]"   │                    │
+     │                       │                     │<──────────────────────┤                    │
+     │                       │<────────────────────┤                       │                    │
+     │<──────────────────────┤                     │                       │                    │
+     │ receives menu        │                     │                       │                    │
+```
+
+### Gate: no bypass to menu/CRUD without auth
+
+Every message hits `WhatsAppMasterConsoleFacade.process_message()` which:
+
+1. Checks lockout (`wa:auth:lock:{phone}`) → returns lockout reply if locked.
+2. Checks auth session (`wa:auth:{phone}`) → delegates to
+   `WhatsAppConsoleService.process_message(is_master=True, ...)` if valid.
+3. Otherwise runs conversational login flow (username → password → verify →
+   create auth session).
+
+Even if a user sends `1`, `2`, `menu`, or any CRUD-triggering option
+**without** an active auth session, they are redirected to the username prompt.
+
+### Auth session vs conversation session
+
+- **Auth session** (`wa:auth:{phone}`, TTL 15 min sliding) — proof of
+  authenticated identity. Reset commands (`0`, `menu`, `cancelar`)
+  do **not** clear this session.
+- **Conversation session** (`session:{phone}`, TTL 15 min sliding) —
+  conversational flow state (step, temp data, selection map). Reset
+  commands clear this session and return to the main menu.
+
+The two are independent. Expiry or absence of either blocks console
+access appropriately.
+
+### Security trade-off (accepted)
+
+- **Password over WhatsApp:** The password is transmitted through
+  WhatsApp's E2E-encrypted channel (Evolution API relay). This is an
+  accepted trade-off for operational flexibility: the Master Console
+  can be used from any WhatsApp-registered device without VPN or
+  dashboard access.
+- **Mitigations:** Temporary lockout after 5 consecutive failures
+  (5-minute lock window, 15-minute failure counter window). Auth session
+  TTL of 15 minutes (sliding). No password stored in Redis payloads.
+  Role verification restricts to `master` role only.
+- **Future hardening:** Consider OTP, magic link, or QR-based
+  device-trust for higher-security environments (explicitly out of
+  scope for this iteration — see PRD).
 
 ## Tenant deactivation flow
 

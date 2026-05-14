@@ -41,6 +41,12 @@ class _FakeRedis:
             self._ttls.pop(key, None)
         # keepttl=True: leave existing TTL untouched
 
+    async def expire(self, key: str, time: int) -> int:
+        if key in self._store:
+            self._ttls[key] = time
+            return 1
+        return 0
+
     async def delete(self, key: str) -> int:
         self._ttls.pop(key, None)
         return 1 if self._store.pop(key, None) is not None else 0
@@ -54,7 +60,7 @@ class _FakeManager:
     used_backup:
         When ``True`` simulates failover active (backup in use).
     fail_on_execute:
-        When ``True`` raises ``RuntimeError`` to simulate both stores down.
+        When ``True`` raises ``RedisUnavailableError`` to simulate both stores down.
     """
 
     def __init__(
@@ -63,9 +69,11 @@ class _FakeManager:
         used_backup: bool = False,
         fail_on_execute: bool = False,
     ) -> None:
+        from app.core.redis_client import RedisUnavailableError
         self._redis = _FakeRedis()
         self._used_backup = used_backup
         self._fail_on_execute = fail_on_execute
+        self._RedisUnavailableError = RedisUnavailableError
 
     @property
     def used_backup(self) -> bool:
@@ -73,7 +81,7 @@ class _FakeManager:
 
     async def execute(self, operation_name: str, async_callable: Any) -> Any:
         if self._fail_on_execute:
-            raise RuntimeError("Both Redis stores unavailable")
+            raise self._RedisUnavailableError("Both Redis stores unavailable")
         return await async_callable(self._redis)
 
 
@@ -98,32 +106,38 @@ async def test_wrong_api_key_returns_401(client):
     assert "Invalid API Key" in response.json()["detail"]
 
 
-async def test_unknown_phone_returns_access_denied(client):
-    """Phone not found → 200 with access-denied reply n8n can relay."""
-    response = await client.post(
-        ENDPOINT,
-        json={"phone": "+9999999999", "message": "hola"},
-        headers={"X-API-Key": settings.n8n_api_key},
-    )
+async def test_unknown_phone_returns_login_prompt_with_redis(client):
+    """Phone not found + Redis available → login prompt, not access denied."""
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": "+9999999999", "message": "hola"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
     assert response.status_code == 200
     body = response.json()
     assert "reply" in body
     reply = body["reply"].lower()
-    assert "master" in reply or "solo" in reply or "disponible" in reply
+    # Must be a login prompt, not access denied
+    assert "usuario" in reply or "iniciar sesión" in reply or "inicio de sesión" in reply
 
 
-async def test_tenant_phone_returns_access_denied(client, active_tenant_user):
-    """Tenant phone → 200 with access-denied reply, no CRUD action."""
-    response = await client.post(
-        ENDPOINT,
-        json={"phone": "+20000000000", "message": "hola"},
-        headers={"X-API-Key": settings.n8n_api_key},
-    )
+async def test_tenant_phone_returns_login_prompt_with_redis(client, active_tenant_user):
+    """Tenant phone + Redis available → login prompt, not access denied."""
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": "+20000000000", "message": "hola"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
     assert response.status_code == 200
     body = response.json()
     assert "reply" in body
     reply = body["reply"].lower()
-    assert "master" in reply or "solo" in reply or "disponible" in reply
+    # Must be a login prompt, not access denied
+    assert "usuario" in reply or "iniciar sesión" in reply or "inicio de sesión" in reply
 
 
 async def test_master_phone_returns_state_unavailable_when_redis_missing(client, master_user):
@@ -193,8 +207,25 @@ async def test_response_shape(client, master_user):
 # ---------------------------------------------------------------------------
 
 async def test_primary_flow_with_fake_manager_returns_menu(client, master_user):
-    """Primary Redis active + Manager with used_backup=False → normal flow."""
+    """Primary Redis active + Manager with used_backup=False → normal flow.
+    Requires an active auth session first.
+    """
+    from datetime import datetime, timezone
+    from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
+
     fake_mgr = _FakeManager(used_backup=False)
+
+    auth_session = WhatsAppAuthSession(
+        phone="12015550001",
+        user_id=str(master_user.id),
+        username=master_user.username,
+        role="master",
+        authenticated_at=datetime.now(timezone.utc),
+    )
+    auth_key = f"wa:auth:12015550001"
+    import json
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
@@ -215,8 +246,26 @@ async def test_failover_missing_session_returns_contingency_reset(client, master
 
     The reply must tell the Master the session was reset due to
     contingency and ask them to choose an option again.
+    Requires an active auth session first.
     """
+    from datetime import datetime, timezone
+    from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
+
     fake_mgr = _FakeManager(used_backup=True)
+
+    # Create auth session in the fake Redis first
+    # Phone must match normalized form (digits only, no +)
+    auth_session = WhatsAppAuthSession(
+        phone="12015550001",
+        user_id=str(master_user.id),
+        username=master_user.username,
+        role="master",
+        authenticated_at=datetime.now(timezone.utc),
+    )
+    auth_key = f"wa:auth:12015550001"
+    import json
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
@@ -235,7 +284,22 @@ async def test_failover_missing_session_returns_contingency_reset(client, master
 
 async def test_failover_missing_session_with_menu_choice_still_resets(client, master_user):
     """Even a menu-choice message gets reset when failover active + no session."""
+    from datetime import datetime, timezone
+    from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
+
     fake_mgr = _FakeManager(used_backup=True)
+
+    auth_session = WhatsAppAuthSession(
+        phone="12015550001",
+        user_id=str(master_user.id),
+        username=master_user.username,
+        role="master",
+        authenticated_at=datetime.now(timezone.utc),
+    )
+    auth_key = f"wa:auth:12015550001"
+    import json
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
@@ -257,8 +321,24 @@ async def test_failover_reset_creates_session_on_backup(client, master_user):
 
     The first message creates a fresh session on backup via the reset
     path.  The second message finds the session and routes normally.
+    Requires an active auth session first.
     """
+    from datetime import datetime, timezone
+    from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
+
     fake_mgr = _FakeManager(used_backup=True)
+
+    auth_session = WhatsAppAuthSession(
+        phone="12015550001",
+        user_id=str(master_user.id),
+        username=master_user.username,
+        role="master",
+        authenticated_at=datetime.now(timezone.utc),
+    )
+    auth_key = f"wa:auth:12015550001"
+    import json
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         # First message — triggers reset, creates fresh session on backup
         resp1 = await client.post(
@@ -383,9 +463,10 @@ async def test_redis_os_error_returns_temporary_unavailable(client, master_user)
     assert "no disponible" in response.json()["reply"].lower()
 
 
-async def test_redis_generic_exception_returns_temporary_unavailable(client, master_user):
-    """Any unexpected exception from Redis yields relayable unavailable reply."""
-    fake_mgr = _FakeManagerRaising(RuntimeError("unexpected infrastructure error"))
+async def test_redis_unavailable_error_returns_temporary_unavailable(client, master_user):
+    """RedisUnavailableError from Redis yields relayable unavailable reply."""
+    from app.core.redis_client import RedisUnavailableError
+    fake_mgr = _FakeManagerRaising(RedisUnavailableError("both Redis stores down"))
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
@@ -396,9 +477,9 @@ async def test_redis_generic_exception_returns_temporary_unavailable(client, mas
     assert "no disponible" in response.json()["reply"].lower()
 
 
-async def test_access_denied_non_master_does_not_call_redis(client, active_tenant_user):
-    """Non-master phone returns access-denied without touching Redis."""
-    fake_mgr = _FakeManager(fail_on_execute=True)
+async def test_non_master_returns_login_prompt_when_redis_healthy(client, active_tenant_user):
+    """Non-master phone + Redis healthy → login prompt, not access denied."""
+    fake_mgr = _FakeManager(fail_on_execute=False)
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
@@ -407,6 +488,92 @@ async def test_access_denied_non_master_does_not_call_redis(client, active_tenan
         )
     assert response.status_code == 200
     reply = response.json()["reply"].lower()
-    # Access denied, not a Redis error
-    assert "master" in reply or "solo" in reply
-    assert "no disponible" not in reply
+    # Must be a login prompt (no identity check happens anymore)
+    assert "usuario" in reply or "iniciar sesión" in reply or "inicio de sesión" in reply
+
+
+# ---------------------------------------------------------------------------
+# Multi-instance invariance tests — instance must not influence auth
+# session lookup or lockout keys.
+# ---------------------------------------------------------------------------
+
+
+async def test_instance_value_does_not_affect_auth_session_lookup(client, master_user):
+    """Different instance values → same phone gets same auth session."""
+    from datetime import datetime, timezone
+    from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
+
+    fake_mgr = _FakeManager(used_backup=False)
+
+    auth_session = WhatsAppAuthSession(
+        phone="12015550001",
+        user_id=str(master_user.id),
+        username=master_user.username,
+        role="master",
+        authenticated_at=datetime.now(timezone.utc),
+    )
+    auth_key = f"wa:auth:12015550001"
+    import json
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+
+    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+        # Request with instance A
+        resp_a = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "menu", "instance": "evolution-instance-a"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp_a.status_code == 200
+        reply_a = resp_a.json()["reply"]
+
+        # Request with instance B
+        resp_b = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "menu", "instance": "evolution-instance-b"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp_b.status_code == 200
+        reply_b = resp_b.json()["reply"]
+
+    # Both replies must be the same (menu from auth session, not login prompt)
+    assert reply_a == reply_b
+    assert "Master Console" in reply_a or "Trackpal" in reply_a
+    assert "usuario" not in reply_a.lower()
+
+
+async def test_instance_value_does_not_affect_lockout_lookup(client, master_user):
+    """Different instance values → same phone shares the same lockout state."""
+    from datetime import datetime, timedelta, timezone
+    from app.services.whatsapp_auth_session_service import WhatsAppAuthLockState
+
+    fake_mgr = _FakeManager(used_backup=False)
+
+    # Create lock state using the same serialisation as the service
+    lock_key = f"wa:auth:lock:12015550001"
+    lock_state = WhatsAppAuthLockState(
+        locked_until=datetime.now(timezone.utc) + timedelta(minutes=5),
+    )
+    await fake_mgr._redis.set(lock_key, lock_state.model_dump_json(), ex=300)
+
+    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+        # Request with instance A
+        resp_a = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "hola", "instance": "instance-x"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp_a.status_code == 200
+        reply_a = resp_a.json()["reply"]
+
+        # Request with instance B
+        resp_b = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "hola", "instance": "instance-y"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp_b.status_code == 200
+        reply_b = resp_b.json()["reply"]
+
+    # Both replies must be the same (lockout message)
+    assert reply_a == reply_b
+    assert "demasiados intentos" in reply_a.lower() or "espera" in reply_a.lower()

@@ -23,6 +23,7 @@
 | [WhatsApp Master Console](prds/260512-0143-whatsapp-master-console/PRD.md) | Backend-driven Master Console via WhatsApp |
 | [Redis Session HA](prds/260512-2005-redis-session-ha/PRD.md) | Redis high-availability for WhatsApp Master Console |
 | [Input Validation Policy](prds/260513-1049-input-validation-policy/PRD.md) | Centralized backend-owned validation for identity/contact fields |
+| [WhatsApp Credential Auth](prds/260513-1732-whatsapp-credential-auth/PRD.md) | Conversational username+password login for Master Console |
 
 ## Plans (Archived)
 
@@ -32,6 +33,7 @@
 | [WhatsApp Master Console — Plan](plans/archived/260512-0143-whatsapp-master-console/SUMMARY.md) | 8-phase execution plan and EXECUTION-REPORT |
 | [Redis Session HA — Plan](plans/archived/260512-2005-redis-session-ha/SUMMARY.md) | 6-phase execution plan and EXECUTION-REPORT |
 | [Input Validation Policy — Plan](plans/archived/260513-1049-input-validation-policy/SUMMARY.md) | 6-phase execution plan and EXECUTION-REPORT |
+| [WhatsApp Credential Auth — Plan](plans/archived/260513-1732-whatsapp-credential-auth/SUMMARY.md) | 5-phase execution plan and EXECUTION-REPORT |
 
 ## ADRs (Architecture Decision Records)
 
