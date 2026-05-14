@@ -32,6 +32,10 @@ WhatsApp → Evolution API (n8n integration, keyword trigger: "/menu")
        Evolution API Send (5) [HTTP POST]
          → POST /message/sendText/{instance}
          → Body: { number, text }
+
+       Config node (0) [Set] — sibling, not in data-flow graph
+         → Holds operational values consumed by nodes 3 and 5
+         → Referenced via `$('Config').first().json.*`
 ```
 
 ## Node details
@@ -68,9 +72,9 @@ return [{ json: { phone, message, instance, raw: payload } }];
 ### 3. Console call (HTTP POST)
 Calls the backend WhatsApp Master Console endpoint. The backend handles all auth, session state, menu routing, and CRUD logic.
 
-- URL: `{{$env.TRACKPAL_BACKEND_URL}}/api/v1/integrations/n8n/console`
+- URL: `{{$('Config').first().json.trackpal_backend_url}}/api/v1/integrations/n8n/console`
 - Method: `POST`
-- Headers: `X-API-Key` (value from `{{$env.TRACKPAL_N8N_API_KEY}}`), `Content-Type: application/json`
+- Headers: `X-API-Key` (value from `{{$('Config').first().json.trackpal_n8n_api_key}}`), `Content-Type: application/json`
 - Body: `{ phone, message, instance }`
 - Response: `{ reply }`
 
@@ -86,9 +90,9 @@ return [{ json: { ...input, reply } }];
 ### 5. Evolution API Send (HTTP POST)
 Sends the backend reply text back to the WhatsApp user through Evolution API.
 
-- URL: `{{$env.TRACKPAL_EVOLUTION_API_URL}}/message/sendText/{{$json.instance}}`
+- URL: `{{$('Config').first().json.evolution_api_url}}/message/sendText/{{$json.instance}}`
 - Method: `POST`
-- Headers: `apikey` (value from `{{$env.TRACKPAL_EVOLUTION_API_KEY}}`)
+- Headers: `apikey` (value from `{{$('Config').first().json.evolution_api_key}}`)
 - Body: `{ number, text }`
 
 ## Evolution API integration
@@ -108,18 +112,30 @@ POST /n8n/create/{instanceName}
 
 Only messages starting with `/menu` are sent to n8n, reducing unnecessary traffic.
 
-## Configuration
+## Configuration — Config Set node pattern
 
-The workflow uses n8n `$env.*` expressions so the export contains no secrets and is safe to commit. Set these environment variables in your n8n instance (Settings → Environment Variables or `~/.n8n/.env`):
+> **Community-license constraint:** The self-hosted n8n community edition does not expose the Environment Variables UI (Settings → Environment Variables). That feature requires a commercial n8n license (pro/enterprise). To keep the workflow portable without a paid license, the live workflow uses an in-workflow **Config Set node** (type: `n8n-nodes-base.set`) to hold operational values instead of `$env.*` expressions.
 
-| Env var | Description |
+The Config node is a sibling node (not connected in the data-flow graph). Other nodes reference its values via `$('Config').first().json.*` expressions. This keeps secrets and URLs out of the node parameter exports while working on any n8n edition.
+
+### Config node values
+
+| Key | Description |
 |---|---|
-| `TRACKPAL_BACKEND_URL` | Trackpal backend base URL (e.g. `https://trackpal-backend.onrender.com`) |
-| `TRACKPAL_N8N_API_KEY` | N8N_API_KEY from backend config |
-| `TRACKPAL_EVOLUTION_API_URL` | Evolution API base URL (e.g. `https://rs-evoapi.wilfredocamacho.dev`) |
-| `TRACKPAL_EVOLUTION_API_KEY` | Evolution API key |
+| `trackpal_backend_url` | Trackpal backend base URL (e.g. `https://trackpal-backend.onrender.com`) |
+| `trackpal_n8n_api_key` | N8N_API_KEY from backend config |
+| `evolution_api_url` | Evolution API base URL (e.g. `https://rs-evoapi.wilfredocamacho.dev`) |
+| `evolution_api_key` | Evolution API key |
+| `default_instance` | Default Evolution API instance name |
 
-> **Note:** n8n resolves `$env.VAR_NAME` from its environment at runtime. This keeps secrets out of the exported JSON.
+### Setting up on a fresh n8n instance
+
+1. Import or recreate the workflow in n8n.
+2. Locate the **Config** Set node (not connected to any flow edges).
+3. Open its parameters and populate the key-value pairs above with your actual values.
+4. Activate the workflow.
+
+> **Note:** The local export (`n8n/Trackpal WhatsApp Bot.json`) still uses `$env.*` expressions for portability. The live workflow on `rs-n8n.wilfredocamacho.dev` has been manually modified to use the Config node. If you re-import the JSON export, you must either (a) recreate the Config node and update the two HTTP nodes to use `$('Config').first().json.*` expressions, or (b) set the four env vars in your n8n environment if you have a commercial license.
 
 ### Verification: no secrets in export
 
@@ -130,7 +146,7 @@ After modifying the workflow, run this to check no real secrets remain:
 rg -n "onrender\.com|X-API-Key\"\s*:\s*\"[A-Za-z0-9]|apikey\"\s*:\s*\"[A-Za-z0-9]" "n8n/Trackpal WhatsApp Bot.json"
 ```
 
-Expected: matches only for header *names*, not real secret *values*. The only `X-API-Key` or `apikey` values should be `{{$env.TRACKPAL_N8N_API_KEY}}` and `{{$env.TRACKPAL_EVOLUTION_API_KEY}}` respectively.
+Expected: matches only for header *names*, not real secret *values*. The only `X-API-Key` or `apikey` values should be `{{$('Config').first().json.trackpal_n8n_api_key}}` and `{{$('Config').first().json.evolution_api_key}}` respectively (or `{{$env.*}}` equivalents).
 
 ## Phone number format
 
