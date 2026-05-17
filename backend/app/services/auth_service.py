@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import set_internal_rls_context
 from app.core.phone import normalize_phone
 from app.core.security import (
     create_access_token,
@@ -35,6 +36,7 @@ class AuthService:
         if not user:
             return None
         if user.role == "tenant":
+            await set_internal_rls_context(db)
             result = await db.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
             profile = result.scalar_one_or_none()
             if profile and not profile.is_active:
@@ -46,6 +48,7 @@ class AuthService:
     async def _active_tenant_id_for_user(self, db: AsyncSession, user: User) -> UUID | None:
         if user.role != "tenant":
             return None
+        await set_internal_rls_context(db)
         result = await db.execute(select(Tenant).where(Tenant.owner_user_id == user.id, Tenant.is_active))
         tenant = result.scalar_one_or_none()
         return tenant.id if tenant else None
@@ -113,6 +116,7 @@ class AuthService:
 
         # Reject inactive tenants during token refresh
         if user.role == "tenant":
+            await set_internal_rls_context(db)
             result = await db.execute(
                 select(Tenant).where(Tenant.owner_user_id == user.id)
             )
@@ -122,6 +126,7 @@ class AuthService:
                 return None
 
         if user.role == "master" and active_tenant_id:
+            await set_internal_rls_context(db)
             result = await db.execute(select(Tenant).where(Tenant.id == active_tenant_id, Tenant.is_active))
             if result.scalar_one_or_none() is None:
                 active_tenant_id = None
@@ -153,6 +158,7 @@ class AuthService:
         canonical = normalize_phone(phone)
         if canonical is None:
             return None
+        await set_internal_rls_context(db)
         result = await user_crud.get_by_phone(db, canonical)
         if not result:
             return None

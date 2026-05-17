@@ -31,12 +31,16 @@ Make Supabase/Postgres RLS real for tenant-scoped data by setting per-request da
 2. Design: decide exact request context setter and transaction boundary.
    - `set_config('...', true)` is transaction-local. It must run inside the same real PostgreSQL transaction that performs tenant-scoped queries.
    - Do not set context in one dependency transaction and then run endpoint SQL in a separate later transaction.
+   - If service code commits before ORM refresh/readback, reapply the same RLS context immediately before the post-commit SELECT/refresh in the new transaction.
+   - Implementation note: `backend/app/core/database.py` centralizes this in `restore_rls_context(session)`. Any service method that commits and then calls `refresh()` or performs another tenant-scoped `SELECT` must call this helper first so Postgres receives transaction-local `app.*` settings in the new real transaction.
    - Recommended safe designs:
      - use a single request transaction context that sets RLS context after `BEGIN` and before tenant-scoped SQL; or
      - attach a SQLAlchemy transaction-begin hook/helper that reapplies context after every real `BEGIN` for the request session.
    - Use transaction-local `is_local = true` behavior so context does not leak across pooled connections.
    - Use only dotted custom GUC names. Required names: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`. Do not use undotted names such as `tenant_id` or `current_user_id`.
    - Ensure tenant-scoped dependencies call this before catalog queries and verify it remains active for those queries.
+   - API-key and auth pre-JWT flows that query `tenants` must set internal RLS context before the query. Use `set_internal_rls_context(session)`, which sets role `master`, a fixed system `user_id`, and empty `active_tenant_id`; this allows tenant-management reads while catalog RLS still requires an explicit active tenant.
+   - `tenants` tenant-role `USING` must allow the owner to read its tenant row even when inactive. App code needs to see inactive rows to return 401; `services` and `plans` policies retain `t.is_active` so inactive tenants cannot access catalog data.
 3. Implement: DB context helper.
    - Add helper such as `set_rls_context(db, user_id, role, active_tenant_id)` plus request/transaction wiring that guarantees same-transaction execution.
    - Helper must set exactly `app.current_user_id`, `app.current_role`, and `app.active_tenant_id`.

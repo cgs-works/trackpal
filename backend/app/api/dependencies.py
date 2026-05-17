@@ -5,7 +5,7 @@ from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db, set_rls_context
+from app.core.database import get_db, set_internal_rls_context, set_rls_context
 from app.core.security import decode_token, verify_n8n_api_key
 from app.crud import users as user_crud
 from app.models import Tenant, User
@@ -100,7 +100,16 @@ async def verify_n8n_api_key_header(
     return True
 
 
+async def set_api_key_rls_context(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    verified: Annotated[bool, Depends(verify_n8n_api_key_header)],
+) -> AsyncSession:
+    await set_internal_rls_context(db)
+    return db
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
 MasterUser = Annotated[User, Depends(require_role("master"))]
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+ApiKeyDbDep = Annotated[AsyncSession, Depends(set_api_key_rls_context)]
 ActiveTenantId = Annotated[UUID, Depends(get_active_tenant_id)]

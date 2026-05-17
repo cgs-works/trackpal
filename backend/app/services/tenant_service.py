@@ -12,6 +12,7 @@ from app.core.input_validation import (
     validate_phone,
     validate_username,
 )
+from app.core.database import restore_rls_context
 from app.core.security import get_password_hash
 from app.crud import users as user_crud
 from app.models import RefreshSession, Tenant, User
@@ -70,6 +71,7 @@ class TenantService:
             raise ValueError(f"Failed to create Evolution instance: {exc}") from exc
 
         await db.commit()
+        await restore_rls_context(db)
 
         created_profile = await self.get_tenant(db, profile.id)
         if created_profile is None:
@@ -129,6 +131,7 @@ class TenantService:
             setattr(profile, field, value)
 
         await db.commit()
+        await restore_rls_context(db)
         return await self.get_tenant(db, tenant_id)
 
     async def deactivate_tenant(
@@ -148,6 +151,7 @@ class TenantService:
             .values(revoked=True)
         )
         await db.commit()
+        await restore_rls_context(db)
         return await self.get_tenant(db, tenant_id)
 
     async def activate_tenant(
@@ -158,6 +162,7 @@ class TenantService:
             return None
         profile.is_active = True
         await db.commit()
+        await restore_rls_context(db)
         return await self.get_tenant(db, tenant_id)
 
     async def delete_tenant(self, db: AsyncSession, tenant_id: UUID) -> bool:
@@ -183,4 +188,5 @@ class TenantService:
             raise ValueError(f"Failed to delete Evolution instance: {exc}") from exc
 
         await db.commit()
+        await restore_rls_context(db)
         return True

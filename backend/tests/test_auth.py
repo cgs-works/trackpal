@@ -38,6 +38,16 @@ async def test_login_deactivated_tenant(client, deactivated_tenant_user):
     assert response.status_code == 401
 
 
+async def test_login_deactivated_tenant_is_rejected_after_profile_lookup(client, deactivated_tenant_user):
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "inactive-tenant", "password": "tenant-password"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials or account deactivated"
+
+
 async def test_refresh_token(client, master_user):
     login_response = await client.post(
         "/api/v1/auth/login",
@@ -105,6 +115,18 @@ async def test_identify_by_phone(client, master_user):
     assert response.status_code == 200
     assert response.json()["username"] == "master"
     assert response.json()["role"] == "master"
+
+
+async def test_identify_by_phone_finds_active_tenant_with_api_key_context(client, active_tenant_user):
+    response = await client.get(
+        "/api/v1/integrations/n8n/identify",
+        params={"phone": "+12015550002"},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "tenant"
+    assert response.json()["role"] == "tenant"
 
 
 async def test_identify_no_phone(client, master_user):

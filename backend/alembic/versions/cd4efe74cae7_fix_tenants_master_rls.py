@@ -26,7 +26,6 @@ def upgrade() -> None:
             OR (
                 current_setting('app.current_role', true) = 'tenant'
                 AND owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')
-                AND is_active
             )
         )
         WITH CHECK (

@@ -3,6 +3,9 @@
 ## Status
 Completed with pending manual QA; review fixes applied
 
+## Pull Request
+https://github.com/neutrobox/trackpal/pull/9
+
 ## Summary
 Executed all phases in Batch mode. Implemented canonical tenants, catalog services/plans, Master tenant switch context, RLS context/policies, backend APIs, frontend catalog UI, docs, and tests. Post-review fixes addressed forced-RLS Master tenant management and Master support UI profile safety.
 

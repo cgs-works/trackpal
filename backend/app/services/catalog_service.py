@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.database import restore_rls_context
 from app.models import Plan, Service
 from app.schemas.catalog import PlanCreate, PlanUpdate, ServiceCreate, ServiceUpdate
 
@@ -39,6 +40,7 @@ class CatalogService:
         service = Service(tenant_id=tenant_id, name=name)
         db.add(service)
         await db.commit()
+        await restore_rls_context(db)
         await db.refresh(service)
         return service
 
@@ -52,6 +54,7 @@ class CatalogService:
                 raise ValueError("Service name already exists")
             service.name = name
         await db.commit()
+        await restore_rls_context(db)
         await db.refresh(service)
         return service
 
@@ -88,6 +91,7 @@ class CatalogService:
         plan = Plan(tenant_id=tenant_id, service_id=service_id, name=name)
         db.add(plan)
         await db.commit()
+        await restore_rls_context(db)
         await db.refresh(plan)
         return plan
 
@@ -101,6 +105,7 @@ class CatalogService:
                 raise ValueError("Plan name already exists")
             plan.name = name
         await db.commit()
+        await restore_rls_context(db)
         await db.refresh(plan)
         return plan
 
