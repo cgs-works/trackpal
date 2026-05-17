@@ -24,7 +24,7 @@ def _tenant_response(profile) -> TenantResponse:
         phone=profile.phone,
         evolution_instance_name=profile.evolution_instance_name,
         is_active=profile.is_active,
-        username=profile.user.username,
+        username=profile.owner.username,
         created_at=profile.created_at,
     )
 

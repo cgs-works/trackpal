@@ -4,7 +4,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.phone import normalize_phone
-from app.models import MasterProfile, TenantProfile, User
+from app.models import MasterProfile, Tenant, User
 
 
 async def get_by_username(db: AsyncSession, username: str) -> User | None:
@@ -43,13 +43,11 @@ async def get_by_phone(db: AsyncSession, phone: str) -> tuple[User, str | None] 
         if user:
             return user, master_profile.phone
 
-    result = await db.execute(
-        select(TenantProfile).where(TenantProfile.phone.in_(variants))
-    )
-    tenant_profile = result.scalar_one_or_none()
-    if tenant_profile:
-        user = await get(db, tenant_profile.id)
+    result = await db.execute(select(Tenant).where(Tenant.whatsapp_phone.in_(variants)))
+    tenant = result.scalar_one_or_none()
+    if tenant:
+        user = await get(db, tenant.owner_user_id)
         if user:
-            return user, tenant_profile.phone
+            return user, tenant.whatsapp_phone
 
     return None

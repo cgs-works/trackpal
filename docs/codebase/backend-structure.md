@@ -12,6 +12,7 @@ backend/
 │   │       ├── router.py         # Aggregates all endpoint routers
 │   │       └── endpoints/
 │   │           ├── auth.py       # Login, refresh, logout
+│   │           ├── catalog.py    # Tenant-scoped services/plans CRUD
 │   │           ├── dashboard.py  # Role-aware dashboard data
 │   │           ├── integrations.py # n8n identify, WhatsApp console
 │   │           ├── me.py         # Self-profile CRUD
@@ -32,11 +33,14 @@ backend/
 │   │   ├── base.py              # DeclarativeBase + TimestampMixin
 │   │   ├── user.py              # User (polymorphic role)
 │   │   ├── master_profile.py    # MasterProfile (1:1 with User)
-│   │   ├── tenant_profile.py    # TenantProfile (1:1 with User)
+│   │   ├── tenant.py            # Canonical Tenant (owner_user_id → User)
+│   │   ├── service.py           # Tenant catalog service
+│   │   ├── plan.py              # Service catalog plan
 │   │   └── refresh_session.py   # RefreshSession (1:N with User)
 │   ├── schemas/                  # Pydantic schemas (request/response)
 │   │   ├── __init__.py
 │   │   ├── auth.py              # LoginRequest, TokenResponse, IdentifyResponse
+│   │   ├── catalog.py           # Service/plan request and response schemas
 │   │   ├── dashboard.py         # MasterDashboardResponse, TenantDashboardResponse
 │   │   ├── me.py                # ProfileResponse, ProfileUpdate, PasswordChange
 │   │   ├── tenant.py            # TenantCreate, TenantUpdate, TenantResponse, etc.
@@ -44,6 +48,7 @@ backend/
 │   └── services/                 # Business logic layer
 │       ├── __init__.py
 │       ├── auth_service.py      # Authenticate, token creation, refresh, revoke
+│       ├── catalog_service.py   # Tenant-scoped catalog CRUD/validation
 │       ├── contingency_reply_policy.py  # Degraded state reply text constants
 │       ├── evolution_client.py  # Evolution API HTTP client
 │       ├── profile_service.py   # Profile get/update, password change
@@ -56,13 +61,15 @@ backend/
 │   ├── env.py
 │   ├── versions/
 │   │   ├── cd1efe74cae4_initial_schema.py
-│   │   └── cd2efe74cae5_normalize_phone_values.py
+│   │   ├── cd2efe74cae5_normalize_phone_values.py
+│   │   └── cd3efe74cae6_tenant_catalog_rls.py
 │   └── script.py.mako
 ├── scripts/                      # Utility scripts
 │   └── seed.py                   # Master user seeder
 ├── tests/                        # Pytest test suite
 │   ├── conftest.py              # Fixtures: DB, client, users
 │   ├── test_auth.py
+│   ├── test_catalog.py
 │   ├── test_contingency_reply_policy.py
 │   ├── test_evolution_client.py
 │   ├── test_input_validation_policy.py
@@ -71,6 +78,7 @@ backend/
 │   ├── test_profile.py
 │   ├── test_redis_connection_manager.py
 │   ├── test_redis_failover_policy.py
+│   ├── test_rls_policy_sql.py
 │   ├── test_tenants.py
 │   ├── test_whatsapp_auth_session_service.py
 │   ├── test_whatsapp_create_flow.py

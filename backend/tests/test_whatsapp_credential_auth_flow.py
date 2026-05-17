@@ -378,7 +378,7 @@ class TestLoginErrors:
         db_session,
     ) -> None:
         """Tenant credentials → role not allowed error, no auth session."""
-        from app.models import User, TenantProfile
+        from app.models import Tenant, User
 
         user = User(
             username="tenant",
@@ -388,10 +388,10 @@ class TestLoginErrors:
         db_session.add(user)
         await db_session.flush()
         db_session.add(
-            TenantProfile(
-                id=user.id,
-                full_name="Tenant User",
-                phone="+12015550002",
+            Tenant(
+                owner_user_id=user.id,
+                name="Tenant User",
+                whatsapp_phone="+12015550002",
                 is_active=True,
             )
         )

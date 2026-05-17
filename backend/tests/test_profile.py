@@ -273,12 +273,12 @@ async def test_update_profile_phone_conflict_normalized(
     Existing tenant phone is stored with + in fixture.  Sending the
     same phone without + must still trigger conflict.
     """
-    from app.models import TenantProfile
+    from app.models import Tenant
     from sqlalchemy import select
 
     # Ensure tenant phone is known
     result = await db_session.execute(
-        select(TenantProfile).where(TenantProfile.id == active_tenant_user.id)
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
     )
     tenant = result.scalar_one_or_none()
     tenant_phone = tenant.phone  # "+12015550002" (has + in fixture)

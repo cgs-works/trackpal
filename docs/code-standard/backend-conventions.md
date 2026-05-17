@@ -16,8 +16,8 @@
 
 ## Naming
 
-- **Files**: snake_case (`auth_service.py`, `tenant_profile.py`)
-- **Classes**: PascalCase (`AuthService`, `TenantProfile`)
+- **Files**: snake_case (`auth_service.py`, `tenant.py`, `catalog_service.py`)
+- **Classes**: PascalCase (`AuthService`, `Tenant`, `Service`, `Plan`)
 - **Functions/methods**: snake_case (`get_by_username`, `create_tenant`)
 - **Constants**: UPPER_SNAKE_CASE for module-level constants
 - **Private methods**: `_leading_underscore` (Python convention)
@@ -90,3 +90,10 @@ All user-facing strings are in Spanish. WhatsApp flow templates are class consta
 - New migrations use Alembic's auto-generation or manual DDL
 - Phone value migrations must detect cross-table collisions before applying changes
 - Backward compatibility: `get_by_phone` searches both canonical and `+`-prefixed variants
+
+## Tenant Scope and RLS
+
+- `Tenant` is the only tenant entity for active code; obsolete `tenant_profiles` was dropped after migration.
+- Tenant-scoped queries must filter by `tenant_id` in application code.
+- Postgres/Supabase tenant-scoped operations must set transaction-local RLS context before SQL using dotted GUC names only: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`.
+- Master catalog operations require explicit switched tenant context. Do not infer tenant scope from arbitrary request payload IDs.

@@ -1,14 +1,12 @@
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import ApiKeyDbDep
 from app.core.config import settings
-from app.core.database import get_db
 from app.core.phone import normalize_phone
 from app.core.redis_client import RedisUnavailableError, get_redis_manager
-from app.core.security import verify_n8n_api_key
 from app.schemas.auth import IdentifyResponse
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
@@ -21,7 +19,7 @@ from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 class _TenantConsoleItem:
-    """Wraps a TenantProfile ORM object for the simple
+    """Wraps a tenant ORM object for the simple
     attribute-based interface expected by WhatsAppConsoleService."""
 
     def __init__(self, profile) -> None:
@@ -30,7 +28,8 @@ class _TenantConsoleItem:
         self.is_active = profile.is_active
         self.email = profile.email
         self.phone = profile.phone
-        self.username = profile.user.username if profile.user else ""
+        owner = getattr(profile, "owner", None) or getattr(profile, "user", None)
+        self.username = owner.username if owner else ""
         self.evolution_instance_name = profile.evolution_instance_name
         self.created_at = profile.created_at
 
@@ -148,7 +147,6 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
 auth_service = AuthService()
 console_service = WhatsAppConsoleService()
 tenant_service = TenantService()
-DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
@@ -156,14 +154,8 @@ CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 @router.get("/n8n/identify", response_model=IdentifyResponse)
 async def identify_n8n(
     phone: str,
-    x_api_key: Annotated[str, Header(alias="X-API-Key")],
-    db: DbDep,
+    db: ApiKeyDbDep,
 ):
-    if not verify_n8n_api_key(x_api_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-        )
     result = await auth_service.identify_by_phone(db, phone)
     if not result:
         raise HTTPException(
@@ -176,8 +168,7 @@ async def identify_n8n(
 @router.post("/n8n/console", response_model=WhatsAppConsoleResponse)
 async def whatsapp_console(
     request: WhatsAppConsoleRequest,
-    db: DbDep,
-    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    db: ApiKeyDbDep,
 ):
     """Entrypoint for n8n transport: receive message, return reply.
 
@@ -186,12 +177,6 @@ async def whatsapp_console(
     runs the console flow logic, and returns the reply text that n8n
     relays through Evolution API.
     """
-    if not verify_n8n_api_key(x_api_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-        )
-
     phone = normalize_phone(request.phone) or ""
 
     # Create Redis-dependent services when available

@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.api.v1.endpoints.integrations import _TenantConsoleAdapter
-from app.models import TenantProfile
+from app.models import Tenant
 from app.services.tenant_service import TenantService
 
 pytestmark = pytest.mark.asyncio
@@ -183,7 +183,7 @@ async def test_real_adapter_lifecycle_methods_use_tenant_service(db_session, act
     assert deleted == {"success": True}
 
     result = await db_session.execute(
-        select(TenantProfile).where(TenantProfile.id == active_tenant_user.id)
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
     )
     assert result.scalar_one_or_none() is None
 

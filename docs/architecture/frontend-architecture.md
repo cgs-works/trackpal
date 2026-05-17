@@ -54,9 +54,9 @@ No lazy loading is used for `LoginView` (eager import). `MasterDashboardView` an
 
 Single store in `src/stores/auth.js`:
 
-- **State**: `token`, `refreshToken`, `user` — all persisted to `localStorage`
+- **State**: `token`, `refreshToken`, `user`, `activeTenantId` — all persisted to `localStorage`
 - **Getters (computed)**: `isAuthenticated`, `role`, `username`
-- **Actions**: `login(username, password)` — POST to `/auth/login`, stores tokens + user; `logout()` — POST to `/auth/logout`, clears localStorage
+- **Actions**: `login(username, password)` — POST to `/auth/login`, stores tokens + user; `switchTenant(tenantId)` — Master support context; `exitTenantContext()` — exits support context through `/auth/switch-tenant` with `tenant_id: null`; `logout()` — POST to `/auth/logout`, clears localStorage
 
 Token and user data are read from `localStorage` on store initialization, surviving page reloads.
 
@@ -116,6 +116,8 @@ Spanish-language login form. Username + password fields, error display, loading 
 Full tenant management dashboard accessible only to `master` role:
 - Summary cards: total, active, inactive tenant counts
 - Tenant table with CRUD actions
+- Manage catalog action switches Master into tenant support context
+- Visible `Salir de tenant` action clears support context
 - Create/Edit modal form
 - Activate/deactivate/delete operations
 - Logout button
@@ -126,6 +128,8 @@ Self-service dashboard accessible only to `tenant` role:
 - Welcome message + profile display
 - Profile edit form (name, email, phone)
 - Password change form (old + new password)
+- Catalog management: services CRUD and per-service plans CRUD
+- Duplicate/validation API errors shown in Spanish UI
 - Logout button
 
 Dashboard data is loaded from `GET /api/v1/dashboard` and `GET /api/v1/me` on mount.

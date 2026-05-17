@@ -25,12 +25,12 @@ frontend/
 │   │   └── api.js                # Axios instance: base URL, JWT interceptor, 401 handler
 │   │
 │   ├── stores/
-│   │   └── auth.js               # Pinia store: token, user, isAuthenticated, login, logout
+│   │   └── auth.js               # Pinia store: token, user, activeTenantId, login, switch, logout
 │   │
 │   └── views/
 │       ├── LoginView.vue         # Login form (Spanish UI)
-│       ├── MasterDashboardView.vue  # Master tenant CRUD dashboard
-│       └── TenantDashboardView.vue  # Tenant self-service profile + password
+│       ├── MasterDashboardView.vue  # Master tenant CRUD + support context switch
+│       └── TenantDashboardView.vue  # Tenant profile/password + catalog CRUD
 │
 └── dist/                         # Build output (gitignored)
 ```
@@ -49,8 +49,8 @@ frontend/
 |--------|-------|----------------|
 | Router | `router/index.js` | Route definitions, lazy loading, navigation guard for auth + role |
 | API Service | `services/api.js` | Axios singleton, JWT injection on requests, 401 auto-logout |
-| Auth Store | `stores/auth.js` | Login/logout actions, token/user persistence in localStorage |
-| Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard |
+| Auth Store | `stores/auth.js` | Login/logout/switch actions, token/user/active tenant persistence in localStorage |
+| Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard/catalog |
 
 ## Dependencies (from package.json)
 

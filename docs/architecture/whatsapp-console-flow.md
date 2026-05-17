@@ -53,7 +53,7 @@ When an authenticated user sends "0":
 Stores per-phone multi-step flow state as JSON under `session:{phone}` with configurable TTL (default 15 minutes).
 
 Key fields on `ConversationSession`:
-- `phone`, `flow`, `step`, `selected_tenant_id`
+- `phone`, `flow`, `step`, `selected_tenant_id` (UUID of the canonical tenant being managed)
 - `temp_data` — form data being collected across steps
 - `selection_map` — maps displayed numbers to tenant UUIDs
 
@@ -76,16 +76,16 @@ Handles conversation state transitions, menu routing, and CRUD decisions.
 
 | # | Action | Description |
 |---|--------|-------------|
-| 1 | Ver Tenants | Lists all tenants with status; user selects one for detail |
-| 2 | Crear Tenant | Multi-step form: name, email, phone, username, Evolution instance, password |
-| 3 | Desactivar Tenant | Starts deactivation flow requiring CONFIRMAR |
-| 4 | Eliminar Tenant | Deletes inactive tenant with CONFIRMAR |
+| 1 | Ver Tenants | Lists all canonical tenants with status; user selects one for detail |
+| 2 | Crear Tenant | Multi-step form: name, email, phone, owner username, Evolution instance, password |
+| 3 | Desactivar Tenant | Detail screen option: deactivation flow requiring CONFIRMAR |
+| 4 | Eliminar Tenant | Detail screen option: deletes inactive tenant with CONFIRMAR |
 | 5 | Ayuda | Show help text |
 | 0 | Cerrar sesión / Cancelar | Contextual: cancel flow or logout |
 
 ### Create Flow Steps
 
-1. `full_name` → `email` → `phone` → `username` → `evolution_instance` → `password_mode` → (optional `manual_password`) → `confirm`
+1. `full_name` (tenant display name) → `email` → `phone` → `username` (owner user login) → `evolution_instance` → `password_mode` → (optional `manual_password`) → `confirm`
 - All fields validated against centralized input validation policy
 - Username checked for duplicates before advancing
 - On creation failure, user is returned to the offending field

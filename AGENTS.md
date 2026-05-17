@@ -30,12 +30,12 @@ npm run build                                 # → dist/
 ```
 backend/
 ├── app/main.py                     # FastAPI entry, CORS, lifespan
-├── app/api/v1/endpoints/           # auth, me, dashboard, tenants, integrations
+├── app/api/v1/endpoints/           # auth, me, dashboard, tenants, catalog, integrations
 ├── app/api/dependencies.py         # get_current_user, require_role, verify_n8n
 ├── app/core/                       # config, database, security, redis, validation, phone
-├── app/models/                     # user, master/tenant_profile, refresh_session
-├── app/schemas/                    # auth, tenant, me, dashboard, whatsapp
-├── app/services/                   # auth, tenant, profile, evolution_client,
+├── app/models/                     # user, tenant, service, plan, profiles, refresh_session
+├── app/schemas/                    # auth, tenant, catalog, me, dashboard, whatsapp
+├── app/services/                   # auth, tenant, catalog, profile, evolution_client,
 │                                   # whatsapp_console_service (1327 LOC), session services, facade
 ├── tests/                          # 22 files, ~11.6k LOC
 └── scripts/seed.py
@@ -84,6 +84,8 @@ Title: `[backend|frontend|n8n] Brief description`. Run `uv run pytest` + `npm ru
 ## Key Architecture Decisions
 
 - WhatsApp console → Master manages tenants from phone
+- Canonical tenants → `tenants.owner_user_id` links tenant account to login user; catalog uses `services`/`plans`
+- Tenant isolation → app-level tenant filters plus Postgres RLS context (`app.current_user_id`, `app.current_role`, `app.active_tenant_id`)
 - n8n bridge → decouples Evolution webhooks from backend
 - Redis HA + circuit breaker → 3 failures → backup, half-open 30s
 - JWT + refresh rotation → short-lived tokens, refresh invalidated on use

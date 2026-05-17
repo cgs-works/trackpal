@@ -25,10 +25,16 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserInfo
+    active_tenant_id: UUID | None = None
 
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+    active_tenant_id: UUID | None = None
+
+
+class SwitchTenantRequest(BaseModel):
+    tenant_id: UUID | None = None
 
 
 class IdentifyResponse(BaseModel):

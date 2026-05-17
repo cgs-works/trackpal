@@ -38,3 +38,10 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 |------|-------------|
 | [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
 | [Business Rules](project-pdr/business-rules.md) | Tenant lifecycle, auth constraints, phone handling, validation rules, deployment constraints |
+
+## Other
+
+| File | Description |
+|------|-------------|
+| [Plans](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Recent execution plans and reports |
+| [Brainstorms](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Design brainstorms and research |

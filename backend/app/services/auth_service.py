@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import set_internal_rls_context
 from app.core.phone import normalize_phone
 from app.core.security import (
     create_access_token,
@@ -16,7 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.crud import users as user_crud
-from app.models import RefreshSession, TenantProfile, User
+from app.models import RefreshSession, Tenant, User
 
 
 def _hash_refresh_token(refresh_token: str) -> str:
@@ -35,9 +36,8 @@ class AuthService:
         if not user:
             return None
         if user.role == "tenant":
-            result = await db.execute(
-                select(TenantProfile).where(TenantProfile.id == user.id)
-            )
+            await set_internal_rls_context(db)
+            result = await db.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
             profile = result.scalar_one_or_none()
             if profile and not profile.is_active:
                 return None
@@ -45,8 +45,20 @@ class AuthService:
             return None
         return user
 
-    async def create_tokens(self, db: AsyncSession, user: User) -> dict:
-        access_token = create_access_token(subject=str(user.id), role=user.role)
+    async def _active_tenant_id_for_user(self, db: AsyncSession, user: User) -> UUID | None:
+        if user.role != "tenant":
+            return None
+        await set_internal_rls_context(db)
+        result = await db.execute(select(Tenant).where(Tenant.owner_user_id == user.id, Tenant.is_active))
+        tenant = result.scalar_one_or_none()
+        return tenant.id if tenant else None
+
+    async def create_tokens(self, db: AsyncSession, user: User, active_tenant_id: UUID | None = None) -> dict | None:
+        if user.role == "tenant":
+            active_tenant_id = await self._active_tenant_id_for_user(db, user)
+            if active_tenant_id is None:
+                return None
+        access_token = create_access_token(subject=str(user.id), role=user.role, active_tenant_id=str(active_tenant_id) if active_tenant_id else None)
         refresh_token = create_refresh_token(subject=str(user.id))
         generate_secure_token()
         refresh_token_hash = _hash_refresh_token(refresh_token)
@@ -66,10 +78,11 @@ class AuthService:
             "refresh_token": refresh_token,
             "token_type": "bearer",
             "user": {"id": user.id, "role": user.role, "username": user.username},
+            "active_tenant_id": active_tenant_id,
         }
 
     async def refresh_access_token(
-        self, db: AsyncSession, refresh_token: str
+        self, db: AsyncSession, refresh_token: str, active_tenant_id: UUID | None = None
     ) -> dict | None:
         try:
             payload = decode_token(refresh_token)
@@ -105,15 +118,30 @@ class AuthService:
 
         # Reject inactive tenants during token refresh
         if user.role == "tenant":
+            await set_internal_rls_context(db)
             result = await db.execute(
-                select(TenantProfile).where(TenantProfile.id == user.id)
+                select(Tenant).where(Tenant.owner_user_id == user.id)
             )
             profile = result.scalar_one_or_none()
             if profile and not profile.is_active:
                 await db.commit()
                 return None
 
-        return await self.create_tokens(db, user)
+        if user.role == "master" and active_tenant_id:
+            await set_internal_rls_context(db)
+            result = await db.execute(select(Tenant).where(Tenant.id == active_tenant_id, Tenant.is_active))
+            if result.scalar_one_or_none() is None:
+                active_tenant_id = None
+        return await self.create_tokens(db, user, active_tenant_id)
+
+    async def switch_tenant(self, db: AsyncSession, user: User, tenant_id: UUID | None) -> dict | None:
+        if user.role != "master":
+            return None
+        if tenant_id is not None:
+            result = await db.execute(select(Tenant).where(Tenant.id == tenant_id, Tenant.is_active))
+            if result.scalar_one_or_none() is None:
+                return None
+        return await self.create_tokens(db, user, tenant_id)
 
     async def revoke_refresh_token(self, db: AsyncSession, refresh_token: str) -> bool:
         """Revoke a refresh token (logout)."""
@@ -132,13 +160,14 @@ class AuthService:
         canonical = normalize_phone(phone)
         if canonical is None:
             return None
+        await set_internal_rls_context(db)
         result = await user_crud.get_by_phone(db, canonical)
         if not result:
             return None
         user, _ = result
         if user.role == "tenant":
             profile_result = await db.execute(
-                select(TenantProfile).where(TenantProfile.id == user.id)
+                select(Tenant).where(Tenant.owner_user_id == user.id)
             )
             profile = profile_result.scalar_one_or_none()
             if profile and not profile.is_active:

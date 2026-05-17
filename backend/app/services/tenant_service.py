@@ -12,9 +12,10 @@ from app.core.input_validation import (
     validate_phone,
     validate_username,
 )
+from app.core.database import restore_rls_context
 from app.core.security import get_password_hash
 from app.crud import users as user_crud
-from app.models import RefreshSession, TenantProfile, User
+from app.models import RefreshSession, Tenant, User
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.services.evolution_client import evolution_client
 
@@ -22,7 +23,7 @@ from app.services.evolution_client import evolution_client
 class TenantService:
     async def create_tenant(
         self, db: AsyncSession, payload: TenantCreate
-    ) -> tuple[TenantProfile, str | None]:
+    ) -> tuple[Tenant, str | None]:
         # Defensive normalization at service layer (safety net)
         username = validate_username(payload.username)
         full_name = validate_full_name(payload.full_name)
@@ -51,11 +52,11 @@ class TenantService:
         db.add(user)
         await db.flush()
 
-        profile = TenantProfile(
-            id=user.id,
-            full_name=full_name,
+        profile = Tenant(
+            owner_user_id=user.id,
+            name=full_name,
             email=email,
-            phone=phone,
+            whatsapp_phone=phone,
             evolution_instance_name=payload.evolution_instance_name,
             is_active=True,
         )
@@ -70,17 +71,18 @@ class TenantService:
             raise ValueError(f"Failed to create Evolution instance: {exc}") from exc
 
         await db.commit()
+        await restore_rls_context(db)
 
-        created_profile = await self.get_tenant(db, user.id)
+        created_profile = await self.get_tenant(db, profile.id)
         if created_profile is None:
             raise ValueError("Tenant could not be created")
         return created_profile, plain_password if auto_generated else None
 
-    async def get_tenants(self, db: AsyncSession) -> tuple[list[TenantProfile], dict]:
+    async def get_tenants(self, db: AsyncSession) -> tuple[list[Tenant], dict]:
         result = await db.execute(
-            select(TenantProfile)
-            .options(selectinload(TenantProfile.user))
-            .order_by(TenantProfile.created_at.desc())
+            select(Tenant)
+            .options(selectinload(Tenant.owner))
+            .order_by(Tenant.created_at.desc())
         )
         profiles = list(result.scalars().all())
         total = len(profiles)
@@ -90,17 +92,17 @@ class TenantService:
 
     async def get_tenant(
         self, db: AsyncSession, tenant_id: UUID
-    ) -> TenantProfile | None:
+    ) -> Tenant | None:
         result = await db.execute(
-            select(TenantProfile)
-            .options(selectinload(TenantProfile.user))
-            .where(TenantProfile.id == tenant_id)
+            select(Tenant)
+            .options(selectinload(Tenant.owner))
+            .where((Tenant.id == tenant_id) | (Tenant.owner_user_id == tenant_id))
         )
         return result.scalar_one_or_none()
 
     async def update_tenant(
         self, db: AsyncSession, tenant_id: UUID, payload: TenantUpdate
-    ) -> TenantProfile | None:
+    ) -> Tenant | None:
         profile = await self.get_tenant(db, tenant_id)
         if profile is None:
             return None
@@ -122,18 +124,19 @@ class TenantService:
         if "phone" in update_data and update_data["phone"] != profile.phone:
             if update_data["phone"] is not None:
                 existing = await user_crud.get_by_phone(db, update_data["phone"])
-                if existing and existing[0].id != tenant_id:
+                if existing and existing[0].id != profile.owner_user_id:
                     raise ValueError("Phone already registered")
 
         for field, value in update_data.items():
             setattr(profile, field, value)
 
         await db.commit()
+        await restore_rls_context(db)
         return await self.get_tenant(db, tenant_id)
 
     async def deactivate_tenant(
         self, db: AsyncSession, tenant_id: UUID
-    ) -> TenantProfile | None:
+    ) -> Tenant | None:
         profile = await self.get_tenant(db, tenant_id)
         if profile is None:
             return None
@@ -142,22 +145,24 @@ class TenantService:
         await db.execute(
             update(RefreshSession)
             .where(
-                RefreshSession.user_id == tenant_id,
+                RefreshSession.user_id == profile.owner_user_id,
                 RefreshSession.revoked == False,
             )
             .values(revoked=True)
         )
         await db.commit()
+        await restore_rls_context(db)
         return await self.get_tenant(db, tenant_id)
 
     async def activate_tenant(
         self, db: AsyncSession, tenant_id: UUID
-    ) -> TenantProfile | None:
+    ) -> Tenant | None:
         profile = await self.get_tenant(db, tenant_id)
         if profile is None:
             return None
         profile.is_active = True
         await db.commit()
+        await restore_rls_context(db)
         return await self.get_tenant(db, tenant_id)
 
     async def delete_tenant(self, db: AsyncSession, tenant_id: UUID) -> bool:
@@ -168,7 +173,7 @@ class TenantService:
             raise ValueError("Cannot delete active tenant. Deactivate first.")
 
         instance_name = profile.evolution_instance_name
-        user = await user_crud.get(db, tenant_id)
+        user = await user_crud.get(db, profile.owner_user_id)
         if user is None:
             return False
 
@@ -183,4 +188,5 @@ class TenantService:
             raise ValueError(f"Failed to delete Evolution instance: {exc}") from exc
 
         await db.commit()
+        await restore_rls_context(db)
         return True

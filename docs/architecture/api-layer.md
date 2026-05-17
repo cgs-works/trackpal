@@ -15,6 +15,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | Prefix | Module | Tags | Auth |
 |--------|--------|------|------|
 | `/api/v1/auth/*` | `app.api.v1.endpoints.auth` | auth | None (public) |
+| `/api/v1/catalog/*` | `app.api.v1.endpoints.catalog` | catalog | JWT + active tenant context |
 | `/api/v1/me/*` | `app.api.v1.endpoints.me` | me | JWT bearer |
 | `/api/v1/tenants/*` | `app.api.v1.endpoints.tenants` | tenants | JWT + master role |
 | `/api/v1/integrations/*` | `app.api.v1.endpoints.integrations` | integrations | X-API-Key header |
@@ -25,6 +26,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 - `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens
 - `POST /api/v1/auth/refresh` — Exchange refresh token for new token pair
 - `POST /api/v1/auth/logout` — Revoke refresh token
+- `POST /api/v1/auth/switch-tenant` — Master switches into an active tenant context (set `tenant_id`) or exits context (set `tenant_id: null`) and receives new token with/without `active_tenant_id`
 
 ### Me Endpoints (self-profile)
 
@@ -51,10 +53,27 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 
 - `GET /api/v1/dashboard` — Role-aware dashboard data (master sees tenant counts, tenant sees own profile)
 
+### Catalog Endpoints (tenant-scoped)
+
+All catalog endpoints require tenant context. Tenant users derive it from their owned tenant. Master users must call switch-tenant first.
+
+- `GET /api/v1/catalog/services`
+- `POST /api/v1/catalog/services`
+- `GET /api/v1/catalog/services/{service_id}`
+- `PUT /api/v1/catalog/services/{service_id}`
+- `DELETE /api/v1/catalog/services/{service_id}`
+- `GET /api/v1/catalog/services/{service_id}/plans`
+- `POST /api/v1/catalog/services/{service_id}/plans`
+- `PUT /api/v1/catalog/services/{service_id}/plans/{plan_id}`
+- `DELETE /api/v1/catalog/services/{service_id}/plans/{plan_id}`
+
+Duplicate service/plan names return 409. Cross-tenant resources return 404.
+
 ## Dependency Injection
 
 Defined in `app/api/dependencies.py`:
 - `get_current_user` — Decodes JWT, loads user, checks tenant active status
+- `get_active_tenant_id` / tenant context helpers — Resolve `active_tenant_id` for tenant users and switched Master users; set RLS context for tenant-scoped work
 - `require_role(role)` — Returns a dependency that checks `current_user.role`
 - `verify_n8n_api_key_header` — Validates `X-API-Key` header against `settings.n8n_api_key`
-- Type aliases: `CurrentUser`, `MasterUser`, `DbDep`
+- Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`

@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token'))
   const refreshToken = ref(localStorage.getItem('refreshToken'))
   const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+  const activeTenantId = ref(localStorage.getItem('activeTenantId'))
 
   const isAuthenticated = computed(() => !!token.value)
   const role = computed(() => user.value?.role || null)
@@ -22,7 +23,38 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('token', data.access_token)
     localStorage.setItem('refreshToken', data.refresh_token)
     localStorage.setItem('user', JSON.stringify(data.user))
+    activeTenantId.value = data.active_tenant_id || null
+    if (activeTenantId.value) localStorage.setItem('activeTenantId', activeTenantId.value)
+    else localStorage.removeItem('activeTenantId')
     return data
+  }
+
+  function setTokenData(data) {
+    token.value = data.access_token
+    refreshToken.value = data.refresh_token
+    user.value = data.user
+    activeTenantId.value = data.active_tenant_id || null
+    localStorage.setItem('token', data.access_token)
+    localStorage.setItem('refreshToken', data.refresh_token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    if (activeTenantId.value) localStorage.setItem('activeTenantId', activeTenantId.value)
+    else localStorage.removeItem('activeTenantId')
+  }
+
+  async function switchTenant(tenantId) {
+    const response = await axios.post(`${API_URL}/auth/switch-tenant`, { tenant_id: tenantId }, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    setTokenData(response.data)
+    return response.data
+  }
+
+  async function exitTenantContext() {
+    const response = await axios.post(`${API_URL}/auth/switch-tenant`, { tenant_id: null }, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    setTokenData(response.data)
+    return response.data
   }
 
   async function logout() {
@@ -39,7 +71,9 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
+    activeTenantId.value = null
+    localStorage.removeItem('activeTenantId')
   }
 
-  return { token, refreshToken, user, isAuthenticated, role, username, login, logout }
+  return { token, refreshToken, user, activeTenantId, isAuthenticated, role, username, login, logout, switchTenant, exitTenantContext }
 })

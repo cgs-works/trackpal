@@ -40,6 +40,7 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.role && authStore.role !== to.meta.role) {
+    if (to.meta.role === 'tenant' && authStore.role === 'master' && authStore.activeTenantId) return next()
     // Redirect to appropriate dashboard
     if (authStore.role === 'master') return next('/master/dashboard')
     if (authStore.role === 'tenant') return next('/admin/dashboard')

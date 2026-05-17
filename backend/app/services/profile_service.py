@@ -9,14 +9,14 @@ from app.core.input_validation import (
 )
 from app.core.security import get_password_hash, verify_password
 from app.crud import users as user_crud
-from app.models import MasterProfile, TenantProfile, User
+from app.models import MasterProfile, Tenant, User
 from app.schemas.me import ProfileUpdate
 
 
 class ProfileService:
     async def get_profile(
         self, db: AsyncSession, user: User
-    ) -> MasterProfile | TenantProfile | None:
+    ) -> MasterProfile | Tenant | None:
         if user.role == "master":
             result = await db.execute(
                 select(MasterProfile).where(MasterProfile.id == user.id)
@@ -24,13 +24,13 @@ class ProfileService:
             return result.scalar_one_or_none()
 
         result = await db.execute(
-            select(TenantProfile).where(TenantProfile.id == user.id)
+            select(Tenant).where(Tenant.owner_user_id == user.id)
         )
         return result.scalar_one_or_none()
 
     async def update_profile(
         self, db: AsyncSession, user: User, payload: ProfileUpdate
-    ) -> MasterProfile | TenantProfile | None:
+    ) -> MasterProfile | Tenant | None:
         profile = await self.get_profile(db, user)
         if profile is None:
             return None
