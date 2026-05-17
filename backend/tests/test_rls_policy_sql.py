@@ -52,6 +52,26 @@ def test_service_and_plan_policies_keep_active_tenant_requirement():
     assert "AND t.is_active" in text
 
 
+def test_service_and_plan_with_check_validate_tenant_ownership_for_writes():
+    text = Path("alembic/versions/cd3efe74cae6_tenant_catalog_rls.py").read_text()
+    services_policy = text.split("CREATE POLICY services_tenant_isolation", 1)[1].split("CREATE POLICY plans_tenant_isolation", 1)[0]
+    plans_policy = text.split("CREATE POLICY plans_tenant_isolation", 1)[1].split("def downgrade", 1)[0]
+
+    assert "WITH CHECK (" in services_policy
+    assert "current_setting('app.current_role', true) = 'master'" in services_policy
+    assert "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')" in services_policy
+    assert "t.id = services.tenant_id" in services_policy
+    assert "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in services_policy
+    assert "AND t.is_active" in services_policy
+
+    assert "WITH CHECK (" in plans_policy
+    assert "current_setting('app.current_role', true) = 'master'" in plans_policy
+    assert "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')" in plans_policy
+    assert "t.id = plans.tenant_id" in plans_policy
+    assert "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in plans_policy
+    assert "AND t.is_active" in plans_policy
+
+
 @pytest.mark.asyncio
 async def test_set_rls_context_stores_context_on_sqlite(db_session):
     await set_rls_context(db_session, "user-1", "tenant", "tenant-1")

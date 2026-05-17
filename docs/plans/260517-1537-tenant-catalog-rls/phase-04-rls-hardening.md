@@ -58,7 +58,9 @@ Make Supabase/Postgres RLS real for tenant-scoped data by setting per-request da
    - `tenants` policy allows:
      - master switched context sees target tenant;
      - tenant owner sees own tenant.
-   - Add `WITH CHECK` for INSERT/UPDATE on `services` and `plans`.
+   - Add role-aware `WITH CHECK` for INSERT/UPDATE on `services` and `plans`:
+     - master writes require `tenant_id = app.active_tenant_id`;
+     - tenant writes require an active owned tenant row via `owner_user_id = app.current_user_id`.
 5. Implement: grants if relevant.
    - Ensure application DB role has table privileges needed for API operations.
    - Revoke overly broad public/anonymous access when applicable in Supabase.

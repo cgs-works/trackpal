@@ -1,5 +1,5 @@
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 
@@ -16,7 +16,7 @@ async def get_db():
 
 
 async def set_rls_context(
-    session, user_id: str, role: str, active_tenant_id: str | None
+    session: AsyncSession, user_id: str, role: str, active_tenant_id: str | None
 ) -> None:
     bind = session.get_bind()
     session.info[RLS_CONTEXT_KEY] = {
@@ -38,7 +38,7 @@ async def set_rls_context(
     )
 
 
-async def restore_rls_context(session) -> None:
+async def restore_rls_context(session: AsyncSession) -> None:
     context = get_rls_context(session)
     if context is None:
         return
@@ -50,11 +50,11 @@ async def restore_rls_context(session) -> None:
     )
 
 
-def get_rls_context(session) -> dict[str, str | None] | None:
+def get_rls_context(session: AsyncSession) -> dict[str, str | None] | None:
     return session.info.get(RLS_CONTEXT_KEY)
 
 
-async def set_internal_rls_context(session) -> None:
+async def set_internal_rls_context(session: AsyncSession) -> None:
     """Set safe internal RLS context for API-key/auth flows.
 
     These flows run before JWT dependencies can establish user context but still

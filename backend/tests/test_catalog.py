@@ -1,6 +1,9 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
+from unittest.mock import AsyncMock
 
 from app.models import Tenant
+from app.services.catalog_service import CatalogService
 
 
 pytestmark = pytest.mark.asyncio
@@ -50,3 +53,13 @@ async def test_master_switched_context_can_manage_catalog(client, active_tenant_
     headers = {"Authorization": f"Bearer {switched.json()['access_token']}"}
     response = await client.post("/api/v1/catalog/services", json={"name": "Soporte"}, headers=headers)
     assert response.status_code == 201
+
+
+async def test_catalog_commit_integrity_error_maps_to_value_error():
+    db = AsyncMock()
+    db.commit.side_effect = IntegrityError("insert", {}, Exception("unique violation"))
+
+    with pytest.raises(ValueError, match="Service name already exists"):
+        await CatalogService()._commit_catalog_change(db, "Service name already exists")
+
+    db.rollback.assert_awaited_once()

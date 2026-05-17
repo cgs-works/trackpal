@@ -91,7 +91,10 @@ def upgrade() -> None:
             (current_setting('app.current_role', true) = 'master' AND tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), ''))
             OR (current_setting('app.current_role', true) = 'tenant' AND EXISTS (SELECT 1 FROM tenants t WHERE t.id = services.tenant_id AND t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '') AND t.is_active))
         )
-        WITH CHECK (tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), ''))
+        WITH CHECK (
+            (current_setting('app.current_role', true) = 'master' AND tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), ''))
+            OR (current_setting('app.current_role', true) = 'tenant' AND EXISTS (SELECT 1 FROM tenants t WHERE t.id = services.tenant_id AND t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '') AND t.is_active))
+        )
     """)
     op.execute("""
         CREATE POLICY plans_tenant_isolation ON plans
@@ -99,7 +102,10 @@ def upgrade() -> None:
             (current_setting('app.current_role', true) = 'master' AND tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), ''))
             OR (current_setting('app.current_role', true) = 'tenant' AND EXISTS (SELECT 1 FROM tenants t WHERE t.id = plans.tenant_id AND t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '') AND t.is_active))
         )
-        WITH CHECK (tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), ''))
+        WITH CHECK (
+            (current_setting('app.current_role', true) = 'master' AND tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), ''))
+            OR (current_setting('app.current_role', true) = 'tenant' AND EXISTS (SELECT 1 FROM tenants t WHERE t.id = plans.tenant_id AND t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '') AND t.is_active))
+        )
     """)
 
 
