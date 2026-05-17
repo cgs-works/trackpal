@@ -1,6 +1,8 @@
 import pytest
 
+import app.api.dependencies as dependencies
 from app.core.config import settings
+from app.core.security import create_access_token
 
 pytestmark = pytest.mark.asyncio
 
@@ -46,6 +48,18 @@ async def test_login_deactivated_tenant_is_rejected_after_profile_lookup(client,
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid credentials or account deactivated"
+
+
+async def test_malformed_tenant_token_without_active_tenant_returns_401(client, active_tenant_user, monkeypatch):
+    async def raise_missing_context(*args, **kwargs):
+        raise ValueError("active_tenant_id required for tenant RLS context")
+
+    monkeypatch.setattr(dependencies, "set_rls_context", raise_missing_context)
+    token = create_access_token(subject=str(active_tenant_user.id), role="tenant")
+
+    response = await client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
 
 
 async def test_refresh_token(client, master_user):

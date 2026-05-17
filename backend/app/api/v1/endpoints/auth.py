@@ -21,7 +21,13 @@ async def login(payload: LoginRequest, db: DbDep):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials or account deactivated",
         )
-    return await auth_service.create_tokens(db, user)
+    result = await auth_service.create_tokens(db, user)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials or account deactivated",
+        )
+    return result
 
 
 @router.post("/refresh", response_model=TokenResponse)

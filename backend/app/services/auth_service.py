@@ -53,9 +53,11 @@ class AuthService:
         tenant = result.scalar_one_or_none()
         return tenant.id if tenant else None
 
-    async def create_tokens(self, db: AsyncSession, user: User, active_tenant_id: UUID | None = None) -> dict:
+    async def create_tokens(self, db: AsyncSession, user: User, active_tenant_id: UUID | None = None) -> dict | None:
         if user.role == "tenant":
             active_tenant_id = await self._active_tenant_id_for_user(db, user)
+            if active_tenant_id is None:
+                return None
         access_token = create_access_token(subject=str(user.id), role=user.role, active_tenant_id=str(active_tenant_id) if active_tenant_id else None)
         refresh_token = create_refresh_token(subject=str(user.id))
         generate_secure_token()

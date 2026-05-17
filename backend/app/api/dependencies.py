@@ -37,7 +37,10 @@ async def get_current_user(
     user = await user_crud.get(db, parsed_user_id)
     if user is None:
         raise credentials_exception
-    await set_rls_context(db, str(user.id), user.role, payload.get("active_tenant_id"))
+    try:
+        await set_rls_context(db, str(user.id), user.role, payload.get("active_tenant_id"))
+    except ValueError:
+        raise credentials_exception from None
     if user.role == "tenant":
         result = await db.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
         profile = result.scalar_one_or_none()
