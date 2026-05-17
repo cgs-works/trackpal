@@ -204,6 +204,16 @@ async function deleteTenant(tenant) {
   }
 }
 
+async function manageCatalog(tenant) {
+  clearMessages()
+  try {
+    await authStore.switchTenant(tenant.id)
+    await router.push('/admin/dashboard')
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'Unable to switch tenant context')
+  }
+}
+
 async function handleLogout() {
   await authStore.logout()
   await router.push('/login')
@@ -281,6 +291,7 @@ onMounted(loadTenants)
               <td>
                 <div class="row-actions">
                   <button class="link-button" type="button" @click="openEditModal(tenant)">Edit</button>
+                  <button class="link-button" type="button" @click="manageCatalog(tenant)">Manage catalog</button>
                   <button class="link-button" type="button" @click="toggleTenantStatus(tenant)">
                     {{ isTenantActive(tenant) ? 'Deactivate' : 'Activate' }}
                   </button>

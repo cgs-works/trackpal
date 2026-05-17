@@ -21,7 +21,7 @@ from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 class _TenantConsoleItem:
-    """Wraps a TenantProfile ORM object for the simple
+    """Wraps a tenant ORM object for the simple
     attribute-based interface expected by WhatsAppConsoleService."""
 
     def __init__(self, profile) -> None:
@@ -30,7 +30,8 @@ class _TenantConsoleItem:
         self.is_active = profile.is_active
         self.email = profile.email
         self.phone = profile.phone
-        self.username = profile.user.username if profile.user else ""
+        owner = getattr(profile, "owner", None) or getattr(profile, "user", None)
+        self.username = owner.username if owner else ""
         self.evolution_instance_name = profile.evolution_instance_name
         self.created_at = profile.created_at
 

@@ -23,9 +23,9 @@ class User(Base, TimestampMixin):
         uselist=False,
         cascade="all, delete-orphan",
     )
-    tenant_profile = relationship(
-        "TenantProfile",
-        back_populates="user",
+    owned_tenant = relationship(
+        "Tenant",
+        back_populates="owner",
         uselist=False,
         cascade="all, delete-orphan",
     )

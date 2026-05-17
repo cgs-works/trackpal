@@ -22,12 +22,17 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(
-    subject: str, role: str, expires_delta: timedelta | None = None
+    subject: str,
+    role: str,
+    expires_delta: timedelta | None = None,
+    active_tenant_id: str | None = None,
 ) -> str:
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
     expire = datetime.now(timezone.utc) + expires_delta
     payload = {"sub": subject, "role": role, "exp": expire, "type": "access"}
+    if active_tenant_id:
+        payload["active_tenant_id"] = active_tenant_id
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 

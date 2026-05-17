@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.main import app
-from app.models import Base, MasterProfile, TenantProfile, User
+from app.models import Base, MasterProfile, Tenant, User
 from app.services.evolution_client import evolution_client
 
 
@@ -76,10 +76,10 @@ async def active_tenant_user(db_session):
     db_session.add(user)
     await db_session.flush()
     db_session.add(
-        TenantProfile(
-            id=user.id,
-            full_name="Active Tenant",
-            phone="+12015550002",
+        Tenant(
+            owner_user_id=user.id,
+            name="Active Tenant",
+            whatsapp_phone="+12015550002",
             is_active=True,
         )
     )
@@ -97,10 +97,10 @@ async def deactivated_tenant_user(db_session):
     db_session.add(user)
     await db_session.flush()
     db_session.add(
-        TenantProfile(
-            id=user.id,
-            full_name="Inactive Tenant",
-            phone="+12015550003",
+        Tenant(
+            owner_user_id=user.id,
+            name="Inactive Tenant",
+            whatsapp_phone="+12015550003",
             is_active=False,
         )
     )

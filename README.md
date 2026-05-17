@@ -8,14 +8,14 @@ Multi-tenant platform for managing WhatsApp-based service delivery. The Master o
 - **Frontend**: Vue 3, Vite, Pinia, vue-router
 - **Infrastructure**: Render (backend), Cloudflare Pages (frontend), Evolution API (WhatsApp), n8n (automation)
 
-## Quick Start
+## Quick Start (Local Dev)
 
 ```bash
 cd backend
-cp .env.example .env       # edit with your values
-uv sync
-uv run alembic upgrade head
-uv run python -m scripts.seed
+uv sync                    # installs deps with uv
+cp .env.example .env       # set DATABASE_URL (PostgreSQL), etc.
+uv run alembic upgrade head # run migrations
+uv run python -m scripts.seed # create initial Master user
 uv run uvicorn app.main:app --reload
 ```
 

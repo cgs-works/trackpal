@@ -23,10 +23,18 @@ const isSavingPassword = ref(false)
 const errorMessage = ref('')
 const profileSuccess = ref('')
 const passwordSuccess = ref('')
+const services = ref([])
+const selectedServiceId = ref('')
+const plans = ref([])
+const serviceName = ref('')
+const planName = ref('')
+const catalogMessage = ref('')
 
 const username = computed(() => authStore.username || authStore.user?.username || 'Usuario')
+const isMasterSupport = computed(() => authStore.role === 'master' && !!authStore.activeTenantId)
 const displayName = computed(() => profile.value.full_name || dashboard.value?.full_name || username.value)
 const dashboardMessage = computed(() => {
+  if (isMasterSupport.value) return 'Estás gestionando el catálogo de este tenant en modo soporte.'
   return dashboard.value?.message || 'El dashboard está en construcción.'
 })
 
@@ -51,18 +59,116 @@ async function loadDashboard() {
   isLoading.value = true
 
   try {
-    const [dashboardResponse, profileResponse] = await Promise.all([
-      api.get('/dashboard'),
-      api.get('/me'),
-    ])
+    if (isMasterSupport.value) {
+      const tenantResponse = await api.get(`/tenants/${authStore.activeTenantId}`)
+      dashboard.value = {
+        full_name: tenantResponse.data?.full_name,
+        message: 'Modo soporte Master activo.',
+      }
+      setProfile(tenantResponse.data)
+    } else {
+      const [dashboardResponse, profileResponse] = await Promise.all([
+        api.get('/dashboard'),
+        api.get('/me'),
+      ])
 
-    dashboard.value = dashboardResponse.data || null
-    setProfile(profileResponse.data || dashboardResponse.data)
+      dashboard.value = dashboardResponse.data || null
+      setProfile(profileResponse.data || dashboardResponse.data)
+    }
+    await loadServices()
   } catch (error) {
     errorMessage.value = getApiError(error, 'No se pudo cargar el dashboard.')
   } finally {
     isLoading.value = false
   }
+}
+
+async function loadServices() {
+  const response = await api.get('/catalog/services')
+  services.value = response.data || []
+  if (!selectedServiceId.value && services.value.length) selectedServiceId.value = services.value[0].id
+  if (selectedServiceId.value) await loadPlans()
+}
+
+async function loadPlans() {
+  if (!selectedServiceId.value) {
+    plans.value = []
+    return
+  }
+  const response = await api.get(`/catalog/services/${selectedServiceId.value}/plans`)
+  plans.value = response.data || []
+}
+
+async function createService() {
+  catalogMessage.value = ''
+  try {
+    const response = await api.post('/catalog/services', { name: serviceName.value })
+    serviceName.value = ''
+    selectedServiceId.value = response.data.id
+    await loadServices()
+    catalogMessage.value = 'Servicio creado.'
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo crear el servicio.')
+  }
+}
+
+async function renameService(service) {
+  const name = window.prompt('Nuevo nombre del servicio', service.name)
+  if (!name) return
+  try {
+    await api.put(`/catalog/services/${service.id}`, { name })
+    await loadServices()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo actualizar el servicio.')
+  }
+}
+
+async function deleteService(service) {
+  if (!window.confirm(`Eliminar ${service.name}? También se eliminarán sus planes.`)) return
+  try {
+    await api.delete(`/catalog/services/${service.id}`)
+    if (selectedServiceId.value === service.id) selectedServiceId.value = ''
+    await loadServices()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo eliminar el servicio.')
+  }
+}
+
+async function createPlan() {
+  if (!selectedServiceId.value) return
+  try {
+    await api.post(`/catalog/services/${selectedServiceId.value}/plans`, { name: planName.value })
+    planName.value = ''
+    await loadPlans()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo crear el plan.')
+  }
+}
+
+async function renamePlan(plan) {
+  const name = window.prompt('Nuevo nombre del plan', plan.name)
+  if (!name) return
+  try {
+    await api.put(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`, { name })
+    await loadPlans()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo actualizar el plan.')
+  }
+}
+
+async function deletePlan(plan) {
+  if (!window.confirm(`Eliminar plan ${plan.name}?`)) return
+  try {
+    await api.delete(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`)
+    await loadPlans()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo eliminar el plan.')
+  }
+}
+
+async function exitTenantContext() {
+  await authStore.exitTenantContext()
+  await router.push('/master/dashboard')
 }
 
 async function saveProfile() {
@@ -120,6 +226,7 @@ onMounted(loadDashboard)
 
       <div class="user-actions">
         <span class="username">{{ username }}</span>
+        <button v-if="authStore.role === 'master' && authStore.activeTenantId" class="button button-secondary" type="button" @click="exitTenantContext">Salir de tenant</button>
         <button class="button button-secondary" type="button" @click="handleLogout">Cerrar sesión</button>
       </div>
     </header>
@@ -133,13 +240,46 @@ onMounted(loadDashboard)
       <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
 
       <section class="content-card welcome-card">
-        <p class="eyebrow">Dashboard de tenant</p>
+        <p class="eyebrow">{{ isMasterSupport ? 'Soporte Master' : 'Dashboard de tenant' }}</p>
         <h2>Bienvenido, {{ displayName }}</h2>
-        <p>Has iniciado sesión como {{ displayName }}. El dashboard está en construcción.</p>
+        <p v-if="isMasterSupport">Estás gestionando el catálogo de {{ displayName }} como Master.</p>
+        <p v-else>Has iniciado sesión como {{ displayName }}. El dashboard está en construcción.</p>
         <p class="placeholder-message">{{ dashboardMessage }}</p>
       </section>
 
       <section class="content-card profile-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Catálogo</p>
+            <h2>Servicios y planes</h2>
+          </div>
+        </div>
+        <p v-if="catalogMessage" class="alert alert-success">{{ catalogMessage }}</p>
+        <form class="form-grid" @submit.prevent="createService">
+          <label>Nuevo servicio<input v-model.trim="serviceName" type="text" required /></label>
+          <div class="form-actions"><button class="button button-primary" type="submit">Crear servicio</button></div>
+        </form>
+        <ul>
+          <li v-for="service in services" :key="service.id">
+            <button class="link-button" type="button" @click="selectedServiceId = service.id; loadPlans()">{{ service.name }}</button>
+            <button class="link-button" type="button" @click="renameService(service)">Editar</button>
+            <button class="link-button danger" type="button" @click="deleteService(service)">Eliminar</button>
+          </li>
+        </ul>
+        <form v-if="selectedServiceId" class="form-grid" @submit.prevent="createPlan">
+          <label>Nuevo plan<input v-model.trim="planName" type="text" required /></label>
+          <div class="form-actions"><button class="button button-primary" type="submit">Crear plan</button></div>
+        </form>
+        <ul v-if="selectedServiceId">
+          <li v-for="plan in plans" :key="plan.id">
+            {{ plan.name }}
+            <button class="link-button" type="button" @click="renamePlan(plan)">Editar</button>
+            <button class="link-button danger" type="button" @click="deletePlan(plan)">Eliminar</button>
+          </li>
+        </ul>
+      </section>
+
+      <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
             <p class="eyebrow">Perfil</p>
@@ -173,7 +313,7 @@ onMounted(loadDashboard)
         </form>
       </section>
 
-      <section class="content-card profile-card">
+      <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
             <p class="eyebrow">Seguridad</p>

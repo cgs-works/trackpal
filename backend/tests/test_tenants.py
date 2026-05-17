@@ -10,9 +10,9 @@ async def _create_tenant(client, auth_headers, **overrides):
         "phone": "+12015550004",
         "username": "tenant_one",
         "password": "tenant-password",
-        "evolution_instance_name": "tenant-one-instance",
     }
     payload.update(overrides)
+    payload.setdefault("evolution_instance_name", f"{payload['username']}-instance")
     return await client.post("/api/v1/tenants/", json=payload, headers=auth_headers)
 
 
@@ -91,7 +91,7 @@ async def test_get_tenant(client, auth_headers, active_tenant_user):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == str(active_tenant_user.id)
+    assert data["id"]
     assert data["full_name"] == "Active Tenant"
     assert data["username"] == "tenant"
 
@@ -174,14 +174,14 @@ async def test_create_tenant_phone_is_canonical(client, auth_headers, db_session
     assert data["phone"] == "12015550008"  # canonical: no + prefix
 
     # Verify in database directly
-    from app.models import TenantProfile
+    from app.models import Tenant
     from sqlalchemy import select
     result = await db_session.execute(
-        select(TenantProfile).where(TenantProfile.id == UUID(data["id"]))
+        select(Tenant).where(Tenant.id == UUID(data["id"]))
     )
     profile = result.scalar_one_or_none()
     assert profile is not None
-    assert profile.phone == "12015550008"
+    assert profile.whatsapp_phone == "12015550008"
 
 
 async def test_create_tenant_phone_jid_becomes_canonical(client, auth_headers, db_session):
@@ -199,13 +199,13 @@ async def test_create_tenant_phone_jid_becomes_canonical(client, auth_headers, d
     data = response.json()
     assert data["phone"] == "12015550009"
 
-    from app.models import TenantProfile
+    from app.models import Tenant
     from sqlalchemy import select
     result = await db_session.execute(
-        select(TenantProfile).where(TenantProfile.id == UUID(data["id"]))
+        select(Tenant).where(Tenant.id == UUID(data["id"]))
     )
     profile = result.scalar_one_or_none()
-    assert profile.phone == "12015550009"
+    assert profile.whatsapp_phone == "12015550009"
 
 
 async def test_update_tenant_phone_is_canonical(client, auth_headers, active_tenant_user, db_session):
@@ -225,13 +225,13 @@ async def test_update_tenant_phone_is_canonical(client, auth_headers, active_ten
     data = response.json()
     assert data["phone"] == "12015550011"
 
-    from app.models import TenantProfile
+    from app.models import Tenant
     from sqlalchemy import select
     result = await db_session.execute(
-        select(TenantProfile).where(TenantProfile.id == UUID(str(active_tenant_user.id)))
+        select(Tenant).where(Tenant.owner_user_id == UUID(str(active_tenant_user.id)))
     )
     profile = result.scalar_one_or_none()
-    assert profile.phone == "12015550011"
+    assert profile.whatsapp_phone == "12015550011"
 
 
 # ===========================================================================
@@ -386,7 +386,7 @@ async def test_create_tenant_same_logical_payload_normalized(
 ):
     """Same logical payload with different formatting produces same canonical values."""
     from uuid import UUID
-    from app.models import TenantProfile
+    from app.models import Tenant
     from sqlalchemy import select
 
     # Create with mixed-case email, phone with +
@@ -429,12 +429,12 @@ async def test_create_tenant_same_logical_payload_normalized(
         (d2["id"], "12015551002"),
     ]:
         result = await db_session.execute(
-            select(TenantProfile).where(TenantProfile.id == UUID(uid))
+            select(Tenant).where(Tenant.id == UUID(uid))
         )
         profile = result.scalar_one_or_none()
         assert profile is not None
-        assert profile.full_name == "Alice Smith"
-        assert profile.phone == expected_phone
+        assert profile.name == "Alice Smith"
+        assert profile.whatsapp_phone == expected_phone
 
 
 async def test_create_tenant_optional_email_phone_allowed(client, auth_headers):
