@@ -11,6 +11,8 @@ import pytest
 
 from app.core.input_validation import (
     InputValidationError,
+    validate_client_local_username,
+    validate_client_prefix,
     validate_email,
     validate_full_name,
     validate_phone,
@@ -88,6 +90,58 @@ class TestValidateUsername:
         valid = "a" + "0" * 19  # 20 chars total
         assert len(valid) == 20
         assert validate_username(valid) == valid
+
+
+# ===========================================================================
+# Client prefix and local username
+# ===========================================================================
+
+
+class TestValidateClientPrefix:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("abc", "abc"),
+            (" ABC12 ", "abc12"),
+            ("z9", "z9"),
+        ],
+    )
+    def test_valid_client_prefix(self, value: str, expected: str) -> None:
+        assert validate_client_prefix(value) == expected
+
+    @pytest.mark.parametrize(
+        ("value", "expected_code"),
+        [
+            ("", "client_prefix_required"),
+            ("   ", "client_prefix_required"),
+            ("1abc", "client_prefix_invalid"),
+            ("abc-d", "client_prefix_invalid"),
+            ("abcdef", "client_prefix_too_long"),
+        ],
+    )
+    def test_invalid_client_prefix(self, value: str, expected_code: str) -> None:
+        with pytest.raises(InputValidationError) as exc:
+            validate_client_prefix(value)
+        assert exc.value.code == expected_code
+
+
+class TestValidateClientLocalUsername:
+    def test_valid_client_local_username(self) -> None:
+        assert validate_client_local_username("client_one") == "client_one"
+
+    @pytest.mark.parametrize(
+        ("value", "expected_code"),
+        [
+            ("a" * 95, "client_local_username_too_long"),
+            ("1client", "client_local_username_invalid"),
+            ("client one", "client_local_username_invalid"),
+            ("", "client_local_username_required"),
+        ],
+    )
+    def test_invalid_client_local_username(self, value: str, expected_code: str) -> None:
+        with pytest.raises(InputValidationError) as exc:
+            validate_client_local_username(value)
+        assert exc.value.code == expected_code
 
         invalid = "a" + "0" * 20  # 21 chars total
         assert len(invalid) == 21

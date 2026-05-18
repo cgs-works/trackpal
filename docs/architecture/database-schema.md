@@ -15,7 +15,7 @@ Primary identity for all system users, with a polymorphic role design.
 | id | UUID | Primary key, auto-generated |
 | username | VARCHAR(100) | Unique, used for login |
 | password_hash | VARCHAR(255) | bcrypt hashed |
-| role | VARCHAR(10) | `"master"` or `"tenant"` |
+| role | VARCHAR(10) | `"master"`, `"tenant"`, or `"client"` |
 | created_at | TIMESTAMPTZ | Server default now() |
 | updated_at | TIMESTAMPTZ | Server default now(), onupdate now() |
 
@@ -38,12 +38,30 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 |--------|------|-------|
 | id | UUID | PK, canonical tenant id |
 | owner_user_id | UUID | Unique FK → users.id CASCADE |
+| client_prefix | VARCHAR(5) | Unique, not null, lowercase technical prefix for client logins |
 | name | VARCHAR(200) | Display name |
 | email | VARCHAR(255) | Nullable |
 | whatsapp_phone | VARCHAR(50) | Unique, nullable, canonical digits-only |
 | evolution_instance_name | VARCHAR(200) | Unique, nullable |
 | is_active | BOOLEAN | Default true |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
+
+### `Client` — `clients` table
+
+Tenant-owned end-customer profile linked to a `users` login row.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK → tenants.id CASCADE |
+| owner_user_id | UUID | Unique FK → users.id CASCADE |
+| full_name | VARCHAR(200) | Required |
+| local_username | VARCHAR(94) | Tenant-local login handle used with tenant prefix |
+| phone | VARCHAR(50) | Nullable, canonical digits-only, unique per tenant |
+| is_active | BOOLEAN | Default true |
+| created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
+
+Technical login username is stored in `users.username` as `<client_prefix>_<local_username>`.
 
 ### `RefreshSession` — `refresh_sessions` table
 
@@ -101,11 +119,13 @@ Alembic migrations:
 3. `cd3efe74cae6` — Add canonical tenants, catalog tables, constraints, data copy from tenant_profiles, and RLS policies
 4. `cd4efe74cae7` — Adjust tenant RLS policy so Master can manage tenants before switching into catalog context
 5. `cd5efe74cae8` — Drop obsolete `tenant_profiles` table after data migration to `tenants`
+6. `cd6efe74cae9` — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
 
 ## Key Constraints
 
-- Username unique across all users
+- Username unique across all users; client technical usernames use tenant prefix + local username
 - Master phone is unique in `master_profiles`; tenant WhatsApp phone is unique in `tenants.whatsapp_phone`
+- Tenant `client_prefix` is unique and required for client login generation
 - `User` row is the parent for identity; canonical tenant rows cascade on owner delete
 - `RefreshSession` rows cascade delete when parent user is deleted
 - Inactive tenants cannot log in or be identified by phone

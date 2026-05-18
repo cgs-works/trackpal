@@ -40,6 +40,20 @@ async def test_get_profile_tenant(client, active_tenant_user):
     assert data["is_active"] is True
 
 
+async def test_get_profile_client(client, active_client_user):
+    headers = await _login(client, active_client_user.username, "client-password")
+
+    response = await client.get("/api/v1/me", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["role"] == "client"
+    assert data["username"] == active_client_user.username
+    assert data["local_username"] == "client1"
+    assert data["client_prefix"] == "tna01"
+    assert data["tenant_name"] == "Active Tenant"
+
+
 async def test_update_profile_phone_conflict(client, master_user, active_tenant_user):
     master_headers = await _login(client, "master", "master-password")
 
@@ -85,6 +99,18 @@ async def test_update_profile(client, master_user, active_tenant_user):
     assert tenant_response.json()["full_name"] == "Updated Tenant"
 
 
+async def test_update_profile_client_forbidden(client, active_client_user):
+    headers = await _login(client, active_client_user.username, "client-password")
+
+    response = await client.put(
+        "/api/v1/me",
+        json={"full_name": "New Client"},
+        headers=headers,
+    )
+
+    assert response.status_code == 403
+
+
 async def test_change_password(client, active_tenant_user):
     headers = await _login(client, "tenant", "tenant-password")
 
@@ -97,6 +123,44 @@ async def test_change_password(client, active_tenant_user):
     assert response.status_code == 200
     new_headers = await _login(client, "tenant", "new-password")
     assert new_headers["Authorization"].startswith("Bearer ")
+
+
+async def test_change_password_client(client, active_client_user):
+    headers = await _login(client, active_client_user.username, "client-password")
+
+    response = await client.put(
+        "/api/v1/me/password",
+        json={"old_password": "client-password", "new_password": "new-client-password"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    new_headers = await _login(client, active_client_user.username, "new-client-password")
+    assert new_headers["Authorization"].startswith("Bearer ")
+
+
+async def test_change_password_client_short_new_password_rejected(client, active_client_user):
+    headers = await _login(client, active_client_user.username, "client-password")
+
+    response = await client.put(
+        "/api/v1/me/password",
+        json={"old_password": "client-password", "new_password": "123"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+
+
+async def test_change_password_client_empty_new_password_rejected(client, active_client_user):
+    headers = await _login(client, active_client_user.username, "client-password")
+
+    response = await client.put(
+        "/api/v1/me/password",
+        json={"old_password": "client-password", "new_password": ""},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
 
 
 async def test_change_password_wrong_old(client, active_tenant_user):

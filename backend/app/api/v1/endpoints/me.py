@@ -9,11 +9,16 @@ profile_service = ProfileService()
 
 
 def _profile_response(user, profile) -> ProfileResponse:
+    tenant = getattr(profile, "tenant", None)
     return ProfileResponse(
         role=user.role,
         username=user.username,
         name=getattr(profile, "name", None),
         full_name=getattr(profile, "full_name", None),
+        local_username=getattr(profile, "local_username", None),
+        tenant_id=getattr(profile, "tenant_id", None),
+        tenant_name=getattr(tenant, "name", None),
+        client_prefix=getattr(tenant, "client_prefix", None),
         email=getattr(profile, "email", None),
         phone=getattr(profile, "phone", None),
         is_active=getattr(profile, "is_active", None),
@@ -38,6 +43,10 @@ async def update_profile(
 ):
     try:
         profile = await profile_service.update_profile(db, current_user, payload)
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)

@@ -13,6 +13,7 @@ backend/
 │   │       └── endpoints/
 │   │           ├── auth.py       # Login, refresh, logout
 │   │           ├── catalog.py    # Tenant-scoped services/plans CRUD
+│   │           ├── clients.py    # Tenant-scoped client lifecycle CRUD
 │   │           ├── dashboard.py  # Role-aware dashboard data
 │   │           ├── integrations.py # n8n identify, WhatsApp console
 │   │           ├── me.py         # Self-profile CRUD
@@ -33,7 +34,8 @@ backend/
 │   │   ├── base.py              # DeclarativeBase + TimestampMixin
 │   │   ├── user.py              # User (polymorphic role)
 │   │   ├── master_profile.py    # MasterProfile (1:1 with User)
-│   │   ├── tenant.py            # Canonical Tenant (owner_user_id → User)
+│   │   ├── tenant.py            # Canonical Tenant (owner_user_id → User, client_prefix)
+│   │   ├── client.py            # Tenant-owned Client profile
 │   │   ├── service.py           # Tenant catalog service
 │   │   ├── plan.py              # Service catalog plan
 │   │   └── refresh_session.py   # RefreshSession (1:N with User)
@@ -41,7 +43,8 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── auth.py              # LoginRequest, TokenResponse, IdentifyResponse
 │   │   ├── catalog.py           # Service/plan request and response schemas
-│   │   ├── dashboard.py         # MasterDashboardResponse, TenantDashboardResponse
+│   │   ├── dashboard.py         # MasterDashboardResponse, TenantDashboardResponse, ClientDashboardResponse
+│   │   ├── client.py            # ClientCreate, ClientUpdate, ClientResponse
 │   │   ├── me.py                # ProfileResponse, ProfileUpdate, PasswordChange
 │   │   ├── tenant.py            # TenantCreate, TenantUpdate, TenantResponse, etc.
 │   │   └── whatsapp.py          # WhatsAppConsoleRequest, WhatsAppConsoleResponse
@@ -51,8 +54,9 @@ backend/
 │       ├── catalog_service.py   # Tenant-scoped catalog CRUD/validation
 │       ├── contingency_reply_policy.py  # Degraded state reply text constants
 │       ├── evolution_client.py  # Evolution API HTTP client
+│       ├── client_service.py    # Client CRUD + technical username sync
 │       ├── profile_service.py   # Profile get/update, password change
-│       ├── tenant_service.py    # Tenant CRUD + Evolution lifecycle
+│       ├── tenant_service.py    # Tenant CRUD + client prefix sync + Evolution lifecycle
 │       ├── whatsapp_auth_session_service.py  # Auth session + lockout Redis primitives
 │       ├── whatsapp_console_service.py       # Console flow routing + templates
 │       ├── whatsapp_master_console_facade.py # Auth-orchestrator facade
@@ -62,7 +66,8 @@ backend/
 │   ├── versions/
 │   │   ├── cd1efe74cae4_initial_schema.py
 │   │   ├── cd2efe74cae5_normalize_phone_values.py
-│   │   └── cd3efe74cae6_tenant_catalog_rls.py
+│   │   ├── cd3efe74cae6_tenant_catalog_rls.py
+│   │   └── cd6efe74cae9_add_client_prefix_and_clients.py
 │   └── script.py.mako
 ├── scripts/                      # Utility scripts
 │   └── seed.py                   # Master user seeder

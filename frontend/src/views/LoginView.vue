@@ -23,6 +23,8 @@ async function handleSubmit() {
       await router.push('/master/dashboard')
     } else if (role === 'tenant') {
       await router.push('/admin/dashboard')
+    } else if (role === 'client') {
+      await router.push('/client/dashboard')
     } else {
       errorMessage.value = 'Rol de usuario no reconocido'
     }

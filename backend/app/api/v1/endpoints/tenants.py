@@ -20,6 +20,7 @@ def _tenant_response(profile) -> TenantResponse:
     return TenantResponse(
         id=profile.id,
         full_name=profile.full_name,
+        client_prefix=profile.client_prefix,
         email=profile.email,
         phone=profile.phone,
         evolution_instance_name=profile.evolution_instance_name,

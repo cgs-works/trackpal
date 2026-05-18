@@ -2,6 +2,8 @@
 
 Multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard.
 
+Each Tenant manages their own catalog (services and plans) and their own Clients via a dedicated dashboard. Clients have a readonly dashboard for profile management.
+
 ## Stack
 
 - **Backend**: Python 3.12, FastAPI, PostgreSQL (asyncpg), Redis (HA), Alembic

@@ -20,20 +20,23 @@ The Master interacts with the system via a WhatsApp chatbot to:
 
 - **Master Dashboard**: Full tenant management UI (CRUD, activate/deactivate, delete) with summary cards and modal forms — accessible at `/master/dashboard`
 - **Tenant Dashboard**: Self-service profile management and password change — accessible at `/admin/dashboard`
+- **Client Dashboard**: Readonly profile view and password change for end-customers — accessible at `/client/dashboard`
 
 ### REST API
 
 Programmatic tenant management for the frontend SPA:
 - JWT-based authentication with access/refresh token rotation
-- Role-based authorization (master vs tenant)
+- Role-based authorization (master vs tenant vs client)
 - Full tenant CRUD with Evolution instance lifecycle
+- Catalog management (services, plans) and Client management
 
 ## User Roles
 
 | Role | Capabilities |
 |------|-------------|
-| Master | Full access via WhatsApp Console + REST API. Manages all tenants. |
-| Tenant | Limited REST API access (own profile only). Cannot access WhatsApp Console. |
+| Master | Full access via WhatsApp Console + REST API. Manages all tenants and system config. |
+| Tenant | Manages their own profile and their client catalog/clients via REST API. Cannot access WhatsApp Console. |
+| Client | Read-only access to their own profile and password management. Tenant-prefixed login. |
 
 ## Non-Goals
 

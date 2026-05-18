@@ -82,6 +82,105 @@ def validate_username(value: str) -> str:
     return stripped
 
 
+def validate_client_prefix(value: str) -> str:
+    """Validate and normalize tenant client prefix.
+
+    Rules:
+
+    * Required, non-empty string.
+    * Trim and lowercase.
+    * 1-5 characters.
+    * Lowercase ASCII letters and digits only.
+    * Must start with a lowercase ASCII letter to keep technical usernames valid.
+    """
+    if not value or not isinstance(value, str) or not value.strip():
+        raise InputValidationError(
+            field="client_prefix",
+            message="Client prefix is required.",
+            code="client_prefix_required",
+        )
+
+    stripped = value.strip().lower()
+
+    if len(stripped) > 5:
+        raise InputValidationError(
+            field="client_prefix",
+            message="Client prefix must be at most 5 characters.",
+            code="client_prefix_too_long",
+        )
+
+    if not re.match(r"^[a-z][a-z0-9]{0,4}$", stripped):
+        raise InputValidationError(
+            field="client_prefix",
+            message=(
+                "Client prefix must start with a lowercase letter and contain only "
+                "lowercase letters and digits."
+            ),
+            code="client_prefix_invalid",
+        )
+
+    return stripped
+
+
+def validate_client_local_username(value: str) -> str:
+    """Validate tenant-local client username.
+
+    Mirrors standard username rules but allows a longer local part so the
+    technical username ``<client_prefix>_<local_username>`` stays within
+    ``users.username`` length limits.
+    """
+    if not value or not isinstance(value, str) or not value.strip():
+        raise InputValidationError(
+            field="local_username",
+            message="Client local username is required.",
+            code="client_local_username_required",
+        )
+
+    stripped = value.strip()
+
+    if value != stripped:
+        raise InputValidationError(
+            field="local_username",
+            message="Client local username must not start or end with spaces.",
+            code="client_local_username_leading_trailing_spaces",
+        )
+
+    if len(stripped) > 94:
+        raise InputValidationError(
+            field="local_username",
+            message="Client local username must be at most 94 characters.",
+            code="client_local_username_too_long",
+        )
+
+    if not re.match(r"^[a-z][a-z0-9_]*$", stripped):
+        raise InputValidationError(
+            field="local_username",
+            message="Client local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores.",
+            code="client_local_username_invalid",
+        )
+
+    return stripped
+
+
+def validate_password_policy(value: str) -> str:
+    """Validate password policy minimums."""
+    if not value or not isinstance(value, str):
+        raise InputValidationError(
+            field="password",
+            message="Password is required.",
+            code="password_required",
+        )
+
+    if len(value) < 6:
+        raise InputValidationError(
+            field="password",
+            message="Password must be at least 6 characters.",
+            code="password_too_short",
+        )
+
+    return value
+
+
 def validate_full_name(value: str) -> str:
     """Validate and normalize a full name.
 

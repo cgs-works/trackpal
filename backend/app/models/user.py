@@ -29,6 +29,12 @@ class User(Base, TimestampMixin):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    client_profile = relationship(
+        "Client",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     refresh_sessions = relationship(
         "RefreshSession", back_populates="user", cascade="all, delete-orphan"
     )

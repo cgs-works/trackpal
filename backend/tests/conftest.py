@@ -1,12 +1,13 @@
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.main import app
-from app.models import Base, MasterProfile, Tenant, User
+from app.models import Base, Client, MasterProfile, Tenant, User
 from app.services.evolution_client import evolution_client
 
 
@@ -78,6 +79,7 @@ async def active_tenant_user(db_session):
     db_session.add(
         Tenant(
             owner_user_id=user.id,
+            client_prefix="tna01",
             name="Active Tenant",
             whatsapp_phone="+12015550002",
             is_active=True,
@@ -99,8 +101,62 @@ async def deactivated_tenant_user(db_session):
     db_session.add(
         Tenant(
             owner_user_id=user.id,
+            client_prefix="tnb01",
             name="Inactive Tenant",
             whatsapp_phone="+12015550003",
+            is_active=False,
+        )
+    )
+    await db_session.commit()
+    return user
+
+
+async def _tenant_for_user(db_session, user_id):
+    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == user_id))
+    return result.scalar_one_or_none()
+
+
+@pytest_asyncio.fixture
+async def active_client_user(db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user.id)
+    user = User(
+        username=f"{tenant.client_prefix}_client1",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        Client(
+            tenant_id=tenant.id,
+            owner_user_id=user.id,
+            full_name="Active Client",
+            local_username="client1",
+            phone="+12015550030",
+            is_active=True,
+        )
+    )
+    await db_session.commit()
+    return user
+
+
+@pytest_asyncio.fixture
+async def inactive_client_user(db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user.id)
+    user = User(
+        username=f"{tenant.client_prefix}_client2",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        Client(
+            tenant_id=tenant.id,
+            owner_user_id=user.id,
+            full_name="Inactive Client",
+            local_username="client2",
+            phone="+12015550031",
             is_active=False,
         )
     )

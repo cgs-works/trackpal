@@ -20,6 +20,11 @@ const form = ref(getEmptyForm())
 
 const isEditMode = computed(() => modalMode.value === 'edit')
 const modalTitle = computed(() => (isEditMode.value ? 'Edit Tenant' : 'Create Tenant'))
+const modalPrefixHint = computed(() => (
+  isEditMode.value
+    ? 'Changing this prefix will update all client login usernames for the tenant.'
+    : 'Leave blank to auto-generate a unique prefix.'
+))
 const username = computed(() => authStore.username || authStore.user?.username || 'Master')
 
 function getEmptyForm() {
@@ -28,6 +33,7 @@ function getEmptyForm() {
     full_name: '',
     email: '',
     phone: '',
+    client_prefix: '',
     username: '',
     password: '',
     evolution_instance_name: '',
@@ -87,6 +93,7 @@ function openEditModal(tenant) {
     full_name: tenant.full_name || '',
     email: tenant.email || '',
     phone: tenant.phone || '',
+    client_prefix: tenant.client_prefix || '',
     evolution_instance_name: tenant.evolution_instance_name || '',
   }
   isModalOpen.value = true
@@ -133,12 +140,16 @@ async function handleSubmit() {
 
   try {
     if (isEditMode.value) {
-      await api.put(`/tenants/${form.value.id}`, {
+      const payload = {
         full_name: form.value.full_name,
         email: form.value.email,
         phone: form.value.phone,
         evolution_instance_name: form.value.evolution_instance_name,
-      })
+      }
+      if (form.value.client_prefix?.trim()) {
+        payload.client_prefix = form.value.client_prefix
+      }
+      await api.put(`/tenants/${form.value.id}`, payload)
       successMessage.value = 'Tenant updated successfully.'
     } else {
       const payload = {
@@ -147,6 +158,10 @@ async function handleSubmit() {
         phone: form.value.phone,
         username: form.value.username,
         evolution_instance_name: form.value.evolution_instance_name,
+      }
+
+      if (form.value.client_prefix?.trim()) {
+        payload.client_prefix = form.value.client_prefix
       }
 
       if (form.value.password) {
@@ -270,6 +285,7 @@ onMounted(loadTenants)
           <thead>
             <tr>
               <th>Full Name</th>
+              <th>Client Prefix</th>
               <th>Email</th>
               <th>Phone</th>
               <th>Evolution Instance</th>
@@ -280,6 +296,7 @@ onMounted(loadTenants)
           <tbody>
             <tr v-for="tenant in tenants" :key="tenant.id">
               <td>{{ tenant.full_name }}</td>
+              <td>{{ tenant.client_prefix || '—' }}</td>
               <td>{{ tenant.email }}</td>
               <td>{{ tenant.phone }}</td>
               <td>{{ tenant.evolution_instance_name || '—' }}</td>
@@ -321,6 +338,10 @@ onMounted(loadTenants)
 
         <label for="phone">Phone</label>
         <input id="phone" v-model.trim="form.phone" type="tel" required>
+
+        <label for="client_prefix">Client Prefix <span>(optional)</span></label>
+        <input id="client_prefix" v-model.trim="form.client_prefix" type="text" maxlength="5">
+        <p class="modal-hint">{{ modalPrefixHint }}</p>
 
         <template v-if="!isEditMode">
           <label for="tenant_username">Username</label>
@@ -604,6 +625,12 @@ label {
 
 label span {
   font-weight: 500;
+}
+
+.modal-hint {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 input {

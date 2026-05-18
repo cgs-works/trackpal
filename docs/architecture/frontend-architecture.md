@@ -26,6 +26,7 @@ Vue 3 SPA consuming the Trackpal REST API. Hosted on Cloudflare Pages, built wit
               │  LoginView        │
               │  MasterDashboard  │
               │  TenantDashboard  │
+              │  ClientDashboard  │
               └───────────────────┘
 ```
 
@@ -38,6 +39,7 @@ Router lives in `src/router/index.js` with four routes:
 | `/login` | `LoginView` | Public | — |
 | `/master/dashboard` | `MasterDashboardView` | Required | `master` |
 | `/admin/dashboard` | `TenantDashboardView` | Required | `tenant` |
+| `/client/dashboard` | `ClientDashboardView` | Required | `client` |
 | `/:pathMatch(.*)*` | Redirect → `/login` | — | — |
 
 ### Navigation Guard
@@ -57,6 +59,8 @@ Single store in `src/stores/auth.js`:
 - **State**: `token`, `refreshToken`, `user`, `activeTenantId` — all persisted to `localStorage`
 - **Getters (computed)**: `isAuthenticated`, `role`, `username`
 - **Actions**: `login(username, password)` — POST to `/auth/login`, stores tokens + user; `switchTenant(tenantId)` — Master support context; `exitTenantContext()` — exits support context through `/auth/switch-tenant` with `tenant_id: null`; `logout()` — POST to `/auth/logout`, clears localStorage
+
+Client users land on `/client/dashboard`, which shows readonly client profile data and password change only.
 
 Token and user data are read from `localStorage` on store initialization, surviving page reloads.
 
@@ -81,6 +85,7 @@ Login Page
   │              │
   │              ├─ role === "master"  → /master/dashboard
   │              └─ role === "tenant"  → /admin/dashboard
+  │              └─ role === "client"  → /client/dashboard
   │
   └─ Failure → Show error message (Spanish: "No se pudo iniciar sesión")
 ```

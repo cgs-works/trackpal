@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db, set_internal_rls_context, set_rls_context
 from app.core.security import decode_token, verify_n8n_api_key
 from app.crud import users as user_crud
-from app.models import Tenant, User
+from app.models import Client, Tenant, User
 from sqlalchemy import select
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -49,6 +49,26 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account is deactivated",
             )
+    if user.role == "client":
+        raw_tenant_id = payload.get("active_tenant_id")
+        if not raw_tenant_id:
+            raise credentials_exception
+        try:
+            tenant_id = UUID(raw_tenant_id)
+        except (ValueError, TypeError):
+            raise credentials_exception from None
+        result = await db.execute(
+            select(Client)
+            .join(Tenant, Tenant.id == Client.tenant_id)
+            .where(
+                Client.owner_user_id == user.id,
+                Client.is_active,
+                Tenant.id == tenant_id,
+                Tenant.is_active,
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            raise credentials_exception
     return user
 
 
@@ -58,6 +78,11 @@ async def get_active_tenant_id(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> UUID:
     payload = decode_token(token)
+    if current_user.role == "client":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clients cannot access tenant management endpoints",
+        )
     if current_user.role == "tenant":
         result = await db.execute(select(Tenant).where(Tenant.owner_user_id == current_user.id, Tenant.is_active))
         tenant = result.scalar_one_or_none()

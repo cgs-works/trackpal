@@ -29,6 +29,13 @@ const plans = ref([])
 const serviceName = ref('')
 const planName = ref('')
 const catalogMessage = ref('')
+const clients = ref([])
+const clientForm = ref(getEmptyClientForm())
+const clientMessage = ref('')
+const clientError = ref('')
+const isSavingClient = ref(false)
+const isLoadingClients = ref(false)
+const isEditingClient = computed(() => !!clientForm.value.id)
 
 const username = computed(() => authStore.username || authStore.user?.username || 'Usuario')
 const isMasterSupport = computed(() => authStore.role === 'master' && !!authStore.activeTenantId)
@@ -54,6 +61,124 @@ function setProfile(data) {
   }
 }
 
+function getEmptyClientForm() {
+  return {
+    id: null,
+    full_name: '',
+    local_username: '',
+    phone: '',
+    password: '',
+  }
+}
+
+function resetClientForm() {
+  clientForm.value = getEmptyClientForm()
+}
+
+function getClientError(error, fallback) {
+  return getApiError(error, fallback)
+}
+
+async function loadClients() {
+  clientError.value = ''
+  isLoadingClients.value = true
+
+  try {
+    const response = await api.get('/clients')
+    clients.value = response.data || []
+  } catch (error) {
+    clientError.value = getClientError(error, 'No se pudo cargar los clientes.')
+  } finally {
+    isLoadingClients.value = false
+  }
+}
+
+function editClient(client) {
+  clientError.value = ''
+  clientMessage.value = ''
+  clientForm.value = {
+    id: client.id,
+    full_name: client.full_name || '',
+    local_username: client.local_username || '',
+    phone: client.phone || '',
+    password: '',
+  }
+}
+
+function cancelClientEdit() {
+  resetClientForm()
+  clientError.value = ''
+}
+
+async function saveClient() {
+  clientError.value = ''
+  clientMessage.value = ''
+  isSavingClient.value = true
+
+  try {
+    if (isEditingClient.value) {
+      const response = await api.put(`/clients/${clientForm.value.id}`, {
+        full_name: clientForm.value.full_name,
+        local_username: clientForm.value.local_username,
+        phone: clientForm.value.phone,
+      })
+      clientMessage.value = `Cliente actualizado. Login: ${response.data.username}`
+    } else {
+      const response = await api.post('/clients', {
+        full_name: clientForm.value.full_name,
+        local_username: clientForm.value.local_username,
+        phone: clientForm.value.phone,
+        password: clientForm.value.password,
+      })
+      clientMessage.value = `Cliente creado. Login: ${response.data.username}`
+    }
+    resetClientForm()
+    await loadClients()
+  } catch (error) {
+    clientError.value = getClientError(error, 'No se pudo guardar el cliente.')
+  } finally {
+    isSavingClient.value = false
+  }
+}
+
+async function toggleClientStatus(client) {
+  clientError.value = ''
+  clientMessage.value = ''
+  const endpoint = client.is_active
+    ? `/clients/${client.id}/deactivate`
+    : `/clients/${client.id}/activate`
+
+  try {
+    const response = await api.patch(endpoint)
+    clientMessage.value = client.is_active ? 'Cliente desactivado.' : 'Cliente activado.'
+    clients.value = clients.value.map((entry) => (entry.id === client.id ? response.data : entry))
+  } catch (error) {
+    clientError.value = getClientError(error, 'No se pudo actualizar el estado del cliente.')
+  }
+}
+
+async function deleteClient(client) {
+  clientError.value = ''
+  clientMessage.value = ''
+
+  if (client.is_active) {
+    clientError.value = 'No se puede eliminar un cliente activo. Desactívalo primero.'
+    return
+  }
+
+  if (!window.confirm(`Eliminar cliente ${client.full_name}?`)) {
+    return
+  }
+
+  try {
+    await api.delete(`/clients/${client.id}`)
+    clientMessage.value = 'Cliente eliminado.'
+    await loadClients()
+  } catch (error) {
+    clientError.value = getClientError(error, 'No se pudo eliminar el cliente.')
+  }
+}
+
 async function loadDashboard() {
   errorMessage.value = ''
   isLoading.value = true
@@ -76,6 +201,9 @@ async function loadDashboard() {
       setProfile(profileResponse.data || dashboardResponse.data)
     }
     await loadServices()
+    if (!isMasterSupport.value) {
+      await loadClients()
+    }
   } catch (error) {
     errorMessage.value = getApiError(error, 'No se pudo cargar el dashboard.')
   } finally {
@@ -247,7 +375,7 @@ onMounted(loadDashboard)
         <p class="placeholder-message">{{ dashboardMessage }}</p>
       </section>
 
-      <section class="content-card profile-card">
+      <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
             <p class="eyebrow">Catálogo</p>
@@ -277,6 +405,86 @@ onMounted(loadDashboard)
             <button class="link-button danger" type="button" @click="deletePlan(plan)">Eliminar</button>
           </li>
         </ul>
+      </section>
+
+      <section v-if="!isMasterSupport" class="content-card profile-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Clientes</p>
+            <h2>Gestiona accesos de clientes</h2>
+          </div>
+        </div>
+
+        <p v-if="clientError" class="alert alert-error">{{ clientError }}</p>
+        <p v-if="clientMessage" class="alert alert-success">{{ clientMessage }}</p>
+
+        <form class="form-grid" @submit.prevent="saveClient">
+          <label>
+            Nombre completo
+            <input v-model.trim="clientForm.full_name" type="text" required />
+          </label>
+
+          <label>
+            Usuario local
+            <input v-model.trim="clientForm.local_username" type="text" required />
+          </label>
+
+          <label>
+            Teléfono
+            <input v-model.trim="clientForm.phone" type="tel" />
+          </label>
+
+          <label v-if="!isEditingClient">
+            Contraseña inicial
+            <input v-model="clientForm.password" type="password" autocomplete="new-password" required />
+          </label>
+
+          <div class="form-actions">
+            <button class="button button-secondary" type="button" @click="cancelClientEdit">Limpiar</button>
+            <button class="button button-primary" type="submit" :disabled="isSavingClient">
+              {{ isSavingClient ? 'Guardando...' : (isEditingClient ? 'Actualizar cliente' : 'Crear cliente') }}
+            </button>
+          </div>
+        </form>
+
+        <div v-if="isLoadingClients" class="empty-state">Cargando clientes...</div>
+        <div v-else-if="!clients.length" class="empty-state">No hay clientes registrados</div>
+        <div v-else class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Local Username</th>
+                <th>Technical Username</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="client in clients" :key="client.id">
+                <td>{{ client.full_name }}</td>
+                <td>{{ client.local_username }}</td>
+                <td>{{ client.username }}</td>
+                <td>{{ client.phone || '—' }}</td>
+                <td>
+                  <span class="status-badge" :class="client.is_active ? 'active' : 'inactive'">
+                    {{ client.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button class="link-button" type="button" @click="editClient(client)">Edit</button>
+                    <button class="link-button" type="button" @click="toggleClientStatus(client)">
+                      {{ client.is_active ? 'Deactivate' : 'Activate' }}
+                    </button>
+                    <button class="link-button danger" type="button" @click="deleteClient(client)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section v-if="!isMasterSupport" class="content-card profile-card">
@@ -512,6 +720,71 @@ input:focus {
   border: 1px solid rgb(34 197 94 / 30%);
   background: rgb(34 197 94 / 10%);
   color: #15803d;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.status-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.link-button {
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+}
+
+.link-button.danger {
+  color: var(--danger);
 }
 
 .loading-card {

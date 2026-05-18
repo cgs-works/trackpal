@@ -16,6 +16,7 @@ from app.core.database import (
 def test_rls_policy_sql_uses_required_context_settings():
     text = Path("alembic/versions/cd3efe74cae6_tenant_catalog_rls.py").read_text()
     text += Path("alembic/versions/cd4efe74cae7_fix_tenants_master_rls.py").read_text()
+    text += Path("alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py").read_text()
     assert "ENABLE ROW LEVEL SECURITY" in text
     assert "FORCE ROW LEVEL SECURITY" in text
     assert "WITH CHECK" in text
@@ -25,6 +26,7 @@ def test_rls_policy_sql_uses_required_context_settings():
     assert "services_tenant_isolation" in text
     assert "plans_tenant_isolation" in text
     assert "tenants_tenant_isolation" in text
+    assert "clients_tenant_isolation" in text
     assert "current_setting('app.current_role', true) = 'master'" in text
 
 
@@ -72,6 +74,20 @@ def test_service_and_plan_with_check_validate_tenant_ownership_for_writes():
     assert "AND t.is_active" in plans_policy
 
 
+def test_clients_policy_enforces_tenant_and_client_context():
+    text = Path("alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py").read_text()
+    policy = text.split("CREATE POLICY clients_tenant_isolation", 1)[1].split("def downgrade", 1)[0]
+
+    assert "ALTER TABLE clients ENABLE ROW LEVEL SECURITY" in text
+    assert "ALTER TABLE clients FORCE ROW LEVEL SECURITY" in text
+    assert "current_setting('app.current_role', true) = 'master'" in policy
+    assert "current_setting('app.current_role', true) = 'tenant'" in policy
+    assert "current_setting('app.current_role', true) = 'client'" in policy
+    assert "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in policy
+    assert "AND is_active" in policy
+    assert "AND false" in policy
+
+
 @pytest.mark.asyncio
 async def test_set_rls_context_stores_context_on_sqlite(db_session):
     await set_rls_context(db_session, "user-1", "tenant", "tenant-1")
@@ -80,6 +96,17 @@ async def test_set_rls_context_stores_context_on_sqlite(db_session):
         "user_id": "user-1",
         "role": "tenant",
         "active_tenant_id": "tenant-1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_set_rls_context_stores_client_context_on_sqlite(db_session):
+    await set_rls_context(db_session, "user-2", "client", "tenant-2")
+
+    assert get_rls_context(db_session) == {
+        "user_id": "user-2",
+        "role": "client",
+        "active_tenant_id": "tenant-2",
     }
 
 

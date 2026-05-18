@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.input_validation import (
+    validate_client_prefix,
     validate_email,
     validate_full_name,
     validate_phone,
@@ -20,6 +21,7 @@ class TenantCreate(BaseModel):
     username: str
     password: str | None = None
     evolution_instance_name: str = Field(min_length=1)
+    client_prefix: str | None = None
 
     @field_validator("password")
     @classmethod
@@ -48,6 +50,13 @@ class TenantCreate(BaseModel):
     def validate_phone_field(cls, v: str | None) -> str | None:
         return validate_phone(v)
 
+    @field_validator("client_prefix")
+    @classmethod
+    def validate_client_prefix_field(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validate_client_prefix(v)
+
 
 class TenantUpdate(BaseModel):
     model_config = ConfigDict()
@@ -56,6 +65,7 @@ class TenantUpdate(BaseModel):
     email: str | None = None
     phone: str | None = None
     evolution_instance_name: str | None = None
+    client_prefix: str | None = None
 
     @field_validator("full_name")
     @classmethod
@@ -74,12 +84,20 @@ class TenantUpdate(BaseModel):
     def validate_phone_field(cls, v: str | None) -> str | None:
         return validate_phone(v)
 
+    @field_validator("client_prefix")
+    @classmethod
+    def validate_client_prefix_field(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validate_client_prefix(v)
+
 
 class TenantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     full_name: str
+    client_prefix: str
     email: str | None
     phone: str | None
     evolution_instance_name: str | None

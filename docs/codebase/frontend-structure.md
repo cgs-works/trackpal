@@ -30,7 +30,8 @@ frontend/
 │   └── views/
 │       ├── LoginView.vue         # Login form (Spanish UI)
 │       ├── MasterDashboardView.vue  # Master tenant CRUD + support context switch
-│       └── TenantDashboardView.vue  # Tenant profile/password + catalog CRUD
+│       ├── TenantDashboardView.vue  # Tenant profile/password + catalog + client CRUD
+│       └── ClientDashboardView.vue  # Client readonly dashboard + password change
 │
 └── dist/                         # Build output (gitignored)
 ```

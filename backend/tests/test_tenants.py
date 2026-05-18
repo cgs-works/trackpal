@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -24,6 +26,7 @@ async def test_create_tenant(client, auth_headers):
     assert data["full_name"] == "Tenant One"
     assert data["email"] == "tenant@example.com"
     assert data["phone"] == "12015550004"  # canonical: no + prefix
+    assert re.fullmatch(r"[a-z][a-z0-9]{0,4}", data["client_prefix"])
     assert data["username"] == "tenant_one"
     assert data["is_active"] is True
     assert data["plain_password"] is None
@@ -44,6 +47,7 @@ async def test_create_tenant_auto_password(client, auth_headers):
     data = response.json()
     assert data["plain_password"]
     assert len(data["plain_password"]) >= 6
+    assert re.fullmatch(r"[a-z][a-z0-9]{0,4}", data["client_prefix"])
 
 
 async def test_create_tenant_duplicate_username(client, auth_headers):
@@ -67,6 +71,52 @@ async def test_create_tenant_duplicate_phone(client, auth_headers, active_tenant
 
     assert response.status_code == 409
     assert response.json()["detail"] == "Phone already registered"
+
+
+async def test_create_tenant_explicit_client_prefix(client, auth_headers):
+    response = await _create_tenant(
+        client,
+        auth_headers,
+        username="tenant_prefix",
+        phone="+12015550012",
+        client_prefix="ab12",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["client_prefix"] == "ab12"
+
+
+async def test_create_tenant_duplicate_client_prefix(client, auth_headers):
+    await _create_tenant(
+        client,
+        auth_headers,
+        username="tenant_prefix_a",
+        phone="+12015550013",
+        client_prefix="ab13",
+    )
+
+    response = await _create_tenant(
+        client,
+        auth_headers,
+        username="tenant_prefix_b",
+        phone="+12015550014",
+        client_prefix="ab13",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Prefijo de cliente ya registrado"
+
+
+async def test_create_tenant_invalid_client_prefix(client, auth_headers):
+    response = await _create_tenant(
+        client,
+        auth_headers,
+        username="tenant_prefix_invalid",
+        phone="+12015550015",
+        client_prefix="1abc",
+    )
+
+    assert response.status_code == 422
 
 
 async def test_list_tenants(
@@ -104,6 +154,7 @@ async def test_update_tenant(client, auth_headers, active_tenant_user):
             "email": "updated@example.com",
             "phone": "+12015550010",
             "evolution_instance_name": "updated-instance",
+            "client_prefix": "z9",
         },
         headers=auth_headers,
     )
@@ -114,6 +165,18 @@ async def test_update_tenant(client, auth_headers, active_tenant_user):
     assert data["email"] == "updated@example.com"
     assert data["phone"] == "12015550010"  # canonical: no + prefix
     assert data["evolution_instance_name"] == "updated-instance"
+    assert data["client_prefix"] == "z9"
+
+
+async def test_update_tenant_duplicate_client_prefix(client, auth_headers, active_tenant_user, deactivated_tenant_user):
+    response = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"client_prefix": "tnb01"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Prefijo de cliente ya registrado"
 
 
 async def test_deactivate_tenant(client, auth_headers, active_tenant_user):

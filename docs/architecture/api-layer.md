@@ -16,6 +16,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 |--------|--------|------|------|
 | `/api/v1/auth/*` | `app.api.v1.endpoints.auth` | auth | None (public) |
 | `/api/v1/catalog/*` | `app.api.v1.endpoints.catalog` | catalog | JWT + active tenant context |
+| `/api/v1/clients/*` | `app.api.v1.endpoints.clients` | clients | JWT + tenant context |
 | `/api/v1/me/*` | `app.api.v1.endpoints.me` | me | JWT bearer |
 | `/api/v1/tenants/*` | `app.api.v1.endpoints.tenants` | tenants | JWT + master role |
 | `/api/v1/integrations/*` | `app.api.v1.endpoints.integrations` | integrations | X-API-Key header |
@@ -34,6 +35,8 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 - `PUT /api/v1/me` — Update own profile fields
 - `PUT /api/v1/me/password` — Change password
 
+Client role receives readonly profile data from `GET /api/v1/me`; profile edits are rejected, but password change remains allowed.
+
 ### Tenants Endpoints (master-only)
 
 - `POST /api/v1/tenants/` — Create tenant + Evolution API instance
@@ -44,6 +47,18 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 - `PATCH /api/v1/tenants/{id}/activate` — Reactivate tenant
 - `DELETE /api/v1/tenants/{id}` — Delete inactive tenant + Evolution instance
 
+Tenant prefix edits update client technical usernames transactionally.
+
+### Clients Endpoints (tenant-scoped)
+
+- `GET /api/v1/clients` — List clients for active tenant
+- `POST /api/v1/clients` — Create client with tenant-local username and initial password
+- `GET /api/v1/clients/{id}` — Get client detail
+- `PUT /api/v1/clients/{id}` — Update client full name, local username, phone
+- `PATCH /api/v1/clients/{id}/deactivate` — Deactivate client and revoke refresh sessions
+- `PATCH /api/v1/clients/{id}/activate` — Reactivate client
+- `DELETE /api/v1/clients/{id}` — Delete inactive client and linked auth user
+
 ### Integrations Endpoints (n8n-facing)
 
 - `GET /api/v1/integrations/n8n/identify?phone=` — Identify user by phone (X-API-Key)
@@ -51,7 +66,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 
 ### Dashboard Endpoints
 
-- `GET /api/v1/dashboard` — Role-aware dashboard data (master sees tenant counts, tenant sees own profile)
+- `GET /api/v1/dashboard` — Role-aware dashboard data (master sees tenant counts, tenant sees own profile, client sees readonly profile)
 
 ### Catalog Endpoints (tenant-scoped)
 

@@ -63,3 +63,12 @@ async def set_internal_rls_context(session: AsyncSession) -> None:
     tenant-scoped catalog policies still require explicit active_tenant_id.
     """
     await set_rls_context(session, SYSTEM_RLS_USER_ID, "master", None)
+
+
+async def set_internal_tenant_rls_context(session: AsyncSession, tenant_id: str) -> None:
+    """Set internal master context scoped to a tenant-owned FORCE-RLS table.
+
+    Use for maintenance operations that must see tenant-owned rows even when
+    the tenant is inactive, such as FK-safe cleanup and username sync.
+    """
+    await set_rls_context(session, SYSTEM_RLS_USER_ID, "master", tenant_id)

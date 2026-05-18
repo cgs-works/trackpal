@@ -1,8 +1,14 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.core.input_validation import validate_email, validate_full_name, validate_phone
+from app.core.input_validation import (
+    validate_email,
+    validate_full_name,
+    validate_phone,
+    validate_password_policy,
+)
 
 
 class ProfileResponse(BaseModel):
@@ -12,6 +18,10 @@ class ProfileResponse(BaseModel):
     username: str
     name: str | None = None
     full_name: str | None = None
+    local_username: str | None = None
+    tenant_id: UUID | None = None
+    tenant_name: str | None = None
+    client_prefix: str | None = None
     email: str | None = None
     phone: str | None = None
     is_active: bool | None = None
@@ -55,3 +65,8 @@ class ProfileUpdate(BaseModel):
 class PasswordChange(BaseModel):
     old_password: str
     new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_field(cls, v: str) -> str:
+        return validate_password_policy(v)

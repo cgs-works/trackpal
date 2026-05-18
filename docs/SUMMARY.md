@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard. The backend is Python/FastAPI with PostgreSQL and Redis HA. The frontend is a Vue 3 SPA hosted on Cloudflare Pages.
+Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard. Each Tenant manages their own catalog and Clients. The backend is Python/FastAPI with PostgreSQL and Redis HA. The frontend is a Vue 3 SPA.
 
 ## Architecture
 
@@ -36,12 +36,14 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 
 | File | Description |
 |------|-------------|
-| [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
-| [Business Rules](project-pdr/business-rules.md) | Tenant lifecycle, auth constraints, phone handling, validation rules, deployment constraints |
+| [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles (Master, Tenant, Client), and non-goals |
+| [Business Rules](project-pdr/business-rules.md) | Lifecycle (Tenant/Client), auth constraints, phone handling, validation, deployment |
 
 ## Other
 
 | File | Description |
 |------|-------------|
-| [Plans](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Recent execution plans and reports |
-| [Brainstorms](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Design brainstorms and research |
+| [Tenant Catalog Plan](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Plan for tenant catalog and RLS |
+| [Client Entity Plan](plans/260517-1938-client-entity-dashboard/SUMMARY.md) | Client role, tenant prefix, and dashboard implementation plan |
+| [Tenant Catalog Brainstorm](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Design brainstorms for catalog RLS |
+| [Client Entity Brainstorm](brainstorms/260517-1930-client-entity-dashboard/SUMMARY.md) | Design brainstorms for client entity |

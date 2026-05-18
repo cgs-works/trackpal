@@ -1,25 +1,35 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.input_validation import (
     InputValidationError,
     validate_email,
     validate_full_name,
     validate_phone,
+    validate_password_policy,
 )
 from app.core.security import get_password_hash, verify_password
 from app.crud import users as user_crud
-from app.models import MasterProfile, Tenant, User
+from app.models import Client, MasterProfile, Tenant, User
 from app.schemas.me import ProfileUpdate
 
 
 class ProfileService:
     async def get_profile(
         self, db: AsyncSession, user: User
-    ) -> MasterProfile | Tenant | None:
+    ) -> MasterProfile | Tenant | Client | None:
         if user.role == "master":
             result = await db.execute(
                 select(MasterProfile).where(MasterProfile.id == user.id)
+            )
+            return result.scalar_one_or_none()
+
+        if user.role == "client":
+            result = await db.execute(
+                select(Client)
+                .options(selectinload(Client.tenant), selectinload(Client.user))
+                .where(Client.owner_user_id == user.id)
             )
             return result.scalar_one_or_none()
 
@@ -34,6 +44,9 @@ class ProfileService:
         profile = await self.get_profile(db, user)
         if profile is None:
             return None
+
+        if user.role == "client":
+            raise PermissionError("Client profile is read-only")
 
         update_data = payload.model_dump(exclude_unset=True)
 
@@ -72,6 +85,7 @@ class ProfileService:
     async def change_password(
         self, db: AsyncSession, user: User, old_password: str, new_password: str
     ) -> bool:
+        new_password = validate_password_policy(new_password)
         if not verify_password(old_password, user.password_hash):
             return False
 
