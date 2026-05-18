@@ -1,10 +1,30 @@
-# AGENTS.md
+# Trackpal — AGENTS.md
 
 ## Project Overview
 
 Trackpal — multi-tenant SaaS. Master manages tenants via WhatsApp console + web dashboard. Spanish market.
 
-**Stack:** Python ≥3.12 / FastAPI / SQLAlchemy async / PostgreSQL / Redis HA / JWT+brypt / Evolution API / n8n / Vue 3+Pinia / Vite
+**Stack:** Python ≥3.12 / FastAPI / SQLAlchemy async / PostgreSQL / Redis HA / JWT+bcrypt / Evolution API / n8n / Vue 3+Pinia / Vite
+
+## Documentation
+
+All project documentation is in [docs/SUMMARY.md](docs/SUMMARY.md). Before planning or implementing, read it to understand the full documentation map. Key docs:
+
+| Area | Location |
+|------|----------|
+| System architecture | `docs/architecture/system-overview.md` |
+| API layer | `docs/architecture/api-layer.md` |
+| Database schema | `docs/architecture/database-schema.md` |
+| Redis HA | `docs/architecture/redis-ha.md` |
+| WhatsApp console flow | `docs/architecture/whatsapp-console-flow.md` |
+| Evolution integration | `docs/architecture/evolution-integration.md` |
+| n8n workflow | `docs/architecture/n8n-workflow.md` |
+| Frontend architecture | `docs/architecture/frontend-architecture.md` |
+| Input validation policy | `docs/architecture/input-validation-policy.md` |
+| Backend conventions | `docs/code-standard/backend-conventions.md` |
+| Frontend conventions | `docs/code-standard/frontend-conventions.md` |
+| Product goals | `docs/project-pdr/product-goals.md` |
+| Business rules | `docs/project-pdr/business-rules.md` |
 
 ## Setup Commands
 
@@ -46,7 +66,8 @@ frontend/
 │   ├── router/index.js             # 3 rutas + guards
 │   ├── services/api.js             # Axios + interceptors
 │   ├── stores/auth.js              # Pinia: token, user, login/logout
-│   └── views/                      # LoginView, MasterDashboardView, TenantDashboardView
+│   └── views/                      # LoginView, MasterDashboardView, TenantDashboardView,
+│                                   # ClientDashboardView
 └── vite.config.js
 ```
 
@@ -76,6 +97,30 @@ uv run pytest -v -k "tenant"              # By keyword
 | Render | `pip install uv && uv sync` → `uv run alembic upgrade head && uv run python -m scripts.seed && uv run uvicorn app.main:app` |
 | Cloudflare Pages | `VITE_API_URL=<url> npm run build` → upload `dist/` |
 | n8n | Import workflow JSON; set webhook URL in Evolution API instance (trigger: `/menu`) |
+
+## MCP Servers
+
+Configured in `.mcp.json`:
+
+- **supabase** — Hosted Supabase MCP (`https://mcp.supabase.com/mcp`), lazy lifecycle
+- **n8n-mcp** — Local npx-based MCP (`n8n-mcp`) with API key auth, connects to `https://rs-n8n.wilfredocamacho.dev`
+
+## Skills
+
+This repo uses 10 local skills under `.agents/skills/`. Each matches specific code patterns and tasks:
+
+| Skill | When to use |
+|-------|-------------|
+| **fastapi-expert** | Building FastAPI endpoints, Pydantic models, auth flows, async SQLAlchemy operations, JWT, WebSocket, OpenAPI |
+| **n8n-code-javascript** | Writing JavaScript code in n8n Code nodes — `$input`, `$json`, `$node`, HTTP requests, data transforms |
+| **n8n-expression-syntax** | Writing or debugging n8n expressions (`{{ }}`, `$json`, `$node`), fixing syntax errors in node fields |
+| **n8n-mcp-tools-expert** | Using n8n MCP tools — searching nodes, validating configs, managing workflows/credentials, instance audits |
+| **n8n-node-configuration** | Configuring n8n node parameters, understanding field dependencies and displayOptions, surgical node edits |
+| **n8n-validation-expert** | Interpreting n8n validation errors, handling false positives, auto-fix guidance |
+| **n8n-workflow-patterns** | Designing n8n workflow architecture — webhook processing, API integration, DB operations, AI agents, batch processing, scheduled tasks |
+| **python-pro** | Writing type-annotated async Python 3.12+ with mypy strict, pytest suites, black/ruff validation, error handling |
+| **supabase-postgres-best-practices** | Writing/optimizing Postgres queries, schema design, indexing, connection pooling, RLS, locking |
+| **vue-expert-js** | Building Vue 3 components with `<script setup>`, Pinia stores, composables, JSDoc-typed code (no TypeScript), Vite config |
 
 ## PR Guidelines
 
