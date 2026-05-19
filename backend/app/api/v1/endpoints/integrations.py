@@ -10,12 +10,37 @@ from app.core.redis_client import RedisUnavailableError, get_redis_manager
 from app.schemas.auth import IdentifyResponse
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
+from app.services.catalog_service import CatalogService
+from app.services.client_service import ClientService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
+from app.services.profile_service import ProfileService
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_auth_session_service import WhatsAppAuthSessionService
 from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_master_console_facade import WhatsAppMasterConsoleFacade
 from app.services.whatsapp_session_service import WhatsAppSessionService
+from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
+from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
+
+# ---------------------------------------------------------------------------
+# Role-based routing reply templates (Spanish)
+# ---------------------------------------------------------------------------
+
+UNKNOWN_PHONE_REPLY = (
+    "❌ No tienes acceso a la consola. "
+    "El número de teléfono no está registrado en el sistema."
+)
+
+CLIENT_ROLE_REJECTION = (
+    "❌ Esta consola es solo para administradores. "
+    "Los usuarios con rol de cliente no pueden usar esta consola."
+)
+
+TENANT_CONSOLE_PLACEHOLDER = (
+    "🤖 *Trackpal Consola de Administración*\n\n"
+    "Bienvenido a la consola de administración para tu tenant.\n\n"
+    "Esta funcionalidad estará disponible próximamente."
+)
 
 
 class _TenantConsoleItem:
@@ -49,6 +74,7 @@ class _TenantConsoleAdapter:
 
     async def get_tenant(self, tenant_id: str) -> _TenantConsoleItem | None:
         from uuid import UUID
+
         profile = await self._service.get_tenant(self._db, UUID(tenant_id))
         if profile is None:
             return None
@@ -57,6 +83,7 @@ class _TenantConsoleAdapter:
     async def get_tenant_by_username(self, username: str) -> _TenantConsoleItem | None:
         """Return a single tenant whose username matches, or None."""
         from app.crud import users as user_crud
+
         user = await user_crud.get_by_username(self._db, username)
         if user is None or user.role != "tenant":
             return None
@@ -184,6 +211,49 @@ async def whatsapp_console(
     if manager is None:
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
+    # Identify caller by phone and route by role
+    identity = await auth_service.identify_by_phone(db, phone)
+
+    if identity is None:
+        return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
+
+    role = identity["role"]
+
+    if role == "master":
+        return await _handle_master_console(
+            phone=phone,
+            message=request.message,
+            instance=request.instance,
+            manager=manager,
+            db=db,
+        )
+
+    if role == "tenant":
+        return await _handle_tenant_console(
+            phone=phone,
+            message=request.message,
+            instance=request.instance,
+            manager=manager,
+            db=db,
+        )
+
+    # Client role — rejected
+    return WhatsAppConsoleResponse(reply=CLIENT_ROLE_REJECTION)
+
+
+async def _handle_master_console(
+    phone: str,
+    message: str,
+    instance: str | None,
+    manager: object,
+    db: AsyncSession,
+) -> WhatsAppConsoleResponse:
+    """Handle a message from an identified Master user.
+
+    Builds Redis-dependent services, creates the Master Console facade,
+    and processes the message.  This is the extracted inline path from
+    the original ``whatsapp_console`` endpoint — behavior is preserved.
+    """
     session_service = WhatsAppSessionService(
         connection_manager=manager,
         ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
@@ -211,16 +281,59 @@ async def whatsapp_console(
     try:
         reply = await facade.process_message(
             phone=phone,
-            message=request.message,
-            instance=request.instance,
+            message=message,
+            instance=instance,
             db=db,
         )
     except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
-        # Redis infrastructure failure — both stores unavailable,
-        # connection/timeout/OS errors. Return relayable unavailable
-        # reply — never degrade to stateless and never return HTTP
-        # 500 to n8n. Application-level bugs (AttributeError,
-        # TypeError, etc.) propagate as HTTP 500 for observability.
+        return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
+
+    return WhatsAppConsoleResponse(reply=reply)
+
+
+async def _handle_tenant_console(
+    phone: str,
+    message: str,
+    instance: str | None,
+    manager: object,
+    db: AsyncSession,
+) -> WhatsAppConsoleResponse:
+    """Handle a message from an identified Tenant Admin user.
+
+    Builds Redis-dependent services, the Tenant console service,
+    and the facade orchestrator, then processes the message.
+    Redis failures return the relayable unavailable reply.
+    """
+    # Create tenant-scoped services
+    session_service = WhatsAppSessionService(
+        connection_manager=manager,
+        ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+    )
+
+    tenant_console_service = WhatsAppTenantConsoleService(
+        client_service=ClientService(),
+        catalog_service=CatalogService(),
+        profile_service=ProfileService(),
+    )
+
+    facade = WhatsAppTenantConsoleFacade(
+        console_service=tenant_console_service,
+        session_service=session_service,
+        tenant_service=TenantService(),
+    )
+
+    identity = await auth_service.identify_by_phone(db, phone)
+    if identity is None:
+        return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
+
+    try:
+        reply = await facade.process_message(
+            phone=phone,
+            message=message,
+            identity=identity,
+            db=db,
+        )
+    except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
     return WhatsAppConsoleResponse(reply=reply)
