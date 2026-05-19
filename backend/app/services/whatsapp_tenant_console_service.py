@@ -652,6 +652,10 @@ class WhatsAppTenantConsoleService:
                 return await self._handle_client_list_selection(
                     phone, msg, session, session_service, tenant_id, db
                 )
+            elif step == self.CLIENTS_STEP_SELECT:
+                return await self._handle_client_select(
+                    phone, msg, session, session_service, tenant_id, db
+                )
             elif step == self.CLIENTS_STEP_DETAIL_ACTION:
                 return await self._handle_client_detail_action(
                     phone, msg, session, session_service, tenant_id, db
@@ -790,7 +794,7 @@ class WhatsAppTenantConsoleService:
             reply += "\n\n" + self.CLIENT_SELECT_PROMPT
             if session_service is not None:
                 session.flow = self.CLIENTS_FLOW
-                session.step = self.CLIENTS_STEP_LIST
+                session.step = self.CLIENTS_STEP_SELECT
                 session.selection_map = selection_map
                 await session_service.save_session(session)
             return reply
@@ -813,6 +817,45 @@ class WhatsAppTenantConsoleService:
                         await session_service.save_session(session)
                     return reply
             return self.CLIENT_INVALID_SELECTION
+
+    async def _handle_client_select(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        """Handle client selection from the numbered list (CLIENTS_STEP_SELECT).
+
+        Only does selection_map lookup — no menu command checks.
+        """
+        if msg == "0":
+            # Go back to clients menu
+            if session_service is not None:
+                session.flow = self.CLIENTS_FLOW
+                session.step = self.CLIENTS_STEP_LIST
+                session.selection_map = {}
+                session.temp_data = {}
+                await session_service.save_session(session)
+            return self.CLIENTS_MENU
+
+        client_id = session.selection_map.get(msg)
+        if client_id:
+            if db is None or self._client_service is None:
+                return self.CLIENT_INVALID_SELECTION
+            client = await self._client_service.get_client(
+                db, tenant_id, UUID(client_id)
+            )
+            if client:
+                reply = self._format_client_detail(client)
+                if session_service is not None:
+                    session.selected_tenant_id = client_id
+                    session.step = self.CLIENTS_STEP_DETAIL_ACTION
+                    await session_service.save_session(session)
+                return reply
+        return self.CLIENT_INVALID_SELECTION
 
     async def _handle_client_detail_action(
         self,

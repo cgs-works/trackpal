@@ -12,6 +12,7 @@ interfaces.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -77,63 +78,81 @@ class FakeManager:
 # -------------------------------------------------------------------
 
 
+@dataclass
+class FakeClientObj:
+    """Object returned by FakeClientService, supporting attribute access."""
+
+    id: UUID
+    tenant_id: UUID
+    full_name: str
+    phone: str | None = None
+    is_active: bool = True
+    created_at: Any = None
+    local_username: str | None = None
+
+    @property
+    def user(self) -> SimpleNamespace:
+        return SimpleNamespace(username=self.local_username or "")
+
+
 class FakeClientService:
     """In-memory double for ``ClientServiceProtocol``."""
 
     def __init__(self) -> None:
-        self._clients: dict[str, dict[str, Any]] = {}
+        self._clients: dict[str, FakeClientObj] = {}
 
     async def list_clients(
         self, db: Any, tenant_id: UUID
-    ) -> list[Any]:
+    ) -> list[FakeClientObj]:
         return list(self._clients.values())
 
     async def get_client(
         self, db: Any, tenant_id: UUID, client_id: UUID
-    ) -> Any | None:
+    ) -> FakeClientObj | None:
         return self._clients.get(str(client_id))
 
     async def create_client(
         self, db: Any, tenant_id: UUID, payload: Any
-    ) -> Any:
+    ) -> FakeClientObj:
         client_id = uuid4()
-        obj = {
-            "id": client_id,
-            "tenant_id": tenant_id,
-            "full_name": payload.full_name,
-            "phone": getattr(payload, "phone", None),
-            "is_active": True,
-            "created_at": None,
-        }
+        obj = FakeClientObj(
+            id=client_id,
+            tenant_id=tenant_id,
+            full_name=payload.full_name,
+            phone=getattr(payload, "phone", None),
+            is_active=True,
+            created_at=None,
+            local_username=getattr(payload, "local_username", ""),
+        )
         self._clients[str(client_id)] = obj
         return obj
 
     async def update_client(
         self, db: Any, tenant_id: UUID, client_id: UUID, payload: Any
-    ) -> Any | None:
+    ) -> FakeClientObj | None:
         obj = self._clients.get(str(client_id))
         if obj is None:
             return None
         for key, value in payload.model_dump(exclude_none=True).items():
-            obj[key] = value
+            setattr(obj, key, value)
         return obj
 
     async def deactivate_client(
         self, db: Any, tenant_id: UUID, client_id: UUID
-    ) -> Any | None:
+    ) -> FakeClientObj | None:
         obj = self._clients.get(str(client_id))
         if obj is None:
             return None
-        obj["is_active"] = False
+        obj.is_active = False
         return obj
 
     async def activate_client(
         self, db: Any, tenant_id: UUID, client_id: UUID
-    ) -> Any | None:
+    ) -> FakeClientObj | None:
         obj = self._clients.get(str(client_id))
         if obj is None:
             return None
-        obj["is_active"] = True
+        obj.is_active = True
         return obj
 
     async def delete_client(
@@ -635,3 +654,94 @@ class TestServiceNoSession:
             message="1",
         )
         assert "Clientes" in reply
+
+
+# ===================================================================
+# Client selection flow tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestClientSelect:
+    """Client selection from numbered list with dedicated SELECT step."""
+
+    async def test_service_client_list_select_shows_detail(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        client_service: FakeClientService,
+    ) -> None:
+        """Selecting a client from the list shows its detail."""
+        tenant_id = uuid4()
+        client_id = uuid4()
+        client_service._clients[str(client_id)] = FakeClientObj(
+            id=client_id,
+            tenant_id=tenant_id,
+            full_name="Test Client",
+            phone="52123456789",
+            is_active=True,
+            created_at=None,
+            local_username="testclient",
+        )
+
+        # Start clients flow
+        reply = await console_service.process_message(
+            phone="+20000000001",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+        )
+        assert "Clientes" in reply
+
+        # Now show the list (press "1" on the clients submenu)
+        reply = await console_service.process_message(
+            phone="+20000000001",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db="fake",  # db needed for list_clients
+        )
+        assert "Test Client" in reply
+
+        # Session should be in CLIENTS_STEP_SELECT
+        session = await session_service.get_session("admin:+20000000001")
+        assert session is not None
+        assert session.step == "select"
+
+        # Now select client #1
+        reply = await console_service.process_message(
+            phone="+20000000001",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db="fake",
+        )
+        assert "Detalle" in reply or "Test Client" in reply
+        # Session should advance to detail_action
+        session = await session_service.get_session("admin:+20000000001")
+        assert session is not None
+        assert session.step == "detail_action"
+
+    async def test_service_client_select_zero_goes_back(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """'0' from client selection is intercepted by global reset."""
+        # Create session at SELECT step
+        session = await session_service.create_session("admin:+20000000002")
+        session.flow = "clients"
+        session.step = "select"
+        session.selection_map = {"1": str(uuid4())}
+        await session_service.save_session(session)
+
+        reply = await console_service.process_message(
+            phone="+20000000002",
+            message="0",
+            session_service=session_service,
+        )
+        # Global reset intercepts '0' on any active flow → cancel
+        assert "cancelada" in reply.lower() or "Consola de Administración" in reply
+        # Session is cleared by global reset
+        session = await session_service.get_session("admin:+20000000002")
+        assert session is None
