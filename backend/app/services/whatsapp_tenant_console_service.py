@@ -790,7 +790,7 @@ class WhatsAppTenantConsoleService:
             reply += "\n\n" + self.CLIENT_SELECT_PROMPT
             if session_service is not None:
                 session.flow = self.CLIENTS_FLOW
-                session.step = self.CLIENTS_STEP_SELECT
+                session.step = self.CLIENTS_STEP_LIST
                 session.selection_map = selection_map
                 await session_service.save_session(session)
             return reply
@@ -808,11 +808,7 @@ class WhatsAppTenantConsoleService:
                 if client:
                     reply = self._format_client_detail(client)
                     if session_service is not None:
-                        session.step = self.CLIENTS_STEP_DETAIL
                         session.selected_tenant_id = client_id
-                        await session_service.save_session(session)
-                    # Next message routes to detail action
-                    if session_service is not None:
                         session.step = self.CLIENTS_STEP_DETAIL_ACTION
                         await session_service.save_session(session)
                     return reply

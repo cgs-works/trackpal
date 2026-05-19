@@ -31,11 +31,6 @@ UNKNOWN_PHONE_REPLY = (
     "El número de teléfono no está registrado en el sistema."
 )
 
-CLIENT_ROLE_REJECTION = (
-    "❌ Esta consola es solo para administradores. "
-    "Los usuarios con rol de cliente no pueden usar esta consola."
-)
-
 TENANT_CONSOLE_PLACEHOLDER = (
     "🤖 *Trackpal Consola de Administración*\n\n"
     "Bienvenido a la consola de administración para tu tenant.\n\n"
@@ -237,8 +232,8 @@ async def whatsapp_console(
             db=db,
         )
 
-    # Client role — rejected
-    return WhatsAppConsoleResponse(reply=CLIENT_ROLE_REJECTION)
+    # Unknown role — treat as no-access
+    return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
 
 async def _handle_master_console(
