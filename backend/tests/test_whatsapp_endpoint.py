@@ -139,8 +139,12 @@ async def test_tenant_phone_returns_tenant_console(client, active_tenant_user):
     assert "Consola de Administración" in reply or "No entendí" in reply or "opción del menú" in reply
 
 
-async def test_client_phone_returns_admin_only_rejection(client, active_client_user):
-    """Client phone + Redis available → admin-only rejection."""
+async def test_client_phone_returns_no_access(client, active_client_user):
+    """Client phone + Redis available → no-access reply.
+
+    Clients are not identified by phone (per Issue 3 fix), so they
+    fall through as ``unknown`` and receive the no-access reply.
+    """
     fake_mgr = _FakeManager(used_backup=False)
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
@@ -152,8 +156,8 @@ async def test_client_phone_returns_admin_only_rejection(client, active_client_u
     body = response.json()
     assert "reply" in body
     reply = body["reply"].lower()
-    # Must be an admin-only rejection, not a login prompt
-    assert "solo para administradores" in reply
+    # Must be the no-access reply, not a login prompt
+    assert "no tienes acceso" in reply or "no está registrado" in reply
 
 
 async def test_master_phone_returns_state_unavailable_when_redis_missing(client, master_user):

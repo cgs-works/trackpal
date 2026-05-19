@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis_client import RedisUnavailableError
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
+from app.services.whatsapp_session_service import WhatsAppSessionService
 from app.services.tenant_console_protocols import (
     CatalogServiceProtocol,
     ClientServiceProtocol,
@@ -544,7 +545,7 @@ class WhatsAppTenantConsoleService:
         tenant_id: UUID | None = None,
         user_id: UUID | None = None,
         db: AsyncSession | None = None,
-        session_service=None,
+        session_service: WhatsAppSessionService | None = None,
     ) -> str:
         """Process a WhatsApp message and return the reply text.
 
@@ -636,8 +637,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         user_id: UUID | None,
         db: AsyncSession | None,
@@ -753,19 +754,27 @@ class WhatsAppTenantConsoleService:
     async def _start_clients_flow(
         self,
         phone: str,
-        session_service,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
         """Start the clients sub-menu."""
+        if session_service is not None:
+            session = await session_service.get_session(f"admin:{phone}")
+            if session is None:
+                session = await session_service.create_session(f"admin:{phone}")
+            session.flow = self.CLIENTS_FLOW
+            session.step = self.CLIENTS_STEP_LIST
+            session.temp_data = {}
+            await session_service.save_session(session)
         return self.CLIENTS_MENU
 
     async def _handle_client_list_selection(
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -813,8 +822,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -872,7 +881,7 @@ class WhatsAppTenantConsoleService:
     async def _start_client_create(
         self,
         phone: str,
-        session_service,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         if session_service is not None:
             session = await session_service.get_session(f"admin:{phone}")
@@ -888,8 +897,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         name = msg.strip()
         if not name:
@@ -904,8 +913,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         stripped = msg.strip()
         if not stripped or stripped.lower() in self.CLIENT_SKIP_WORDS:
@@ -926,8 +935,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         username = msg.strip()
         if not username:
@@ -942,8 +951,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         password = msg.strip()
         if len(password) < 6:
@@ -963,8 +972,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1027,8 +1036,8 @@ class WhatsAppTenantConsoleService:
     async def _start_client_edit(
         self,
         phone: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         session.flow = self.CLIENTS_FLOW
         session.step = self.CLIENTS_STEP_EDIT_FIELD
@@ -1041,8 +1050,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         if msg == "0":
             if session_service is not None:
@@ -1061,8 +1070,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1098,8 +1107,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1122,8 +1131,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1153,7 +1162,7 @@ class WhatsAppTenantConsoleService:
     async def _start_catalog_flow(
         self,
         phone: str,
-        session_service,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1186,8 +1195,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1215,8 +1224,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1254,8 +1263,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1284,8 +1293,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1331,8 +1340,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1364,8 +1373,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1398,19 +1407,27 @@ class WhatsAppTenantConsoleService:
     async def _start_profile_flow(
         self,
         phone: str,
-        session_service,
+        session_service: WhatsAppSessionService | None,
         user_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
         """Start the profile sub-menu."""
+        if session_service is not None:
+            session = await session_service.get_session(f"admin:{phone}")
+            if session is None:
+                session = await session_service.create_session(f"admin:{phone}")
+            session.flow = self.PROFILE_FLOW
+            session.step = self.PROFILE_STEP_ACTION
+            session.temp_data = {}
+            await session_service.save_session(session)
         return self.PROFILE_MENU
 
     async def _handle_profile_action(
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         user_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1430,7 +1447,7 @@ class WhatsAppTenantConsoleService:
     async def _show_profile(
         self,
         phone: str,
-        session_service,
+        session_service: WhatsAppSessionService | None,
         user_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1448,8 +1465,8 @@ class WhatsAppTenantConsoleService:
     async def _start_profile_edit(
         self,
         phone: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         session.flow = self.PROFILE_FLOW
         session.step = self.PROFILE_STEP_EDIT_FIELD
@@ -1462,8 +1479,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         if msg == "0":
             await session_service.clear_session(f"admin:{phone}")
@@ -1481,8 +1498,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         user_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1509,8 +1526,8 @@ class WhatsAppTenantConsoleService:
     async def _start_profile_change_password(
         self,
         phone: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
     ) -> str:
         session.flow = self.PROFILE_FLOW
         session.step = self.PROFILE_STEP_CHANGE_PASSWORD_OLD
@@ -1523,8 +1540,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         user_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
@@ -1541,8 +1558,8 @@ class WhatsAppTenantConsoleService:
         self,
         phone: str,
         msg: str,
-        session,
-        session_service,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
         user_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
