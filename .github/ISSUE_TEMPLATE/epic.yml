@@ -5,11 +5,6 @@ labels: [epic]
 projects: []
 assignees: []
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Use for tracking large bodies of work. An epic should have a clear
-        goal, defined scope, and link to child issues.
 
   - type: textarea
     id: goal

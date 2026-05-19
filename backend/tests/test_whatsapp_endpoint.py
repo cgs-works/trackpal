@@ -106,8 +106,8 @@ async def test_wrong_api_key_returns_401(client):
     assert "Invalid API Key" in response.json()["detail"]
 
 
-async def test_unknown_phone_returns_login_prompt_with_redis(client):
-    """Phone not found + Redis available → login prompt, not access denied."""
+async def test_unknown_phone_returns_no_access_reply(client):
+    """Phone not found + Redis available → no-access reply, not login prompt."""
     fake_mgr = _FakeManager(used_backup=False)
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
@@ -119,25 +119,45 @@ async def test_unknown_phone_returns_login_prompt_with_redis(client):
     body = response.json()
     assert "reply" in body
     reply = body["reply"].lower()
-    # Must be a login prompt, not access denied
-    assert "usuario" in reply or "iniciar sesión" in reply or "inicio de sesión" in reply
+    # Must be a no-access reply, not a login prompt
+    assert "no tienes acceso" in reply or "no está registrado" in reply
 
-
-async def test_tenant_phone_returns_login_prompt_with_redis(client, active_tenant_user):
-    """Tenant phone + Redis available → login prompt, not access denied."""
+async def test_tenant_phone_returns_tenant_console(client, active_tenant_user):
+    """Tenant phone + Redis available → tenant console reply, not login prompt."""
     fake_mgr = _FakeManager(used_backup=False)
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
-            json={"phone": "+20000000000", "message": "hola"},
+            json={"phone": "+12015550002", "message": "hola"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Must be the tenant console (main menu or fallback), not the login prompt
+    assert "Consola de Administración" in reply or "No entendí" in reply or "opción del menú" in reply
+
+
+async def test_client_phone_returns_no_access(client, active_client_user):
+    """Client phone + Redis available → no-access reply.
+
+    Clients are not identified by phone (per Issue 3 fix), so they
+    fall through as ``unknown`` and receive the no-access reply.
+    """
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550030", "message": "hola"},
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200
     body = response.json()
     assert "reply" in body
     reply = body["reply"].lower()
-    # Must be a login prompt, not access denied
-    assert "usuario" in reply or "iniciar sesión" in reply or "inicio de sesión" in reply
+    # Must be the no-access reply, not a login prompt
+    assert "no tienes acceso" in reply or "no está registrado" in reply
 
 
 async def test_master_phone_returns_state_unavailable_when_redis_missing(client, master_user):
@@ -477,8 +497,8 @@ async def test_redis_unavailable_error_returns_temporary_unavailable(client, mas
     assert "no disponible" in response.json()["reply"].lower()
 
 
-async def test_non_master_returns_login_prompt_when_redis_healthy(client, active_tenant_user):
-    """Non-master phone + Redis healthy → login prompt, not access denied."""
+async def test_unknown_phone_returns_no_access_when_redis_healthy(client, active_tenant_user):
+    """Unknown phone + Redis healthy → no-access reply, not login prompt."""
     fake_mgr = _FakeManager(fail_on_execute=False)
     with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
@@ -488,9 +508,8 @@ async def test_non_master_returns_login_prompt_when_redis_healthy(client, active
         )
     assert response.status_code == 200
     reply = response.json()["reply"].lower()
-    # Must be a login prompt (no identity check happens anymore)
-    assert "usuario" in reply or "iniciar sesión" in reply or "inicio de sesión" in reply
-
+    # Must be a no-access reply, not a login prompt
+    assert "no tienes acceso" in reply or "no está registrado" in reply
 
 # ---------------------------------------------------------------------------
 # Multi-instance invariance tests — instance must not influence auth
