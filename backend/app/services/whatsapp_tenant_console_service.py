@@ -533,6 +533,16 @@ class WhatsAppTenantConsoleService:
             f"*Teléfono:* {profile.phone or '—'}\n"
         )
 
+    @staticmethod
+    def _safe_uuid(value: str | None) -> UUID | None:
+        """Convert *value* to ``UUID`` or return ``None`` on failure."""
+        if value is None:
+            return None
+        try:
+            return UUID(value)
+        except (ValueError, AttributeError):
+            return None
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -808,7 +818,10 @@ class WhatsAppTenantConsoleService:
             if client_id:
                 if db is None or self._client_service is None:
                     return self.CLIENT_INVALID_SELECTION
-                client = await self._client_service.get_client(db, tenant_id, UUID(client_id))
+                parsed_id = self._safe_uuid(client_id)
+                if parsed_id is None:
+                    return self.CLIENT_INVALID_SELECTION
+                client = await self._client_service.get_client(db, tenant_id, parsed_id)
                 if client:
                     reply = self._format_client_detail(client)
                     if session_service is not None:
@@ -830,23 +843,17 @@ class WhatsAppTenantConsoleService:
         """Handle client selection from the numbered list (CLIENTS_STEP_SELECT).
 
         Only does selection_map lookup — no menu command checks.
+        '0' is handled by the global reset in process_message().
         """
-        if msg == "0":
-            # Go back to clients menu
-            if session_service is not None:
-                session.flow = self.CLIENTS_FLOW
-                session.step = self.CLIENTS_STEP_LIST
-                session.selection_map = {}
-                session.temp_data = {}
-                await session_service.save_session(session)
-            return self.CLIENTS_MENU
-
         client_id = session.selection_map.get(msg)
         if client_id:
             if db is None or self._client_service is None:
                 return self.CLIENT_INVALID_SELECTION
+            parsed_id = self._safe_uuid(client_id)
+            if parsed_id is None:
+                return self.CLIENT_INVALID_SELECTION
             client = await self._client_service.get_client(
-                db, tenant_id, UUID(client_id)
+                db, tenant_id, parsed_id
             )
             if client:
                 reply = self._format_client_detail(client)
@@ -871,6 +878,10 @@ class WhatsAppTenantConsoleService:
         if not client_id:
             return self.CLIENT_INVALID_SELECTION
 
+        parsed_id = self._safe_uuid(client_id)
+        if parsed_id is None:
+            return self.CLIENT_INVALID_SELECTION
+
         if msg == "1":
             # Edit flow
             return await self._start_client_edit(phone, session, session_service)
@@ -878,7 +889,7 @@ class WhatsAppTenantConsoleService:
             # Deactivate or reactivate
             if db is None or self._client_service is None:
                 return self.CLIENT_INVALID_SELECTION
-            client = await self._client_service.get_client(db, tenant_id, UUID(client_id))
+            client = await self._client_service.get_client(db, tenant_id, parsed_id)
             if client is None:
                 return self.CLIENT_INVALID_SELECTION
             if client.is_active:
@@ -889,7 +900,7 @@ class WhatsAppTenantConsoleService:
                 return self.CLIENT_DEACTIVATE_CONFIRM_TEMPLATE.format(name=client.full_name)
             else:
                 # Reactivate immediately
-                await self._client_service.activate_client(db, tenant_id, UUID(client_id))
+                await self._client_service.activate_client(db, tenant_id, parsed_id)
                 if session_service is not None:
                     await session_service.clear_session(f"admin:{phone}")
                 return self._with_main_menu(
@@ -899,7 +910,7 @@ class WhatsAppTenantConsoleService:
             # Delete
             if db is None or self._client_service is None:
                 return self.CLIENT_INVALID_SELECTION
-            client = await self._client_service.get_client(db, tenant_id, UUID(client_id))
+            client = await self._client_service.get_client(db, tenant_id, parsed_id)
             if client is None:
                 return self.CLIENT_INVALID_SELECTION
             if client.is_active:
@@ -1119,12 +1130,15 @@ class WhatsAppTenantConsoleService:
         client_id = session.selected_tenant_id
         if not client_id or tenant_id is None or db is None or self._client_service is None:
             return "❌ No se pudo actualizar el cliente."
+        parsed_id = self._safe_uuid(client_id)
+        if parsed_id is None:
+            return "❌ No se pudo actualizar el cliente."
 
         from app.schemas.client import ClientUpdate
         payload = ClientUpdate(**{field: new_value})
         try:
             client = await self._client_service.update_client(
-                db, tenant_id, UUID(client_id), payload
+                db, tenant_id, parsed_id, payload
             )
         except ValueError as exc:
             return "❌ " + str(exc)
@@ -1157,7 +1171,10 @@ class WhatsAppTenantConsoleService:
         client_id = session.selected_tenant_id
         if not client_id or tenant_id is None or db is None or self._client_service is None:
             return "❌ No se pudo desactivar el cliente."
-        client = await self._client_service.deactivate_client(db, tenant_id, UUID(client_id))
+        parsed_id = self._safe_uuid(client_id)
+        if parsed_id is None:
+            return "❌ No se pudo desactivar el cliente."
+        client = await self._client_service.deactivate_client(db, tenant_id, parsed_id)
         if client is None:
             return "❌ Cliente no encontrado."
         if session_service is not None:
@@ -1181,11 +1198,14 @@ class WhatsAppTenantConsoleService:
         client_id = session.selected_tenant_id
         if not client_id or tenant_id is None or db is None or self._client_service is None:
             return "❌ No se pudo eliminar el cliente."
+        parsed_id = self._safe_uuid(client_id)
+        if parsed_id is None:
+            return "❌ No se pudo eliminar el cliente."
         client_name = client_id  # fallback
-        client = await self._client_service.get_client(db, tenant_id, UUID(client_id))
+        client = await self._client_service.get_client(db, tenant_id, parsed_id)
         if client:
             client_name = client.full_name
-        deleted = await self._client_service.delete_client(db, tenant_id, UUID(client_id))
+        deleted = await self._client_service.delete_client(db, tenant_id, parsed_id)
         if not deleted:
             return "❌ No se pudo eliminar el cliente."
         if session_service is not None:
@@ -1246,7 +1266,10 @@ class WhatsAppTenantConsoleService:
         service_id = session.selection_map.get(msg)
         if not service_id or tenant_id is None or db is None or self._catalog_service is None:
             return self.CATALOG_INVALID_SELECTION
-        service = await self._catalog_service.get_service(db, tenant_id, UUID(service_id))
+        parsed_id = self._safe_uuid(service_id)
+        if parsed_id is None:
+            return self.CATALOG_INVALID_SELECTION
+        service = await self._catalog_service.get_service(db, tenant_id, parsed_id)
         if service is None:
             return self.CATALOG_INVALID_SELECTION
         session.flow = self.CATALOG_FLOW
@@ -1282,7 +1305,10 @@ class WhatsAppTenantConsoleService:
             # View plans
             if tenant_id is None or db is None or self._catalog_service is None:
                 return self.CATALOG_NO_PLANS
-            plans = await self._catalog_service.list_plans(db, tenant_id, UUID(service_id))
+            parsed_id = self._safe_uuid(service_id)
+            if parsed_id is None:
+                return self.CATALOG_INVALID_SELECTION
+            plans = await self._catalog_service.list_plans(db, tenant_id, parsed_id)
             if not plans:
                 return self._with_main_menu(self.CATALOG_NO_PLANS)
             reply, selection_map = self._format_plan_list(plans)
@@ -1313,10 +1339,13 @@ class WhatsAppTenantConsoleService:
         service_id = session.selected_tenant_id
         if not service_id or tenant_id is None or db is None or self._catalog_service is None:
             return "❌ No se pudo actualizar el servicio."
+        parsed_id = self._safe_uuid(service_id)
+        if parsed_id is None:
+            return "❌ No se pudo actualizar el servicio."
         from app.schemas.catalog import ServiceUpdate
         try:
             service = await self._catalog_service.update_service(
-                db, tenant_id, UUID(service_id), ServiceUpdate(name=name)
+                db, tenant_id, parsed_id, ServiceUpdate(name=name)
             )
         except ValueError as exc:
             return "❌ " + str(exc)
@@ -1357,8 +1386,12 @@ class WhatsAppTenantConsoleService:
         service_id = session.selected_tenant_id
         if service_id is None:
             return self.CATALOG_INVALID_SELECTION
+        parsed_service_id = self._safe_uuid(service_id)
+        parsed_plan_id = self._safe_uuid(plan_id)
+        if parsed_service_id is None or parsed_plan_id is None:
+            return self.CATALOG_INVALID_SELECTION
         plan = await self._catalog_service.get_plan(
-            db, tenant_id, UUID(service_id), UUID(plan_id)
+            db, tenant_id, parsed_service_id, parsed_plan_id
         )
         if plan is None:
             return self.CATALOG_INVALID_SELECTION
@@ -1424,10 +1457,14 @@ class WhatsAppTenantConsoleService:
         service_id = session.temp_data.get("service_id")
         if not plan_id or not service_id or tenant_id is None or db is None or self._catalog_service is None:
             return "❌ No se pudo actualizar el plan."
+        parsed_service_id = self._safe_uuid(service_id)
+        parsed_plan_id = self._safe_uuid(plan_id)
+        if parsed_service_id is None or parsed_plan_id is None:
+            return "❌ No se pudo actualizar el plan."
         from app.schemas.catalog import PlanUpdate
         try:
             plan = await self._catalog_service.update_plan(
-                db, tenant_id, UUID(service_id), UUID(plan_id), PlanUpdate(name=name)
+                db, tenant_id, parsed_service_id, parsed_plan_id, PlanUpdate(name=name)
             )
         except ValueError as exc:
             return "❌ " + str(exc)
