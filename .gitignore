@@ -2,3 +2,6 @@
 NUL
 .ace-tool/
 /.codegraph
+specs/README.md
+specs/TEMPLATE.md
+TODOs.md
