@@ -9,7 +9,6 @@ This facade follows the same orchestration pattern as
 ``WhatsAppMasterConsoleFacade`` but omits:
 - Credential-based login flows (tenant admins are auto-authed by phone)
 - Lockout / ``WhatsAppAuthSessionService``
-- Evolution-chat close on exit
 """
 
 from __future__ import annotations
@@ -18,9 +17,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.phone import normalize_phone
 from app.services.auth_service import AuthService
+from app.services.evolution_client import evolution_client
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
@@ -41,8 +43,7 @@ INACTIVE_TENANT_REPLY = (
 )
 
 TENANT_NOT_FOUND_REPLY = (
-    "❌ No se encontró un tenant asociado a tu cuenta. "
-    "Contacta al Master de Trackpal."
+    "❌ No se encontró un tenant asociado a tu cuenta. Contacta al Master de Trackpal."
 )
 
 GOODBYE_REPLY = (
@@ -83,6 +84,7 @@ class WhatsAppTenantConsoleFacade:
         message: str,
         identity: dict[str, Any],
         *,
+        instance: str | None = None,
         db: AsyncSession | None = None,
     ) -> str:
         """Process a WhatsApp message for a tenant admin.
@@ -93,6 +95,8 @@ class WhatsAppTenantConsoleFacade:
             identity: Pre-resolved identity dict from
                 ``AuthService.identify_by_phone()`` with keys
                 ``user_id``, ``role``, ``username``.
+            instance: Optional Evolution API instance name for context.
+                      Used to close the chat session on top-level exit.
             db: Database session (required for tenant resolution).
 
         Returns:
@@ -134,15 +138,10 @@ class WhatsAppTenantConsoleFacade:
                 )
             elif self._session_service.used_backup:
                 # Failover: session may be missing on backup
-                return self._console_service._with_main_menu(
-                    "🚫 Operación cancelada."
-                )
+                return self._console_service._with_main_menu("🚫 Operación cancelada.")
             else:
-                # Top-level → clear session and goodbye
-                await self._session_service.clear_session(
-                    self._admin_phone_key(phone)
-                )
-                return GOODBYE_REPLY
+                # Top-level → clear session, close Evolution chat, and goodbye
+                return await self._perform_exit(phone=phone, instance=instance)
 
         # 4. Delegate to the tenant console service
         return await self._console_service.process_message(
@@ -153,6 +152,38 @@ class WhatsAppTenantConsoleFacade:
             db=db,
             session_service=self._session_service,
         )
+
+    # ------------------------------------------------------------------
+    # Exit
+    # ------------------------------------------------------------------
+
+    async def _perform_exit(self, phone: str, instance: str | None) -> str:
+        """Perform a top-level exit and close Evolution chat when possible."""
+        await self._session_service.clear_session(self._admin_phone_key(phone))
+
+        if instance is not None:
+            digits = normalize_phone(phone)
+            if digits:
+                remote_jid = f"{digits}@s.whatsapp.net"
+                try:
+                    await evolution_client.close_chat_session(
+                        instance=instance,
+                        remote_jid=remote_jid,
+                    )
+                except httpx.HTTPError:
+                    logger.warning(
+                        "Evolution API call failed during tenant exit for phone=%s instance=%s",
+                        phone,
+                        instance,
+                        exc_info=True,
+                    )
+            else:
+                logger.warning(
+                    "Cannot close Evolution session: normalize_phone returned no digits for phone=%s",
+                    phone,
+                )
+
+        return GOODBYE_REPLY
 
     # ------------------------------------------------------------------
     # Helpers

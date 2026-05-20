@@ -101,9 +101,7 @@ class FakeClientService:
     def __init__(self) -> None:
         self._clients: dict[str, FakeClientObj] = {}
 
-    async def list_clients(
-        self, db: Any, tenant_id: UUID
-    ) -> list[FakeClientObj]:
+    async def list_clients(self, db: Any, tenant_id: UUID) -> list[FakeClientObj]:
         return list(self._clients.values())
 
     async def get_client(
@@ -155,9 +153,7 @@ class FakeClientService:
         obj.is_active = True
         return obj
 
-    async def delete_client(
-        self, db: Any, tenant_id: UUID, client_id: UUID
-    ) -> bool:
+    async def delete_client(self, db: Any, tenant_id: UUID, client_id: UUID) -> bool:
         return self._clients.pop(str(client_id), None) is not None
 
 
@@ -180,9 +176,7 @@ class FakeCatalogService:
         self._services: dict[str, FakeServiceObj] = {}
         self._plans: dict[str, FakePlanObj] = {}
 
-    async def list_services(
-        self, db: Any, tenant_id: UUID
-    ) -> list[FakeServiceObj]:
+    async def list_services(self, db: Any, tenant_id: UUID) -> list[FakeServiceObj]:
         return list(self._services.values())
 
     async def get_service(
@@ -273,9 +267,7 @@ class FakeTenantService:
         self._tenants: dict[str, FakeTenantObj] = {}
         self._default_tenant = FakeTenantObj()
 
-    async def get_tenant(
-        self, db: Any, user_id: UUID
-    ) -> FakeTenantObj | None:
+    async def get_tenant(self, db: Any, user_id: UUID) -> FakeTenantObj | None:
         return self._default_tenant
 
     def set_active(self, active: bool) -> None:
@@ -421,6 +413,39 @@ class TestFacade:
             db=object(),
         )
         assert reply == GOODBYE_REPLY
+
+    async def test_facade_top_level_zero_closes_evolution_session(
+        self,
+        facade: WhatsAppTenantConsoleFacade,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Top-level '0' closes the Evolution chat session when instance is present."""
+        calls: list[dict[str, str]] = []
+
+        async def fake_close_chat_session(instance: str, remote_jid: str) -> None:
+            calls.append({"instance": instance, "remote_jid": remote_jid})
+
+        monkeypatch.setattr(
+            "app.services.whatsapp_tenant_console_facade.evolution_client.close_chat_session",
+            fake_close_chat_session,
+        )
+
+        identity = _tenant_identity(role="tenant")
+        reply = await facade.process_message(
+            phone="+10000000000",
+            message="0",
+            identity=identity,
+            instance="tenant-instance",
+            db=object(),
+        )
+
+        assert reply == GOODBYE_REPLY
+        assert calls == [
+            {
+                "instance": "tenant-instance",
+                "remote_jid": "10000000000@s.whatsapp.net",
+            }
+        ]
 
     async def test_facade_zero_with_active_flow_cancels(
         self,

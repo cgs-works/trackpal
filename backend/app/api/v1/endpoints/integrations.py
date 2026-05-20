@@ -326,6 +326,7 @@ async def _handle_tenant_console(
             phone=phone,
             message=message,
             identity=identity,
+            instance=instance,
             db=db,
         )
     except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
