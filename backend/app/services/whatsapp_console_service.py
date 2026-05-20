@@ -57,14 +57,14 @@ class WhatsAppConsoleService:
         "0️⃣ *Cerrar sesión* — Cierra tu sesión en la consola Master.\n\n"
         "En el menú principal, escribe *0* para cerrar sesión.\n"
         "Dentro de un flujo, *0* o *cancelar* cancelan la operación.\n"
-        "Escribe *menu* para volver al menú principal."
+        "Escribe */menu* para volver al menú principal."
     )
 
     FALLBACK_NO_FLOW = (
         "❌ No entendí tu mensaje.\n\n"
         "Responde con:\n"
         "• Un número del *1* al *5* para elegir una opción del menú\n"
-        "• *menu* para volver al menú principal\n"
+        "• *menu* o */menu* para volver al menú principal\n"
         "• *0* para cerrar sesión\n"
         "• *ayuda* para ver los comandos disponibles"
     )
@@ -76,7 +76,7 @@ class WhatsAppConsoleService:
         "principal."
     )
 
-    RESET_COMMANDS = {"0", "menu", "menú", "cancelar"}
+    RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
     HELP_COMMANDS = {"5", "ayuda"}
 
     # Flow identifiers

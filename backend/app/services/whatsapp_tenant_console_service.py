@@ -64,14 +64,14 @@ class WhatsAppTenantConsoleService:
         "0️⃣ *Salir* — Cierra la sesión de la consola.\n\n"
         "En el menú principal, escribe *0* para salir.\n"
         "Dentro de un flujo, *0* o *cancelar* cancelan la operación.\n"
-        "Escribe *menu* para volver al menú principal."
+        "Escribe *menu* o */menu* para volver al menú principal."
     )
 
     FALLBACK_NO_FLOW = (
         "❌ No entendí tu mensaje.\n\n"
         "Responde con:\n"
         "• Un número del *1* al *4* para elegir una opción del menú\n"
-        "• *menu* para volver al menú principal\n"
+        "• *menu* o */menu* para volver al menú principal\n"
         "• *0* para salir\n"
         "• *ayuda* para ver los comandos disponibles"
     )
@@ -83,7 +83,7 @@ class WhatsAppTenantConsoleService:
         "principal."
     )
 
-    RESET_COMMANDS = {"0", "menu", "menú", "cancelar"}
+    RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
     HELP_COMMANDS = {"4", "ayuda"}
 
     # -- Flow identifiers -------------------------------------------------

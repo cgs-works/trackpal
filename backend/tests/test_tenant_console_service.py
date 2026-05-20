@@ -489,6 +489,19 @@ class TestServiceMainMenu:
         )
         assert "Trackpal Consola de Administración" in reply
 
+    @pytest.mark.parametrize("cmd", ["menu", "/menu", "MENU", "/MENU"])
+    async def test_service_menu_commands_return_main_menu(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        cmd: str,
+    ) -> None:
+        """Menu commands without active flow return main menu."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message=cmd,
+        )
+        assert "Trackpal Consola de Administración" in reply
+
     async def test_service_clients_menu(
         self,
         console_service: WhatsAppTenantConsoleService,
@@ -647,6 +660,31 @@ class TestZeroHandling:
         assert "cancelada" in reply.lower() or "Consola de Administración" in reply
 
         # Session should be cleared
+        fetched = await session_service.get_session("admin:+10000000000")
+        assert fetched is None
+
+    @pytest.mark.parametrize(
+        "cmd", ["menu", "menú", "/menu", "MENU", "/MENU", "/Menu", "cancelar"]
+    )
+    async def test_service_reset_commands_cancel_flow(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        cmd: str,
+    ) -> None:
+        """Various menu/reset commands inside clients flow cancel and clear session."""
+        session = await session_service.create_session("admin:+10000000000")
+        session.flow = "clients"
+        session.step = "list"
+        await session_service.save_session(session)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message=cmd,
+            session_service=session_service,
+        )
+        assert "cancelada" in reply.lower() or "Consola de Administración" in reply
+
         fetched = await session_service.get_session("admin:+10000000000")
         assert fetched is None
 

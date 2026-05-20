@@ -63,7 +63,7 @@ ROLE_NOT_ALLOWED = (
 LOGOUT_CONFIRMATION = (
     "🔒 *Sesión cerrada*\n\n"
     "Has cerrado sesión en la consola Master.\n\n"
-    "Escribe *menu* para iniciar sesión de nuevo."
+    "Escribe */menu* para iniciar sesión de nuevo."
 )
 
 LOCKOUT_TEMPLATE = (
@@ -77,7 +77,7 @@ LOGIN_HELP = (
     "Para acceder a la consola Master, debes iniciar sesión "
     "con tu nombre de usuario y contraseña.\n\n"
     "Comandos disponibles:\n"
-    "• *0* o *menu* o *cancelar* — Volver al inicio de sesión\n"
+    "• *0* o *menu* o */menu* o *cancelar* — Volver al inicio de sesión\n"
     "• *ayuda* o *5* — Mostrar esta ayuda"
 )
 
@@ -89,7 +89,7 @@ AUTH_FLOW = "auth"
 AUTH_STEP_USERNAME = "username"
 AUTH_STEP_PASSWORD = "password"
 
-RESET_COMMANDS = {"0", "menu", "menú", "cancelar"}
+RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
 HELP_COMMANDS = {"5", "ayuda"}
 
 

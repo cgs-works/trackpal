@@ -1051,17 +1051,17 @@ class TestUsernameStep:
             session_service=session_service,
         )
 
-    async def test_username_slash_menu_rejected(
+    async def test_username_slash_invalid_rejected(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """REGRESSION: '/menu' must be rejected as username, stay on step."""
+        """REGRESSION: '/invalid' must be rejected as username, stay on step."""
         await self._progress_to_username(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="/menu",
+            message="/invalid",
             is_master=True,
             session_service=session_service,
         )
@@ -1070,6 +1070,27 @@ class TestUsernameStep:
         assert session is not None
         assert session.step == "username"
         assert "username" not in session.temp_data
+
+    async def test_username_slash_menu_resets(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """REGRESSION: '/menu' is a global reset command; returns to menu
+        instead of being accepted as username."""
+        await self._progress_to_username(console_service, session_service)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="/menu",
+            is_master=True,
+            session_service=session_service,
+        )
+        # '/menu' triggers global reset, returns main menu
+        assert "Trackpal Master Console" in reply
+        # Session cleared
+        session = await session_service.get_session("+10000000000")
+        assert session is None
 
     async def test_username_zero_rejected(
         self,
@@ -1213,12 +1234,12 @@ class TestUsernameStep:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """REGRESSION: /menu is rejected by syntax validation, not stored."""
+        """REGRESSION: /invalid is rejected by syntax validation, not stored."""
         await self._progress_to_username(console_service, session_service)
 
         await console_service.process_message(
             phone="+10000000000",
-            message="/menu",
+            message="/invalid",
             is_master=True,
             session_service=session_service,
         )
@@ -1240,10 +1261,10 @@ class TestUsernameStep:
         """Invalid syntax must NOT trigger duplicate lookup."""
         await self._progress_to_username(console_service, session_service)
 
-        # '/menu' is syntactically invalid, not a duplicate
+        # '/invalid' is syntactically invalid, not a duplicate
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="/menu",
+            message="/invalid",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,

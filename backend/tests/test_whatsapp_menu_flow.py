@@ -200,6 +200,7 @@ class TestHelp:
         assert "Eliminar Tenant" in reply
         assert "cerrar sesión" in reply.lower() or "sesión" in reply.lower()
         assert "menu" in reply.lower()
+        assert "/menu" in reply.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +209,7 @@ class TestHelp:
 
 @pytest.mark.asyncio
 class TestResetCommands:
-    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "cancelar"])
+    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "/menu", "cancelar"])
     async def test_reset_returns_main_menu(
         self,
         console_service: WhatsAppConsoleService,
@@ -221,7 +222,7 @@ class TestResetCommands:
         )
         assert "Trackpal Master Console" in reply
 
-    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "cancelar"])
+    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "/menu", "cancelar"])
     async def test_reset_clears_session(
         self,
         console_service: WhatsAppConsoleService,
@@ -250,7 +251,7 @@ class TestResetCommands:
         fetched = await session_service.get_session("+10000000000")
         assert fetched is None
 
-    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "cancelar"])
+    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "/menu", "cancelar"])
     async def test_reset_without_session_service_does_not_raise(
         self,
         console_service: WhatsAppConsoleService,
@@ -265,7 +266,7 @@ class TestResetCommands:
         )
         assert "Trackpal Master Console" in reply
 
-    @pytest.mark.parametrize("cmd", ["MENU", "Menú", "CANCELAR"])
+    @pytest.mark.parametrize("cmd", ["MENU", "Menú", "/MENU", "/Menu", "CANCELAR"])
     async def test_reset_is_case_insensitive(
         self,
         console_service: WhatsAppConsoleService,
@@ -314,6 +315,7 @@ class TestFallbackNoFlow:
         assert "5" in reply
         assert "0" in reply
         assert "menu" in reply.lower()
+        assert "/menu" in reply.lower()
         assert "ayuda" in reply.lower()
 
 
