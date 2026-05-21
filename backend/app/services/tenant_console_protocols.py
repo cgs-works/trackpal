@@ -90,3 +90,73 @@ class CatalogServiceProtocol(Protocol):
         plan_id: UUID,
         payload: Any,
     ) -> Any | None: ...
+
+
+@runtime_checkable
+class SubscriptionServiceProtocol(Protocol):
+    """Minimal interface for tenant-scoped subscription CRUD operations.
+
+    Matches the subset of ``SubscriptionService`` methods that the tenant
+    WhatsApp console actually invokes.
+    """
+
+    async def list_subscriptions(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        status: str | None = None,
+        client_id: UUID | None = None,
+        service_id: UUID | None = None,
+        quick_filter: str | None = None,
+        expires_from=None,
+        expires_to=None,
+    ) -> list[Any]: ...
+
+    async def get_subscription(
+        self, db: AsyncSession, tenant_id: UUID, subscription_id: UUID
+    ) -> Any | None: ...
+
+    async def create_subscription(
+        self, db: AsyncSession, tenant_id: UUID, payload: Any
+    ) -> Any | None: ...
+
+    async def update_subscription(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        payload: Any,
+    ) -> Any | None: ...
+
+    async def cancel_subscription(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        notes: str | None = None,
+    ) -> Any | None: ...
+
+    async def reactivate_subscription(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        duration_type: str,
+        starts_at=None,
+        expires_at=None,
+        notes: str | None = None,
+    ) -> Any | None: ...
+
+    async def renew_subscription(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        duration_type: str,
+        expires_at=None,
+        notes: str | None = None,
+    ) -> Any | None: ...
+
+    async def reveal_credentials(
+        self, db: AsyncSession, tenant_id: UUID, subscription_id: UUID
+    ) -> dict | None: ...

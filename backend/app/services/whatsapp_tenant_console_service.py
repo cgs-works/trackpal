@@ -20,6 +20,7 @@ from app.services.whatsapp_session_service import WhatsAppSessionService
 from app.services.tenant_console_protocols import (
     CatalogServiceProtocol,
     ClientServiceProtocol,
+    SubscriptionServiceProtocol,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,8 @@ class WhatsAppTenantConsoleService:
         "1️⃣ Clientes\n"
         "2️⃣ Catálogo\n"
         "3️⃣ Mi Perfil\n"
-        "4️⃣ Ayuda\n\n"
+        "4️⃣ Suscripciones\n"
+        "5️⃣ Ayuda\n\n"
         "0️⃣ Salir\n\n"
         "Responde con el número de la opción deseada."
     )
@@ -60,7 +62,10 @@ class WhatsAppTenantConsoleService:
         "    • Ver datos de perfil\n"
         "    • Editar nombre, email o teléfono\n"
         "    • Cambiar contraseña\n"
-        "4️⃣ *Ayuda* — Muestra este mensaje.\n"
+        "4️⃣ *Suscripciones* — Gestiona las suscripciones de tus clientes.\n"
+        "    • Ver lista de suscripciones\n"
+        "    • Crear, editar, cancelar, renovar o reactivar suscripciones\n"
+        "5️⃣ *Ayuda* — Muestra este mensaje.\n"
         "0️⃣ *Salir* — Cierra la sesión de la consola.\n\n"
         "En el menú principal, escribe *0* para salir.\n"
         "Dentro de un flujo, *0* o *cancelar* cancelan la operación.\n"
@@ -70,7 +75,7 @@ class WhatsAppTenantConsoleService:
     FALLBACK_NO_FLOW = (
         "❌ No entendí tu mensaje.\n\n"
         "Responde con:\n"
-        "• Un número del *1* al *4* para elegir una opción del menú\n"
+        "• Un número del *1* al *5* para elegir una opción del menú\n"
         "• *menu* o */menu* para volver al menú principal\n"
         "• *0* para salir\n"
         "• *ayuda* para ver los comandos disponibles"
@@ -120,6 +125,37 @@ class WhatsAppTenantConsoleService:
     PROFILE_STEP_EDIT_VALUE = "edit_value"
     PROFILE_STEP_CHANGE_PASSWORD_OLD = "change_password_old"
     PROFILE_STEP_CHANGE_PASSWORD_NEW = "change_password_new"
+
+    SUBSCRIPTIONS_FLOW = "subscriptions"
+    SUBSCRIPTIONS_STEP_MENU = "menu"
+    SUBSCRIPTIONS_STEP_FILTER = "filter"
+    SUBSCRIPTIONS_STEP_LIST = "list"
+    SUBSCRIPTIONS_STEP_SELECT = "select"
+    SUBSCRIPTIONS_STEP_DETAIL = "detail"
+    SUBSCRIPTIONS_STEP_ACTION = "action"
+    SUBSCRIPTIONS_STEP_CREATE_CLIENT = "create_client"
+    SUBSCRIPTIONS_STEP_CREATE_SERVICE = "create_service"
+    SUBSCRIPTIONS_STEP_CREATE_PLAN = "create_plan"
+    SUBSCRIPTIONS_STEP_CREATE_EMAIL = "create_email"
+    SUBSCRIPTIONS_STEP_CREATE_PASSWORD = "create_password"
+    SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM = "create_password_confirm"
+    SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME = "create_profile_name"
+    SUBSCRIPTIONS_STEP_CREATE_PIN = "create_pin"
+    SUBSCRIPTIONS_STEP_CREATE_PIN_CONFIRM = "create_pin_confirm"
+    SUBSCRIPTIONS_STEP_CREATE_DURATION = "create_duration"
+    SUBSCRIPTIONS_STEP_CREATE_CUSTOM_DATE = "create_custom_date"
+    SUBSCRIPTIONS_STEP_CREATE_CONFIRM = "create_confirm"
+    SUBSCRIPTIONS_STEP_EDIT_FIELD = "edit_field"
+    SUBSCRIPTIONS_STEP_EDIT_VALUE = "edit_value"
+    SUBSCRIPTIONS_STEP_EDIT_PASSWORD_CONFIRM = "edit_password_confirm"
+    SUBSCRIPTIONS_STEP_EDIT_PIN_CONFIRM = "edit_pin_confirm"
+    SUBSCRIPTIONS_STEP_CANCEL_CONFIRM = "cancel_confirm"
+    SUBSCRIPTIONS_STEP_REACTIVATE_DURATION = "reactivate_duration"
+    SUBSCRIPTIONS_STEP_REACTIVATE_CUSTOM_DATE = "reactivate_custom_date"
+    SUBSCRIPTIONS_STEP_REACTIVATE_CONFIRM = "reactivate_confirm"
+    SUBSCRIPTIONS_STEP_RENEW_DURATION = "renew_duration"
+    SUBSCRIPTIONS_STEP_RENEW_CUSTOM_DATE = "renew_custom_date"
+    SUBSCRIPTIONS_STEP_RENEW_CONFIRM = "renew_confirm"
 
     # -- Client messages --------------------------------------------------
 
@@ -417,6 +453,330 @@ class WhatsAppTenantConsoleService:
         "✅ *Contraseña cambiada exitosamente.*"
     )
 
+    # -- Subscription messages --------------------------------------------
+
+    SUBSCRIPTIONS_MENU = (
+        "📺 *Suscripciones*\n\n"
+        "1️⃣ Ver suscripciones\n"
+        "2️⃣ Crear suscripción\n"
+        "0️⃣ Volver al menú principal"
+    )
+
+    SUBSCRIPTIONS_FILTER_PROMPT = (
+        "📊 *Filtrar por estado*\n\n"
+        "1️⃣ Activas\n"
+        "2️⃣ Expiradas\n"
+        "3️⃣ Canceladas\n"
+        "4️⃣ Todas\n"
+        "0️⃣ Volver"
+    )
+
+    SUBSCRIPTIONS_NO_RESULTS = "📭 No hay suscripciones en esta categoría."
+
+    SUBSCRIPTIONS_SELECT_PROMPT = (
+        "Responde con el número de la suscripción para ver sus detalles."
+    )
+
+    SUBSCRIPTION_DETAIL_ACTIONS = (
+        "*Acciones disponibles:*\n"
+        "1️⃣ Editar\n"
+        "2️⃣ Cancelar\n"
+        "3️⃣ Renovar\n"
+        "4️⃣ Reactivar (solo canceladas)\n"
+        "0️⃣ Volver"
+    )
+
+    SUBSCRIPTION_DETAIL_ACTIONS_ACTIVE = (
+        "*Acciones disponibles:*\n"
+        "1️⃣ Editar\n"
+        "2️⃣ Cancelar\n"
+        "3️⃣ Renovar\n"
+        "0️⃣ Volver"
+    )
+
+    # -- Create subscription prompts
+
+    SUBSCRIPTIONS_CREATE_CLIENT_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "Selecciona el *cliente* para la suscripción:\n\n"
+        "{client_list}\n\n"
+        "Responde con el número del cliente."
+    )
+
+    SUBSCRIPTIONS_CREATE_SERVICE_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "Selecciona el *servicio*:\n\n"
+        "{service_list}\n\n"
+        "Responde con el número del servicio."
+    )
+
+    SUBSCRIPTIONS_CREATE_PLAN_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "Selecciona el *plan*:\n\n"
+        "{plan_list}\n\n"
+        "Responde con el número del plan."
+    )
+
+    SUBSCRIPTIONS_CREATE_EMAIL_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "¿Cuál es el *email de streaming*?"
+    )
+
+    SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "¿Cuál es la *contraseña de streaming*?\n\n"
+        "(Opcional — escribe *—* para omitir)"
+    )
+
+    SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "Por seguridad, escribe *nuevamente* la contraseña de streaming."
+    )
+
+    SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH = (
+        "❌ Las contraseñas no coinciden. Intenta de nuevo.\n\n"
+        "(Escribe *—* para omitir contraseña)"
+    )
+
+    SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "¿Cuál es el *nombre del perfil*?\n\n"
+        "(Opcional — escribe *—* para omitir)"
+    )
+
+    SUBSCRIPTIONS_CREATE_PIN_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "¿Cuál es el *PIN del perfil*?\n\n"
+        "(Opcional — escribe *—* para omitir)\n\n"
+        "⚠️ El PIN requiere un nombre de perfil."
+    )
+
+    SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "Por seguridad, escribe *nuevamente* el PIN del perfil."
+    )
+
+    SUBSCRIPTIONS_CREATE_PIN_MISMATCH = (
+        "❌ Los PIN no coinciden. Intenta de nuevo.\n\n"
+        "(Escribe *—* para omitir PIN)"
+    )
+
+    SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE = (
+        "❌ No puedes establecer un PIN sin un nombre de perfil.\n\n"
+        "Primero escribe el nombre del perfil o escribe *—* para omitir el PIN."
+    )
+
+    SUBSCRIPTIONS_DURATION_PROMPT = (
+        "📅 *Duración*\n\n"
+        "Selecciona la duración:\n\n"
+        "1️⃣ 1 mes\n"
+        "2️⃣ 3 meses\n"
+        "3️⃣ 6 meses\n"
+        "4️⃣ 9 meses\n"
+        "5️⃣ 1 año\n"
+        "6️⃣ Personalizada\n"
+        "0️⃣ Volver"
+    )
+
+    SUBSCRIPTIONS_DURATION_MAP = {
+        "1": "1_month",
+        "2": "3_months",
+        "3": "6_months",
+        "4": "9_months",
+        "5": "1_year",
+        "6": "custom",
+    }
+
+    SUBSCRIPTIONS_CUSTOM_DATE_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "Escribe la *fecha de expiración* (YYYY-MM-DD)."
+    )
+
+    SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE = (
+        "📋 *Resumen de Creación*\n\n"
+        "*Cliente:* {client_name}\n"
+        "*Servicio:* {service_name}\n"
+        "*Plan:* {plan_name}\n"
+        "*Email:* {email}\n"
+        "*Contraseña:* {password}\n"
+        "*Perfil:* {profile_name}\n"
+        "*PIN:* {pin}\n"
+        "*Duración:* {duration_label}\n"
+        "*Inicio:* {starts_at}\n"
+        "*Expira:* {expires_at}\n\n"
+        "¿Todo está correcto? Escribe *CONFIRMAR* para crear la suscripción.\n"
+        "Escribe *0* para cancelar."
+    )
+
+    SUBSCRIPTIONS_CREATE_SUCCESS = (
+        "✅ *Suscripción creada exitosamente*"
+    )
+
+    # -- Edit prompts
+
+    SUBSCRIPTIONS_EDIT_FIELD_PROMPT = (
+        "✏️ *Editar Suscripción*\n\n"
+        "¿Qué campo deseas editar?\n\n"
+        "1️⃣ Cliente\n"
+        "2️⃣ Servicio\n"
+        "3️⃣ Plan\n"
+        "4️⃣ Email de streaming\n"
+        "5️⃣ Contraseña de streaming\n"
+        "6️⃣ Nombre del perfil\n"
+        "7️⃣ PIN del perfil\n"
+        "0️⃣ Volver"
+    )
+
+    SUBSCRIPTIONS_EDIT_FIELD_MAP = {
+        "1": "client",
+        "2": "service",
+        "3": "plan",
+        "4": "streaming_email",
+        "5": "streaming_password",
+        "6": "profile_name",
+        "7": "profile_pin",
+    }
+
+    SUBSCRIPTIONS_EDIT_PROMPTS = {
+        "streaming_email": (
+            "✏️ *Editar Suscripción*\n\n"
+            "¿Cuál es el *nuevo email de streaming*?"
+        ),
+        "streaming_password": (
+            "✏️ *Editar Suscripción*\n\n"
+            "¿Cuál es la *nueva contraseña de streaming*?\n\n"
+            "(Escribe *—* para dejar vacía)"
+        ),
+        "profile_name": (
+            "✏️ *Editar Suscripción*\n\n"
+            "¿Cuál es el *nuevo nombre del perfil*?\n\n"
+            "(Escribe *—* para dejar vacío)"
+        ),
+        "profile_pin": (
+            "✏️ *Editar Suscripción*\n\n"
+            "¿Cuál es el *nuevo PIN del perfil*?\n\n"
+            "(Escribe *—* para dejar vacío)"
+        ),
+    }
+
+    SUBSCRIPTIONS_EDIT_ERROR_INVALID_FIELD = (
+        "❌ Opción inválida. Responde con un número del *1* al *7* "
+        "o *0* para volver."
+    )
+
+    SUBSCRIPTIONS_EDIT_SUCCESS = (
+        "✅ *Suscripción actualizada exitosamente.*"
+    )
+
+    SUBSCRIPTIONS_EDIT_PASSWORD_CONFIRM_PROMPT = (
+        "✏️ *Editar Suscripción*\n\n"
+        "Por seguridad, escribe *nuevamente* la nueva contraseña."
+    )
+
+    SUBSCRIPTIONS_EDIT_PIN_CONFIRM_PROMPT = (
+        "✏️ *Editar Suscripción*\n\n"
+        "Por seguridad, escribe *nuevamente* el nuevo PIN."
+    )
+
+    SUBSCRIPTIONS_EDIT_MISMATCH = (
+        "❌ Los valores no coinciden. Intenta de nuevo."
+    )
+
+    # -- Other lifecycle messages
+
+    SUBSCRIPTIONS_CANCEL_CONFIRM_TEMPLATE = (
+        "⚠️ *Cancelar Suscripción*\n\n"
+        "¿Estás seguro de que deseas cancelar esta suscripción?\n\n"
+        "*Email:* {email}\n"
+        "*Cliente:* {client_name}\n\n"
+        "Esta acción no elimina la suscripción, solo la cambia a estado *cancelada*.\n\n"
+        "Escribe *CONFIRMAR* para cancelar.\n"
+        "Escribe *0* para cancelar."
+    )
+
+    SUBSCRIPTIONS_CANCEL_SUCCESS = (
+        "✅ *Suscripción cancelada exitosamente.*"
+    )
+
+    SUBSCRIPTIONS_REACTIVATE_DURATION_PROMPT = (
+        "🔄 *Reactivar Suscripción*\n\n"
+        "Selecciona la *nueva duración*:\n\n"
+        "1️⃣ 1 mes\n"
+        "2️⃣ 3 meses\n"
+        "3️⃣ 6 meses\n"
+        "4️⃣ 9 meses\n"
+        "5️⃣ 1 año\n"
+        "6️⃣ Personalizada\n"
+        "0️⃣ Volver"
+    )
+
+    SUBSCRIPTIONS_REACTIVATE_CUSTOM_DATE_PROMPT = (
+        "🔄 *Reactivar Suscripción*\n\n"
+        "Escribe la *fecha de expiración* (YYYY-MM-DD)."
+    )
+
+    SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE = (
+        "🔄 *Confirmar Reactivación*\n\n"
+        "*Duración:* {duration_label}\n"
+        "*Inicio:* {starts_at}\n"
+        "*Expira:* {expires_at}\n\n"
+        "Escribe *CONFIRMAR* para reactivar la suscripción.\n"
+        "Escribe *0* para cancelar."
+    )
+
+    SUBSCRIPTIONS_REACTIVATE_SUCCESS = (
+        "✅ *Suscripción reactivada exitosamente.*"
+    )
+
+    SUBSCRIPTIONS_RENEW_DURATION_PROMPT = (
+        "🔄 *Renovar Suscripción*\n\n"
+        "Selecciona la *duración de renovación*:\n\n"
+        "1️⃣ 1 mes\n"
+        "2️⃣ 3 meses\n"
+        "3️⃣ 6 meses\n"
+        "4️⃣ 9 meses\n"
+        "5️⃣ 1 año\n"
+        "6️⃣ Personalizada\n"
+        "0️⃣ Volver"
+    )
+
+    SUBSCRIPTIONS_RENEW_CUSTOM_DATE_PROMPT = (
+        "🔄 *Renovar Suscripción*\n\n"
+        "Escribe la *fecha de expiración* (YYYY-MM-DD)."
+    )
+
+    SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE = (
+        "🔄 *Confirmar Renovación*\n\n"
+        "*Duración:* {duration_label}\n"
+        "*Expira:* {expires_at}\n\n"
+        "Escribe *CONFIRMAR* para renovar la suscripción.\n"
+        "Escribe *0* para cancelar."
+    )
+
+    SUBSCRIPTIONS_RENEW_SUCCESS = (
+        "✅ *Suscripción renovada exitosamente.*"
+    )
+
+    SUBSCRIPTIONS_INVALID_SELECTION = (
+        "❌ Número inválido. Responde con un número de la lista "
+        "o escribe *0* para volver."
+    )
+
+    SUBSCRIPTIONS_CONFIRM_REPROMPT = (
+        "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas "
+        "o minúsculas)."
+    )
+
+    SUBSCRIPTIONS_EMAIL_REQUIRED = (
+        "❌ El email de streaming no puede estar vacío."
+    )
+
+    SUBSCRIPTIONS_CLIENT_REQUIRED = (
+        "❌ Debes seleccionar un cliente."
+    )
+
+    SUBSCRIPTIONS_SKIP_WORDS = {"—", "skip", "ninguno", "none", "-"}
+
     # ------------------------------------------------------------------
     # Constructor
     # ------------------------------------------------------------------
@@ -426,10 +786,12 @@ class WhatsAppTenantConsoleService:
         client_service: ClientServiceProtocol | None = None,
         catalog_service: CatalogServiceProtocol | None = None,
         profile_service: Any = None,
+        subscription_service: SubscriptionServiceProtocol | None = None,
     ) -> None:
         self._client_service = client_service
         self._catalog_service = catalog_service
         self._profile_service = profile_service
+        self._subscription_service = subscription_service
 
     # ------------------------------------------------------------------
     # Reply composition helpers
@@ -534,6 +896,98 @@ class WhatsAppTenantConsoleService:
         )
 
     @staticmethod
+    def _format_subscription_list(
+        subscriptions: list[Any], show_status: bool = True
+    ) -> tuple[str, dict[str, str]]:
+        entries: list[str] = []
+        selection_map: dict[str, str] = {}
+        for i, sub in enumerate(subscriptions, start=1):
+            num = str(i)
+            status_emoji = {
+                "active": "✅",
+                "expired": "⏰",
+                "cancelled": "❌",
+            }.get(sub.status, "❓")
+            label = f"{status_emoji} {sub.streaming_email}"
+            if show_status:
+                status_name = {
+                    "active": "Activa",
+                    "expired": "Expirada",
+                    "cancelled": "Cancelada",
+                }.get(sub.status, sub.status)
+                label += f" ({status_name})"
+            # Optionally show client name
+            client_name = getattr(sub, "client_name", None) or getattr(sub, "client_full_name", "")
+            if client_name:
+                label += f" — {client_name}"
+            entries.append(f"{num}️⃣ {label}")
+            selection_map[num] = str(sub.id)
+        return "📋 *Suscripciones*\n\n" + "\n".join(entries), selection_map
+
+    @staticmethod
+    def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> str:
+        status_emoji = {
+            "active": "✅ Activa",
+            "expired": "⏰ Expirada",
+            "cancelled": "❌ Cancelada",
+        }.get(sub.status, sub.status)
+
+        password_display = "—"
+        pin_display = "—"
+        if credentials:
+            pwd = credentials.get("streaming_password")
+            if pwd:
+                password_display = pwd
+            pin_val = credentials.get("profile_pin")
+            if pin_val:
+                pin_display = pin_val
+
+        client_name = getattr(sub, "client_name", None) or getattr(sub, "client_full_name", "—")
+        service_name = getattr(sub, "service_name", None) or "—"
+        plan_name = getattr(sub, "plan_name", None) or "—"
+
+        profile_name = sub.profile_name or "—"
+
+        starts_at = ""
+        if sub.starts_at:
+            if hasattr(sub.starts_at, "strftime"):
+                starts_at = sub.starts_at.strftime("%Y-%m-%d")
+            else:
+                starts_at = str(sub.starts_at)
+
+        expires_at = ""
+        if sub.expires_at:
+            if hasattr(sub.expires_at, "strftime"):
+                expires_at = sub.expires_at.strftime("%Y-%m-%d")
+            else:
+                expires_at = str(sub.expires_at)
+
+        duration_labels = {
+            "1_month": "1 mes",
+            "3_months": "3 meses",
+            "6_months": "6 meses",
+            "9_months": "9 meses",
+            "1_year": "1 año",
+            "custom": "Personalizada",
+        }
+        duration_label = duration_labels.get(sub.duration_type, sub.duration_type)
+
+        return (
+            f"📺 *Detalle de Suscripción*\n\n"
+            f"*Estado:* {status_emoji}\n"
+            f"*Cliente:* {client_name}\n"
+            f"*Servicio:* {service_name}\n"
+            f"*Plan:* {plan_name}\n"
+            f"*Email:* {sub.streaming_email}\n"
+            f"*Contraseña:* {password_display}\n"
+            f"*Perfil:* {profile_name}\n"
+            f"*PIN:* {pin_display}\n"
+            f"*Duración:* {duration_label}\n"
+            f"*Inicio:* {starts_at}\n"
+            f"*Expira:* {expires_at}\n"
+        )
+
+    @staticmethod
     def _safe_uuid(value: str | None) -> UUID | None:
         """Convert *value* to ``UUID`` or return ``None`` on failure."""
         if value is None:
@@ -633,6 +1087,10 @@ class WhatsAppTenantConsoleService:
             elif msg == "3":
                 return await self._start_profile_flow(
                     phone, session_service, user_id, db
+                )
+            elif msg == "4":
+                return await self._start_subscriptions_flow(
+                    phone, session_service, tenant_id, db
                 )
             return self.FALLBACK_NO_FLOW
 
@@ -757,6 +1215,121 @@ class WhatsAppTenantConsoleService:
             elif step == self.PROFILE_STEP_CHANGE_PASSWORD_NEW:
                 return await self._handle_profile_change_password_new(
                     phone, msg, session, session_service, user_id, db
+                )
+
+        # -- Subscription flows --
+        if flow == self.SUBSCRIPTIONS_FLOW:
+            if step == self.SUBSCRIPTIONS_STEP_MENU:
+                return await self._handle_subscriptions_menu(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_FILTER:
+                return await self._handle_subscriptions_filter(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_LIST:
+                return await self._handle_subscriptions_list(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_SELECT:
+                return await self._handle_subscriptions_select(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_ACTION:
+                return await self._handle_subscriptions_action(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_CLIENT:
+                return await self._handle_subscriptions_create_client(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_SERVICE:
+                return await self._handle_subscriptions_create_service(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PLAN:
+                return await self._handle_subscriptions_create_plan(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_EMAIL:
+                return await self._handle_subscriptions_create_email(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD:
+                return await self._handle_subscriptions_create_password(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM:
+                return await self._handle_subscriptions_create_password_confirm(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME:
+                return await self._handle_subscriptions_create_profile_name(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PIN:
+                return await self._handle_subscriptions_create_pin(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PIN_CONFIRM:
+                return await self._handle_subscriptions_create_pin_confirm(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_DURATION:
+                return await self._handle_subscriptions_create_duration(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_CUSTOM_DATE:
+                return await self._handle_subscriptions_create_custom_date(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_CONFIRM:
+                return await self._handle_subscriptions_create_confirm(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_EDIT_FIELD:
+                return await self._handle_subscriptions_edit_field(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_EDIT_VALUE:
+                return await self._handle_subscriptions_edit_value(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_EDIT_PASSWORD_CONFIRM:
+                return await self._handle_subscriptions_edit_password_confirm(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_EDIT_PIN_CONFIRM:
+                return await self._handle_subscriptions_edit_pin_confirm(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CANCEL_CONFIRM:
+                return await self._handle_subscriptions_cancel_confirm(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_REACTIVATE_DURATION:
+                return await self._handle_subscriptions_reactivate_duration(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_REACTIVATE_CUSTOM_DATE:
+                return await self._handle_subscriptions_reactivate_custom_date(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_REACTIVATE_CONFIRM:
+                return await self._handle_subscriptions_reactivate_confirm(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_RENEW_DURATION:
+                return await self._handle_subscriptions_renew_duration(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_RENEW_CUSTOM_DATE:
+                return await self._handle_subscriptions_renew_custom_date(
+                    phone, msg, session, session_service, tenant_id, db
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_RENEW_CONFIRM:
+                return await self._handle_subscriptions_renew_confirm(
+                    phone, msg, session, session_service, tenant_id, db
                 )
 
         return self.FALLBACK_ACTIVE_FLOW
