@@ -13,7 +13,7 @@ Nightmanager implementation queue.
 
 ## Queue
 
-- [ready] Add tenant subscription data model and encryption foundation
+- [done] Add tenant subscription data model and encryption foundation — e44a30a
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: create subscription, event, reminder-log, and reminder-settings persistence with tenant RLS plus Fernet encryption helper using `DATA_ENCRYPTION_KEY`.
   - Acceptance:
