@@ -92,7 +92,7 @@ Nightmanager implementation queue.
     - Cancelled subscriptions are hidden by default and visible under cancelled filter/category.
   - Notes: exact UX layout remains open; keep implementation consistent with Vue 3 plain JS conventions. Validation comes from the spec Testing Plan.
 
-- [ready] Add web create/edit/renew/reactivate subscription flows
+- [done] Add web create/edit/renew/reactivate subscription flows — 51cf51c
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: implement subscription form and actions on dedicated web page.
   - Acceptance:
