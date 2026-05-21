@@ -35,6 +35,7 @@ const formData = ref({
   plan_id: '',
   streaming_email: '',
   streaming_password: '',
+  starts_at: '',
   duration_type: '',
   expires_at: '',
   profile_name: '',
@@ -253,6 +254,7 @@ function openCreateModal() {
     plan_id: '',
     streaming_email: '',
     streaming_password: '',
+    starts_at: new Date().toISOString().split('T')[0],
     duration_type: '',
     expires_at: '',
     profile_name: '',
@@ -272,6 +274,7 @@ function openEditModal(sub) {
     plan_id: sub.plan_id || '',
     streaming_email: sub.streaming_email || '',
     streaming_password: sub.streaming_password || '',
+    starts_at: sub.starts_at ? sub.starts_at.split('T')[0] : '',
     duration_type: sub.duration_type || '',
     expires_at: sub.expires_at ? sub.expires_at.split('T')[0] : '',
     profile_name: sub.profile_name || '',
@@ -325,6 +328,7 @@ async function saveSubscription() {
       plan_id: formData.value.plan_id,
       streaming_email: formData.value.streaming_email,
       streaming_password: formData.value.streaming_password || undefined,
+      starts_at: formData.value.starts_at || new Date().toISOString().split('T')[0],
       duration_type: formData.value.duration_type,
       expires_at: formData.value.duration_type === 'custom' ? formData.value.expires_at : undefined,
       profile_name: formData.value.profile_name || undefined,
@@ -751,6 +755,10 @@ onMounted(init)
                 {{ showPassword ? '🙈' : '👁️' }}
               </button>
             </div>
+          </label>
+          <label>
+            Fecha de inicio
+            <input v-model="formData.starts_at" type="date" />
           </label>
           <label>
             Duración
