@@ -366,6 +366,7 @@
     },
     "SplitInBatches": {
       "main": [
+        [],
         [
           {
             "node": "Wait",
@@ -420,6 +421,28 @@
         [
           {
             "node": "Mark Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Sent": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Failed": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
             "type": "main",
             "index": 0
           }
