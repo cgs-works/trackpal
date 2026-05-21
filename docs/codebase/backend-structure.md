@@ -17,11 +17,13 @@ backend/
 │   │           ├── dashboard.py  # Role-aware dashboard data
 │   │           ├── integrations.py # n8n identify, WhatsApp console
 │   │           ├── me.py         # Self-profile CRUD
+├── subscriptions.py # Tenant subscription CRUD + lifecycle job + reminders
 │   │           └── tenants.py    # Master-only tenant CRUD
 │   ├── core/                     # Core infrastructure
 │   │   ├── __init__.py
 │   │   ├── config.py            # Pydantic Settings (all env vars)
 │   │   ├── database.py          # SQLAlchemy async engine + session
+├── encryption.py        # Fernet symmetric encryption for subscription secrets
 │   │   ├── input_validation.py  # Centralized field validators
 │   │   ├── phone.py             # Phone normalizer utility
 │   │   ├── redis_client.py      # Redis connection manager + failover
@@ -38,6 +40,7 @@ backend/
 │   │   ├── client.py            # Tenant-owned Client profile
 │   │   ├── service.py           # Tenant catalog service
 │   │   ├── plan.py              # Service catalog plan
+├── subscription.py       # Subscription, SubscriptionEvent, SubscriptionReminderLog, SubscriptionReminderSettings
 │   │   └── refresh_session.py   # RefreshSession (1:N with User)
 │   ├── schemas/                  # Pydantic schemas (request/response)
 │   │   ├── __init__.py
@@ -46,6 +49,7 @@ backend/
 │   │   ├── dashboard.py         # MasterDashboardResponse, TenantDashboardResponse, ClientDashboardResponse
 │   │   ├── client.py            # ClientCreate, ClientUpdate, ClientResponse
 │   │   ├── me.py                # ProfileResponse, ProfileUpdate, PasswordChange
+├── subscription.py      # Subscription request/response schemas + reminder payloads
 │   │   ├── tenant.py            # TenantCreate, TenantUpdate, TenantResponse, etc.
 │   │   └── whatsapp.py          # WhatsAppConsoleRequest, WhatsAppConsoleResponse
 │   └── services/                 # Business logic layer
@@ -56,6 +60,8 @@ backend/
 │       ├── evolution_client.py  # Evolution API HTTP client
 │       ├── client_service.py    # Client CRUD + technical username sync
 │       ├── profile_service.py   # Profile get/update, password change
+├── subscription_service.py    # Subscription CRUD + lifecycle operations
+├── subscription_job_service.py  # Lifecycle job + reminder payloads
 │       ├── tenant_service.py    # Tenant CRUD + client prefix sync + Evolution lifecycle
 │       ├── whatsapp_auth_session_service.py  # Auth session + lockout Redis primitives
 │       ├── whatsapp_console_service.py       # Console flow routing + templates
@@ -85,6 +91,7 @@ backend/
 │   ├── test_redis_failover_policy.py
 │   ├── test_rls_policy_sql.py
 │   ├── test_tenants.py
+├── test_subscriptions.py
 │   ├── test_whatsapp_auth_session_service.py
 │   ├── test_whatsapp_create_flow.py
 │   ├── test_whatsapp_credential_auth_flow.py

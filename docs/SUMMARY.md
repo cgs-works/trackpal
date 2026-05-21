@@ -2,7 +2,14 @@
 
 ## Project Overview
 
-Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard. Each Tenant manages their own catalog and Clients. The backend is Python/FastAPI with PostgreSQL and Redis HA. The frontend is a Vue 3 SPA.
+Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard. Each Tenant manages their own catalog, Clients, and Subscriptions. The backend is Python/FastAPI with PostgreSQL and Redis HA. The frontend is a Vue 3 SPA.
+
+## Agent Context Guide
+
+1. Read `docs/SUMMARY.md` first when it exists
+2. Load only task-relevant detail docs
+3. Prioritize `Code Standard` docs for implementation conventions
+4. Use the available input/question before broad changes when docs conflict with code or user intent
 
 ## Architecture
 
@@ -17,6 +24,7 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution API client for instance management and chat control |
 | [Frontend Architecture](architecture/frontend-architecture.md) | Vue 3 SPA structure, routing, auth flow, state management, API integration |
 | [n8n Workflow](architecture/n8n-workflow.md) | n8n automation: webhook, parsing, backend call, Evolution relay |
+| [Subscriptions](architecture/subscriptions.md) | Tenant subscription data model, CRUD API, encryption, lifecycle job, reminders, n8n workflow, frontend |
 
 ## Codebase
 
@@ -45,5 +53,6 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 |------|-------------|
 | [Tenant Catalog Plan](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Plan for tenant catalog and RLS |
 | [Client Entity Plan](plans/260517-1938-client-entity-dashboard/SUMMARY.md) | Client role, tenant prefix, and dashboard implementation plan |
+| [Tenant Subscriptions Spec](specs/tenant-subscriptions.md) | Spec for tenant subscriptions module |
 | [Tenant Catalog Brainstorm](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Design brainstorms for catalog RLS |
 | [Client Entity Brainstorm](brainstorms/260517-1930-client-entity-dashboard/SUMMARY.md) | Design brainstorms for client entity |

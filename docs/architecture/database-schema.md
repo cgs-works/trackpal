@@ -101,6 +101,70 @@ Service-owned catalog plan.
 
 Constraints: composite FK `(tenant_id, service_id)` prevents cross-tenant service/plan links; unique index on `(tenant_id, service_id, lower(name))`.
 
+
+### `Subscription` -- `subscriptions`
+
+Tenant-scoped streaming account subscription for a client.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK -> tenants.id CASCADE |
+| client_id | UUID | FK -> clients.id CASCADE |
+| service_id | UUID | FK -> services.id CASCADE |
+| plan_id | UUID | FK -> plans.id CASCADE |
+| streaming_email | VARCHAR(255) | Plain text, required |
+| streaming_password_encrypted | VARCHAR(500) | Fernet-encrypted, nullable |
+| profile_name | VARCHAR(100) | Nullable |
+| profile_pin_encrypted | VARCHAR(500) | Fernet-encrypted, nullable, requires profile_name |
+| duration_type | VARCHAR(50) | 1_month, 3_months, 6_months, 9_months, 1_year, custom |
+| starts_at | TIMESTAMPTZ | Subscription start |
+| expires_at | TIMESTAMPTZ | Computed from duration or custom expires_at |
+| cancelled_at | TIMESTAMPTZ | Nullable, set on cancel |
+| status | VARCHAR(50) | active, expired, cancelled |
+
+Relationships: events, reminder_logs (1:N, delete-orphan).
+
+### `SubscriptionEvent` -- `subscription_events`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK -> tenants.id CASCADE |
+| subscription_id | UUID | FK -> subscriptions.id CASCADE |
+| event_type | VARCHAR(100) | created, updated, renewed, cancelled, reactivated, expired, auto_cancelled, auto_deleted |
+| notes | TEXT | Nullable |
+| event_metadata | JSON | Nullable |
+
+### `SubscriptionReminderLog` -- `subscription_reminder_logs`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK -> tenants.id CASCADE |
+| subscription_id | UUID | FK -> subscriptions.id CASCADE |
+| recipient_type | VARCHAR(20) | tenant or client |
+| recipient_phone | VARCHAR(50) | Nullable |
+| days_before_expiry | INT | Days before expiry when reminder sent |
+| sent_for_date | DATE | The day this reminder covers |
+| status | VARCHAR(20) | pending, sent, failed |
+| attempt_count | INT | Default 0, max 3 before permanent failure |
+| last_error | TEXT | Nullable |
+| sent_at | TIMESTAMPTZ | Set on mark-sent |
+
+Unique index: (subscription_id, recipient_type, days_before_expiry, sent_for_date).
+
+### `SubscriptionReminderSettings` -- `subscription_reminder_settings`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | Unique FK -> tenants.id CASCADE |
+| timezone | VARCHAR(50) | Default UTC |
+| warning_days | JSON | Default [7, 3, 1] |
+| reminder_time | VARCHAR(5) | Default 09:00 (HH:MM) |
+| recipient_mode | VARCHAR(20) | tenant_only, client_only, tenant_client, tenant_and_client |
+
 ## RLS
 
 Postgres RLS is enabled and forced on `tenants`, `services`, and `plans`. Policies use transaction-local custom settings set by the API before tenant-scoped queries:
@@ -120,6 +184,7 @@ Alembic migrations:
 4. `cd4efe74cae7` — Adjust tenant RLS policy so Master can manage tenants before switching into catalog context
 5. `cd5efe74cae8` — Drop obsolete `tenant_profiles` table after data migration to `tenants`
 6. `cd6efe74cae9` — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
+7. `cd7efe74caa0` — Add `subscriptions`, `subscription_events`, `subscription_reminder_logs`, and `subscription_reminder_settings` tables with RLS policies — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
 
 ## Key Constraints
 

@@ -48,10 +48,10 @@ frontend/
 
 | Module | Files | Responsibility |
 |--------|-------|----------------|
-| Router | `router/index.js` | Route definitions, lazy loading, navigation guard for auth + role |
+| Router | `router/index.js` | Route definitions, lazy loading, navigation guard for auth + role; /admin/subscriptions route for subscriptions |
 | API Service | `services/api.js` | Axios singleton, JWT injection on requests, 401 auto-logout |
 | Auth Store | `stores/auth.js` | Login/logout/switch actions, token/user/active tenant persistence in localStorage |
-| Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard/catalog |
+| Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard, subscriptions, client dashboard |
 
 ## Dependencies (from package.json)
 
