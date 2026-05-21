@@ -70,7 +70,7 @@ Nightmanager implementation queue.
     - Client reminders skip clients without phone without failing job.
   - Notes: reminder logs store only metadata, not message text or PII. Validation comes from the spec Testing Plan.
 
-- [ready] Add dedicated n8n workflow for subscription reminders
+- [done] Add dedicated n8n workflow for subscription reminders — d2e77eb
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: create separate n8n workflow for reminder sending, independent from current Master/Tenant WhatsApp console workflows.
   - Acceptance:
