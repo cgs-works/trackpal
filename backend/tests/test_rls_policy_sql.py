@@ -16,7 +16,9 @@ from app.core.database import (
 def test_rls_policy_sql_uses_required_context_settings():
     text = Path("alembic/versions/cd3efe74cae6_tenant_catalog_rls.py").read_text()
     text += Path("alembic/versions/cd4efe74cae7_fix_tenants_master_rls.py").read_text()
-    text += Path("alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py").read_text()
+    text += Path(
+        "alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py"
+    ).read_text()
     text += Path("alembic/versions/cd7efe74caa0_add_subscriptions.py").read_text()
     assert "ENABLE ROW LEVEL SECURITY" in text
     assert "FORCE ROW LEVEL SECURITY" in text
@@ -45,9 +47,14 @@ def test_tenants_policy_allows_master_management_without_active_tenant_context()
 def test_tenants_policy_allows_tenant_to_read_inactive_own_row_for_app_check():
     text = Path("alembic/versions/cd4efe74cae7_fix_tenants_master_rls.py").read_text()
     using_block = text.split("USING (", 1)[1].split(")\n        WITH CHECK", 1)[0]
-    tenant_branch = using_block.split("current_setting('app.current_role', true) = 'tenant'", 1)[1]
+    tenant_branch = using_block.split(
+        "current_setting('app.current_role', true) = 'tenant'", 1
+    )[1]
 
-    assert "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in tenant_branch
+    assert (
+        "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')"
+        in tenant_branch
+    )
     assert "AND is_active" not in tenant_branch
 
 
@@ -61,34 +68,57 @@ def test_service_and_plan_policies_keep_active_tenant_requirement():
 
 def test_service_and_plan_with_check_validate_tenant_ownership_for_writes():
     text = Path("alembic/versions/cd3efe74cae6_tenant_catalog_rls.py").read_text()
-    services_policy = text.split("CREATE POLICY services_tenant_isolation", 1)[1].split("CREATE POLICY plans_tenant_isolation", 1)[0]
-    plans_policy = text.split("CREATE POLICY plans_tenant_isolation", 1)[1].split("def downgrade", 1)[0]
+    services_policy = text.split("CREATE POLICY services_tenant_isolation", 1)[1].split(
+        "CREATE POLICY plans_tenant_isolation", 1
+    )[0]
+    plans_policy = text.split("CREATE POLICY plans_tenant_isolation", 1)[1].split(
+        "def downgrade", 1
+    )[0]
 
     assert "WITH CHECK (" in services_policy
     assert "current_setting('app.current_role', true) = 'master'" in services_policy
-    assert "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')" in services_policy
+    assert (
+        "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')"
+        in services_policy
+    )
     assert "t.id = services.tenant_id" in services_policy
-    assert "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in services_policy
+    assert (
+        "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')"
+        in services_policy
+    )
     assert "AND t.is_active" in services_policy
 
     assert "WITH CHECK (" in plans_policy
     assert "current_setting('app.current_role', true) = 'master'" in plans_policy
-    assert "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')" in plans_policy
+    assert (
+        "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')"
+        in plans_policy
+    )
     assert "t.id = plans.tenant_id" in plans_policy
-    assert "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in plans_policy
+    assert (
+        "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')"
+        in plans_policy
+    )
     assert "AND t.is_active" in plans_policy
 
 
 def test_clients_policy_enforces_tenant_and_client_context():
-    text = Path("alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py").read_text()
-    policy = text.split("CREATE POLICY clients_tenant_isolation", 1)[1].split("def downgrade", 1)[0]
+    text = Path(
+        "alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py"
+    ).read_text()
+    policy = text.split("CREATE POLICY clients_tenant_isolation", 1)[1].split(
+        "def downgrade", 1
+    )[0]
 
     assert "ALTER TABLE clients ENABLE ROW LEVEL SECURITY" in text
     assert "ALTER TABLE clients FORCE ROW LEVEL SECURITY" in text
     assert "current_setting('app.current_role', true) = 'master'" in policy
     assert "current_setting('app.current_role', true) = 'tenant'" in policy
     assert "current_setting('app.current_role', true) = 'client'" in policy
-    assert "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in policy
+    assert (
+        "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')"
+        in policy
+    )
     assert "AND is_active" in policy
     assert "AND false" in policy
 
@@ -107,15 +137,20 @@ def test_subscription_policies_enforce_tenant_context():
         assert f"CREATE POLICY {table}_tenant_isolation" in text
 
     assert "current_setting('app.current_role', true) = 'master'" in text
-    assert "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')" in text
+    assert (
+        "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')"
+        in text
+    )
     assert "current_setting('app.current_role', true) = 'tenant'" in text
     assert "t.id = subscriptions.tenant_id" in text
     assert "t.id = subscription_events.tenant_id" in text
     assert "t.id = subscription_reminder_logs.tenant_id" in text
     assert "t.id = subscription_reminder_settings.tenant_id" in text
-    assert "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in text
+    assert (
+        "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')"
+        in text
+    )
     assert "AND t.is_active" in text
-
 
 
 @pytest.mark.asyncio
@@ -194,7 +229,9 @@ async def test_internal_rls_context_uses_master_without_active_tenant():
     }
 
 
-@pytest.mark.skip(reason="Requires disposable Postgres/app-role DATABASE_URL and is run manually before production deploy")
+@pytest.mark.skip(
+    reason="Requires disposable Postgres/app-role DATABASE_URL and is run manually before production deploy"
+)
 def test_postgres_rls_behavior_manual_gate_documented():
     """Placeholder gate for manual Postgres RLS QA.
 
