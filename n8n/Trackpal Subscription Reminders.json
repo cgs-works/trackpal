@@ -1,0 +1,381 @@
+{
+  "name": "Trackpal Subscription Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "cronExpression": "0 9 * * *",
+          "schedulerCron": true
+        }
+      },
+      "id": "e1a2b3c4-5d6e-7f8a-9b0c-1d2e3f4a5b6c",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "trackpal_backend_url",
+              "type": "string",
+              "value": "https://trackpal-backend.onrender.com"
+            },
+            {
+              "name": "trackpal_n8n_api_key",
+              "type": "string",
+              "value": "placeholder"
+            },
+            {
+              "name": "evolution_api_url",
+              "type": "string",
+              "value": "https://rs-evoapi.wilfredocamacho.dev"
+            },
+            {
+              "name": "evolution_api_key",
+              "type": "string",
+              "value": "placeholder"
+            },
+            {
+              "name": "default_instance",
+              "type": "string",
+              "value": "Sublify"
+            },
+            {
+              "name": "reminders_page_limit",
+              "type": "number",
+              "value": 100
+            },
+            {
+              "name": "message_delay_seconds",
+              "type": "number",
+              "value": 2
+            },
+            {
+              "name": "reminder_task",
+              "type": "string",
+              "value": "reminders"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f2b3c4d5-6e7f-8a9b-0c1d-2e3f4a5b6c7d",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/pending",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Config').first().json.trackpal_n8n_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ task: $('Config').first().json.reminder_task, limit: $('Config').first().json.reminders_page_limit }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a3b4c5d6-7e8f-9a0b-1c2d-3e4f5a6b7c8d",
+      "name": "Fetch Pending Reminders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (!items || items.length === 0) {\n  return [];\n}\nconst response = items[0].json;\nlet list = response.data || response.results || response.reminders || [];\nif (!Array.isArray(list)) {\n  if (Array.isArray(response)) {\n    list = response;\n  } else {\n    list = [];\n  }\n}\nreturn list.map(item => ({ json: item }));"
+      },
+      "id": "b4c5d6e7-8f9a-0b1c-2d3e-4f5a6b7c8d9e",
+      "name": "Transform Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1
+      },
+      "id": "c5d6e7f8-9a0b-1c2d-3e4f-5a6b7c8d9e0f",
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3.1,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "d6e7f8a9-0b1c-2d3e-4f5a-6b7c8d9e0f1a",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.evolution_api_url }}/message/sendText/{{ $json.evolution_instance_name || $('Config').first().json.default_instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.evolution_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: String($json.recipient_phone || '').replace('+', ''), text: String($json.message_text || '') }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e7f8a9b0-1c2d-3e4f-5a6b-7c8d9e0f1a2b",
+      "name": "Evolution API Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst hasError = response.error !== undefined && response.error !== null;\nconst statusIsError = response.status && response.status === 'error';\nconst evolutionSuccess = !hasError && !statusIsError;\nreturn [{ json: { ...$input.first().json, _evolutionSuccess: evolutionSuccess, _evolutionResponse: response } }];"
+      },
+      "id": "f8a9b0c1-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+      "name": "Evaluate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json._evolutionSuccess }}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "a9b0c1d2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
+      "name": "Route by Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [2160, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/{{ $json.log_id }}/mark-sent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Config').first().json.trackpal_n8n_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b0c1d2e3-4f5a-6b7c-8d9e-0f1a2b3c4d5e",
+      "name": "Mark Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2400, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/{{ $json.log_id }}/mark-failed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Config').first().json.trackpal_n8n_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ error: $json._evolutionResponse ? JSON.stringify($json._evolutionResponse) : 'Unknown error' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c1d2e3f4-5a6b-7c8d-9e0f-1a2b3c4d5e6f",
+      "name": "Mark Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2400, 400]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending Reminders": {
+      "main": [
+        [
+          {
+            "node": "Transform Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Items": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Evolution API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution API Send": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Result": {
+      "main": [
+        [
+          {
+            "node": "Route by Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Success?": {
+      "main": [
+        [
+          {
+            "node": "Mark Sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "id": "r3m1nd3r5-w0rkfl0w-4a5b-6c7d-8e9f0a1b2c3d",
+  "tags": []
+}
