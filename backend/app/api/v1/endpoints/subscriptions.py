@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 from app.api.dependencies import ActiveTenantId, ApiKeyDbDep, CurrentUser, DbDep
 from app.schemas.subscription import (
+    MarkFailedRequest,
+    ReminderPendingResponse,
     SubscriptionCreate,
     SubscriptionUpdate,
     SubscriptionResponse,
@@ -18,7 +20,9 @@ from app.services.subscription_job_service import SubscriptionJobService
 from app.services.subscription_service import SubscriptionService
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
-settings_router = APIRouter(prefix="/subscription-settings", tags=["subscription-settings"])
+settings_router = APIRouter(
+    prefix="/subscription-settings", tags=["subscription-settings"]
+)
 
 subscription_service = SubscriptionService()
 
@@ -50,7 +54,10 @@ class RenewRequest(BaseModel):
 
 # Subscriptions Endpoints
 
-@router.post("", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_subscription(
     payload: SubscriptionCreate,
     db: DbDep,
@@ -61,7 +68,9 @@ async def create_subscription(
     try:
         return await subscription_service.create_subscription(db, tenant_id, payload)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
 
 
 @router.get("", response_model=List[SubscriptionResponse])
@@ -99,7 +108,9 @@ async def get_subscription(
     _require_tenant_or_master_in_context(current_user)
     sub = await subscription_service.get_subscription(db, tenant_id, subscription_id)
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return sub
 
 
@@ -111,9 +122,13 @@ async def reveal_subscription_credentials(
     current_user: CurrentUser,
 ):
     _require_tenant_or_master_in_context(current_user)
-    creds = await subscription_service.reveal_credentials(db, tenant_id, subscription_id)
+    creds = await subscription_service.reveal_credentials(
+        db, tenant_id, subscription_id
+    )
     if creds is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return creds
 
 
@@ -127,11 +142,17 @@ async def update_subscription(
 ):
     _require_tenant_or_master_in_context(current_user)
     try:
-        sub = await subscription_service.update_subscription(db, tenant_id, subscription_id, payload)
+        sub = await subscription_service.update_subscription(
+            db, tenant_id, subscription_id, payload
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return sub
 
 
@@ -145,11 +166,17 @@ async def patch_subscription(
 ):
     _require_tenant_or_master_in_context(current_user)
     try:
-        sub = await subscription_service.update_subscription(db, tenant_id, subscription_id, payload)
+        sub = await subscription_service.update_subscription(
+            db, tenant_id, subscription_id, payload
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return sub
 
 
@@ -163,9 +190,13 @@ async def cancel_subscription(
     current_user: CurrentUser,
 ):
     _require_tenant_or_master_in_context(current_user)
-    sub = await subscription_service.cancel_subscription(db, tenant_id, subscription_id, notes=payload.notes)
+    sub = await subscription_service.cancel_subscription(
+        db, tenant_id, subscription_id, notes=payload.notes
+    )
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return sub
 
 
@@ -190,9 +221,13 @@ async def reactivate_subscription(
             notes=payload.notes,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return sub
 
 
@@ -216,9 +251,13 @@ async def renew_subscription(
             notes=payload.notes,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     return sub
 
 
@@ -230,10 +269,13 @@ async def list_subscription_events(
     current_user: CurrentUser,
 ):
     _require_tenant_or_master_in_context(current_user)
-    return await subscription_service.list_subscription_events(db, tenant_id, subscription_id)
+    return await subscription_service.list_subscription_events(
+        db, tenant_id, subscription_id
+    )
 
 
 # Subscription Settings Endpoints
+
 
 @settings_router.get("", response_model=SubscriptionReminderSettingsResponse)
 async def get_reminder_settings(
@@ -254,9 +296,13 @@ async def update_reminder_settings(
 ):
     _require_tenant_or_master_in_context(current_user)
     try:
-        return await subscription_service.update_reminder_settings(db, tenant_id, payload)
+        return await subscription_service.update_reminder_settings(
+            db, tenant_id, payload
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
 
 
 # Subscription Jobs Endpoint
@@ -298,3 +344,67 @@ async def run_subscription_job(
         results.extend(reminder_results)
 
     return {"task": task, "items_processed": len(results), "results": results}
+
+
+# Reminder Generation Endpoints
+
+reminders_router = APIRouter(prefix="/subscriptions/reminders", tags=["subscriptions-reminders"])
+
+
+@reminders_router.post("/pending", response_model=ReminderPendingResponse)
+async def get_pending_reminders(
+    db: ApiKeyDbDep,
+    cursor: Optional[str] = None,
+    page_size: int = 100,
+):
+    """Generate and return pending reminder payloads.
+
+    Protected by ``N8N_API_KEY`` header.  Returns at most ``page_size``
+    payloads (default 100).  If more pages exist, includes an opaque
+    ``next_cursor``.
+    """
+    if page_size < 1 or page_size > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="page_size must be between 1 and 100",
+        )
+    result = await subscription_job_service.generate_reminder_payloads(
+        db, cursor=cursor, page_size=page_size
+    )
+    return result
+
+
+@reminders_router.post("/{log_id}/mark-sent")
+async def mark_reminder_sent(
+    db: ApiKeyDbDep,
+    log_id: uuid.UUID,
+):
+    """Mark a reminder log as sent after n8n confirms Evolution success."""
+    result = await subscription_job_service.mark_reminder_sent(db, log_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reminder log not found",
+        )
+    return result
+
+
+@reminders_router.post("/{log_id}/mark-failed")
+async def mark_reminder_failed(
+    db: ApiKeyDbDep,
+    log_id: uuid.UUID,
+    payload: MarkFailedRequest,
+):
+    """Mark a reminder log as failed after Evolution send failure.
+
+    Retries up to 3 attempts before setting permanent ``failed`` status.
+    """
+    result = await subscription_job_service.mark_reminder_failed(
+        db, log_id, reason=payload.reason
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reminder log not found",
+        )
+    return result

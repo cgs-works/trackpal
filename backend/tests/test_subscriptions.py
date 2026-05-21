@@ -62,7 +62,10 @@ async def test_subscription_model_persistence(db_session, active_tenant_user):
     # Setup dependencies: Tenant, Client, Service, Plan
     # active_tenant_user fixture already creates a user and a tenant
     from sqlalchemy import select
-    res = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+
+    res = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = res.scalar_one()
 
     # Create a client
@@ -139,14 +142,23 @@ async def test_subscription_model_persistence(db_session, active_tenant_user):
 @pytest.mark.asyncio
 async def test_subscription_event_model(db_session, active_tenant_user):
     from sqlalchemy import select
-    res = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+
+    res = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = res.scalar_one()
 
     # Minimal Subscription setup
     client_user = User(username="evt_client", password_hash="hash", role="client")
     db_session.add(client_user)
     await db_session.flush()
-    client = Client(tenant_id=tenant.id, owner_user_id=client_user.id, full_name="Evt Client", local_username="evtclient", is_active=True)
+    client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=client_user.id,
+        full_name="Evt Client",
+        local_username="evtclient",
+        is_active=True,
+    )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Netflix")
     db_session.add(service)
@@ -192,14 +204,23 @@ async def test_subscription_event_model(db_session, active_tenant_user):
 @pytest.mark.asyncio
 async def test_subscription_reminder_log(db_session, active_tenant_user):
     from sqlalchemy import select
-    res = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+
+    res = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = res.scalar_one()
 
     # Minimal setup
     client_user = User(username="rem_client", password_hash="hash", role="client")
     db_session.add(client_user)
     await db_session.flush()
-    client = Client(tenant_id=tenant.id, owner_user_id=client_user.id, full_name="Rem Client", local_username="remclient", is_active=True)
+    client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=client_user.id,
+        full_name="Rem Client",
+        local_username="remclient",
+        is_active=True,
+    )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Netflix")
     db_session.add(service)
@@ -252,7 +273,10 @@ async def test_subscription_reminder_log(db_session, active_tenant_user):
 @pytest.mark.asyncio
 async def test_subscription_reminder_settings(db_session, active_tenant_user):
     from sqlalchemy import select
-    res = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+
+    res = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = res.scalar_one()
 
     # Create settings
@@ -285,11 +309,15 @@ async def _login_headers(async_client, username: str, password: str) -> dict[str
 async def _tenant_for_user(db_session, user: User) -> Tenant:
     from sqlalchemy import select
 
-    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == user.id)
+    )
     return result.scalar_one()
 
 
-async def _create_subscription_dependencies(db_session, tenant: Tenant, suffix: str = "api"):
+async def _create_subscription_dependencies(
+    db_session, tenant: Tenant, suffix: str = "api"
+):
     client_user = User(
         username=f"{suffix}_client_user",
         password_hash=get_password_hash("client-password"),
@@ -308,7 +336,9 @@ async def _create_subscription_dependencies(db_session, tenant: Tenant, suffix: 
     service = Service(tenant_id=tenant.id, name=f"{suffix.title()} Service")
     db_session.add_all([client, service])
     await db_session.flush()
-    plan = Plan(tenant_id=tenant.id, service_id=service.id, name=f"{suffix.title()} Plan")
+    plan = Plan(
+        tenant_id=tenant.id, service_id=service.id, name=f"{suffix.title()} Plan"
+    )
     db_session.add(plan)
     await db_session.commit()
     return client, service, plan
@@ -331,9 +361,13 @@ def _subscription_payload(client: Client, service: Service, plan: Plan, **overri
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_create_masks_secrets(client, db_session, active_tenant_user):
+async def test_subscription_api_create_masks_secrets(
+    client, db_session, active_tenant_user
+):
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "createapi")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "createapi"
+    )
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     response = await client.post(
@@ -354,14 +388,20 @@ async def test_subscription_api_create_masks_secrets(client, db_session, active_
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_rejects_pin_without_profile(client, db_session, active_tenant_user):
+async def test_subscription_api_rejects_pin_without_profile(
+    client, db_session, active_tenant_user
+):
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "pinapi")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "pinapi"
+    )
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     response = await client.post(
         "/api/v1/subscriptions",
-        json=_subscription_payload(sub_client, service, plan, profile_name=None, profile_pin="1234"),
+        json=_subscription_payload(
+            sub_client, service, plan, profile_name=None, profile_pin="1234"
+        ),
         headers=headers,
     )
 
@@ -369,9 +409,13 @@ async def test_subscription_api_rejects_pin_without_profile(client, db_session, 
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_rejects_plan_service_mismatch(client, db_session, active_tenant_user):
+async def test_subscription_api_rejects_plan_service_mismatch(
+    client, db_session, active_tenant_user
+):
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "mismatchapi")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "mismatchapi"
+    )
     other_service = Service(tenant_id=tenant.id, name="Other Service")
     db_session.add(other_service)
     await db_session.commit()
@@ -388,9 +432,13 @@ async def test_subscription_api_rejects_plan_service_mismatch(client, db_session
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_lifecycle_and_cancelled_filter(client, db_session, active_tenant_user):
+async def test_subscription_api_lifecycle_and_cancelled_filter(
+    client, db_session, active_tenant_user
+):
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "lifeapi")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "lifeapi"
+    )
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     create_response = await client.post(
@@ -454,9 +502,13 @@ async def test_subscription_api_settings_defaults(client, active_tenant_user):
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_reveal_credentials(client, db_session, active_tenant_user):
+async def test_subscription_api_reveal_credentials(
+    client, db_session, active_tenant_user
+):
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "revealapi")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "revealapi"
+    )
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     # 1. Create subscription with password and PIN
@@ -465,7 +517,7 @@ async def test_subscription_api_reveal_credentials(client, db_session, active_te
         service,
         plan,
         streaming_password="my-super-secret-password-123",
-        profile_pin="5678"
+        profile_pin="5678",
     )
     create_res = await client.post(
         "/api/v1/subscriptions",
@@ -548,10 +600,14 @@ async def test_subscription_api_reveal_credentials(client, db_session, active_te
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant(client, db_session, active_tenant_user):
+async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant(
+    client, db_session, active_tenant_user
+):
     # Setup Tenant A (active_tenant_user)
     tenant_a = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client_a, service_a, plan_a = await _create_subscription_dependencies(db_session, tenant_a, "revealcrossa")
+    sub_client_a, service_a, plan_a = await _create_subscription_dependencies(
+        db_session, tenant_a, "revealcrossa"
+    )
     headers_a = await _login_headers(client, "tenant", "tenant-password")
 
     # Create subscription in Tenant A
@@ -560,7 +616,7 @@ async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant
         service_a,
         plan_a,
         streaming_password="tenant-a-secret",
-        profile_pin="1111"
+        profile_pin="1111",
     )
     create_res = await client.post(
         "/api/v1/subscriptions",
@@ -617,7 +673,9 @@ async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant
     )
     await db_session.commit()
 
-    headers_client = await _login_headers(client, "tenant_a_client_user", "client-password")
+    headers_client = await _login_headers(
+        client, "tenant_a_client_user", "client-password"
+    )
 
     client_res = await client.get(
         f"/api/v1/subscriptions/{subscription_id}/reveal",
@@ -654,7 +712,9 @@ async def test_subscription_job_endpoint_invalid_task(client):
 
 
 @pytest.mark.asyncio
-async def test_subscription_job_endpoint_cleanup(client, db_session, active_tenant_user):
+async def test_subscription_job_endpoint_cleanup(
+    client, db_session, active_tenant_user
+):
     """Cleanup job transitions expired active subs, cancels long-expired, and deletes old cancelled."""
     from sqlalchemy import select
 
@@ -662,7 +722,9 @@ async def test_subscription_job_endpoint_cleanup(client, db_session, active_tena
     tenant = await _tenant_for_user(db_session, active_tenant_user)
 
     # Create subscriptions in various states
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "cleanup")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "cleanup"
+    )
 
     headers = await _login_headers(client, "tenant", "tenant-password")
 
@@ -673,8 +735,12 @@ async def test_subscription_job_endpoint_cleanup(client, db_session, active_tena
     resp1 = await client.post(
         "/api/v1/subscriptions",
         json=_subscription_payload(
-            sub_client, service, plan,
-            streaming_password="p1", profile_pin=None, profile_name=None,
+            sub_client,
+            service,
+            plan,
+            streaming_password="p1",
+            profile_pin=None,
+            profile_name=None,
             duration_type="custom",
             starts_at=(now - timedelta(days=10)).isoformat(),
             expires_at=past_date,
@@ -688,8 +754,12 @@ async def test_subscription_job_endpoint_cleanup(client, db_session, active_tena
     resp2 = await client.post(
         "/api/v1/subscriptions",
         json=_subscription_payload(
-            sub_client, service, plan,
-            streaming_password="p2", profile_pin=None, profile_name=None,
+            sub_client,
+            service,
+            plan,
+            streaming_password="p2",
+            profile_pin=None,
+            profile_name=None,
             duration_type="custom",
             starts_at=(now - timedelta(days=30)).isoformat(),
             expires_at=(now - timedelta(days=10)).isoformat(),
@@ -706,7 +776,9 @@ async def test_subscription_job_endpoint_cleanup(client, db_session, active_tena
     )
 
     # Manually expire sub2 to test expired→cancelled path
-    res = await db_session.execute(select(Subscription).where(Subscription.id == uuid.UUID(sub2_id)))
+    res = await db_session.execute(
+        select(Subscription).where(Subscription.id == uuid.UUID(sub2_id))
+    )
     sub2 = res.scalar_one()
     sub2.status = "expired"
     sub2.expires_at = now - timedelta(days=10)
@@ -716,8 +788,12 @@ async def test_subscription_job_endpoint_cleanup(client, db_session, active_tena
     resp3 = await client.post(
         "/api/v1/subscriptions",
         json=_subscription_payload(
-            sub_client, service, plan,
-            streaming_password="p3", profile_pin=None, profile_name=None,
+            sub_client,
+            service,
+            plan,
+            streaming_password="p3",
+            profile_pin=None,
+            profile_name=None,
             duration_type="custom",
             starts_at=(now - timedelta(days=60)).isoformat(),
             expires_at=(now - timedelta(days=35)).isoformat(),
@@ -733,7 +809,9 @@ async def test_subscription_job_endpoint_cleanup(client, db_session, active_tena
         headers=headers,
     )
     # Backdate cancelled_at beyond 30 days
-    res3 = await db_session.execute(select(Subscription).where(Subscription.id == uuid.UUID(sub3_id)))
+    res3 = await db_session.execute(
+        select(Subscription).where(Subscription.id == uuid.UUID(sub3_id))
+    )
     sub3 = res3.scalar_one()
     sub3.status = "cancelled"
     sub3.cancelled_at = now - timedelta(days=35)
@@ -802,6 +880,215 @@ async def test_subscription_job_endpoint_all(client, db_session, active_tenant_u
     assert resp.status_code == 200
     data = resp.json()
     assert data["task"] == "all"
-    # At minimum returns 0 items since no cleanup needed
     assert "results" in data
 
+
+@pytest.mark.asyncio
+async def test_subscription_reminder_pending_endpoint(client, db_session, active_tenant_user):
+    """Reminder pending endpoint generates and returns payloads."""
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import select
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "remind")
+
+    now = datetime.now(timezone.utc)
+
+    # Create an active subscription that expires in 7 days (matching default warning_days)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client, service, plan,
+            streaming_password="pwd1", profile_pin=None, profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    sub_id = resp.json()["id"]
+
+    # Set reminder_time to 00:00 so it passes regardless of current time
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00"},
+        headers=headers,
+    )
+
+    # Fetch pending reminders
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert "items" in data
+    assert "next_cursor" in data
+    assert len(data["items"]) >= 1
+
+    # Verify payload structure
+    payload = data["items"][0]
+    assert "id" in payload
+    assert payload["subscription_id"] == sub_id
+    assert payload["days_before_expiry"] == 7
+    assert "message" in payload
+    assert "⚠️" in payload["message"]
+    assert "Recordatorio" in payload["message"]
+    assert service.name in payload["message"]
+    assert "Gestiona desde tu panel" in payload["message"]
+    assert payload["recipient_type"] == "tenant"
+    assert payload.get("evolution_instance_name") is not None
+
+    # Same call again should not duplicate (deduped by unique constraint)
+    resp_pending2 = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending2.status_code == 200
+    data2 = resp_pending2.json()
+    # Verify no NEW reminder logs were created (existing one has same id)
+    existing_ids = {item["id"] for item in data["items"]}
+    new_ids = {item["id"] for item in data2["items"]}
+    assert new_ids.issubset(existing_ids), "Second call created duplicate reminder logs"
+
+
+@pytest.mark.asyncio
+async def test_subscription_reminder_mark_sent(client, db_session, active_tenant_user):
+    """Mark-sent updates status and records sent_at."""
+    from datetime import datetime, timezone, timedelta
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "marksent")
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client, service, plan,
+            streaming_password="pwd", profile_pin=None, profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Set reminder_time to 00:00 so pending endpoint returns reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00"},
+        headers=headers,
+    )
+
+    # Get a pending reminder to obtain a log_id
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    items = resp_pending.json().get("items", [])
+    if not items:
+        pytest.skip("No pending reminders to test mark-sent")
+
+    log_id = items[0]["id"]
+
+    # Mark as sent
+    resp_sent = await client.post(
+        f"/api/v1/subscriptions/reminders/{log_id}/mark-sent",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_sent.status_code == 200
+    sent_data = resp_sent.json()
+    assert sent_data["status"] == "sent"
+    assert sent_data["sent_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_subscription_reminder_mark_failed(client, db_session, active_tenant_user):
+    """Mark-failed increments attempt_count and retries up to 3."""
+    from datetime import datetime, timezone, timedelta
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "markfail")
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client, service, plan,
+            streaming_password="pwd", profile_pin=None, profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Set reminder_time to 00:00 so pending endpoint returns reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00"},
+        headers=headers,
+    )
+
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    items = resp_pending.json().get("items", [])
+    if not items:
+        pytest.skip("No pending reminders to test mark-failed")
+
+    log_id = items[0]["id"]
+
+    # Mark failed twice
+    for attempt in range(2):
+        resp_fail = await client.post(
+            f"/api/v1/subscriptions/reminders/{log_id}/mark-failed",
+            json={"reason": f"Evolution error attempt {attempt + 1}"},
+            headers={"X-API-Key": api_key},
+        )
+        assert resp_fail.status_code == 200
+        fail_data = resp_fail.json()
+        assert fail_data["status"] == "pending"  # not yet failed
+        assert fail_data["attempt_count"] == attempt + 1
+        assert "Evolution error" in (fail_data.get("last_error") or "")
+
+    # Third failure should set status to failed
+    resp_fail3 = await client.post(
+        f"/api/v1/subscriptions/reminders/{log_id}/mark-failed",
+        json={"reason": "Evolution error attempt 3"},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_fail3.status_code == 200
+    fail_data3 = resp_fail3.json()
+    assert fail_data3["status"] == "failed"
+    assert fail_data3["attempt_count"] == 3
+
+
+@pytest.mark.asyncio
+async def test_subscription_reminder_endpoint_requires_api_key(client):
+    """Reminder endpoints return 401 without valid API key."""
+    resp = await client.post("/api/v1/subscriptions/reminders/pending")
+    assert resp.status_code == 401
+
+    resp = await client.post(
+        "/api/v1/subscriptions/reminders/00000000-0000-0000-0000-000000000000/mark-sent",
+    )
+    assert resp.status_code == 401
+
+    resp = await client.post(
+        "/api/v1/subscriptions/reminders/00000000-0000-0000-0000-000000000000/mark-failed",
+        json={"reason": "test"},
+    )
+    assert resp.status_code == 401

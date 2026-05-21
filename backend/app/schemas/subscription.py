@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -200,4 +200,43 @@ class SubscriptionRevealResponse(BaseModel):
 
     streaming_password: Optional[str] = None
     profile_pin: Optional[str] = None
+
+
+class ReminderPayload(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    subscription_id: uuid.UUID
+    tenant_id: uuid.UUID
+    recipient_type: str
+    recipient_phone: str
+    message: str
+    evolution_instance_name: Optional[str] = None
+    days_before_expiry: int
+
+
+class ReminderPendingResponse(BaseModel):
+    items: list[ReminderPayload]
+    next_cursor: Optional[str] = None
+
+
+class ReminderLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    subscription_id: uuid.UUID
+    recipient_type: str
+    recipient_phone: Optional[str] = None
+    days_before_expiry: int
+    sent_for_date: date
+    status: str
+    attempt_count: int
+    last_error: Optional[str] = None
+    sent_at: Optional[datetime] = None
+
+
+class MarkFailedRequest(BaseModel):
+    reason: Optional[str] = None
+
 

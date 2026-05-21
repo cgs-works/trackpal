@@ -4,6 +4,7 @@ from typing import Any, Optional
 from sqlalchemy import ForeignKey, String, DateTime, Date, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import UniqueConstraint
 
 from app.models.base import Base, TimestampMixin
 
@@ -52,6 +53,12 @@ class SubscriptionEvent(Base, TimestampMixin):
 
 class SubscriptionReminderLog(Base, TimestampMixin):
     __tablename__ = "subscription_reminder_logs"
+    __table_args__ = (
+        UniqueConstraint(
+            "subscription_id", "days_before_expiry", "sent_for_date", "recipient_type",
+            name="uq_subscription_reminder_dedupe",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
