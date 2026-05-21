@@ -104,7 +104,7 @@ Nightmanager implementation queue.
     - Reactivate asks for new duration and recalculates dates.
   - Notes: no price/payment fields in v1. Validation comes from the spec Testing Plan.
 
-- [ready] Add web credential masking and reminder settings UI
+- [done] Add web credential masking and reminder settings UI — 347b63d
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: implement masked credential display/reveal controls and tenant reminder settings UI.
   - Acceptance:
