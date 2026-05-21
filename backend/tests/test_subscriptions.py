@@ -270,3 +270,183 @@ async def test_subscription_reminder_settings(db_session, active_tenant_user):
     assert settings_obj.warning_days == [7, 3, 1]
     assert settings_obj.reminder_time == "09:00"
     assert settings_obj.recipient_mode == "tenant_only"
+
+
+async def _login_headers(async_client, username: str, password: str) -> dict[str, str]:
+    response = await async_client.post(
+        "/api/v1/auth/login",
+        json={"username": username, "password": password},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+async def _tenant_for_user(db_session, user: User) -> Tenant:
+    from sqlalchemy import select
+
+    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
+    return result.scalar_one()
+
+
+async def _create_subscription_dependencies(db_session, tenant: Tenant, suffix: str = "api"):
+    client_user = User(
+        username=f"{suffix}_client_user",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(client_user)
+    await db_session.flush()
+    client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=client_user.id,
+        full_name=f"{suffix.title()} Client",
+        local_username=f"{suffix}client",
+        phone=f"+1201555{len(suffix):04d}",
+        is_active=True,
+    )
+    service = Service(tenant_id=tenant.id, name=f"{suffix.title()} Service")
+    db_session.add_all([client, service])
+    await db_session.flush()
+    plan = Plan(tenant_id=tenant.id, service_id=service.id, name=f"{suffix.title()} Plan")
+    db_session.add(plan)
+    await db_session.commit()
+    return client, service, plan
+
+
+def _subscription_payload(client: Client, service: Service, plan: Plan, **overrides):
+    payload = {
+        "client_id": str(client.id),
+        "service_id": str(service.id),
+        "plan_id": str(plan.id),
+        "streaming_email": "account@example.com",
+        "streaming_password": "stream-secret",
+        "profile_name": "Principal",
+        "profile_pin": "1234",
+        "duration_type": "1_month",
+        "starts_at": datetime(2026, 1, 1, tzinfo=timezone.utc).isoformat(),
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_create_masks_secrets(client, db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "createapi")
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(sub_client, service, plan),
+        headers=headers,
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["streaming_email"] == "account@example.com"
+    assert body["has_password"] is True
+    assert body["has_pin"] is True
+    assert "streaming_password" not in body
+    assert "streaming_password_encrypted" not in body
+    assert "profile_pin" not in body
+    assert "profile_pin_encrypted" not in body
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_rejects_pin_without_profile(client, db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "pinapi")
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(sub_client, service, plan, profile_name=None, profile_pin="1234"),
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_rejects_plan_service_mismatch(client, db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "mismatchapi")
+    other_service = Service(tenant_id=tenant.id, name="Other Service")
+    db_session.add(other_service)
+    await db_session.commit()
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(sub_client, other_service, plan),
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert "Plan not found" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_lifecycle_and_cancelled_filter(client, db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "lifeapi")
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    create_response = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(sub_client, service, plan),
+        headers=headers,
+    )
+    assert create_response.status_code == 201, create_response.text
+    subscription_id = create_response.json()["id"]
+
+    renew_response = await client.post(
+        f"/api/v1/subscriptions/{subscription_id}/renew",
+        json={"duration_type": "3_months"},
+        headers=headers,
+    )
+    assert renew_response.status_code == 200, renew_response.text
+    assert renew_response.json()["duration_type"] == "3_months"
+
+    cancel_response = await client.post(
+        f"/api/v1/subscriptions/{subscription_id}/cancel",
+        json={"notes": "cancel test"},
+        headers=headers,
+    )
+    assert cancel_response.status_code == 200, cancel_response.text
+    assert cancel_response.json()["status"] == "cancelled"
+    assert cancel_response.json()["cancelled_at"] is not None
+
+    default_list_response = await client.get("/api/v1/subscriptions", headers=headers)
+    assert default_list_response.status_code == 200
+    assert default_list_response.json() == []
+
+    cancelled_list_response = await client.get(
+        "/api/v1/subscriptions?status=cancelled",
+        headers=headers,
+    )
+    assert cancelled_list_response.status_code == 200
+    assert [item["id"] for item in cancelled_list_response.json()] == [subscription_id]
+
+    reactivate_response = await client.post(
+        f"/api/v1/subscriptions/{subscription_id}/reactivate",
+        json={"duration_type": "1_month"},
+        headers=headers,
+    )
+    assert reactivate_response.status_code == 200, reactivate_response.text
+    assert reactivate_response.json()["status"] == "active"
+    assert reactivate_response.json()["cancelled_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_defaults(client, active_tenant_user):
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/subscription-settings", headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "UTC"
+    assert body["warning_days"] == [7, 3, 1]
+    assert body["reminder_time"] == "09:00"
+    assert body["recipient_mode"] == "tenant_only"
