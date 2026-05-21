@@ -47,7 +47,7 @@ Nightmanager implementation queue.
     - Plaintext secrets are not logged.
   - Notes: normal list/detail API must stay masked/flag-only. Validation comes from the spec Testing Plan.
 
-- [ready] Add subscription lifecycle job endpoint
+- [done] Add subscription lifecycle job endpoint — 9b2e65e
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: implement protected job endpoint using `N8N_API_KEY` with `task=cleanup|reminders|all`, cleanup lifecycle actions, and detailed ID-only results.
   - Acceptance:
