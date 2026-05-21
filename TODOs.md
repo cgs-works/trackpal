@@ -58,7 +58,7 @@ Nightmanager implementation queue.
     - Job response includes per-item IDs/action/status/error metadata only, no PII/secrets.
   - Notes: tenant timezone controls date boundaries; default timezone is `UTC`. Validation comes from the spec Testing Plan.
 
-- [ready] Add reminder payload generation and send-status API
+- [done] Add reminder payload generation and send-status API — 8402c69
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: implement reminder payload generation, opaque cursor pagination, sent/failed mark endpoints, retry limits, and tenant reminder settings behavior.
   - Acceptance:
