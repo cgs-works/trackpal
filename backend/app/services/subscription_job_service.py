@@ -69,7 +69,9 @@ class SubscriptionJobService:
         tz_map = await self._get_tenant_timezone_map(db)
         tenant_tz_str = tz_map.get(tenant_id, "UTC")
         _ = tenant_tz_str
-        return datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc)
+        return datetime(
+            today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc
+        )
 
     async def _expire_active_subs(
         self, db: AsyncSession, now: datetime, today: date
@@ -330,16 +332,19 @@ class SubscriptionJobService:
                             streaming_email=streaming_email,
                         )
 
-                        items.append({
-                            "id": str(log.id),
-                            "subscription_id": str(sub.id),
-                            "tenant_id": str(sub.tenant_id),
-                            "recipient_type": recipient_type,
-                            "recipient_phone": recipient_phone,
-                            "message": message,
-                            "evolution_instance_name": tenant.evolution_instance_name or "",
-                            "days_before_expiry": warning_day,
-                        })
+                        items.append(
+                            {
+                                "id": str(log.id),
+                                "subscription_id": str(sub.id),
+                                "tenant_id": str(sub.tenant_id),
+                                "recipient_type": recipient_type,
+                                "recipient_phone": recipient_phone,
+                                "message": message,
+                                "evolution_instance_name": tenant.evolution_instance_name
+                                or "",
+                                "days_before_expiry": warning_day,
+                            }
+                        )
             except Exception:
                 continue
 
@@ -360,7 +365,9 @@ class SubscriptionJobService:
         """
         try:
             hour, minute = reminder_time.split(":")
-            reminder = now.replace(hour=int(hour), minute=int(minute), second=0, microsecond=0)
+            reminder = now.replace(
+                hour=int(hour), minute=int(minute), second=0, microsecond=0
+            )
             return now >= reminder
         except (ValueError, AttributeError):
             return True

@@ -884,14 +884,18 @@ async def test_subscription_job_endpoint_all(client, db_session, active_tenant_u
 
 
 @pytest.mark.asyncio
-async def test_subscription_reminder_pending_endpoint(client, db_session, active_tenant_user):
+async def test_subscription_reminder_pending_endpoint(
+    client, db_session, active_tenant_user
+):
     """Reminder pending endpoint generates and returns payloads."""
     from datetime import datetime, timezone, timedelta
     from sqlalchemy import select
 
     api_key = settings.n8n_api_key
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "remind")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "remind"
+    )
 
     now = datetime.now(timezone.utc)
 
@@ -900,8 +904,12 @@ async def test_subscription_reminder_pending_endpoint(client, db_session, active
     resp = await client.post(
         "/api/v1/subscriptions",
         json=_subscription_payload(
-            sub_client, service, plan,
-            streaming_password="pwd1", profile_pin=None, profile_name=None,
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd1",
+            profile_pin=None,
+            profile_name=None,
             duration_type="custom",
             starts_at=now.isoformat(),
             expires_at=(now + timedelta(days=7)).isoformat(),
@@ -962,15 +970,21 @@ async def test_subscription_reminder_mark_sent(client, db_session, active_tenant
 
     api_key = settings.n8n_api_key
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "marksent")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "marksent"
+    )
 
     now = datetime.now(timezone.utc)
     headers = await _login_headers(client, "tenant", "tenant-password")
     resp = await client.post(
         "/api/v1/subscriptions",
         json=_subscription_payload(
-            sub_client, service, plan,
-            streaming_password="pwd", profile_pin=None, profile_name=None,
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
             duration_type="custom",
             starts_at=now.isoformat(),
             expires_at=(now + timedelta(days=7)).isoformat(),
@@ -1010,21 +1024,29 @@ async def test_subscription_reminder_mark_sent(client, db_session, active_tenant
 
 
 @pytest.mark.asyncio
-async def test_subscription_reminder_mark_failed(client, db_session, active_tenant_user):
+async def test_subscription_reminder_mark_failed(
+    client, db_session, active_tenant_user
+):
     """Mark-failed increments attempt_count and retries up to 3."""
     from datetime import datetime, timezone, timedelta
 
     api_key = settings.n8n_api_key
     tenant = await _tenant_for_user(db_session, active_tenant_user)
-    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "markfail")
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "markfail"
+    )
 
     now = datetime.now(timezone.utc)
     headers = await _login_headers(client, "tenant", "tenant-password")
     resp = await client.post(
         "/api/v1/subscriptions",
         json=_subscription_payload(
-            sub_client, service, plan,
-            streaming_password="pwd", profile_pin=None, profile_name=None,
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
             duration_type="custom",
             starts_at=now.isoformat(),
             expires_at=(now + timedelta(days=7)).isoformat(),

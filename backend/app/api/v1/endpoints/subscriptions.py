@@ -348,7 +348,9 @@ async def run_subscription_job(
 
 # Reminder Generation Endpoints
 
-reminders_router = APIRouter(prefix="/subscriptions/reminders", tags=["subscriptions-reminders"])
+reminders_router = APIRouter(
+    prefix="/subscriptions/reminders", tags=["subscriptions-reminders"]
+)
 
 
 @reminders_router.post("/pending", response_model=ReminderPendingResponse)
