@@ -4,15 +4,24 @@
     {
       "parameters": {
         "rule": {
-          "cronExpression": "0 9 * * *",
-          "schedulerCron": true
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
         }
       },
       "id": "e1a2b3c4-5d6e-7f8a-9b0c-1d2e3f4a5b6c",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.1,
-      "position": [240, 300]
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -67,7 +76,10 @@
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [480, 300]
+      "position": [
+        480,
+        300
+      ]
     },
     {
       "parameters": {
@@ -88,7 +100,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ task: $('Config').first().json.reminder_task, limit: $('Config').first().json.reminders_page_limit }) }}",
+        "jsonBody": "={{ JSON.stringify({ page_size: $('Config').first().json.reminders_page_limit }) }}",
         "options": {
           "response": {
             "response": {
@@ -101,17 +113,24 @@
       "name": "Fetch Pending Reminders",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [720, 300]
+      "position": [
+        720,
+        300
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nif (!items || items.length === 0) {\n  return [];\n}\nconst response = items[0].json;\nlet list = response.data || response.results || response.reminders || [];\nif (!Array.isArray(list)) {\n  if (Array.isArray(response)) {\n    list = response;\n  } else {\n    list = [];\n  }\n}\nreturn list.map(item => ({ json: item }));"
+        "jsCode": "const response = $input.first()?.json || {};\nconst list = Array.isArray(response.items) ? response.items : [];\nreturn list.map(item => ({ json: item }));"
       },
       "id": "b4c5d6e7-8f9a-0b1c-2d3e-4f5a6b7c8d9e",
       "name": "Transform Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 300]
+      "position": [
+        960,
+        300
+      ]
     },
     {
       "parameters": {
@@ -120,8 +139,11 @@
       "id": "c5d6e7f8-9a0b-1c2d-3e4f-5a6b7c8d9e0f",
       "name": "SplitInBatches",
       "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3.1,
-      "position": [1200, 300]
+      "typeVersion": 3,
+      "position": [
+        1200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -132,7 +154,10 @@
       "name": "Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1440, 300]
+      "position": [
+        1440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -149,7 +174,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: String($json.recipient_phone || '').replace('+', ''), text: String($json.message_text || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: String($json.recipient_phone || '').replace('+', ''), text: String($json.message || '') }) }}",
         "options": {
           "response": {
             "response": {
@@ -162,39 +187,64 @@
       "name": "Evolution API Send",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [1680, 300]
+      "position": [
+        1680,
+        300
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst hasError = response.error !== undefined && response.error !== null;\nconst statusIsError = response.status && response.status === 'error';\nconst evolutionSuccess = !hasError && !statusIsError;\nreturn [{ json: { ...$input.first().json, _evolutionSuccess: evolutionSuccess, _evolutionResponse: response } }];"
+        "jsCode": "const sendResponse = $input.first().json;\nconst original = $('SplitInBatches').item.json;\nconst hasError = sendResponse.error !== undefined && sendResponse.error !== null;\nconst statusIsError = sendResponse.status && String(sendResponse.status).toLowerCase() === 'error';\nconst evolutionSuccess = !hasError && !statusIsError;\nreturn [{ json: { ...original, _evolutionSuccess: evolutionSuccess, _evolutionResponse: sendResponse } }];"
       },
       "id": "f8a9b0c1-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
       "name": "Evaluate Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1920, 300]
+      "position": [
+        1920,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
             {
-              "value1": "={{ $json._evolutionSuccess }}",
-              "operation": "isTrue"
+              "id": "success-check",
+              "leftValue": "={{ $json._evolutionSuccess }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
-          ]
-        }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": false,
+        "options": {}
       },
       "id": "a9b0c1d2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
       "name": "Route by Success?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.1,
-      "position": [2160, 300]
+      "typeVersion": 2.3,
+      "position": [
+        2160,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/{{ $json.log_id }}/mark-sent",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/{{ $json.id }}/mark-sent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -223,12 +273,16 @@
       "name": "Mark Sent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [2400, 200]
+      "position": [
+        2400,
+        200
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/{{ $json.log_id }}/mark-failed",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/subscriptions/reminders/{{ $json.id }}/mark-failed",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -244,7 +298,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ error: $json._evolutionResponse ? JSON.stringify($json._evolutionResponse) : 'Unknown error' }) }}",
+        "jsonBody": "={{ JSON.stringify({ reason: $json._evolutionResponse ? JSON.stringify($json._evolutionResponse) : 'Unknown error' }) }}",
         "options": {
           "response": {
             "response": {
@@ -257,7 +311,11 @@
       "name": "Mark Failed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [2400, 400]
+      "position": [
+        2400,
+        400
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
