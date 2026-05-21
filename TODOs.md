@@ -24,7 +24,7 @@ Nightmanager implementation queue.
     - RLS policy tests cover subscription-related tables.
   - Notes: keep event/reminder logs cascade-deleted with subscriptions; do not add key rotation in v1. Validation comes from the spec Testing Plan.
 
-- [ready] Add subscription CRUD API for tenant and master-context users
+- [done] Add subscription CRUD API for tenant and master-context users — ea3bb0e
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: implement `/api/v1/subscriptions` tenant-scoped create/list/detail/update/cancel/reactivate/renew/events endpoints and settings endpoints.
   - Acceptance:
