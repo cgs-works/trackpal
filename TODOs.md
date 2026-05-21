@@ -81,7 +81,7 @@ Nightmanager implementation queue.
     - Workflow calls `mark-sent` after successful Evolution send and `mark-failed` on Evolution failure.
   - Notes: exact node-level error handling and workflow JSON still need design during implementation. Validation comes from the spec Testing Plan.
 
-- [ready] Add subscriptions web page and navigation
+- [done] Add subscriptions web page and navigation — 068b801
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: create dedicated subscriptions route/page with dashboard and client navigation entry points.
   - Acceptance:
