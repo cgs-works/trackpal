@@ -22,6 +22,12 @@ const routes = [
     component: () => import('../views/TenantDashboardView.vue')
   },
   {
+    path: '/admin/subscriptions',
+    name: 'subscriptions',
+    meta: { requiresAuth: true, role: 'tenant' },
+    component: () => import('../views/SubscriptionsView.vue')
+  },
+  {
     path: '/client/dashboard',
     name: 'client-dashboard',
     meta: { requiresAuth: true, role: 'client' },

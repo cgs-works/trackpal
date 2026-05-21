@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     whatsapp_auth_fail_threshold: int = 5
     whatsapp_auth_lock_minutes: int = 5
     whatsapp_auth_fail_window_minutes: int = 15
+    data_encryption_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
