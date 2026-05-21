@@ -115,7 +115,7 @@ Nightmanager implementation queue.
     - Defaults show `UTC`, `[7, 3, 1]`, `09:00`, and tenant-only recipient.
   - Notes: do not cache revealed secrets longer than needed in UI state. Validation comes from the spec Testing Plan.
 
-- [ready] Add Tenant WhatsApp subscription CRUD
+- [done] Add Tenant WhatsApp subscription CRUD — c546417
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: extend Tenant WhatsApp console with subscription list/create/detail/edit/cancel/renew/reactivate flows.
   - Acceptance:
