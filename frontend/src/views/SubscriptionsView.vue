@@ -15,6 +15,58 @@ const planMap = ref({})
 const isLoading = ref(false)
 const errorMessage = ref('')
 
+// Modal state
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showRenewModal = ref(false)
+const showReactivateModal = ref(false)
+const showCancelConfirm = ref(false)
+const selectedSubscription = ref(null)
+const confirmCancelId = ref(null)
+const isSaving = ref(false)
+const showPassword = ref(false)
+const showProfile = ref(false)
+const availablePlans = ref([])
+
+// Form data
+const formData = ref({
+  client_id: '',
+  service_id: '',
+  plan_id: '',
+  streaming_email: '',
+  streaming_password: '',
+  duration_type: '',
+  expires_at: '',
+  profile_name: '',
+  profile_pin: '',
+})
+
+const renewForm = ref({
+  duration_type: '',
+  expires_at: '',
+})
+
+const reactivateForm = ref({
+  duration_type: '',
+  starts_at: '',
+  expires_at: '',
+})
+
+const cancelNotes = ref('')
+
+const durationOptions = [
+  { value: '1_month', label: '1 mes' },
+  { value: '3_months', label: '3 meses' },
+  { value: '6_months', label: '6 meses' },
+  { value: '9_months', label: '9 meses' },
+  { value: '1_year', label: '1 año' },
+  { value: 'custom', label: 'Personalizado' },
+]
+
+const isCustomDuration = computed(() => formData.value.duration_type === 'custom')
+const isRenewCustomDuration = computed(() => renewForm.value.duration_type === 'custom')
+const isReactivateCustomDuration = computed(() => reactivateForm.value.duration_type === 'custom')
+
 const filters = ref({
   status: '',
   client_id: '',
@@ -177,6 +229,182 @@ async function init() {
   await loadSubscriptions()
 }
 
+// --- Modal helpers ---
+
+async function loadPlans(serviceId) {
+  if (!serviceId) {
+    availablePlans.value = []
+    formData.value.plan_id = ''
+    return
+  }
+  try {
+    const response = await api.get(`/catalog/services/${serviceId}/plans`)
+    availablePlans.value = response.data || []
+  } catch (error) {
+    availablePlans.value = []
+    formData.value.plan_id = ''
+  }
+}
+
+function openCreateModal() {
+  formData.value = {
+    client_id: '',
+    service_id: '',
+    plan_id: '',
+    streaming_email: '',
+    streaming_password: '',
+    duration_type: '',
+    expires_at: '',
+    profile_name: '',
+    profile_pin: '',
+  }
+  availablePlans.value = []
+  showPassword.value = false
+  showProfile.value = false
+  showCreateModal.value = true
+}
+
+function openEditModal(sub) {
+  selectedSubscription.value = sub
+  formData.value = {
+    client_id: sub.client_id || '',
+    service_id: sub.service_id || '',
+    plan_id: sub.plan_id || '',
+    streaming_email: sub.streaming_email || '',
+    streaming_password: sub.streaming_password || '',
+    duration_type: sub.duration_type || '',
+    expires_at: sub.expires_at ? sub.expires_at.split('T')[0] : '',
+    profile_name: sub.profile_name || '',
+    profile_pin: sub.profile_pin || '',
+  }
+  showPassword.value = false
+  showProfile.value = !!(sub.profile_name || sub.profile_pin)
+  showEditModal.value = true
+  if (sub.service_id) loadPlans(sub.service_id)
+}
+
+function openRenewModal(sub) {
+  selectedSubscription.value = sub
+  renewForm.value = { duration_type: '', expires_at: '' }
+  showRenewModal.value = true
+}
+
+function openReactivateModal(sub) {
+  selectedSubscription.value = sub
+  reactivateForm.value = { duration_type: '', starts_at: '', expires_at: '' }
+  showReactivateModal.value = true
+}
+
+function confirmCancel(sub) {
+  confirmCancelId.value = sub.id
+  cancelNotes.value = ''
+  showCancelConfirm.value = true
+}
+
+async function doCancel() {
+  if (!confirmCancelId.value) return
+  isSaving.value = true
+  try {
+    await api.post(`/subscriptions/${confirmCancelId.value}/cancel`, { notes: cancelNotes.value || '' })
+    showCancelConfirm.value = false
+    confirmCancelId.value = null
+    await loadSubscriptions()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo cancelar la suscripción.')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function saveSubscription() {
+  isSaving.value = true
+  try {
+    const payload = {
+      client_id: formData.value.client_id,
+      service_id: formData.value.service_id,
+      plan_id: formData.value.plan_id,
+      streaming_email: formData.value.streaming_email,
+      streaming_password: formData.value.streaming_password || undefined,
+      duration_type: formData.value.duration_type,
+      expires_at: formData.value.duration_type === 'custom' ? formData.value.expires_at : undefined,
+      profile_name: formData.value.profile_name || undefined,
+      profile_pin: formData.value.profile_pin || undefined,
+    }
+    if (showEditModal.value && selectedSubscription.value) {
+      await api.put(`/subscriptions/${selectedSubscription.value.id}`, payload)
+    } else {
+      await api.post('/subscriptions', payload)
+    }
+    showCreateModal.value = false
+    showEditModal.value = false
+    selectedSubscription.value = null
+    await loadSubscriptions()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo guardar la suscripción.')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function doRenew() {
+  if (!selectedSubscription.value) return
+  isSaving.value = true
+  try {
+    const payload = {
+      duration_type: renewForm.value.duration_type,
+      expires_at: renewForm.value.duration_type === 'custom' ? renewForm.value.expires_at : undefined,
+    }
+    await api.post(`/subscriptions/${selectedSubscription.value.id}/renew`, payload)
+    showRenewModal.value = false
+    selectedSubscription.value = null
+    await loadSubscriptions()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo renovar la suscripción.')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function doReactivate() {
+  if (!selectedSubscription.value) return
+  isSaving.value = true
+  try {
+    const payload = {
+      duration_type: reactivateForm.value.duration_type,
+      starts_at: reactivateForm.value.starts_at || undefined,
+      expires_at: reactivateForm.value.duration_type === 'custom' ? reactivateForm.value.expires_at : undefined,
+    }
+    await api.post(`/subscriptions/${selectedSubscription.value.id}/reactivate`, payload)
+    showReactivateModal.value = false
+    selectedSubscription.value = null
+    await loadSubscriptions()
+  } catch (error) {
+    errorMessage.value = getApiError(error, 'No se pudo reactivar la suscripción.')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+function closeModals() {
+  showCreateModal.value = false
+  showEditModal.value = false
+  showRenewModal.value = false
+  showReactivateModal.value = false
+  showCancelConfirm.value = false
+  confirmCancelId.value = null
+  selectedSubscription.value = null
+}
+
+// Watch service_id changes to reload plans
+watch(() => formData.value.service_id, (newVal) => {
+  formData.value.plan_id = ''
+  if (newVal) {
+    loadPlans(newVal)
+  } else {
+    availablePlans.value = []
+  }
+})
+
 onMounted(init)
 </script>
 
@@ -190,6 +418,7 @@ onMounted(init)
 
       <div class="user-actions">
         <span class="username">{{ username }}</span>
+        <button class="button button-primary" type="button" @click="openCreateModal">Nueva suscripción</button>
         <button class="button button-secondary" type="button" @click="goBack">Volver al dashboard</button>
         <button class="button button-secondary" type="button" @click="authStore.logout(); router.push('/login')">Cerrar sesión</button>
       </div>
@@ -288,6 +517,7 @@ onMounted(init)
               <th>Estado</th>
               <th>Inicio</th>
               <th>Vencimiento</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -303,11 +533,180 @@ onMounted(init)
               </td>
               <td>{{ formatDate(sub.starts_at) }}</td>
               <td>{{ formatDate(sub.expires_at) }}</td>
+              <td class="actions-cell">
+                <button class="button button-sm" type="button" @click="openEditModal(sub)" title="Editar">✏️</button>
+                <button v-if="sub.status === 'active'" class="button button-sm" type="button" @click="openRenewModal(sub)" title="Renovar">🔄</button>
+                <button v-if="sub.status === 'cancelled'" class="button button-sm" type="button" @click="openReactivateModal(sub)" title="Reactivar">▶️</button>
+                <button v-if="sub.status === 'active'" class="button button-sm button-danger" type="button" @click="confirmCancel(sub)" title="Cancelar">✕</button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <!-- Create/Edit Modal -->
+    <div v-if="showCreateModal || showEditModal" class="modal-overlay" @click.self="closeModals">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>{{ showEditModal ? 'Editar suscripción' : 'Nueva suscripción' }}</h2>
+          <button class="modal-close" type="button" @click="closeModals">✕</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            Cliente
+            <select v-model="formData.client_id" required>
+              <option value="">Seleccionar cliente</option>
+              <option v-for="client in clients" :key="client.id" :value="client.id">{{ client.full_name }}</option>
+            </select>
+          </label>
+          <label>
+            Servicio
+            <select v-model="formData.service_id" required>
+              <option value="">Seleccionar servicio</option>
+              <option v-for="service in services" :key="service.id" :value="service.id">{{ service.name }}</option>
+            </select>
+          </label>
+          <label>
+            Plan
+            <select v-model="formData.plan_id" required :disabled="!availablePlans.length">
+              <option value="">Seleccionar plan</option>
+              <option v-for="plan in availablePlans" :key="plan.id" :value="plan.id">{{ plan.name }}</option>
+            </select>
+          </label>
+          <label>
+            Email streaming
+            <input v-model="formData.streaming_email" type="email" placeholder="email@ejemplo.com" required />
+          </label>
+          <label>
+            Contraseña streaming
+            <div class="password-wrapper">
+              <input :type="showPassword ? 'text' : 'password'" v-model="formData.streaming_password" placeholder="••••••••" />
+              <button class="toggle-password" type="button" @click="showPassword = !showPassword">
+                {{ showPassword ? '🙈' : '👁️' }}
+              </button>
+            </div>
+          </label>
+          <label>
+            Duración
+            <select v-model="formData.duration_type">
+              <option value="">Seleccionar duración</option>
+              <option v-for="opt in durationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </label>
+          <label v-if="isCustomDuration">
+            Fecha de vencimiento
+            <input v-model="formData.expires_at" type="date" />
+          </label>
+          <div class="profile-toggle">
+            <button class="button button-sm" type="button" @click="showProfile = !showProfile">
+              {{ showProfile ? '−' : '+' }} Añadir perfil y PIN
+            </button>
+          </div>
+          <template v-if="showProfile">
+            <label>
+              Nombre de perfil
+              <input v-model="formData.profile_name" placeholder="Ej: Perfil 1" />
+            </label>
+            <label>
+              PIN
+              <input v-model="formData.profile_pin" type="text" inputmode="numeric" placeholder="1234" :disabled="!formData.profile_name" />
+            </label>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button class="button button-secondary" type="button" @click="closeModals">Cancelar</button>
+          <button class="button button-primary" type="button" @click="saveSubscription" :disabled="isSaving || !formData.client_id || !formData.service_id || !formData.plan_id || !formData.streaming_email || !formData.duration_type">
+            {{ isSaving ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Renew Modal -->
+    <div v-if="showRenewModal" class="modal-overlay" @click.self="closeModals">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Renovar suscripción</h2>
+          <button class="modal-close" type="button" @click="closeModals">✕</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            Duración
+            <select v-model="renewForm.duration_type">
+              <option value="">Seleccionar duración</option>
+              <option v-for="opt in durationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </label>
+          <label v-if="isRenewCustomDuration">
+            Fecha de vencimiento
+            <input v-model="renewForm.expires_at" type="date" />
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="button button-secondary" type="button" @click="closeModals">Cancelar</button>
+          <button class="button button-primary" type="button" @click="doRenew" :disabled="isSaving || !renewForm.duration_type || (isRenewCustomDuration && !renewForm.expires_at)">
+            {{ isSaving ? 'Renovando...' : 'Renovar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reactivate Modal -->
+    <div v-if="showReactivateModal" class="modal-overlay" @click.self="closeModals">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Reactivar suscripción</h2>
+          <button class="modal-close" type="button" @click="closeModals">✕</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            Duración
+            <select v-model="reactivateForm.duration_type">
+              <option value="">Seleccionar duración</option>
+              <option v-for="opt in durationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </label>
+          <label>
+            Fecha de inicio (opcional)
+            <input v-model="reactivateForm.starts_at" type="date" />
+          </label>
+          <label v-if="isReactivateCustomDuration">
+            Fecha de vencimiento
+            <input v-model="reactivateForm.expires_at" type="date" />
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="button button-secondary" type="button" @click="closeModals">Cancelar</button>
+          <button class="button button-primary" type="button" @click="doReactivate" :disabled="isSaving || !reactivateForm.duration_type || (isReactivateCustomDuration && !reactivateForm.expires_at)">
+            {{ isSaving ? 'Reactivando...' : 'Reactivar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancel Confirm Dialog -->
+    <div v-if="showCancelConfirm" class="modal-overlay" @click.self="closeModals">
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <h2>Cancelar suscripción</h2>
+          <button class="modal-close" type="button" @click="closeModals">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>¿Estás seguro de que deseas cancelar esta suscripción?</p>
+          <label>
+            Notas (opcional)
+            <textarea v-model="cancelNotes" rows="3" placeholder="Motivo de la cancelación..."></textarea>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="button button-secondary" type="button" @click="closeModals">Volver</button>
+          <button class="button button-primary" type="button" style="background:var(--danger)" @click="doCancel" :disabled="isSaving">
+            {{ isSaving ? 'Cancelando...' : 'Sí, cancelar' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -564,6 +963,128 @@ tbody tr:hover {
   margin-bottom: 0;
 }
 
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--card-bg);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25);
+}
+
+.modal-sm {
+  max-width: 420px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.modal-close:hover {
+  background: var(--border);
+}
+
+.modal-body {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.modal-body textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text);
+  font: inherit;
+  background: var(--card-bg);
+  resize: vertical;
+}
+
+.modal-body textarea:focus {
+  border-color: var(--primary);
+  outline: 3px solid rgb(79 70 229 / 15%);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+.password-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-wrapper input {
+  flex: 1;
+}
+
+.toggle-password {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.profile-toggle {
+  padding-top: 8px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.button-danger:hover {
+  background: rgb(239 68 68 / 10%);
+}
+
 @media (max-width: 720px) {
   .dashboard-page {
     padding: 20px;
@@ -585,6 +1106,11 @@ tbody tr:hover {
 
   .button {
     width: 100%;
+  }
+
+  .modal {
+    width: 95%;
+    max-width: 100%;
   }
 }
 </style>
