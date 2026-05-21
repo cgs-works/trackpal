@@ -373,6 +373,9 @@ onMounted(loadDashboard)
         <p v-if="isMasterSupport">Estás gestionando el catálogo de {{ displayName }} como Master.</p>
         <p v-else>Has iniciado sesión como {{ displayName }}. El dashboard está en construcción.</p>
         <p class="placeholder-message">{{ dashboardMessage }}</p>
+        <button class="button button-primary" type="button" @click="router.push('/admin/subscriptions')" style="margin-top: 16px;">
+          Ir a Suscripciones
+        </button>
       </section>
 
       <section v-if="!isMasterSupport" class="content-card profile-card">
@@ -478,6 +481,7 @@ onMounted(loadDashboard)
                     <button class="link-button" type="button" @click="toggleClientStatus(client)">
                       {{ client.is_active ? 'Deactivate' : 'Activate' }}
                     </button>
+                    <button class="link-button" type="button" @click="router.push('/admin/subscriptions?client_id=' + client.id)">Suscripciones</button>
                     <button class="link-button danger" type="button" @click="deleteClient(client)">Delete</button>
                   </div>
                 </td>
