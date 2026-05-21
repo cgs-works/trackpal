@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, status, Response
 from pydantic import BaseModel
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep
+from app.api.dependencies import ActiveTenantId, ApiKeyDbDep, CurrentUser, DbDep
 from app.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
@@ -14,6 +14,7 @@ from app.schemas.subscription import (
     SubscriptionReminderSettingsUpdate,
     SubscriptionRevealResponse,
 )
+from app.services.subscription_job_service import SubscriptionJobService
 from app.services.subscription_service import SubscriptionService
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
@@ -256,3 +257,44 @@ async def update_reminder_settings(
         return await subscription_service.update_reminder_settings(db, tenant_id, payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+# Subscription Jobs Endpoint
+
+jobs_router = APIRouter(prefix="/subscriptions", tags=["subscriptions-jobs"])
+
+subscription_job_service = SubscriptionJobService()
+
+
+@jobs_router.post("/jobs")
+async def run_subscription_job(
+    db: ApiKeyDbDep,
+    task: str = "cleanup",
+):
+    """Run a subscription lifecycle job.
+
+    Protected by ``N8N_API_KEY`` header.  Supported tasks:
+    - ``cleanup``: expire/cancel/delete lifecycle transitions.
+    - ``reminders``: placeholder (separate TODO).
+    - ``all``: run both.
+
+    Returns per-item results with IDs, action, status, and optional error.
+    No PII or secrets are returned.
+    """
+    if task not in ("cleanup", "reminders", "all"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid task '{task}'. Must be one of: cleanup, reminders, all",
+        )
+
+    results: list[dict] = []
+
+    if task in ("cleanup", "all"):
+        cleanup_results = await subscription_job_service.run_cleanup(db)
+        results.extend(cleanup_results)
+
+    if task in ("reminders", "all"):
+        reminder_results = await subscription_job_service.run_reminders_stub()
+        results.extend(reminder_results)
+
+    return {"task": task, "items_processed": len(results), "results": results}

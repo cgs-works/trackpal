@@ -21,6 +21,7 @@ from app.models.service import Service
 from app.models.plan import Plan
 from app.models.tenant import Tenant
 from app.models.user import User
+from app.core.config import settings
 from app.core.security import get_password_hash
 
 
@@ -623,4 +624,184 @@ async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant
         headers=headers_client,
     )
     assert client_res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_subscription_job_endpoint_requires_api_key(client):
+    """Job endpoint returns 401 without valid X-API-Key header."""
+    resp = await client.post("/api/v1/subscriptions/jobs?task=cleanup")
+    assert resp.status_code == 401
+    assert "Invalid API Key" in resp.text or "api" in resp.text.lower()
+
+    # Wrong key
+    resp = await client.post(
+        "/api/v1/subscriptions/jobs?task=cleanup",
+        headers={"X-API-Key": "wrong-key"},
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_subscription_job_endpoint_invalid_task(client):
+    """Job endpoint returns 400 for invalid task parameter."""
+    api_key = settings.n8n_api_key
+    resp = await client.post(
+        "/api/v1/subscriptions/jobs?task=invalid_task",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp.status_code == 400
+    assert "Invalid task" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_subscription_job_endpoint_cleanup(client, db_session, active_tenant_user):
+    """Cleanup job transitions expired active subs, cancels long-expired, and deletes old cancelled."""
+    from sqlalchemy import select
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+
+    # Create subscriptions in various states
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "cleanup")
+
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Active subscription already past expires_at → should become expired
+    past_date = (now - timedelta(days=2)).isoformat()
+    resp1 = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client, service, plan,
+            streaming_password="p1", profile_pin=None, profile_name=None,
+            duration_type="custom",
+            starts_at=(now - timedelta(days=10)).isoformat(),
+            expires_at=past_date,
+        ),
+        headers=headers,
+    )
+    assert resp1.status_code == 201
+    sub1_id = resp1.json()["id"]
+
+    # 2. Subscription already expired for 7+ days → should become cancelled
+    resp2 = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client, service, plan,
+            streaming_password="p2", profile_pin=None, profile_name=None,
+            duration_type="custom",
+            starts_at=(now - timedelta(days=30)).isoformat(),
+            expires_at=(now - timedelta(days=10)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp2.status_code == 201
+    sub2_id = resp2.json()["id"]
+    # Manually set to expired (job transition will test expired→cancelled for sub2)
+    await client.patch(
+        f"/api/v1/subscriptions/{sub2_id}/cancel",
+        json={"notes": "manual cancel for expired"},
+        headers=headers,
+    )
+
+    # Manually expire sub2 to test expired→cancelled path
+    res = await db_session.execute(select(Subscription).where(Subscription.id == uuid.UUID(sub2_id)))
+    sub2 = res.scalar_one()
+    sub2.status = "expired"
+    sub2.expires_at = now - timedelta(days=10)
+    await db_session.commit()
+
+    # 3. Subscription cancelled for 30+ days → should be deleted
+    resp3 = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client, service, plan,
+            streaming_password="p3", profile_pin=None, profile_name=None,
+            duration_type="custom",
+            starts_at=(now - timedelta(days=60)).isoformat(),
+            expires_at=(now - timedelta(days=35)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp3.status_code == 201
+    sub3_id = resp3.json()["id"]
+    # Cancel it first
+    await client.post(
+        f"/api/v1/subscriptions/{sub3_id}/cancel",
+        json={"notes": "manual cancel"},
+        headers=headers,
+    )
+    # Backdate cancelled_at beyond 30 days
+    res3 = await db_session.execute(select(Subscription).where(Subscription.id == uuid.UUID(sub3_id)))
+    sub3 = res3.scalar_one()
+    sub3.status = "cancelled"
+    sub3.cancelled_at = now - timedelta(days=35)
+    await db_session.commit()
+
+    # Run cleanup job
+    resp = await client.post(
+        "/api/v1/subscriptions/jobs?task=cleanup",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["task"] == "cleanup"
+    assert data["items_processed"] >= 3
+
+    # Verify results have expected actions
+    actions = {r["action"] for r in data["results"] if r["status"] == "success"}
+    assert "expire" in actions
+    assert "cancel_expired" in actions
+    assert "delete_cancelled" in actions
+
+    # No PII or secrets in results — results contain only IDs, actions, status, error
+    for r in data["results"]:
+        assert isinstance(r.get("id"), str)
+        assert r["action"] in ("expire", "cancel_expired", "delete_cancelled")
+
+    # Verify sub1 is now expired
+    resp1_get = await client.get(f"/api/v1/subscriptions/{sub1_id}", headers=headers)
+    assert resp1_get.status_code == 200
+    assert resp1_get.json()["status"] == "expired"
+
+    # Verify sub2 is now cancelled
+    resp2_get = await client.get(f"/api/v1/subscriptions/{sub2_id}", headers=headers)
+    assert resp2_get.status_code == 200
+    assert resp2_get.json()["status"] == "cancelled"
+    assert resp2_get.json()["cancelled_at"] is not None
+
+    # Verify sub3 is deleted (404)
+    resp3_get = await client.get(f"/api/v1/subscriptions/{sub3_id}", headers=headers)
+    assert resp3_get.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_subscription_job_endpoint_reminders_stub(client):
+    """Reminders task returns empty results (separate TODO)."""
+    api_key = settings.n8n_api_key
+    resp = await client.post(
+        "/api/v1/subscriptions/jobs?task=reminders",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["task"] == "reminders"
+    assert data["items_processed"] == 0
+    assert data["results"] == []
+
+
+@pytest.mark.asyncio
+async def test_subscription_job_endpoint_all(client, db_session, active_tenant_user):
+    """'all' task runs both cleanup and reminders."""
+    api_key = settings.n8n_api_key
+    resp = await client.post(
+        "/api/v1/subscriptions/jobs?task=all",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["task"] == "all"
+    # At minimum returns 0 items since no cleanup needed
+    assert "results" in data
 
