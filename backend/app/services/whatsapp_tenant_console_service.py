@@ -89,7 +89,7 @@ class WhatsAppTenantConsoleService:
     )
 
     RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
-    HELP_COMMANDS = {"4", "ayuda"}
+    HELP_COMMANDS = {"5", "ayuda"}
 
     # -- Flow identifiers -------------------------------------------------
 
@@ -2048,6 +2048,28 @@ class WhatsAppTenantConsoleService:
         return self._with_main_menu(
             self.CATALOG_PLAN_EDIT_SUCCESS.format(name=plan.name)
         )
+
+    # ==================================================================
+    # SUBSCRIPTION FLOWS
+    # ==================================================================
+
+    async def _start_subscriptions_flow(
+        self,
+        phone: str,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        """Start the subscriptions sub-menu."""
+        if session_service is not None:
+            session = await session_service.get_session(f"admin:{phone}")
+            if session is None:
+                session = await session_service.create_session(f"admin:{phone}")
+            session.flow = self.SUBSCRIPTIONS_FLOW
+            session.step = self.SUBSCRIPTIONS_STEP_MENU
+            session.temp_data = {}
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_MENU
 
     # ==================================================================
     # PROFILE FLOWS

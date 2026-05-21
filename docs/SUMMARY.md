@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard. Each Tenant manages their own catalog, Clients, and Subscriptions. The backend is Python/FastAPI with PostgreSQL and Redis HA. The frontend is a Vue 3 SPA.
+Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master manages tenant lifecycle; Tenant admins manage clients, catalog, profile, and subscriptions. Backend is Python/FastAPI with PostgreSQL and Redis HA. Frontend is Vue 3 SPA.
 
 ## Agent Context Guide
 
@@ -15,44 +15,45 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 
 | File | Description |
 |------|-------------|
-| [System Overview](architecture/system-overview.md) | High-level architecture, key decisions, and component relationships |
-| [API Layer](architecture/api-layer.md) | REST API endpoints, routing, authentication, and dependencies |
-| [Database Schema](architecture/database-schema.md) | SQLAlchemy models, relationships, constraints, and migrations |
-| [Redis HA](architecture/redis-ha.md) | Active-passive Redis failover with circuit-breaker, session services |
-| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Conversational flow for Master Console auth and CRUD operations |
-| [Input Validation Policy](architecture/input-validation-policy.md) | Centralized field validation and normalization rules |
-| [Evolution Integration](architecture/evolution-integration.md) | Evolution API client for instance management and chat control |
-| [Frontend Architecture](architecture/frontend-architecture.md) | Vue 3 SPA structure, routing, auth flow, state management, API integration |
-| [n8n Workflow](architecture/n8n-workflow.md) | n8n automation: webhook, parsing, backend call, Evolution relay |
-| [Subscriptions](architecture/subscriptions.md) | Tenant subscription data model, CRUD API, encryption, lifecycle job, reminders, n8n workflow, frontend |
+| [System Overview](architecture/system-overview.md) | High-level architecture, component relationships, and key decisions |
+| [API Layer](architecture/api-layer.md) | REST routes, auth, dependencies, and integrations |
+| [Database Schema](architecture/database-schema.md) | ORM models, relationships, constraints, and migrations |
+| [Redis HA](architecture/redis-ha.md) | Redis failover, session state, and contingency replies |
+| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master and Tenant WhatsApp console orchestration and menus |
+| [Input Validation Policy](architecture/input-validation-policy.md) | Validation and normalization rules |
+| [Evolution Integration](architecture/evolution-integration.md) | Evolution API client, instance lifecycle, and chat control |
+| [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
+| [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge and subscription reminders workflows |
+| [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 
 ## Codebase
 
 | File | Description |
 |------|-------------|
-| [Backend Structure](codebase/backend-structure.md) | Full directory tree, entry points, and module responsibilities |
-| [Frontend Structure](codebase/frontend-structure.md) | Frontend directory tree, file responsibilities, entry points, dependencies |
+| [Backend Structure](codebase/backend-structure.md) | Backend directory tree, entry points, and key modules |
+| [Frontend Structure](codebase/frontend-structure.md) | Frontend directory tree, entry points, and key modules |
 
 ## Code Standard
 
 | File | Description |
 |------|-------------|
-| [Backend Conventions](code-standard/backend-conventions.md) | Python conventions, naming, testing, DI, security, and Redis key schema |
-| [Frontend Conventions](code-standard/frontend-conventions.md) | Vue 3 patterns, naming rules, component conventions, API patterns, styling |
+| [Backend Conventions](code-standard/backend-conventions.md) | Python conventions, testing, security, Redis, and n8n patterns |
+| [Frontend Conventions](code-standard/frontend-conventions.md) | Vue 3, Pinia, routing, API, and styling conventions |
 
 ## Project PDR
 
 | File | Description |
 |------|-------------|
-| [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles (Master, Tenant, Client), and non-goals |
-| [Business Rules](project-pdr/business-rules.md) | Lifecycle (Tenant/Client), auth constraints, phone handling, validation, deployment |
+| [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
+| [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone handling, validation, and deployment constraints |
 
 ## Other
 
 | File | Description |
 |------|-------------|
-| [Tenant Catalog Plan](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Plan for tenant catalog and RLS |
-| [Client Entity Plan](plans/260517-1938-client-entity-dashboard/SUMMARY.md) | Client role, tenant prefix, and dashboard implementation plan |
-| [Tenant Subscriptions Spec](specs/tenant-subscriptions.md) | Spec for tenant subscriptions module |
-| [Tenant Catalog Brainstorm](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Design brainstorms for catalog RLS |
-| [Client Entity Brainstorm](brainstorms/260517-1930-client-entity-dashboard/SUMMARY.md) | Design brainstorms for client entity |
+| [Tenant Catalog Plan](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Tenant catalog and RLS plan |
+| [Client Entity Plan](plans/260517-1938-client-entity-dashboard/SUMMARY.md) | Client entity and dashboard plan |
+| [Tenant Admin WhatsApp Console Plan](plans/260518-2146-tenant-admin-whatsapp-console/SUMMARY.md) | Tenant WhatsApp console implementation plan |
+| [Tenant Catalog Brainstorm](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Catalog RLS brainstorm summary |
+| [Client Entity Brainstorm](brainstorms/260517-1930-client-entity-dashboard/SUMMARY.md) | Client entity brainstorm summary |
+| [Tenant Admin WhatsApp Console Brainstorm](brainstorms/260518-2146-tenant-admin-whatsapp-console/SUMMARY.md) | Tenant WhatsApp console brainstorm summary |

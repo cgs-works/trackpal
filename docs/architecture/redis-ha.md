@@ -1,11 +1,12 @@
 # Redis High-Availability with Circuit-Breaker Failover
 
-Manages ephemeral state for the WhatsApp Master Console using an active-passive Redis architecture with automatic failover.
+Manages ephemeral state for the WhatsApp Master and Tenant consoles using an active-passive Redis architecture with automatic failover.
 
 ## Architecture
 
 ```
 [WhatsAppSessionService] ─→ [RedisConnectionManager.execute()]
+         (Master: session:{phone}, Tenant: session:admin:{phone})
                                     │
                           ┌─────────┴──────────┐
                           │                    │
@@ -63,7 +64,7 @@ Settings from env / `.env`:
 
 Two deterministic replies for degraded states:
 
-- `SESSION_RESET` — Cache miss on backup during failover; includes a fresh inline menu so the Master can continue
+- `SESSION_RESET` — Cache miss on backup during failover; includes a fresh inline menu so the active console can continue
 - `TEMPORARY_UNAVAILABLE` — Both Redis stores unreachable; n8n relays this safe message to the user
 
 ## Exception Handling

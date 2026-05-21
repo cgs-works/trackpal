@@ -21,6 +21,10 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/tenants/*` | `app.api.v1.endpoints.tenants` | tenants | JWT + master role |
 | `/api/v1/integrations/*` | `app.api.v1.endpoints.integrations` | integrations | X-API-Key header |
 | `/api/v1/dashboard` | `app.api.v1.endpoints.dashboard` | dashboard | JWT bearer |
+| `/api/v1/subscriptions/*` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
+| `/api/v1/subscription-settings` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
+| `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
+| `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
 
 ### Auth Endpoints
 
@@ -62,7 +66,7 @@ Tenant prefix edits update client technical usernames transactionally.
 ### Integrations Endpoints (n8n-facing)
 
 - `GET /api/v1/integrations/n8n/identify?phone=` — Identify user by phone (X-API-Key)
-- `POST /api/v1/integrations/n8n/console` — WhatsApp Master Console message processing (X-API-Key)
+- `POST /api/v1/integrations/n8n/console` — WhatsApp Master + Tenant Console message processing (X-API-Key)
 
 ### Dashboard Endpoints
 

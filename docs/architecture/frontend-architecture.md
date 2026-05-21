@@ -26,19 +26,21 @@ Vue 3 SPA consuming the Trackpal REST API. Hosted on Cloudflare Pages, built wit
               │  LoginView        │
               │  MasterDashboard  │
               │  TenantDashboard  │
+              │  Subscriptions    │
               │  ClientDashboard  │
               └───────────────────┘
 ```
 
 ## Routing (vue-router)
 
-Router lives in `src/router/index.js` with four routes:
+Router lives in `src/router/index.js` with five routes:
 
 | Path | Component | Auth | Role |
 |------|-----------|------|------|
 | `/login` | `LoginView` | Public | — |
 | `/master/dashboard` | `MasterDashboardView` | Required | `master` |
 | `/admin/dashboard` | `TenantDashboardView` | Required | `tenant` |
+| `/admin/subscriptions` | `SubscriptionsView` | Required | `tenant` |
 | `/client/dashboard` | `ClientDashboardView` | Required | `client` |
 | `/:pathMatch(.*)*` | Redirect → `/login` | — | — |
 
@@ -134,7 +136,18 @@ Self-service dashboard accessible only to `tenant` role:
 - Profile edit form (name, email, phone)
 - Password change form (old + new password)
 - Catalog management: services CRUD and per-service plans CRUD
+- Client management: table with CRUD actions
+- Link to subscriptions page
 - Duplicate/validation API errors shown in Spanish UI
 - Logout button
+
+### SubscriptionsView
+
+Full subscription management page at `/admin/subscriptions` accessible only to `tenant` role:
+- Table with columns: client, service, email, profile, duration, dates, status badges, actions
+- Filters: status, client, service, quick expiry ranges, custom date range
+- Create/Edit/Renew/Reactivate modals with all subscription fields
+- Cancel with confirmation dialog
+- Reveal credential eye icon per row -- decrypts password and PIN on demand
 
 Dashboard data is loaded from `GET /api/v1/dashboard` and `GET /api/v1/me` on mount.

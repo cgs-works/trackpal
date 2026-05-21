@@ -557,13 +557,32 @@ class TestServiceMainMenu:
     async def test_service_help(
         self, console_service: WhatsAppTenantConsoleService
     ) -> None:
-        """Option '4' returns HELP_TEXT."""
+        """Option '5' returns HELP_TEXT."""
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="4",
+            message="5",
         )
         assert "Ayuda" in reply
         assert "comandos disponibles" in reply
+
+    async def test_service_subscriptions(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Option '4' returns SUBSCRIPTIONS_MENU with persisted session."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="4",
+            session_service=session_service,
+        )
+        assert "Suscripciones" in reply
+
+        # Session should be persisted with flow=subscriptions, step=menu
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert session.flow == "subscriptions"
+        assert session.step == "menu"
 
     async def test_service_zero_main_menu_exits(
         self,

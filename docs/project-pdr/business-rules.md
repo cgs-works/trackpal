@@ -24,15 +24,23 @@
 4. After 5 consecutive failures, the phone is locked out for 5 minutes
 5. Successful login resets the failure counter
 
-## WhatsApp Console
-**Note: Client and Tenant users have NO access to the WhatsApp Master Console.**
+## WhatsApp Consoles
+**Note: Client users have NO WhatsApp console access. Master and Tenant consoles are separate.**
 
-1. The console is available only via the n8n webhook integration (not directly)
+### Master Console
+1. Available only via the n8n webhook integration (not directly)
 2. All messages are relayed through Evolution API -> n8n -> Backend
-3. The backend always returns HTTP 200 to n8n, even during infrastructure failures
+3. Backend always returns HTTP 200 to n8n, even during infrastructure failures
 4. Conversation state is ephemeral (Redis), never persisted to the database
 5. TTL refreshes only on valid progress, not on noise or error input
 6. Master phone number is identified via the `POST /api/v1/integrations/n8n/console` endpoint
+
+### Tenant Console
+1. Available only to users with `role = "tenant"`
+2. Phone-based auto-auth via `POST /api/v1/integrations/n8n/identify`
+3. Uses same Evolution API -> n8n -> Backend relay
+4. Conversation state is ephemeral in Redis under `session:admin:{phone}`
+5. `0` at top level exits; `0` inside a flow cancels the active operation
 
 ## Phone Number Handling
 
@@ -65,3 +73,11 @@
 2. PostgreSQL database (external, configured via `DATABASE_URL`)
 3. Redis primary + backup (optional; console works in degraded mode without Redis)
 4. Frontend hosted on Cloudflare Pages
+
+## Subscription Lifecycle
+
+1. Subscriptions belong to a tenant, client, service, and plan.
+2. Streaming password and PIN are encrypted at rest.
+3. `starts_at` is stored explicitly and `expires_at` is derived from duration or custom dates.
+4. Cancelled subscriptions keep history via events and reminder logs.
+5. Reminder jobs run through n8n using the subscription reminders workflow.

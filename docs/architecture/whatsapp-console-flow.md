@@ -1,6 +1,10 @@
-# WhatsApp Master Console Flow Architecture
+# WhatsApp Console Flow Architecture
 
-The WhatsApp Master Console is a conversational interface that lets a Master user manage tenants via WhatsApp messages, relayed through n8n and Evolution API.
+Trackpal has two WhatsApp conversational consoles:
+- **Master Console** for tenant lifecycle management
+- **Tenant Console** for tenant admins to manage clients, catalog, profile, and subscriptions
+
+Both use n8n + Evolution API + backend relay and store conversation state in Redis.
 
 ## Message Flow
 
@@ -13,95 +17,97 @@ n8n Workflow → POST /api/v1/integrations/n8n/console
     ↓
 Trackpal Backend
     ↓
-WhatsAppMasterConsoleFacade.process_message()
+WhatsApp*ConsoleFacade.process_message()
     ↓
 Redis Session State (WhatsAppSessionService / WhatsAppAuthSessionService)
     ↓
-WhatsAppConsoleService.process_message()
+Console Service.process_message()
     ↓
 Reply text → n8n → Evolution API → User WhatsApp
 ```
 
-## Orchestration — `WhatsAppMasterConsoleFacade`
+## Master Console
 
-The facade in `app/services/whatsapp_master_console_facade.py` orchestrates auth-gated access:
+### Orchestration — `WhatsAppMasterConsoleFacade`
 
-1. **Lockout check** — Check `wa:auth:lock:{phone}` key; returns lockout reply if locked
-2. **Auth session check** — Check `wa:auth:{phone}` key for existing master auth session
-3. **Authenticated path** — If authenticated, delegates to `WhatsAppConsoleService.process_message()` with `is_master=True`
-4. **Login flow** — If not authenticated, runs conversational username/password login
+File: `backend/app/services/whatsapp_master_console_facade.py`.
 
-### Contextual Logout
+1. Lockout check via `wa:auth:lock:{phone}`.
+2. Auth session check via `wa:auth:{phone}`.
+3. If authenticated, delegates to `WhatsAppConsoleService.process_message()`.
+4. If not authenticated, runs username/password login.
 
-When an authenticated user sends "0":
-- **Inside an active flow** → cancels the flow (no logout)
-- **At top level** → performs full logout: clears auth session, clears conversation session, optionally calls Evolution API to close the chat session
+### Login flow
 
-### Login Flow Steps
+1. Username prompt.
+2. Username validation and existence check.
+3. Password prompt.
+4. Authenticate via `AuthService.authenticate()`.
+5. On success, create `WhatsAppAuthSession` in Redis.
+6. On failure, track attempts and lock after 5 failures.
 
-1. Send username prompt
-2. Receive username, validate existence via DB lookup, record failure if unknown
-3. Send password prompt
-4. Receive password, authenticate via `AuthService.authenticate()`
-5. On success: create `WhatsAppAuthSession` in Redis, clear conversation session
-6. On failure: record failed attempt, lock out after threshold (5 attempts, 5-minute lock)
-
-## Session Services
-
-### `WhatsAppSessionService` (conversation state)
-
-Stores per-phone multi-step flow state as JSON under `session:{phone}` with configurable TTL (default 15 minutes).
-
-Key fields on `ConversationSession`:
-- `phone`, `flow`, `step`, `selected_tenant_id` (UUID of the canonical tenant being managed)
-- `temp_data` — form data being collected across steps
-- `selection_map` — maps displayed numbers to tenant UUIDs
-
-TTL refresh policy: Only refreshes on session creation, valid step advance, or valid flow data update. Noise, invalid input, and fallback replies do NOT refresh TTL.
-
-### `WhatsAppAuthSessionService` (auth + lockout)
-
-Three Redis primitives:
-- `wa:auth:{phone}` — Authenticated session with user metadata (TTL: session TTL, default 15 min)
-- `wa:auth:fail:{phone}` — Consecutive failure counter with timestamps (TTL: failure window, default 15 min)
-- `wa:auth:lock:{phone}` — Temporary lockout marker (TTL: lock duration, default 5 min)
-
-No passwords are ever stored in Redis.
-
-## Console Service — `WhatsAppConsoleService`
-
-Handles conversation state transitions, menu routing, and CRUD decisions.
-
-### Menu Options
+### Menu options
 
 | # | Action | Description |
 |---|--------|-------------|
-| 1 | Ver Tenants | Lists all canonical tenants with status; user selects one for detail |
-| 2 | Crear Tenant | Multi-step form: name, email, phone, owner username, Evolution instance, password |
-| 3 | Desactivar Tenant | Detail screen option: deactivation flow requiring CONFIRMAR |
-| 4 | Eliminar Tenant | Detail screen option: deletes inactive tenant with CONFIRMAR |
-| 5 | Ayuda | Show help text |
-| 0 | Cerrar sesión / Cancelar | Contextual: cancel flow or logout |
+| 1 | Ver Tenants | List tenants with status and counts |
+| 2 | Crear Tenant | Create tenant + Evolution instance |
+| 3 | Desactivar Tenant | Deactivate tenant |
+| 4 | Eliminar Tenant | Delete inactive tenant |
+| 5 | Ayuda | Show help |
+| 0 | Cerrar sesión / Cancelar | Contextual exit or cancel |
 
-### Create Flow Steps
+## Tenant Console
 
-1. `full_name` (tenant display name) → `email` → `phone` → `username` (owner user login) → `evolution_instance` → `password_mode` → (optional `manual_password`) → `confirm`
-- All fields validated against centralized input validation policy
-- Username checked for duplicates before advancing
-- On creation failure, user is returned to the offending field
+### Orchestration — `WhatsAppTenantConsoleFacade`
 
-### Edit Flow
+File: `backend/app/services/whatsapp_tenant_console_facade.py`.
 
-From tenant detail screen: select field to edit (full_name, email, phone, Evolution instance), enter new value, validated against input policy, persisted via `TenantService`.
+1. Resolve caller by phone and verify `role=tenant`.
+2. Verify tenant is active.
+3. Resolve tenant context.
+4. On top-level `0`, clear `session:admin:{phone}` and exit.
+5. Delegate to `WhatsAppTenantConsoleService.process_message()`.
 
-### Lifecycle Flows
+### Session model
 
-- **Deactivate**: Detail screen → option 2 → CONFIRMAR → deactivation + session revocation
-- **Reactivate**: Detail screen (inactive) → option 2 → immediate reactivation
-- **Delete**: Detail screen (inactive only) → option 3 → CONFIRMAR → deletion + Evolution instance cleanup
+Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so Redis key becomes `session:admin:{phone}`.
 
-## Contingency Behavior
+### Menu options
 
-- **No Redis configured** → Returns `"Temporalmente no disponible"` (maintains HTTP 200)
-- **Failover active + session missing** → Returns `SESSION_RESET` with inline menu, creates fresh session on backup
-- **Redis infrastructure error** → Caught in endpoint, returns safe `TEMPORARY_UNAVAILABLE` reply
+| # | Action | Description |
+|---|--------|-------------|
+| 1 | Clientes | List and manage clients |
+| 2 | Catálogo | View and edit service/plan names |
+| 3 | Mi Perfil | View/edit profile and password |
+| 4 | Suscripciones | List and manage subscriptions |
+| 5 | Ayuda | Show help |
+| 0 | Salir / Cancelar | Contextual exit or cancel |
+
+### Subscription flows
+
+- List by status
+- Create subscription
+- Edit subscription
+- Cancel / reactivate / renew
+- Reveal credentials
+
+### Protocol definitions
+
+File: `backend/app/services/tenant_console_protocols.py`.
+
+Defines `ClientServiceProtocol`, `CatalogServiceProtocol`, and `SubscriptionServiceProtocol` for DI and to avoid circular imports.
+
+## Shared session behavior
+
+- Master conversation state key: `session:{phone}`
+- Tenant conversation state key: `session:admin:{phone}`
+- TTL: 15 minutes
+- `0` at top level exits; `0` inside active flow cancels
+- Invalid input does not refresh TTL
+
+## Contingency behavior
+
+- No Redis configured -> temporary unavailable reply.
+- Failover cache miss -> session reset reply with inline menu.
+- Redis infrastructure error -> safe 200 response and temporary unavailable text.

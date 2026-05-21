@@ -66,7 +66,7 @@ All phone numbers stored as canonical digits-only (no `+` prefix, no `@c.us` JID
 
 ## Telegram / WhatsApp Reply Templates
 
-All user-facing strings are in Spanish. WhatsApp flow templates are class constants on `WhatsAppConsoleService`. Consistency: reuse template constants rather than inline strings.
+All user-facing strings are in Spanish. WhatsApp flow templates are class constants on `WhatsAppConsoleService` and `WhatsAppTenantConsoleService`. Consistency: reuse template constants rather than inline strings.
 
 ## Redis Keys
 
@@ -76,6 +76,7 @@ All user-facing strings are in Spanish. WhatsApp flow templates are class consta
 | `wa:auth:{phone}` | Auth session after credential verification | 15 min (configurable) |
 | `wa:auth:fail:{phone}` | Consecutive failure counter | 15 min window |
 | `wa:auth:lock:{phone}` | Lockout marker after threshold | 5 min (configurable) |
+| `session:admin:{phone}` | Tenant conversation state | 15 min (configurable) |
 
 ## n8n Integration Conventions
 
@@ -83,7 +84,7 @@ All user-facing strings are in Spanish. WhatsApp flow templates are class consta
 2. **neverError**: Both HTTP Request nodes (Console Call and Evolution API Send) set `neverError: true`. This prevents workflow failure when backend or Evolution API returns non-2xx responses.
 3. **Input normalisation**: The `Parse Input` Code node always normalises phone numbers (strip JID suffixes, `+` prefix, device suffixes) before passing to backend.
 4. **Reply fallback**: The `Merge Reply` Code node provides a static Spanish fallback message when backend returns no reply.
-5. **Workflow file**: Exported as `n8n/Trackpal WhatsApp Bot.json`. Config values are visible in plaintext in the JSON export; treat the file as secrets-bearing.
+5. **Workflow files**: Exported as `n8n/Trackpal WhatsApp Bot.json` and `n8n/Trackpal Subscription Reminders.json`. Config values are visible in plaintext in the JSON export; treat both files as secrets-bearing.
 
 ## Migration Guidelines
 
@@ -94,6 +95,8 @@ All user-facing strings are in Spanish. WhatsApp flow templates are class consta
 ## Tenant Scope and RLS
 
 - `Tenant` is the only tenant entity for active code; obsolete `tenant_profiles` was dropped after migration.
+- Tenant WhatsApp console uses `session:admin:{phone}` as logical key for Redis session isolation.
+- Subscription secrets are encrypted with Fernet via `app/core/encryption.py` and require `DATA_ENCRYPTION_KEY`.
 - Tenant-scoped queries must filter by `tenant_id` in application code.
 - Postgres/Supabase tenant-scoped operations must set transaction-local RLS context before SQL using dotted GUC names only: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`.
 - Master catalog operations require explicit switched tenant context. Do not infer tenant scope from arbitrary request payload IDs.

@@ -31,6 +31,7 @@ frontend/
 │       ├── LoginView.vue         # Login form (Spanish UI)
 │       ├── MasterDashboardView.vue  # Master tenant CRUD + support context switch
 │       ├── TenantDashboardView.vue  # Tenant profile/password + catalog + client CRUD
+│       ├── SubscriptionsView.vue    # Subscription CRUD table + modals
 │       └── ClientDashboardView.vue  # Client readonly dashboard + password change
 │
 └── dist/                         # Build output (gitignored)
@@ -51,7 +52,7 @@ frontend/
 | Router | `router/index.js` | Route definitions, lazy loading, navigation guard for auth + role; /admin/subscriptions route for subscriptions |
 | API Service | `services/api.js` | Axios singleton, JWT injection on requests, 401 auto-logout |
 | Auth Store | `stores/auth.js` | Login/logout/switch actions, token/user/active tenant persistence in localStorage |
-| Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard, subscriptions, client dashboard |
+| Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard, subscriptions page, client dashboard |
 
 ## Dependencies (from package.json)
 

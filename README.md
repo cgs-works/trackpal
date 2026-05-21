@@ -1,14 +1,14 @@
 # Trackpal
 
-Multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp chatbot console and a web dashboard.
+Multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp console and a web dashboard. Tenants also have their own WhatsApp console for clients, catalog, profile, and subscriptions.
 
-Each Tenant manages their own catalog (services and plans) and their own Clients via a dedicated dashboard. Clients have a readonly dashboard for profile management.
+Each Tenant manages their own catalog (services and plans), Clients, and Subscriptions via REST and WhatsApp. Clients have a readonly dashboard for profile management.
 
 ## Stack
 
 - **Backend**: Python 3.12, FastAPI, PostgreSQL (asyncpg), Redis (HA), Alembic
 - **Frontend**: Vue 3, Vite, Pinia, vue-router
-- **Infrastructure**: Render (backend), Cloudflare Pages (frontend), Evolution API (WhatsApp), n8n (automation)
+- **Infrastructure**: Render (backend), Cloudflare Pages (frontend), Evolution API (WhatsApp), n8n (automation, bot + reminders)
 
 ## Quick Start (Local Dev)
 
@@ -36,4 +36,4 @@ Full documentation: [docs/SUMMARY.md](docs/SUMMARY.md)
 - `backend/` — Python FastAPI application
 - `frontend/` — Vue 3 SPA
 - `docs/` — Project documentation
-- `n8n/` — n8n workflow export
+- `n8n/` — n8n workflow exports (WhatsApp bot + subscription reminders)

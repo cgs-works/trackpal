@@ -3,84 +3,84 @@
 ```
 backend/
 ├── app/                          # Application package
-│   ├── __init__.py
 │   ├── main.py                   # FastAPI app entrypoint
-│   ├── api/                      # REST API layer
-│   │   ├── __init__.py
-│   │   ├── dependencies.py       # Deps: get_current_user, require_role, etc.
+│   ├── api/
+│   │   ├── dependencies.py       # get_current_user, require_role, verify_n8n_api_key_header
 │   │   └── v1/
 │   │       ├── router.py         # Aggregates all endpoint routers
 │   │       └── endpoints/
-│   │           ├── auth.py       # Login, refresh, logout
-│   │           ├── catalog.py    # Tenant-scoped services/plans CRUD
-│   │           ├── clients.py    # Tenant-scoped client lifecycle CRUD
-│   │           ├── dashboard.py  # Role-aware dashboard data
-│   │           ├── integrations.py # n8n identify, WhatsApp console
-│   │           ├── me.py         # Self-profile CRUD
-├── subscriptions.py # Tenant subscription CRUD + lifecycle job + reminders
-│   │           └── tenants.py    # Master-only tenant CRUD
-│   ├── core/                     # Core infrastructure
-│   │   ├── __init__.py
-│   │   ├── config.py            # Pydantic Settings (all env vars)
-│   │   ├── database.py          # SQLAlchemy async engine + session
-├── encryption.py        # Fernet symmetric encryption for subscription secrets
-│   │   ├── input_validation.py  # Centralized field validators
-│   │   ├── phone.py             # Phone normalizer utility
-│   │   ├── redis_client.py      # Redis connection manager + failover
-│   │   └── security.py          # JWT, bcrypt, API key helpers
-│   ├── crud/                     # Data access layer
-│   │   ├── __init__.py
-│   │   └── users.py             # User queries (by username, id, phone)
-│   ├── models/                   # SQLAlchemy ORM models
-│   │   ├── __init__.py          # Exports all models
-│   │   ├── base.py              # DeclarativeBase + TimestampMixin
-│   │   ├── user.py              # User (polymorphic role)
-│   │   ├── master_profile.py    # MasterProfile (1:1 with User)
-│   │   ├── tenant.py            # Canonical Tenant (owner_user_id → User, client_prefix)
-│   │   ├── client.py            # Tenant-owned Client profile
-│   │   ├── service.py           # Tenant catalog service
-│   │   ├── plan.py              # Service catalog plan
-├── subscription.py       # Subscription, SubscriptionEvent, SubscriptionReminderLog, SubscriptionReminderSettings
-│   │   └── refresh_session.py   # RefreshSession (1:N with User)
-│   ├── schemas/                  # Pydantic schemas (request/response)
-│   │   ├── __init__.py
-│   │   ├── auth.py              # LoginRequest, TokenResponse, IdentifyResponse
-│   │   ├── catalog.py           # Service/plan request and response schemas
-│   │   ├── dashboard.py         # MasterDashboardResponse, TenantDashboardResponse, ClientDashboardResponse
-│   │   ├── client.py            # ClientCreate, ClientUpdate, ClientResponse
-│   │   ├── me.py                # ProfileResponse, ProfileUpdate, PasswordChange
-├── subscription.py      # Subscription request/response schemas + reminder payloads
-│   │   ├── tenant.py            # TenantCreate, TenantUpdate, TenantResponse, etc.
-│   │   └── whatsapp.py          # WhatsAppConsoleRequest, WhatsAppConsoleResponse
-│   └── services/                 # Business logic layer
-│       ├── __init__.py
-│       ├── auth_service.py      # Authenticate, token creation, refresh, revoke
-│       ├── catalog_service.py   # Tenant-scoped catalog CRUD/validation
-│       ├── contingency_reply_policy.py  # Degraded state reply text constants
-│       ├── evolution_client.py  # Evolution API HTTP client
-│       ├── client_service.py    # Client CRUD + technical username sync
-│       ├── profile_service.py   # Profile get/update, password change
-├── subscription_service.py    # Subscription CRUD + lifecycle operations
-├── subscription_job_service.py  # Lifecycle job + reminder payloads
-│       ├── tenant_service.py    # Tenant CRUD + client prefix sync + Evolution lifecycle
-│       ├── whatsapp_auth_session_service.py  # Auth session + lockout Redis primitives
-│       ├── whatsapp_console_service.py       # Console flow routing + templates
-│       ├── whatsapp_master_console_facade.py # Auth-orchestrator facade
-│       └── whatsapp_session_service.py       # Ephemeral conversation session state
-├── alembic/                      # Database migrations
+│   │           ├── auth.py
+│   │           ├── catalog.py
+│   │           ├── clients.py
+│   │           ├── dashboard.py
+│   │           ├── integrations.py
+│   │           ├── me.py
+│   │           ├── subscriptions.py
+│   │           └── tenants.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── encryption.py
+│   │   ├── input_validation.py
+│   │   ├── phone.py
+│   │   ├── redis_client.py
+│   │   └── security.py
+│   ├── crud/
+│   │   └── users.py
+│   ├── models/
+│   │   ├── base.py
+│   │   ├── client.py
+│   │   ├── master_profile.py
+│   │   ├── plan.py
+│   │   ├── refresh_session.py
+│   │   ├── service.py
+│   │   ├── subscription.py
+│   │   ├── tenant.py
+│   │   └── user.py
+│   ├── schemas/
+│   │   ├── auth.py
+│   │   ├── catalog.py
+│   │   ├── client.py
+│   │   ├── dashboard.py
+│   │   ├── me.py
+│   │   ├── subscription.py
+│   │   ├── tenant.py
+│   │   └── whatsapp.py
+│   └── services/
+│       ├── auth_service.py
+│       ├── catalog_service.py
+│       ├── client_service.py
+│       ├── contingency_reply_policy.py
+│       ├── evolution_client.py
+│       ├── profile_service.py
+│       ├── subscription_job_service.py
+│       ├── subscription_service.py
+│       ├── tenant_console_protocols.py
+│       ├── tenant_service.py
+│       ├── whatsapp_auth_session_service.py
+│       ├── whatsapp_console_service.py
+│       ├── whatsapp_master_console_facade.py
+│       ├── whatsapp_session_service.py
+│       ├── whatsapp_tenant_console_facade.py
+│       └── whatsapp_tenant_console_service.py
+├── alembic/
 │   ├── env.py
-│   ├── versions/
-│   │   ├── cd1efe74cae4_initial_schema.py
-│   │   ├── cd2efe74cae5_normalize_phone_values.py
-│   │   ├── cd3efe74cae6_tenant_catalog_rls.py
-│   │   └── cd6efe74cae9_add_client_prefix_and_clients.py
-│   └── script.py.mako
-├── scripts/                      # Utility scripts
-│   └── seed.py                   # Master user seeder
-├── tests/                        # Pytest test suite
-│   ├── conftest.py              # Fixtures: DB, client, users
+│   ├── script.py.mako
+│   └── versions/
+│       ├── cd1efe74cae4_initial_schema.py
+│       ├── cd2efe74cae5_normalize_phone_values.py
+│       ├── cd3efe74cae6_tenant_catalog_rls.py
+│       ├── cd4efe74cae7_fix_tenants_master_rls.py
+│       ├── cd5efe74cae8_drop_tenant_profiles.py
+│       ├── cd6efe74cae9_add_client_prefix_and_clients.py
+│       └── cd7efe74caa0_add_subscriptions.py
+├── scripts/
+│   └── seed.py
+├── tests/
+│   ├── conftest.py
 │   ├── test_auth.py
 │   ├── test_catalog.py
+│   ├── test_clients.py
 │   ├── test_contingency_reply_policy.py
 │   ├── test_evolution_client.py
 │   ├── test_input_validation_policy.py
@@ -90,8 +90,9 @@ backend/
 │   ├── test_redis_connection_manager.py
 │   ├── test_redis_failover_policy.py
 │   ├── test_rls_policy_sql.py
+│   ├── test_subscriptions.py
+│   ├── test_tenant_console_service.py
 │   ├── test_tenants.py
-├── test_subscriptions.py
 │   ├── test_whatsapp_auth_session_service.py
 │   ├── test_whatsapp_create_flow.py
 │   ├── test_whatsapp_credential_auth_flow.py
@@ -102,15 +103,30 @@ backend/
 │   ├── test_whatsapp_logout_flow.py
 │   ├── test_whatsapp_menu_flow.py
 │   └── test_whatsapp_session_service.py
-├── pyproject.toml               # Python project config (deps, tool config)
-├── uv.lock                      # Lock file (uv package manager)
-├── .env.example                 # Environment variable template
-└── .python-version              # Python 3.12
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+├── render.yaml
+└── .python-version
 ```
 
 ## Entry Points
 
-- **FastAPI application**: `app/main.py` — `uv run uvicorn app.main:app`
-- **Alembic migrations**: `uv run alembic upgrade head`
-- **Seed script**: `uv run python -m scripts.seed`
-- **Tests**: `uv run pytest -v`
+| Entry point | Command |
+|-------------|---------|
+| FastAPI application | `uv run uvicorn app.main:app` |
+| Alembic migrations | `uv run alembic upgrade head` |
+| Seed script | `uv run python -m scripts.seed` |
+| Tests | `uv run pytest -v` |
+
+## Key Modules
+
+| Module | Responsibility |
+|--------|---------------|
+| `app/api/v1/endpoints/subscriptions.py` | Subscription CRUD, lifecycle, reminder endpoints |
+| `app/core/encryption.py` | Fernet encryption for subscription secrets |
+| `app/services/whatsapp_tenant_console_service.py` | Tenant WhatsApp menu routing |
+| `app/services/whatsapp_tenant_console_facade.py` | Tenant console phone-based orchestration |
+| `app/services/subscription_service.py` | Subscription CRUD and lifecycle operations |
+| `app/services/subscription_job_service.py` | Cleanup job and reminder payloads |
+| `app/services/tenant_console_protocols.py` | Protocols for tenant console DI |

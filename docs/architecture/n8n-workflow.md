@@ -1,12 +1,14 @@
 # n8n Workflow Architecture
 
-Trackpal uses a single n8n workflow to bridge Evolution API webhooks with the backend WhatsApp Master Console. The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution API.
+Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution API webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles daily expiry reminder dispatch. The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution API.
 
-## Workflow Overview
+## WhatsApp Bot Workflow
+
+### Workflow Overview
 
 ```
 Evolution API (inbound message)
-    ↓  webhook POST
+    |  webhook POST
 n8n Webhook Node
     ↓
 Parse Input (Code Node) — normalises phone, message, instance
@@ -177,3 +179,76 @@ The workflow communicates with two backend services:
 - **Empty reply**: Merge Reply falls back to a static Spanish unavailability message
 - **Evolution API errors**: The Send node also has `neverError: true` to prevent workflow failures from propagating
 - **n8n-level errors**: If any node throws an unhandled error, n8n marks the execution as "Error" and the user does not receive a reply
+
+
+---
+
+## Subscription Reminders Workflow
+
+**File**: `n8n/Trackpal Subscription Reminders.json`
+
+**Name**: `Trackpal Subscription Reminders`
+**Active**: `true`
+**Total nodes**: 11
+**Execution order**: v1 (sequential)
+
+A scheduled workflow that runs daily at 09:00 (server time) to fetch pending subscription reminders and send them via Evolution API.
+
+### Workflow Overview
+
+```
+Schedule Trigger (09:00 daily)
+    |
+    v
+Config (Set Node) -- backend URL, API keys, page limit 100, delay 2s
+    |
+    v
+Fetch Pending Reminders (HTTP Request) -- POST /api/v1/subscriptions/reminders/pending
+    |
+    v
+Transform Items (Code Node) -- extract items array from response
+    |
+    v
+SplitInBatches (loop, batch size 1)
+    |  (loop back arrow from end)
+    v
+Wait (2s delay)
+    |
+    v
+Evolution API Send (HTTP Request) -- POST /message/sendText/{instance}
+    |
+    v
+Evaluate Result (Code Node) -- check response status
+    |
+    v
+Route by Success? (IF node)
+    |         |
+    v         v
+Mark Sent    Mark Failed
+(HTTP)       (HTTP)
+```
+
+### Nodes
+
+| # | Node | Type | Purpose |
+|---|------|------|---------|
+| 1 | Schedule Trigger | n8n-nodes-base.scheduleTrigger | Daily trigger at 09:00 |
+| 2 | Config | n8n-nodes-base.set | Config vars: backend URL, API keys, evolution URL, page limit, delay |
+| 3 | Fetch Pending Reminders | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/pending with cursor pagination |
+| 4 | Transform Items | n8n-nodes-base.code | Extract items array, add instance field |
+| 5 | SplitInBatches | n8n-nodes-base.splitInBatches | Loop over reminders one at a time |
+| 6 | Wait | n8n-nodes-base.wait | 2-second delay between sends |
+| 7 | Evolution API Send | n8n-nodes-base.httpRequest | POST /message/sendText/{instance} with Spanish reminder text |
+| 8 | Evaluate Result | n8n-nodes-base.code | Check response status, prepare metadata |
+| 9 | Route by Success? | n8n-nodes-base.if | Split by success/failure |
+| 10 | Mark Sent | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/{log_id}/mark-sent |
+| 11 | Mark Failed | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/{log_id}/mark-failed |
+
+### Endpoints Used
+
+| Endpoint | Method | Auth |
+|----------|--------|------|
+| POST /api/v1/subscriptions/reminders/pending | X-API-Key | Cursor-paginated, max 100 per request |
+| POST /api/v1/subscriptions/reminders/{log_id}/mark-sent | X-API-Key | Sets status=sent, sent_at=now |
+| POST /api/v1/subscriptions/reminders/{log_id}/mark-failed | X-API-Key | Increments attempt, permanent fail after 3 |
+| POST /api/v1/subscriptions/jobs | X-API-Key | Manual trigger: cleanup, reminders, or all |
