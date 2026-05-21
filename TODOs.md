@@ -36,7 +36,7 @@ Nightmanager implementation queue.
     - Normal list/detail responses do not include decrypted password or PIN.
   - Notes: use flat `/api/v1/subscriptions` routes; cancelled subscriptions excluded from default listing. Validation comes from the spec Testing Plan.
 
-- [ready] Add authorized subscription credential reveal flow
+- [done] Add authorized subscription credential reveal flow — eb4ca90
   - Spec: `specs/tenant-subscriptions.md`
   - Scope: implement reveal endpoint and service path for decrypted password/PIN access by authorized tenant context.
   - Acceptance:
