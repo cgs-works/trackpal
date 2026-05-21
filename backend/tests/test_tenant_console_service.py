@@ -12,6 +12,7 @@ interfaces.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
@@ -21,6 +22,7 @@ import pytest
 from app.services.tenant_console_protocols import (
     CatalogServiceProtocol,
     ClientServiceProtocol,
+    SubscriptionServiceProtocol,
 )
 from app.services.whatsapp_session_service import (
     ConversationSession,
@@ -223,6 +225,207 @@ class FakeCatalogService:
 
 
 @dataclass
+class FakeSubscriptionObj:
+    id: UUID = field(default_factory=uuid4)
+    tenant_id: UUID = field(default_factory=uuid4)
+    client_id: UUID = field(default_factory=uuid4)
+    service_id: UUID = field(default_factory=uuid4)
+    plan_id: UUID = field(default_factory=uuid4)
+    streaming_email: str = "cliente@test.com"
+    profile_name: str | None = "Perfil 1"
+    duration_type: str = "1_month"
+    starts_at: Any = field(default_factory=lambda: datetime(2026, 1, 1))
+    expires_at: Any = field(default_factory=lambda: datetime(2026, 1, 31))
+    cancelled_at: Any = None
+    status: str = "active"
+    streaming_password: str | None = "secret123"
+    profile_pin: str | None = "1234"
+    client_name: str = "Cliente Demo"
+    client_full_name: str = "Cliente Demo"
+    service_name: str = "Netflix"
+    plan_name: str = "Premium"
+
+
+class FakeSubscriptionService:
+    """In-memory double for ``SubscriptionServiceProtocol``."""
+
+    def __init__(self, tenant_id: UUID, client_service: FakeClientService, catalog_service: FakeCatalogService) -> None:
+        self.tenant_id = tenant_id
+        self.client_service = client_service
+        self.catalog_service = catalog_service
+        service = next(iter(catalog_service._services.values()))
+        plan = FakePlanObj(name="Premium")
+        catalog_service._plans[str(plan.id)] = plan
+        self.default_subscription = FakeSubscriptionObj(
+            tenant_id=tenant_id,
+            service_id=service.id,
+            plan_id=plan.id,
+            service_name=service.name,
+            plan_name=plan.name,
+        )
+        self._subscriptions: dict[str, FakeSubscriptionObj] = {
+            str(self.default_subscription.id): self.default_subscription
+        }
+
+    async def list_subscriptions(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        status: str | None = None,
+        client_id: UUID | None = None,
+        service_id: UUID | None = None,
+        quick_filter: str | None = None,
+        expires_from: Any = None,
+        expires_to: Any = None,
+    ) -> list[FakeSubscriptionObj]:
+        del db, quick_filter, expires_from, expires_to
+        items = [s for s in self._subscriptions.values() if s.tenant_id == tenant_id]
+        if status is not None:
+            items = [s for s in items if s.status == status]
+        if client_id is not None:
+            items = [s for s in items if s.client_id == client_id]
+        if service_id is not None:
+            items = [s for s in items if s.service_id == service_id]
+        return items
+
+    async def get_subscription(
+        self, db: Any, tenant_id: UUID, subscription_id: UUID
+    ) -> FakeSubscriptionObj | None:
+        del db
+        sub = self._subscriptions.get(str(subscription_id))
+        if sub is None or sub.tenant_id != tenant_id:
+            return None
+        return sub
+
+    async def create_subscription(
+        self, db: Any, tenant_id: UUID, payload: Any
+    ) -> FakeSubscriptionObj:
+        del db
+        client = self.client_service._clients[str(payload.client_id)]
+        service = self.catalog_service._services[str(payload.service_id)]
+        plan = self.catalog_service._plans[str(payload.plan_id)]
+        obj = FakeSubscriptionObj(
+            tenant_id=tenant_id,
+            client_id=payload.client_id,
+            service_id=payload.service_id,
+            plan_id=payload.plan_id,
+            streaming_email=payload.streaming_email,
+            profile_name=payload.profile_name,
+            duration_type=payload.duration_type,
+            starts_at=payload.starts_at,
+            expires_at=payload.expires_at or datetime(2026, 2, 1),
+            streaming_password=payload.streaming_password,
+            profile_pin=payload.profile_pin,
+            client_name=client.full_name,
+            client_full_name=client.full_name,
+            service_name=service.name,
+            plan_name=plan.name,
+        )
+        self._subscriptions[str(obj.id)] = obj
+        return obj
+
+    async def update_subscription(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        payload: Any,
+    ) -> FakeSubscriptionObj | None:
+        del db, tenant_id
+        sub = self._subscriptions.get(str(subscription_id))
+        if sub is None:
+            return None
+        for key, value in payload.model_dump(exclude_unset=True).items():
+            if key == "streaming_password":
+                sub.streaming_password = value or None
+            elif key == "profile_pin":
+                sub.profile_pin = value or None
+            else:
+                setattr(sub, key, value)
+        if getattr(sub, "client_id", None):
+            client = self.client_service._clients.get(str(sub.client_id))
+            if client is not None:
+                sub.client_name = client.full_name
+                sub.client_full_name = client.full_name
+        if getattr(sub, "service_id", None):
+            service = self.catalog_service._services.get(str(sub.service_id))
+            if service is not None:
+                sub.service_name = service.name
+        if getattr(sub, "plan_id", None):
+            plan = self.catalog_service._plans.get(str(sub.plan_id))
+            if plan is not None:
+                sub.plan_name = plan.name
+        return sub
+
+    async def cancel_subscription(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        notes: str | None = None,
+    ) -> FakeSubscriptionObj | None:
+        del db, tenant_id, notes
+        sub = self._subscriptions.get(str(subscription_id))
+        if sub is None:
+            return None
+        sub.status = "cancelled"
+        return sub
+
+    async def reactivate_subscription(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        duration_type: str,
+        starts_at: Any = None,
+        expires_at: Any = None,
+        notes: str | None = None,
+    ) -> FakeSubscriptionObj | None:
+        del db, tenant_id, notes
+        sub = self._subscriptions.get(str(subscription_id))
+        if sub is None:
+            return None
+        sub.status = "active"
+        sub.duration_type = duration_type
+        if starts_at is not None:
+            sub.starts_at = starts_at
+        if expires_at is not None:
+            sub.expires_at = expires_at
+        return sub
+
+    async def renew_subscription(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        subscription_id: UUID,
+        duration_type: str,
+        expires_at: Any = None,
+        notes: str | None = None,
+    ) -> FakeSubscriptionObj | None:
+        del db, tenant_id, notes
+        sub = self._subscriptions.get(str(subscription_id))
+        if sub is None:
+            return None
+        sub.status = "active"
+        sub.duration_type = duration_type
+        if expires_at is not None:
+            sub.expires_at = expires_at
+        return sub
+
+    async def reveal_credentials(
+        self, db: Any, tenant_id: UUID, subscription_id: UUID
+    ) -> dict[str, str | None] | None:
+        del db, tenant_id
+        sub = self._subscriptions.get(str(subscription_id))
+        if sub is None:
+            return None
+        return {
+            "streaming_password": sub.streaming_password,
+            "profile_pin": sub.profile_pin,
+        }
+
+
+@dataclass
 class FakeProfileObj:
     full_name: str = "Test Admin"
     email: str = "admin@test.com"
@@ -294,14 +497,38 @@ def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
 
 @pytest.fixture
 def client_service() -> FakeClientService:
-    return FakeClientService()
+    svc = FakeClientService()
+    client_id = uuid4()
+    svc._clients[str(client_id)] = FakeClientObj(
+        id=client_id,
+        tenant_id=uuid4(),
+        full_name="Cliente Demo",
+        phone="1234567890",
+        local_username="cliente.demo",
+    )
+    return svc
 
 
 @pytest.fixture
 def catalog_service() -> FakeCatalogService:
     svc = FakeCatalogService()
-    svc._services["svc-1"] = FakeServiceObj()
+    service = FakeServiceObj(name="Netflix")
+    svc._services[str(service.id)] = service
     return svc
+
+
+@pytest.fixture
+def subscription_service(
+    client_service: FakeClientService,
+    catalog_service: FakeCatalogService,
+) -> FakeSubscriptionService:
+    tenant_id = next(iter(client_service._clients.values())).tenant_id
+    service = FakeSubscriptionService(tenant_id, client_service, catalog_service)
+    client = next(iter(client_service._clients.values()))
+    service.default_subscription.client_id = client.id
+    service.default_subscription.client_name = client.full_name
+    service.default_subscription.client_full_name = client.full_name
+    return service
 
 
 @pytest.fixture
@@ -319,11 +546,13 @@ def console_service(
     client_service: FakeClientService,
     catalog_service: FakeCatalogService,
     profile_service: FakeProfileService,
+    subscription_service: FakeSubscriptionService,
 ) -> WhatsAppTenantConsoleService:
     return WhatsAppTenantConsoleService(
         client_service=client_service,
         catalog_service=catalog_service,
         profile_service=profile_service,
+        subscription_service=subscription_service,
     )
 
 
@@ -583,6 +812,141 @@ class TestServiceMainMenu:
         assert session is not None
         assert session.flow == "subscriptions"
         assert session.step == "menu"
+
+    async def test_service_subscriptions_list_and_detail(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        tenant_id = subscription_service.tenant_id
+        await console_service.process_message(
+            phone="+10000000000",
+            message="4",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        reply_filter = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        assert "Filtrar por estado" in reply_filter
+
+        reply_list = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        assert "Lista" in reply_list or "Suscripciones" in reply_list
+
+        reply_detail = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        assert "Detalle de Suscripción" in reply_detail
+        assert "secret123" in reply_detail
+        assert "1234" in reply_detail
+
+    async def test_service_subscriptions_create_flow(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        tenant_id = subscription_service.tenant_id
+        await console_service.process_message(
+            phone="+10000000000",
+            message="4",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        steps = ["2", "1", "1", "1", "nuevo@test.com", "clave123", "clave123", "Perfil Kids", "7788", "7788", "1", "CONFIRMAR"]
+        reply = ""
+        for step in steps:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=object(),
+                session_service=session_service,
+            )
+        assert "Suscripción creada exitosamente" in reply
+        assert len(subscription_service._subscriptions) == 2
+
+    async def test_service_subscriptions_edit_email_flow(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        tenant_id = subscription_service.tenant_id
+        for step in ["4", "1", "1", "1", "1", "4", "editado@test.com"]:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=object(),
+                session_service=session_service,
+            )
+        assert "Suscripción actualizada exitosamente" in reply
+        assert subscription_service.default_subscription.streaming_email == "editado@test.com"
+
+    async def test_service_subscriptions_cancel_flow(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        tenant_id = subscription_service.tenant_id
+        for step in ["4", "1", "1", "1", "2", "CONFIRMAR"]:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=object(),
+                session_service=session_service,
+            )
+        assert "Suscripción cancelada exitosamente" in reply
+        assert subscription_service.default_subscription.status == "cancelled"
+
+    async def test_service_subscriptions_renew_and_reactivate_flows(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        tenant_id = subscription_service.tenant_id
+        for step in ["4", "1", "1", "1", "3", "1", "CONFIRMAR"]:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=object(),
+                session_service=session_service,
+            )
+        assert "Suscripción renovada exitosamente" in reply
+
+        subscription_service.default_subscription.status = "cancelled"
+        for step in ["4", "1", "3", "1", "4", "1", "CONFIRMAR"]:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=object(),
+                session_service=session_service,
+            )
+        assert "Suscripción reactivada exitosamente" in reply
+        assert subscription_service.default_subscription.status == "active"
 
     async def test_service_zero_main_menu_exits(
         self,

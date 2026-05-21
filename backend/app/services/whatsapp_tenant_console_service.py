@@ -8,7 +8,7 @@ Profile within the tenant scope.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -997,6 +997,52 @@ class WhatsAppTenantConsoleService:
         except (ValueError, AttributeError):
             return None
 
+    @staticmethod
+    def _format_subscription_duration(duration_type: str) -> str:
+        return {
+            "1_month": "1 mes",
+            "3_months": "3 meses",
+            "6_months": "6 meses",
+            "9_months": "9 meses",
+            "1_year": "1 año",
+            "custom": "Personalizada",
+        }.get(duration_type, duration_type)
+
+    @staticmethod
+    def _format_short_date(value: Any) -> str:
+        if value is None:
+            return "—"
+        if hasattr(value, "strftime"):
+            return value.strftime("%Y-%m-%d")
+        return str(value)
+
+    @staticmethod
+    def _calculate_subscription_expiry(
+        starts_at: datetime,
+        duration_type: str,
+        custom_expires_at: datetime | None = None,
+    ) -> datetime:
+        if duration_type == "custom":
+            if custom_expires_at is None:
+                raise ValueError("custom duration requires expires_at")
+            return custom_expires_at
+        duration_days = {
+            "1_month": 30,
+            "3_months": 90,
+            "6_months": 180,
+            "9_months": 270,
+            "1_year": 365,
+        }
+        return starts_at + timedelta(days=duration_days[duration_type])
+
+    @staticmethod
+    def _parse_iso_date(value: str) -> datetime | None:
+        try:
+            parsed = datetime.strptime(value.strip(), "%Y-%m-%d")
+        except ValueError:
+            return None
+        return parsed.replace(tzinfo=timezone.utc)
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -1293,7 +1339,7 @@ class WhatsAppTenantConsoleService:
                 )
             elif step == self.SUBSCRIPTIONS_STEP_EDIT_VALUE:
                 return await self._handle_subscriptions_edit_value(
-                    phone, msg, session, session_service
+                    phone, msg, session, session_service, tenant_id, db
                 )
             elif step == self.SUBSCRIPTIONS_STEP_EDIT_PASSWORD_CONFIRM:
                 return await self._handle_subscriptions_edit_password_confirm(
@@ -2070,6 +2116,1045 @@ class WhatsAppTenantConsoleService:
             session.temp_data = {}
             await session_service.save_session(session)
         return self.SUBSCRIPTIONS_MENU
+
+    async def _handle_subscriptions_menu(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if msg == "1":
+            session.step = self.SUBSCRIPTIONS_STEP_FILTER
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_FILTER_PROMPT
+        if msg == "2":
+            return await self._start_subscriptions_create(
+                phone, session, session_service, tenant_id, db
+            )
+        return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+    async def _handle_subscriptions_filter(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        if tenant_id is None or db is None or self._subscription_service is None:
+            return self.SUBSCRIPTIONS_NO_RESULTS
+
+        subscriptions: list[Any]
+        if msg == "1":
+            subscriptions = await self._subscription_service.list_subscriptions(
+                db, tenant_id, status="active"
+            )
+        elif msg == "2":
+            subscriptions = await self._subscription_service.list_subscriptions(
+                db, tenant_id, status="expired"
+            )
+        elif msg == "3":
+            subscriptions = await self._subscription_service.list_subscriptions(
+                db, tenant_id, status="cancelled"
+            )
+        elif msg == "4":
+            active = await self._subscription_service.list_subscriptions(
+                db, tenant_id, status="active"
+            )
+            expired = await self._subscription_service.list_subscriptions(
+                db, tenant_id, status="expired"
+            )
+            cancelled = await self._subscription_service.list_subscriptions(
+                db, tenant_id, status="cancelled"
+            )
+            subscriptions = [*active, *expired, *cancelled]
+        else:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        if not subscriptions:
+            return self.SUBSCRIPTIONS_NO_RESULTS + "\n\n" + self.SUBSCRIPTIONS_FILTER_PROMPT
+
+        reply, selection_map = self._format_subscription_list(subscriptions)
+        session.selection_map = selection_map
+        session.step = self.SUBSCRIPTIONS_STEP_SELECT
+        if session_service is not None:
+            await session_service.save_session(session)
+        return reply + "\n\n" + self.SUBSCRIPTIONS_SELECT_PROMPT
+
+    async def _handle_subscriptions_list(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        return await self._handle_subscriptions_select(
+            phone, msg, session, session_service, tenant_id, db
+        )
+
+    async def _handle_subscriptions_select(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        subscription_id = session.selection_map.get(msg)
+        parsed_id = self._safe_uuid(subscription_id)
+        if (
+            parsed_id is None
+            or tenant_id is None
+            or db is None
+            or self._subscription_service is None
+        ):
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        subscription = await self._subscription_service.get_subscription(
+            db, tenant_id, parsed_id
+        )
+        if subscription is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        credentials = await self._subscription_service.reveal_credentials(
+            db, tenant_id, parsed_id
+        )
+        reply = self._format_subscription_detail(subscription, credentials)
+        actions = (
+            self.SUBSCRIPTION_DETAIL_ACTIONS
+            if subscription.status == "cancelled"
+            else self.SUBSCRIPTION_DETAIL_ACTIONS_ACTIVE
+        )
+
+        session.selected_tenant_id = str(parsed_id)
+        session.step = self.SUBSCRIPTIONS_STEP_ACTION
+        if session_service is not None:
+            await session_service.save_session(session)
+        return reply + "\n" + actions
+
+    async def _handle_subscriptions_action(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        subscription = await self._get_selected_subscription(session, tenant_id, db)
+        if subscription is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        if msg == "1":
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_FIELD
+            session.temp_data = {}
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_EDIT_FIELD_PROMPT
+
+        if msg == "2":
+            session.step = self.SUBSCRIPTIONS_STEP_CANCEL_CONFIRM
+            if session_service is not None:
+                await session_service.save_session(session)
+            client_name = getattr(subscription, "client_name", None) or getattr(
+                subscription, "client_full_name", "—"
+            )
+            return self.SUBSCRIPTIONS_CANCEL_CONFIRM_TEMPLATE.format(
+                email=subscription.streaming_email,
+                client_name=client_name,
+            )
+
+        if msg == "3":
+            session.step = self.SUBSCRIPTIONS_STEP_RENEW_DURATION
+            session.temp_data = {}
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_RENEW_DURATION_PROMPT
+
+        if msg == "4" and subscription.status == "cancelled":
+            session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_DURATION
+            session.temp_data = {}
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_REACTIVATE_DURATION_PROMPT
+
+        return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+    async def _start_subscriptions_create(
+        self,
+        phone: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if tenant_id is None or db is None or self._client_service is None:
+            return self.SUBSCRIPTIONS_CLIENT_REQUIRED
+        clients = await self._client_service.list_clients(db, tenant_id)
+        if not clients:
+            return self.SUBSCRIPTIONS_CLIENT_REQUIRED
+
+        client_list, selection_map = self._format_client_list(clients)
+        session.flow = self.SUBSCRIPTIONS_FLOW
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_CLIENT
+        session.temp_data = {"starts_at": datetime.now(timezone.utc).isoformat()}
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_CLIENT_PROMPT.format(client_list=client_list)
+
+    async def _handle_subscriptions_create_client(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        client_id = self._safe_uuid(session.selection_map.get(msg))
+        if client_id is None or tenant_id is None or db is None or self._client_service is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        client = await self._client_service.get_client(db, tenant_id, client_id)
+        if client is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        if self._catalog_service is None:
+            return "❌ No se pudo cargar el catálogo."
+        services = await self._catalog_service.list_services(db, tenant_id)
+        if not services:
+            return "❌ No hay servicios disponibles."
+        service_list, selection_map = self._format_service_list(services)
+
+        session.temp_data.update(
+            {
+                "client_id": str(client.id),
+                "client_name": client.full_name,
+            }
+        )
+        session.selection_map = selection_map
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_SERVICE
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_SERVICE_PROMPT.format(service_list=service_list)
+
+    async def _handle_subscriptions_create_service(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        service_id = self._safe_uuid(session.selection_map.get(msg))
+        if service_id is None or tenant_id is None or db is None or self._catalog_service is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        service = await self._catalog_service.get_service(db, tenant_id, service_id)
+        if service is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        plans = await self._catalog_service.list_plans(db, tenant_id, service_id) or []
+        if not plans:
+            return "❌ No hay planes disponibles para este servicio."
+        plan_list, selection_map = self._format_plan_list(plans)
+
+        session.temp_data.update(
+            {
+                "service_id": str(service.id),
+                "service_name": service.name,
+            }
+        )
+        session.selection_map = selection_map
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PLAN
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_PLAN_PROMPT.format(plan_list=plan_list)
+
+    async def _handle_subscriptions_create_plan(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        plan_id = self._safe_uuid(session.selection_map.get(msg))
+        service_id = self._safe_uuid(session.temp_data.get("service_id"))
+        if (
+            plan_id is None
+            or service_id is None
+            or tenant_id is None
+            or db is None
+            or self._catalog_service is None
+        ):
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        plan = await self._catalog_service.get_plan(db, tenant_id, service_id, plan_id)
+        if plan is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        session.temp_data.update(
+            {
+                "plan_id": str(plan.id),
+                "plan_name": plan.name,
+            }
+        )
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_EMAIL
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_EMAIL_PROMPT
+
+    async def _handle_subscriptions_create_email(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        email = msg.strip()
+        if not email:
+            return self.SUBSCRIPTIONS_EMAIL_REQUIRED
+        session.temp_data["streaming_email"] = email
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT
+
+    async def _handle_subscriptions_create_password(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        value = msg.strip()
+        if value.lower() in self.SUBSCRIPTIONS_SKIP_WORDS:
+            session.temp_data["streaming_password"] = None
+            session.temp_data.pop("streaming_password_pending", None)
+            session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT
+
+        session.temp_data["streaming_password_pending"] = value
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT
+
+    async def _handle_subscriptions_create_password_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        pending = session.temp_data.get("streaming_password_pending")
+        if msg.strip() != pending:
+            return self.SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH
+        session.temp_data["streaming_password"] = pending
+        session.temp_data.pop("streaming_password_pending", None)
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT
+
+    async def _handle_subscriptions_create_profile_name(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        value = msg.strip()
+        session.temp_data["profile_name"] = (
+            None if value.lower() in self.SUBSCRIPTIONS_SKIP_WORDS else value
+        )
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PIN
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_PIN_PROMPT
+
+    async def _handle_subscriptions_create_pin(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        value = msg.strip()
+        if value.lower() in self.SUBSCRIPTIONS_SKIP_WORDS:
+            session.temp_data["profile_pin"] = None
+            session.temp_data.pop("profile_pin_pending", None)
+            session.step = self.SUBSCRIPTIONS_STEP_CREATE_DURATION
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_DURATION_PROMPT
+
+        if not session.temp_data.get("profile_name"):
+            return self.SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE
+
+        session.temp_data["profile_pin_pending"] = value
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PIN_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT
+
+    async def _handle_subscriptions_create_pin_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        pending = session.temp_data.get("profile_pin_pending")
+        if msg.strip() != pending:
+            return self.SUBSCRIPTIONS_CREATE_PIN_MISMATCH
+        session.temp_data["profile_pin"] = pending
+        session.temp_data.pop("profile_pin_pending", None)
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_DURATION
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_DURATION_PROMPT
+
+    async def _handle_subscriptions_create_duration(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone, tenant_id, db
+        duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
+        if duration_type is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        session.temp_data["duration_type"] = duration_type
+        if duration_type == "custom":
+            session.step = self.SUBSCRIPTIONS_STEP_CREATE_CUSTOM_DATE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CUSTOM_DATE_PROMPT
+
+        session.temp_data["expires_at"] = None
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._build_subscription_create_confirm(session.temp_data)
+
+    async def _handle_subscriptions_create_custom_date(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone, tenant_id, db
+        expires_at = self._parse_iso_date(msg)
+        if expires_at is None:
+            return "❌ Fecha inválida. Usa formato YYYY-MM-DD."
+        session.temp_data["expires_at"] = expires_at.isoformat()
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._build_subscription_create_confirm(session.temp_data)
+
+    async def _handle_subscriptions_create_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if msg.strip().lower() != "confirmar":
+            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        if tenant_id is None or db is None or self._subscription_service is None:
+            return "❌ No se pudo crear la suscripción."
+
+        from app.schemas.subscription import SubscriptionCreate
+
+        data = session.temp_data
+        starts_at = datetime.fromisoformat(data["starts_at"])
+        expires_at_raw = data.get("expires_at")
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw) if expires_at_raw else None
+        )
+        payload = SubscriptionCreate(
+            client_id=UUID(data["client_id"]),
+            service_id=UUID(data["service_id"]),
+            plan_id=UUID(data["plan_id"]),
+            streaming_email=data["streaming_email"],
+            streaming_password=data.get("streaming_password"),
+            profile_name=data.get("profile_name"),
+            profile_pin=data.get("profile_pin"),
+            duration_type=data["duration_type"],
+            starts_at=starts_at,
+            expires_at=expires_at,
+        )
+        try:
+            await self._subscription_service.create_subscription(db, tenant_id, payload)
+        except ValueError as exc:
+            return "❌ " + str(exc)
+
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self.SUBSCRIPTIONS_CREATE_SUCCESS)
+
+    async def _handle_subscriptions_edit_field(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        field = self.SUBSCRIPTIONS_EDIT_FIELD_MAP.get(msg)
+        if field is None:
+            return self.SUBSCRIPTIONS_EDIT_ERROR_INVALID_FIELD
+        if tenant_id is None or db is None:
+            return "❌ No se pudo cargar la suscripción."
+
+        session.temp_data = {"field": field}
+
+        if field == "client":
+            if self._client_service is None:
+                return self.SUBSCRIPTIONS_CLIENT_REQUIRED
+            clients = await self._client_service.list_clients(db, tenant_id)
+            client_list, selection_map = self._format_client_list(clients)
+            session.selection_map = selection_map
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CREATE_CLIENT_PROMPT.format(client_list=client_list)
+
+        if field == "service":
+            if self._catalog_service is None:
+                return "❌ No se pudo cargar el catálogo."
+            services = await self._catalog_service.list_services(db, tenant_id)
+            service_list, selection_map = self._format_service_list(services)
+            session.selection_map = selection_map
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CREATE_SERVICE_PROMPT.format(service_list=service_list)
+
+        if field == "plan":
+            subscription = await self._get_selected_subscription(session, tenant_id, db)
+            if subscription is None or self._catalog_service is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            plans = (
+                await self._catalog_service.list_plans(db, tenant_id, subscription.service_id)
+                or []
+            )
+            plan_list, selection_map = self._format_plan_list(plans)
+            session.selection_map = selection_map
+            session.temp_data["service_id"] = str(subscription.service_id)
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CREATE_PLAN_PROMPT.format(plan_list=plan_list)
+
+        session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self.SUBSCRIPTIONS_EDIT_PROMPTS.get(field, self.SUBSCRIPTIONS_EDIT_FIELD_PROMPT)
+
+    async def _handle_subscriptions_edit_value(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if tenant_id is None or db is None or self._subscription_service is None:
+            return "❌ No se pudo actualizar la suscripción."
+        field = session.temp_data.get("field")
+
+        if field == "client":
+            client_id = self._safe_uuid(session.selection_map.get(msg))
+            if client_id is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return await self._apply_subscription_update(
+                phone,
+                session,
+                session_service,
+                tenant_id,
+                db,
+                client_id=client_id,
+            )
+
+        if field == "service":
+            service_id = self._safe_uuid(session.selection_map.get(msg))
+            if service_id is None or self._catalog_service is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            service = await self._catalog_service.get_service(db, tenant_id, service_id)
+            if service is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            plans = await self._catalog_service.list_plans(db, tenant_id, service_id) or []
+            if not plans:
+                return "❌ No hay planes disponibles para este servicio."
+            plan_list, selection_map = self._format_plan_list(plans)
+            session.selection_map = selection_map
+            session.temp_data = {
+                "field": "service_plan",
+                "service_id": str(service_id),
+            }
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CREATE_PLAN_PROMPT.format(plan_list=plan_list)
+
+        if field == "service_plan":
+            plan_id = self._safe_uuid(session.selection_map.get(msg))
+            service_id = self._safe_uuid(session.temp_data.get("service_id"))
+            if plan_id is None or service_id is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return await self._apply_subscription_update(
+                phone,
+                session,
+                session_service,
+                tenant_id,
+                db,
+                service_id=service_id,
+                plan_id=plan_id,
+            )
+
+        if field == "plan":
+            plan_id = self._safe_uuid(session.selection_map.get(msg))
+            if plan_id is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return await self._apply_subscription_update(
+                phone,
+                session,
+                session_service,
+                tenant_id,
+                db,
+                plan_id=plan_id,
+            )
+
+        if field == "streaming_email":
+            email = msg.strip()
+            if not email:
+                return self.SUBSCRIPTIONS_EMAIL_REQUIRED
+            return await self._apply_subscription_update(
+                phone,
+                session,
+                session_service,
+                tenant_id,
+                db,
+                streaming_email=email,
+            )
+
+        if field == "profile_name":
+            value = msg.strip()
+            return await self._apply_subscription_update(
+                phone,
+                session,
+                session_service,
+                tenant_id,
+                db,
+                profile_name=None if value.lower() in self.SUBSCRIPTIONS_SKIP_WORDS else value,
+            )
+
+        if field == "streaming_password":
+            session.temp_data["pending_value"] = (
+                "" if msg.strip().lower() in self.SUBSCRIPTIONS_SKIP_WORDS else msg.strip()
+            )
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_PASSWORD_CONFIRM
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_EDIT_PASSWORD_CONFIRM_PROMPT
+
+        if field == "profile_pin":
+            subscription = await self._get_selected_subscription(session, tenant_id, db)
+            if subscription is None:
+                return self.SUBSCRIPTIONS_INVALID_SELECTION
+            value = "" if msg.strip().lower() in self.SUBSCRIPTIONS_SKIP_WORDS else msg.strip()
+            if value and not subscription.profile_name:
+                return self.SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE
+            session.temp_data["pending_value"] = value
+            session.step = self.SUBSCRIPTIONS_STEP_EDIT_PIN_CONFIRM
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_EDIT_PIN_CONFIRM_PROMPT
+
+        return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+    async def _handle_subscriptions_edit_password_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        pending_value = session.temp_data.get("pending_value", "")
+        if msg.strip() != pending_value:
+            return self.SUBSCRIPTIONS_EDIT_MISMATCH
+        return await self._apply_subscription_update(
+            phone,
+            session,
+            session_service,
+            tenant_id,
+            db,
+            streaming_password=pending_value,
+        )
+
+    async def _handle_subscriptions_edit_pin_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        pending_value = session.temp_data.get("pending_value", "")
+        if msg.strip() != pending_value:
+            return self.SUBSCRIPTIONS_EDIT_MISMATCH
+        return await self._apply_subscription_update(
+            phone,
+            session,
+            session_service,
+            tenant_id,
+            db,
+            profile_pin=pending_value,
+        )
+
+    async def _handle_subscriptions_cancel_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if msg.strip().lower() != "confirmar":
+            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        subscription_id = self._safe_uuid(session.selected_tenant_id)
+        if (
+            subscription_id is None
+            or tenant_id is None
+            or db is None
+            or self._subscription_service is None
+        ):
+            return "❌ No se pudo cancelar la suscripción."
+        cancelled = await self._subscription_service.cancel_subscription(
+            db, tenant_id, subscription_id
+        )
+        if cancelled is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self.SUBSCRIPTIONS_CANCEL_SUCCESS)
+
+    async def _handle_subscriptions_reactivate_duration(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone, tenant_id, db
+        duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
+        if duration_type is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        session.temp_data = {
+            "duration_type": duration_type,
+            "starts_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if duration_type == "custom":
+            session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CUSTOM_DATE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_REACTIVATE_CUSTOM_DATE_PROMPT
+        session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._build_subscription_reactivate_confirm(session.temp_data)
+
+    async def _handle_subscriptions_reactivate_custom_date(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone, tenant_id, db
+        expires_at = self._parse_iso_date(msg)
+        if expires_at is None:
+            return "❌ Fecha inválida. Usa formato YYYY-MM-DD."
+        session.temp_data["expires_at"] = expires_at.isoformat()
+        session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._build_subscription_reactivate_confirm(session.temp_data)
+
+    async def _handle_subscriptions_reactivate_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if msg.strip().lower() != "confirmar":
+            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        subscription_id = self._safe_uuid(session.selected_tenant_id)
+        if (
+            subscription_id is None
+            or tenant_id is None
+            or db is None
+            or self._subscription_service is None
+        ):
+            return "❌ No se pudo reactivar la suscripción."
+        duration_type = session.temp_data["duration_type"]
+        starts_at = datetime.fromisoformat(session.temp_data["starts_at"])
+        expires_at_raw = session.temp_data.get("expires_at")
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw) if expires_at_raw else None
+        )
+        reactivated = await self._subscription_service.reactivate_subscription(
+            db,
+            tenant_id,
+            subscription_id,
+            duration_type,
+            starts_at=starts_at,
+            expires_at=expires_at,
+        )
+        if reactivated is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self.SUBSCRIPTIONS_REACTIVATE_SUCCESS)
+
+    async def _handle_subscriptions_renew_duration(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
+        if duration_type is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        session.temp_data = {"duration_type": duration_type}
+        if duration_type == "custom":
+            session.step = self.SUBSCRIPTIONS_STEP_RENEW_CUSTOM_DATE
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_RENEW_CUSTOM_DATE_PROMPT
+        session.step = self.SUBSCRIPTIONS_STEP_RENEW_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return await self._build_subscription_renew_confirm(session, tenant_id, db)
+
+    async def _handle_subscriptions_renew_custom_date(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        del phone
+        expires_at = self._parse_iso_date(msg)
+        if expires_at is None:
+            return "❌ Fecha inválida. Usa formato YYYY-MM-DD."
+        session.temp_data["expires_at"] = expires_at.isoformat()
+        session.step = self.SUBSCRIPTIONS_STEP_RENEW_CONFIRM
+        if session_service is not None:
+            await session_service.save_session(session)
+        return await self._build_subscription_renew_confirm(session, tenant_id, db)
+
+    async def _handle_subscriptions_renew_confirm(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        if msg.strip().lower() != "confirmar":
+            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        subscription_id = self._safe_uuid(session.selected_tenant_id)
+        if (
+            subscription_id is None
+            or tenant_id is None
+            or db is None
+            or self._subscription_service is None
+        ):
+            return "❌ No se pudo renovar la suscripción."
+        duration_type = session.temp_data["duration_type"]
+        expires_at_raw = session.temp_data.get("expires_at")
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw) if expires_at_raw else None
+        )
+        renewed = await self._subscription_service.renew_subscription(
+            db,
+            tenant_id,
+            subscription_id,
+            duration_type,
+            expires_at=expires_at,
+        )
+        if renewed is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self.SUBSCRIPTIONS_RENEW_SUCCESS)
+
+    async def _get_selected_subscription(
+        self,
+        session: Any,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> Any | None:
+        subscription_id = self._safe_uuid(session.selected_tenant_id)
+        if (
+            subscription_id is None
+            or tenant_id is None
+            or db is None
+            or self._subscription_service is None
+        ):
+            return None
+        return await self._subscription_service.get_subscription(
+            db, tenant_id, subscription_id
+        )
+
+    async def _apply_subscription_update(
+        self,
+        phone: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+        **changes: Any,
+    ) -> str:
+        if tenant_id is None or db is None or self._subscription_service is None:
+            return "❌ No se pudo actualizar la suscripción."
+        from app.schemas.subscription import SubscriptionUpdate
+
+        selected_id = self._safe_uuid(session.selected_tenant_id)
+        if selected_id is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+
+        normalized_changes = {
+            key: (None if value == "" else value)
+            for key, value in changes.items()
+        }
+        try:
+            updated = await self._subscription_service.update_subscription(
+                db,
+                tenant_id,
+                selected_id,
+                SubscriptionUpdate(**normalized_changes),
+            )
+        except ValueError as exc:
+            return "❌ " + str(exc)
+        if updated is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self.SUBSCRIPTIONS_EDIT_SUCCESS)
+
+    def _build_subscription_create_confirm(self, data: dict[str, Any]) -> str:
+        starts_at = datetime.fromisoformat(data["starts_at"])
+        expires_at_raw = data.get("expires_at")
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw)
+            if expires_at_raw
+            else self._calculate_subscription_expiry(starts_at, data["duration_type"])
+        )
+        return self.SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE.format(
+            client_name=data.get("client_name", "—"),
+            service_name=data.get("service_name", "—"),
+            plan_name=data.get("plan_name", "—"),
+            email=data.get("streaming_email", "—"),
+            password=data.get("streaming_password") or "—",
+            profile_name=data.get("profile_name") or "—",
+            pin=data.get("profile_pin") or "—",
+            duration_label=self._format_subscription_duration(data["duration_type"]),
+            starts_at=self._format_short_date(starts_at),
+            expires_at=self._format_short_date(expires_at),
+        )
+
+    def _build_subscription_reactivate_confirm(self, data: dict[str, Any]) -> str:
+        starts_at = datetime.fromisoformat(data["starts_at"])
+        expires_at_raw = data.get("expires_at")
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw)
+            if expires_at_raw
+            else self._calculate_subscription_expiry(starts_at, data["duration_type"])
+        )
+        return self.SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE.format(
+            duration_label=self._format_subscription_duration(data["duration_type"]),
+            starts_at=self._format_short_date(starts_at),
+            expires_at=self._format_short_date(expires_at),
+        )
+
+    async def _build_subscription_renew_confirm(
+        self,
+        session: Any,
+        tenant_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        subscription = await self._get_selected_subscription(session, tenant_id, db)
+        if subscription is None:
+            return self.SUBSCRIPTIONS_INVALID_SELECTION
+        duration_type = session.temp_data["duration_type"]
+        expires_at_raw = session.temp_data.get("expires_at")
+        base_expires = subscription.expires_at
+        if base_expires.tzinfo is None:
+            base_expires = base_expires.replace(tzinfo=timezone.utc)
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw)
+            if expires_at_raw
+            else self._calculate_subscription_expiry(base_expires, duration_type)
+        )
+        return self.SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE.format(
+            duration_label=self._format_subscription_duration(duration_type),
+            expires_at=self._format_short_date(expires_at),
+        )
 
     # ==================================================================
     # PROFILE FLOWS
