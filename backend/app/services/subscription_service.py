@@ -168,6 +168,17 @@ class SubscriptionService:
         )
         return res.scalar_one_or_none()
 
+    async def reveal_credentials(
+        self, db: AsyncSession, tenant_id: uuid.UUID, subscription_id: uuid.UUID
+    ) -> Optional[dict]:
+        sub = await self.get_subscription(db, tenant_id, subscription_id)
+        if not sub:
+            return None
+        return {
+            "streaming_password": decrypt_value(sub.streaming_password_encrypted),
+            "profile_pin": decrypt_value(sub.profile_pin_encrypted),
+        }
+
     async def list_subscriptions(
         self,
         db: AsyncSession,

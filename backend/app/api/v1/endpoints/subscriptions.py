@@ -12,6 +12,7 @@ from app.schemas.subscription import (
     SubscriptionEventResponse,
     SubscriptionReminderSettingsResponse,
     SubscriptionReminderSettingsUpdate,
+    SubscriptionRevealResponse,
 )
 from app.services.subscription_service import SubscriptionService
 
@@ -99,6 +100,20 @@ async def get_subscription(
     if sub is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     return sub
+
+
+@router.get("/{subscription_id}/reveal", response_model=SubscriptionRevealResponse)
+async def reveal_subscription_credentials(
+    subscription_id: uuid.UUID,
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+    current_user: CurrentUser,
+):
+    _require_tenant_or_master_in_context(current_user)
+    creds = await subscription_service.reveal_credentials(db, tenant_id, subscription_id)
+    if creds is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    return creds
 
 
 @router.put("/{subscription_id}", response_model=SubscriptionResponse)

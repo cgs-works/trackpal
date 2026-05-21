@@ -450,3 +450,177 @@ async def test_subscription_api_settings_defaults(client, active_tenant_user):
     assert body["warning_days"] == [7, 3, 1]
     assert body["reminder_time"] == "09:00"
     assert body["recipient_mode"] == "tenant_only"
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_reveal_credentials(client, db_session, active_tenant_user):
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(db_session, tenant, "revealapi")
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # 1. Create subscription with password and PIN
+    payload = _subscription_payload(
+        sub_client,
+        service,
+        plan,
+        streaming_password="my-super-secret-password-123",
+        profile_pin="5678"
+    )
+    create_res = await client.post(
+        "/api/v1/subscriptions",
+        json=payload,
+        headers=headers,
+    )
+    assert create_res.status_code == 201
+    sub_data = create_res.json()
+    subscription_id = sub_data["id"]
+
+    # Verify that the normal creation response does NOT return the plaintext values
+    assert sub_data["has_password"] is True
+    assert sub_data["has_pin"] is True
+    assert "streaming_password" not in sub_data
+    assert "profile_pin" not in sub_data
+
+    # Verify that get subscription detail response does NOT return plaintext values either
+    get_res = await client.get(
+        f"/api/v1/subscriptions/{subscription_id}",
+        headers=headers,
+    )
+    assert get_res.status_code == 200
+    get_data = get_res.json()
+    assert get_data["has_password"] is True
+    assert get_data["has_pin"] is True
+    assert "streaming_password" not in get_data
+    assert "profile_pin" not in get_data
+
+    # Fetch initial events count
+    events_res = await client.get(
+        f"/api/v1/subscriptions/{subscription_id}/events",
+        headers=headers,
+    )
+    assert events_res.status_code == 200
+    initial_events_count = len(events_res.json())
+
+    # 2. Reveal credentials - Success
+    reveal_res = await client.get(
+        f"/api/v1/subscriptions/{subscription_id}/reveal",
+        headers=headers,
+    )
+    assert reveal_res.status_code == 200
+    reveal_data = reveal_res.json()
+    assert reveal_data["streaming_password"] == "my-super-secret-password-123"
+    assert reveal_data["profile_pin"] == "5678"
+
+    # 3. Verify that revealing credentials did NOT create any subscription history events
+    events_res_after = await client.get(
+        f"/api/v1/subscriptions/{subscription_id}/events",
+        headers=headers,
+    )
+    assert events_res_after.status_code == 200
+    assert len(events_res_after.json()) == initial_events_count
+
+    # 4. Create another subscription with None password/PIN
+    payload_none = _subscription_payload(
+        sub_client,
+        service,
+        plan,
+        streaming_password=None,
+        profile_pin=None,
+        profile_name=None,
+    )
+    create_none_res = await client.post(
+        "/api/v1/subscriptions",
+        json=payload_none,
+        headers=headers,
+    )
+    assert create_none_res.status_code == 201
+    sub_none_id = create_none_res.json()["id"]
+
+    reveal_none_res = await client.get(
+        f"/api/v1/subscriptions/{sub_none_id}/reveal",
+        headers=headers,
+    )
+    assert reveal_none_res.status_code == 200
+    reveal_none_data = reveal_none_res.json()
+    assert reveal_none_data["streaming_password"] is None
+    assert reveal_none_data["profile_pin"] is None
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant(client, db_session, active_tenant_user):
+    # Setup Tenant A (active_tenant_user)
+    tenant_a = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client_a, service_a, plan_a = await _create_subscription_dependencies(db_session, tenant_a, "revealcrossa")
+    headers_a = await _login_headers(client, "tenant", "tenant-password")
+
+    # Create subscription in Tenant A
+    payload_a = _subscription_payload(
+        sub_client_a,
+        service_a,
+        plan_a,
+        streaming_password="tenant-a-secret",
+        profile_pin="1111"
+    )
+    create_res = await client.post(
+        "/api/v1/subscriptions",
+        json=payload_a,
+        headers=headers_a,
+    )
+    assert create_res.status_code == 201
+    subscription_id = create_res.json()["id"]
+
+    # Setup Tenant B (another user)
+    user_b = User(
+        username="tenant-b",
+        password_hash=get_password_hash("tenant-b-password"),
+        role="tenant",
+    )
+    db_session.add(user_b)
+    await db_session.flush()
+    tenant_b = Tenant(
+        owner_user_id=user_b.id,
+        client_prefix="tnc01",
+        name="Tenant B",
+        whatsapp_phone="+12015550005",
+        is_active=True,
+    )
+    db_session.add(tenant_b)
+    await db_session.commit()
+
+    headers_b = await _login_headers(client, "tenant-b", "tenant-b-password")
+
+    # Attempt to reveal Tenant A's subscription using Tenant B's credentials -> Should return 404
+    cross_res = await client.get(
+        f"/api/v1/subscriptions/{subscription_id}/reveal",
+        headers=headers_b,
+    )
+    assert cross_res.status_code == 404
+
+    # Setup a Client user belonging to Tenant A -> Should return 403 (Unauthorized role)
+    client_user = User(
+        username="tenant_a_client_user",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(client_user)
+    await db_session.flush()
+    db_session.add(
+        Client(
+            tenant_id=tenant_a.id,
+            owner_user_id=client_user.id,
+            full_name="Client Role User",
+            local_username="clientroleuser",
+            phone="+12015551234",
+            is_active=True,
+        )
+    )
+    await db_session.commit()
+
+    headers_client = await _login_headers(client, "tenant_a_client_user", "client-password")
+
+    client_res = await client.get(
+        f"/api/v1/subscriptions/{subscription_id}/reveal",
+        headers=headers_client,
+    )
+    assert client_res.status_code == 403
+

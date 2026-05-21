@@ -193,3 +193,11 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
         if v not in valid_modes:
             raise ValueError(f"recipient_mode must be one of {valid_modes}")
         return v
+
+
+class SubscriptionRevealResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    streaming_password: Optional[str] = None
+    profile_pin: Optional[str] = None
+
