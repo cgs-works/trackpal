@@ -6,5 +6,24 @@ from app.models.tenant import Tenant
 from app.models.service import Service
 from app.models.plan import Plan
 from app.models.user import User
+from app.models.subscription import (
+    Subscription,
+    SubscriptionEvent,
+    SubscriptionReminderLog,
+    SubscriptionReminderSettings,
+)
 
-__all__ = ["Base", "User", "MasterProfile", "Tenant", "Client", "Service", "Plan", "RefreshSession"]
+__all__ = [
+    "Base",
+    "User",
+    "MasterProfile",
+    "Tenant",
+    "Client",
+    "Service",
+    "Plan",
+    "RefreshSession",
+    "Subscription",
+    "SubscriptionEvent",
+    "SubscriptionReminderLog",
+    "SubscriptionReminderSettings",
+]

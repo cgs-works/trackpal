@@ -1,3 +1,8 @@
+import os
+from cryptography.fernet import Fernet
+# Set up a valid DATA_ENCRYPTION_KEY for testing before app or config is loaded
+os.environ["DATA_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
+
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select

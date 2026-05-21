@@ -17,6 +17,7 @@ def test_rls_policy_sql_uses_required_context_settings():
     text = Path("alembic/versions/cd3efe74cae6_tenant_catalog_rls.py").read_text()
     text += Path("alembic/versions/cd4efe74cae7_fix_tenants_master_rls.py").read_text()
     text += Path("alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py").read_text()
+    text += Path("alembic/versions/cd7efe74caa0_add_subscriptions.py").read_text()
     assert "ENABLE ROW LEVEL SECURITY" in text
     assert "FORCE ROW LEVEL SECURITY" in text
     assert "WITH CHECK" in text
@@ -27,6 +28,10 @@ def test_rls_policy_sql_uses_required_context_settings():
     assert "plans_tenant_isolation" in text
     assert "tenants_tenant_isolation" in text
     assert "clients_tenant_isolation" in text
+    assert "subscriptions_tenant_isolation" in text
+    assert "subscription_events_tenant_isolation" in text
+    assert "subscription_reminder_logs_tenant_isolation" in text
+    assert "subscription_reminder_settings_tenant_isolation" in text
     assert "current_setting('app.current_role', true) = 'master'" in text
 
 
@@ -86,6 +91,31 @@ def test_clients_policy_enforces_tenant_and_client_context():
     assert "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in policy
     assert "AND is_active" in policy
     assert "AND false" in policy
+
+
+def test_subscription_policies_enforce_tenant_context():
+    text = Path("alembic/versions/cd7efe74caa0_add_subscriptions.py").read_text()
+
+    for table in (
+        "subscriptions",
+        "subscription_events",
+        "subscription_reminder_logs",
+        "subscription_reminder_settings",
+    ):
+        assert f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY" in text
+        assert f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY" in text
+        assert f"CREATE POLICY {table}_tenant_isolation" in text
+
+    assert "current_setting('app.current_role', true) = 'master'" in text
+    assert "tenant_id::text = NULLIF(current_setting('app.active_tenant_id', true), '')" in text
+    assert "current_setting('app.current_role', true) = 'tenant'" in text
+    assert "t.id = subscriptions.tenant_id" in text
+    assert "t.id = subscription_events.tenant_id" in text
+    assert "t.id = subscription_reminder_logs.tenant_id" in text
+    assert "t.id = subscription_reminder_settings.tenant_id" in text
+    assert "t.owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')" in text
+    assert "AND t.is_active" in text
+
 
 
 @pytest.mark.asyncio

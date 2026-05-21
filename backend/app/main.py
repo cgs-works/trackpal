@@ -5,12 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.encryption import validate_encryption_key
 from app.core.redis_client import close_redis, init_redis
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    validate_encryption_key()
     await init_redis()
     yield
     # Shutdown
