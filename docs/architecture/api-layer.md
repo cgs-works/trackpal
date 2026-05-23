@@ -21,10 +21,15 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/tenants/*` | `app.api.v1.endpoints.tenants` | tenants | JWT + master role |
 | `/api/v1/integrations/*` | `app.api.v1.endpoints.integrations` | integrations | X-API-Key header |
 | `/api/v1/dashboard` | `app.api.v1.endpoints.dashboard` | dashboard | JWT bearer |
+| `/api/v1/i18n/*` | `app.api.v1.endpoints.i18n` | i18n | JWT bearer |
 | `/api/v1/subscriptions/*` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
 | `/api/v1/subscription-settings` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
 | `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
 | `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
+
+### I18n Endpoints
+
+- `GET /api/v1/i18n/catalog` — Returns merged translation catalog for current user's tenant locale. Tenant reads locale from `Tenant.locale`; client reads from parent tenant; master/unknown returns English. Catalog includes all English keys as fallback.
 
 ### Auth Endpoints
 
@@ -95,4 +100,5 @@ Defined in `app/api/dependencies.py`:
 - `get_active_tenant_id` / tenant context helpers — Resolve `active_tenant_id` for tenant users and switched Master users; set RLS context for tenant-scoped work
 - `require_role(role)` — Returns a dependency that checks `current_user.role`
 - `verify_n8n_api_key_header` — Validates `X-API-Key` header against `settings.n8n_api_key`
+- `resolve_locale(db, tenant_id)` — Fetches `Tenant.locale` from DB, returns `"en"` fallback. Used before mutating service calls to translate `UserFacingError` responses. Must be called *before* the mutating call to avoid post-rollback RLS context loss.
 - Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`

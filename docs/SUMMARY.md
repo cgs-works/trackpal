@@ -25,6 +25,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge and subscription reminders workflows |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
+| [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
 
 ## Codebase
 
@@ -38,7 +39,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | File | Description |
 |------|-------------|
 | [Backend Conventions](code-standard/backend-conventions.md) | Python conventions, testing, security, Redis, and n8n patterns |
-| [Frontend Conventions](code-standard/frontend-conventions.md) | Vue 3, Pinia, routing, API, and styling conventions |
+| [Frontend Conventions](code-standard/frontend-conventions.md) | Vue 3, Pinia, routing, API, i18n store, and styling conventions |
 
 ## Project PDR
 

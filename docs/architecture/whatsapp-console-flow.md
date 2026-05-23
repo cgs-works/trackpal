@@ -65,9 +65,18 @@ File: `backend/app/services/whatsapp_tenant_console_facade.py`.
 
 1. Resolve caller by phone and verify `role=tenant`.
 2. Verify tenant is active.
-3. Resolve tenant context.
+3. Resolve tenant context + locale (`tenant.locale`, persisted column).
 4. On top-level `0`, clear `session:admin:{phone}` and exit.
-5. Delegate to `WhatsAppTenantConsoleService.process_message()`.
+5. Delegate to `WhatsAppTenantConsoleService.process_message()` with resolved `locale`.
+
+### Locale Handling
+
+- `WhatsAppTenantConsoleFacade` resolves `tenant.locale` from DB per message
+- `WhatsAppTenantConsoleService` sets a module-level `_current_locale` ContextVar at `process_message()` entry, resets in `finally`
+- All handler methods call `self._t(key, **params)` which reads `_current_locale.get()` automatically — avoids threading locale through 40+ methods
+- Locale switch in profile section updates `Tenant.locale` in DB, then immediately sets ContextVar for fresh locale on next reply
+- Missing keys fall back to English; warning logged at 1st, 10th, 100th, 1000th occurrence
+- Master console stays hardcoded Spanish (out of i18n scope)
 
 ### Session model
 

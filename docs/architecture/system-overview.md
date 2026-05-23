@@ -21,6 +21,7 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 - **Evolution API**: External WhatsApp Business API proxy for instance management and message relay
 - **n8n**: Dual workflow automation - WhatsApp bot webhook bridge + subscription reminder scheduler
 - **WhatsApp Tenant Console**: Phone-based conversational interface for tenant admins (clients, catalog, profile, subscriptions)
+- **I18n System**: Python-centered localization with in-memory catalogs (`en`/`es`), English default and fallback, tenant locale persisted in DB, frontend catalog served via REST API
 - **Deployment**: `render.yaml` defines the web service with build/start commands
 
 ## Key Design Decisions
@@ -32,3 +33,4 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 - **Failover resilience**: Circuit-breaker pattern for Redis primary/backup; degraded replies never return HTTP 5xx to n8n
 - **Input validation**: Centralized policy module used by REST API schemas and WhatsApp console flows
 - **Canonical phone format**: All phone numbers stored as digits-only (no `+` prefix, no JID suffixes)
+- **I18n architecture**: Python backend is source-of-truth for all translations; backend i18n engine at `app/core/i18n.py` with `t(locale, key)`; `UserFacingError` with `translate_error()` for API error localization; WhatsApp console uses `ContextVar`-based per-message locale; frontend fetches merged catalog via `/i18n/catalog`; n8n is pure transport (no translation logic)

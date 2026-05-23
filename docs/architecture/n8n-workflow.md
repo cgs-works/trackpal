@@ -177,6 +177,7 @@ The workflow communicates with two backend services:
 
 - **Backend unavailable**: The Console Call node has `neverError: true`, so the workflow continues even on non-2xx responses
 - **Empty reply**: Merge Reply falls back to a static Spanish unavailability message
+- **I18n scope**: n8n is pure transport — it never generates, owns, or translates strings. All user-facing messages in both WhatsApp Bot and Reminder workflows are rendered by the backend using `t()`, with tenant locale resolved server-side. n8n passes reply text verbatim to Evolution API.
 - **Evolution API errors**: The Send node also has `neverError: true` to prevent workflow failures from propagating
 - **n8n-level errors**: If any node throws an unhandled error, n8n marks the execution as "Error" and the user does not receive a reply
 

@@ -56,7 +56,9 @@ No lazy loading is used for `LoginView` (eager import). `MasterDashboardView` an
 
 ## State Management (Pinia)
 
-Single store in `src/stores/auth.js`:
+Two stores in `src/stores/`:
+
+### `auth.js`
 
 - **State**: `token`, `refreshToken`, `user`, `activeTenantId` — all persisted to `localStorage`
 - **Getters (computed)**: `isAuthenticated`, `role`, `username`
@@ -65,6 +67,21 @@ Single store in `src/stores/auth.js`:
 Client users land on `/client/dashboard`, which shows readonly client profile data and password change only.
 
 Token and user data are read from `localStorage` on store initialization, surviving page reloads.
+
+### `i18n.js`
+
+Pinia i18n store that holds the merged translation catalog fetched from the backend:
+
+- **State**: `locale`, `strings` (catalog dict), `isLoaded`
+- **Actions**: `loadCatalog()` — fetches `GET /api/v1/i18n/catalog`, stores locale + merged strings
+- **Helpers**: `t(key, params)` — looks up key in catalog, applies named params via string replace. Warns in dev if key missing.
+
+Catalog loaded:
+- On successful login (called from `LoginView`)
+- On page refresh if already authenticated (`main.js` checks `authStore.isAuthenticated`)
+- After locale change in profile section (immediate refetch for UI update)
+
+Frontend holds zero source-of-truth translation strings. All strings come from backend catalog.
 
 ## API Integration (Axios)
 
@@ -116,7 +133,7 @@ Defined in `vite.config.js`:
 
 ### LoginView
 
-Spanish-language login form. Username + password fields, error display, loading state. No registration flow.
+Login form with i18n-backed UI strings from `i18nStore.t()`. Uses translated labels for title, username, password, sign-in button, loading state, and error message. Calls `i18nStore.loadCatalog()` after successful auth.
 
 ### MasterDashboardView
 
@@ -133,12 +150,13 @@ Full tenant management dashboard accessible only to `master` role:
 
 Self-service dashboard accessible only to `tenant` role:
 - Welcome message + profile display
-- Profile edit form (name, email, phone)
+- Profile edit form (name, email, phone, **locale**)
 - Password change form (old + new password)
 - Catalog management: services CRUD and per-service plans CRUD
 - Client management: table with CRUD actions
 - Link to subscriptions page
-- Duplicate/validation API errors shown in Spanish UI
+- Duplicate/validation API errors shown in user's locale
+- Locale `<select>` in profile section (en/es); on save, refetches i18n catalog for immediate UI update
 - Logout button
 
 ### SubscriptionsView

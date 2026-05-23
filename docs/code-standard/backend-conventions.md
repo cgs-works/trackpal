@@ -55,7 +55,7 @@ All field validation goes through `app/core/input_validation.py`. This is the si
 - WhatsApp console flow step handlers
 - Service-layer defensive normalization
 
-Error codes are machine-readable strings (`username_required`, `phone_invalid`) mapped to Spanish messages in the console service.
+Error codes are machine-readable strings (`username_required`, `phone_invalid`) mapped to translated messages via the i18n system.
 
 ## Phone Format
 
@@ -64,9 +64,23 @@ All phone numbers stored as canonical digits-only (no `+` prefix, no `@c.us` JID
 - `_strip_phone_suffixes()` in `app/core/input_validation.py`
 - `validate_phone()` in `app/core/input_validation.py`
 
-## Telegram / WhatsApp Reply Templates
+## I18n / Localization Conventions
 
-All user-facing strings are in Spanish. WhatsApp flow templates are class constants on `WhatsAppConsoleService` and `WhatsAppTenantConsoleService`. Consistency: reuse template constants rather than inline strings.
+- **Backend is source of truth**: All translation strings live in `app/core/i18n.py` as Python dicts (`_CATALOG_EN`, `_CATALOG_ES`).
+- **Catalogs**: In-memory dicts loaded at import. No per-request file I/O. Precomputed merged catalogs with English fallback at startup.
+- **Translation function**: `t(locale, key, **params)` — named-placeholder templates via `str.format`. Missing keys fall back to English; warning logged with in-process counter.
+- **User-facing errors**: Services raise `UserFacingError(code, params)`; endpoints catch and translate via `translate_error(locale, exc)`.
+- **Locale resolution**: REST endpoints use `resolve_locale(db, tenant_id)` from `app/api/dependencies.py`; WhatsApp tenant console uses `_current_locale` ContextVar set per-message.
+- **Order of error handling**: Endpoints must catch `UserFacingError` *before* `ValueError` to enable i18n translation.
+- **`resolve_locale()` timing**: Must be called *before* mutating service calls. Post-rollback RLS context may prevent reading tenant row after a failed transaction.
+- **Frontend contract**: All frontend strings come from `GET /api/v1/i18n/catalog` — no translated strings hardcoded in frontend source.
+- **WhatsApp console**: Tenant messages use `self._t(key, **params)` which reads `_current_locale` ContextVar. Master console stays hardcoded Spanish.
+- **n8n**: Pure transport — no translation logic. Backend renders all localized messages.
+- **Missing key behavior**: English fallback + `logger.warning` at 1st, 10th, 100th, 1000th, and every 10000th occurrence.
+
+## WhatsApp / Telegram Reply Templates
+
+Tenant WhatsApp console uses i18n key constants stored as class-level attributes (`KEY_MAIN_MENU`, `KEY_HELP_TEXT`, etc.) and resolved via `self._t()`. Master console continues with hardcoded Spanish class constants.
 
 ## Redis Keys
 
