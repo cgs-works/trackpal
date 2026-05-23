@@ -1633,6 +1633,8 @@ class WhatsAppTenantConsoleService:
             service = await self._catalog_service.update_service(
                 db, tenant_id, parsed_id, ServiceUpdate(name=name)
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if service is None:
@@ -1752,6 +1754,8 @@ class WhatsAppTenantConsoleService:
             plan = await self._catalog_service.update_plan(
                 db, tenant_id, parsed_service_id, parsed_plan_id, PlanUpdate(name=name)
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if plan is None:
@@ -2309,6 +2313,8 @@ class WhatsAppTenantConsoleService:
         )
         try:
             await self._subscription_service.create_subscription(db, tenant_id, payload)
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
 
@@ -2780,6 +2786,8 @@ class WhatsAppTenantConsoleService:
                 selected_id,
                 SubscriptionUpdate(**normalized_changes),
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if updated is None:
@@ -2965,6 +2973,8 @@ class WhatsAppTenantConsoleService:
         payload = ProfileUpdate(**{field: new_value})
         try:
             profile = await self._profile_service.update_profile(db, user, payload)
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if profile is None:

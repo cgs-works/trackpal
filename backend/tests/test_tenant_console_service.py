@@ -1248,3 +1248,136 @@ class TestClientSelect:
 
         assert "El nombre de usuario ya existe" in reply
         assert "username_already_registered" not in reply
+
+# ===================================================================
+# UserFacingError translation tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestUserFacingErrorTranslation:
+    """UserFacingError codes are translated, not leaked as raw codes."""
+
+    async def test_profile_edit_phone_duplicate_translated(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Profile phone duplicate returns translated text, not raw code."""
+        session = SimpleNamespace(
+            temp_data={"field": "phone"},
+        )
+
+        async def _raise(*args: Any, **kwargs: Any) -> None:
+            raise UserFacingError("profile_phone_registered")
+
+        console_service._profile_service.update_profile = _raise  # type: ignore[assignment]
+
+        async def _fake_get(db: Any, user_id: UUID) -> SimpleNamespace:
+            return SimpleNamespace(id=user_id, role="tenant")
+
+        import app.crud.users as user_crud
+        monkeypatch.setattr(user_crud, "get", _fake_get)
+
+        reply = await console_service._handle_profile_edit_value(
+            phone="+10000000000",
+            msg="+12015550099",
+            session=session,
+            session_service=None,
+            user_id=uuid4(),
+            db=object(),
+        )
+
+        assert "El teléfono ya está registrado" in reply
+        assert "profile_phone_registered" not in reply
+
+    async def test_catalog_service_name_duplicate_translated(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Catalog service name duplicate returns translated text, not raw code."""
+        session = SimpleNamespace(
+            selected_tenant_id=str(uuid4()),
+        )
+
+        async def _raise(*args: Any, **kwargs: Any) -> None:
+            raise UserFacingError("service_name_already_exists")
+
+        console_service._catalog_service.update_service = _raise  # type: ignore[assignment]
+
+        reply = await console_service._handle_catalog_edit_service(
+            phone="+10000000000",
+            msg="Netflix",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=object(),
+        )
+
+        assert "El nombre del servicio ya existe" in reply
+        assert "service_name_already_exists" not in reply
+
+    async def test_catalog_plan_name_duplicate_translated(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Catalog plan name duplicate returns translated text, not raw code."""
+        session = SimpleNamespace(
+            selected_tenant_id=str(uuid4()),
+            temp_data={"service_id": str(uuid4())},
+        )
+
+        async def _raise(*args: Any, **kwargs: Any) -> None:
+            raise UserFacingError("plan_name_already_exists")
+
+        console_service._catalog_service.update_plan = _raise  # type: ignore[assignment]
+
+        reply = await console_service._handle_catalog_edit_plan(
+            phone="+10000000000",
+            msg="Premium",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=object(),
+        )
+
+        assert "El nombre del plan ya existe" in reply
+        assert "plan_name_already_exists" not in reply
+
+    async def test_subscription_create_client_not_found_translated(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Subscription create client-not-found returns translated text, not raw code."""
+        session = SimpleNamespace(
+            temp_data={
+                "client_id": str(uuid4()),
+                "service_id": str(uuid4()),
+                "plan_id": str(uuid4()),
+                "streaming_email": "test@test.com",
+                "streaming_password": "pass123",
+                "profile_name": "Perfil",
+                "profile_pin": "1234",
+                "duration_type": "1_month",
+                "starts_at": "2026-06-01T00:00:00",
+                "expires_at": None,
+            },
+            selected_tenant_id=str(uuid4()),
+        )
+
+        async def _raise(*args: Any, **kwargs: Any) -> None:
+            raise UserFacingError("subscription_client_not_found")
+
+        console_service._subscription_service.create_subscription = _raise  # type: ignore[assignment]
+
+        reply = await console_service._handle_subscriptions_create_confirm(
+            phone="+10000000000",
+            msg="CONFIRMAR",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=object(),
+        )
+
+        assert "Cliente no encontrado" in reply
+        assert "subscription_client_not_found" not in reply
