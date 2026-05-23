@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import restore_rls_context
+from app.core.i18n import t as i18n_t
 from app.models.subscription import (
     Subscription,
     SubscriptionEvent,
@@ -325,11 +326,13 @@ class SubscriptionJobService:
                             await restore_rls_context(db)
                             continue
 
+                        locale = getattr(tenant, "locale", "en") or "en"
                         message = self._render_reminder_message(
                             service_name=service_name,
                             client_name=client_name,
                             days=warning_day,
                             streaming_email=streaming_email,
+                            locale=locale,
                         )
 
                         items.append(
@@ -390,15 +393,18 @@ class SubscriptionJobService:
 
     @staticmethod
     def _render_reminder_message(
-        service_name: str, client_name: str, days: int, streaming_email: str
+        service_name: str, client_name: str, days: int, streaming_email: str, locale: str = "es"
     ) -> str:
-        day_word = "día" if days == 1 else "días"
-        return (
-            f"⚠️ *Recordatorio*\n\n"
-            f"La suscripción a *{service_name}* para *{client_name}* "
-            f"vence en {days} {day_word}.\n\n"
-            f"📧 Cuenta: {streaming_email}\n\n"
-            f"Gestiona desde tu panel o envía *MENU* para más opciones."
+        day_word_key = "reminder.day" if days == 1 else "reminder.days"
+        day_word = i18n_t(locale, day_word_key)
+        return i18n_t(
+            locale,
+            "reminder.subscription.expiring",
+            service_name=service_name,
+            client_name=client_name,
+            days=str(days),
+            day_word=day_word,
+            streaming_email=streaming_email,
         )
 
     # ------------------------------------------------------------------

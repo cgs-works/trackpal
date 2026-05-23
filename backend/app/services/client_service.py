@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_rls_context, restore_rls_context, set_internal_tenant_rls_context, set_rls_context
+from app.core.errors import UserFacingError
 from app.core.input_validation import (
     validate_client_local_username,
     validate_full_name,
@@ -103,11 +104,11 @@ class ClientService:
         technical_username = build_client_username(tenant.client_prefix, local_username)
 
         if await self._local_username_exists(db, tenant_id, local_username):
-            raise ValueError("El nombre de usuario local ya existe")
+            raise UserFacingError("client_local_username_exists")
         if phone and await self._phone_exists(db, tenant_id, phone):
-            raise ValueError("Phone already registered")
+            raise UserFacingError("phone_already_registered")
         if await self._technical_username_exists(db, technical_username):
-            raise ValueError("Username already registered")
+            raise UserFacingError("username_already_registered")
 
         user = User(
             username=technical_username,
@@ -131,7 +132,7 @@ class ClientService:
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError("No se pudo crear el cliente") from exc
+            raise UserFacingError("client_create_failed") from exc
 
         await restore_rls_context(db)
         return await self._get_client(db, tenant_id, client.id)
@@ -163,18 +164,18 @@ class ClientService:
             if await self._local_username_exists(
                 db, tenant_id, new_local_username, client.id
             ):
-                raise ValueError("El nombre de usuario local ya existe")
+                raise UserFacingError("client_local_username_exists")
 
         if "phone" in update_data and update_data["phone"] != client.phone:
             if update_data["phone"] is not None and await self._phone_exists(
                 db, tenant_id, update_data["phone"], client.id
             ):
-                raise ValueError("Phone already registered")
+                raise UserFacingError("phone_already_registered")
 
         if technical_username != client.user.username and await self._technical_username_exists(
             db, technical_username, client.user.id
         ):
-            raise ValueError("Username already registered")
+            raise UserFacingError("username_already_registered")
 
         for field, value in update_data.items():
             setattr(client, field, value)
@@ -184,7 +185,7 @@ class ClientService:
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError("No se pudo actualizar el cliente") from exc
+            raise UserFacingError("client_update_failed") from exc
 
         await restore_rls_context(db)
         return await self._get_client(db, tenant_id, client_id)
@@ -226,7 +227,7 @@ class ClientService:
         if client is None:
             return False
         if client.is_active:
-            raise ValueError("Cannot delete active client. Deactivate first.")
+            raise UserFacingError("client_delete_active")
 
         user = client.user or await user_crud.get(db, client.owner_user_id)
         if user is None:

@@ -6,10 +6,7 @@
         "rule": {
           "interval": [
             {
-              "field": "days",
-              "daysInterval": 1,
-              "triggerAtHour": 9,
-              "triggerAtMinute": 0
+              "triggerAtHour": 9
             }
           ]
         }
@@ -20,7 +17,7 @@
       "typeVersion": 1.3,
       "position": [
         240,
-        300
+        304
       ]
     },
     {
@@ -78,7 +75,7 @@
       "typeVersion": 3.4,
       "position": [
         480,
-        300
+        304
       ]
     },
     {
@@ -115,7 +112,7 @@
       "typeVersion": 4.4,
       "position": [
         720,
-        300
+        304
       ],
       "onError": "continueRegularOutput"
     },
@@ -129,12 +126,12 @@
       "typeVersion": 2,
       "position": [
         960,
-        300
+        304
       ]
     },
     {
       "parameters": {
-        "batchSize": 1
+        "options": {}
       },
       "id": "c5d6e7f8-9a0b-1c2d-3e4f-5a6b7c8d9e0f",
       "name": "SplitInBatches",
@@ -142,13 +139,12 @@
       "typeVersion": 3,
       "position": [
         1200,
-        300
+        304
       ]
     },
     {
       "parameters": {
-        "amount": 2,
-        "unit": "seconds"
+        "amount": 2
       },
       "id": "d6e7f8a9-0b1c-2d3e-4f5a-6b7c8d9e0f1a",
       "name": "Wait",
@@ -156,8 +152,9 @@
       "typeVersion": 1.1,
       "position": [
         1440,
-        300
-      ]
+        304
+      ],
+      "webhookId": "48dea8c3-2c6c-4b58-a01f-373d4771b0f1"
     },
     {
       "parameters": {
@@ -189,7 +186,7 @@
       "typeVersion": 4.4,
       "position": [
         1680,
-        300
+        304
       ],
       "onError": "continueRegularOutput"
     },
@@ -203,7 +200,7 @@
       "typeVersion": 2,
       "position": [
         1920,
-        300
+        304
       ]
     },
     {
@@ -229,7 +226,6 @@
           ],
           "combinator": "and"
         },
-        "looseTypeValidation": false,
         "options": {}
       },
       "id": "a9b0c1d2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
@@ -238,7 +234,7 @@
       "typeVersion": 2.3,
       "position": [
         2160,
-        300
+        304
       ]
     },
     {
@@ -275,7 +271,7 @@
       "typeVersion": 4.4,
       "position": [
         2400,
-        200
+        208
       ],
       "onError": "continueRegularOutput"
     },
@@ -364,18 +360,6 @@
         ]
       ]
     },
-    "SplitInBatches": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Wait",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Wait": {
       "main": [
         [
@@ -427,6 +411,18 @@
         ]
       ]
     },
+    "SplitInBatches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Mark Sent": {
       "main": [
         [
@@ -457,6 +453,10 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "id": "r3m1nd3r5-w0rkfl0w-4a5b-6c7d-8e9f0a1b2c3d",
+  "versionId": "e4a43f37-3cd4-466b-b908-9cebdf6b3350",
+  "meta": {
+    "instanceId": "3a9ddc93932fcd7821c6e13a050d0af56c3c9456de8be4d2e7e266d4e0cdbf67"
+  },
+  "id": "Q8hdztkCKVNac5Tf",
   "tags": []
 }

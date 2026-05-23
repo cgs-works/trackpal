@@ -29,8 +29,6 @@ from app.services.whatsapp_session_service import (
     WhatsAppSessionService,
 )
 from app.services.whatsapp_tenant_console_facade import (
-    GOODBYE_REPLY,
-    INACTIVE_TENANT_REPLY,
     NOT_TENANT_REPLY,
     WhatsAppTenantConsoleFacade,
 )
@@ -603,7 +601,7 @@ class TestFacade:
         facade: WhatsAppTenantConsoleFacade,
         tenant_service: FakeTenantService,
     ) -> None:
-        """Inactive tenant returns INACTIVE_TENANT_REPLY."""
+        """Inactive tenant returns translated inactive message."""
         tenant_service.set_active(False)
         identity = _tenant_identity(role="tenant")
         reply = await facade.process_message(
@@ -612,7 +610,7 @@ class TestFacade:
             identity=identity,
             db=object(),  # Needs db to trigger tenant lookup
         )
-        assert reply == INACTIVE_TENANT_REPLY
+        assert "desactivada" in reply and "Master de Trackpal" in reply
 
     async def test_facade_active_tenant_delegates(
         self,
@@ -633,7 +631,7 @@ class TestFacade:
         self,
         facade: WhatsAppTenantConsoleFacade,
     ) -> None:
-        """Top-level '0' with no active flow returns GOODBYE_REPLY."""
+        """Top-level '0' with no active flow returns translated goodbye."""
         identity = _tenant_identity(role="tenant")
         reply = await facade.process_message(
             phone="+10000000000",
@@ -641,7 +639,7 @@ class TestFacade:
             identity=identity,
             db=object(),
         )
-        assert reply == GOODBYE_REPLY
+        assert "Sesión cerrada" in reply and "consola de administración" in reply
 
     async def test_facade_top_level_zero_closes_evolution_session(
         self,
@@ -668,7 +666,7 @@ class TestFacade:
             db=object(),
         )
 
-        assert reply == GOODBYE_REPLY
+        assert "Sesión cerrada" in reply and "consola de administración" in reply
         assert calls == [
             {
                 "instance": "tenant-instance",

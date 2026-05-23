@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import restore_rls_context
 from app.core.encryption import encrypt_value, decrypt_value
+from app.core.errors import UserFacingError
 from app.models import Client, Service, Plan
 from app.models.subscription import (
     Subscription,
@@ -42,12 +43,12 @@ class SubscriptionService:
             raise ValueError(f"Invalid duration_type: {duration_type}")
         return starts_at + timedelta(days=days)
 
-    async def _commit_change(self, db: AsyncSession, error_message: str) -> None:
+    async def _commit_change(self, db: AsyncSession, err_code: str) -> None:
         try:
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError(error_message) from exc
+            raise UserFacingError(err_code) from exc
 
     async def _create_event(
         self,
@@ -83,14 +84,14 @@ class SubscriptionService:
             select(Client).where(Client.tenant_id == tenant_id, Client.id == client_id)
         )
         if not client_res.scalar_one_or_none():
-            raise ValueError("Client not found or does not belong to this tenant")
+            raise UserFacingError("subscription_client_not_found")
 
         # Validate service belongs to tenant
         service_res = await db.execute(
             select(Service).where(Service.tenant_id == tenant_id, Service.id == service_id)
         )
         if not service_res.scalar_one_or_none():
-            raise ValueError("Service not found or does not belong to this tenant")
+            raise UserFacingError("subscription_service_not_found")
 
         # Validate plan belongs to tenant and service
         plan_res = await db.execute(
@@ -101,7 +102,7 @@ class SubscriptionService:
             )
         )
         if not plan_res.scalar_one_or_none():
-            raise ValueError("Plan not found or does not belong to the selected service")
+            raise UserFacingError("subscription_plan_not_found")
 
     async def create_subscription(
         self, db: AsyncSession, tenant_id: uuid.UUID, payload: SubscriptionCreate
@@ -113,7 +114,7 @@ class SubscriptionService:
 
         # 2. PIN requires Profile logic
         if payload.profile_pin and not payload.profile_name:
-            raise ValueError("profile_pin requires profile_name")
+            raise UserFacingError("subscription_pin_requires_profile")
 
         # 3. Expiration calculation
         starts_at = payload.starts_at
@@ -153,7 +154,7 @@ class SubscriptionService:
         # Log event
         await self._create_event(db, tenant_id, sub.id, "created", notes="Subscription created")
 
-        await self._commit_change(db, "Failed to create subscription")
+        await self._commit_change(db, "subscription_create_failed")
         await restore_rls_context(db)
         await db.refresh(sub)
         return sub
@@ -268,7 +269,7 @@ class SubscriptionService:
                 )
             )
             if not plan_res.scalar_one_or_none():
-                raise ValueError("Selected plan does not belong to the new service")
+                raise UserFacingError("subscription_plan_service_mismatch")
 
         # Verify new/updated combination
         await self.validate_ids(db, tenant_id, new_client_id, new_service_id, new_plan_id)
@@ -305,7 +306,7 @@ class SubscriptionService:
         final_profile_name = sub.profile_name
         final_pin = sub.profile_pin_encrypted
         if final_pin and not final_profile_name:
-            raise ValueError("profile_pin requires profile_name")
+            raise UserFacingError("subscription_pin_requires_profile")
 
         # Check if dates or duration are changing
         starts_at_changed = "starts_at" in update_data
@@ -338,7 +339,7 @@ class SubscriptionService:
         # Log event
         await self._create_event(db, tenant_id, sub.id, "updated", notes="Subscription updated")
 
-        await self._commit_change(db, "Failed to update subscription")
+        await self._commit_change(db, "subscription_update_failed")
         await restore_rls_context(db)
         await db.refresh(sub)
         return sub
@@ -357,7 +358,7 @@ class SubscriptionService:
             db, tenant_id, sub.id, "cancelled", notes=notes or "Subscription cancelled"
         )
 
-        await self._commit_change(db, "Failed to cancel subscription")
+        await self._commit_change(db, "subscription_cancel_failed")
         await restore_rls_context(db)
         await db.refresh(sub)
         return sub
@@ -399,7 +400,7 @@ class SubscriptionService:
             notes=notes or f"Subscription reactivated with duration: {duration_type}",
         )
 
-        await self._commit_change(db, "Failed to reactivate subscription")
+        await self._commit_change(db, "subscription_reactivate_failed")
         await restore_rls_context(db)
         await db.refresh(sub)
         return sub
@@ -440,7 +441,7 @@ class SubscriptionService:
             notes=notes or f"Subscription renewed with duration: {duration_type}",
         )
 
-        await self._commit_change(db, "Failed to renew subscription")
+        await self._commit_change(db, "subscription_renew_failed")
         await restore_rls_context(db)
         await db.refresh(sub)
         return sub
@@ -482,7 +483,7 @@ class SubscriptionService:
                 recipient_mode="tenant_only",
             )
             db.add(settings)
-            await self._commit_change(db, "Failed to create default reminder settings")
+            await self._commit_change(db, "subscription_reminder_settings_failed")
             await restore_rls_context(db)
             await db.refresh(settings)
         return settings

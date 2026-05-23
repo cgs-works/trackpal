@@ -6,6 +6,8 @@ from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core import VALID_LOCALES
+
 from app.models.base import Base, TimestampMixin
 
 
@@ -32,6 +34,7 @@ class Tenant(Base, TimestampMixin):
     whatsapp_phone: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
     evolution_instance_name: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     owner = relationship("User", back_populates="owned_tenant")
     clients = relationship("Client", back_populates="tenant", cascade="all, delete-orphan")

@@ -11,6 +11,16 @@ from app.crud import users as user_crud
 from app.models import Client, Tenant, User
 from sqlalchemy import select
 
+
+async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
+    """Resolve locale string for a tenant.
+
+    Returns the tenant's stored locale or ``"en"`` as fallback.
+    """
+    result = await db.execute(select(Tenant.locale).where(Tenant.id == tenant_id))
+    row = result.scalar_one_or_none()
+    return row if row else "en"
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 

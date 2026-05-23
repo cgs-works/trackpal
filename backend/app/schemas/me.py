@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from app.core import VALID_LOCALES
 from app.core.input_validation import (
     validate_email,
     validate_full_name,
@@ -22,6 +23,7 @@ class ProfileResponse(BaseModel):
     tenant_id: UUID | None = None
     tenant_name: str | None = None
     client_prefix: str | None = None
+    locale: str | None = None
     email: str | None = None
     phone: str | None = None
     is_active: bool | None = None
@@ -36,6 +38,7 @@ class ProfileUpdate(BaseModel):
     email: str | None = None
     phone: str | None = None
     name: str | None = None
+    locale: str | None = None
 
     @field_validator("full_name")
     @classmethod
@@ -43,6 +46,16 @@ class ProfileUpdate(BaseModel):
         if v is None:
             return None
         return validate_full_name(v)
+
+    @field_validator("locale")
+    @classmethod
+    def validate_locale_field(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if v not in VALID_LOCALES:
+            raise ValueError(f"Locale must be one of: {', '.join(VALID_LOCALES)}")
+        return v
 
     @field_validator("name")
     @classmethod

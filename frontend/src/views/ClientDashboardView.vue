@@ -3,9 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useI18nStore } from '../stores/i18n'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const i18nStore = useI18nStore()
 
 const dashboard = ref(null)
 const profile = ref(null)
@@ -42,7 +44,7 @@ async function loadDashboard() {
     dashboard.value = dashboardResponse.data || null
     profile.value = profileResponse.data || null
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo cargar el dashboard.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.dashboard.error_load'))
   } finally {
     isLoading.value = false
   }
@@ -59,9 +61,9 @@ async function changePassword() {
       old_password: '',
       new_password: '',
     }
-    passwordSuccess.value = 'Contraseña actualizada correctamente.'
+    passwordSuccess.value = i18nStore.t('frontend.dashboard.client.password_updated')
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo actualizar la contraseña.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.dashboard.client.error_password'))
   } finally {
     isSavingPassword.value = false
   }
@@ -79,19 +81,19 @@ onMounted(loadDashboard)
   <main class="dashboard-page">
     <header class="dashboard-header">
       <div>
-        <p class="eyebrow">Dashboard de cliente</p>
+        <p class="eyebrow">{{ i18nStore.t('frontend.dashboard.client.title') }}</p>
         <h1>Trackpal</h1>
       </div>
 
       <div class="user-actions">
         <span class="username">{{ username }}</span>
-        <button class="button button-secondary" type="button" @click="handleLogout">Cerrar sesión</button>
+        <button class="button button-secondary" type="button" @click="handleLogout">{{ i18nStore.t('frontend.dashboard.tenant.logout') }}</button>
       </div>
     </header>
 
     <section v-if="isLoading" class="content-card loading-card" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
-      <p>Cargando dashboard...</p>
+      <p>{{ i18nStore.t('frontend.dashboard.loading') }}</p>
     </section>
 
     <template v-else>
@@ -99,15 +101,15 @@ onMounted(loadDashboard)
 
       <section class="content-card welcome-card">
         <p class="eyebrow">Cliente</p>
-        <h2>Bienvenido, {{ displayName }}</h2>
-        <p>Solo lectura. Cambia tu contraseña cuando lo necesites.</p>
+        <h2>{{ i18nStore.t('frontend.dashboard.client.welcome', { name: displayName }) }}</h2>
+        <p>{{ i18nStore.t('frontend.dashboard.client.readonly') }}</p>
       </section>
 
       <section class="content-card profile-card">
         <div class="section-header">
           <div>
-            <p class="eyebrow">Datos</p>
-            <h2>Tu acceso</h2>
+            <p class="eyebrow">{{ i18nStore.t('frontend.dashboard.client.access_info') }}</p>
+            <h2>{{ i18nStore.t('frontend.dashboard.client.access_info') }}</h2>
           </div>
         </div>
 
@@ -117,7 +119,7 @@ onMounted(loadDashboard)
             <dd>{{ clientInfo.id }}</dd>
           </div>
           <div>
-            <dt>Nombre completo</dt>
+            <dt>{{ i18nStore.t('frontend.profile.full_name') }}</dt>
             <dd>{{ clientInfo.full_name }}</dd>
           </div>
           <div>
@@ -129,7 +131,7 @@ onMounted(loadDashboard)
             <dd>{{ clientInfo.local_username }}</dd>
           </div>
           <div>
-            <dt>Teléfono</dt>
+            <dt>{{ i18nStore.t('frontend.profile.phone') }}</dt>
             <dd>{{ clientInfo.phone || '—' }}</dd>
           </div>
           <div>
@@ -141,8 +143,8 @@ onMounted(loadDashboard)
             <dd>{{ clientInfo.client_prefix }}</dd>
           </div>
           <div>
-            <dt>Estado</dt>
-            <dd>{{ clientInfo.is_active ? 'Activo' : 'Inactivo' }}</dd>
+            <dt>{{ i18nStore.t('frontend.subscriptions.status') }}</dt>
+            <dd>{{ clientInfo.is_active ? i18nStore.t('frontend.dashboard.client.status_active') : i18nStore.t('frontend.dashboard.client.status_inactive') }}</dd>
           </div>
         </dl>
       </section>
@@ -150,8 +152,8 @@ onMounted(loadDashboard)
       <section class="content-card profile-card">
         <div class="section-header">
           <div>
-            <p class="eyebrow">Seguridad</p>
-            <h2>Cambiar contraseña</h2>
+            <p class="eyebrow">{{ i18nStore.t('frontend.dashboard.client.security') }}</p>
+            <h2>{{ i18nStore.t('frontend.dashboard.client.change_password') }}</h2>
           </div>
         </div>
 
@@ -159,18 +161,18 @@ onMounted(loadDashboard)
 
         <form class="form-grid" @submit.prevent="changePassword">
           <label>
-            Contraseña actual
+            {{ i18nStore.t('frontend.dashboard.client.current_password') }}
             <input v-model="passwordForm.old_password" type="password" autocomplete="current-password" required />
           </label>
 
           <label>
-            Nueva contraseña
+            {{ i18nStore.t('frontend.dashboard.client.new_password') }}
             <input v-model="passwordForm.new_password" type="password" autocomplete="new-password" required />
           </label>
 
           <div class="form-actions">
             <button class="button button-primary" type="submit" :disabled="isSavingPassword">
-              {{ isSavingPassword ? 'Actualizando...' : 'Actualizar contraseña' }}
+              {{ isSavingPassword ? i18nStore.t('frontend.dashboard.client.updating') : i18nStore.t('frontend.dashboard.client.update_password') }}
             </button>
           </div>
         </form>

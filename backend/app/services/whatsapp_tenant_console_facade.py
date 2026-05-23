@@ -20,6 +20,7 @@ from uuid import UUID
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import t as _t
 from app.core.phone import normalize_phone
 from app.services.auth_service import AuthService
 from app.services.evolution_client import evolution_client
@@ -29,27 +30,13 @@ from app.services.whatsapp_session_service import WhatsAppSessionService
 logger = logging.getLogger(__name__)
 
 # ====================================================================
-# Reply templates (Spanish)
+# Reply templates
 # ====================================================================
 
+# Non-tenant callers (master, client roles) — keep fixed Spanish per plan.
 NOT_TENANT_REPLY = (
     "❌ Acceso denegado. Esta consola solo está disponible "
     "para administradores de tenant."
-)
-
-INACTIVE_TENANT_REPLY = (
-    "❌ Tu cuenta de administrador está desactivada. "
-    "Contacta al Master de Trackpal para más información."
-)
-
-TENANT_NOT_FOUND_REPLY = (
-    "❌ No se encontró un tenant asociado a tu cuenta. Contacta al Master de Trackpal."
-)
-
-GOODBYE_REPLY = (
-    "👋 *Sesión cerrada*\n\n"
-    "Has salido de la consola de administración.\n\n"
-    "Escribe *menu* para volver a entrar."
 )
 
 
@@ -111,15 +98,17 @@ class WhatsAppTenantConsoleFacade:
         if user_id is None:
             return NOT_TENANT_REPLY
 
-        # 2. Resolve the active tenant record
+        # 2. Resolve the active tenant record + locale
         tenant_id: UUID | None = None
+        locale: str = "es"
         if db is not None:
             tenant = await self._tenant_service.get_tenant(db, UUID(str(user_id)))
             if tenant is None:
-                return TENANT_NOT_FOUND_REPLY
+                return _t("es", "wa.tenant.facade.tenant_not_found")
             if not tenant.is_active:
-                return INACTIVE_TENANT_REPLY
+                return _t(getattr(tenant, "locale", "es") or "es", "wa.tenant.facade.inactive_tenant")
             tenant_id = tenant.id
+            locale = getattr(tenant, "locale", "es") or "es"
 
         # 3. Top-level "0" handling
         msg = message.strip()
@@ -135,13 +124,14 @@ class WhatsAppTenantConsoleFacade:
                     phone=phone,
                     message=message,
                     session_service=self._session_service,
+                    locale=locale,
                 )
             elif self._session_service.used_backup:
                 # Failover: session may be missing on backup
-                return self._console_service._with_main_menu("🚫 Operación cancelada.")
+                return self._console_service._with_main_menu(_t(locale, "wa.tenant.cancelled"), locale=locale)
             else:
                 # Top-level → clear session, close Evolution chat, and goodbye
-                return await self._perform_exit(phone=phone, instance=instance)
+                return await self._perform_exit(phone=phone, instance=instance, locale=locale)
 
         # 4. Delegate to the tenant console service
         return await self._console_service.process_message(
@@ -151,13 +141,14 @@ class WhatsAppTenantConsoleFacade:
             user_id=UUID(str(user_id)),
             db=db,
             session_service=self._session_service,
+            locale=locale,
         )
 
     # ------------------------------------------------------------------
     # Exit
     # ------------------------------------------------------------------
 
-    async def _perform_exit(self, phone: str, instance: str | None) -> str:
+    async def _perform_exit(self, phone: str, instance: str | None, locale: str = "es") -> str:
         """Perform a top-level exit and close Evolution chat when possible."""
         await self._session_service.clear_session(self._admin_phone_key(phone))
 
@@ -183,7 +174,7 @@ class WhatsAppTenantConsoleFacade:
                     phone,
                 )
 
-        return GOODBYE_REPLY
+        return _t(locale, "wa.tenant.facade.goodbye")
 
     # ------------------------------------------------------------------
     # Helpers

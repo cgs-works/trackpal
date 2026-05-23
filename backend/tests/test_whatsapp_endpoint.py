@@ -136,7 +136,7 @@ async def test_tenant_phone_returns_tenant_console(client, active_tenant_user):
     assert "reply" in body
     reply = body["reply"]
     # Must be the tenant console (main menu or fallback), not the login prompt
-    assert "Consola de Administración" in reply or "No entendí" in reply or "opción del menú" in reply
+    assert "Consola de Administración" in reply or "No entendí" in reply or "opción del menú" in reply or "Admin Console" in reply or "didn't understand" in reply
 
 
 async def test_client_phone_returns_no_access(client, active_client_user):

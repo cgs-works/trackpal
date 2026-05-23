@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useI18nStore } from '../stores/i18n'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const i18nStore = useI18nStore()
 
 const username = ref('')
 const password = ref('')
@@ -17,6 +19,9 @@ async function handleSubmit() {
 
   try {
     const data = await authStore.login(username.value, password.value)
+    // Load i18n catalog after login (for post-auth views)
+    await i18nStore.loadCatalog()
+
     const role = data.user?.role
 
     if (role === 'master') {
