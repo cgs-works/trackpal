@@ -49,6 +49,7 @@ async def test_create_client(client, active_tenant_user):
 
 async def test_create_client_duplicate_local_username(client, active_tenant_user):
     headers = await _login_tenant(client)
+    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
     await _create_client(client, headers)
 
     response = await _create_client(

@@ -32,6 +32,7 @@ from app.services.whatsapp_tenant_console_facade import (
     NOT_TENANT_REPLY,
     WhatsAppTenantConsoleFacade,
 )
+from app.core.errors import UserFacingError
 from app.services.whatsapp_tenant_console_service import (
     WhatsAppTenantConsoleService,
 )
@@ -1189,3 +1190,61 @@ class TestClientSelect:
         # Session is cleared by global reset
         session = await session_service.get_session("admin:+20000000002")
         assert session is None
+
+    async def test_service_client_create_duplicate_phone_uses_translated_message(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        session = SimpleNamespace(
+            temp_data={
+                "full_name": "Cliente Uno",
+                "local_username": "clienteuno",
+                "phone": "+12015550030",
+                "password": "secret123",
+            },
+            step=console_service.CLIENTS_STEP_CREATE_CONFIRM,
+        )
+
+        async def _raise(*args: Any, **kwargs: Any) -> None:
+            raise UserFacingError("phone_already_registered")
+
+        console_service._client_service.create_client = _raise  # type: ignore[assignment]
+
+        reply = await console_service._handle_client_create_confirm(
+            phone="+10000000000",
+            msg="CONFIRMAR",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=object(),
+        )
+
+        assert "El teléfono ya está registrado" in reply
+        assert "phone_already_registered" not in reply
+        assert session.step == console_service.CLIENTS_STEP_CREATE_PHONE
+
+    async def test_service_client_edit_duplicate_username_uses_translated_message(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        session = SimpleNamespace(
+            temp_data={"field": "local_username"},
+            selected_tenant_id=str(uuid4()),
+        )
+
+        async def _raise(*args: Any, **kwargs: Any) -> None:
+            raise UserFacingError("username_already_registered")
+
+        console_service._client_service.update_client = _raise  # type: ignore[assignment]
+
+        reply = await console_service._handle_client_edit_value(
+            phone="+10000000000",
+            msg="nuevo",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=object(),
+        )
+
+        assert "El nombre de usuario ya existe" in reply
+        assert "username_already_registered" not in reply

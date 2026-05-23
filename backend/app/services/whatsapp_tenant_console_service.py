@@ -15,6 +15,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _i18n_t, LOCALE_NAMES
 from app.core.redis_client import RedisUnavailableError
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
@@ -1322,6 +1323,19 @@ class WhatsAppTenantConsoleService:
         )
         try:
             client = await self._client_service.create_client(db, tenant_id, payload)
+        except UserFacingError as exc:
+            error = translate_error(_current_locale.get(), exc)
+            if exc.code in {"phone_already_registered", "client_local_username_exists", "username_already_registered"}:
+                if exc.code == "phone_already_registered":
+                    session.step = self.CLIENTS_STEP_CREATE_PHONE
+                    if session_service is not None:
+                        await session_service.save_session(session)
+                    return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_PHONE)
+                session.step = self.CLIENTS_STEP_CREATE_USERNAME
+                if session_service is not None:
+                    await session_service.save_session(session)
+                return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
+            return "❌ " + error
         except ValueError as exc:
             error = str(exc)
             if "phone" in error.lower() or "teléfono" in error.lower():
@@ -1410,6 +1424,8 @@ class WhatsAppTenantConsoleService:
             client = await self._client_service.update_client(
                 db, tenant_id, parsed_id, payload
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         except Exception as exc:
