@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     catalog,
     clients,
     dashboard,
+    i18n,
     integrations,
     me,
     tenants,
@@ -17,6 +18,7 @@ api_router.include_router(integrations.router)
 api_router.include_router(tenants.router)
 api_router.include_router(clients.router)
 api_router.include_router(catalog.router)
+api_router.include_router(i18n.router)
 api_router.include_router(me.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(subscriptions.router)

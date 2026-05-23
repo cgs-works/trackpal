@@ -139,6 +139,21 @@ async def test_change_password_client(client, active_client_user):
     assert new_headers["Authorization"].startswith("Bearer ")
 
 
+async def test_change_password_client_uses_tenant_locale(client, active_client_user):
+    tenant_headers = await _login(client, "tenant", "tenant-password")
+    await client.put("/api/v1/me", json={"locale": "es"}, headers=tenant_headers)
+
+    headers = await _login(client, active_client_user.username, "client-password")
+    response = await client.put(
+        "/api/v1/me/password",
+        json={"old_password": "wrong-password", "new_password": "new-client-password"},
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Contraseña actual incorrecta"
+
+
 async def test_change_password_client_short_new_password_rejected(client, active_client_user):
     headers = await _login(client, active_client_user.username, "client-password")
 

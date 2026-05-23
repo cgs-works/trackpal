@@ -7,6 +7,7 @@ Profile within the tenant scope.
 
 from __future__ import annotations
 
+import contextvars
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -14,6 +15,8 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import UserFacingError, translate_error
+from app.core.i18n import t as _i18n_t, LOCALE_NAMES
 from app.core.redis_client import RedisUnavailableError
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
 from app.services.whatsapp_session_service import WhatsAppSessionService
@@ -24,6 +27,9 @@ from app.services.tenant_console_protocols import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ContextVar per-message locale — avoids threading locale through 40+ handler methods.
+_current_locale: contextvars.ContextVar[str] = contextvars.ContextVar("wa_locale", default="es")
 
 
 class WhatsAppTenantConsoleService:
@@ -37,56 +43,13 @@ class WhatsAppTenantConsoleService:
     # Reply templates (Spanish)
     # ------------------------------------------------------------------
 
-    MAIN_MENU = (
-        "🤖 *Trackpal Consola de Administración*\n\n"
-        "1️⃣ Clientes\n"
-        "2️⃣ Catálogo\n"
-        "3️⃣ Mi Perfil\n"
-        "4️⃣ Suscripciones\n"
-        "5️⃣ Ayuda\n\n"
-        "0️⃣ Salir\n\n"
-        "Responde con el número de la opción deseada."
-    )
+    KEY_MAIN_MENU = "wa.tenant.main_menu"
 
-    HELP_TEXT = (
-        "🤖 *Ayuda - Consola de Administración*\n\n"
-        "Los comandos disponibles son:\n\n"
-        "1️⃣ *Clientes* — Gestiona los clientes de tu empresa.\n"
-        "    • Ver lista de clientes\n"
-        "    • Ver detalle de un cliente\n"
-        "    • Crear, editar, desactivar o eliminar clientes\n"
-        "2️⃣ *Catálogo* — Consulta y edita tus servicios y planes.\n"
-        "    • Ver servicios y sus planes\n"
-        "    • Editar nombre de servicios y planes\n"
-        "3️⃣ *Mi Perfil* — Consulta y edita tu perfil.\n"
-        "    • Ver datos de perfil\n"
-        "    • Editar nombre, email o teléfono\n"
-        "    • Cambiar contraseña\n"
-        "4️⃣ *Suscripciones* — Gestiona las suscripciones de tus clientes.\n"
-        "    • Ver lista de suscripciones\n"
-        "    • Crear, editar, cancelar, renovar o reactivar suscripciones\n"
-        "5️⃣ *Ayuda* — Muestra este mensaje.\n"
-        "0️⃣ *Salir* — Cierra la sesión de la consola.\n\n"
-        "En el menú principal, escribe *0* para salir.\n"
-        "Dentro de un flujo, *0* o *cancelar* cancelan la operación.\n"
-        "Escribe *menu* o */menu* para volver al menú principal."
-    )
+    KEY_HELP_TEXT = "wa.tenant.help"
 
-    FALLBACK_NO_FLOW = (
-        "❌ No entendí tu mensaje.\n\n"
-        "Responde con:\n"
-        "• Un número del *1* al *5* para elegir una opción del menú\n"
-        "• *menu* o */menu* para volver al menú principal\n"
-        "• *0* para salir\n"
-        "• *ayuda* para ver los comandos disponibles"
-    )
+    KEY_FALLBACK_NO_FLOW = "wa.tenant.fallback.no_flow"
 
-    FALLBACK_ACTIVE_FLOW = (
-        "❌ No entendí tu mensaje.\n\n"
-        "Estás en medio de un flujo. Responde con la información "
-        "solicitada o escribe *0* para cancelar y volver al menú "
-        "principal."
-    )
+    KEY_FALLBACK_ACTIVE_FLOW = "wa.tenant.fallback.active_flow"
 
     RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
     HELP_COMMANDS = {"5", "ayuda"}
@@ -125,6 +88,7 @@ class WhatsAppTenantConsoleService:
     PROFILE_STEP_EDIT_VALUE = "edit_value"
     PROFILE_STEP_CHANGE_PASSWORD_OLD = "change_password_old"
     PROFILE_STEP_CHANGE_PASSWORD_NEW = "change_password_new"
+    PROFILE_STEP_CHANGE_LOCALE_SELECT = "change_locale_select"
 
     SUBSCRIPTIONS_FLOW = "subscriptions"
     SUBSCRIPTIONS_STEP_MENU = "menu"
@@ -160,90 +124,31 @@ class WhatsAppTenantConsoleService:
 
     # -- Client messages --------------------------------------------------
 
-    CLIENTS_MENU = (
-        "👥 *Clientes*\n\n"
-        "1️⃣ Ver clientes\n"
-        "2️⃣ Crear cliente\n"
-        "0️⃣ Volver al menú principal"
-    )
+    KEY_CLIENTS_MENU = "wa.tenant.clients.menu"
 
-    CLIENT_NO_CLIENTS = "📭 No hay clientes registrados."
+    KEY_CLIENT_NO_CLIENTS = "wa.tenant.clients.no_clients"
 
-    CLIENT_SELECT_PROMPT = (
-        "Responde con el número del cliente para ver sus detalles."
-    )
+    KEY_CLIENT_SELECT_PROMPT = "wa.tenant.clients.select_prompt"
 
-    CLIENT_DETAIL_ACTIVE_ACTIONS = (
-        "*Acciones disponibles:*\n"
-        "1️⃣ Editar\n"
-        "2️⃣ Desactivar\n"
-        "3️⃣ Eliminar (solo inactivos)\n"
-        "0️⃣ Volver"
-    )
+    KEY_CLIENT_DETAIL_ACTIVE_ACTIONS = "wa.tenant.clients.detail.active_actions"
 
-    CLIENT_DETAIL_INACTIVE_ACTIONS = (
-        "*Acciones disponibles:*\n"
-        "1️⃣ Editar\n"
-        "2️⃣ Reactivar\n"
-        "3️⃣ Eliminar\n"
-        "0️⃣ Volver"
-    )
+    KEY_CLIENT_DETAIL_INACTIVE_ACTIONS = "wa.tenant.clients.detail.inactive_actions"
 
-    CLIENT_CREATE_PROMPT_FULL_NAME = (
-        "✏️ *Crear Cliente*\n\n"
-        "¿Cuál es el *nombre completo* del cliente?"
-    )
+    KEY_CLIENT_CREATE_PROMPT_FULL_NAME = "wa.tenant.clients.create.full_name"
 
-    CLIENT_CREATE_PROMPT_PHONE = (
-        "✏️ *Crear Cliente*\n\n"
-        "¿Cuál es el *teléfono* del cliente?\n\n"
-        "(Opcional — escribe *—* para omitir)"
-    )
+    KEY_CLIENT_CREATE_PROMPT_PHONE = "wa.tenant.clients.create.phone"
 
-    CLIENT_CREATE_PROMPT_USERNAME = (
-        "✏️ *Crear Cliente*\n\n"
-        "¿Cuál es el *nombre de usuario local* del cliente?\n\n"
-        "Se usará junto con el prefijo del tenant para formar "
-        "el nombre de usuario completo."
-    )
+    KEY_CLIENT_CREATE_PROMPT_USERNAME = "wa.tenant.clients.create.username"
 
-    CLIENT_CREATE_PROMPT_PASSWORD = (
-        "✏️ *Crear Cliente*\n\n"
-        "Escribe la *contraseña* para el cliente.\n\n"
-        "⚠️ Ten en cuenta que estás enviando una contraseña "
-        "a través de WhatsApp.\n\n"
-        "La contraseña debe tener al menos *6 caracteres*."
-    )
+    KEY_CLIENT_CREATE_PROMPT_PASSWORD = "wa.tenant.clients.create.password"
 
-    CLIENT_CREATE_CONFIRM_TEMPLATE = (
-        "📋 *Resumen de Creación*\n\n"
-        "*Nombre:* {name}\n"
-        "*Usuario local:* {username}\n"
-        "*Teléfono:* {phone}\n\n"
-        "¿Todo está correcto? Escribe *CONFIRMAR* para crear el cliente.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_CLIENT_CREATE_CONFIRM_TEMPLATE = "wa.tenant.clients.create.confirm"
 
-    CLIENT_CREATE_SUCCESS = (
-        "✅ *Cliente creado exitosamente*\n\n"
-        "*Nombre:* {name}\n"
-        "*Usuario:* {username_full}\n"
-        "*Teléfono:* {phone}\n"
-    )
+    KEY_CLIENT_CREATE_SUCCESS = "wa.tenant.clients.create.success"
 
-    CLIENT_CREATE_ERROR_PHONE = (
-        "❌ Teléfono inválido o ya registrado. "
-        "Intenta de nuevo o escribe *—* para omitir."
-    )
+    KEY_CLIENT_CREATE_ERROR_PHONE = "wa.tenant.clients.create.error_phone"
 
-    CLIENT_EDIT_FIELD_PROMPT = (
-        "✏️ *Editar Cliente*\n\n"
-        "¿Qué campo deseas editar?\n\n"
-        "1️⃣ Nombre completo\n"
-        "2️⃣ Teléfono\n"
-        "3️⃣ Nombre de usuario local\n"
-        "0️⃣ Volver"
-    )
+    KEY_CLIENT_EDIT_FIELD_PROMPT = "wa.tenant.clients.edit.field_prompt"
 
     CLIENT_EDIT_FIELD_MAP = {
         "1": "full_name",
@@ -266,145 +171,67 @@ class WhatsAppTenantConsoleService:
         ),
     }
 
-    CLIENT_EDIT_ERROR_INVALID_FIELD = (
-        "❌ Opción inválida. Responde con un número del *1* al *3* "
-        "o *0* para volver."
-    )
+    KEY_CLIENT_EDIT_ERROR_INVALID_FIELD = "wa.tenant.clients.edit.invalid_field"
 
-    CLIENT_DEACTIVATE_CONFIRM_TEMPLATE = (
-        "⚠️ *Desactivar Cliente*\n\n"
-        "¿Estás seguro de que deseas desactivar a *{name}*?\n\n"
-        "Escribe *CONFIRMAR* para desactivar.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_CLIENT_DEACTIVATE_CONFIRM_TEMPLATE = "wa.tenant.clients.deactivate.confirm"
 
-    CLIENT_DELETE_CONFIRM_TEMPLATE = (
-        "⚠️ *Eliminar Cliente*\n\n"
-        "¿Estás seguro de que deseas eliminar permanentemente "
-        "a *{name}*?\n\n"
-        "Esta acción no se puede deshacer.\n\n"
-        "Escribe *CONFIRMAR* para eliminar.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_CLIENT_DELETE_CONFIRM_TEMPLATE = "wa.tenant.clients.delete.confirm"
 
-    CLIENT_CANT_DELETE_ACTIVE = (
-        "❌ No se puede eliminar un cliente activo.\n\n"
-        "Desactívalo primero y luego intenta eliminarlo."
-    )
+    KEY_CLIENT_CANT_DELETE_ACTIVE = "wa.tenant.clients.cant_delete_active"
 
-    CLIENT_DEACTIVATE_SUCCESS = (
-        "✅ Cliente *{name}* desactivado exitosamente."
-    )
+    KEY_CLIENT_DEACTIVATE_SUCCESS = "wa.tenant.clients.deactivate.success"
 
-    CLIENT_REACTIVATE_SUCCESS = (
-        "✅ Cliente *{name}* reactivado exitosamente."
-    )
+    KEY_CLIENT_REACTIVATE_SUCCESS = "wa.tenant.clients.reactivate.success"
 
-    CLIENT_DELETE_SUCCESS = (
-        "✅ Cliente *{name}* eliminado permanentemente."
-    )
+    KEY_CLIENT_DELETE_SUCCESS = "wa.tenant.clients.delete.success"
 
-    CLIENT_EDIT_SUCCESS = (
-        "✅ Cliente *{name}* actualizado exitosamente."
-    )
+    KEY_CLIENT_EDIT_SUCCESS = "wa.tenant.clients.edit.success"
 
-    CLIENT_CONFIRM_REPROMPT = (
-        "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas "
-        "o minúsculas)."
-    )
+    KEY_CLIENT_CONFIRM_REPROMPT = "wa.tenant.clients.confirm_reprompt"
 
-    CLIENT_INVALID_SELECTION = (
-        "❌ Número inválido. Responde con un número de la lista "
-        "o escribe *0* para volver al menú principal."
-    )
+    KEY_CLIENT_INVALID_SELECTION = "wa.tenant.clients.invalid_selection"
 
-    CLIENT_NAME_REQUIRED = "❌ El nombre completo no puede estar vacío."
+    KEY_CLIENT_NAME_REQUIRED = "wa.tenant.clients.name_required"
 
-    CLIENT_USERNAME_REQUIRED = "❌ El nombre de usuario no puede estar vacío."
+    KEY_CLIENT_USERNAME_REQUIRED = "wa.tenant.clients.username_required"
 
-    CLIENT_SHORT_PASSWORD = (
-        "❌ La contraseña debe tener al menos 6 caracteres.\n\n"
-        "Intenta de nuevo."
-    )
+    KEY_CLIENT_SHORT_PASSWORD = "wa.tenant.clients.short_password"
 
     CLIENT_SKIP_WORDS = {"—", "skip", "ninguno", "none", "-"}
 
     # -- Catalog messages -------------------------------------------------
 
-    CATALOG_MENU = (
-        "📦 *Catálogo*\n\n"
-        "1️⃣ Ver servicios\n"
-        "0️⃣ Volver al menú principal"
-    )
+    KEY_CATALOG_MENU = "wa.tenant.catalog.menu"
 
-    CATALOG_NO_SERVICES = "📭 No hay servicios registrados."
+    KEY_CATALOG_NO_SERVICES = "wa.tenant.catalog.no_services"
 
-    CATALOG_SERVICE_PROMPT = (
-        "Responde con el número del servicio para ver sus detalles."
-    )
+    KEY_CATALOG_SERVICE_PROMPT = "wa.tenant.catalog.service_prompt"
 
-    CATALOG_SERVICE_ACTIONS = (
-        "*Acciones disponibles:*\n"
-        "1️⃣ Editar nombre\n"
-        "2️⃣ Ver planes\n"
-        "0️⃣ Volver"
-    )
+    KEY_CATALOG_SERVICE_ACTIONS = "wa.tenant.catalog.service_actions"
 
-    CATALOG_SERVICE_EDIT_PROMPT = (
-        "✏️ *Editar Servicio*\n\n"
-        "¿Cuál es el *nuevo nombre* del servicio?"
-    )
+    KEY_CATALOG_SERVICE_EDIT_PROMPT = "wa.tenant.catalog.service_edit_prompt"
 
-    CATALOG_SERVICE_EDIT_SUCCESS = (
-        "✅ Nombre del servicio actualizado a *{name}*."
-    )
+    KEY_CATALOG_SERVICE_EDIT_SUCCESS = "wa.tenant.catalog.service_edit_success"
 
-    CATALOG_PLAN_ACTIONS = (
-        "*Acciones disponibles:*\n"
-        "1️⃣ Editar nombre\n"
-        "0️⃣ Volver"
-    )
+    KEY_CATALOG_PLAN_ACTIONS = "wa.tenant.catalog.plan_actions"
 
-    CATALOG_NO_PLANS = "📭 No hay planes para este servicio."
+    KEY_CATALOG_NO_PLANS = "wa.tenant.catalog.no_plans"
 
-    CATALOG_PLAN_PROMPT = (
-        "Responde con el número del plan para ver sus detalles."
-    )
+    KEY_CATALOG_PLAN_PROMPT = "wa.tenant.catalog.plan_prompt"
 
-    CATALOG_PLAN_EDIT_PROMPT = (
-        "✏️ *Editar Plan*\n\n"
-        "¿Cuál es el *nuevo nombre* del plan?"
-    )
+    KEY_CATALOG_PLAN_EDIT_PROMPT = "wa.tenant.catalog.plan_edit_prompt"
 
-    CATALOG_PLAN_EDIT_SUCCESS = (
-        "✅ Nombre del plan actualizado a *{name}*."
-    )
+    KEY_CATALOG_PLAN_EDIT_SUCCESS = "wa.tenant.catalog.plan_edit_success"
 
-    CATALOG_INVALID_SELECTION = (
-        "❌ Número inválido. Responde con un número de la lista "
-        "o escribe *0* para volver."
-    )
+    KEY_CATALOG_INVALID_SELECTION = "wa.tenant.catalog.invalid_selection"
 
-    CATALOG_NAME_REQUIRED = "❌ El nombre no puede estar vacío."
+    KEY_CATALOG_NAME_REQUIRED = "wa.tenant.catalog.name_required"
 
     # -- Profile messages -------------------------------------------------
 
-    PROFILE_MENU = (
-        "👤 *Mi Perfil*\n\n"
-        "1️⃣ Ver perfil\n"
-        "2️⃣ Editar perfil\n"
-        "3️⃣ Cambiar contraseña\n"
-        "0️⃣ Volver al menú principal"
-    )
+    KEY_PROFILE_MENU = "wa.tenant.profile.menu"
 
-    PROFILE_EDIT_FIELD_PROMPT = (
-        "✏️ *Editar Perfil*\n\n"
-        "¿Qué campo deseas editar?\n\n"
-        "1️⃣ Nombre completo\n"
-        "2️⃣ Email\n"
-        "3️⃣ Teléfono\n"
-        "0️⃣ Volver"
-    )
+    KEY_PROFILE_EDIT_FIELD_PROMPT = "wa.tenant.profile.edit_field_prompt"
 
     PROFILE_EDIT_FIELD_MAP = {
         "1": "full_name",
@@ -427,164 +254,61 @@ class WhatsAppTenantConsoleService:
         ),
     }
 
-    PROFILE_EDIT_ERROR_INVALID_FIELD = (
-        "❌ Opción inválida. Responde con un número del *1* al *3* "
-        "o *0* para volver."
-    )
+    KEY_PROFILE_EDIT_ERROR_INVALID_FIELD = "wa.tenant.profile.edit_invalid_field"
 
-    PROFILE_EDIT_SUCCESS = "✅ Perfil actualizado exitosamente."
+    KEY_PROFILE_EDIT_SUCCESS = "wa.tenant.profile.edit_success"
 
-    PROFILE_CHANGE_PASSWORD_PROMPT_OLD = (
-        "🔑 *Cambiar Contraseña*\n\n"
-        "Escribe tu *contraseña actual*."
-    )
+    KEY_PROFILE_CHANGE_PASSWORD_PROMPT_OLD = "wa.tenant.profile.change_password_old"
 
-    PROFILE_CHANGE_PASSWORD_PROMPT_NEW = (
-        "🔑 *Cambiar Contraseña*\n\n"
-        "Escribe tu *nueva contraseña*.\n\n"
-        "La contraseña debe tener al menos *6 caracteres*."
-    )
+    KEY_PROFILE_CHANGE_PASSWORD_PROMPT_NEW = "wa.tenant.profile.change_password_new"
 
-    PROFILE_CHANGE_PASSWORD_ERROR_OLD = (
-        "❌ La contraseña actual no es correcta.\n\n"
-        "Intenta de nuevo o escribe *0* para cancelar."
-    )
+    KEY_PROFILE_CHANGE_PASSWORD_ERROR_OLD = "wa.tenant.profile.change_password_error_old"
 
-    PROFILE_CHANGE_PASSWORD_SUCCESS = (
-        "✅ *Contraseña cambiada exitosamente.*"
-    )
+    KEY_PROFILE_CHANGE_PASSWORD_SUCCESS = "wa.tenant.profile.change_password_success"
 
     # -- Subscription messages --------------------------------------------
 
-    SUBSCRIPTIONS_MENU = (
-        "📺 *Suscripciones*\n\n"
-        "1️⃣ Ver suscripciones\n"
-        "2️⃣ Crear suscripción\n"
-        "0️⃣ Volver al menú principal"
-    )
+    KEY_SUBSCRIPTIONS_MENU = "wa.tenant.subscriptions.menu"
 
-    SUBSCRIPTIONS_FILTER_PROMPT = (
-        "📊 *Filtrar por estado*\n\n"
-        "1️⃣ Activas\n"
-        "2️⃣ Expiradas\n"
-        "3️⃣ Canceladas\n"
-        "4️⃣ Todas\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTIONS_FILTER_PROMPT = "wa.tenant.subscriptions.filter_prompt"
 
-    SUBSCRIPTIONS_NO_RESULTS = "📭 No hay suscripciones en esta categoría."
+    KEY_SUBSCRIPTIONS_NO_RESULTS = "wa.tenant.subscriptions.no_results"
 
-    SUBSCRIPTIONS_SELECT_PROMPT = (
-        "Responde con el número de la suscripción para ver sus detalles."
-    )
+    KEY_SUBSCRIPTIONS_SELECT_PROMPT = "wa.tenant.subscriptions.select_prompt"
 
-    SUBSCRIPTION_DETAIL_ACTIONS = (
-        "*Acciones disponibles:*\n"
-        "1️⃣ Editar\n"
-        "2️⃣ Cancelar\n"
-        "3️⃣ Renovar\n"
-        "4️⃣ Reactivar (solo canceladas)\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTION_DETAIL_ACTIONS = "wa.tenant.subscriptions.detail.actions"
 
-    SUBSCRIPTION_DETAIL_ACTIONS_ACTIVE = (
-        "*Acciones disponibles:*\n"
-        "1️⃣ Editar\n"
-        "2️⃣ Cancelar\n"
-        "3️⃣ Renovar\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTION_DETAIL_ACTIONS_ACTIVE = "wa.tenant.subscriptions.detail.actions_active"
 
     # -- Create subscription prompts
 
-    SUBSCRIPTIONS_CREATE_CLIENT_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "Selecciona el *cliente* para la suscripción:\n\n"
-        "{client_list}\n\n"
-        "Responde con el número del cliente."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT = "wa.tenant.subscriptions.create.client_prompt"
 
-    SUBSCRIPTIONS_CREATE_SERVICE_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "Selecciona el *servicio*:\n\n"
-        "{service_list}\n\n"
-        "Responde con el número del servicio."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT = "wa.tenant.subscriptions.create.service_prompt"
 
-    SUBSCRIPTIONS_CREATE_PLAN_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "Selecciona el *plan*:\n\n"
-        "{plan_list}\n\n"
-        "Responde con el número del plan."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PLAN_PROMPT = "wa.tenant.subscriptions.create.plan_prompt"
 
-    SUBSCRIPTIONS_CREATE_EMAIL_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "¿Cuál es el *email de streaming*?"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_EMAIL_PROMPT = "wa.tenant.subscriptions.create.email_prompt"
 
-    SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "¿Cuál es la *contraseña de streaming*?\n\n"
-        "(Opcional — escribe *—* para omitir)"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT = "wa.tenant.subscriptions.create.password_prompt"
 
-    SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "Por seguridad, escribe *nuevamente* la contraseña de streaming."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT = "wa.tenant.subscriptions.create.password_confirm"
 
-    SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH = (
-        "❌ Las contraseñas no coinciden. Intenta de nuevo.\n\n"
-        "(Escribe *—* para omitir contraseña)"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH = "wa.tenant.subscriptions.create.password_mismatch"
 
-    SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "¿Cuál es el *nombre del perfil*?\n\n"
-        "(Opcional — escribe *—* para omitir)"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT = "wa.tenant.subscriptions.create.profile_name"
 
-    SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "¿Deseas agregar nombre de perfil y PIN de perfil?\n\n"
-        "1️⃣ Sí\n"
-        "2️⃣ No"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT = "wa.tenant.subscriptions.create.profile_option"
 
-    SUBSCRIPTIONS_CREATE_PIN_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "¿Cuál es el *PIN del perfil*?\n\n"
-        "(Opcional — escribe *—* para omitir)\n\n"
-        "⚠️ El PIN requiere un nombre de perfil."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PIN_PROMPT = "wa.tenant.subscriptions.create.pin_prompt"
 
-    SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "Por seguridad, escribe *nuevamente* el PIN del perfil."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT = "wa.tenant.subscriptions.create.pin_confirm"
 
-    SUBSCRIPTIONS_CREATE_PIN_MISMATCH = (
-        "❌ Los PIN no coinciden. Intenta de nuevo.\n\n"
-        "(Escribe *—* para omitir PIN)"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PIN_MISMATCH = "wa.tenant.subscriptions.create.pin_mismatch"
 
-    SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE = (
-        "❌ No puedes establecer un PIN sin un nombre de perfil.\n\n"
-        "Primero escribe el nombre del perfil o escribe *—* para omitir el PIN."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE = "wa.tenant.subscriptions.create.pin_requires_profile"
 
-    SUBSCRIPTIONS_DURATION_PROMPT = (
-        "📅 *Duración*\n\n"
-        "Selecciona la duración:\n\n"
-        "1️⃣ 1 mes\n"
-        "2️⃣ 3 meses\n"
-        "3️⃣ 6 meses\n"
-        "4️⃣ 9 meses\n"
-        "5️⃣ 1 año\n"
-        "6️⃣ Personalizada\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTIONS_DURATION_PROMPT = "wa.tenant.subscriptions.duration_prompt"
 
     SUBSCRIPTIONS_DURATION_MAP = {
         "1": "1_month",
@@ -595,45 +319,15 @@ class WhatsAppTenantConsoleService:
         "6": "custom",
     }
 
-    SUBSCRIPTIONS_CUSTOM_DATE_PROMPT = (
-        "✏️ *Crear Suscripción*\n\n"
-        "Escribe la *fecha de expiración* (YYYY-MM-DD)."
-    )
+    KEY_SUBSCRIPTIONS_CUSTOM_DATE_PROMPT = "wa.tenant.subscriptions.custom_date_prompt"
 
-    SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE = (
-        "📋 *Resumen de Creación*\n\n"
-        "*Cliente:* {client_name}\n"
-        "*Servicio:* {service_name}\n"
-        "*Plan:* {plan_name}\n"
-        "*Email:* {email}\n"
-        "*Contraseña:* {password}\n"
-        "*Perfil:* {profile_name}\n"
-        "*PIN:* {pin}\n"
-        "*Duración:* {duration_label}\n"
-        "*Inicio:* {starts_at}\n"
-        "*Expira:* {expires_at}\n\n"
-        "¿Todo está correcto? Escribe *CONFIRMAR* para crear la suscripción.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE = "wa.tenant.subscriptions.create.confirm"
 
-    SUBSCRIPTIONS_CREATE_SUCCESS = (
-        "✅ *Suscripción creada exitosamente*"
-    )
+    KEY_SUBSCRIPTIONS_CREATE_SUCCESS = "wa.tenant.subscriptions.create.success"
 
     # -- Edit prompts
 
-    SUBSCRIPTIONS_EDIT_FIELD_PROMPT = (
-        "✏️ *Editar Suscripción*\n\n"
-        "¿Qué campo deseas editar?\n\n"
-        "1️⃣ Cliente\n"
-        "2️⃣ Servicio\n"
-        "3️⃣ Plan\n"
-        "4️⃣ Email de streaming\n"
-        "5️⃣ Contraseña de streaming\n"
-        "6️⃣ Nombre del perfil\n"
-        "7️⃣ PIN del perfil\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTIONS_EDIT_FIELD_PROMPT = "wa.tenant.subscriptions.edit.field_prompt"
 
     SUBSCRIPTIONS_EDIT_FIELD_MAP = {
         "1": "client",
@@ -667,121 +361,45 @@ class WhatsAppTenantConsoleService:
         ),
     }
 
-    SUBSCRIPTIONS_EDIT_ERROR_INVALID_FIELD = (
-        "❌ Opción inválida. Responde con un número del *1* al *7* "
-        "o *0* para volver."
-    )
+    KEY_SUBSCRIPTIONS_EDIT_ERROR_INVALID_FIELD = "wa.tenant.subscriptions.edit.invalid_field"
 
-    SUBSCRIPTIONS_EDIT_SUCCESS = (
-        "✅ *Suscripción actualizada exitosamente.*"
-    )
+    KEY_SUBSCRIPTIONS_EDIT_SUCCESS = "wa.tenant.subscriptions.edit.success"
 
-    SUBSCRIPTIONS_EDIT_PASSWORD_CONFIRM_PROMPT = (
-        "✏️ *Editar Suscripción*\n\n"
-        "Por seguridad, escribe *nuevamente* la nueva contraseña."
-    )
+    KEY_SUBSCRIPTIONS_EDIT_PASSWORD_CONFIRM_PROMPT = "wa.tenant.subscriptions.edit.password_confirm"
 
-    SUBSCRIPTIONS_EDIT_PIN_CONFIRM_PROMPT = (
-        "✏️ *Editar Suscripción*\n\n"
-        "Por seguridad, escribe *nuevamente* el nuevo PIN."
-    )
+    KEY_SUBSCRIPTIONS_EDIT_PIN_CONFIRM_PROMPT = "wa.tenant.subscriptions.edit.pin_confirm"
 
-    SUBSCRIPTIONS_EDIT_MISMATCH = (
-        "❌ Los valores no coinciden. Intenta de nuevo."
-    )
+    KEY_SUBSCRIPTIONS_EDIT_MISMATCH = "wa.tenant.subscriptions.edit.mismatch"
 
     # -- Other lifecycle messages
 
-    SUBSCRIPTIONS_CANCEL_CONFIRM_TEMPLATE = (
-        "⚠️ *Cancelar Suscripción*\n\n"
-        "¿Estás seguro de que deseas cancelar esta suscripción?\n\n"
-        "*Email:* {email}\n"
-        "*Cliente:* {client_name}\n\n"
-        "Esta acción no elimina la suscripción, solo la cambia a estado *cancelada*.\n\n"
-        "Escribe *CONFIRMAR* para cancelar.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_SUBSCRIPTIONS_CANCEL_CONFIRM_TEMPLATE = "wa.tenant.subscriptions.cancel.confirm"
 
-    SUBSCRIPTIONS_CANCEL_SUCCESS = (
-        "✅ *Suscripción cancelada exitosamente.*"
-    )
+    KEY_SUBSCRIPTIONS_CANCEL_SUCCESS = "wa.tenant.subscriptions.cancel.success"
 
-    SUBSCRIPTIONS_REACTIVATE_DURATION_PROMPT = (
-        "🔄 *Reactivar Suscripción*\n\n"
-        "Selecciona la *nueva duración*:\n\n"
-        "1️⃣ 1 mes\n"
-        "2️⃣ 3 meses\n"
-        "3️⃣ 6 meses\n"
-        "4️⃣ 9 meses\n"
-        "5️⃣ 1 año\n"
-        "6️⃣ Personalizada\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTIONS_REACTIVATE_DURATION_PROMPT = "wa.tenant.subscriptions.reactivate.duration_prompt"
 
-    SUBSCRIPTIONS_REACTIVATE_CUSTOM_DATE_PROMPT = (
-        "🔄 *Reactivar Suscripción*\n\n"
-        "Escribe la *fecha de expiración* (YYYY-MM-DD)."
-    )
+    KEY_SUBSCRIPTIONS_REACTIVATE_CUSTOM_DATE_PROMPT = "wa.tenant.subscriptions.reactivate.custom_date"
 
-    SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE = (
-        "🔄 *Confirmar Reactivación*\n\n"
-        "*Duración:* {duration_label}\n"
-        "*Inicio:* {starts_at}\n"
-        "*Expira:* {expires_at}\n\n"
-        "Escribe *CONFIRMAR* para reactivar la suscripción.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE = "wa.tenant.subscriptions.reactivate.confirm"
 
-    SUBSCRIPTIONS_REACTIVATE_SUCCESS = (
-        "✅ *Suscripción reactivada exitosamente.*"
-    )
+    KEY_SUBSCRIPTIONS_REACTIVATE_SUCCESS = "wa.tenant.subscriptions.reactivate.success"
 
-    SUBSCRIPTIONS_RENEW_DURATION_PROMPT = (
-        "🔄 *Renovar Suscripción*\n\n"
-        "Selecciona la *duración de renovación*:\n\n"
-        "1️⃣ 1 mes\n"
-        "2️⃣ 3 meses\n"
-        "3️⃣ 6 meses\n"
-        "4️⃣ 9 meses\n"
-        "5️⃣ 1 año\n"
-        "6️⃣ Personalizada\n"
-        "0️⃣ Volver"
-    )
+    KEY_SUBSCRIPTIONS_RENEW_DURATION_PROMPT = "wa.tenant.subscriptions.renew.duration_prompt"
 
-    SUBSCRIPTIONS_RENEW_CUSTOM_DATE_PROMPT = (
-        "🔄 *Renovar Suscripción*\n\n"
-        "Escribe la *fecha de expiración* (YYYY-MM-DD)."
-    )
+    KEY_SUBSCRIPTIONS_RENEW_CUSTOM_DATE_PROMPT = "wa.tenant.subscriptions.renew.custom_date"
 
-    SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE = (
-        "🔄 *Confirmar Renovación*\n\n"
-        "*Duración:* {duration_label}\n"
-        "*Expira:* {expires_at}\n\n"
-        "Escribe *CONFIRMAR* para renovar la suscripción.\n"
-        "Escribe *0* para cancelar."
-    )
+    KEY_SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE = "wa.tenant.subscriptions.renew.confirm"
 
-    SUBSCRIPTIONS_RENEW_SUCCESS = (
-        "✅ *Suscripción renovada exitosamente.*"
-    )
+    KEY_SUBSCRIPTIONS_RENEW_SUCCESS = "wa.tenant.subscriptions.renew.success"
 
-    SUBSCRIPTIONS_INVALID_SELECTION = (
-        "❌ Número inválido. Responde con un número de la lista "
-        "o escribe *0* para volver."
-    )
+    KEY_SUBSCRIPTIONS_INVALID_SELECTION = "wa.tenant.subscriptions.invalid_selection"
 
-    SUBSCRIPTIONS_CONFIRM_REPROMPT = (
-        "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas "
-        "o minúsculas)."
-    )
+    KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT = "wa.tenant.subscriptions.confirm_reprompt"
 
-    SUBSCRIPTIONS_EMAIL_REQUIRED = (
-        "❌ El email de streaming no puede estar vacío."
-    )
+    KEY_SUBSCRIPTIONS_EMAIL_REQUIRED = "wa.tenant.subscriptions.email_required"
 
-    SUBSCRIPTIONS_CLIENT_REQUIRED = (
-        "❌ Debes seleccionar un cliente."
-    )
+    KEY_SUBSCRIPTIONS_CLIENT_REQUIRED = "wa.tenant.subscriptions.client_required"
 
     SUBSCRIPTIONS_SKIP_WORDS = {"—", "skip", "ninguno", "none", "-"}
 
@@ -802,40 +420,48 @@ class WhatsAppTenantConsoleService:
         self._subscription_service = subscription_service
 
     # ------------------------------------------------------------------
+    # i18n helper (reads locale from per-message ContextVar)
+    # ------------------------------------------------------------------
+
+    def _t(self, key: str, /, **params: Any) -> str:
+        """Translate *key* in the current message locale."""
+        return _i18n_t(_current_locale.get(), key, **params)
+
+    # ------------------------------------------------------------------
     # Reply composition helpers
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _with_main_menu(message: str) -> str:
-        """Append the ``MAIN_MENU`` to *message*."""
-        return message.rstrip() + "\n\n" + WhatsAppTenantConsoleService.MAIN_MENU
+    def _with_main_menu(message: str, locale: str | None = None) -> str:
+        """Append the main menu to *message*, translated to *locale*."""
+        loc = locale if locale is not None else _current_locale.get()
+        return message.rstrip() + "\n\n" + _i18n_t(loc, WhatsAppTenantConsoleService.KEY_MAIN_MENU)
 
     @staticmethod
     def _format_client_list(clients: list[Any]) -> tuple[str, dict[str, str]]:
         entries: list[str] = []
         selection_map: dict[str, str] = {}
         active_count = 0
+        loc = _current_locale.get()
         for i, c in enumerate(clients, start=1):
             num = str(i)
-            status = "Activo" if c.is_active else "Inactivo"
+            status = _i18n_t(loc, "wa.tenant.status.active") if c.is_active else _i18n_t(loc, "wa.tenant.status.inactive")
             entries.append(f"{num}️⃣ {c.full_name} ({status})")
             selection_map[num] = str(c.id)
             if c.is_active:
                 active_count += 1
         inactive_count = len(clients) - active_count
-        header = (
-            "📋 *Lista de Clientes*\n"
-            f"Activos: {active_count} | Inactivos: {inactive_count}\n\n"
-        )
+        header = _i18n_t(loc, "wa.tenant.clients.list.header", active_count=active_count, inactive_count=inactive_count)
         return header + "\n".join(entries), selection_map
 
     @staticmethod
     def _format_client_detail(client: Any) -> str:
-        status_emoji = "✅ Activo" if client.is_active else "❌ Inactivo"
+        loc = _current_locale.get()
+        status_emoji = _i18n_t(loc, "wa.tenant.clients.detail.status_active") if client.is_active else _i18n_t(loc, "wa.tenant.clients.detail.status_inactive")
         actions = (
-            WhatsAppTenantConsoleService.CLIENT_DETAIL_ACTIVE_ACTIONS
+            _i18n_t(loc, WhatsAppTenantConsoleService.KEY_CLIENT_DETAIL_ACTIVE_ACTIONS)
             if client.is_active
-            else WhatsAppTenantConsoleService.CLIENT_DETAIL_INACTIVE_ACTIONS
+            else _i18n_t(loc, WhatsAppTenantConsoleService.KEY_CLIENT_DETAIL_INACTIVE_ACTIONS)
         )
         phone = client.phone or "—"
         username = (
@@ -849,7 +475,7 @@ class WhatsAppTenantConsoleService:
             else:
                 created = str(client.created_at)
         return (
-            f"👤 *Detalle del Cliente*\n\n"
+            f"{_i18n_t(loc, 'wa.tenant.clients.detail.header')}\n\n"
             f"*Nombre:* {client.full_name}\n"
             f"*Usuario:* {username}\n"
             f"*Teléfono:* {phone}\n"
@@ -1064,6 +690,7 @@ class WhatsAppTenantConsoleService:
         user_id: UUID | None = None,
         db: AsyncSession | None = None,
         session_service: WhatsAppSessionService | None = None,
+        locale: str | None = None,
     ) -> str:
         """Process a WhatsApp message and return the reply text.
 
@@ -1074,10 +701,16 @@ class WhatsAppTenantConsoleService:
             user_id: Resolved user UUID for profile operations.
             db: Database session for CRUD operations.
             session_service: ``WhatsAppSessionService`` for persistence.
+            locale: Tenant locale (``en`` or ``es``). Defaults to contextvar.
 
         Returns:
             Reply text that n8n will send through Evolution API.
         """
+        # Set per-message locale context
+        if locale is not None:
+            _token = _current_locale.set(locale)
+        else:
+            _token = None
         msg = message.strip()
 
         try:
@@ -1094,11 +727,11 @@ class WhatsAppTenantConsoleService:
                     await session_service.clear_session(f"admin:{phone}")
                 if has_active_flow:
                     if msg == "0":
-                        return self._with_main_menu("🚫 Operación cancelada.")
-                    return self._with_main_menu("🚫 Operación cancelada.")
+                        return self._with_main_menu(_i18n_t(_current_locale.get(), "wa.tenant.cancelled"))
+                    return self._with_main_menu(_i18n_t(_current_locale.get(), "wa.tenant.cancelled"))
                 if msg == "0":
-                    return self._with_main_menu("👋 Has salido de la consola.")
-                return self.MAIN_MENU
+                    return self._with_main_menu(_i18n_t(_current_locale.get(), "wa.tenant.goodbye"))
+                return self._t(self.KEY_MAIN_MENU)
 
             # Contingency reset — failover, session missing on backup
             if (
@@ -1112,7 +745,7 @@ class WhatsAppTenantConsoleService:
 
             # Help — reachable from any state
             if msg.lower() in self.HELP_COMMANDS:
-                return self.HELP_TEXT
+                return self._t(self.KEY_HELP_TEXT)
 
             # Active flow routing
             if has_active_flow:
@@ -1128,7 +761,7 @@ class WhatsAppTenantConsoleService:
 
             # No active flow — main menu
             if not msg:
-                return self.MAIN_MENU
+                return self._t(self.KEY_MAIN_MENU)
 
             if msg == "1":
                 return await self._start_clients_flow(
@@ -1146,10 +779,13 @@ class WhatsAppTenantConsoleService:
                 return await self._start_subscriptions_flow(
                     phone, session_service, tenant_id, db
                 )
-            return self.FALLBACK_NO_FLOW
+            return self._t(self.KEY_FALLBACK_NO_FLOW)
 
         except RedisUnavailableError:
             return ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
+        finally:
+            if _token is not None:
+                _current_locale.reset(_token)
 
     # ------------------------------------------------------------------
     # Active flow router
@@ -1222,7 +858,7 @@ class WhatsAppTenantConsoleService:
         # -- Catalog flows --
         if flow == self.CATALOG_FLOW:
             if step == self.CATALOG_STEP_LIST:
-                return self.CLIENTS_MENU  # catalog menu placeholder
+                return self._t(self.KEY_CLIENTS_MENU)  # catalog menu placeholder
             elif step == self.CATALOG_STEP_SERVICE_SELECT:
                 return await self._handle_catalog_service_select(
                     phone, msg, session, session_service, tenant_id, db
@@ -1268,6 +904,10 @@ class WhatsAppTenantConsoleService:
                 )
             elif step == self.PROFILE_STEP_CHANGE_PASSWORD_NEW:
                 return await self._handle_profile_change_password_new(
+                    phone, msg, session, session_service, user_id, db
+                )
+            elif step == self.PROFILE_STEP_CHANGE_LOCALE_SELECT:
+                return await self._handle_profile_change_locale_select(
                     phone, msg, session, session_service, user_id, db
                 )
 
@@ -1390,7 +1030,7 @@ class WhatsAppTenantConsoleService:
                     phone, msg, session, session_service, tenant_id, db
                 )
 
-        return self.FALLBACK_ACTIVE_FLOW
+        return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)
 
     # ==================================================================
     # CLIENT FLOWS
@@ -1412,7 +1052,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.CLIENTS_STEP_LIST
             session.temp_data = {}
             await session_service.save_session(session)
-        return self.CLIENTS_MENU
+        return self._t(self.KEY_CLIENTS_MENU)
 
     async def _handle_client_list_selection(
         self,
@@ -1427,12 +1067,12 @@ class WhatsAppTenantConsoleService:
         if msg == "1":
             # Show client list
             if tenant_id is None or db is None or self._client_service is None:
-                return self.CLIENT_NO_CLIENTS
+                return self._t(self.KEY_CLIENT_NO_CLIENTS)
             clients = await self._client_service.list_clients(db, tenant_id)
             if not clients:
-                return self._with_main_menu(self.CLIENT_NO_CLIENTS)
+                return self._with_main_menu(self._t(self.KEY_CLIENT_NO_CLIENTS))
             reply, selection_map = self._format_client_list(clients)
-            reply += "\n\n" + self.CLIENT_SELECT_PROMPT
+            reply += "\n\n" + self._t(self.KEY_CLIENT_SELECT_PROMPT)
             if session_service is not None:
                 session.flow = self.CLIENTS_FLOW
                 session.step = self.CLIENTS_STEP_SELECT
@@ -1448,10 +1088,10 @@ class WhatsAppTenantConsoleService:
             client_id = session.selection_map.get(msg)
             if client_id:
                 if db is None or self._client_service is None:
-                    return self.CLIENT_INVALID_SELECTION
+                    return self._t(self.KEY_CLIENT_INVALID_SELECTION)
                 parsed_id = self._safe_uuid(client_id)
                 if parsed_id is None:
-                    return self.CLIENT_INVALID_SELECTION
+                    return self._t(self.KEY_CLIENT_INVALID_SELECTION)
                 client = await self._client_service.get_client(db, tenant_id, parsed_id)
                 if client:
                     reply = self._format_client_detail(client)
@@ -1460,7 +1100,7 @@ class WhatsAppTenantConsoleService:
                         session.step = self.CLIENTS_STEP_DETAIL_ACTION
                         await session_service.save_session(session)
                     return reply
-            return self.CLIENT_INVALID_SELECTION
+            return self._t(self.KEY_CLIENT_INVALID_SELECTION)
 
     async def _handle_client_select(
         self,
@@ -1479,10 +1119,10 @@ class WhatsAppTenantConsoleService:
         client_id = session.selection_map.get(msg)
         if client_id:
             if db is None or self._client_service is None:
-                return self.CLIENT_INVALID_SELECTION
+                return self._t(self.KEY_CLIENT_INVALID_SELECTION)
             parsed_id = self._safe_uuid(client_id)
             if parsed_id is None:
-                return self.CLIENT_INVALID_SELECTION
+                return self._t(self.KEY_CLIENT_INVALID_SELECTION)
             client = await self._client_service.get_client(
                 db, tenant_id, parsed_id
             )
@@ -1493,7 +1133,7 @@ class WhatsAppTenantConsoleService:
                     session.step = self.CLIENTS_STEP_DETAIL_ACTION
                     await session_service.save_session(session)
                 return reply
-        return self.CLIENT_INVALID_SELECTION
+        return self._t(self.KEY_CLIENT_INVALID_SELECTION)
 
     async def _handle_client_detail_action(
         self,
@@ -1507,11 +1147,11 @@ class WhatsAppTenantConsoleService:
         """Handle action from client detail screen."""
         client_id = session.selected_tenant_id
         if not client_id:
-            return self.CLIENT_INVALID_SELECTION
+            return self._t(self.KEY_CLIENT_INVALID_SELECTION)
 
         parsed_id = self._safe_uuid(client_id)
         if parsed_id is None:
-            return self.CLIENT_INVALID_SELECTION
+            return self._t(self.KEY_CLIENT_INVALID_SELECTION)
 
         if msg == "1":
             # Edit flow
@@ -1519,42 +1159,42 @@ class WhatsAppTenantConsoleService:
         elif msg == "2":
             # Deactivate or reactivate
             if db is None or self._client_service is None:
-                return self.CLIENT_INVALID_SELECTION
+                return self._t(self.KEY_CLIENT_INVALID_SELECTION)
             client = await self._client_service.get_client(db, tenant_id, parsed_id)
             if client is None:
-                return self.CLIENT_INVALID_SELECTION
+                return self._t(self.KEY_CLIENT_INVALID_SELECTION)
             if client.is_active:
                 session.flow = self.CLIENTS_FLOW
                 session.step = self.CLIENTS_STEP_DEACTIVATE_CONFIRM
                 if session_service is not None:
                     await session_service.save_session(session)
-                return self.CLIENT_DEACTIVATE_CONFIRM_TEMPLATE.format(name=client.full_name)
+                return self._t(self.KEY_CLIENT_DEACTIVATE_CONFIRM_TEMPLATE, name=client.full_name)
             else:
                 # Reactivate immediately
                 await self._client_service.activate_client(db, tenant_id, parsed_id)
                 if session_service is not None:
                     await session_service.clear_session(f"admin:{phone}")
                 return self._with_main_menu(
-                    self.CLIENT_REACTIVATE_SUCCESS.format(name=client.full_name)
+                    self._t(self.KEY_CLIENT_REACTIVATE_SUCCESS, name=client.full_name)
                 )
         elif msg == "3":
             # Delete
             if db is None or self._client_service is None:
-                return self.CLIENT_INVALID_SELECTION
+                return self._t(self.KEY_CLIENT_INVALID_SELECTION)
             client = await self._client_service.get_client(db, tenant_id, parsed_id)
             if client is None:
-                return self.CLIENT_INVALID_SELECTION
+                return self._t(self.KEY_CLIENT_INVALID_SELECTION)
             if client.is_active:
-                return self.CLIENT_CANT_DELETE_ACTIVE
+                return self._t(self.KEY_CLIENT_CANT_DELETE_ACTIVE)
             session.flow = self.CLIENTS_FLOW
             session.step = self.CLIENTS_STEP_DELETE_CONFIRM
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.CLIENT_DELETE_CONFIRM_TEMPLATE.format(name=client.full_name)
+            return self._t(self.KEY_CLIENT_DELETE_CONFIRM_TEMPLATE, name=client.full_name)
         elif msg == "0":
             if session_service is not None:
                 await session_service.clear_session(f"admin:{phone}")
-            return self.MAIN_MENU
+            return self._t(self.KEY_MAIN_MENU)
         return ""
 
     # -- Client create helpers --
@@ -1572,7 +1212,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.CLIENTS_STEP_CREATE_FULL_NAME
             session.temp_data = {}
             await session_service.save_session(session)
-        return self.CLIENT_CREATE_PROMPT_FULL_NAME
+        return self._t(self.KEY_CLIENT_CREATE_PROMPT_FULL_NAME)
 
     async def _handle_client_create_full_name(
         self,
@@ -1583,12 +1223,12 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         name = msg.strip()
         if not name:
-            return self.CLIENT_NAME_REQUIRED
+            return self._t(self.KEY_CLIENT_NAME_REQUIRED)
         session.temp_data["full_name"] = name
         session.step = self.CLIENTS_STEP_CREATE_PHONE
         if session_service is not None:
             await session_service.save_session(session)
-        return self.CLIENT_CREATE_PROMPT_PHONE
+        return self._t(self.KEY_CLIENT_CREATE_PROMPT_PHONE)
 
     async def _handle_client_create_phone(
         self,
@@ -1606,11 +1246,11 @@ class WhatsAppTenantConsoleService:
                 normalized = validate_phone(stripped, required=False)
                 session.temp_data["phone"] = normalized
             except Exception:
-                return self.CLIENT_CREATE_ERROR_PHONE
+                return self._t(self.KEY_CLIENT_CREATE_ERROR_PHONE)
         session.step = self.CLIENTS_STEP_CREATE_USERNAME
         if session_service is not None:
             await session_service.save_session(session)
-        return self.CLIENT_CREATE_PROMPT_USERNAME
+        return self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
 
     async def _handle_client_create_username(
         self,
@@ -1621,12 +1261,12 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         username = msg.strip()
         if not username:
-            return self.CLIENT_USERNAME_REQUIRED
+            return self._t(self.KEY_CLIENT_USERNAME_REQUIRED)
         session.temp_data["local_username"] = username.lower()
         session.step = self.CLIENTS_STEP_CREATE_PASSWORD
         if session_service is not None:
             await session_service.save_session(session)
-        return self.CLIENT_CREATE_PROMPT_PASSWORD
+        return self._t(self.KEY_CLIENT_CREATE_PROMPT_PASSWORD)
 
     async def _handle_client_create_password(
         self,
@@ -1637,13 +1277,13 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         password = msg.strip()
         if len(password) < 6:
-            return self.CLIENT_SHORT_PASSWORD
+            return self._t(self.KEY_CLIENT_SHORT_PASSWORD)
         session.temp_data["password"] = password
         session.step = self.CLIENTS_STEP_CREATE_CONFIRM
         if session_service is not None:
             await session_service.save_session(session)
         data = session.temp_data
-        return self.CLIENT_CREATE_CONFIRM_TEMPLATE.format(
+        return self._t(self.KEY_CLIENT_CREATE_CONFIRM_TEMPLATE, 
             name=data.get("full_name", ""),
             username=data.get("local_username", ""),
             phone=data.get("phone") or "—",
@@ -1659,11 +1299,11 @@ class WhatsAppTenantConsoleService:
         db: AsyncSession | None,
     ) -> str:
         stripped = msg.strip()
-        if stripped.upper() != "CONFIRMAR":
+        if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
             data = session.temp_data
             return (
-                self.CLIENT_CONFIRM_REPROMPT + "\n\n"
-                + self.CLIENT_CREATE_CONFIRM_TEMPLATE.format(
+                self._t(self.KEY_CLIENT_CONFIRM_REPROMPT) + "\n\n"
+                + self._t(self.KEY_CLIENT_CREATE_CONFIRM_TEMPLATE, 
                     name=data.get("full_name", ""),
                     username=data.get("local_username", ""),
                     phone=data.get("phone") or "—",
@@ -1671,7 +1311,7 @@ class WhatsAppTenantConsoleService:
             )
         data = session.temp_data
         if tenant_id is None or db is None or self._client_service is None:
-            return "❌ No se pudo crear el cliente. Servicio no disponible."
+            return self._t("wa.tenant.errors.client_create_service_unavailable")
 
         from app.schemas.client import ClientCreate
 
@@ -1683,29 +1323,42 @@ class WhatsAppTenantConsoleService:
         )
         try:
             client = await self._client_service.create_client(db, tenant_id, payload)
+        except UserFacingError as exc:
+            error = translate_error(_current_locale.get(), exc)
+            if exc.code in {"phone_already_registered", "client_local_username_exists", "username_already_registered"}:
+                if exc.code == "phone_already_registered":
+                    session.step = self.CLIENTS_STEP_CREATE_PHONE
+                    if session_service is not None:
+                        await session_service.save_session(session)
+                    return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_PHONE)
+                session.step = self.CLIENTS_STEP_CREATE_USERNAME
+                if session_service is not None:
+                    await session_service.save_session(session)
+                return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
+            return "❌ " + error
         except ValueError as exc:
             error = str(exc)
             if "phone" in error.lower() or "teléfono" in error.lower():
                 session.step = self.CLIENTS_STEP_CREATE_PHONE
                 if session_service is not None:
                     await session_service.save_session(session)
-                return "❌ " + error + "\n\n" + self.CLIENT_CREATE_PROMPT_PHONE
+                return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_PHONE)
             if "username" in error.lower() or "usuario" in error.lower():
                 session.step = self.CLIENTS_STEP_CREATE_USERNAME
                 if session_service is not None:
                     await session_service.save_session(session)
-                return "❌ " + error + "\n\n" + self.CLIENT_CREATE_PROMPT_USERNAME
+                return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
             return "❌ " + error
 
         if client is None:
-            return "❌ Error al crear el cliente."
+            return self._t("wa.tenant.errors.client_create_failed_generic")
 
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
 
         full_username = getattr(client.user, "username", data.get("local_username", ""))
         return self._with_main_menu(
-            self.CLIENT_CREATE_SUCCESS.format(
+            self._t(self.KEY_CLIENT_CREATE_SUCCESS, 
                 name=client.full_name,
                 username_full=full_username,
                 phone=client.phone or "—",
@@ -1725,7 +1378,7 @@ class WhatsAppTenantConsoleService:
         session.temp_data = {}
         if session_service is not None:
             await session_service.save_session(session)
-        return self.CLIENT_EDIT_FIELD_PROMPT
+        return self._t(self.KEY_CLIENT_EDIT_FIELD_PROMPT)
 
     async def _handle_client_edit_field(
         self,
@@ -1737,10 +1390,10 @@ class WhatsAppTenantConsoleService:
         if msg == "0":
             if session_service is not None:
                 await session_service.clear_session(f"admin:{phone}")
-            return self.MAIN_MENU
+            return self._t(self.KEY_MAIN_MENU)
         field = self.CLIENT_EDIT_FIELD_MAP.get(msg)
         if field is None:
-            return self.CLIENT_EDIT_ERROR_INVALID_FIELD
+            return self._t(self.KEY_CLIENT_EDIT_ERROR_INVALID_FIELD)
         session.temp_data["field"] = field
         session.step = self.CLIENTS_STEP_EDIT_VALUE
         if session_service is not None:
@@ -1760,10 +1413,10 @@ class WhatsAppTenantConsoleService:
         new_value = msg.strip()
         client_id = session.selected_tenant_id
         if not client_id or tenant_id is None or db is None or self._client_service is None:
-            return "❌ No se pudo actualizar el cliente."
+            return self._t("wa.tenant.errors.client_update_failed")
         parsed_id = self._safe_uuid(client_id)
         if parsed_id is None:
-            return "❌ No se pudo actualizar el cliente."
+            return self._t("wa.tenant.errors.client_update_failed")
 
         from app.schemas.client import ClientUpdate
         payload = ClientUpdate(**{field: new_value})
@@ -1771,18 +1424,20 @@ class WhatsAppTenantConsoleService:
             client = await self._client_service.update_client(
                 db, tenant_id, parsed_id, payload
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         except Exception as exc:
             return "❌ " + str(exc)
 
         if client is None:
-            return "❌ Cliente no encontrado."
+            return self._t("wa.tenant.errors.client_not_found")
 
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(
-            self.CLIENT_EDIT_SUCCESS.format(name=client.full_name)
+            self._t(self.KEY_CLIENT_EDIT_SUCCESS, name=client.full_name)
         )
 
     # -- Client lifecycle helpers --
@@ -1797,21 +1452,21 @@ class WhatsAppTenantConsoleService:
         db: AsyncSession | None,
     ) -> str:
         stripped = msg.strip()
-        if stripped.upper() != "CONFIRMAR":
-            return self.CLIENT_CONFIRM_REPROMPT
+        if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
+            return self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)
         client_id = session.selected_tenant_id
         if not client_id or tenant_id is None or db is None or self._client_service is None:
-            return "❌ No se pudo desactivar el cliente."
+            return self._t("wa.tenant.errors.client_deactivate_failed")
         parsed_id = self._safe_uuid(client_id)
         if parsed_id is None:
-            return "❌ No se pudo desactivar el cliente."
+            return self._t("wa.tenant.errors.client_deactivate_failed")
         client = await self._client_service.deactivate_client(db, tenant_id, parsed_id)
         if client is None:
-            return "❌ Cliente no encontrado."
+            return self._t("wa.tenant.errors.client_not_found")
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(
-            self.CLIENT_DEACTIVATE_SUCCESS.format(name=client.full_name)
+            self._t(self.KEY_CLIENT_DEACTIVATE_SUCCESS, name=client.full_name)
         )
 
     async def _handle_client_delete_confirm(
@@ -1824,25 +1479,25 @@ class WhatsAppTenantConsoleService:
         db: AsyncSession | None,
     ) -> str:
         stripped = msg.strip()
-        if stripped.upper() != "CONFIRMAR":
-            return self.CLIENT_CONFIRM_REPROMPT
+        if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
+            return self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)
         client_id = session.selected_tenant_id
         if not client_id or tenant_id is None or db is None or self._client_service is None:
-            return "❌ No se pudo eliminar el cliente."
+            return self._t("wa.tenant.errors.client_delete_failed")
         parsed_id = self._safe_uuid(client_id)
         if parsed_id is None:
-            return "❌ No se pudo eliminar el cliente."
+            return self._t("wa.tenant.errors.client_delete_failed")
         client_name = client_id  # fallback
         client = await self._client_service.get_client(db, tenant_id, parsed_id)
         if client:
             client_name = client.full_name
         deleted = await self._client_service.delete_client(db, tenant_id, parsed_id)
         if not deleted:
-            return "❌ No se pudo eliminar el cliente."
+            return self._t("wa.tenant.errors.client_delete_failed")
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(
-            self.CLIENT_DELETE_SUCCESS.format(name=client_name)
+            self._t(self.KEY_CLIENT_DELETE_SUCCESS, name=client_name)
         )
 
     # ==================================================================
@@ -1859,7 +1514,7 @@ class WhatsAppTenantConsoleService:
         """Start the catalog flow — list services immediately."""
         reply, selection_map = await self._fetch_service_list(tenant_id, db)
         if reply is None:
-            return self._with_main_menu(self.CATALOG_NO_SERVICES)
+            return self._with_main_menu(self._t(self.KEY_CATALOG_NO_SERVICES))
         if session_service is not None:
             session = await session_service.get_session(f"admin:{phone}")
             if session is None:
@@ -1868,7 +1523,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.CATALOG_STEP_SERVICE_SELECT
             session.selection_map = selection_map
             await session_service.save_session(session)
-        return reply + "\n\n" + self.CATALOG_SERVICE_PROMPT
+        return reply + "\n\n" + self._t(self.KEY_CATALOG_SERVICE_PROMPT)
 
     async def _fetch_service_list(
         self, tenant_id: UUID | None, db: AsyncSession | None
@@ -1893,16 +1548,16 @@ class WhatsAppTenantConsoleService:
         if msg == "0":
             if session_service is not None:
                 await session_service.clear_session(f"admin:{phone}")
-            return self.MAIN_MENU
+            return self._t(self.KEY_MAIN_MENU)
         service_id = session.selection_map.get(msg)
         if not service_id or tenant_id is None or db is None or self._catalog_service is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         parsed_id = self._safe_uuid(service_id)
         if parsed_id is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         service = await self._catalog_service.get_service(db, tenant_id, parsed_id)
         if service is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_SERVICE_ACTION
         session.selected_tenant_id = service_id
@@ -1910,7 +1565,7 @@ class WhatsAppTenantConsoleService:
             await session_service.save_session(session)
         return (
             self._format_service_detail(service) + "\n"
-            + self.CATALOG_SERVICE_ACTIONS
+            + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
         )
 
     async def _handle_catalog_service_action(
@@ -1924,36 +1579,36 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         service_id = session.selected_tenant_id
         if not service_id:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         if msg == "1":
             # Edit service name
             session.flow = self.CATALOG_FLOW
             session.step = self.CATALOG_STEP_EDIT_SERVICE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.CATALOG_SERVICE_EDIT_PROMPT
+            return self._t(self.KEY_CATALOG_SERVICE_EDIT_PROMPT)
         elif msg == "2":
             # View plans
             if tenant_id is None or db is None or self._catalog_service is None:
-                return self.CATALOG_NO_PLANS
+                return self._t(self.KEY_CATALOG_NO_PLANS)
             parsed_id = self._safe_uuid(service_id)
             if parsed_id is None:
-                return self.CATALOG_INVALID_SELECTION
+                return self._t(self.KEY_CATALOG_INVALID_SELECTION)
             plans = await self._catalog_service.list_plans(db, tenant_id, parsed_id)
             if not plans:
-                return self._with_main_menu(self.CATALOG_NO_PLANS)
+                return self._with_main_menu(self._t(self.KEY_CATALOG_NO_PLANS))
             reply, selection_map = self._format_plan_list(plans)
             session.flow = self.CATALOG_FLOW
             session.step = self.CATALOG_STEP_PLAN_SELECT
             session.selection_map = selection_map
             if session_service is not None:
                 await session_service.save_session(session)
-            return reply + "\n\n" + self.CATALOG_PLAN_PROMPT
+            return reply + "\n\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
         elif msg == "0":
             if session_service is not None:
                 await session_service.clear_session(f"admin:{phone}")
-            return self.MAIN_MENU
-        return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_MAIN_MENU)
+        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
     async def _handle_catalog_edit_service(
         self,
@@ -1966,26 +1621,28 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         name = msg.strip()
         if not name:
-            return self.CATALOG_NAME_REQUIRED
+            return self._t(self.KEY_CATALOG_NAME_REQUIRED)
         service_id = session.selected_tenant_id
         if not service_id or tenant_id is None or db is None or self._catalog_service is None:
-            return "❌ No se pudo actualizar el servicio."
+            return self._t("wa.tenant.errors.service_update_failed")
         parsed_id = self._safe_uuid(service_id)
         if parsed_id is None:
-            return "❌ No se pudo actualizar el servicio."
+            return self._t("wa.tenant.errors.service_update_failed")
         from app.schemas.catalog import ServiceUpdate
         try:
             service = await self._catalog_service.update_service(
                 db, tenant_id, parsed_id, ServiceUpdate(name=name)
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if service is None:
-            return "❌ Servicio no encontrado."
+            return self._t("wa.tenant.errors.service_not_found")
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(
-            self.CATALOG_SERVICE_EDIT_SUCCESS.format(name=service.name)
+            self._t(self.KEY_CATALOG_SERVICE_EDIT_SUCCESS, name=service.name)
         )
 
     async def _handle_catalog_plan_select(
@@ -2003,29 +1660,29 @@ class WhatsAppTenantConsoleService:
             if reply is None:
                 if session_service is not None:
                     await session_service.clear_session(f"admin:{phone}")
-                return self.MAIN_MENU
+                return self._t(self.KEY_MAIN_MENU)
             session.flow = self.CATALOG_FLOW
             session.step = self.CATALOG_STEP_SERVICE_SELECT
             session.selection_map = selection_map
             if session_service is not None:
                 await session_service.save_session(session)
-            return reply + "\n\n" + self.CATALOG_SERVICE_PROMPT
+            return reply + "\n\n" + self._t(self.KEY_CATALOG_SERVICE_PROMPT)
         plan_id = session.selection_map.get(msg)
         if not plan_id or tenant_id is None or db is None or self._catalog_service is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         # We need the service_id from the session
         service_id = session.selected_tenant_id
         if service_id is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         parsed_service_id = self._safe_uuid(service_id)
         parsed_plan_id = self._safe_uuid(plan_id)
         if parsed_service_id is None or parsed_plan_id is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         plan = await self._catalog_service.get_plan(
             db, tenant_id, parsed_service_id, parsed_plan_id
         )
         if plan is None:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_ACTION
         session.selected_tenant_id = plan_id
@@ -2036,7 +1693,7 @@ class WhatsAppTenantConsoleService:
             await session_service.save_session(session)
         return (
             self._format_plan_detail(plan) + "\n"
-            + self.CATALOG_PLAN_ACTIONS
+            + self._t(self.KEY_CATALOG_PLAN_ACTIONS)
         )
 
     async def _handle_catalog_plan_action(
@@ -2050,27 +1707,27 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         plan_id = session.selected_tenant_id
         if not plan_id:
-            return self.CATALOG_INVALID_SELECTION
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         if msg == "1":
             session.flow = self.CATALOG_FLOW
             session.step = self.CATALOG_STEP_EDIT_PLAN
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.CATALOG_PLAN_EDIT_PROMPT
+            return self._t(self.KEY_CATALOG_PLAN_EDIT_PROMPT)
         elif msg == "0":
             # Back to service list
             reply, selection_map = await self._fetch_service_list(tenant_id, db)
             if reply is None:
                 if session_service is not None:
                     await session_service.clear_session(f"admin:{phone}")
-                return self.MAIN_MENU
+                return self._t(self.KEY_MAIN_MENU)
             session.flow = self.CATALOG_FLOW
             session.step = self.CATALOG_STEP_SERVICE_SELECT
             session.selection_map = selection_map
             if session_service is not None:
                 await session_service.save_session(session)
-            return reply + "\n\n" + self.CATALOG_SERVICE_PROMPT
-        return self.CATALOG_INVALID_SELECTION
+            return reply + "\n\n" + self._t(self.KEY_CATALOG_SERVICE_PROMPT)
+        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
     async def _handle_catalog_edit_plan(
         self,
@@ -2083,28 +1740,30 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         name = msg.strip()
         if not name:
-            return self.CATALOG_NAME_REQUIRED
+            return self._t(self.KEY_CATALOG_NAME_REQUIRED)
         plan_id = session.selected_tenant_id
         service_id = session.temp_data.get("service_id")
         if not plan_id or not service_id or tenant_id is None or db is None or self._catalog_service is None:
-            return "❌ No se pudo actualizar el plan."
+            return self._t("wa.tenant.errors.plan_update_failed")
         parsed_service_id = self._safe_uuid(service_id)
         parsed_plan_id = self._safe_uuid(plan_id)
         if parsed_service_id is None or parsed_plan_id is None:
-            return "❌ No se pudo actualizar el plan."
+            return self._t("wa.tenant.errors.plan_update_failed")
         from app.schemas.catalog import PlanUpdate
         try:
             plan = await self._catalog_service.update_plan(
                 db, tenant_id, parsed_service_id, parsed_plan_id, PlanUpdate(name=name)
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if plan is None:
-            return "❌ Plan no encontrado."
+            return self._t("wa.tenant.errors.plan_not_found")
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(
-            self.CATALOG_PLAN_EDIT_SUCCESS.format(name=plan.name)
+            self._t(self.KEY_CATALOG_PLAN_EDIT_SUCCESS, name=plan.name)
         )
 
     # ==================================================================
@@ -2127,7 +1786,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_MENU
             session.temp_data = {}
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_MENU
+        return self._t(self.KEY_SUBSCRIPTIONS_MENU)
 
     async def _handle_subscriptions_menu(
         self,
@@ -2142,12 +1801,12 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_FILTER
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_FILTER_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_FILTER_PROMPT)
         if msg == "2":
             return await self._start_subscriptions_create(
                 phone, session, session_service, tenant_id, db
             )
-        return self.SUBSCRIPTIONS_INVALID_SELECTION
+        return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
     async def _handle_subscriptions_filter(
         self,
@@ -2160,7 +1819,7 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         del phone
         if tenant_id is None or db is None or self._subscription_service is None:
-            return self.SUBSCRIPTIONS_NO_RESULTS
+            return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS)
 
         subscriptions: list[Any]
         if msg == "1":
@@ -2187,17 +1846,17 @@ class WhatsAppTenantConsoleService:
             )
             subscriptions = [*active, *expired, *cancelled]
         else:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         if not subscriptions:
-            return self.SUBSCRIPTIONS_NO_RESULTS + "\n\n" + self.SUBSCRIPTIONS_FILTER_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS) + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_FILTER_PROMPT)
 
         reply, selection_map = self._format_subscription_list(subscriptions)
         session.selection_map = selection_map
         session.step = self.SUBSCRIPTIONS_STEP_SELECT
         if session_service is not None:
             await session_service.save_session(session)
-        return reply + "\n\n" + self.SUBSCRIPTIONS_SELECT_PROMPT
+        return reply + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_SELECT_PROMPT)
 
     async def _handle_subscriptions_list(
         self,
@@ -2230,22 +1889,22 @@ class WhatsAppTenantConsoleService:
             or db is None
             or self._subscription_service is None
         ):
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         subscription = await self._subscription_service.get_subscription(
             db, tenant_id, parsed_id
         )
         if subscription is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         credentials = await self._subscription_service.reveal_credentials(
             db, tenant_id, parsed_id
         )
         reply = self._format_subscription_detail(subscription, credentials)
         actions = (
-            self.SUBSCRIPTION_DETAIL_ACTIONS
+            self._t(self.KEY_SUBSCRIPTION_DETAIL_ACTIONS)
             if subscription.status == "cancelled"
-            else self.SUBSCRIPTION_DETAIL_ACTIONS_ACTIVE
+            else self._t(self.KEY_SUBSCRIPTION_DETAIL_ACTIONS_ACTIVE)
         )
 
         session.selected_tenant_id = str(parsed_id)
@@ -2265,14 +1924,14 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         subscription = await self._get_selected_subscription(session, tenant_id, db)
         if subscription is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         if msg == "1":
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_FIELD
             session.temp_data = {}
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_EDIT_FIELD_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_EDIT_FIELD_PROMPT)
 
         if msg == "2":
             session.step = self.SUBSCRIPTIONS_STEP_CANCEL_CONFIRM
@@ -2281,7 +1940,7 @@ class WhatsAppTenantConsoleService:
             client_name = getattr(subscription, "client_name", None) or getattr(
                 subscription, "client_full_name", "—"
             )
-            return self.SUBSCRIPTIONS_CANCEL_CONFIRM_TEMPLATE.format(
+            return self._t(self.KEY_SUBSCRIPTIONS_CANCEL_CONFIRM_TEMPLATE, 
                 email=subscription.streaming_email,
                 client_name=client_name,
             )
@@ -2291,16 +1950,16 @@ class WhatsAppTenantConsoleService:
             session.temp_data = {}
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_RENEW_DURATION_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_RENEW_DURATION_PROMPT)
 
         if msg == "4" and subscription.status == "cancelled":
             session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_DURATION
             session.temp_data = {}
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_REACTIVATE_DURATION_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_DURATION_PROMPT)
 
-        return self.SUBSCRIPTIONS_INVALID_SELECTION
+        return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
     async def _start_subscriptions_create(
         self,
@@ -2311,10 +1970,10 @@ class WhatsAppTenantConsoleService:
         db: AsyncSession | None,
     ) -> str:
         if tenant_id is None or db is None or self._client_service is None:
-            return self.SUBSCRIPTIONS_CLIENT_REQUIRED
+            return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
         clients = await self._client_service.list_clients(db, tenant_id)
         if not clients:
-            return self.SUBSCRIPTIONS_CLIENT_REQUIRED
+            return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
 
         client_list, selection_map = self._format_client_list(clients)
         session.flow = self.SUBSCRIPTIONS_FLOW
@@ -2323,7 +1982,7 @@ class WhatsAppTenantConsoleService:
         session.selection_map = selection_map
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_CLIENT_PROMPT.format(client_list=client_list)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list)
 
     async def _handle_subscriptions_create_client(
         self,
@@ -2337,16 +1996,16 @@ class WhatsAppTenantConsoleService:
         del phone
         client_id = self._safe_uuid(session.selection_map.get(msg))
         if client_id is None or tenant_id is None or db is None or self._client_service is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         client = await self._client_service.get_client(db, tenant_id, client_id)
         if client is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         if self._catalog_service is None:
-            return "❌ No se pudo cargar el catálogo."
+            return self._t("wa.tenant.errors.catalog_load_failed")
         services = await self._catalog_service.list_services(db, tenant_id)
         if not services:
-            return "❌ No hay servicios disponibles."
+            return self._t("wa.tenant.errors.no_services")
         service_list, selection_map = self._format_service_list(services)
 
         session.temp_data.update(
@@ -2359,7 +2018,7 @@ class WhatsAppTenantConsoleService:
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_SERVICE
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_SERVICE_PROMPT.format(service_list=service_list)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
 
     async def _handle_subscriptions_create_service(
         self,
@@ -2373,13 +2032,13 @@ class WhatsAppTenantConsoleService:
         del phone
         service_id = self._safe_uuid(session.selection_map.get(msg))
         if service_id is None or tenant_id is None or db is None or self._catalog_service is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         service = await self._catalog_service.get_service(db, tenant_id, service_id)
         if service is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         plans = await self._catalog_service.list_plans(db, tenant_id, service_id) or []
         if not plans:
-            return "❌ No hay planes disponibles para este servicio."
+            return self._t("wa.tenant.errors.no_plans")
         plan_list, selection_map = self._format_plan_list(plans)
 
         session.temp_data.update(
@@ -2392,7 +2051,7 @@ class WhatsAppTenantConsoleService:
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PLAN
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PLAN_PROMPT.format(plan_list=plan_list)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PLAN_PROMPT, plan_list=plan_list)
 
     async def _handle_subscriptions_create_plan(
         self,
@@ -2413,10 +2072,10 @@ class WhatsAppTenantConsoleService:
             or db is None
             or self._catalog_service is None
         ):
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         plan = await self._catalog_service.get_plan(db, tenant_id, service_id, plan_id)
         if plan is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         session.temp_data.update(
             {
@@ -2427,7 +2086,7 @@ class WhatsAppTenantConsoleService:
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_EMAIL
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_EMAIL_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_EMAIL_PROMPT)
 
     async def _handle_subscriptions_create_email(
         self,
@@ -2439,12 +2098,12 @@ class WhatsAppTenantConsoleService:
         del phone
         email = msg.strip()
         if not email:
-            return self.SUBSCRIPTIONS_EMAIL_REQUIRED
+            return self._t(self.KEY_SUBSCRIPTIONS_EMAIL_REQUIRED)
         session.temp_data["streaming_email"] = email
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT)
 
     async def _handle_subscriptions_create_password(
         self,
@@ -2461,13 +2120,13 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_OPTION
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT)
 
         session.temp_data["streaming_password_pending"] = value
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT)
 
     async def _handle_subscriptions_create_password_confirm(
         self,
@@ -2479,13 +2138,13 @@ class WhatsAppTenantConsoleService:
         del phone
         pending = session.temp_data.get("streaming_password_pending")
         if msg.strip() != pending:
-            return self.SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH)
         session.temp_data["streaming_password"] = pending
         session.temp_data.pop("streaming_password_pending", None)
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_OPTION
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT)
 
     async def _handle_subscriptions_create_profile_option(
         self,
@@ -2500,7 +2159,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT)
         if value == "2":
             session.temp_data["profile_name"] = None
             session.temp_data["profile_pin"] = None
@@ -2508,8 +2167,8 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_CREATE_DURATION
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_DURATION_PROMPT
-        return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_DURATION_PROMPT)
+        return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
     async def _handle_subscriptions_create_profile_name(
         self,
@@ -2526,7 +2185,7 @@ class WhatsAppTenantConsoleService:
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PIN
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PIN_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PIN_PROMPT)
 
     async def _handle_subscriptions_create_pin(
         self,
@@ -2543,16 +2202,16 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_CREATE_DURATION
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_DURATION_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_DURATION_PROMPT)
 
         if not session.temp_data.get("profile_name"):
-            return self.SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE)
 
         session.temp_data["profile_pin_pending"] = value
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PIN_CONFIRM
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT)
 
     async def _handle_subscriptions_create_pin_confirm(
         self,
@@ -2564,13 +2223,13 @@ class WhatsAppTenantConsoleService:
         del phone
         pending = session.temp_data.get("profile_pin_pending")
         if msg.strip() != pending:
-            return self.SUBSCRIPTIONS_CREATE_PIN_MISMATCH
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PIN_MISMATCH)
         session.temp_data["profile_pin"] = pending
         session.temp_data.pop("profile_pin_pending", None)
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_DURATION
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_DURATION_PROMPT
+        return self._t(self.KEY_SUBSCRIPTIONS_DURATION_PROMPT)
 
     async def _handle_subscriptions_create_duration(
         self,
@@ -2584,14 +2243,14 @@ class WhatsAppTenantConsoleService:
         del phone, tenant_id, db
         duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
         if duration_type is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         session.temp_data["duration_type"] = duration_type
         if duration_type == "custom":
             session.step = self.SUBSCRIPTIONS_STEP_CREATE_CUSTOM_DATE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CUSTOM_DATE_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_CUSTOM_DATE_PROMPT)
 
         session.temp_data["expires_at"] = None
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_CONFIRM
@@ -2611,7 +2270,7 @@ class WhatsAppTenantConsoleService:
         del phone, tenant_id, db
         expires_at = self._parse_iso_date(msg)
         if expires_at is None:
-            return "❌ Fecha inválida. Usa formato YYYY-MM-DD."
+            return self._t("wa.tenant.errors.invalid_date")
         session.temp_data["expires_at"] = expires_at.isoformat()
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_CONFIRM
         if session_service is not None:
@@ -2627,10 +2286,10 @@ class WhatsAppTenantConsoleService:
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
-        if msg.strip().lower() != "confirmar":
-            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        if msg.strip().lower() not in ("confirmar", "confirm"):
+            return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
         if tenant_id is None or db is None or self._subscription_service is None:
-            return "❌ No se pudo crear la suscripción."
+            return self._t("wa.tenant.errors.subscription_create_failed")
 
         from app.schemas.subscription import SubscriptionCreate
 
@@ -2654,12 +2313,14 @@ class WhatsAppTenantConsoleService:
         )
         try:
             await self._subscription_service.create_subscription(db, tenant_id, payload)
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
 
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.SUBSCRIPTIONS_CREATE_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_CREATE_SUCCESS))
 
     async def _handle_subscriptions_edit_field(
         self,
@@ -2672,38 +2333,38 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         field = self.SUBSCRIPTIONS_EDIT_FIELD_MAP.get(msg)
         if field is None:
-            return self.SUBSCRIPTIONS_EDIT_ERROR_INVALID_FIELD
+            return self._t(self.KEY_SUBSCRIPTIONS_EDIT_ERROR_INVALID_FIELD)
         if tenant_id is None or db is None:
-            return "❌ No se pudo cargar la suscripción."
+            return self._t("wa.tenant.errors.subscription_load_failed")
 
         session.temp_data = {"field": field}
 
         if field == "client":
             if self._client_service is None:
-                return self.SUBSCRIPTIONS_CLIENT_REQUIRED
+                return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
             clients = await self._client_service.list_clients(db, tenant_id)
             client_list, selection_map = self._format_client_list(clients)
             session.selection_map = selection_map
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_CLIENT_PROMPT.format(client_list=client_list)
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list)
 
         if field == "service":
             if self._catalog_service is None:
-                return "❌ No se pudo cargar el catálogo."
+                return self._t("wa.tenant.errors.catalog_load_failed")
             services = await self._catalog_service.list_services(db, tenant_id)
             service_list, selection_map = self._format_service_list(services)
             session.selection_map = selection_map
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_SERVICE_PROMPT.format(service_list=service_list)
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
 
         if field == "plan":
             subscription = await self._get_selected_subscription(session, tenant_id, db)
             if subscription is None or self._catalog_service is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             plans = (
                 await self._catalog_service.list_plans(db, tenant_id, subscription.service_id)
                 or []
@@ -2714,12 +2375,12 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_PLAN_PROMPT.format(plan_list=plan_list)
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PLAN_PROMPT, plan_list=plan_list)
 
         session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_EDIT_PROMPTS.get(field, self.SUBSCRIPTIONS_EDIT_FIELD_PROMPT)
+        return self.SUBSCRIPTIONS_EDIT_PROMPTS.get(field, self._t(self.KEY_SUBSCRIPTIONS_EDIT_FIELD_PROMPT))
 
     async def _handle_subscriptions_edit_value(
         self,
@@ -2731,13 +2392,13 @@ class WhatsAppTenantConsoleService:
         db: AsyncSession | None,
     ) -> str:
         if tenant_id is None or db is None or self._subscription_service is None:
-            return "❌ No se pudo actualizar la suscripción."
+            return self._t("wa.tenant.errors.subscription_update_failed")
         field = session.temp_data.get("field")
 
         if field == "client":
             client_id = self._safe_uuid(session.selection_map.get(msg))
             if client_id is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             return await self._apply_subscription_update(
                 phone,
                 session,
@@ -2750,13 +2411,13 @@ class WhatsAppTenantConsoleService:
         if field == "service":
             service_id = self._safe_uuid(session.selection_map.get(msg))
             if service_id is None or self._catalog_service is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             service = await self._catalog_service.get_service(db, tenant_id, service_id)
             if service is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             plans = await self._catalog_service.list_plans(db, tenant_id, service_id) or []
             if not plans:
-                return "❌ No hay planes disponibles para este servicio."
+                return self._t("wa.tenant.errors.no_plans")
             plan_list, selection_map = self._format_plan_list(plans)
             session.selection_map = selection_map
             session.temp_data = {
@@ -2766,13 +2427,13 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_PLAN_PROMPT.format(plan_list=plan_list)
+            return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PLAN_PROMPT, plan_list=plan_list)
 
         if field == "service_plan":
             plan_id = self._safe_uuid(session.selection_map.get(msg))
             service_id = self._safe_uuid(session.temp_data.get("service_id"))
             if plan_id is None or service_id is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             return await self._apply_subscription_update(
                 phone,
                 session,
@@ -2786,7 +2447,7 @@ class WhatsAppTenantConsoleService:
         if field == "plan":
             plan_id = self._safe_uuid(session.selection_map.get(msg))
             if plan_id is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             return await self._apply_subscription_update(
                 phone,
                 session,
@@ -2799,7 +2460,7 @@ class WhatsAppTenantConsoleService:
         if field == "streaming_email":
             email = msg.strip()
             if not email:
-                return self.SUBSCRIPTIONS_EMAIL_REQUIRED
+                return self._t(self.KEY_SUBSCRIPTIONS_EMAIL_REQUIRED)
             return await self._apply_subscription_update(
                 phone,
                 session,
@@ -2827,22 +2488,22 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_PASSWORD_CONFIRM
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_EDIT_PASSWORD_CONFIRM_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_EDIT_PASSWORD_CONFIRM_PROMPT)
 
         if field == "profile_pin":
             subscription = await self._get_selected_subscription(session, tenant_id, db)
             if subscription is None:
-                return self.SUBSCRIPTIONS_INVALID_SELECTION
+                return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
             value = "" if msg.strip().lower() in self.SUBSCRIPTIONS_SKIP_WORDS else msg.strip()
             if value and not subscription.profile_name:
-                return self.SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE
+                return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE)
             session.temp_data["pending_value"] = value
             session.step = self.SUBSCRIPTIONS_STEP_EDIT_PIN_CONFIRM
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_EDIT_PIN_CONFIRM_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_EDIT_PIN_CONFIRM_PROMPT)
 
-        return self.SUBSCRIPTIONS_INVALID_SELECTION
+        return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
     async def _handle_subscriptions_edit_password_confirm(
         self,
@@ -2855,7 +2516,7 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         pending_value = session.temp_data.get("pending_value", "")
         if msg.strip() != pending_value:
-            return self.SUBSCRIPTIONS_EDIT_MISMATCH
+            return self._t(self.KEY_SUBSCRIPTIONS_EDIT_MISMATCH)
         return await self._apply_subscription_update(
             phone,
             session,
@@ -2876,7 +2537,7 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         pending_value = session.temp_data.get("pending_value", "")
         if msg.strip() != pending_value:
-            return self.SUBSCRIPTIONS_EDIT_MISMATCH
+            return self._t(self.KEY_SUBSCRIPTIONS_EDIT_MISMATCH)
         return await self._apply_subscription_update(
             phone,
             session,
@@ -2895,8 +2556,8 @@ class WhatsAppTenantConsoleService:
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
-        if msg.strip().lower() != "confirmar":
-            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        if msg.strip().lower() not in ("confirmar", "confirm"):
+            return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
         subscription_id = self._safe_uuid(session.selected_tenant_id)
         if (
             subscription_id is None
@@ -2904,15 +2565,15 @@ class WhatsAppTenantConsoleService:
             or db is None
             or self._subscription_service is None
         ):
-            return "❌ No se pudo cancelar la suscripción."
+            return self._t("wa.tenant.errors.subscription_cancel_failed")
         cancelled = await self._subscription_service.cancel_subscription(
             db, tenant_id, subscription_id
         )
         if cancelled is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.SUBSCRIPTIONS_CANCEL_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_CANCEL_SUCCESS))
 
     async def _handle_subscriptions_reactivate_duration(
         self,
@@ -2926,7 +2587,7 @@ class WhatsAppTenantConsoleService:
         del phone, tenant_id, db
         duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
         if duration_type is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         session.temp_data = {
             "duration_type": duration_type,
             "starts_at": datetime.now(timezone.utc).isoformat(),
@@ -2935,7 +2596,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CUSTOM_DATE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_REACTIVATE_CUSTOM_DATE_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_CUSTOM_DATE_PROMPT)
         session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CONFIRM
         if session_service is not None:
             await session_service.save_session(session)
@@ -2953,7 +2614,7 @@ class WhatsAppTenantConsoleService:
         del phone, tenant_id, db
         expires_at = self._parse_iso_date(msg)
         if expires_at is None:
-            return "❌ Fecha inválida. Usa formato YYYY-MM-DD."
+            return self._t("wa.tenant.errors.invalid_date")
         session.temp_data["expires_at"] = expires_at.isoformat()
         session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CONFIRM
         if session_service is not None:
@@ -2969,8 +2630,8 @@ class WhatsAppTenantConsoleService:
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
-        if msg.strip().lower() != "confirmar":
-            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        if msg.strip().lower() not in ("confirmar", "confirm"):
+            return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
         subscription_id = self._safe_uuid(session.selected_tenant_id)
         if (
             subscription_id is None
@@ -2978,7 +2639,7 @@ class WhatsAppTenantConsoleService:
             or db is None
             or self._subscription_service is None
         ):
-            return "❌ No se pudo reactivar la suscripción."
+            return self._t("wa.tenant.errors.subscription_reactivate_failed")
         duration_type = session.temp_data["duration_type"]
         starts_at = datetime.fromisoformat(session.temp_data["starts_at"])
         expires_at_raw = session.temp_data.get("expires_at")
@@ -2994,10 +2655,10 @@ class WhatsAppTenantConsoleService:
             expires_at=expires_at,
         )
         if reactivated is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.SUBSCRIPTIONS_REACTIVATE_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_SUCCESS))
 
     async def _handle_subscriptions_renew_duration(
         self,
@@ -3011,13 +2672,13 @@ class WhatsAppTenantConsoleService:
         del phone
         duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
         if duration_type is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         session.temp_data = {"duration_type": duration_type}
         if duration_type == "custom":
             session.step = self.SUBSCRIPTIONS_STEP_RENEW_CUSTOM_DATE
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_RENEW_CUSTOM_DATE_PROMPT
+            return self._t(self.KEY_SUBSCRIPTIONS_RENEW_CUSTOM_DATE_PROMPT)
         session.step = self.SUBSCRIPTIONS_STEP_RENEW_CONFIRM
         if session_service is not None:
             await session_service.save_session(session)
@@ -3035,7 +2696,7 @@ class WhatsAppTenantConsoleService:
         del phone
         expires_at = self._parse_iso_date(msg)
         if expires_at is None:
-            return "❌ Fecha inválida. Usa formato YYYY-MM-DD."
+            return self._t("wa.tenant.errors.invalid_date")
         session.temp_data["expires_at"] = expires_at.isoformat()
         session.step = self.SUBSCRIPTIONS_STEP_RENEW_CONFIRM
         if session_service is not None:
@@ -3051,8 +2712,8 @@ class WhatsAppTenantConsoleService:
         tenant_id: UUID | None,
         db: AsyncSession | None,
     ) -> str:
-        if msg.strip().lower() != "confirmar":
-            return self.SUBSCRIPTIONS_CONFIRM_REPROMPT
+        if msg.strip().lower() not in ("confirmar", "confirm"):
+            return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
         subscription_id = self._safe_uuid(session.selected_tenant_id)
         if (
             subscription_id is None
@@ -3060,7 +2721,7 @@ class WhatsAppTenantConsoleService:
             or db is None
             or self._subscription_service is None
         ):
-            return "❌ No se pudo renovar la suscripción."
+            return self._t("wa.tenant.errors.subscription_renew_failed")
         duration_type = session.temp_data["duration_type"]
         expires_at_raw = session.temp_data.get("expires_at")
         expires_at = (
@@ -3074,10 +2735,10 @@ class WhatsAppTenantConsoleService:
             expires_at=expires_at,
         )
         if renewed is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.SUBSCRIPTIONS_RENEW_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_RENEW_SUCCESS))
 
     async def _get_selected_subscription(
         self,
@@ -3107,12 +2768,12 @@ class WhatsAppTenantConsoleService:
         **changes: Any,
     ) -> str:
         if tenant_id is None or db is None or self._subscription_service is None:
-            return "❌ No se pudo actualizar la suscripción."
+            return self._t("wa.tenant.errors.subscription_update_failed")
         from app.schemas.subscription import SubscriptionUpdate
 
         selected_id = self._safe_uuid(session.selected_tenant_id)
         if selected_id is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
         normalized_changes = {
             key: (None if value == "" else value)
@@ -3125,13 +2786,15 @@ class WhatsAppTenantConsoleService:
                 selected_id,
                 SubscriptionUpdate(**normalized_changes),
             )
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if updated is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.SUBSCRIPTIONS_EDIT_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_EDIT_SUCCESS))
 
     def _build_subscription_create_confirm(self, data: dict[str, Any]) -> str:
         starts_at = datetime.fromisoformat(data["starts_at"])
@@ -3141,7 +2804,7 @@ class WhatsAppTenantConsoleService:
             if expires_at_raw
             else self._calculate_subscription_expiry(starts_at, data["duration_type"])
         )
-        return self.SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE.format(
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE, 
             client_name=data.get("client_name", "—"),
             service_name=data.get("service_name", "—"),
             plan_name=data.get("plan_name", "—"),
@@ -3162,7 +2825,7 @@ class WhatsAppTenantConsoleService:
             if expires_at_raw
             else self._calculate_subscription_expiry(starts_at, data["duration_type"])
         )
-        return self.SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE.format(
+        return self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE, 
             duration_label=self._format_subscription_duration(data["duration_type"]),
             starts_at=self._format_short_date(starts_at),
             expires_at=self._format_short_date(expires_at),
@@ -3176,7 +2839,7 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         subscription = await self._get_selected_subscription(session, tenant_id, db)
         if subscription is None:
-            return self.SUBSCRIPTIONS_INVALID_SELECTION
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         duration_type = session.temp_data["duration_type"]
         expires_at_raw = session.temp_data.get("expires_at")
         base_expires = subscription.expires_at
@@ -3187,7 +2850,7 @@ class WhatsAppTenantConsoleService:
             if expires_at_raw
             else self._calculate_subscription_expiry(base_expires, duration_type)
         )
-        return self.SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE.format(
+        return self._t(self.KEY_SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE, 
             duration_label=self._format_subscription_duration(duration_type),
             expires_at=self._format_short_date(expires_at),
         )
@@ -3212,7 +2875,7 @@ class WhatsAppTenantConsoleService:
             session.step = self.PROFILE_STEP_ACTION
             session.temp_data = {}
             await session_service.save_session(session)
-        return self.PROFILE_MENU
+        return self._t(self.KEY_PROFILE_MENU)
 
     async def _handle_profile_action(
         self,
@@ -3232,9 +2895,12 @@ class WhatsAppTenantConsoleService:
         elif msg == "3":
             # Change password
             return await self._start_profile_change_password(phone, session, session_service)
+        elif msg == "4":
+            # Change language
+            return await self._start_profile_change_locale(phone, session, session_service)
         elif msg == "0":
             return self._with_main_menu("")
-        return self.FALLBACK_NO_FLOW
+        return self._t(self.KEY_FALLBACK_NO_FLOW)
 
     async def _show_profile(
         self,
@@ -3244,14 +2910,14 @@ class WhatsAppTenantConsoleService:
         db: AsyncSession | None,
     ) -> str:
         if user_id is None or db is None or self._profile_service is None:
-            return "❌ No se pudo obtener el perfil."
+            return self._t("wa.tenant.errors.profile_load_failed")
         from app.crud import users as user_crud
         user = await user_crud.get(db, user_id)
         if user is None:
-            return "❌ Usuario no encontrado."
+            return self._t("wa.tenant.errors.user_not_found")
         profile = await self._profile_service.get_profile(db, user)
         if profile is None:
-            return "❌ Perfil no encontrado."
+            return self._t("wa.tenant.errors.profile_not_found")
         return self._format_profile_detail(profile, user.username)
 
     async def _start_profile_edit(
@@ -3265,7 +2931,7 @@ class WhatsAppTenantConsoleService:
         session.temp_data = {}
         if session_service is not None:
             await session_service.save_session(session)
-        return self.PROFILE_EDIT_FIELD_PROMPT
+        return self._t(self.KEY_PROFILE_EDIT_FIELD_PROMPT)
 
     async def _handle_profile_edit_field(
         self,
@@ -3276,10 +2942,10 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         if msg == "0":
             await session_service.clear_session(f"admin:{phone}")
-            return self.MAIN_MENU
+            return self._t(self.KEY_MAIN_MENU)
         field = self.PROFILE_EDIT_FIELD_MAP.get(msg)
         if field is None:
-            return self.PROFILE_EDIT_ERROR_INVALID_FIELD
+            return self._t(self.KEY_PROFILE_EDIT_ERROR_INVALID_FIELD)
         session.temp_data["field"] = field
         session.step = self.PROFILE_STEP_EDIT_VALUE
         if session_service is not None:
@@ -3298,22 +2964,24 @@ class WhatsAppTenantConsoleService:
         field = session.temp_data.get("field", "")
         new_value = msg.strip()
         if user_id is None or db is None or self._profile_service is None:
-            return "❌ No se pudo actualizar el perfil."
+            return self._t("wa.tenant.errors.profile_update_failed")
         from app.crud import users as user_crud
         user = await user_crud.get(db, user_id)
         if user is None:
-            return "❌ Usuario no encontrado."
+            return self._t("wa.tenant.errors.user_not_found")
         from app.schemas.me import ProfileUpdate
         payload = ProfileUpdate(**{field: new_value})
         try:
             profile = await self._profile_service.update_profile(db, user, payload)
+        except UserFacingError as exc:
+            return "❌ " + translate_error(_current_locale.get(), exc)
         except ValueError as exc:
             return "❌ " + str(exc)
         if profile is None:
-            return "❌ No se pudo actualizar el perfil."
+            return self._t("wa.tenant.errors.profile_update_failed")
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.PROFILE_EDIT_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_PROFILE_EDIT_SUCCESS))
 
     async def _start_profile_change_password(
         self,
@@ -3326,7 +2994,7 @@ class WhatsAppTenantConsoleService:
         session.temp_data = {}
         if session_service is not None:
             await session_service.save_session(session)
-        return self.PROFILE_CHANGE_PASSWORD_PROMPT_OLD
+        return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_OLD)
 
     async def _handle_profile_change_password_old(
         self,
@@ -3339,12 +3007,12 @@ class WhatsAppTenantConsoleService:
     ) -> str:
         old_password = msg.strip()
         if not old_password:
-            return self.PROFILE_CHANGE_PASSWORD_PROMPT_OLD
+            return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_OLD)
         session.temp_data["old_password"] = old_password
         session.step = self.PROFILE_STEP_CHANGE_PASSWORD_NEW
         if session_service is not None:
             await session_service.save_session(session)
-        return self.PROFILE_CHANGE_PASSWORD_PROMPT_NEW
+        return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_NEW)
 
     async def _handle_profile_change_password_new(
         self,
@@ -3358,16 +3026,68 @@ class WhatsAppTenantConsoleService:
         new_password = msg.strip()
         old_password = session.temp_data.get("old_password", "")
         if len(new_password) < 6:
-            return "❌ La contraseña debe tener al menos 6 caracteres.\n\n" + self.PROFILE_CHANGE_PASSWORD_PROMPT_NEW
+            return self._t("wa.tenant.errors.password_short") + "\n\n" + self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_NEW)
         if user_id is None or db is None or self._profile_service is None:
-            return "❌ No se pudo cambiar la contraseña."
+            return self._t("wa.tenant.errors.password_change_failed")
         from app.crud import users as user_crud
         user = await user_crud.get(db, user_id)
         if user is None:
-            return "❌ Usuario no encontrado."
+            return self._t("wa.tenant.errors.user_not_found")
         success = await self._profile_service.change_password(db, user, old_password, new_password)
         if not success:
-            return self.PROFILE_CHANGE_PASSWORD_ERROR_OLD
+            return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_ERROR_OLD)
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self.PROFILE_CHANGE_PASSWORD_SUCCESS)
+        return self._with_main_menu(self._t(self.KEY_PROFILE_CHANGE_PASSWORD_SUCCESS))
+
+    async def _start_profile_change_locale(
+        self,
+        phone: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        """Start the locale change flow."""
+        current_locale = _current_locale.get()
+        current_locale_name = LOCALE_NAMES.get(current_locale, current_locale)
+        if session_service is not None:
+            session.flow = self.PROFILE_FLOW
+            session.step = self.PROFILE_STEP_CHANGE_LOCALE_SELECT
+            await session_service.save_session(session)
+        return self._t(self.KEY_PROFILE_LOCALE_SELECT, current_locale=current_locale_name)
+
+    async def _handle_profile_change_locale_select(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+        user_id: UUID | None,
+        db: AsyncSession | None,
+    ) -> str:
+        """Handle locale selection."""
+        if msg == "0":
+            return self._with_main_menu("")
+        if msg not in ("1", "2"):
+            return self._t(self.KEY_FALLBACK_NO_FLOW)
+        
+        new_locale = "en" if msg == "1" else "es"
+        
+        if user_id is not None and db is not None:
+            # Update tenant locale directly — ProfileService expects User, not UUID
+            from app.models import Tenant
+            from sqlalchemy import update as sa_update
+            await db.execute(
+                sa_update(Tenant).where(Tenant.owner_user_id == user_id).values(locale=new_locale)
+            )
+            await db.commit()
+        
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        
+        # Show confirmation in the new locale
+        token = _current_locale.set(new_locale)
+        try:
+            human_name = LOCALE_NAMES.get(new_locale, new_locale)
+            return self._with_main_menu(_i18n_t(new_locale, "wa.tenant.profile.locale_changed", locale_name=human_name))
+        finally:
+            _current_locale.reset(token)

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import restore_rls_context
+from app.core.errors import UserFacingError
 from app.models import Plan, Service
 from app.schemas.catalog import PlanCreate, PlanUpdate, ServiceCreate, ServiceUpdate
 
@@ -20,12 +21,12 @@ def _clean_name(name: str) -> str:
 
 
 class CatalogService:
-    async def _commit_catalog_change(self, db: AsyncSession, conflict_message: str) -> None:
+    async def _commit_catalog_change(self, db: AsyncSession, err_code: str) -> None:
         try:
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError(conflict_message) from exc
+            raise UserFacingError(err_code) from exc
 
     async def list_services(self, db: AsyncSession, tenant_id: UUID) -> list[Service]:
         result = await db.execute(select(Service).where(Service.tenant_id == tenant_id).order_by(Service.created_at.desc()))
@@ -44,10 +45,10 @@ class CatalogService:
     async def create_service(self, db: AsyncSession, tenant_id: UUID, payload: ServiceCreate) -> Service:
         name = _clean_name(payload.name)
         if await self._service_name_exists(db, tenant_id, name):
-            raise ValueError("Service name already exists")
+            raise UserFacingError("service_name_already_exists")
         service = Service(tenant_id=tenant_id, name=name)
         db.add(service)
-        await self._commit_catalog_change(db, "Service name already exists")
+        await self._commit_catalog_change(db, "service_name_already_exists")
         await restore_rls_context(db)
         await db.refresh(service)
         return service
@@ -59,9 +60,9 @@ class CatalogService:
         if payload.name is not None:
             name = _clean_name(payload.name)
             if await self._service_name_exists(db, tenant_id, name, service_id):
-                raise ValueError("Service name already exists")
+                raise UserFacingError("service_name_already_exists")
             service.name = name
-        await self._commit_catalog_change(db, "Service name already exists")
+        await self._commit_catalog_change(db, "service_name_already_exists")
         await restore_rls_context(db)
         await db.refresh(service)
         return service
@@ -95,10 +96,10 @@ class CatalogService:
             return None
         name = _clean_name(payload.name)
         if await self._plan_name_exists(db, tenant_id, service_id, name):
-            raise ValueError("Plan name already exists")
+            raise UserFacingError("plan_name_already_exists")
         plan = Plan(tenant_id=tenant_id, service_id=service_id, name=name)
         db.add(plan)
-        await self._commit_catalog_change(db, "Plan name already exists")
+        await self._commit_catalog_change(db, "plan_name_already_exists")
         await restore_rls_context(db)
         await db.refresh(plan)
         return plan
@@ -110,9 +111,9 @@ class CatalogService:
         if payload.name is not None:
             name = _clean_name(payload.name)
             if await self._plan_name_exists(db, tenant_id, service_id, name, plan_id):
-                raise ValueError("Plan name already exists")
+                raise UserFacingError("plan_name_already_exists")
             plan.name = name
-        await self._commit_catalog_change(db, "Plan name already exists")
+        await self._commit_catalog_change(db, "plan_name_already_exists")
         await restore_rls_context(db)
         await db.refresh(plan)
         return plan

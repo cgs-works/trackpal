@@ -3,15 +3,18 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useI18nStore } from '../stores/i18n'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const i18nStore = useI18nStore()
 
 const dashboard = ref(null)
 const profile = ref({
   full_name: '',
   email: '',
   phone: '',
+  locale: 'en',
 })
 const passwordForm = ref({
   old_password: '',
@@ -40,10 +43,6 @@ const isEditingClient = computed(() => !!clientForm.value.id)
 const username = computed(() => authStore.username || authStore.user?.username || 'Usuario')
 const isMasterSupport = computed(() => authStore.role === 'master' && !!authStore.activeTenantId)
 const displayName = computed(() => profile.value.full_name || dashboard.value?.full_name || username.value)
-const dashboardMessage = computed(() => {
-  if (isMasterSupport.value) return 'Estás gestionando el catálogo de este tenant en modo soporte.'
-  return dashboard.value?.message || 'El dashboard está en construcción.'
-})
 
 function getApiError(error, fallback) {
   const detail = error.response?.data?.detail
@@ -58,6 +57,7 @@ function setProfile(data) {
     full_name: data?.full_name || '',
     email: data?.email || '',
     phone: data?.phone || '',
+    locale: data?.locale || 'en',
   }
 }
 
@@ -87,7 +87,7 @@ async function loadClients() {
     const response = await api.get('/clients')
     clients.value = response.data || []
   } catch (error) {
-    clientError.value = getClientError(error, 'No se pudo cargar los clientes.')
+    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_load'))
   } finally {
     isLoadingClients.value = false
   }
@@ -122,7 +122,7 @@ async function saveClient() {
         local_username: clientForm.value.local_username,
         phone: clientForm.value.phone,
       })
-      clientMessage.value = `Cliente actualizado. Login: ${response.data.username}`
+      clientMessage.value = i18nStore.t('frontend.clients.updated', { login: response.data.username })
     } else {
       const response = await api.post('/clients', {
         full_name: clientForm.value.full_name,
@@ -130,12 +130,12 @@ async function saveClient() {
         phone: clientForm.value.phone,
         password: clientForm.value.password,
       })
-      clientMessage.value = `Cliente creado. Login: ${response.data.username}`
+      clientMessage.value = i18nStore.t('frontend.clients.created', { login: response.data.username })
     }
     resetClientForm()
     await loadClients()
   } catch (error) {
-    clientError.value = getClientError(error, 'No se pudo guardar el cliente.')
+    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_save'))
   } finally {
     isSavingClient.value = false
   }
@@ -150,10 +150,10 @@ async function toggleClientStatus(client) {
 
   try {
     const response = await api.patch(endpoint)
-    clientMessage.value = client.is_active ? 'Cliente desactivado.' : 'Cliente activado.'
+    clientMessage.value = client.is_active ? i18nStore.t('frontend.clients.deactivated') : i18nStore.t('frontend.clients.activated')
     clients.value = clients.value.map((entry) => (entry.id === client.id ? response.data : entry))
   } catch (error) {
-    clientError.value = getClientError(error, 'No se pudo actualizar el estado del cliente.')
+    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_toggle_status'))
   }
 }
 
@@ -162,20 +162,20 @@ async function deleteClient(client) {
   clientMessage.value = ''
 
   if (client.is_active) {
-    clientError.value = 'No se puede eliminar un cliente activo. Desactívalo primero.'
+    clientError.value = i18nStore.t('frontend.clients.cannot_delete_active')
     return
   }
 
-  if (!window.confirm(`Eliminar cliente ${client.full_name}?`)) {
+  if (!window.confirm(i18nStore.t('frontend.clients.confirm_delete', { name: client.full_name }))) {
     return
   }
 
   try {
     await api.delete(`/clients/${client.id}`)
-    clientMessage.value = 'Cliente eliminado.'
+    clientMessage.value = i18nStore.t('frontend.clients.deleted')
     await loadClients()
   } catch (error) {
-    clientError.value = getClientError(error, 'No se pudo eliminar el cliente.')
+    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_delete'))
   }
 }
 
@@ -205,7 +205,7 @@ async function loadDashboard() {
       await loadClients()
     }
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo cargar el dashboard.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.dashboard.error_load'))
   } finally {
     isLoading.value = false
   }
@@ -234,31 +234,31 @@ async function createService() {
     serviceName.value = ''
     selectedServiceId.value = response.data.id
     await loadServices()
-    catalogMessage.value = 'Servicio creado.'
+    catalogMessage.value = i18nStore.t('frontend.catalog.service_created')
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo crear el servicio.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_create_service'))
   }
 }
 
 async function renameService(service) {
-  const name = window.prompt('Nuevo nombre del servicio', service.name)
+  const name = window.prompt(i18nStore.t('frontend.catalog.rename_service_prompt'), service.name)
   if (!name) return
   try {
     await api.put(`/catalog/services/${service.id}`, { name })
     await loadServices()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo actualizar el servicio.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_update_service'))
   }
 }
 
 async function deleteService(service) {
-  if (!window.confirm(`Eliminar ${service.name}? También se eliminarán sus planes.`)) return
+  if (!window.confirm(i18nStore.t('frontend.catalog.delete_service_confirm', { name: service.name }))) return
   try {
     await api.delete(`/catalog/services/${service.id}`)
     if (selectedServiceId.value === service.id) selectedServiceId.value = ''
     await loadServices()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo eliminar el servicio.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_service'))
   }
 }
 
@@ -269,28 +269,28 @@ async function createPlan() {
     planName.value = ''
     await loadPlans()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo crear el plan.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_create_plan'))
   }
 }
 
 async function renamePlan(plan) {
-  const name = window.prompt('Nuevo nombre del plan', plan.name)
+  const name = window.prompt(i18nStore.t('frontend.catalog.rename_plan_prompt'), plan.name)
   if (!name) return
   try {
     await api.put(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`, { name })
     await loadPlans()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo actualizar el plan.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_update_plan'))
   }
 }
 
 async function deletePlan(plan) {
-  if (!window.confirm(`Eliminar plan ${plan.name}?`)) return
+  if (!window.confirm(i18nStore.t('frontend.catalog.delete_plan_confirm', { name: plan.name }))) return
   try {
     await api.delete(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`)
     await loadPlans()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo eliminar el plan.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_plan'))
   }
 }
 
@@ -308,9 +308,11 @@ async function saveProfile() {
   try {
     const response = await api.put('/me', profile.value)
     setProfile(response.data || profile.value)
-    profileSuccess.value = 'Perfil actualizado correctamente.'
+    profileSuccess.value = i18nStore.t('frontend.profile.saved')
+    // Reload catalog after locale change
+    await i18nStore.loadCatalog()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo actualizar el perfil.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.profile.error_update'))
   } finally {
     isSavingProfile.value = false
   }
@@ -328,9 +330,9 @@ async function changePassword() {
       old_password: '',
       new_password: '',
     }
-    passwordSuccess.value = 'Contraseña actualizada correctamente.'
+    passwordSuccess.value = i18nStore.t('frontend.profile.password_updated')
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudo actualizar la contraseña.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.profile.error_password'))
   } finally {
     isSavingPassword.value = false
   }
@@ -354,58 +356,57 @@ onMounted(loadDashboard)
 
       <div class="user-actions">
         <span class="username">{{ username }}</span>
-        <button v-if="authStore.role === 'master' && authStore.activeTenantId" class="button button-secondary" type="button" @click="exitTenantContext">Salir de tenant</button>
-        <button class="button button-secondary" type="button" @click="handleLogout">Cerrar sesión</button>
+        <button v-if="authStore.role === 'master' && authStore.activeTenantId" class="button button-secondary" type="button" @click="exitTenantContext">{{ i18nStore.t('frontend.dashboard.tenant.exit_tenant') }}</button>
+        <button class="button button-secondary" type="button" @click="handleLogout">{{ i18nStore.t('frontend.dashboard.tenant.logout') }}</button>
       </div>
     </header>
 
     <section v-if="isLoading" class="content-card loading-card" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
-      <p>Cargando dashboard...</p>
+      <p>{{ i18nStore.t('frontend.dashboard.loading') }}</p>
     </section>
 
     <template v-else>
       <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
 
       <section class="content-card welcome-card">
-        <p class="eyebrow">{{ isMasterSupport ? 'Soporte Master' : 'Dashboard de tenant' }}</p>
-        <h2>Bienvenido, {{ displayName }}</h2>
-        <p v-if="isMasterSupport">Estás gestionando el catálogo de {{ displayName }} como Master.</p>
-        <p v-else>Has iniciado sesión como {{ displayName }}. El dashboard está en construcción.</p>
-        <p class="placeholder-message">{{ dashboardMessage }}</p>
+        <p class="eyebrow">{{ isMasterSupport ? 'Soporte Master' : i18nStore.t('frontend.dashboard.tenant.title') }}</p>
+        <h2>{{ i18nStore.t('frontend.dashboard.tenant.welcome', { name: displayName }) }}</h2>
+        <p v-if="isMasterSupport">{{ i18nStore.t('frontend.dashboard.master_support') }}</p>
+        <p v-else>{{ i18nStore.t('frontend.dashboard.tenant.under_construction', { name: displayName }) }}</p>
         <button class="button button-primary" type="button" @click="router.push('/admin/subscriptions')" style="margin-top: 16px;">
-          Ir a Suscripciones
+          {{ i18nStore.t('frontend.dashboard.tenant.go_subscriptions') }}
         </button>
       </section>
 
       <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
-            <p class="eyebrow">Catálogo</p>
-            <h2>Servicios y planes</h2>
+            <p class="eyebrow">{{ i18nStore.t('frontend.catalog.section_title') }}</p>
+            <h2>{{ i18nStore.t('frontend.catalog.section_heading') }}</h2>
           </div>
         </div>
         <p v-if="catalogMessage" class="alert alert-success">{{ catalogMessage }}</p>
         <form class="form-grid" @submit.prevent="createService">
-          <label>Nuevo servicio<input v-model.trim="serviceName" type="text" required /></label>
-          <div class="form-actions"><button class="button button-primary" type="submit">Crear servicio</button></div>
+          <label>{{ i18nStore.t('frontend.catalog.new_service') }}<input v-model.trim="serviceName" type="text" required /></label>
+          <div class="form-actions"><button class="button button-primary" type="submit">{{ i18nStore.t('frontend.catalog.create_service') }}</button></div>
         </form>
         <ul>
           <li v-for="service in services" :key="service.id">
             <button class="link-button" type="button" @click="selectedServiceId = service.id; loadPlans()">{{ service.name }}</button>
-            <button class="link-button" type="button" @click="renameService(service)">Editar</button>
-            <button class="link-button danger" type="button" @click="deleteService(service)">Eliminar</button>
+            <button class="link-button" type="button" @click="renameService(service)">{{ i18nStore.t('frontend.catalog.edit') }}</button>
+            <button class="link-button danger" type="button" @click="deleteService(service)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
           </li>
         </ul>
         <form v-if="selectedServiceId" class="form-grid" @submit.prevent="createPlan">
-          <label>Nuevo plan<input v-model.trim="planName" type="text" required /></label>
-          <div class="form-actions"><button class="button button-primary" type="submit">Crear plan</button></div>
+          <label>{{ i18nStore.t('frontend.catalog.new_plan') }}<input v-model.trim="planName" type="text" required /></label>
+          <div class="form-actions"><button class="button button-primary" type="submit">{{ i18nStore.t('frontend.catalog.create_plan') }}</button></div>
         </form>
         <ul v-if="selectedServiceId">
           <li v-for="plan in plans" :key="plan.id">
             {{ plan.name }}
-            <button class="link-button" type="button" @click="renamePlan(plan)">Editar</button>
-            <button class="link-button danger" type="button" @click="deletePlan(plan)">Eliminar</button>
+            <button class="link-button" type="button" @click="renamePlan(plan)">{{ i18nStore.t('frontend.catalog.edit') }}</button>
+            <button class="link-button danger" type="button" @click="deletePlan(plan)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
           </li>
         </ul>
       </section>
@@ -413,8 +414,8 @@ onMounted(loadDashboard)
       <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
-            <p class="eyebrow">Clientes</p>
-            <h2>Gestiona accesos de clientes</h2>
+            <p class="eyebrow">{{ i18nStore.t('frontend.clients.section_title') }}</p>
+            <h2>{{ i18nStore.t('frontend.clients.section_heading') }}</h2>
           </div>
         </div>
 
@@ -423,17 +424,17 @@ onMounted(loadDashboard)
 
         <form class="form-grid" @submit.prevent="saveClient">
           <label>
-            Nombre completo
+            {{ i18nStore.t('frontend.profile.full_name') }}
             <input v-model.trim="clientForm.full_name" type="text" required />
           </label>
 
           <label>
-            Usuario local
+            {{ i18nStore.t('frontend.clients.section_title') }} local
             <input v-model.trim="clientForm.local_username" type="text" required />
           </label>
 
           <label>
-            Teléfono
+            {{ i18nStore.t('frontend.profile.phone') }}
             <input v-model.trim="clientForm.phone" type="tel" />
           </label>
 
@@ -443,25 +444,25 @@ onMounted(loadDashboard)
           </label>
 
           <div class="form-actions">
-            <button class="button button-secondary" type="button" @click="cancelClientEdit">Limpiar</button>
+            <button class="button button-secondary" type="button" @click="cancelClientEdit">{{ i18nStore.t('frontend.clients.clear') }}</button>
             <button class="button button-primary" type="submit" :disabled="isSavingClient">
-              {{ isSavingClient ? 'Guardando...' : (isEditingClient ? 'Actualizar cliente' : 'Crear cliente') }}
+              {{ isSavingClient ? i18nStore.t('frontend.clients.saving') : (isEditingClient ? i18nStore.t('frontend.clients.update') : i18nStore.t('frontend.clients.create')) }}
             </button>
           </div>
         </form>
 
-        <div v-if="isLoadingClients" class="empty-state">Cargando clientes...</div>
-        <div v-else-if="!clients.length" class="empty-state">No hay clientes registrados</div>
+        <div v-if="isLoadingClients" class="empty-state">{{ i18nStore.t('frontend.clients.loading') }}</div>
+        <div v-else-if="!clients.length" class="empty-state">{{ i18nStore.t('frontend.clients.no_clients') }}</div>
         <div v-else class="table-wrapper">
           <table>
             <thead>
               <tr>
-                <th>Full Name</th>
+                <th>{{ i18nStore.t('frontend.profile.full_name') }}</th>
                 <th>Local Username</th>
                 <th>Technical Username</th>
-                <th>Phone</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>{{ i18nStore.t('frontend.profile.phone') }}</th>
+                <th>{{ i18nStore.t('frontend.subscriptions.status') }}</th>
+                <th>{{ i18nStore.t('frontend.subscriptions.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -472,17 +473,17 @@ onMounted(loadDashboard)
                 <td>{{ client.phone || '—' }}</td>
                 <td>
                   <span class="status-badge" :class="client.is_active ? 'active' : 'inactive'">
-                    {{ client.is_active ? 'Active' : 'Inactive' }}
+                    {{ client.is_active ? i18nStore.t('frontend.dashboard.client.status_active') : i18nStore.t('frontend.dashboard.client.status_inactive') }}
                   </span>
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button class="link-button" type="button" @click="editClient(client)">Edit</button>
+                    <button class="link-button" type="button" @click="editClient(client)">{{ i18nStore.t('frontend.clients.edit') }}</button>
                     <button class="link-button" type="button" @click="toggleClientStatus(client)">
-                      {{ client.is_active ? 'Deactivate' : 'Activate' }}
+                      {{ client.is_active ? i18nStore.t('frontend.clients.deactivate') : i18nStore.t('frontend.clients.activate') }}
                     </button>
-                    <button class="link-button" type="button" @click="router.push('/admin/subscriptions?client_id=' + client.id)">Suscripciones</button>
-                    <button class="link-button danger" type="button" @click="deleteClient(client)">Delete</button>
+                    <button class="link-button" type="button" @click="router.push('/admin/subscriptions?client_id=' + client.id)">{{ i18nStore.t('frontend.clients.subscriptions') }}</button>
+                    <button class="link-button danger" type="button" @click="deleteClient(client)">{{ i18nStore.t('frontend.clients.delete') }}</button>
                   </div>
                 </td>
               </tr>
@@ -494,8 +495,8 @@ onMounted(loadDashboard)
       <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
-            <p class="eyebrow">Perfil</p>
-            <h2>Gestiona tu información</h2>
+            <p class="eyebrow">{{ i18nStore.t('frontend.profile.section_title') }}</p>
+            <h2>{{ i18nStore.t('frontend.profile.section_heading') }}</h2>
           </div>
         </div>
 
@@ -503,23 +504,31 @@ onMounted(loadDashboard)
 
         <form class="form-grid" @submit.prevent="saveProfile">
           <label>
-            Nombre completo
+            {{ i18nStore.t('frontend.profile.full_name') }}
             <input v-model="profile.full_name" type="text" autocomplete="name" required />
           </label>
 
           <label>
-            Email
+            {{ i18nStore.t('frontend.profile.email') }}
             <input v-model="profile.email" type="email" autocomplete="email" required />
           </label>
 
           <label>
-            Teléfono
+            {{ i18nStore.t('frontend.profile.phone') }}
             <input v-model="profile.phone" type="tel" autocomplete="tel" />
+          </label>
+
+          <label>
+            {{ i18nStore.t('frontend.profile.locale') }}
+            <select v-model="profile.locale">
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </select>
           </label>
 
           <div class="form-actions">
             <button class="button button-primary" type="submit" :disabled="isSavingProfile">
-              {{ isSavingProfile ? 'Guardando...' : 'Guardar perfil' }}
+              {{ isSavingProfile ? i18nStore.t('frontend.profile.saving') : i18nStore.t('frontend.profile.save') }}
             </button>
           </div>
         </form>
@@ -528,8 +537,8 @@ onMounted(loadDashboard)
       <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">
           <div>
-            <p class="eyebrow">Seguridad</p>
-            <h2>Cambiar contraseña</h2>
+            <p class="eyebrow">{{ i18nStore.t('frontend.dashboard.client.security') }}</p>
+            <h2>{{ i18nStore.t('frontend.dashboard.client.change_password') }}</h2>
           </div>
         </div>
 
@@ -537,18 +546,18 @@ onMounted(loadDashboard)
 
         <form class="form-grid" @submit.prevent="changePassword">
           <label>
-            Contraseña actual
+            {{ i18nStore.t('frontend.dashboard.client.current_password') }}
             <input v-model="passwordForm.old_password" type="password" autocomplete="current-password" required />
           </label>
 
           <label>
-            Nueva contraseña
+            {{ i18nStore.t('frontend.dashboard.client.new_password') }}
             <input v-model="passwordForm.new_password" type="password" autocomplete="new-password" required />
           </label>
 
           <div class="form-actions">
             <button class="button button-primary" type="submit" :disabled="isSavingPassword">
-              {{ isSavingPassword ? 'Actualizando...' : 'Actualizar contraseña' }}
+              {{ isSavingPassword ? i18nStore.t('frontend.dashboard.client.updating') : i18nStore.t('frontend.dashboard.client.update_password') }}
             </button>
           </div>
         </form>

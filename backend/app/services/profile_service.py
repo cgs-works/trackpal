@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.errors import UserFacingError
 from app.core.input_validation import (
     InputValidationError,
     validate_email,
@@ -62,10 +63,10 @@ class ProfileService:
                 update_data["phone"] = validate_phone(update_data["phone"])
             # phone=None is allowed (clearing optional field)
 
-        allowed_fields = (
+        allowed_fields: set[str] = (
             {"name", "phone"}
             if user.role == "master"
-            else {"full_name", "email", "phone"}
+            else {"full_name", "email", "phone", "locale"}
         )
 
         # Duplicate check using normalized phone
@@ -73,7 +74,7 @@ class ProfileService:
             if update_data["phone"] is not None:
                 existing = await user_crud.get_by_phone(db, update_data["phone"])
                 if existing and existing[0].id != user.id:
-                    raise ValueError("Phone already registered")
+                    raise UserFacingError("profile_phone_registered")
 
         for field, value in update_data.items():
             if field in allowed_fields:

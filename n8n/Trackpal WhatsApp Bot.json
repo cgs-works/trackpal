@@ -126,7 +126,7 @@
             {
               "name": "trackpal_n8n_api_key",
               "type": "string",
-              "value": "placeholder"
+              "value": "CHANGE_ME"
             },
             {
               "name": "evolution_api_url",
@@ -136,7 +136,7 @@
             {
               "name": "evolution_api_key",
               "type": "string",
-              "value": "placeholder"
+              "value": "CHANGE_ME"
             },
             {
               "name": "default_instance",

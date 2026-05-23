@@ -4,7 +4,9 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, status, Response
 from pydantic import BaseModel
 
-from app.api.dependencies import ActiveTenantId, ApiKeyDbDep, CurrentUser, DbDep
+from app.api.dependencies import ActiveTenantId, ApiKeyDbDep, CurrentUser, DbDep, resolve_locale
+from app.core.errors import UserFacingError, translate_error
+from app.core.i18n import t as _t
 from app.schemas.subscription import (
     MarkFailedRequest,
     ReminderPendingResponse,
@@ -67,6 +69,11 @@ async def create_subscription(
     _require_tenant_or_master_in_context(current_user)
     try:
         return await subscription_service.create_subscription(db, tenant_id, payload)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -108,8 +115,9 @@ async def get_subscription(
     _require_tenant_or_master_in_context(current_user)
     sub = await subscription_service.get_subscription(db, tenant_id, subscription_id)
     if sub is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return sub
 
@@ -126,8 +134,9 @@ async def reveal_subscription_credentials(
         db, tenant_id, subscription_id
     )
     if creds is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return creds
 
@@ -145,13 +154,19 @@ async def update_subscription(
         sub = await subscription_service.update_subscription(
             db, tenant_id, subscription_id, payload
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     if sub is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return sub
 
@@ -169,13 +184,19 @@ async def patch_subscription(
         sub = await subscription_service.update_subscription(
             db, tenant_id, subscription_id, payload
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     if sub is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return sub
 
@@ -194,8 +215,9 @@ async def cancel_subscription(
         db, tenant_id, subscription_id, notes=payload.notes
     )
     if sub is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return sub
 
@@ -220,13 +242,19 @@ async def reactivate_subscription(
             expires_at=payload.expires_at,
             notes=payload.notes,
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     if sub is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return sub
 
@@ -250,13 +278,19 @@ async def renew_subscription(
             expires_at=payload.expires_at,
             notes=payload.notes,
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     if sub is None:
+        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.subscription_not_found")
         )
     return sub
 
@@ -299,6 +333,11 @@ async def update_reminder_settings(
         return await subscription_service.update_reminder_settings(
             db, tenant_id, payload
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -382,11 +421,12 @@ async def mark_reminder_sent(
     log_id: uuid.UUID,
 ):
     """Mark a reminder log as sent after n8n confirms Evolution success."""
+    locale = "en"  # API-key flow; no tenant context to resolve locale
     result = await subscription_job_service.mark_reminder_sent(db, log_id)
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Reminder log not found",
+            detail=_t(locale, "errors.reminder_log_not_found"),
         )
     return result
 
@@ -401,12 +441,13 @@ async def mark_reminder_failed(
 
     Retries up to 3 attempts before setting permanent ``failed`` status.
     """
+    locale = "en"  # API-key flow; no tenant context to resolve locale
     result = await subscription_job_service.mark_reminder_failed(
         db, log_id, reason=payload.reason
     )
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Reminder log not found",
+            detail=_t(locale, "errors.reminder_log_not_found"),
         )
     return result

@@ -2,7 +2,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Response, status
 
-from app.api.dependencies import ActiveTenantId, DbDep
+from app.api.dependencies import ActiveTenantId, DbDep, resolve_locale
+from app.core.errors import UserFacingError, translate_error
+from app.core.i18n import t as _t
 from app.schemas.catalog import PlanCreate, PlanResponse, PlanUpdate, ServiceCreate, ServiceResponse, ServiceUpdate
 from app.services.catalog_service import CatalogService
 
@@ -19,6 +21,9 @@ async def list_services(db: DbDep, tenant_id: ActiveTenantId):
 async def create_service(payload: ServiceCreate, db: DbDep, tenant_id: ActiveTenantId):
     try:
         return await catalog_service.create_service(db, tenant_id, payload)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
@@ -27,7 +32,8 @@ async def create_service(payload: ServiceCreate, db: DbDep, tenant_id: ActiveTen
 async def get_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     service = await catalog_service.get_service(db, tenant_id, service_id)
     if service is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
     return service
 
 
@@ -35,17 +41,22 @@ async def get_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
 async def update_service(service_id: UUID, payload: ServiceUpdate, db: DbDep, tenant_id: ActiveTenantId):
     try:
         service = await catalog_service.update_service(db, tenant_id, service_id, payload)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if service is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
     return service
 
 
 @router.delete("/services/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     if not await catalog_service.delete_service(db, tenant_id, service_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -53,7 +64,8 @@ async def delete_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId)
 async def list_plans(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     plans = await catalog_service.list_plans(db, tenant_id, service_id)
     if plans is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
     return plans
 
 
@@ -61,10 +73,14 @@ async def list_plans(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
 async def create_plan(service_id: UUID, payload: PlanCreate, db: DbDep, tenant_id: ActiveTenantId):
     try:
         plan = await catalog_service.create_plan(db, tenant_id, service_id, payload)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
     return plan
 
 
@@ -72,15 +88,20 @@ async def create_plan(service_id: UUID, payload: PlanCreate, db: DbDep, tenant_i
 async def update_plan(service_id: UUID, plan_id: UUID, payload: PlanUpdate, db: DbDep, tenant_id: ActiveTenantId):
     try:
         plan = await catalog_service.update_plan(db, tenant_id, service_id, plan_id, payload)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
     return plan
 
 
 @router.delete("/services/{service_id}/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_plan(service_id: UUID, plan_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     if not await catalog_service.delete_plan(db, tenant_id, service_id, plan_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
