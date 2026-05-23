@@ -242,6 +242,11 @@ async def reactivate_subscription(
             expires_at=payload.expires_at,
             notes=payload.notes,
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -273,6 +278,11 @@ async def renew_subscription(
             expires_at=payload.expires_at,
             notes=payload.notes,
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -323,6 +333,11 @@ async def update_reminder_settings(
         return await subscription_service.update_reminder_settings(
             db, tenant_id, payload
         )
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)

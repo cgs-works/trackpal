@@ -22,6 +22,7 @@ from app.models.plan import Plan
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.core.config import settings
+from app.core.errors import UserFacingError
 from app.core.security import get_password_hash
 
 
@@ -1143,3 +1144,66 @@ async def test_subscription_reminder_mark_not_found_uses_english_default(
         resp = await client.post(path, **kw)
         assert resp.status_code == 404
         assert "Reminder log not found" in resp.json()["detail"]
+
+
+# ===================================================================
+# UserFacingError translation tests for renew/reactivate
+# ===================================================================
+
+
+@pytest.mark.asyncio
+async def test_subscription_renew_userfacing_error_translated(
+    client, monkeypatch, active_tenant_user
+):
+    """renew endpoint returns translated message, not raw error code."""
+    async def _raise_userfacing(*args, **kwargs):
+        raise UserFacingError("subscription_renew_failed")
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.subscriptions.subscription_service.renew_subscription",
+        _raise_userfacing,
+    )
+
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    sub_id = "00000000-0000-0000-0000-000000000000"
+    payload = {"duration_type": "1_month"}
+
+    response = await client.post(
+        f"/api/v1/subscriptions/{sub_id}/renew",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert "subscription_renew_failed" not in detail
+    assert detail == "Failed to renew subscription"
+
+
+@pytest.mark.asyncio
+async def test_subscription_reactivate_userfacing_error_translated(
+    client, monkeypatch, active_tenant_user
+):
+    """reactivate endpoint returns translated message, not raw error code."""
+    async def _raise_userfacing(*args, **kwargs):
+        raise UserFacingError("subscription_reactivate_failed")
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.subscriptions.subscription_service.reactivate_subscription",
+        _raise_userfacing,
+    )
+
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    sub_id = "00000000-0000-0000-0000-000000000000"
+    payload = {"duration_type": "1_month"}
+
+    response = await client.post(
+        f"/api/v1/subscriptions/{sub_id}/reactivate",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert "subscription_reactivate_failed" not in detail
+    assert detail == "Failed to reactivate subscription"

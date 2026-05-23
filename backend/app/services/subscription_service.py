@@ -506,7 +506,7 @@ class SubscriptionService:
         if "recipient_mode" in update_data:
             settings.recipient_mode = update_data["recipient_mode"]
 
-        await self._commit_change(db, "Failed to update reminder settings")
+        await self._commit_change(db, "subscription_reminder_settings_failed")
         await restore_rls_context(db)
         await db.refresh(settings)
         return settings
