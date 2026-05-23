@@ -406,6 +406,7 @@ async def mark_reminder_sent(
     log_id: uuid.UUID,
 ):
     """Mark a reminder log as sent after n8n confirms Evolution success."""
+    locale = "en"  # API-key flow; no tenant context to resolve locale
     result = await subscription_job_service.mark_reminder_sent(db, log_id)
     if result is None:
         raise HTTPException(
@@ -425,6 +426,7 @@ async def mark_reminder_failed(
 
     Retries up to 3 attempts before setting permanent ``failed`` status.
     """
+    locale = "en"  # API-key flow; no tenant context to resolve locale
     result = await subscription_job_service.mark_reminder_failed(
         db, log_id, reason=payload.reason
     )

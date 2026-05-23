@@ -1112,3 +1112,34 @@ async def test_subscription_reminder_endpoint_requires_api_key(client):
         json={"reason": "test"},
     )
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_subscription_reminder_mark_not_found_uses_english_default(
+    client, monkeypatch
+):
+    """404 path uses 'en' locale, no NameError."""
+    api_key = settings.n8n_api_key
+
+    async def _none(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(
+        "app.services.subscription_job_service.SubscriptionJobService.mark_reminder_sent",
+        _none,
+    )
+    monkeypatch.setattr(
+        "app.services.subscription_job_service.SubscriptionJobService.mark_reminder_failed",
+        _none,
+    )
+
+    for path in (
+        "/api/v1/subscriptions/reminders/00000000-0000-0000-0000-000000000000/mark-sent",
+        "/api/v1/subscriptions/reminders/00000000-0000-0000-0000-000000000000/mark-failed",
+    ):
+        kw = {"headers": {"X-API-Key": api_key}}
+        if "mark-failed" in path:
+            kw["json"] = {"reason": "test"}
+        resp = await client.post(path, **kw)
+        assert resp.status_code == 404
+        assert "Reminder log not found" in resp.json()["detail"]
