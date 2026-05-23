@@ -139,6 +139,7 @@ class WhatsAppTenantConsoleService:
     SUBSCRIPTIONS_STEP_CREATE_EMAIL = "create_email"
     SUBSCRIPTIONS_STEP_CREATE_PASSWORD = "create_password"
     SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM = "create_password_confirm"
+    SUBSCRIPTIONS_STEP_CREATE_PROFILE_OPTION = "create_profile_option"
     SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME = "create_profile_name"
     SUBSCRIPTIONS_STEP_CREATE_PIN = "create_pin"
     SUBSCRIPTIONS_STEP_CREATE_PIN_CONFIRM = "create_pin_confirm"
@@ -542,6 +543,13 @@ class WhatsAppTenantConsoleService:
         "✏️ *Crear Suscripción*\n\n"
         "¿Cuál es el *nombre del perfil*?\n\n"
         "(Opcional — escribe *—* para omitir)"
+    )
+
+    SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT = (
+        "✏️ *Crear Suscripción*\n\n"
+        "¿Deseas agregar nombre de perfil y PIN de perfil?\n\n"
+        "1️⃣ Sí\n"
+        "2️⃣ No"
     )
 
     SUBSCRIPTIONS_CREATE_PIN_PROMPT = (
@@ -1307,6 +1315,10 @@ class WhatsAppTenantConsoleService:
                 )
             elif step == self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM:
                 return await self._handle_subscriptions_create_password_confirm(
+                    phone, msg, session, session_service
+                )
+            elif step == self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_OPTION:
+                return await self._handle_subscriptions_create_profile_option(
                     phone, msg, session, session_service
                 )
             elif step == self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME:
@@ -2446,10 +2458,10 @@ class WhatsAppTenantConsoleService:
         if value.lower() in self.SUBSCRIPTIONS_SKIP_WORDS:
             session.temp_data["streaming_password"] = None
             session.temp_data.pop("streaming_password_pending", None)
-            session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME
+            session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_OPTION
             if session_service is not None:
                 await session_service.save_session(session)
-            return self.SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT
+            return self.SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT
 
         session.temp_data["streaming_password_pending"] = value
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_PASSWORD_CONFIRM
@@ -2470,10 +2482,34 @@ class WhatsAppTenantConsoleService:
             return self.SUBSCRIPTIONS_CREATE_PASSWORD_MISMATCH
         session.temp_data["streaming_password"] = pending
         session.temp_data.pop("streaming_password_pending", None)
-        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_OPTION
         if session_service is not None:
             await session_service.save_session(session)
-        return self.SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT
+        return self.SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT
+
+    async def _handle_subscriptions_create_profile_option(
+        self,
+        phone: str,
+        msg: str,
+        session: Any,
+        session_service: WhatsAppSessionService | None,
+    ) -> str:
+        del phone
+        value = msg.strip()
+        if value == "1":
+            session.step = self.SUBSCRIPTIONS_STEP_CREATE_PROFILE_NAME
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_CREATE_PROFILE_NAME_PROMPT
+        if value == "2":
+            session.temp_data["profile_name"] = None
+            session.temp_data["profile_pin"] = None
+            session.temp_data.pop("profile_pin_pending", None)
+            session.step = self.SUBSCRIPTIONS_STEP_CREATE_DURATION
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self.SUBSCRIPTIONS_DURATION_PROMPT
+        return self.SUBSCRIPTIONS_INVALID_SELECTION
 
     async def _handle_subscriptions_create_profile_name(
         self,

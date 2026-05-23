@@ -870,7 +870,7 @@ class TestServiceMainMenu:
             db=object(),
             session_service=session_service,
         )
-        steps = ["2", "1", "1", "1", "nuevo@test.com", "clave123", "clave123", "Perfil Kids", "7788", "7788", "1", "CONFIRMAR"]
+        steps = ["2", "1", "1", "1", "nuevo@test.com", "clave123", "clave123", "1", "Perfil Kids", "7788", "7788", "1", "CONFIRMAR"]
         reply = ""
         for step in steps:
             reply = await console_service.process_message(
