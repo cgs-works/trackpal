@@ -48,6 +48,11 @@ async def test_create_client(client, active_tenant_user):
 
 
 async def test_create_client_duplicate_local_username(client, active_tenant_user):
+    """UserFacingError on create returns tenant-localized (es) message.
+
+    Locale resolved before service call so post-rollback RLS context loss
+    cannot cause fallback to English.
+    """
     headers = await _login_tenant(client)
     await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
     await _create_client(client, headers)
@@ -336,3 +341,48 @@ async def test_master_cannot_create_clients(client, auth_headers):
     )
 
     assert response.status_code == 403
+
+
+async def test_update_client_duplicate_local_username_spanish(client, active_tenant_user):
+    """UserFacingError on update returns tenant-localized (es) message.
+
+    Locale resolved before service call, so IntegrityError rollback in
+    service cannot clear RLS context before locale is consumed.
+    """
+    headers = await _login_tenant(client)
+    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
+
+    # Create client A
+    resp_a = await _create_client(client, headers, local_username="client_a", phone="+12015550030")
+    assert resp_a.status_code == 201
+    client_a_id = resp_a.json()["id"]
+
+    # Create client B with different local_username
+    resp_b = await _create_client(
+        client, headers, local_username="client_b", full_name="Client B", phone="+12015550031"
+    )
+    assert resp_b.status_code == 201
+
+    # Try to update client A's local_username to client B's — triggers UserFacingError
+    response = await client.put(
+        f"/api/v1/clients/{client_a_id}",
+        json={"local_username": "client_b"},
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "El nombre de usuario local ya existe"
+
+
+async def test_delete_client_active_spanish(client, active_tenant_user):
+    """UserFacingError on delete (active client) returns tenant-localized (es) message."""
+    headers = await _login_tenant(client)
+    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
+
+    create_resp = await _create_client(client, headers)
+    client_id = create_resp.json()["id"]
+
+    response = await client.delete(f"/api/v1/clients/{client_id}", headers=headers)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "No se puede eliminar un cliente activo. Desactívalo primero."

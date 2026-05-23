@@ -44,15 +44,14 @@ async def list_clients(db: DbDep, tenant_id: ActiveTenantId, current_user: Curre
 @router.post("", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
 async def create_client(payload: ClientCreate, db: DbDep, tenant_id: ActiveTenantId, current_user: CurrentUser):
     _require_tenant_user(current_user)
+    locale = await resolve_locale(db, tenant_id)
     try:
         client = await client_service.create_client(db, tenant_id, payload)
     except UserFacingError as exc:
-        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if client is None:
-        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.tenant_not_found"))
     return _client_response(client)
 
@@ -70,15 +69,14 @@ async def get_client(client_id: UUID, db: DbDep, tenant_id: ActiveTenantId, curr
 @router.put("/{client_id}", response_model=ClientResponse)
 async def update_client(client_id: UUID, payload: ClientUpdate, db: DbDep, tenant_id: ActiveTenantId, current_user: CurrentUser):
     _require_tenant_user(current_user)
+    locale = await resolve_locale(db, tenant_id)
     try:
         client = await client_service.update_client(db, tenant_id, client_id, payload)
     except UserFacingError as exc:
-        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if client is None:
-        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.client_not_found"))
     return _client_response(client)
 
@@ -106,14 +104,13 @@ async def activate_client(client_id: UUID, db: DbDep, tenant_id: ActiveTenantId,
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_client(client_id: UUID, db: DbDep, tenant_id: ActiveTenantId, current_user: CurrentUser):
     _require_tenant_user(current_user)
+    locale = await resolve_locale(db, tenant_id)
     try:
         deleted = await client_service.delete_client(db, tenant_id, client_id)
     except UserFacingError as exc:
-        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=translate_error(locale, exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     if not deleted:
-        locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.client_not_found"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
