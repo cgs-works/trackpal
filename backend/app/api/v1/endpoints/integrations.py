@@ -14,6 +14,7 @@ from app.services.catalog_service import CatalogService
 from app.services.client_service import ClientService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
 from app.services.profile_service import ProfileService
+from app.services.subscription_service import SubscriptionService
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_auth_session_service import WhatsAppAuthSessionService
 from app.services.whatsapp_console_service import WhatsAppConsoleService
@@ -309,6 +310,7 @@ async def _handle_tenant_console(
         client_service=ClientService(),
         catalog_service=CatalogService(),
         profile_service=ProfileService(),
+        subscription_service=SubscriptionService(),
     )
 
     facade = WhatsAppTenantConsoleFacade(
