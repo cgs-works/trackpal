@@ -1,13 +1,32 @@
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import CurrentUser, DbDep
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
+from app.models import Client, Tenant
 from app.schemas.me import PasswordChange, ProfileResponse, ProfileUpdate
 from app.services.profile_service import ProfileService
 
 router = APIRouter(prefix="/me", tags=["me"])
 profile_service = ProfileService()
+
+
+async def _resolve_profile_locale(db: AsyncSession, current_user) -> str:
+    if current_user.role == "tenant":
+        result = await db.execute(
+            select(Tenant.locale).where(Tenant.owner_user_id == current_user.id)
+        )
+        return result.scalar_one_or_none() or "en"
+    if current_user.role == "client":
+        result = await db.execute(
+            select(Tenant.locale)
+            .join(Client, Client.tenant_id == Tenant.id)
+            .where(Client.owner_user_id == current_user.id)
+        )
+        return result.scalar_one_or_none() or "en"
+    return "en"
 
 
 def _profile_response(user, profile) -> ProfileResponse:
@@ -34,12 +53,7 @@ def _profile_response(user, profile) -> ProfileResponse:
 async def get_profile(db: DbDep, current_user: CurrentUser):
     profile = await profile_service.get_profile(db, current_user)
     if profile is None:
-        from app.models import Tenant
-        from sqlalchemy import select
-        tenant_res = await db.execute(
-            select(Tenant.locale).where(Tenant.owner_user_id == current_user.id)
-        )
-        locale = tenant_res.scalar_one_or_none() or "en"
+        locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.profile_not_found")
         )
@@ -57,15 +71,7 @@ async def update_profile(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
         ) from exc
     except UserFacingError as exc:
-        # Resolve locale for profile errors (tenant role may have locale)
-        from app.api.dependencies import resolve_locale
-        from app.models import Tenant
-        from sqlalchemy import select
-
-        tenant_res = await db.execute(
-            select(Tenant.locale).where(Tenant.owner_user_id == current_user.id)
-        )
-        locale = tenant_res.scalar_one_or_none() or "en"
+        locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
         ) from exc
@@ -75,13 +81,7 @@ async def update_profile(
         ) from exc
 
     if profile is None:
-        # Resolve locale for profile-not-found
-        from app.models import Tenant
-        from sqlalchemy import select
-        tenant_res = await db.execute(
-            select(Tenant.locale).where(Tenant.owner_user_id == current_user.id)
-        )
-        locale = tenant_res.scalar_one_or_none() or "en"
+        locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.profile_not_found")
         )
@@ -96,12 +96,7 @@ async def change_password(
         db, current_user, payload.old_password, payload.new_password
     )
     if not changed:
-        from app.models import Tenant
-        from sqlalchemy import select
-        tenant_res = await db.execute(
-            select(Tenant.locale).where(Tenant.owner_user_id == current_user.id)
-        )
-        locale = tenant_res.scalar_one_or_none() or "en"
+        locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_t(locale, "errors.incorrect_old_password")
         )
