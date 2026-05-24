@@ -80,7 +80,7 @@ File: `backend/app/core/encryption.py`
 
 ## API
 
-File: `backend/app/api/v1/endpoints/subscriptions.py`. 4 routers.
+File: `backend/app/api/v1/endpoints/subscriptions/` (package). 4 routers defined in `router.py`.
 
 ### Subscriptions (/api/v1/subscriptions)
 
@@ -112,7 +112,9 @@ POST /pending (cursor-paginated, max 100), POST /{log_id}/mark-sent, POST /{log_
 
 ## Services
 
-### subscription_service.py
+### subscription_service/ (package)
+
+Submodules: `queries.py`, `mutations.py`, `updater.py`, `validation.py`, `helpers.py`, `constants.py`, `reminder_settings.py`.
 
 - Duration map: 1_month=30, 3_months=90, 6_months=180, 9_months=270, 1_year=365.
 - Validates IDs belong to tenant, plan belongs to service.
@@ -122,7 +124,9 @@ POST /pending (cursor-paginated, max 100), POST /{log_id}/mark-sent, POST /{log_
 - Renew extends from current expires_at.
 - Reveal decrypts, creates no event.
 
-### subscription_job_service.py
+### subscription_job_service/ (package)
+
+Submodules: `cleanup.py`, `reminder_log.py`, `reminder_payloads.py`.
 
 **Cleanup**: expire -> auto-cancel (7d) -> delete (30d). Uses tenant timezone.
 

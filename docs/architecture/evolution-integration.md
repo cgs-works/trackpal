@@ -2,7 +2,7 @@
 
 The backend integrates with Evolution API (WhatsApp Business API proxy) for instance management and chat session control.
 
-## Client (`app/services/evolution_client.py`)
+## Client (`app/services/evolution_client/`)
 
 `EvolutionClient` is a singleton instantiated at module level as `evolution_client`.
 

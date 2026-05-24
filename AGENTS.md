@@ -72,14 +72,14 @@ npm run build                                 # → dist/
 ```
 backend/
 ├── app/main.py                     # FastAPI entry, CORS, lifespan
-├── app/api/v1/endpoints/           # auth, me, dashboard, tenants, catalog, integrations
 ├── app/api/dependencies.py         # get_current_user, require_role, verify_n8n
-├── app/core/                       # config, database, security, redis, validation, phone
-├── app/models/                     # user, tenant, service, plan, profiles, refresh_session
-├── app/schemas/                    # auth, tenant, catalog, me, dashboard, whatsapp
-├── app/services/                   # auth, tenant, catalog, profile, evolution_client,
-│                                   # whatsapp_console_service (1327 LOC), session services, facade
-├── tests/                          # 22 files, ~11.6k LOC
+├── app/api/v1/endpoints/           # auth, me, dashboard, tenants, catalog, i18n, plus integrations/, subscriptions/ packages
+├── app/core/                       # config, database, security, phone, errors, plus i18n/, input_validation/, redis_client/ packages
+├── app/models/                     # user, tenant, service, plan, client, profiles, refresh_session, subscription
+├── app/repositories/               # users, tenants, clients, catalog, profiles, sessions (migrated from crud/)
+├── app/schemas/                    # auth, tenant, catalog, me, dashboard, whatsapp, plus subscription/ package
+├── app/services/                   # All services as packages: auth_service/, tenant_service/, subscription_service/, etc.
+├── tests/                          # 28 files, ~12k LOC
 └── scripts/seed.py
 
 frontend/

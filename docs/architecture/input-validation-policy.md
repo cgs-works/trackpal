@@ -1,6 +1,6 @@
 # Input Validation Policy
 
-Centralized input validation lives in `app/core/input_validation.py` and is the single source of truth for all field validation and normalization rules.
+Centralized input validation lives in `app/core/input_validation/` and is the single source of truth for all field validation and normalization rules.
 
 ## Design
 

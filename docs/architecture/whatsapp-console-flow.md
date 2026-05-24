@@ -30,7 +30,7 @@ Reply text → n8n → Evolution API → User WhatsApp
 
 ### Orchestration — `WhatsAppMasterConsoleFacade`
 
-File: `backend/app/services/whatsapp_master_console_facade.py`.
+Package: `backend/app/services/whatsapp_master_console_facade/`. Submodules: `facade.py`, `login_flow.py`, `constants.py`, `protocols.py`.
 
 1. Lockout check via `wa:auth:lock:{phone}`.
 2. Auth session check via `wa:auth:{phone}`.
@@ -61,7 +61,7 @@ File: `backend/app/services/whatsapp_master_console_facade.py`.
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`
 
-File: `backend/app/services/whatsapp_tenant_console_facade.py`.
+Package: `backend/app/services/whatsapp_tenant_console_facade/`. Submodules: `facade.py`.
 
 1. Resolve caller by phone and verify `role=tenant`.
 2. Verify tenant is active.
@@ -103,7 +103,7 @@ Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so
 
 ### Protocol definitions
 
-File: `backend/app/services/tenant_console_protocols.py`.
+Package: `backend/app/services/tenant_console_protocols/`. Submodules: `protocols.py`.
 
 Defines `ClientServiceProtocol`, `CatalogServiceProtocol`, and `SubscriptionServiceProtocol` for DI and to avoid circular imports.
 

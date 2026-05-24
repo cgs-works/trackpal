@@ -8,10 +8,10 @@
 
 ## Project Structure
 
-- Layers follow strict dependency direction: `api → services → crud → models`
+- Layers follow strict dependency direction: `api → services → repositories → models`
 - `api` depends on `services` and `schemas`
-- `services` depends on `crud`, `core`, and `models`
-- `crud` depends on `models` and `core`
+- `services` depends on `repositories`, `core`, and `models`
+- `repositories` depends on `models` and `core`
 - `core` has no internal dependencies (except `config` consumed everywhere)
 
 ## Naming
@@ -50,7 +50,7 @@ FastAPI dependencies live in `app/api/dependencies.py`:
 
 ## Validation
 
-All field validation goes through `app/core/input_validation.py`. This is the single source of truth used by:
+All field validation goes through `app/core/input_validation/`. This is the single source of truth used by:
 - Pydantic schema `@field_validator` decorators
 - WhatsApp console flow step handlers
 - Service-layer defensive normalization
@@ -61,12 +61,12 @@ Error codes are machine-readable strings (`username_required`, `phone_invalid`) 
 
 All phone numbers stored as canonical digits-only (no `+` prefix, no `@c.us` JID suffix, no `:N` device suffix). Key functions:
 - `normalize_phone()` in `app/core/phone.py`
-- `_strip_phone_suffixes()` in `app/core/input_validation.py`
-- `validate_phone()` in `app/core/input_validation.py`
+- `_strip_phone_suffixes()` in `app/core/input_validation/contact_validators.py`
+- `validate_phone()` in `app/core/input_validation/contact_validators.py`
 
 ## I18n / Localization Conventions
 
-- **Backend is source of truth**: All translation strings live in `app/core/i18n.py` as Python dicts (`_CATALOG_EN`, `_CATALOG_ES`).
+- **Backend is source of truth**: All translation strings live in `app/core/i18n/` as Python dicts in `catalogs_en_*.py` and `catalogs_es_*.py` files.
 - **Catalogs**: In-memory dicts loaded at import. No per-request file I/O. Precomputed merged catalogs with English fallback at startup.
 - **Translation function**: `t(locale, key, **params)` — named-placeholder templates via `str.format`. Missing keys fall back to English; warning logged with in-process counter.
 - **User-facing errors**: Services raise `UserFacingError(code, params)`; endpoints catch and translate via `translate_error(locale, exc)`.

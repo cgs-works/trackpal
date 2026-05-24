@@ -3,31 +3,63 @@
 ```
 backend/
 ├── app/                          # Application package
+│   ├── __init__.py
 │   ├── main.py                   # FastAPI app entrypoint
 │   ├── api/
+│   │   ├── __init__.py
 │   │   ├── dependencies.py       # get_current_user, require_role, verify_n8n_api_key_header
 │   │   └── v1/
+│   │       ├── __init__.py
 │   │       ├── router.py         # Aggregates all endpoint routers
 │   │       └── endpoints/
+│   │           ├── __init__.py
 │   │           ├── auth.py
 │   │           ├── catalog.py
 │   │           ├── clients.py
 │   │           ├── dashboard.py
-│   │           ├── integrations.py
+│   │           ├── i18n.py       # GET /i18n/catalog
 │   │           ├── me.py
-│   │           ├── subscriptions.py
-│   │           └── tenants.py
+│   │           ├── tenants.py
+│   │           ├── integrations/ # Package: adapter, console, identify
+│   │           │   ├── __init__.py
+│   │           │   ├── adapter.py
+│   │           │   ├── console.py
+│   │           │   └── identify.py
+│   │           └── subscriptions/ # Package: crud, lifecycle, jobs, settings, router
+│   │               ├── __init__.py
+│   │               ├── _common.py
+│   │               ├── crud.py
+│   │               ├── jobs.py
+│   │               ├── lifecycle.py
+│   │               ├── router.py
+│   │               └── settings.py
 │   ├── core/
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   ├── encryption.py
-│   │   ├── input_validation.py
-│   │   ├── phone.py
-│   │   ├── redis_client.py
-│   │   └── security.py
-│   ├── crud/
-│   │   └── users.py
+│   │   ├── __init__.py            # VALID_LOCALES
+│   │   ├── config.py              # Pydantic Settings
+│   │   ├── database.py            # AsyncSession factory
+│   │   ├── encryption.py          # Fernet encrypt/decrypt
+│   │   ├── errors.py              # UserFacingError, translate_error
+│   │   ├── phone.py               # normalize_phone
+│   │   ├── security.py            # bcrypt, JWT, refresh tokens
+│   │   ├── i18n/                  # Package: engine + 6 catalog files
+│   │   │   ├── __init__.py
+│   │   │   └── engine.py, catalogs_en_general.py, catalogs_en_frontend.py,
+│   │   │       catalogs_en_wa.py, catalogs_es_general.py, catalogs_es_frontend.py,
+│   │   │       catalogs_es_wa.py
+│   │   ├── input_validation/      # Package: validators by domain
+│   │   │   ├── __init__.py
+│   │   │   ├── contact_validators.py
+│   │   │   ├── errors.py
+│   │   │   ├── general_validators.py
+│   │   │   └── phone_utils.py
+│   │   └── redis_client/          # Package: manager, lifespan, policy, types
+│   │       ├── __init__.py
+│   │       ├── lifespan.py
+│   │       ├── manager.py
+│   │       ├── policy.py
+│   │       └── types.py
 │   ├── models/
+│   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── client.py
 │   │   ├── master_profile.py
@@ -37,32 +69,45 @@ backend/
 │   │   ├── subscription.py
 │   │   ├── tenant.py
 │   │   └── user.py
+│   ├── repositories/              # Data access layer (migrated from crud/)
+│   │   ├── __init__.py
+│   │   ├── catalog_repository.py
+│   │   ├── clients_repository.py
+│   │   ├── profiles_repository.py
+│   │   ├── sessions_repository.py
+│   │   ├── tenants_repository.py
+│   │   └── users_repository.py
 │   ├── schemas/
+│   │   ├── __init__.py
 │   │   ├── auth.py
 │   │   ├── catalog.py
 │   │   ├── client.py
 │   │   ├── dashboard.py
 │   │   ├── me.py
-│   │   ├── subscription.py
 │   │   ├── tenant.py
-│   │   └── whatsapp.py
-│   └── services/
-│       ├── auth_service.py
-│       ├── catalog_service.py
-│       ├── client_service.py
-│       ├── contingency_reply_policy.py
-│       ├── evolution_client.py
-│       ├── profile_service.py
-│       ├── subscription_job_service.py
-│       ├── subscription_service.py
-│       ├── tenant_console_protocols.py
-│       ├── tenant_service.py
-│       ├── whatsapp_auth_session_service.py
-│       ├── whatsapp_console_service.py
-│       ├── whatsapp_master_console_facade.py
-│       ├── whatsapp_session_service.py
-│       ├── whatsapp_tenant_console_facade.py
-│       └── whatsapp_tenant_console_service.py
+│   │   ├── whatsapp.py
+│   │   └── subscription/          # Package: create_update, responses
+│   │       ├── __init__.py
+│   │       ├── create_update.py
+│   │       └── responses.py
+│   └── services/                  # All services organized as packages
+│       ├── __init__.py            # Re-exports for stable public API
+│       ├── auth_service/
+│       ├── catalog_service/
+│       ├── client_service/
+│       ├── contingency_reply_policy/
+│       ├── evolution_client/
+│       ├── profile_service/
+│       ├── subscription_job_service/
+│       ├── subscription_service/
+│       ├── tenant_console_protocols/
+│       ├── tenant_service/
+│       ├── whatsapp_auth_session_service/
+│       ├── whatsapp_console_service/
+│       ├── whatsapp_master_console_facade/
+│       ├── whatsapp_session_service/
+│       ├── whatsapp_tenant_console_facade/
+│       └── whatsapp_tenant_console_service/
 ├── alembic/
 │   ├── env.py
 │   ├── script.py.mako
@@ -83,6 +128,7 @@ backend/
 │   ├── test_clients.py
 │   ├── test_contingency_reply_policy.py
 │   ├── test_evolution_client.py
+│   ├── test_i18n.py
 │   ├── test_input_validation_policy.py
 │   ├── test_phone_normalization_migration.py
 │   ├── test_phone_normalizer.py
@@ -123,10 +169,11 @@ backend/
 
 | Module | Responsibility |
 |--------|---------------|
-| `app/api/v1/endpoints/subscriptions.py` | Subscription CRUD, lifecycle, reminder endpoints |
+| `app/api/v1/endpoints/subscriptions/` | Subscription CRUD, lifecycle, reminder endpoints (package) |
 | `app/core/encryption.py` | Fernet encryption for subscription secrets |
-| `app/services/whatsapp_tenant_console_service.py` | Tenant WhatsApp menu routing |
-| `app/services/whatsapp_tenant_console_facade.py` | Tenant console phone-based orchestration |
-| `app/services/subscription_service.py` | Subscription CRUD and lifecycle operations |
-| `app/services/subscription_job_service.py` | Cleanup job and reminder payloads |
-| `app/services/tenant_console_protocols.py` | Protocols for tenant console DI |
+| `app/core/errors.py` | UserFacingError and translate_error |
+| `app/services/whatsapp_tenant_console_service/` | Tenant WhatsApp menu routing (package) |
+| `app/services/whatsapp_tenant_console_facade/` | Tenant console phone-based orchestration (package) |
+| `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
+| `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
+| `app/services/tenant_console_protocols/` | Protocols for tenant console DI (package) |

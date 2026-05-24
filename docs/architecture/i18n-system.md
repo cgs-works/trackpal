@@ -6,7 +6,7 @@ Trackpal uses a Python-centered i18n system. Backend is translation source-of-tr
 
 ```
 ┌────────────────────────────────────────────────────┐
-│ Backend i18n Engine (app/core/i18n.py)             │
+│ Backend i18n Engine (app/core/i18n/)               │
 │  _CATALOG_EN, _CATALOG_ES → _MERGED[locale]        │
 │  t(locale, key, **params) → str                    │
 │  get_merged_catalog(locale) → dict                 │
@@ -55,7 +55,7 @@ Column `tenants.locale` stores per-tenant locale. Migration `cd8efe74caa1`:
 
 Exposed via `GET /api/v1/me` → `ProfileResponse.locale`. Updated via `PUT /api/v1/me` with `ProfileUpdate.locale` validated against `VALID_LOCALES`.
 
-## Backend i18n Engine (`app/core/i18n.py`)
+## Backend i18n Engine (`app/core/i18n/`)
 
 ### Catalogs
 

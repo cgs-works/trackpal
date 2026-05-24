@@ -17,7 +17,7 @@ Manages ephemeral state for the WhatsApp Master and Tenant consoles using an act
                (circuit breaker)
 ```
 
-## Connection Manager (`app/core/redis_client.py`)
+## Connection Manager (`app/core/redis_client/`)
 
 `RedisConnectionManager` owns exactly one primary and one backup Redis client, each backed by a connection pool.
 
@@ -60,7 +60,7 @@ Settings from env / `.env`:
 - `get_redis()` — Returns active Redis client or None
 - `get_redis_manager()` — Returns the `RedisConnectionManager` instance for services that need `execute()`
 
-## Contingency Reply Policy (`app/services/contingency_reply_policy.py`)
+## Contingency Reply Policy (`app/services/contingency_reply_policy/`)
 
 Two deterministic replies for degraded states:
 

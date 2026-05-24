@@ -60,7 +60,7 @@
 
 ## Input Validation
 
-1. All field validation goes through the centralized `app/core/input_validation.py`
+1. All field validation goes through the centralized `app/core/input_validation/`
 2. Usernames: max 20 chars, lowercase + digits + underscores, must start with a letter
 3. Full names: Unicode letters, digits, and spaces only (no punctuation)
 4. Emails: validated via `email_validator` (syntax only, no deliverability check)
