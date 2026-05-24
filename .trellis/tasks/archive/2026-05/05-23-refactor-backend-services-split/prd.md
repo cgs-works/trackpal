@@ -38,13 +38,13 @@ Reducir tamaño/complexidad de servicios en `backend/app/services/` (solo archiv
 
 ## Acceptance Criteria
 
-- [ ] Inventario validado de todos archivos backend >200 LoC con estrategia por archivo.
-- [ ] Diseño objetivo documentado alineado a `fastapi-templates`.
-- [ ] Decisión documentada para `app/crud/` y plan de migración/convivencia.
-- [ ] Todos módulos objetivo quedan <=200 LoC.
-- [ ] Sin cambios funcionales observables (tests + smoke flows críticos).
-- [ ] Suite de tests backend relevante pasa después refactor.
-- [ ] Plan por fases listo (`design.md` + `implement.md`) antes de `task.py start`.
+- [x] Inventario validado de todos archivos backend >200 LoC con estrategia por archivo.
+- [x] Diseño objetivo documentado alineado a `fastapi-templates`.
+- [x] Decisión documentada para `app/crud/` y plan de migración/convivencia.
+- [x] Todos módulos objetivo quedan <=200 LoC.
+- [x] Sin cambios funcionales observables (tests + smoke flows críticos).
+- [x] Suite de tests backend relevante pasa después refactor.
+- [x] Plan por fases listo (`design.md` + `implement.md`) antes de `task.py start`.
 
 ## Out of Scope (provisional)
 
