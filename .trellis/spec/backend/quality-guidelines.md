@@ -61,6 +61,65 @@ SUBSCRIPTIONS_EDIT_PROMPT_KEYS = {
 prompt = self._t(SUBSCRIPTIONS_EDIT_PROMPT_KEYS[field])
 ```
 
+## Scenario: WhatsApp tenant subscriptions filtered list must be interactive and paginated
+
+### 1. Scope / Trigger
+- Trigger: filtered subscriptions list mixed hardcoded Spanish labels and inconsistent navigation (`0` missing in some views, no stable pagination commands).
+
+### 2. Signatures
+- Formatter signature:
+  - `_format_subscription_list(..., page: int = 1, total_pages: int = 1) -> str`
+- Flow handlers:
+  - `_handle_subscriptions_filter(...)` initializes paginated list context.
+  - `_handle_subscriptions_list(...)` routes `8/9` navigation and `1..7` selection.
+
+### 3. Contracts
+- Session temp contract:
+  - `temp_data['status']`: selected filter status
+  - `temp_data['page']`: current page (1-based)
+- Selection map contract:
+  - Rebuilt per page with keys `"1".."7"` only.
+- Command contract in list step:
+  - `0` cancel/exit (global reset path)
+  - `8` previous page (if `page > 1`)
+  - `9` next page (if `page < total_pages`)
+- WA i18n keys required in ES/EN catalogs:
+  - list header, status labels, detail labels, page navigation labels.
+
+### 4. Validation & Error Matrix
+- `8` on first page -> localized invalid option/keep page.
+- `9` on last page -> localized invalid option/keep page.
+- Selection outside `1..7` current map -> localized invalid option.
+- Missing i18n key -> fallback warning; response must not crash.
+
+### 5. Good/Base/Bad Cases
+- Good: list with >7 records shows 7 items + `8`/`9` nav + `0` cancel.
+- Base: list with <=7 records shows only `1..N` + `0` cancel.
+- Bad: rendering all subscriptions in one page or mapping `8/9` to subscription IDs.
+
+### 6. Tests Required
+- Focused backend tests:
+  - tenant console subscriptions list flow with >7 records.
+  - assert page transitions on `8`/`9`.
+  - assert `selection_map` keys limited to `1..7` each page.
+  - assert `0` appears in rendered list and still exits flow.
+- Regression command:
+  - `cd backend && uv run pytest tests/test_tenant_console_service.py -v -k "subscriptions"`
+
+### 7. Wrong vs Correct
+#### Wrong
+```python
+for i, subscription in enumerate(all_subscriptions, 1):
+    options.append(f"{i}️⃣ ...")
+# No explicit 0, no page navigation
+```
+#### Correct
+```python
+visible = filtered[(page-1)*7 : page*7]
+session.selection_map = {str(i): sub.id for i, sub in enumerate(visible, 1)}
+# 8 prev if page>1, 9 next if page<total_pages, 0 cancel always
+```
+
 ## Testing Requirements
 
 - Run backend suite before completion: `cd backend && uv run pytest -v`.
