@@ -33,39 +33,93 @@ async def _handle_subscriptions_menu(self, phone, msg, session, session_service,
     return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
 
+async def _query_subscriptions_by_filter(self, db, tenant_id, filter_msg):
+    """Query subscriptions from DB based on filter message (1-4)."""
+    if filter_msg == "1":
+        return await self._subscription_service.list_subscriptions(db, tenant_id, status="active")
+    elif filter_msg == "2":
+        return await self._subscription_service.list_subscriptions(db, tenant_id, status="expired")
+    elif filter_msg == "3":
+        return await self._subscription_service.list_subscriptions(db, tenant_id, status="cancelled")
+    elif filter_msg == "4":
+        active = await self._subscription_service.list_subscriptions(db, tenant_id, status="active")
+        expired = await self._subscription_service.list_subscriptions(db, tenant_id, status="expired")
+        cancelled = await self._subscription_service.list_subscriptions(db, tenant_id, status="cancelled")
+        return [*active, *expired, *cancelled]
+    return []
+
+
 async def _handle_subscriptions_filter(self, phone, msg, session, session_service, tenant_id, db):
     del phone
     if tenant_id is None or db is None or self._subscription_service is None:
         return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS)
 
-    subscriptions = []
-    if msg == "1":
-        subscriptions = await self._subscription_service.list_subscriptions(db, tenant_id, status="active")
-    elif msg == "2":
-        subscriptions = await self._subscription_service.list_subscriptions(db, tenant_id, status="expired")
-    elif msg == "3":
-        subscriptions = await self._subscription_service.list_subscriptions(db, tenant_id, status="cancelled")
-    elif msg == "4":
-        active = await self._subscription_service.list_subscriptions(db, tenant_id, status="active")
-        expired = await self._subscription_service.list_subscriptions(db, tenant_id, status="expired")
-        cancelled = await self._subscription_service.list_subscriptions(db, tenant_id, status="cancelled")
-        subscriptions = [*active, *expired, *cancelled]
-    else:
+    if msg not in ("1", "2", "3", "4"):
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+
+    subscriptions = await self._query_subscriptions_by_filter(db, tenant_id, msg)
 
     if not subscriptions:
         return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS) + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_FILTER_PROMPT)
 
-    reply, selection_map = self._format_subscription_list(subscriptions)
+    total_pages = max(1, (len(subscriptions) + 6) // 7)
+    page = 1
+    page_subs = subscriptions[:7]
+
+    session.temp_data["status_filter"] = msg
+    session.temp_data["page"] = page
+
+    reply, selection_map = self._format_subscription_list(page_subs, page=page, total_pages=total_pages)
     session.selection_map = selection_map
-    session.step = self.SUBSCRIPTIONS_STEP_SELECT
+    session.step = self.SUBSCRIPTIONS_STEP_LIST
     if session_service is not None:
         await session_service.save_session(session)
     return reply + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_SELECT_PROMPT)
 
 
 async def _handle_subscriptions_list(self, phone, msg, session, session_service, tenant_id, db):
-    return await self._handle_subscriptions_select(phone, msg, session, session_service, tenant_id, db)
+    if tenant_id is None or db is None or self._subscription_service is None:
+        return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+
+    page = session.temp_data.get("page", 1)
+    status_filter = session.temp_data.get("status_filter")
+
+    # Handle page navigation
+    if msg == "8" and page > 1:
+        subscriptions = await self._query_subscriptions_by_filter(db, tenant_id, status_filter)
+        if not subscriptions:
+            return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS) + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_FILTER_PROMPT)
+        total_pages = max(1, (len(subscriptions) + 6) // 7)
+        page -= 1
+        page_subs = subscriptions[(page - 1) * 7 : page * 7]
+        session.temp_data["page"] = page
+        reply, selection_map = self._format_subscription_list(page_subs, page=page, total_pages=total_pages)
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return reply + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_SELECT_PROMPT)
+
+    if msg == "9":
+        subscriptions = await self._query_subscriptions_by_filter(db, tenant_id, status_filter)
+        if not subscriptions:
+            return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS) + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_FILTER_PROMPT)
+        total_pages = max(1, (len(subscriptions) + 6) // 7)
+        if page >= total_pages:
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+        page += 1
+        page_subs = subscriptions[(page - 1) * 7 : page * 7]
+        session.temp_data["page"] = page
+        reply, selection_map = self._format_subscription_list(page_subs, page=page, total_pages=total_pages)
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return reply + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_SELECT_PROMPT)
+
+    # Otherwise try as subscription selection (1-7)
+    if msg in session.selection_map:
+        return await self._handle_subscriptions_select(phone, msg, session, session_service, tenant_id, db)
+
+    return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
 
 async def _handle_subscriptions_select(self, phone, msg, session, session_service, tenant_id, db):

@@ -117,39 +117,56 @@ def _format_profile_detail(profile: Any, username: str) -> str:
 
 
 def _format_subscription_list(
-    subscriptions: list[Any], show_status: bool = True
+    subscriptions: list[Any], show_status: bool = True, page: int = 1, total_pages: int = 1
 ) -> tuple[str, dict[str, str]]:
+    loc = ctx.get_locale()
     entries: list[str] = []
     selection_map: dict[str, str] = {}
+    status_emoji_map = {
+        "active": "✅",
+        "expired": "⏰",
+        "cancelled": "❌",
+    }
     for i, sub in enumerate(subscriptions, start=1):
         num = str(i)
-        status_emoji = {
-            "active": "✅",
-            "expired": "⏰",
-            "cancelled": "❌",
-        }.get(sub.status, "❓")
-        label = f"{status_emoji} {sub.streaming_email}"
+        emoji = status_emoji_map.get(sub.status, "❓")
+        label = f"{emoji} {sub.streaming_email}"
         if show_status:
-            status_name = {
-                "active": "Activa",
-                "expired": "Expirada",
-                "cancelled": "Cancelada",
-            }.get(sub.status, sub.status)
+            status_name = _i18n_t(loc, f"wa.tenant.subscriptions.status.{sub.status}")
             label += f" ({status_name})"
         client_name = getattr(sub, "client_name", None) or getattr(sub, "client_full_name", "")
         if client_name:
             label += f" — {client_name}"
         entries.append(f"{num}️⃣ {label}")
         selection_map[num] = str(sub.id)
-    return "📋 *Suscripciones*\n\n" + "\n".join(entries), selection_map
+
+    header = _i18n_t(loc, "wa.tenant.subscriptions.list.header")
+    body = "\n".join(entries)
+
+    # Build navigation line
+    nav_parts: list[str] = [_i18n_t(loc, "wa.tenant.subscriptions.list.cancel")]
+    if page > 1:
+        nav_parts.append(_i18n_t(loc, "wa.tenant.subscriptions.list.page_prev"))
+    if page < total_pages:
+        nav_parts.append(_i18n_t(loc, "wa.tenant.subscriptions.list.page_next"))
+    nav_line = " | ".join(nav_parts) if nav_parts else ""
+
+    page_line = ""
+    if total_pages > 1:
+        page_line = _i18n_t(loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages)
+
+    reply = header + body
+    if page_line:
+        reply += "\n\n" + page_line
+    if nav_line:
+        reply += "\n" + nav_line
+
+    return reply, selection_map
 
 
 def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> str:
-    status_emoji = {
-        "active": "✅ Activa",
-        "expired": "⏰ Expirada",
-        "cancelled": "❌ Cancelada",
-    }.get(sub.status, sub.status)
+    loc = ctx.get_locale()
+    status_emoji = _i18n_t(loc, f"wa.tenant.subscriptions.detail.status.{sub.status}")
 
     password_display = "—"
     pin_display = "—"
@@ -191,7 +208,7 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
     duration_label = duration_labels.get(sub.duration_type, sub.duration_type)
 
     return (
-        f"📺 *Detalle de Suscripción*\n\n"
+        f"{_i18n_t(loc, 'wa.tenant.subscriptions.detail.header')}"
         f"*Estado:* {status_emoji}\n"
         f"*Cliente:* {client_name}\n"
         f"*Servicio:* {service_name}\n"

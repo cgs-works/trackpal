@@ -59,6 +59,7 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.clients.create": "Create Client",
     "frontend.clients.update": "Update Client",
     "frontend.clients.saving": "Saving...",
+    "frontend.clients.password": "Password",
     "frontend.clients.clear": "Clear",
     "frontend.clients.created": "Client created. Login: {login}",
     "frontend.clients.updated": "Client updated. Login: {login}",
