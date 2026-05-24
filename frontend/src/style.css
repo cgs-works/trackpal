@@ -70,3 +70,18 @@ button:disabled {
   margin: 0;
   color: #dc2626;
 }
+
+.locale-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.locale-selector select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+}

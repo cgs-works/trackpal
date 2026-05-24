@@ -19,7 +19,6 @@ class ClientDashboardResponse(BaseModel):
     id: UUID
     full_name: str
     username: str
-    local_username: str
     phone: str | None
     tenant_id: UUID
     tenant_name: str

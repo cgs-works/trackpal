@@ -136,7 +136,7 @@ async def active_client_user(db_session, active_tenant_user):
             tenant_id=tenant.id,
             owner_user_id=user.id,
             full_name="Active Client",
-            local_username="client1",
+            username=f"{tenant.client_prefix}_client1",
             phone="+12015550030",
             is_active=True,
         )
@@ -160,7 +160,7 @@ async def inactive_client_user(db_session, active_tenant_user):
             tenant_id=tenant.id,
             owner_user_id=user.id,
             full_name="Inactive Client",
-            local_username="client2",
+            username=f"{tenant.client_prefix}_client2",
             phone="+12015550031",
             is_active=False,
         )

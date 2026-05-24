@@ -19,7 +19,6 @@ class ProfileResponse(BaseModel):
     username: str
     name: str | None = None
     full_name: str | None = None
-    local_username: str | None = None
     tenant_id: UUID | None = None
     tenant_name: str | None = None
     client_prefix: str | None = None

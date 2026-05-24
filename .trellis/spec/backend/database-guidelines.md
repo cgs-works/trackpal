@@ -46,3 +46,55 @@ Examples:
 - Mixing query code and HTTP status logic.
 - Post-rollback locale reads in i18n flows.
 - Keeping stale `crud`-style access after repository migration.
+
+## Scenario: Clients username canonical storage migration
+
+### 1. Scope / Trigger
+- Trigger: DB schema change + cross-layer contract change for client login identifier.
+
+### 2. Signatures
+- Migration: `clients.local_username` -> `clients.username`.
+- Canonical format: `<tenant_prefix>_<client_username_local>`.
+- Sync rule: `clients.username` must match `users.username` for client owner user.
+
+### 3. Contracts
+- DB contract:
+  - `clients.username` non-null canonical value.
+  - tenant-scoped case-insensitive uniqueness index moved to `username` field.
+- Service contract:
+  - create/update operations compute canonical username from tenant prefix + local part input.
+  - tenant prefix changes must resync both client and user usernames.
+- API contract:
+  - responses expose `username` (canonical), not `local_username`.
+
+### 4. Validation & Error Matrix
+- Duplicate canonical username in tenant scope -> validation error (409/400 mapped by endpoint policy).
+- Legacy row mismatch (`clients.username != users.username`) -> migration backfill aligns from `users.username`.
+- Invalid local part input -> service validation error before persistence.
+
+### 5. Good/Base/Bad Cases
+- Good: tenant `eq3wn`, local `rafael` -> store `eq3wn_rafael` in both tables.
+- Base: unchanged username update path keeps canonical value stable.
+- Bad: storing only `rafael` in `clients.username`.
+
+### 6. Tests Required
+- Migration test assertions:
+  - old column removed/new exists.
+  - migrated rows contain canonical prefixed values.
+- Service tests:
+  - create client stores canonical username in `clients` and `users`.
+  - update local part recomputes canonical both sides.
+  - tenant prefix change resyncs all tenant clients.
+- Endpoint tests:
+  - payload/response use `username` contract.
+
+### 7. Wrong vs Correct
+#### Wrong
+```python
+client.local_username = local_username
+```
+#### Correct
+```python
+client.username = build_client_username(tenant.prefix, local_username)
+user.username = client.username
+```

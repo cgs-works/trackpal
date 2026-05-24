@@ -41,7 +41,6 @@ async def test_create_client(client, active_tenant_user):
     assert response.status_code == 201
     data = response.json()
     assert data["full_name"] == "Client One"
-    assert data["local_username"] == "client1"
     assert data["username"] == "tna01_client1"
     assert data["phone"] == "12015550030"
     assert data["is_active"] is True
@@ -102,7 +101,6 @@ async def test_list_get_update_client(client, active_tenant_user, db_session):
     create_response = await _create_client(client, headers)
     client_id = create_response.json()["id"]
     old_username = create_response.json()["username"]
-    old_username = create_response.json()["username"]
 
     list_response = await client.get("/api/v1/clients", headers=headers)
     assert list_response.status_code == 200
@@ -124,7 +122,6 @@ async def test_list_get_update_client(client, active_tenant_user, db_session):
     assert update_response.status_code == 200
     updated = update_response.json()
     assert updated["full_name"] == "Client One Updated"
-    assert updated["local_username"] == "clientx"
     assert updated["username"] == "tna01_clientx"
 
     result = await db_session.execute(

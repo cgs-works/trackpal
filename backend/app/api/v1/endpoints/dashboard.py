@@ -36,8 +36,7 @@ async def get_dashboard(db: DbDep, current_user: CurrentUser):
         return ClientDashboardResponse(
             id=profile.id,
             full_name=profile.full_name,
-            username=current_user.username,
-            local_username=profile.local_username,
+            username=profile.username,
             phone=profile.phone,
             tenant_id=profile.tenant_id,
             tenant_name=getattr(tenant, "name", ""),

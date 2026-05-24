@@ -81,7 +81,7 @@ async def test_subscription_model_persistence(db_session, active_tenant_user):
         tenant_id=tenant.id,
         owner_user_id=client_user.id,
         full_name="Subscription Client",
-        local_username="subclient1",
+        username=client_user.username,
         phone="+12015559999",
         is_active=True,
     )
@@ -157,7 +157,7 @@ async def test_subscription_event_model(db_session, active_tenant_user):
         tenant_id=tenant.id,
         owner_user_id=client_user.id,
         full_name="Evt Client",
-        local_username="evtclient",
+        username=client_user.username,
         is_active=True,
     )
     db_session.add(client)
@@ -219,7 +219,7 @@ async def test_subscription_reminder_log(db_session, active_tenant_user):
         tenant_id=tenant.id,
         owner_user_id=client_user.id,
         full_name="Rem Client",
-        local_username="remclient",
+        username=client_user.username,
         is_active=True,
     )
     db_session.add(client)
@@ -330,7 +330,7 @@ async def _create_subscription_dependencies(
         tenant_id=tenant.id,
         owner_user_id=client_user.id,
         full_name=f"{suffix.title()} Client",
-        local_username=f"{suffix}client",
+        username=client_user.username,
         phone=f"+1201555{len(suffix):04d}",
         is_active=True,
     )
@@ -667,7 +667,7 @@ async def test_subscription_api_reveal_credentials_unauthorized_and_cross_tenant
             tenant_id=tenant_a.id,
             owner_user_id=client_user.id,
             full_name="Client Role User",
-            local_username="clientroleuser",
+            username=client_user.username,
             phone="+12015551234",
             is_active=True,
         )

@@ -20,16 +20,16 @@ class Client(Base, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    local_username: Mapped[str] = mapped_column(String(94), nullable=False)
+    username: Mapped[str] = mapped_column(String(94), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     __table_args__ = (
         UniqueConstraint("owner_user_id", name="uq_clients_owner_user_id"),
         Index(
-            "ix_clients_tenant_lower_local_username",
+            "ix_clients_tenant_lower_username",
             "tenant_id",
-            func.lower(local_username),
+            func.lower(username),
             unique=True,
         ),
         Index("ix_clients_tenant_phone", "tenant_id", "phone", unique=True),

@@ -70,13 +70,13 @@ async def list_clients(
 async def local_username_exists(
     db: AsyncSession,
     tenant_id: UUID,
-    local_username: str,
+    canonical_username: str,
     exclude_id: UUID | None = None,
 ) -> bool:
-    """Check if a local username is taken within a tenant."""
+    """Check if a canonical username is taken within a tenant."""
     stmt = select(Client.id).where(
         Client.tenant_id == tenant_id,
-        func.lower(Client.local_username) == local_username.lower(),
+        func.lower(Client.username) == canonical_username.lower(),
     )
     if exclude_id is not None:
         stmt = stmt.where(Client.id != exclude_id)

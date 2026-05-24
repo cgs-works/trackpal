@@ -89,11 +89,11 @@ class FakeClientObj:
     phone: str | None = None
     is_active: bool = True
     created_at: Any = None
-    local_username: str | None = None
+    username: str | None = None
 
     @property
     def user(self) -> SimpleNamespace:
-        return SimpleNamespace(username=self.local_username or "")
+        return SimpleNamespace(username=self.username or "")
 
 
 class FakeClientService:
@@ -503,7 +503,7 @@ def client_service() -> FakeClientService:
         tenant_id=uuid4(),
         full_name="Cliente Demo",
         phone="1234567890",
-        local_username="cliente.demo",
+        username="cliente.demo",
     )
     return svc
 
@@ -1195,7 +1195,7 @@ class TestClientSelect:
             phone="52123456789",
             is_active=True,
             created_at=None,
-            local_username="testclient",
+            username="testclient",
         )
 
         # Start clients flow

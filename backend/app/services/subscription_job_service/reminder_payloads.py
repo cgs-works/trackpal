@@ -147,7 +147,7 @@ async def generate_reminder_payloads(
                 continue
 
             service_name = sub.service.name if sub.service else "Servicio"
-            client_name = client.full_name or client.local_username or "Cliente"
+            client_name = client.full_name or client.username or "Cliente"
             streaming_email = sub.streaming_email or ""
 
             days_until_expiry = (sub.expires_at.date() - today).days

@@ -227,13 +227,24 @@ const useI18nStore = defineStore('i18n', () => {
 })
 ```
 
-Catalog loaded on:
+Catalog loaded on authenticated lifecycle:
 
-- **Login**: `LoginView` calls `i18nStore.loadCatalog()` after successful auth
+- **After login success**: authenticated app loads `/i18n/catalog`
 - **Page refresh**: `main.js` checks `authStore.isAuthenticated` and preloads catalog
 - **Locale change**: Tenant profile save triggers catalog refetch for immediate UI update
 
-Frontend holds zero translation strings as source-of-truth. All strings come from backend catalog.
+### Pre-auth public i18n (frontend-only)
+
+Login and future unauthenticated routes use local frontend catalog files, independent from backend `/i18n/catalog`:
+
+- `frontend/src/i18n/public.json` — source for public translations (`en`, `es`)
+- `frontend/src/i18n/usePublicI18n.js` — locale resolver + `t(key)` helper
+- Default locale on first visit: `en`
+- Selected locale persisted in `localStorage.publicLocale`
+
+Boundary:
+- Pre-auth views do **not** call backend i18n endpoint.
+- Authenticated views continue using backend catalog through Pinia `i18n` store.
 
 ## N8n Integration
 

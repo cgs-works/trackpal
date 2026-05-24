@@ -49,7 +49,6 @@ async def test_get_profile_client(client, active_client_user):
     data = response.json()
     assert data["role"] == "client"
     assert data["username"] == active_client_user.username
-    assert data["local_username"] == "client1"
     assert data["client_prefix"] == "tna01"
     assert data["tenant_name"] == "Active Tenant"
 
