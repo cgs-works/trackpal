@@ -26,11 +26,11 @@ Migrar capa de acceso a datos desde `app/crud` y queries directas dispersas haci
 
 ## Acceptance Criteria
 
-- [ ] `app/repositories` creada y usada por dominios actuales.
-- [ ] `crud/users.py` migrado.
-- [ ] Queries seleccionadas migradas fuera de `services`/`api dependencies`.
-- [ ] Compatibilidad temporal de imports documentada.
-- [ ] Tests auth/tenant/client pasan.
+- [x] `app/repositories` creada y usada por dominios actuales.
+- [x] `crud/users.py` migrado.
+- [x] Queries seleccionadas migradas fuera de `services`/`api dependencies`.
+- [x] Compatibilidad temporal de imports documentada.
+- [x] Tests auth/tenant/client pasan.
 
 ## Out of Scope
 
