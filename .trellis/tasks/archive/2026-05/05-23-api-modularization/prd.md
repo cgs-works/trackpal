@@ -24,10 +24,10 @@ Modularizar endpoints backend grandes y adelgazar capa API para delegar lógica 
 
 ## Acceptance Criteria
 
-- [ ] Endpoints objetivo modularizados.
-- [ ] Contratos HTTP intactos.
-- [ ] Sin módulo >240 LoC en alcance.
-- [ ] Tests API relevantes pasan.
+- [x] Endpoints objetivo modularizados.
+- [x] Contratos HTTP intactos.
+- [x] Sin módulo >240 LoC en alcance.
+- [x] Tests API relevantes pasan.
 
 ## Out of Scope
 
