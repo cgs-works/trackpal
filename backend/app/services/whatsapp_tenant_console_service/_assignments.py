@@ -1,0 +1,130 @@
+"""Handler-to-class method assignments for WhatsAppTenantConsoleService."""
+
+from __future__ import annotations
+
+from . import formatters as fmt
+from . import format_helpers as fh
+from . import clients_flow as cf
+from . import clients_crud as cc
+from . import catalog_flow as caf
+from . import subscriptions_flow as sf
+from . import subscriptions_create as sfc
+from . import subscriptions_create_confirm as sfcc
+from . import subscriptions_edit as sfe
+from . import subscriptions_lifecycle as sfl
+from . import profile_flow as pf
+from . import subscription_builders as sb
+from . import _routers as rt
+
+
+# fmt: off
+# -- Formatter assignments
+_t = staticmethod(fmt._t)
+_with_main_menu = staticmethod(fmt._with_main_menu)
+_format_client_list = staticmethod(fmt._format_client_list)
+_format_client_detail = staticmethod(fmt._format_client_detail)
+_format_service_list = staticmethod(fmt._format_service_list)
+_format_service_detail = staticmethod(fmt._format_service_detail)
+_format_plan_list = staticmethod(fmt._format_plan_list)
+_format_plan_detail = staticmethod(fmt._format_plan_detail)
+_format_profile_detail = staticmethod(fmt._format_profile_detail)
+_format_subscription_list = staticmethod(fmt._format_subscription_list)
+_format_subscription_detail = staticmethod(fmt._format_subscription_detail)
+_safe_uuid = staticmethod(fh._safe_uuid)
+_format_subscription_duration = staticmethod(fh._format_subscription_duration)
+_format_short_date = staticmethod(fh._format_short_date)
+_calculate_subscription_expiry = staticmethod(fh._calculate_subscription_expiry)
+_parse_iso_date = staticmethod(fh._parse_iso_date)
+
+# -- Client flow handlers
+_start_clients_flow = cf._start_clients_flow
+_handle_client_list_selection = cf._handle_client_list_selection
+_handle_client_select = cf._handle_client_select
+_handle_client_detail_action = cf._handle_client_detail_action
+_start_client_create = cc._start_client_create
+_handle_client_create_full_name = cc._handle_client_create_full_name
+_handle_client_create_phone = cc._handle_client_create_phone
+_handle_client_create_username = cc._handle_client_create_username
+_handle_client_create_password = cc._handle_client_create_password
+_handle_client_create_confirm = cc._handle_client_create_confirm
+_start_client_edit = cc._start_client_edit
+_handle_client_edit_field = cc._handle_client_edit_field
+_handle_client_edit_value = cc._handle_client_edit_value
+_handle_client_deactivate_confirm = cc._handle_client_deactivate_confirm
+_handle_client_delete_confirm = cc._handle_client_delete_confirm
+
+# -- Catalog flow handlers
+_start_catalog_flow = caf._start_catalog_flow
+_fetch_service_list = caf._fetch_service_list
+_handle_catalog_service_select = caf._handle_catalog_service_select
+_handle_catalog_service_action = caf._handle_catalog_service_action
+_handle_catalog_edit_service = caf._handle_catalog_edit_service
+_handle_catalog_plan_select = caf._handle_catalog_plan_select
+_handle_catalog_plan_action = caf._handle_catalog_plan_action
+_handle_catalog_edit_plan = caf._handle_catalog_edit_plan
+
+# -- Profile flow handlers
+_start_profile_flow = pf._start_profile_flow
+_handle_profile_action = pf._handle_profile_action
+_show_profile = pf._show_profile
+_start_profile_edit = pf._start_profile_edit
+_handle_profile_edit_field = pf._handle_profile_edit_field
+_handle_profile_edit_value = pf._handle_profile_edit_value
+_start_profile_change_password = pf._start_profile_change_password
+_handle_profile_change_password_old = pf._handle_profile_change_password_old
+_handle_profile_change_password_new = pf._handle_profile_change_password_new
+_start_profile_change_locale = pf._start_profile_change_locale
+_handle_profile_change_locale_select = pf._handle_profile_change_locale_select
+
+# -- Subscription core handlers
+_start_subscriptions_flow = sf._start_subscriptions_flow
+_handle_subscriptions_menu = sf._handle_subscriptions_menu
+_handle_subscriptions_filter = sf._handle_subscriptions_filter
+_handle_subscriptions_list = sf._handle_subscriptions_list
+_handle_subscriptions_select = sf._handle_subscriptions_select
+_handle_subscriptions_action = sf._handle_subscriptions_action
+_get_selected_subscription = sf._get_selected_subscription
+_apply_subscription_update = sf._apply_subscription_update
+
+# -- Subscription create handlers
+_start_subscriptions_create = sfc._start_subscriptions_create
+_handle_subscriptions_create_client = sfc._handle_subscriptions_create_client
+_handle_subscriptions_create_service = sfc._handle_subscriptions_create_service
+_handle_subscriptions_create_plan = sfc._handle_subscriptions_create_plan
+_handle_subscriptions_create_email = sfc._handle_subscriptions_create_email
+_handle_subscriptions_create_password = sfc._handle_subscriptions_create_password
+_handle_subscriptions_create_password_confirm = sfc._handle_subscriptions_create_password_confirm
+_handle_subscriptions_create_profile_option = sfc._handle_subscriptions_create_profile_option
+_handle_subscriptions_create_profile_name = sfc._handle_subscriptions_create_profile_name
+_handle_subscriptions_create_pin = sfc._handle_subscriptions_create_pin
+_handle_subscriptions_create_pin_confirm = sfc._handle_subscriptions_create_pin_confirm
+_handle_subscriptions_create_duration = sfcc._handle_subscriptions_create_duration
+_handle_subscriptions_create_custom_date = sfcc._handle_subscriptions_create_custom_date
+_handle_subscriptions_create_confirm = sfcc._handle_subscriptions_create_confirm
+
+# -- Subscription edit handlers
+_handle_subscriptions_edit_field = sfe._handle_subscriptions_edit_field
+_handle_subscriptions_edit_value = sfe._handle_subscriptions_edit_value
+_handle_subscriptions_edit_password_confirm = sfe._handle_subscriptions_edit_password_confirm
+_handle_subscriptions_edit_pin_confirm = sfe._handle_subscriptions_edit_pin_confirm
+
+# -- Subscription lifecycle handlers
+_handle_subscriptions_cancel_confirm = sfl._handle_subscriptions_cancel_confirm
+_handle_subscriptions_reactivate_duration = sfl._handle_subscriptions_reactivate_duration
+_handle_subscriptions_reactivate_custom_date = sfl._handle_subscriptions_reactivate_custom_date
+_handle_subscriptions_reactivate_confirm = sfl._handle_subscriptions_reactivate_confirm
+_handle_subscriptions_renew_duration = sfl._handle_subscriptions_renew_duration
+_handle_subscriptions_renew_custom_date = sfl._handle_subscriptions_renew_custom_date
+_handle_subscriptions_renew_confirm = sfl._handle_subscriptions_renew_confirm
+
+# -- Subscription builder methods
+_build_subscription_create_confirm = sb._build_subscription_create_confirm
+_build_subscription_reactivate_confirm = sb._build_subscription_reactivate_confirm
+_build_subscription_renew_confirm = sb._build_subscription_renew_confirm
+
+# -- Sub-routers
+_route_clients_flow = rt._route_clients_flow
+_route_catalog_flow = rt._route_catalog_flow
+_route_profile_flow = rt._route_profile_flow
+_route_subscriptions_flow = rt._route_subscriptions_flow
+# fmt: on

@@ -109,7 +109,7 @@ async def test_wrong_api_key_returns_401(client):
 async def test_unknown_phone_returns_no_access_reply(client):
     """Phone not found + Redis available → no-access reply, not login prompt."""
     fake_mgr = _FakeManager(used_backup=False)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+9999999999", "message": "hola"},
@@ -125,7 +125,7 @@ async def test_unknown_phone_returns_no_access_reply(client):
 async def test_tenant_phone_returns_tenant_console(client, active_tenant_user):
     """Tenant phone + Redis available → tenant console reply, not login prompt."""
     fake_mgr = _FakeManager(used_backup=False)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550002", "message": "hola"},
@@ -146,7 +146,7 @@ async def test_client_phone_returns_no_access(client, active_client_user):
     fall through as ``unknown`` and receive the no-access reply.
     """
     fake_mgr = _FakeManager(used_backup=False)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550030", "message": "hola"},
@@ -246,7 +246,7 @@ async def test_primary_flow_with_fake_manager_returns_menu(client, master_user):
     import json
     await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
 
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "menu"},
@@ -286,7 +286,7 @@ async def test_failover_missing_session_returns_contingency_reset(client, master
     import json
     await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
 
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "nombre del tenant"},
@@ -320,7 +320,7 @@ async def test_failover_missing_session_with_menu_choice_still_resets(client, ma
     import json
     await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
 
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "2"},
@@ -359,7 +359,7 @@ async def test_failover_reset_creates_session_on_backup(client, master_user):
     import json
     await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
 
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         # First message — triggers reset, creates fresh session on backup
         resp1 = await client.post(
             ENDPOINT,
@@ -386,7 +386,7 @@ async def test_failover_reset_creates_session_on_backup(client, master_user):
 async def test_both_redis_unavailable_returns_temporary_unavailable(client, master_user):
     """Both Redis stores fail during operation → temporary unavailable reply."""
     fake_mgr = _FakeManager(fail_on_execute=True)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -402,7 +402,7 @@ async def test_both_redis_unavailable_returns_temporary_unavailable(client, mast
 async def test_both_unavailable_still_returns_200_for_relayable_reply(client, master_user):
     """HTTP 200 is preserved for temporary unavailable so n8n can relay."""
     fake_mgr = _FakeManager(fail_on_execute=True)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -414,7 +414,7 @@ async def test_both_unavailable_still_returns_200_for_relayable_reply(client, ma
 async def test_invalid_api_key_still_401_with_fake_manager(client, master_user):
     """Invalid API key returns 401 regardless of Redis state."""
     fake_mgr = _FakeManager(used_backup=False)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -447,7 +447,7 @@ class _FakeManagerRaising:
 async def test_redis_connection_error_returns_temporary_unavailable(client, master_user):
     """ConnectionError from Redis yields relayable unavailable reply."""
     fake_mgr = _FakeManagerRaising(ConnectionError("primary Redis connection refused"))
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -460,7 +460,7 @@ async def test_redis_connection_error_returns_temporary_unavailable(client, mast
 async def test_redis_timeout_error_returns_temporary_unavailable(client, master_user):
     """TimeoutError from Redis yields relayable unavailable reply."""
     fake_mgr = _FakeManagerRaising(TimeoutError("primary Redis timed out"))
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -473,7 +473,7 @@ async def test_redis_timeout_error_returns_temporary_unavailable(client, master_
 async def test_redis_os_error_returns_temporary_unavailable(client, master_user):
     """OSError (e.g. socket-level) from Redis yields relayable unavailable reply."""
     fake_mgr = _FakeManagerRaising(OSError("socket closed by remote"))
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -487,7 +487,7 @@ async def test_redis_unavailable_error_returns_temporary_unavailable(client, mas
     """RedisUnavailableError from Redis yields relayable unavailable reply."""
     from app.core.redis_client import RedisUnavailableError
     fake_mgr = _FakeManagerRaising(RedisUnavailableError("both Redis stores down"))
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+12015550001", "message": "hola"},
@@ -500,7 +500,7 @@ async def test_redis_unavailable_error_returns_temporary_unavailable(client, mas
 async def test_unknown_phone_returns_no_access_when_redis_healthy(client, active_tenant_user):
     """Unknown phone + Redis healthy → no-access reply, not login prompt."""
     fake_mgr = _FakeManager(fail_on_execute=False)
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         response = await client.post(
             ENDPOINT,
             json={"phone": "+20000000000", "message": "hola"},
@@ -535,7 +535,7 @@ async def test_instance_value_does_not_affect_auth_session_lookup(client, master
     import json
     await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
 
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         # Request with instance A
         resp_a = await client.post(
             ENDPOINT,
@@ -574,7 +574,7 @@ async def test_instance_value_does_not_affect_lockout_lookup(client, master_user
     )
     await fake_mgr._redis.set(lock_key, lock_state.model_dump_json(), ex=300)
 
-    with patch("app.api.v1.endpoints.integrations.get_redis_manager", return_value=fake_mgr):
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
         # Request with instance A
         resp_a = await client.post(
             ENDPOINT,

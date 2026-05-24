@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/index.md","reason":"Backend conventions and checklist"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Service package decomposition conventions"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Preserve user-facing flow errors"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Refactor quality gates"}
+{"file":".trellis/spec/guides/index.md","reason":"Shared guides"}
+{"file":".pi/skills/fastapi-templates/references/details.md","reason":"Service/facade layering reference"}

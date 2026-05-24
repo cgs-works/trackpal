@@ -1,0 +1,239 @@
+"""WhatsApp Tenant Admin Console service — conversation flow routing."""
+
+from __future__ import annotations
+
+import logging
+from uuid import UUID
+
+from app.core.i18n import t as _i18n_t
+from app.core.redis_client import RedisUnavailableError
+from app.services.contingency_reply_policy import ContingencyReplyPolicy
+from app.services.whatsapp_session_service import WhatsAppSessionService
+from app.services.tenant_console_protocols import (
+    CatalogServiceProtocol,
+    ClientServiceProtocol,
+    SubscriptionServiceProtocol,
+)
+
+from . import _context as ctx
+from ._const_mixin import _ConstMixin
+
+logger = logging.getLogger(__name__)
+
+
+class WhatsAppTenantConsoleService(
+    _ConstMixin,
+    # Handler assignments injected via _assignments module below
+):
+    """Route incoming WhatsApp messages for the Tenant Admin Console."""
+
+    # -- Inject all handler/formatter/static assignments ------------------
+    # These are defined in _assignments.py and injected into this class's
+    # namespace via class-level attribute assignment below.
+
+    from . import _assignments as _  # noqa: E402
+
+    # fmt: off
+    _t = _._t
+    _with_main_menu = _._with_main_menu
+    _format_client_list = _._format_client_list
+    _format_client_detail = _._format_client_detail
+    _format_service_list = _._format_service_list
+    _format_service_detail = _._format_service_detail
+    _format_plan_list = _._format_plan_list
+    _format_plan_detail = _._format_plan_detail
+    _format_profile_detail = _._format_profile_detail
+    _format_subscription_list = _._format_subscription_list
+    _format_subscription_detail = _._format_subscription_detail
+    _safe_uuid = _._safe_uuid
+    _format_subscription_duration = _._format_subscription_duration
+    _format_short_date = _._format_short_date
+    _calculate_subscription_expiry = _._calculate_subscription_expiry
+    _parse_iso_date = _._parse_iso_date
+    _start_clients_flow = _._start_clients_flow
+    _handle_client_list_selection = _._handle_client_list_selection
+    _handle_client_select = _._handle_client_select
+    _handle_client_detail_action = _._handle_client_detail_action
+    _start_client_create = _._start_client_create
+    _handle_client_create_full_name = _._handle_client_create_full_name
+    _handle_client_create_phone = _._handle_client_create_phone
+    _handle_client_create_username = _._handle_client_create_username
+    _handle_client_create_password = _._handle_client_create_password
+    _handle_client_create_confirm = _._handle_client_create_confirm
+    _start_client_edit = _._start_client_edit
+    _handle_client_edit_field = _._handle_client_edit_field
+    _handle_client_edit_value = _._handle_client_edit_value
+    _handle_client_deactivate_confirm = _._handle_client_deactivate_confirm
+    _handle_client_delete_confirm = _._handle_client_delete_confirm
+    _start_catalog_flow = _._start_catalog_flow
+    _fetch_service_list = _._fetch_service_list
+    _handle_catalog_service_select = _._handle_catalog_service_select
+    _handle_catalog_service_action = _._handle_catalog_service_action
+    _handle_catalog_edit_service = _._handle_catalog_edit_service
+    _handle_catalog_plan_select = _._handle_catalog_plan_select
+    _handle_catalog_plan_action = _._handle_catalog_plan_action
+    _handle_catalog_edit_plan = _._handle_catalog_edit_plan
+    _start_profile_flow = _._start_profile_flow
+    _handle_profile_action = _._handle_profile_action
+    _show_profile = _._show_profile
+    _start_profile_edit = _._start_profile_edit
+    _handle_profile_edit_field = _._handle_profile_edit_field
+    _handle_profile_edit_value = _._handle_profile_edit_value
+    _start_profile_change_password = _._start_profile_change_password
+    _handle_profile_change_password_old = _._handle_profile_change_password_old
+    _handle_profile_change_password_new = _._handle_profile_change_password_new
+    _start_profile_change_locale = _._start_profile_change_locale
+    _handle_profile_change_locale_select = _._handle_profile_change_locale_select
+    _start_subscriptions_flow = _._start_subscriptions_flow
+    _handle_subscriptions_menu = _._handle_subscriptions_menu
+    _handle_subscriptions_filter = _._handle_subscriptions_filter
+    _handle_subscriptions_list = _._handle_subscriptions_list
+    _handle_subscriptions_select = _._handle_subscriptions_select
+    _handle_subscriptions_action = _._handle_subscriptions_action
+    _start_subscriptions_create = _._start_subscriptions_create
+    _handle_subscriptions_create_client = _._handle_subscriptions_create_client
+    _handle_subscriptions_create_service = _._handle_subscriptions_create_service
+    _handle_subscriptions_create_plan = _._handle_subscriptions_create_plan
+    _handle_subscriptions_create_email = _._handle_subscriptions_create_email
+    _handle_subscriptions_create_password = _._handle_subscriptions_create_password
+    _handle_subscriptions_create_password_confirm = _._handle_subscriptions_create_password_confirm
+    _handle_subscriptions_create_profile_option = _._handle_subscriptions_create_profile_option
+    _handle_subscriptions_create_profile_name = _._handle_subscriptions_create_profile_name
+    _handle_subscriptions_create_pin = _._handle_subscriptions_create_pin
+    _handle_subscriptions_create_pin_confirm = _._handle_subscriptions_create_pin_confirm
+    _handle_subscriptions_create_duration = _._handle_subscriptions_create_duration
+    _handle_subscriptions_create_custom_date = _._handle_subscriptions_create_custom_date
+    _handle_subscriptions_create_confirm = _._handle_subscriptions_create_confirm
+    _handle_subscriptions_edit_field = _._handle_subscriptions_edit_field
+    _handle_subscriptions_edit_value = _._handle_subscriptions_edit_value
+    _handle_subscriptions_edit_password_confirm = _._handle_subscriptions_edit_password_confirm
+    _handle_subscriptions_edit_pin_confirm = _._handle_subscriptions_edit_pin_confirm
+    _handle_subscriptions_cancel_confirm = _._handle_subscriptions_cancel_confirm
+    _handle_subscriptions_reactivate_duration = _._handle_subscriptions_reactivate_duration
+    _handle_subscriptions_reactivate_custom_date = _._handle_subscriptions_reactivate_custom_date
+    _handle_subscriptions_reactivate_confirm = _._handle_subscriptions_reactivate_confirm
+    _handle_subscriptions_renew_duration = _._handle_subscriptions_renew_duration
+    _handle_subscriptions_renew_custom_date = _._handle_subscriptions_renew_custom_date
+    _handle_subscriptions_renew_confirm = _._handle_subscriptions_renew_confirm
+    _get_selected_subscription = _._get_selected_subscription
+    _apply_subscription_update = _._apply_subscription_update
+    _build_subscription_create_confirm = _._build_subscription_create_confirm
+    _build_subscription_reactivate_confirm = _._build_subscription_reactivate_confirm
+    _build_subscription_renew_confirm = _._build_subscription_renew_confirm
+    _route_clients_flow = _._route_clients_flow
+    _route_catalog_flow = _._route_catalog_flow
+    _route_profile_flow = _._route_profile_flow
+    _route_subscriptions_flow = _._route_subscriptions_flow
+    # fmt: on
+
+    # ------------------------------------------------------------------
+    # Constructor
+    # ------------------------------------------------------------------
+
+    def __init__(
+        self,
+        client_service: ClientServiceProtocol | None = None,
+        catalog_service: CatalogServiceProtocol | None = None,
+        profile_service: Any = None,
+        subscription_service: SubscriptionServiceProtocol | None = None,
+    ) -> None:
+        self._client_service = client_service
+        self._catalog_service = catalog_service
+        self._profile_service = profile_service
+        self._subscription_service = subscription_service
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    async def process_message(
+        self,
+        phone: str,
+        message: str,
+        *,
+        tenant_id: UUID | None = None,
+        user_id: UUID | None = None,
+        db: AsyncSession | None = None,
+        session_service: WhatsAppSessionService | None = None,
+        locale: str | None = None,
+    ) -> str:
+        if locale is not None:
+            _token = ctx.set_locale(locale)
+        else:
+            _token = None
+        msg = message.strip()
+
+        try:
+            session = None
+            if session_service is not None:
+                session = await session_service.get_session(f"admin:{phone}")
+            has_active_flow = session is not None and bool(session.flow)
+
+            if msg.lower() in self.RESET_COMMANDS:
+                if session_service is not None:
+                    await session_service.clear_session(f"admin:{phone}")
+                if has_active_flow:
+                    return self._with_main_menu(_i18n_t(ctx.get_locale(), "wa.tenant.cancelled"))
+                if msg == "0":
+                    return self._with_main_menu(_i18n_t(ctx.get_locale(), "wa.tenant.goodbye"))
+                return self._t(self.KEY_MAIN_MENU)
+
+            if (
+                session is None
+                and session_service is not None
+                and session_service.used_backup
+                and msg.lower() not in self.RESET_COMMANDS
+            ):
+                await session_service.create_session(f"admin:{phone}")
+                return ContingencyReplyPolicy.SESSION_RESET
+
+            if msg.lower() in self.HELP_COMMANDS:
+                return self._t(self.KEY_HELP_TEXT)
+
+            if has_active_flow:
+                return await self._route_active_flow(
+                    phone, msg, session, session_service, tenant_id, user_id, db,
+                )
+
+            if not msg:
+                return self._t(self.KEY_MAIN_MENU)
+
+            if msg == "1":
+                return await self._start_clients_flow(phone, session_service, tenant_id, db)
+            elif msg == "2":
+                return await self._start_catalog_flow(phone, session_service, tenant_id, db)
+            elif msg == "3":
+                return await self._start_profile_flow(phone, session_service, user_id, db)
+            elif msg == "4":
+                return await self._start_subscriptions_flow(phone, session_service, tenant_id, db)
+            return self._t(self.KEY_FALLBACK_NO_FLOW)
+
+        except RedisUnavailableError:
+            return ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
+        finally:
+            if _token is not None:
+                ctx.reset_locale(_token)
+
+    async def _route_active_flow(
+        self, phone, msg, session, session_service, tenant_id, user_id, db,
+    ) -> str:
+        flow = session.flow
+        step = session.step
+
+        if flow == self.CLIENTS_FLOW:
+            return await self._route_clients_flow(
+                phone, msg, step, session, session_service, tenant_id, db,
+            )
+        if flow == self.CATALOG_FLOW:
+            return await self._route_catalog_flow(
+                phone, msg, step, session, session_service, tenant_id, db,
+            )
+        if flow == self.PROFILE_FLOW:
+            return await self._route_profile_flow(
+                phone, msg, step, session, session_service, user_id, db,
+            )
+        if flow == self.SUBSCRIPTIONS_FLOW:
+            return await self._route_subscriptions_flow(
+                phone, msg, step, session, session_service, tenant_id, db,
+            )
+        return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)

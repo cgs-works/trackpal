@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/index.md","reason":"Backend conventions and checklist"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Target backend modular structure"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Quality gates for refactor"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Preserve exception semantics"}
+{"file":".trellis/spec/guides/index.md","reason":"Shared engineering thinking guide"}
+{"file":".pi/skills/fastapi-templates/SKILL.md","reason":"FastAPI template structure target"}
+{"file":".pi/skills/fastapi-templates/references/details.md","reason":"Repository/service layering patterns"}

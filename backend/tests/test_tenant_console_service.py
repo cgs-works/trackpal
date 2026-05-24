@@ -654,7 +654,7 @@ class TestFacade:
             calls.append({"instance": instance, "remote_jid": remote_jid})
 
         monkeypatch.setattr(
-            "app.services.whatsapp_tenant_console_facade.evolution_client.close_chat_session",
+            "app.services.whatsapp_tenant_console_facade.facade.evolution_client.close_chat_session",
             fake_close_chat_session,
         )
 
@@ -1276,8 +1276,8 @@ class TestUserFacingErrorTranslation:
         async def _fake_get(db: Any, user_id: UUID) -> SimpleNamespace:
             return SimpleNamespace(id=user_id, role="tenant")
 
-        import app.crud.users as user_crud
-        monkeypatch.setattr(user_crud, "get", _fake_get)
+        import app.repositories.users_repository as users_repo
+        monkeypatch.setattr(users_repo, "get", _fake_get)
 
         reply = await console_service._handle_profile_edit_value(
             phone="+10000000000",

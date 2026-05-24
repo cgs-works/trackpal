@@ -1,0 +1,26 @@
+"""Protocol definitions for the Master Console facade."""
+
+from __future__ import annotations
+
+from typing import Any, Protocol, runtime_checkable
+
+
+@runtime_checkable
+class TenantServiceProtocol(Protocol):
+    """Minimal interface that the facade requires from a tenant service.
+
+    The facade passes *tenant_service* through to
+    ``WhatsAppConsoleService`` without calling methods directly.
+    This protocol captures the subset of methods that the console
+    service actually invokes, enabling static type checking without
+    circular imports between endpoint and service layers.
+    """
+
+    async def get_tenants(self) -> list[Any]: ...
+    async def get_tenant(self, tenant_id: str) -> Any | None: ...
+    async def get_tenant_by_username(self, username: str) -> Any | None: ...
+    async def create_tenant(self, payload: dict) -> dict: ...
+    async def activate_tenant(self, tenant_id: str) -> dict: ...
+    async def deactivate_tenant(self, tenant_id: str) -> dict: ...
+    async def delete_tenant(self, tenant_id: str) -> dict: ...
+    async def update_tenant(self, tenant_id: str, payload: dict) -> dict: ...

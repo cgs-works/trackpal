@@ -1160,7 +1160,7 @@ async def test_subscription_renew_userfacing_error_translated(
         raise UserFacingError("subscription_renew_failed")
 
     monkeypatch.setattr(
-        "app.api.v1.endpoints.subscriptions.subscription_service.renew_subscription",
+        "app.api.v1.endpoints.subscriptions.lifecycle.subscription_service.renew_subscription",
         _raise_userfacing,
     )
 
@@ -1189,7 +1189,7 @@ async def test_subscription_reactivate_userfacing_error_translated(
         raise UserFacingError("subscription_reactivate_failed")
 
     monkeypatch.setattr(
-        "app.api.v1.endpoints.subscriptions.subscription_service.reactivate_subscription",
+        "app.api.v1.endpoints.subscriptions.lifecycle.subscription_service.reactivate_subscription",
         _raise_userfacing,
     )
 
