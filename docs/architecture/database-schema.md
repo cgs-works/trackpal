@@ -56,12 +56,12 @@ Tenant-owned end-customer profile linked to a `users` login row.
 | tenant_id | UUID | FK → tenants.id CASCADE |
 | owner_user_id | UUID | Unique FK → users.id CASCADE |
 | full_name | VARCHAR(200) | Required |
-| local_username | VARCHAR(94) | Tenant-local login handle used with tenant prefix |
+| username | VARCHAR(100) | Canonical client login username (`<tenant_prefix>_<local_username>`), tenant-scoped case-insensitive unique |
 | phone | VARCHAR(50) | Nullable, canonical digits-only, unique per tenant |
 | is_active | BOOLEAN | Default true |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
-Technical login username is stored in `users.username` as `<client_prefix>_<local_username>`.
+Client canonical login username is stored in both `clients.username` and `users.username` as `<client_prefix>_<local_username>`.
 
 ### `RefreshSession` — `refresh_sessions` table
 
@@ -184,11 +184,12 @@ Alembic migrations:
 4. `cd4efe74cae7` — Adjust tenant RLS policy so Master can manage tenants before switching into catalog context
 5. `cd5efe74cae8` — Drop obsolete `tenant_profiles` table after data migration to `tenants`
 6. `cd6efe74cae9` — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
-7. `cd7efe74caa0` — Add `subscriptions`, `subscription_events`, `subscription_reminder_logs`, and `subscription_reminder_settings` tables with RLS policies — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
+7. `cd7efe74caa0` — Add `subscriptions`, `subscription_events`, `subscription_reminder_logs`, and `subscription_reminder_settings` tables with RLS policies
+8. `cd9efe74caa2` — Rename `clients.local_username` to `clients.username`, rename related tenant+lower index, and backfill canonical values from `users.username`
 
 ## Key Constraints
 
-- Username unique across all users; client technical usernames use tenant prefix + local username
+- Username unique across all users; client canonical usernames use tenant prefix + local username and are stored in both `users` and `clients`
 - Master phone is unique in `master_profiles`; tenant WhatsApp phone is unique in `tenants.whatsapp_phone`
 - Tenant `client_prefix` is unique and required for client login generation
 - `User` row is the parent for identity; canonical tenant rows cascade on owner delete
