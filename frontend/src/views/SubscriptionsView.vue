@@ -112,9 +112,9 @@ function getStatusClass(status) {
 
 function getStatusLabel(status) {
   switch (status) {
-    case 'active': return 'Activa'
-    case 'expired': return 'Expirada'
-    case 'cancelled': return 'Cancelada'
+    case 'active': return i18nStore.t('frontend.subscriptions.status_active')
+    case 'expired': return i18nStore.t('frontend.subscriptions.status_expired')
+    case 'cancelled': return i18nStore.t('frontend.subscriptions.status_cancelled')
     default: return status || '—'
   }
 }
@@ -212,7 +212,7 @@ async function loadSubscriptions() {
     const response = await api.get('/subscriptions', { params })
     subscriptions.value = response.data || []
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudieron cargar las suscripciones.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.subscriptions.error_load'))
   } finally {
     isLoading.value = false
   }
@@ -439,7 +439,7 @@ async function revealCredentials(subId) {
     }, 10000)
   } catch (error) {
     revealedRowId.value = null
-    errorMessage.value = getApiError(error, 'No se pudieron revelar las credenciales.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.subscriptions.error_reveal'))
   }
 }
 
@@ -468,9 +468,9 @@ const reminderSettings = ref({
 const reminderCustomDay = ref('')
 
 const recipientModeOptions = [
-  { value: 'tenant_only', label: 'Solo el tenant' },
-  { value: 'client_only', label: 'Solo el cliente' },
-  { value: 'both', label: 'Tenant y cliente' },
+  { value: 'tenant_only', label: i18nStore.t('frontend.subscriptions.recipient_mode_tenant_only') },
+  { value: 'client_only', label: i18nStore.t('frontend.subscriptions.recipient_mode_client_only') },
+  { value: 'both', label: i18nStore.t('frontend.subscriptions.recipient_mode_both') },
 ]
 
 const timezoneOptions = [
@@ -513,7 +513,7 @@ async function saveReminderSettings() {
     await api.put('/subscription-settings', reminderSettings.value)
     showReminderSettings.value = false
   } catch (error) {
-    errorMessage.value = getApiError(error, 'No se pudieron guardar los ajustes de recordatorios.')
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.subscriptions.error_reminder_settings'))
   } finally {
     isSaving.value = false
   }
@@ -682,7 +682,7 @@ onMounted(init)
                     </template>
                     <template v-else>******</template>
                   </span>
-                  <button class="button button-sm reveal-btn" type="button" @click="revealCredentials(sub.id)" :title="revealedRowId === sub.id ? 'Ocultar' : 'Revelar'">
+                  <button class="button button-sm reveal-btn" type="button" @click="revealCredentials(sub.id)" :title="revealedRowId === sub.id ? i18nStore.t('frontend.subscriptions.hide') : i18nStore.t('frontend.subscriptions.reveal')">
                     👁️
                   </button>
                 </template>
@@ -783,7 +783,7 @@ onMounted(init)
           <template v-if="showProfile">
             <label>
               {{ i18nStore.t('frontend.subscriptions.profile_name') }}
-              <input v-model="formData.profile_name" placeholder="Ej: Perfil 1" />
+              <input v-model="formData.profile_name" :placeholder="i18nStore.t('frontend.subscriptions.placeholder_profile_name')" />
             </label>
             <label>
               {{ i18nStore.t('frontend.subscriptions.pin') }}
@@ -845,7 +845,7 @@ onMounted(init)
             </select>
           </label>
           <label>
-            {{ i18nStore.t('frontend.subscriptions.start_date') }} (opcional)
+            {{ i18nStore.t('frontend.subscriptions.start_date') }} {{ i18nStore.t('frontend.subscriptions.optional') }}
             <input v-model="reactivateForm.starts_at" type="date" />
           </label>
           <label v-if="isReactivateCustomDuration">
@@ -873,7 +873,7 @@ onMounted(init)
           <p>{{ i18nStore.t('frontend.subscriptions.cancel_confirm') }}</p>
           <label>
             {{ i18nStore.t('frontend.subscriptions.cancel_notes') }}
-            <textarea v-model="cancelNotes" rows="3" placeholder="Motivo de la cancelación..."></textarea>
+            <textarea v-model="cancelNotes" rows="3" :placeholder="i18nStore.t('frontend.subscriptions.placeholder_cancel_reason')"></textarea>
           </label>
         </div>
         <div class="modal-footer">
@@ -905,16 +905,16 @@ onMounted(init)
             <div class="warning-days-container">
               <label class="day-check" v-for="day in [7, 3, 1]" :key="day">
                 <input type="checkbox" :checked="reminderSettings.warning_days.includes(day)" @change="toggleWarningDay(day)" />
-                {{ day }} día{{ day > 1 ? 's' : '' }}
+                {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
               </label>
               <div class="custom-day-input">
-                <input v-model="reminderCustomDay" type="number" min="1" :placeholder="i18nStore.t('frontend.catalog.new_service')" @keyup.enter="addCustomWarningDay" />
+                <input v-model="reminderCustomDay" type="number" min="1" :placeholder="i18nStore.t('frontend.subscriptions.placeholder_custom_day')" @keyup.enter="addCustomWarningDay" />
                 <button class="button button-sm" type="button" @click="addCustomWarningDay" :disabled="!reminderCustomDay">+</button>
               </div>
             </div>
             <div v-if="reminderSettings.warning_days.length" class="warning-days-tags">
               <span class="tag" v-for="day in reminderSettings.warning_days" :key="day">
-                {{ day }} día{{ day > 1 ? 's' : '' }}
+                {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
                 <button class="tag-remove" type="button" @click="removeWarningDay(day)">✕</button>
               </span>
             </div>

@@ -75,24 +75,9 @@ SUBSCRIPTIONS_EDIT_FIELD_MAP = {
     "7": "profile_pin",
 }
 
-SUBSCRIPTIONS_EDIT_PROMPTS = {
-    "streaming_email": (
-        "✏️ *Editar Suscripción*\n\n"
-        "¿Cuál es el *nuevo email de streaming*?"
-    ),
-    "streaming_password": (
-        "✏️ *Editar Suscripción*\n\n"
-        "¿Cuál es la *nueva contraseña de streaming*?\n\n"
-        "(Escribe *—* para dejar vacía)"
-    ),
-    "profile_name": (
-        "✏️ *Editar Suscripción*\n\n"
-        "¿Cuál es el *nuevo nombre del perfil*?\n\n"
-        "(Escribe *—* para dejar vacío)"
-    ),
-    "profile_pin": (
-        "✏️ *Editar Suscripción*\n\n"
-        "¿Cuál es el *nuevo PIN del perfil*?\n\n"
-        "(Escribe *—* para dejar vacío)"
-    ),
+SUBSCRIPTIONS_EDIT_PROMPT_KEYS = {
+    "streaming_email": "wa.tenant.subscriptions.edit.prompt.streaming_email",
+    "streaming_password": "wa.tenant.subscriptions.edit.prompt.streaming_password",
+    "profile_name": "wa.tenant.subscriptions.edit.prompt.profile_name",
+    "profile_pin": "wa.tenant.subscriptions.edit.prompt.profile_pin",
 }

@@ -50,7 +50,7 @@ async def _handle_subscriptions_edit_field(self, phone, msg, session, session_se
     session.step = self.SUBSCRIPTIONS_STEP_EDIT_VALUE
     if session_service is not None:
         await session_service.save_session(session)
-    return self.SUBSCRIPTIONS_EDIT_PROMPTS.get(field, self._t(self.KEY_SUBSCRIPTIONS_EDIT_FIELD_PROMPT))
+    return self._t(self.SUBSCRIPTIONS_EDIT_PROMPT_KEYS.get(field, self.KEY_SUBSCRIPTIONS_EDIT_FIELD_PROMPT))
 
 
 async def _handle_subscriptions_edit_value(self, phone, msg, session, session_service, tenant_id, db):
