@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"Backend check baseline"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Verification standards"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Ensure resulting structure compliance"}
+{"file":".trellis/spec/guides/index.md","reason":"Cross-check shared constraints"}

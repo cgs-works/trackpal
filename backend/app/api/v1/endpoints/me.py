@@ -1,11 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import CurrentUser, DbDep
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
-from app.models import Client, Tenant
+from app.repositories import tenants_repository
 from app.schemas.me import PasswordChange, ProfileResponse, ProfileUpdate
 from app.services.profile_service import ProfileService
 
@@ -13,19 +11,11 @@ router = APIRouter(prefix="/me", tags=["me"])
 profile_service = ProfileService()
 
 
-async def _resolve_profile_locale(db: AsyncSession, current_user) -> str:
+async def _resolve_profile_locale(db: DbDep, current_user) -> str:
     if current_user.role == "tenant":
-        result = await db.execute(
-            select(Tenant.locale).where(Tenant.owner_user_id == current_user.id)
-        )
-        return result.scalar_one_or_none() or "en"
+        return await tenants_repository.resolve_locale_by_owner(db, current_user.id)
     if current_user.role == "client":
-        result = await db.execute(
-            select(Tenant.locale)
-            .join(Client, Client.tenant_id == Tenant.id)
-            .where(Client.owner_user_id == current_user.id)
-        )
-        return result.scalar_one_or_none() or "en"
+        return await tenants_repository.resolve_locale_by_client(db, current_user.id)
     return "en"
 
 

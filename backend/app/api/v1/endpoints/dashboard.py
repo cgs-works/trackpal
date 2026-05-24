@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
 
 from app.api.dependencies import CurrentUser, DbDep
-from app.models import Tenant
+from app.repositories import tenants_repository
 from app.schemas.dashboard import (
     ClientDashboardResponse,
     MasterDashboardResponse,
@@ -20,16 +19,11 @@ profile_service = ProfileService()
 )
 async def get_dashboard(db: DbDep, current_user: CurrentUser):
     if current_user.role == "master":
-        total_result = await db.execute(select(func.count()).select_from(Tenant))
-        active_result = await db.execute(
-            select(func.count()).select_from(Tenant).where(Tenant.is_active)
-        )
-        total = total_result.scalar_one()
-        active = active_result.scalar_one()
+        stats = await tenants_repository.get_stats(db)
         return MasterDashboardResponse(
-            total_tenants=total,
-            active_tenants=active,
-            inactive_tenants=total - active,
+            total_tenants=stats["total"],
+            active_tenants=stats["active"],
+            inactive_tenants=stats["inactive"],
         )
 
     profile = await profile_service.get_profile(db, current_user)

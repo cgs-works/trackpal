@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, set_internal_rls_context, set_rls_context
 from app.core.security import decode_token, verify_n8n_api_key
-from app.crud import users as user_crud
+from app.repositories import clients_repository, tenants_repository, users_repository
 from app.models import Client, Tenant, User
 from sqlalchemy import select
 
@@ -17,9 +17,7 @@ async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
 
     Returns the tenant's stored locale or ``"en"`` as fallback.
     """
-    result = await db.execute(select(Tenant.locale).where(Tenant.id == tenant_id))
-    row = result.scalar_one_or_none()
-    return row if row else "en"
+    return await tenants_repository.resolve_locale(db, tenant_id)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -44,7 +42,7 @@ async def get_current_user(
     except (ValueError, TypeError):
         raise credentials_exception from None
 
-    user = await user_crud.get(db, parsed_user_id)
+    user = await users_repository.get(db, parsed_user_id)
     if user is None:
         raise credentials_exception
     try:
@@ -52,8 +50,7 @@ async def get_current_user(
     except ValueError:
         raise credentials_exception from None
     if user.role == "tenant":
-        result = await db.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
-        profile = result.scalar_one_or_none()
+        profile = await tenants_repository.get_by_owner(db, user.id)
         if profile and not profile.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -67,17 +64,7 @@ async def get_current_user(
             tenant_id = UUID(raw_tenant_id)
         except (ValueError, TypeError):
             raise credentials_exception from None
-        result = await db.execute(
-            select(Client)
-            .join(Tenant, Tenant.id == Client.tenant_id)
-            .where(
-                Client.owner_user_id == user.id,
-                Client.is_active,
-                Tenant.id == tenant_id,
-                Tenant.is_active,
-            )
-        )
-        if result.scalar_one_or_none() is None:
+        if await clients_repository.get_active_client_in_tenant(db, user.id, tenant_id) is None:
             raise credentials_exception
     return user
 
@@ -94,8 +81,7 @@ async def get_active_tenant_id(
             detail="Clients cannot access tenant management endpoints",
         )
     if current_user.role == "tenant":
-        result = await db.execute(select(Tenant).where(Tenant.owner_user_id == current_user.id, Tenant.is_active))
-        tenant = result.scalar_one_or_none()
+        tenant = await tenants_repository.get_active_by_owner(db, current_user.id)
         if tenant is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is deactivated")
         await set_rls_context(db, str(current_user.id), current_user.role, str(tenant.id))
@@ -107,8 +93,7 @@ async def get_active_tenant_id(
         tenant_id = UUID(raw)
     except (ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid tenant context") from None
-    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id, Tenant.is_active))
-    if result.scalar_one_or_none() is None:
+    if await tenants_repository.get_active(db, tenant_id) is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Active tenant context required")
     await set_rls_context(db, str(current_user.id), current_user.role, str(tenant_id))
     return tenant_id
