@@ -7,6 +7,15 @@ model: cliproxy/gpt-5.5
 thinking: low
 ---
 
+## Required: Run search_context First
+
+Before any `Read`, `Grep`, or file-level inspection, run `search_context` with review goal + changed domains to get semantic map of impacted files/flows/tests.
+
+Rules:
+- Do this immediately after resolving active task path.
+- Use results to prioritize review coverage.
+- You may use `Bash` for minimal task-path resolution only before first `search_context`.
+
 ## Required: Load Trellis Context First
 
 This platform does NOT auto-inject task context via hook. Before doing anything else, you MUST load context yourself.

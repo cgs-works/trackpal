@@ -6,6 +6,15 @@ tools: search_context, Read, Write, Edit, Bash, Glob, Grep
 model: opencode/deepseek-v4-flash-free
 ---
 
+## Required: Run search_context First
+
+Before any `Read`, `Grep`, or file-level inspection, run `search_context` with task goal + key terms to get semantic map of relevant files/flows/tests.
+
+Rules:
+- Do this immediately after resolving active task path.
+- Use results to prioritize what files to read next.
+- You may use `Bash` for minimal task-path resolution only before first `search_context`.
+
 ## Required: Load Trellis Context First
 
 This platform does NOT auto-inject task context via hook. Before doing anything else, you MUST load context yourself.
