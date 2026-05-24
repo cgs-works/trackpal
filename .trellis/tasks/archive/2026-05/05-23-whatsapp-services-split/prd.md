@@ -27,10 +27,10 @@ Partir servicios/facades WhatsApp de alto tamaño en módulos pequeños, manteni
 
 ## Acceptance Criteria
 
-- [ ] WhatsApp servicios/facade divididos en módulos pequeños.
-- [ ] Sin módulo >240 LoC en alcance.
-- [ ] Flujos críticos WhatsApp mantienen comportamiento.
-- [ ] Tests `console/whatsapp` pasan.
+- [x] WhatsApp servicios/facade divididos en módulos pequeños.
+- [x] Sin módulo >240 LoC en alcance.
+- [x] Flujos críticos WhatsApp mantienen comportamiento.
+- [x] Tests `console/whatsapp` pasan.
 
 ## Out of Scope
 
