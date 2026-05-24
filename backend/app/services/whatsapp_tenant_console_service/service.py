@@ -86,6 +86,7 @@ class WhatsAppTenantConsoleService(
     _handle_profile_change_locale_select = _._handle_profile_change_locale_select
     _start_subscriptions_flow = _._start_subscriptions_flow
     _handle_subscriptions_menu = _._handle_subscriptions_menu
+    _query_subscriptions_by_filter = _._query_subscriptions_by_filter
     _handle_subscriptions_filter = _._handle_subscriptions_filter
     _handle_subscriptions_list = _._handle_subscriptions_list
     _handle_subscriptions_select = _._handle_subscriptions_select

@@ -439,7 +439,7 @@ onMounted(loadDashboard)
           </label>
 
           <label v-if="!isEditingClient">
-            Contraseña inicial
+            {{ i18nStore.t('frontend.clients.password') }}
             <input v-model="clientForm.password" type="password" autocomplete="new-password" required />
           </label>
 

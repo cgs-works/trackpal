@@ -855,6 +855,75 @@ class TestServiceMainMenu:
         assert "secret123" in reply_detail
         assert "1234" in reply_detail
 
+    async def test_service_subscriptions_list_paginates_and_keeps_selection_map(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        tenant_id = subscription_service.tenant_id
+        subscription_service._subscriptions = {}
+        subscriptions = [
+            FakeSubscriptionObj(
+                tenant_id=tenant_id,
+                streaming_email=f"cliente-page-{index}@test.com",
+            )
+            for index in range(1, 9)
+        ]
+        for subscription in subscriptions:
+            subscription_service._subscriptions[str(subscription.id)] = subscription
+
+        for step in ["4", "1"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=object(),
+                session_service=session_service,
+            )
+
+        reply_page_1 = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert set(session.selection_map) == {"1", "2", "3", "4", "5", "6", "7"}
+        assert session.selection_map["7"] == str(subscriptions[6].id)
+        assert "cliente-page-7@test.com" in reply_page_1
+        assert "cliente-page-8@test.com" not in reply_page_1
+        assert "0️⃣ Volver al menú principal" in reply_page_1
+        assert "9️⃣ Siguiente" in reply_page_1
+        assert "8️⃣ ← Anterior" not in reply_page_1
+
+        reply_page_2 = await console_service.process_message(
+            phone="+10000000000",
+            message="9",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert session.selection_map == {"1": str(subscriptions[7].id)}
+        assert "cliente-page-8@test.com" in reply_page_2
+        assert "cliente-page-7@test.com" not in reply_page_2
+        assert "8️⃣ ← Anterior" in reply_page_2
+        assert "9️⃣ Siguiente" not in reply_page_2
+
+        reply_detail = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=object(),
+            session_service=session_service,
+        )
+        assert "Detalle de Suscripción" in reply_detail
+        assert "cliente-page-8@test.com" in reply_detail
+
     async def test_service_subscriptions_create_flow(
         self,
         console_service: WhatsAppTenantConsoleService,

@@ -84,3 +84,44 @@ errorMessage.value = getApiError(error, 'No se pudieron revelar las credenciales
 ```vue
 errorMessage.value = getApiError(error, i18nStore.t('frontend.subscriptions.error_reveal'))
 ```
+
+## Scenario: Tenant admin client password label must come from i18n
+
+### 1. Scope / Trigger
+- Trigger: client club form showed hardcoded `Contraseña inicial` in `TenantDashboardView.vue`.
+
+### 2. Signatures
+- View contract: `useI18nStore().t(key: string): string`.
+- Template contract: create-client label must reference `frontend.clients.password`.
+
+### 3. Contracts
+- Required keys:
+  - ES catalog: `frontend.clients.password = "Contraseña"`
+  - EN catalog: `frontend.clients.password = "Password"`
+- Edit mode behavior unchanged (password field hidden on edit path).
+
+### 4. Validation & Error Matrix
+- Missing key -> i18n fallback text; render must not crash.
+- Wrong key namespace -> untranslated token visible; treat as regression.
+
+### 5. Good/Base/Bad Cases
+- Good: `<label>{{ i18nStore.t('frontend.clients.password') }}</label>`.
+- Base: only label text changes; input binding/validation unchanged.
+- Bad: hardcoded `<label>Contraseña inicial</label>`.
+
+### 6. Tests Required
+- Frontend build: `cd frontend && npm run build`.
+- Manual assertions:
+  - ES locale shows `Contraseña`.
+  - EN locale shows `Password`.
+  - No `Contraseña inicial` remains in tenant dashboard create-client form.
+
+### 7. Wrong vs Correct
+#### Wrong
+```vue
+<label for="new-client-password">Contraseña inicial</label>
+```
+#### Correct
+```vue
+<label for="new-client-password">{{ i18nStore.t('frontend.clients.password') }}</label>
+```

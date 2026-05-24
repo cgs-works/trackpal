@@ -153,7 +153,7 @@ Self-service dashboard accessible only to `tenant` role:
 - Profile edit form (name, email, phone, **locale**)
 - Password change form (old + new password)
 - Catalog management: services CRUD and per-service plans CRUD
-- Client management: table with CRUD actions
+- Client management: table with CRUD actions; create-client form uses i18n label `frontend.clients.password` (`Contraseña` / `Password`)
 - Link to subscriptions page
 - Duplicate/validation API errors shown in user's locale
 - Locale `<select>` in profile section (en/es); on save, refetches i18n catalog for immediate UI update

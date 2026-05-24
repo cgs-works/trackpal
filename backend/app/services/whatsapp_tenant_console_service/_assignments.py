@@ -79,6 +79,7 @@ _handle_profile_change_locale_select = pf._handle_profile_change_locale_select
 # -- Subscription core handlers
 _start_subscriptions_flow = sf._start_subscriptions_flow
 _handle_subscriptions_menu = sf._handle_subscriptions_menu
+_query_subscriptions_by_filter = sf._query_subscriptions_by_filter
 _handle_subscriptions_filter = sf._handle_subscriptions_filter
 _handle_subscriptions_list = sf._handle_subscriptions_list
 _handle_subscriptions_select = sf._handle_subscriptions_select
