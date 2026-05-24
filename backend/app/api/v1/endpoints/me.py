@@ -26,7 +26,6 @@ def _profile_response(user, profile) -> ProfileResponse:
         username=user.username,
         name=getattr(profile, "name", None),
         full_name=getattr(profile, "full_name", None),
-        local_username=getattr(profile, "local_username", None),
         tenant_id=getattr(profile, "tenant_id", None),
         tenant_name=getattr(tenant, "name", None),
         client_prefix=getattr(tenant, "client_prefix", None),

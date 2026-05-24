@@ -51,7 +51,7 @@ def _format_client_detail(client: Any) -> str:
     )
     phone = client.phone or "—"
     username = (
-        getattr(client, "local_username", None)
+        getattr(client, "username", None)
         or getattr(client.user, "username", "—")
     )
     created = ""

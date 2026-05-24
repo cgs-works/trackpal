@@ -74,7 +74,6 @@ class ClientResponse(BaseModel):
     tenant_id: UUID
     owner_user_id: UUID
     full_name: str
-    local_username: str
     username: str
     phone: str | None
     is_active: bool

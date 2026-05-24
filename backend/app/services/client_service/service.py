@@ -49,17 +49,17 @@ class ClientService:
         local_username = validate_client_local_username(payload.local_username)
         phone = validate_phone(payload.phone)
         password = validate_password_policy(payload.password)
-        technical_username = build_client_username(tenant.client_prefix, local_username)
+        canonical_username = build_client_username(tenant.client_prefix, local_username)
 
-        if await clients_repository.local_username_exists(db, tenant_id, local_username):
+        if await clients_repository.local_username_exists(db, tenant_id, canonical_username):
             raise UserFacingError("client_local_username_exists")
         if phone and await clients_repository.phone_exists(db, tenant_id, phone):
             raise UserFacingError("phone_already_registered")
-        if await users_repository.username_exists(db, technical_username):
+        if await users_repository.username_exists(db, canonical_username):
             raise UserFacingError("username_already_registered")
 
         user = User(
-            username=technical_username,
+            username=canonical_username,
             password_hash=get_password_hash(password),
             role="client",
         )
@@ -70,7 +70,7 @@ class ClientService:
             tenant_id=tenant.id,
             owner_user_id=user.id,
             full_name=full_name,
-            local_username=local_username,
+            username=canonical_username,
             phone=phone,
             is_active=True,
         )
@@ -103,14 +103,16 @@ class ClientService:
         if "phone" in update_data:
             update_data["phone"] = validate_phone(update_data["phone"])
 
-        new_local_username = update_data.get("local_username", client.local_username)
-        technical_username = build_client_username(
+        new_local_username = update_data.get("local_username", client.username.split("_", 1)[1] if "_" in client.username else client.username)
+        canonical_username = build_client_username(
             client.tenant.client_prefix, new_local_username
         )
 
-        if new_local_username != client.local_username:
+        if new_local_username != (
+            client.username.split("_", 1)[1] if "_" in client.username else client.username
+        ):
             if await clients_repository.local_username_exists(
-                db, tenant_id, new_local_username, client.id
+                db, tenant_id, canonical_username, client.id
             ):
                 raise UserFacingError("client_local_username_exists")
 
@@ -120,14 +122,16 @@ class ClientService:
             ):
                 raise UserFacingError("phone_already_registered")
 
-        if technical_username != client.user.username and await users_repository.username_exists(
-            db, technical_username, client.user.id
+        if canonical_username != client.user.username and await users_repository.username_exists(
+            db, canonical_username, client.user.id
         ):
             raise UserFacingError("username_already_registered")
 
         for field, value in update_data.items():
             setattr(client, field, value)
-        client.user.username = technical_username
+        client.user.username = canonical_username
+        # Sync client.username with canonical value
+        client.username = canonical_username
 
         try:
             await db.commit()
@@ -187,7 +191,11 @@ class ClientService:
         try:
             clients = await clients_repository.get_clients_with_user(db, tenant_id)
             for client in clients:
-                client.user.username = build_client_username(new_prefix, client.local_username)
+                # Extract local part from existing canonical username
+                local_part = client.username.split("_", 1)[1] if "_" in client.username else client.username
+                new_canonical = build_client_username(new_prefix, local_part)
+                client.user.username = new_canonical
+                client.username = new_canonical
         finally:
             if previous_context is not None:
                 await set_rls_context(

@@ -131,7 +131,7 @@ async def _handle_client_create_confirm(self, phone, msg, session, session_servi
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
 
-    full_username = getattr(client.user, "username", data.get("local_username", ""))
+    full_username = getattr(client, "username", data.get("local_username", ""))
     return self._with_main_menu(
         self._t(self.KEY_CLIENT_CREATE_SUCCESS,
             name=client.full_name,

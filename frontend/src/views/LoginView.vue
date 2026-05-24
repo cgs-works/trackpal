@@ -3,10 +3,12 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useI18nStore } from '../stores/i18n'
+import { usePublicI18n } from '../i18n/usePublicI18n'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const i18nStore = useI18nStore()
+const { locale, setLocale, t } = usePublicI18n()
 
 const username = ref('')
 const password = ref('')
@@ -31,10 +33,10 @@ async function handleSubmit() {
     } else if (role === 'client') {
       await router.push('/client/dashboard')
     } else {
-      errorMessage.value = 'Rol de usuario no reconocido'
+      errorMessage.value = t('login.unknown_role')
     }
   } catch (error) {
-    errorMessage.value = error.response?.data?.detail || 'No se pudo iniciar sesión'
+    errorMessage.value = error.response?.data?.detail || t('login.error')
   } finally {
     isLoading.value = false
   }
@@ -44,9 +46,17 @@ async function handleSubmit() {
 <template>
   <main class="login-page">
     <form class="login-form" @submit.prevent="handleSubmit">
-      <h1>Iniciar sesión</h1>
+      <h1>{{ t('login.title') }}</h1>
 
-      <label for="username">Usuario</label>
+      <div class="locale-selector">
+        <label for="locale-select">{{ t('login.language') }}:</label>
+        <select id="locale-select" v-model="locale" @change="setLocale(locale)">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </div>
+
+      <label for="username">{{ t('login.username') }}</label>
       <input
         id="username"
         v-model="username"
@@ -55,7 +65,7 @@ async function handleSubmit() {
         required
       >
 
-      <label for="password">Contraseña</label>
+      <label for="password">{{ t('login.password') }}</label>
       <input
         id="password"
         v-model="password"
@@ -67,7 +77,7 @@ async function handleSubmit() {
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
       <button type="submit" :disabled="isLoading">
-        {{ isLoading ? 'Ingresando...' : 'Ingresar' }}
+        {{ isLoading ? t('login.signing_in') : t('login.sign_in') }}
       </button>
     </form>
   </main>
