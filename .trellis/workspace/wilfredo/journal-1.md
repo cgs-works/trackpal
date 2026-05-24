@@ -74,3 +74,37 @@ Migrated admin club-client hardcoded label to i18n, made WA subscriptions list f
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Login public i18n + client username canonical migration
+
+**Date**: 2026-05-24
+**Task**: Login public i18n + client username canonical migration
+**Branch**: `feat/login-public-i18n-and-client-username-migration`
+
+### Summary
+
+Implemented login pre-auth locale selector with frontend JSON + localStorage default EN flow, migrated clients.local_username to canonical clients.username with backend schema/service/schema/test updates, created issue #21 and PR #22, and updated docs/spec contracts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4fa8fa0` | (see git log) |
+| `2c28d62` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
