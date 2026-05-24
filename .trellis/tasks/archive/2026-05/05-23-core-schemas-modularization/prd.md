@@ -26,10 +26,10 @@ Modularizar `backend/app/core` y `backend/app/schemas` para cumplir estructura t
 
 ## Acceptance Criteria
 
-- [ ] Ningún módulo nuevo de `core`/`schemas` supera 240 LoC.
-- [ ] Excepciones 201-240 quedan documentadas con plan cierre.
-- [ ] Imports existentes siguen funcionando (o compatibilidad equivalente).
-- [ ] Tests backend relevantes pasan.
+- [x] Ningún módulo nuevo de `core`/`schemas` supera 240 LoC.
+- [x] Excepciones 201-240 quedan documentadas con plan cierre.
+- [x] Imports existentes siguen funcionando (o compatibilidad equivalente).
+- [x] Tests backend relevantes pasan.
 
 ## Out of Scope
 
