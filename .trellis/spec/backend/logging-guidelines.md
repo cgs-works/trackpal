@@ -1,51 +1,46 @@
 # Logging Guidelines
 
-> How logging is done in this project.
-
----
+> Logging rules observed in backend.
 
 ## Overview
 
-<!--
-Document your project's logging conventions here.
+Project uses Python `logging` (backend runtime) and structured helper logging in Trellis scripts (`.trellis/scripts/common/log.py`).
+Primary rule: no secrets/PII in logs.
 
-Questions to answer:
-- What logging library do you use?
-- What are the log levels and when to use each?
-- What should be logged?
-- What should NOT be logged (PII, secrets)?
--->
+## Levels
 
-(To be filled by the team)
+- `INFO`: lifecycle events, startup/shutdown, normal ops summaries.
+- `WARNING`: fallback paths (missing i18n key, degraded dependency path).
+- `ERROR`: failed external calls, unhandled failures with context.
+- `DEBUG`: temporary/local debugging only; remove before merge.
 
----
+## Structured Context
 
-## Log Levels
+When logging failures include:
+- operation name
+- tenant/user identifiers when safe (ids, not passwords/tokens)
+- exception type/message
 
-<!-- When to use each level: debug, info, warn, error -->
-
-(To be filled by the team)
-
----
-
-## Structured Logging
-
-<!-- Log format, required fields -->
-
-(To be filled by the team)
-
----
+Avoid dumping full payload bodies with personal data.
 
 ## What to Log
 
-<!-- Important events to log -->
-
-(To be filled by the team)
-
----
+- Auth/session anomalies (without credentials).
+- Redis/Evolution API availability failures.
+- i18n missing keys (already done in i18n engine fallback path).
 
 ## What NOT to Log
 
-<!-- Sensitive data, PII, secrets -->
+- Passwords, JWTs, refresh tokens, API keys.
+- Full phone numbers if unnecessary.
+- Raw request bodies containing sensitive data.
 
-(To be filled by the team)
+## Examples
+
+- i18n fallback warning behavior documented in `docs/code-standard/backend-conventions.md` and implemented in `backend/app/core/i18n/engine.py`.
+- Trellis script severity helper patterns in `.trellis/scripts/common/log.py`.
+
+## Anti-patterns avoided
+
+- `print()` debug left in production paths.
+- Logging secret env vars from `app/core/config.py` values.

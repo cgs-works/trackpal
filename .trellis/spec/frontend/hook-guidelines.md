@@ -1,51 +1,35 @@
 # Hook Guidelines
 
-> How hooks are used in this project.
-
----
+> Custom hook/composable guidance for current frontend.
 
 ## Overview
 
-<!--
-Document your project's hook conventions here.
+Project currently uses stores + view logic; no dedicated `composables/` folder yet.
+Equivalent shared stateful logic lives in Pinia stores.
 
-Questions to answer:
-- What custom hooks do you have?
-- How do you handle data fetching?
-- What are the naming conventions?
-- How do you share stateful logic?
--->
+## Current Pattern
 
-(To be filled by the team)
-
----
-
-## Custom Hook Patterns
-
-<!-- How to create and structure custom hooks -->
-
-(To be filled by the team)
-
----
+- Reusable state/actions go to `stores/*` first.
+- If reusable view-only logic grows, create `src/composables/useXxx.js`.
+- Keep API transport in `services/api.js`, not in composable/store internals unless specific domain module needed.
 
 ## Data Fetching
 
-<!-- How data fetching is handled (React Query, SWR, etc.) -->
-
-(To be filled by the team)
-
----
+- Axios via `src/services/api.js`.
+- Interceptors handle auth token injection and global 401 flow.
+- Login uses direct axios call pattern documented in conventions to avoid recursion.
 
 ## Naming Conventions
 
-<!-- Hook naming rules (use*, etc.) -->
-
-(To be filled by the team)
-
----
+- Future composables: `useSomething.js`.
+- Return plain refs/computed/functions; avoid hidden side effects.
 
 ## Common Mistakes
 
-<!-- Hook-related mistakes your team has made -->
+- Mixing router guard logic into arbitrary view methods.
+- Duplicating same async fetch/error mapping across views instead of extracting shared helper/store action.
 
-(To be filled by the team)
+## Examples
+
+- Shared state pattern today: `frontend/src/stores/auth.js`, `frontend/src/stores/i18n.js`.
+- HTTP handling pattern: `frontend/src/services/api.js`.

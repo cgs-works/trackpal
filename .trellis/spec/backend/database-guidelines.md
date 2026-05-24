@@ -1,51 +1,48 @@
 # Database Guidelines
 
-> Database patterns and conventions for this project.
-
----
+> SQLAlchemy async + Alembic conventions used in Trackpal.
 
 ## Overview
 
-<!--
-Document your project's database conventions here.
-
-Questions to answer:
-- What ORM/query library do you use?
-- How are migrations managed?
-- What are the naming conventions for tables/columns?
-- How do you handle transactions?
--->
-
-(To be filled by the team)
-
----
+- ORM: SQLAlchemy 2.x async (`AsyncSession`).
+- Migrations: Alembic (`uv run alembic upgrade head`).
+- PostgreSQL in prod, SQLite in tests.
+- Repository layer is preferred home for query logic.
 
 ## Query Patterns
 
-<!-- How should queries be written? Batch operations? -->
+- Use `select()`, `update()`, joins, `scalar()/scalars()` with `AsyncSession`.
+- Group reusable queries in `app/repositories/*`.
+- Services orchestrate transactions and business validation.
+- Resolve locale before mutating operations when endpoint may translate errors.
 
-(To be filled by the team)
+Examples:
+- `backend/app/repositories/users_repository.py`
+- `backend/app/repositories/tenants_repository.py`
+- `backend/app/repositories/catalog_repository.py`
 
----
+## Transactions
+
+- Commit in service layer after successful mutation.
+- On exception: rollback, re-raise mapped error.
+- Avoid hidden commits inside lower helpers unless explicit contract.
 
 ## Migrations
 
-<!-- How to create and run migrations -->
-
-(To be filled by the team)
-
----
+- Create with Alembic revision (autogen/manual).
+- Apply locally before tests:
+  - `uv run alembic upgrade head`
+- Keep model/schema/repository changes synchronized in same change set.
 
 ## Naming Conventions
 
-<!-- Table names, column names, index names -->
-
-(To be filled by the team)
-
----
+- Tables/columns: snake_case.
+- FK/index/constraints follow Alembic defaults or explicit clear names.
+- Repository functions named by intent: `get_*`, `list_*`, `create_*`, `update_*`, `delete_*`, `resolve_*`.
 
 ## Common Mistakes
 
-<!-- Database-related mistakes your team has made -->
-
-(To be filled by the team)
+- Direct SQL in endpoint handlers.
+- Mixing query code and HTTP status logic.
+- Post-rollback locale reads in i18n flows.
+- Keeping stale `crud`-style access after repository migration.

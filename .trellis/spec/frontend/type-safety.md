@@ -1,51 +1,35 @@
 # Type Safety
 
-> Type safety patterns in this project.
-
----
+> Type safety reality in current frontend.
 
 ## Overview
 
-<!--
-Document your project's type safety conventions here.
-
-Questions to answer:
-- What type system do you use?
-- How are types organized?
-- What validation library do you use?
-- How do you handle type inference?
--->
-
-(To be filled by the team)
-
----
+- Frontend is JavaScript-only (no TypeScript).
+- Runtime validation and backend contracts are primary safety mechanisms.
 
 ## Type Organization
 
-<!-- Where types are defined, shared types vs local types -->
-
-(To be filled by the team)
-
----
+- No dedicated type files today.
+- Contract shapes inferred from backend schemas/endpoints and usage in views/stores.
 
 ## Validation
 
-<!-- Runtime validation patterns (Zod, Yup, io-ts, etc.) -->
-
-(To be filled by the team)
-
----
+- Backend enforces strict schema validation (FastAPI + Pydantic).
+- Frontend validates user flows with guard clauses and API error handling.
+- i18n catalogs fetched from backend (`/api/v1/i18n/catalog`) reduce string-shape drift.
 
 ## Common Patterns
 
-<!-- Type utilities, generics, type guards -->
-
-(To be filled by the team)
-
----
+- Defensive optional chaining on API errors:
+  - `error.response?.data?.detail`
+- Array detail normalization pattern from frontend conventions doc.
 
 ## Forbidden Patterns
 
-<!-- any, type assertions, etc. -->
+- Pretending TS types exist.
+- Silent `catch {}` without user feedback.
+- Hardcoded translation dictionaries in frontend source.
 
-(To be filled by the team)
+## Migration note
+
+If TypeScript is adopted later, add explicit `types/` and update this spec. For now document JS reality, not aspirational TS rules.

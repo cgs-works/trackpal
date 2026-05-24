@@ -1,51 +1,38 @@
 # Quality Guidelines
 
-> Code quality standards for backend development.
-
----
-
-## Overview
-
-<!--
-Document your project's quality standards here.
-
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
-
-(To be filled by the team)
-
----
-
-## Forbidden Patterns
-
-<!-- Patterns that should never be used and why -->
-
-(To be filled by the team)
-
----
+> Backend quality gates used in Trackpal.
 
 ## Required Patterns
 
-<!-- Patterns that must always be used -->
+- Async FastAPI handlers and SQLAlchemy async sessions.
+- Thin endpoint handlers, business logic in services.
+- Reusable query logic in repositories.
+- Shared input normalization via `app/core/input_validation/*`.
+- i18n-aware user errors via `UserFacingError` + endpoint translation.
 
-(To be filled by the team)
+## Forbidden Patterns
 
----
+- New monolith files >240 LoC (target <=200).
+- SQL in API endpoints unless urgent temporary hotfix.
+- Hardcoded frontend-visible translation strings in services.
+- Committing debug prints/temp code.
 
 ## Testing Requirements
 
-<!-- What level of testing is expected -->
+- Run backend suite before completion: `cd backend && uv run pytest -v`.
+- For scoped edits run focused tests first, then full suite.
+- Keep async test patterns from `backend/tests/conftest.py` fixtures.
 
-(To be filled by the team)
+## Review Checklist
 
----
+- Layering respected (`api -> services -> repositories`).
+- Endpoint status codes unchanged unless intentional.
+- Imports stable through package `__init__.py` re-exports.
+- No secrets in logs/errors.
+- LoC policy respected; debt explicitly documented for 201-240 range.
 
-## Code Review Checklist
+## Evidence examples
 
-<!-- What reviewers should check -->
-
-(To be filled by the team)
+- Full-suite baseline used in refactor: `781 passed, 1 skipped`.
+- Endpoint package modularization: `backend/app/api/v1/endpoints/subscriptions/*`.
+- Repository migration examples: `backend/app/repositories/*`.

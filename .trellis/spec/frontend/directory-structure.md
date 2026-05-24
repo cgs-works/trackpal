@@ -1,54 +1,54 @@
 # Directory Structure
 
-> How frontend code is organized in this project.
-
----
+> Frontend layout used in Trackpal.
 
 ## Overview
 
-<!--
-Document your project's frontend directory structure here.
-
-Questions to answer:
-- Where do components live?
-- How are features/modules organized?
-- Where are shared utilities?
-- How are assets organized?
--->
-
-(To be filled by the team)
-
----
+Vue 3 SPA, JS-only, route-driven views. No TypeScript.
+Small shared layers: router, stores, services.
 
 ## Directory Layout
 
+```text
+frontend/src/
+├── App.vue
+├── main.js
+├── style.css
+├── router/
+│   └── index.js
+├── services/
+│   └── api.js
+├── stores/
+│   ├── auth.js
+│   └── i18n.js
+└── views/
+    ├── LoginView.vue
+    ├── MasterDashboardView.vue
+    ├── TenantDashboardView.vue
+    ├── ClientDashboardView.vue
+    └── SubscriptionsView.vue
 ```
-<!-- Replace with your actual structure -->
-src/
-├── ...
-└── ...
-```
-
----
 
 ## Module Organization
 
-<!-- How should new features be organized? -->
-
-(To be filled by the team)
-
----
+- `views/`: route pages, page-level UI + API calls.
+- `stores/`: cross-page state (auth, i18n catalogs/locale).
+- `services/api.js`: Axios instance + interceptors.
+- `router/index.js`: routes + auth/role guards.
 
 ## Naming Conventions
 
-<!-- File and folder naming rules -->
-
-(To be filled by the team)
-
----
+- View components: `PascalCaseView.vue`.
+- Store files: concise domain names (`auth.js`, `i18n.js`).
+- JS modules: `snake_or_short-lower` by existing style.
 
 ## Examples
 
-<!-- Link to well-organized modules as examples -->
+- Routing/guards: `frontend/src/router/index.js`.
+- Auth flow state: `frontend/src/stores/auth.js`.
+- i18n store + catalog loading: `frontend/src/stores/i18n.js`.
 
-(To be filled by the team)
+## Anti-patterns avoided
+
+- Random shared utils in root.
+- Business logic duplicated across multiple views without store/service extraction.

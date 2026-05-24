@@ -1,51 +1,40 @@
 # State Management
 
-> How state is managed in this project.
-
----
+> State conventions in Trackpal frontend.
 
 ## Overview
 
-<!--
-Document your project's state management conventions here.
-
-Questions to answer:
-- What state management solution do you use?
-- How is local vs global state decided?
-- How do you handle server state?
-- What are the patterns for derived state?
--->
-
-(To be filled by the team)
-
----
+- Global state library: Pinia.
+- Router handles URL/navigation state.
+- Server state fetched on demand via Axios; no React Query/Vue Query layer currently.
 
 ## State Categories
 
-<!-- Local state, global state, server state, URL state -->
-
-(To be filled by the team)
-
----
+- Global auth/session/role: `stores/auth.js`.
+- Global locale/catalog/translations: `stores/i18n.js`.
+- View-local UI state: refs inside each `.vue` view.
 
 ## When to Use Global State
 
-<!-- Criteria for promoting state to global -->
-
-(To be filled by the team)
-
----
+Promote to store when state is:
+- used across multiple routes/views,
+- required by router guards,
+- needed for app-wide rendering (auth user, locale, catalog).
 
 ## Server State
 
-<!-- How server data is cached and synchronized -->
-
-(To be filled by the team)
-
----
+- Fetch via `services/api.js` in views/stores.
+- Keep server data normalized enough for current small app scope.
+- Handle API errors consistently through detail extraction helper pattern.
 
 ## Common Mistakes
 
-<!-- State management mistakes your team has made -->
+- Storing transient form-only state globally.
+- Duplicating auth/locale resolution logic in each view.
+- Bypassing interceptor-managed API client for authenticated calls.
 
-(To be filled by the team)
+## Examples
+
+- `frontend/src/stores/auth.js`
+- `frontend/src/stores/i18n.js`
+- `frontend/src/router/index.js` (depends on auth store)
