@@ -95,7 +95,19 @@ Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so
 
 ### Subscription flows
 
-- List by status
+The subscription list flow supports interactive pagination with 7 items per page (reserving keys 8 and 9 for navigation and 0 for exit):
+
+1. **Filter by status**: Tenant selects a status (Active / Expired / Cancelled / All)
+2. **Paginated list**: Results shown in pages of 7, with per-command:
+   - `0` — Cancel and return to tenant main menu
+   - `8` — Previous page (hidden if page ≤ 1)
+   - `9` — Next page (hidden if page ≥ total_pages)
+3. **Subscription selection**: Tenant picks a subscription by number (1–7) to view details and available actions (edit, cancel, renew, reactivate)
+
+Page state (`page`, `status_filter`) is stored in session `temp_data` and the per-page `selection_map` maps keys `1..7` to subscription IDs. Invalid page navigation returns a localized error without changing the current page.
+
+Additional subscription management flows:
+
 - Create subscription
 - Edit subscription
 - Cancel / reactivate / renew

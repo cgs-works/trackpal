@@ -71,10 +71,11 @@ Organized by prefix:
 | `error.*` | Backend API errors | `error.auth.invalid_credentials` |
 | `errors.*` | Business logic errors | `errors.client_not_found` |
 | `reminder.*` | Subscription reminders | `reminder.subscription.expiring` |
-| `wa.tenant.*` | WhatsApp tenant console | `wa.tenant.main_menu` |
-| `frontend.*` | Vue SPA web UI | `frontend.login.title` |
+| `wa.tenant.*` | WhatsApp tenant console — general | `wa.tenant.main_menu` |
+| `wa.tenant.subscriptions.*` | WhatsApp tenant console — subscriptions | `wa.tenant.subscriptions.list.header`, `wa.tenant.subscriptions.status.active`, `wa.tenant.subscriptions.list.page_prev` |
+| `frontend.*` | Vue SPA web UI | `frontend.login.title`, `frontend.clients.password` |
 
-Total: ~1094 string entries across both catalogs.
+Total: ~838 string entries across both catalogs.
 
 ### Merged Catalog
 
