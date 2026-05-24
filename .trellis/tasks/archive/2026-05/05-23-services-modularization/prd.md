@@ -28,10 +28,10 @@ Dividir servicios backend no-WhatsApp en módulos pequeños por responsabilidad,
 
 ## Acceptance Criteria
 
-- [ ] Servicios objetivo divididos en módulos pequeños.
-- [ ] Sin cambios de contrato externo.
-- [ ] Sin módulo >240 LoC en alcance.
-- [ ] Tests de servicios/subscriptions/client/tenant pasan.
+- [x] Servicios objetivo divididos en módulos pequeños.
+- [x] Sin cambios de contrato externo.
+- [x] Sin módulo >240 LoC en alcance.
+- [x] Tests de servicios/subscriptions/client/tenant pasan.
 
 ## Out of Scope
 
