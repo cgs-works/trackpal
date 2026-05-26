@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 3
-- **Last Active**: 2026-05-24
+- **Total Sessions**: 4
+- **Last Active**: 2026-05-26
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~110 | Active |
+| `journal-1.md` | ~144 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 4 | 2026-05-26 | Migrar integración Evolution Go + n8n specs + docs finalization | `7e694ac`, `1394ded` | `main` |
 | 3 | 2026-05-24 | Login public i18n + client username canonical migration | `4fa8fa0`, `2c28d62` | `feat/login-public-i18n-and-client-username-migration` |
 | 2 | 2026-05-24 | Fix i18n admin string and improve tenant subscription WhatsApp flow | `eeea611`, `e2ac993`, `701d469` | `main` |
 | 1 | 2026-05-23 | Fix i18n hardcoded strings tenant subscriptions | `aa290ce`, `29b37bf` | `main` |

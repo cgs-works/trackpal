@@ -108,3 +108,37 @@ Implemented login pre-auth locale selector with frontend JSON + localStorage def
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Migrar integración Evolution Go + n8n specs + docs finalization
+
+**Date**: 2026-05-26
+**Task**: Migrar integración Evolution Go + n8n specs + docs finalization
+**Branch**: `main`
+
+### Summary
+
+Finalize task 05-25-migrar-evolution-go-n8n: update Trellis spec docs (error-handling gotcha, quality-guidelines external API scenario, cross-layer-thinking probe checklist, backend index status) and align project docs (system-overview, whatsapp-console-flow, subscriptions, database-schema, backend-conventions, business-rules, product-goals, evolution-integration) to reflect Evolution Go migration. Archive task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7e694ac` | (see git log) |
+| `1394ded` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
