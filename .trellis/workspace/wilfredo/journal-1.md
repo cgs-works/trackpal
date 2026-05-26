@@ -142,3 +142,36 @@ Finalize task 05-25-migrar-evolution-go-n8n: update Trellis spec docs (error-han
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Extender acceso cliente multi-tenant (dashboard + WhatsApp) - implementación + i18n + docs
+
+**Date**: 2026-05-26
+**Task**: Extender acceso cliente multi-tenant (dashboard + WhatsApp) - implementación + i18n + docs
+**Branch**: `feat/client-console-i18n`
+
+### Summary
+
+Cliente acceso multi-tenant con routing instance-first (MASTER_WHATSAPP_INSTANCE), ambigüedad tenant+client, status='closed', i18n wa.client.*, dashboard suscripciones, refactor console.py split, package dashboard_service, tests 22 nuevos, docs actualizadas, code-specs actualizados, PR #25 cerrando issue #24.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b75a948` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
