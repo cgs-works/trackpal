@@ -120,6 +120,18 @@ async def resolve_locale_by_client(
     return row if row else "en"
 
 
+async def get_by_instance(
+    db: AsyncSession, instance_name: str
+) -> Tenant | None:
+    """Get active tenant by Evolution instance name."""
+    result = await db.execute(
+        select(Tenant)
+        .options(selectinload(Tenant.owner))
+        .where(Tenant.evolution_instance_name == instance_name)
+    )
+    return result.scalar_one_or_none()
+
+
 async def client_prefix_exists(
     db: AsyncSession,
     client_prefix: str,

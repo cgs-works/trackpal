@@ -1,35 +1,53 @@
+"""WhatsApp console entrypoint for n8n transport with instance-first routing.
+
+Instance-first routing resolution order:
+1. If ``instance == MASTER_WHATSAPP_INSTANCE`` → only master flow.
+2. If instance is a tenant instance → resolve tenant, then identity
+   within that tenant (admin by ``tenant.whatsapp_phone``, client by
+   ``(tenant_id, phone)``).
+3. If both tenant admin and client match → prompt for mode and persist
+   in Redis until ``0`` or ``/menu``.
+"""
+
+import logging
+
 from fastapi import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import ApiKeyDbDep
+from app.api.v1.endpoints.integrations.adapter import UNKNOWN_PHONE_REPLY
+from app.api.v1.endpoints.integrations.console_handlers import (
+    _handle_client_console,
+    _handle_master_console,
+    _handle_tenant_console,
+)
+from app.api.v1.endpoints.integrations.console_modes import _handle_ambiguity
 from app.core.config import settings
+from app.core.database import set_internal_rls_context
+from app.core.i18n import t
 from app.core.phone import normalize_phone
-from app.core.redis_client import RedisUnavailableError, get_redis_manager
+from app.core.redis_client import get_redis_manager
+from app.repositories import clients_repository, tenants_repository
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
-from app.services.catalog_service import CatalogService
-from app.services.client_service import ClientService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
-from app.services.profile_service import ProfileService
-from app.services.subscription_service import SubscriptionService
-from app.services.tenant_service import TenantService
-from app.services.whatsapp_auth_session_service import WhatsAppAuthSessionService
-from app.services.whatsapp_console_service import WhatsAppConsoleService
-from app.services.whatsapp_master_console_facade import WhatsAppMasterConsoleFacade
-from app.services.whatsapp_session_service import WhatsAppSessionService
-from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
-from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
-from app.api.v1.endpoints.integrations.adapter import (
-    _TenantConsoleAdapter,
-    UNKNOWN_PHONE_REPLY,
-)
+
+logger = logging.getLogger(__name__)
+
+
+def _tl(tenant: object) -> str:
+    """Resolve locale from tenant, defaulting to ``\"es\"``."""
+    return getattr(tenant, "locale", "es") or "es"
+
 
 console_router = APIRouter(tags=["integrations"])
 auth_service = AuthService()
-console_service = WhatsAppConsoleService()
-tenant_service = TenantService()
-
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
+
+
+# ====================================================================
+# Main endpoint
+# ====================================================================
 
 
 @console_router.post("/n8n/console", response_model=WhatsAppConsoleResponse)
@@ -46,136 +64,151 @@ async def whatsapp_console(
     """
     phone = normalize_phone(request.phone) or ""
 
-    # Create Redis-dependent services when available
     manager = get_redis_manager()
     if manager is None:
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
-    # Identify caller by phone and route by role
-    identity = await auth_service.identify_by_phone(db, phone)
+    instance = request.instance
+    if instance:
+        return await _route_by_instance(
+            phone=phone,
+            message=request.message,
+            instance=instance,
+            manager=manager,
+            db=db,
+        )
 
+    # Legacy phone-only identification (no instance provided)
+    identity = await auth_service.identify_by_phone(db, phone)
     if identity is None:
         return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
     role = identity["role"]
-
     if role == "master":
         return await _handle_master_console(
             phone=phone,
             message=request.message,
-            instance=request.instance,
+            instance=instance,
             manager=manager,
             db=db,
         )
-
     if role == "tenant":
         return await _handle_tenant_console(
             phone=phone,
             message=request.message,
-            instance=request.instance,
+            instance=instance,
             manager=manager,
             db=db,
         )
-
-    # Unknown role — treat as no-access
     return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
 
-async def _handle_master_console(
+# ====================================================================
+# Instance-first routing
+# ====================================================================
+
+
+async def _route_by_instance(
     phone: str,
     message: str,
-    instance: str | None,
+    instance: str,
     manager: object,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
-    """Handle a message from an identified Master user.
+    """Route by Evolution instance first.
 
-    Builds Redis-dependent services, creates the Master Console facade,
-    and processes the message.  This is the extracted inline path from
-    the original ``whatsapp_console`` endpoint — behavior is preserved.
+    Master instance → only master flow.
+    Tenant instance → resolve identity within tenant, handle ambiguity.
     """
-    session_service = WhatsAppSessionService(
-        connection_manager=manager,
-        ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
-    )
+    master_instance = settings.master_whatsapp_instance
 
-    auth_session_service = WhatsAppAuthSessionService(
-        connection_manager=manager,
-        session_ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
-        fail_threshold=settings.whatsapp_auth_fail_threshold,
-        lock_minutes=settings.whatsapp_auth_lock_minutes,
-        fail_window_minutes=settings.whatsapp_auth_fail_window_minutes,
-    )
-
-    # Create tenant adapter for console service
-    adapter = _TenantConsoleAdapter(tenant_service, db)
-
-    # Create facade orchestrator
-    facade = WhatsAppMasterConsoleFacade(
-        console_service=console_service,
-        session_service=session_service,
-        auth_session_service=auth_session_service,
-        tenant_service=adapter,
-    )
-
-    try:
-        reply = await facade.process_message(
-            phone=phone,
-            message=message,
-            instance=instance,
-            db=db,
-        )
-    except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
-        return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
-
-    return WhatsAppConsoleResponse(reply=reply)
-
-
-async def _handle_tenant_console(
-    phone: str,
-    message: str,
-    instance: str | None,
-    manager: object,
-    db: AsyncSession,
-) -> WhatsAppConsoleResponse:
-    """Handle a message from an identified Tenant Admin user.
-
-    Builds Redis-dependent services, the Tenant console service,
-    and the facade orchestrator, then processes the message.
-    Redis failures return the relayable unavailable reply.
-    """
-    # Create tenant-scoped services
-    session_service = WhatsAppSessionService(
-        connection_manager=manager,
-        ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
-    )
-
-    tenant_console_service = WhatsAppTenantConsoleService(
-        client_service=ClientService(),
-        catalog_service=CatalogService(),
-        profile_service=ProfileService(),
-        subscription_service=SubscriptionService(),
-    )
-
-    facade = WhatsAppTenantConsoleFacade(
-        console_service=tenant_console_service,
-        session_service=session_service,
-        tenant_service=TenantService(),
-    )
-
-    identity = await auth_service.identify_by_phone(db, phone)
-    if identity is None:
+    # 1. Master instance — only master flow
+    if master_instance and instance == master_instance:
+        identity = await auth_service.identify_by_phone(db, phone)
+        if identity and identity["role"] == "master":
+            return await _handle_master_console(
+                phone=phone, message=message, instance=instance,
+                manager=manager, db=db,
+            )
         return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
-    try:
-        reply = await facade.process_message(
-            phone=phone,
-            message=message,
-            identity=identity,
-            instance=instance,
-            db=db,
-        )
-    except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
-        return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
+    # 2. Tenant instance — resolve tenant
+    await set_internal_rls_context(db)
+    tenant = await tenants_repository.get_by_instance(db, instance)
+    if tenant is None:
+        # Unknown instance — fall back to legacy phone-based identification
+        identity = await auth_service.identify_by_phone(db, phone)
+        if identity is None:
+            return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
+        role = identity["role"]
+        if role == "master":
+            return await _handle_master_console(
+                phone=phone, message=message, instance=instance,
+                manager=manager, db=db,
+            )
+        if role == "tenant":
+            return await _handle_tenant_console(
+                phone=phone, message=message, instance=instance,
+                manager=manager, db=db,
+            )
+        return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
-    return WhatsAppConsoleResponse(reply=reply)
+    if not tenant.is_active:
+        return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))
+
+    # 3. Resolve identity within tenant
+    phone_digits = normalize_phone(phone) or phone
+
+    # Check tenant admin
+    tenant_admin = None
+    if tenant.whatsapp_phone:
+        admin_phone = normalize_phone(tenant.whatsapp_phone)
+        if admin_phone == phone_digits:
+            tenant_admin = tenant
+
+    # Check client within tenant — handle legacy duplicates safely
+    try:
+        client = await clients_repository.get_active_client_by_tenant_phone(
+            db, tenant.id, phone_digits
+        )
+    except Exception:
+        logger.exception(
+            "Duplicate client phone detected for tenant=%s phone=%s",
+            tenant.id, phone_digits,
+        )
+        return WhatsAppConsoleResponse(
+            reply=t(_tl(tenant), "wa.client.multiple_matches")
+        )
+
+    has_tenant_admin = tenant_admin is not None
+    has_client = client is not None
+
+    # 4. Handle ambiguity or direct match
+    if has_tenant_admin and has_client:
+        return await _handle_ambiguity(
+            phone=phone_digits, message=message, instance=instance,
+            manager=manager, db=db, tenant=tenant, client=client,
+        )
+
+    if has_tenant_admin:
+        return await _handle_tenant_console(
+            phone=phone, message=message, instance=instance,
+            manager=manager, db=db,
+        )
+
+    if has_client:
+        client_locale = _tl(tenant)
+        client_identity = {
+            "user_id": str(client.owner_user_id),
+            "role": "client",
+            "username": client.username,
+            "client_id": str(client.id),
+            "tenant_id": str(tenant.id),
+        }
+        return await _handle_client_console(
+            phone=phone, message=message, instance=instance,
+            manager=manager, db=db,
+            identity=client_identity, locale=client_locale,
+        )
+
+    return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))

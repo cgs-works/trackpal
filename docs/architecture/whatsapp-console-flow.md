@@ -57,13 +57,82 @@ Package: `backend/app/services/whatsapp_master_console_facade/`. Submodules: `fa
 | 5 | Ayuda | Show help |
 | 0 | Cerrar sesión / Cancelar | Contextual exit or cancel |
 
+## Client Console
+
+Client WhatsApp console provides **read-only** access for clients registered under a tenant. Clients cannot perform mutations (no create/update/delete). This was added in 2026-05.
+
+### Instance-first routing
+
+The console endpoint now routes by **WhatsApp instance** before resolving identity:
+
+1. Read `MASTER_WHATSAPP_INSTANCE` env var.
+2. If `instance == MASTER_WHATSAPP_INSTANCE` → master flow only.
+3. If instance belongs to a tenant → resolve tenant by `evolution_instance_name`.
+4. Within tenant context:
+   - Match `tenant.whatsapp_phone` → tenant admin flow.
+   - Match `(tenant_id, phone)` in `clients` table → client flow.
+
+### Ambiguity handling
+
+If the same phone matches both `tenant.whatsapp_phone` and a `client` record within the same tenant:
+- System **prompts** the user to choose mode: `1) Tenant` or `2) Cliente`.
+- Selection is persisted in Redis at key `wa:mode:{phone}` for the current session.
+- A confirmation message is sent indicating the chosen mode and that it stays until exit.
+- When user exits (`0`, `salir`, or `/menu`), the mode key is cleared from Redis.
+
+### Exit contract (`status="closed"`)
+
+When a client exits the console (option `0` / `salir`), the response includes `status="closed"` in the payload. This triggers the n8n/Evolution Go `change-status` node to close the Evolution chat session. The `status` field is omitted (serialized as `None`) for all non-exit responses to maintain backward compatibility.
+
+### Orchestration — `WhatsAppClientConsoleFacade`
+
+Package: `backend/app/services/whatsapp_client_console_facade/`. Submodules: `facade.py`.
+
+1. Client is resolved by `(tenant_id, phone)` — not by global phone lookup.
+2. Validates both `tenant.is_active` and `client.is_active`.
+3. Locale is resolved from parent tenant.
+4. All replies use i18n keys under namespace `wa.client.*`.
+5. Menu is read-only.
+
+### Menu options
+
+| # | Action | Description |
+|---|--------|-------------|
+| 1 | Mi Perfil | View client profile (name, tenant, phone, status) |
+| 2 | Mis Suscripciones | View active subscriptions |
+| 0 | Salir | Exit, returns `status="closed"` |
+
+### i18n namespace
+
+```
+wa.client.main_menu
+wa.client.profile.body          # params: full_name, tenant_name, phone, status
+wa.client.subscriptions.header
+wa.client.subscriptions.item    # params: num, service, plan, start, exp, status
+wa.client.subscriptions.empty
+wa.client.goodbye
+wa.client.access_denied
+wa.client.mode_prompt           # ambiguity resolution
+wa.client.mode_confirm_client
+wa.client.mode_confirm_tenant
+wa.client.mode_exit
+wa.client.mode_reset
+```
+
+### Split routing architecture
+
+To keep file size under the 240 LoC limit, the console endpoint package was split:
+- `console.py` — entry point, routing, dependency injection (~214 LoC)
+- `console_handlers.py` — individual handler functions (~300 LoC)
+- `console_modes.py` — ambiguity mode selection logic
+
 ## Tenant Console
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`
 
 Package: `backend/app/services/whatsapp_tenant_console_facade/`. Submodules: `facade.py`.
 
-1. Resolve caller by phone and verify `role=tenant`.
+1. Resolve caller by phone. Within tenant context, first check `tenant.whatsapp_phone` (tenant admin), then fallback to client identity.
 2. Verify tenant is active.
 3. Resolve tenant context + locale (`tenant.locale`, persisted column).
 4. On top-level `0`, clear `session:admin:{phone}` and exit.

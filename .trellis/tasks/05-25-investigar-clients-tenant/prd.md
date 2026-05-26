@@ -1,52 +1,81 @@
-# Extender login y consola para clientes multi-tenant
+# PRD — Extender acceso cliente multi-tenant (dashboard + WhatsApp)
 
 ## Goal
 
-Permitir que clientes de tenants inicien sesión en dashboard cliente y usen consola WhatsApp cliente por tenant, aislando datos entre tenants.
+Permitir acceso cliente por tenant en web y WhatsApp, con aislamiento estricto entre tenants, sin romper contrato Evolution Go + n8n ya migrado.
 
-## Confirmed Facts
+## User Value
 
-- Ya existe `POST /api/v1/auth/login` y soporta rol `client` (`backend/app/api/v1/endpoints/auth.py`).
-- Frontend ya tiene ruta protegida `/client/dashboard` rol `client` (`frontend/src/router/index.js`).
-- Modelo actual `clients` fuerza 1:1 con `users` por `uq_clients_owner_user_id` (`backend/app/models/client.py`).
-- `phone` no es global único; índice actual es único por tenant (`tenant_id`, `phone`) (`backend/app/models/client.py`).
-- Login cliente actual depende de relación activa `client + tenant activo` (`AuthService` + tests auth/clientes investigados).
+- Cliente entra a su panel con cuenta propia por tenant.
+- Cliente consulta estado de sus suscripciones activas.
+- Cliente usa consola WhatsApp del tenant donde está registrado.
+- Operación segura: mismo teléfono puede existir en tenants distintos sin fuga de datos.
+
+## Confirmed Facts (evidencia repo)
+
+- Login cliente ya existe en backend: `POST /api/v1/auth/login` + `AuthService`.
+- JWT cliente ya incluye `active_tenant_id` cuando cliente/tenant activos.
+- Frontend ya redirige `role=client` a `/client/dashboard`.
+- Tabla `clients` ya permite mismo teléfono en tenants distintos (`UNIQUE tenant_id + phone`).
+- Dashboard cliente actual devuelve perfil básico; no incluye lista de suscripciones activas en schema actual.
+- Integración WhatsApp actual identifica por teléfono solo master/tenant (`users_repository.get_by_phone` no consulta `clients`).
+- Endpoint consola (`/api/v1/integrations/n8n/console`) hoy enruta master/tenant; client cae en no acceso.
+- Tarea archivada `05-25-migrar-evolution-go-n8n` ya definió contrato Evolution Go (path, triggers, send, close-status). Esta tarea debe ser compatible.
 
 ## Requirements
 
-- Cliente debe poder autenticarse al dashboard cliente con credenciales de cuenta cliente por tenant.
-- Mismo número telefónico permitido en tenants distintos sin colisión.
-- Aislamiento estricto por tenant: acciones/datos en tenant A no afectan tenant B.
-- Dashboard web cliente MVP debe mostrar perfil + suscripciones activas del tenant actual.
-- Consola WhatsApp cliente: al escribir al número WhatsApp de tenant X, resolver cliente dentro de tenant X por teléfono y abrir sesión contextual de ese tenant.
-- Acceso a menú WhatsApp cliente solo para clientes precreados en ese tenant.
-- Menú WhatsApp cliente MVP: solo lectura (perfil + suscripciones activas), sin mutaciones.
-- Mantener prefijo tenant en username canónico para evitar colisiones globales.
+1. Cliente login web por username canónico de tenant + password.
+2. Mantener modelo cuenta cliente separada por tenant (sin identidad global).
+3. Dashboard cliente MVP debe mostrar:
+   - perfil cliente tenant actual,
+   - suscripciones activas tenant actual.
+4. WhatsApp cliente:
+   - resolver contexto de instancia primero,
+   - si instancia == `MASTER_WHATSAPP_INSTANCE`: solo flujo master,
+   - si instancia tenant: resolver tenant por instancia y luego identidad dentro de ese tenant,
+   - resolver cliente por `(tenant_id, phone)`,
+   - permitir solo cliente activo + tenant activo,
+   - menú read-only (perfil + suscripciones activas).
+5. Ambigüedad misma instancia (phone coincide como tenant y client): preguntar modo (`tenant` o `client`) y guardar elección en sesión actual hasta `0` o `/menu`.
+6. Al entrar en modo client, avisar explícitamente que seguirá en modo cliente hasta salir con `0` o `/menu`.
+7. Bloquear acceso WhatsApp cuando teléfono no pertenece a cliente precreado de ese tenant.
+8. No alterar contrato Evolution Go/n8n migrado (payload/rutas/headers críticos).
+9. Cobertura de tests para aislamiento cross-tenant y flujos cliente.
 
 ## Acceptance Criteria
 
-- [ ] Cliente de tenant puede login y acceder `/client/dashboard` con JWT rol `client` y `active_tenant_id` correcto.
-- [ ] Dashboard web cliente retorna perfil y suscripciones activas del tenant actual.
-- [ ] Mismo teléfono puede existir en clientes de tenant A y tenant B sin error.
-- [ ] Mensajes WhatsApp de cliente en instancia tenant A solo operan sobre datos de tenant A.
-- [ ] Mensajes WhatsApp de cliente en instancia tenant B solo operan sobre datos de tenant B.
-- [ ] Si teléfono no pertenece a cliente precreado en tenant de instancia WhatsApp, menú cliente se bloquea con respuesta de no autorizado/registro requerido.
-- [ ] Menú WhatsApp cliente expone solo lectura de perfil + suscripciones activas.
-- [ ] No hay fuga de datos cross-tenant en consultas clientes/suscripciones/dashboard cliente.
-- [ ] Tests backend cubren login cliente, aislamiento multi-tenant por teléfono y flujo WhatsApp cliente.
+- [ ] Login cliente válido retorna token usable y acceso a `/client/dashboard`.
+- [ ] Login cliente falla si cliente inactivo o tenant inactivo.
+- [ ] Dashboard cliente responde solo datos de tenant activo + suscripciones activas de ese tenant.
+- [ ] Mismo teléfono en tenants distintos no causa colisión.
+- [ ] WhatsApp cliente en tenant A nunca lee/escribe datos tenant B.
+- [ ] Instancia `MASTER_WHATSAPP_INSTANCE` nunca enruta a tenant/client.
+- [ ] Ambigüedad tenant+client en misma instancia pregunta modo y persiste en sesión actual hasta `0` o `/menu`.
+- [ ] Al seleccionar modo cliente, sistema avisa persistencia de modo hasta salir (`0` o `/menu`).
+- [ ] WhatsApp cliente no precreado recibe respuesta de acceso denegado/registro requerido.
+- [ ] Menú WhatsApp cliente no expone mutaciones (solo lectura).
+- [ ] Contratos Evolution Go/n8n existentes siguen pasando (sin regresión de integración).
+- [ ] Tests backend nuevos/ajustados cubren casos anteriores.
 
-## Out of Scope (propuesto)
+## Out of Scope
 
 - SSO global cliente entre tenants.
-- Unificación de perfil global cliente entre tenants.
+- Cuenta única cliente compartida entre tenants.
+- Mutaciones por WhatsApp cliente (crear/editar/cancelar recursos).
+
+## Constraints
+
+- Compatibilidad obligatoria con migración archivada `05-25-migrar-evolution-go-n8n`.
+- Cambios mínimos, enfocados en flujo cliente.
 
 ## Decisions Taken
 
-- Modelo identidad: cuenta cliente separada por tenant.
-- Teléfono: único dentro de cada tenant; reutilizable en tenants distintos.
-- Login web cliente: `username` canónico (`prefijo_usuario`) + contraseña.
-- WhatsApp auto-login: permitir solo con cliente activo y tenant activo.
+- Mensaje para cliente no precreado/inactivo en WhatsApp: **"Acceso denegado, no tienes una cuenta activa."** (genérico, sin filtrar existencia en otros tenants).
+- Verificación de ruteo primero por contexto de instancia.
+- Instancia master definida por variable `MASTER_WHATSAPP_INSTANCE`.
+- En colisión tenant+client en misma instancia, preguntar modo y guardar en sesión actual (no persistente en BD).
+- Si elige modo cliente, notificar que seguirá en ese modo hasta salir con `0` o `/menu`.
 
 ## Open Questions
 
-- Ninguna crítica por ahora.
+- Definir política exacta para colisión de teléfono dentro mismo tenant en flujo WhatsApp cliente cuando existan datos legacy inconsistentes (si apareciera más de un match).

@@ -175,16 +175,102 @@ probe = await client.post("/instance/create", json={"name": "ping", "token": "pi
 assert probe.status_code != 403, f"Body parsing failed for /instance/create"
 ```
 
+## Scenario: WhatsApp client console must route by instance before identity
+
+### 1. Scope / Trigger
+- Trigger: client WhatsApp console required same phone in different tenants to not leak data, and same phone as tenant+client within one tenant to prompt mode selection.
+
+### 2. Signatures
+- Console endpoint: `POST /api/v1/integrations/n8n/console` accepts `{"instance": str, "phone": str, "message": str}`.
+- Routing entry:
+  - `_route_by_instance(instance: str, phone: str, msg: str) -> WhatsAppConsoleResponse`
+- Ambiguity handler:
+  - `_handle_ambiguity(phone: str, msg: str, locale: str) -> WhatsAppConsoleResponse`
+- Redis session key for mode:
+  - `wa:mode:{phone}` stores `"tenant"` or `"client"` value
+
+### 3. Contracts
+- Config env var: `MASTER_WHATSAPP_INSTANCE` — literal name of master instance.
+- If `instance == MASTER_WHATSAPP_INSTANCE`: route only to master flow. Never fallback to tenant/client.
+- If `instance != MASTER_WHATSAPP_INSTANCE`:
+  1. Lookup tenant by `evolution_instance_name` via `tenants_repository.get_by_instance()`.
+  2. Within resolved tenant: check `tenant.whatsapp_phone` (tenant admin) and `clients` table by `(tenant_id, phone)`.
+- Only one match → route to that identity flow.
+- Both match (tenant + client) → prompt mode selection, persist decision in Redis `wa:mode:{phone}`.
+- Mode persists until `0`, `salir`, or `/menu`.
+- Exit (`0` / `salir`) must return `status="closed"` in response payload for n8n/Evolution Go `change-status` node.
+- Response shape is `WhatsAppConsoleResponse(reply=..., status=str|None)`. `status` field is omitted when `None` via `model_serializer`.
+
+### 4. Validation & Error Matrix
+- Unknown instance (no tenant found) → respond with access denied.
+- Client not precreated/inactive → respond `"Acceso denegado, no tienes una cuenta activa."` (via i18n key `wa.client.access_denied`).
+- Tenant inactive → respond access denied.
+- Duplicate phone within same tenant (legacy data) → respond generic error message without stacktrace (no 500).
+- Mode prompt invalid input → loop back to prompt.
+- Exit from ambiguity → clear `wa:mode:{phone}` from Redis, return `status="closed"`.
+
+### 5. Good/Base/Bad Cases
+- Good: tenant-instance A → client in tenant A → access own profiles/subscriptions. Same phone in tenant B → no data leak.
+- Good: phone is both tenant admin and client in same instance → mode prompt works, chosen mode persists until exit.
+- Base: phone not registered in resolved tenant → access denied generic.
+- Bad: mixing tenant A client data into tenant B response.
+- Bad: sending `status="closed"` on non-exit responses (breaks compatibility).
+
+### 6. Tests Required
+- Client console tests must cover:
+  - `instance == MASTER_WHATSAPP_INSTANCE` routes to master only
+  - tenant instance resolves correct tenant
+  - client in tenant A data isolated from tenant B
+  - same phone as tenant+client → ambiguity prompt shows
+  - ambiguity mode selection persists across messages until exit
+  - `/menu` and `0` reset mode and return `status="closed"`
+  - inactive client gets access denied
+  - inactive tenant blocks client
+- Regression: existing tenant console wizard, master console, and WhatsApp endpoint tests pass unchanged.
+- Command: `cd backend && uv run pytest tests/test_client_console_service.py -v`.
+
+### 7. Wrong vs Correct
+#### Wrong
+```python
+# Global precedence: master > tenant > client by phone only
+# No instance scoping — client from tenant A can leak into tenant B
+user = await identify_by_phone(phone)
+if user.role == "master":
+    return master_flow(...)
+elif user.role == "tenant":
+    return tenant_flow(...)
+```
+
+#### Correct
+```python
+# Instance-first routing
+if instance == config.master_whatsapp_instance:
+    return master_flow(phone, msg)
+
+tenant = await tenants_repository.get_by_instance(db, instance)
+if not tenant:
+    return access_denied(locale)
+
+# Resolve identity within tenant context
+tenant_match = tenant.whatsapp_phone == phone
+client_match = await clients_repository.get_active_client_by_tenant_phone(db, tenant.id, phone)
+
+if tenant_match and client_match:
+    return handle_ambiguity(phone, msg, locale)
+elif tenant_match:
+    return tenant_flow(phone, msg, tenant)
+elif client_match:
+    return client_flow(phone, msg, client_match)
+else:
+    return access_denied(locale)
+```
+
 ## Testing Requirements
 
 - Run backend suite before completion: `cd backend && uv run pytest -v`.
 - For scoped edits run focused tests first, then full suite.
 - Keep async test patterns from `backend/tests/conftest.py` fixtures.
 - Always probe external API endpoints directly with curl before assuming contract from docs.
-
-- Run backend suite before completion: `cd backend && uv run pytest -v`.
-- For scoped edits run focused tests first, then full suite.
-- Keep async test patterns from `backend/tests/conftest.py` fixtures.
 
 ## Review Checklist
 

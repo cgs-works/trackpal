@@ -6,6 +6,7 @@ from typing import Optional, List
 
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.encryption import decrypt_value
 from app.models.subscription import Subscription, SubscriptionEvent
@@ -84,6 +85,29 @@ async def list_subscriptions(
         stmt = stmt.where(Subscription.expires_at <= expires_to)
 
     stmt = stmt.order_by(Subscription.created_at.desc())
+    res = await db.execute(stmt)
+    return list(res.scalars().all())
+
+
+async def get_active_subscriptions_for_client(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    client_id: uuid.UUID,
+) -> list[Subscription]:
+    """Return active subscriptions for a client with service/plan loaded."""
+    stmt = (
+        select(Subscription)
+        .options(
+            selectinload(Subscription.service),
+            selectinload(Subscription.plan),
+        )
+        .where(
+            Subscription.tenant_id == tenant_id,
+            Subscription.client_id == client_id,
+            Subscription.status == "active",
+        )
+        .order_by(Subscription.expires_at.asc())
+    )
     res = await db.execute(stmt)
     return list(res.scalars().all())
 
