@@ -20,10 +20,12 @@ backend/
 │   │           ├── i18n.py       # GET /i18n/catalog
 │   │           ├── me.py
 │   │           ├── tenants.py
-│   │           ├── integrations/ # Package: adapter, console, identify
+│   │           ├── integrations/ # Package: adapter, console (split), identify
 │   │           │   ├── __init__.py
 │   │           │   ├── adapter.py
-│   │           │   ├── console.py
+│   │           │   ├── console.py          # Entrypoint + routing
+│   │           │   ├── console_handlers.py # Flow handlers
+│   │           │   ├── console_modes.py    # Ambiguity mode selection
 │   │           │   └── identify.py
 │   │           └── subscriptions/ # Package: crud, lifecycle, jobs, settings, router
 │   │               ├── __init__.py
@@ -96,6 +98,7 @@ backend/
 │       ├── catalog_service/
 │       ├── client_service/
 │       ├── contingency_reply_policy/
+│       ├── dashboard_service/     # Dashboard response assembly (package)
 │       ├── evolution_client/
 │       ├── profile_service/
 │       ├── subscription_job_service/
@@ -103,6 +106,7 @@ backend/
 │       ├── tenant_console_protocols/
 │       ├── tenant_service/
 │       ├── whatsapp_auth_session_service/
+│       ├── whatsapp_client_console_facade/  # Client WhatsApp console (read-only)
 │       ├── whatsapp_console_service/
 │       ├── whatsapp_master_console_facade/
 │       ├── whatsapp_session_service/
@@ -125,6 +129,7 @@ backend/
 │   ├── conftest.py
 │   ├── test_auth.py
 │   ├── test_catalog.py
+│   ├── test_client_console_service.py  # 22 tests
 │   ├── test_clients.py
 │   ├── test_contingency_reply_policy.py
 │   ├── test_evolution_client.py
@@ -174,6 +179,8 @@ backend/
 | `app/core/errors.py` | UserFacingError and translate_error |
 | `app/services/whatsapp_tenant_console_service/` | Tenant WhatsApp menu routing (package) |
 | `app/services/whatsapp_tenant_console_facade/` | Tenant console phone-based orchestration (package) |
+| `app/services/whatsapp_client_console_facade/` | Client WhatsApp read-only console (package) |
+| `app/services/dashboard_service/` | Dashboard response assembly per role (package) |
 | `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
 | `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
 | `app/services/tenant_console_protocols/` | Protocols for tenant console DI (package) |

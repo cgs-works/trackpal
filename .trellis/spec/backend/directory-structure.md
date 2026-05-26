@@ -64,6 +64,31 @@ backend/app/
 - WhatsApp domain split: `backend/app/services/whatsapp_tenant_console_service/*`.
 - Core infra split: `backend/app/core/redis_client/{manager.py,lifespan.py,policy.py}`.
 
+## Convention: Service single-file → package when >240 LoC
+
+Services that start as a single file (`dashboard_service.py`) must be converted to a package (`dashboard_service/__init__.py`) when:
+- LoC exceeds 240, or
+- They gain multiple responsibilities that should be split into focused modules (`queries.py`, `mutations.py`, `facade.py`, etc.).
+
+**Why**: Python resolves `app.services.dashboard_service` identically whether it is a module or a package `__init__.py`. Converting is transparent to all importers — no import paths change.
+
+**Pattern**:
+- Create directory `app/services/{name}/`.
+- Move class into `__init__.py`.
+- Delete `{name}.py`.
+- Add splitting modules as needed later.
+
+**Example** (dashboard):
+```
+# Before
+app/services/dashboard_service.py  # ~250 LoC
+
+# After (imports unchanged)
+app/services/dashboard_service/
+├── __init__.py  # DashboardService class, ~198 LoC
+# Future: queries.py, helpers.py, etc.
+```
+
 ## Anti-patterns avoided
 
 - Fat single-file services in `app/services/` root.

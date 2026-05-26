@@ -98,6 +98,32 @@ async def phone_exists(
     return (await db.execute(stmt)).first() is not None
 
 
+async def get_active_client_by_tenant_phone(
+    db: AsyncSession, tenant_id: UUID, phone: str
+) -> Client | None:
+    """Get active client by tenant_id and phone.
+
+    Searches both digits-only and ``+``-prefixed variants for
+    backward-compatibility with data stored in either format.
+    """
+    from app.core.phone import normalize_phone
+
+    canonical = normalize_phone(phone)
+    if canonical is None:
+        canonical = phone
+    variants = [canonical, f"+{canonical}"]
+    result = await db.execute(
+        select(Client)
+        .options(selectinload(Client.user), selectinload(Client.tenant))
+        .where(
+            Client.tenant_id == tenant_id,
+            Client.phone.in_(variants),
+            Client.is_active,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_clients_with_user(
     db: AsyncSession, tenant_id: UUID
 ) -> list[Client]:
@@ -112,6 +138,8 @@ async def get_clients_with_user(
 
 
 __all__ = [
+    "get_active_client_by_tenant_phone",
+
     "get",
     "get_active_client_tenant_join",
     "get_active_client_in_tenant",

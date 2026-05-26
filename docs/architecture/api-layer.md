@@ -71,7 +71,7 @@ Tenant prefix edits update client technical usernames transactionally.
 ### Integrations Endpoints (n8n-facing)
 
 - `GET /api/v1/integrations/n8n/identify?phone=` — Identify user by phone (X-API-Key)
-- `POST /api/v1/integrations/n8n/console` — WhatsApp Master + Tenant Console message processing (X-API-Key)
+- `POST /api/v1/integrations/n8n/console` — WhatsApp Master + Tenant + Client Console message processing (X-API-Key). Routes by instance first (`MASTER_WHATSAPP_INSTANCE`), resolves tenant by instance name, then identity within tenant. Client exit returns `status="closed"` for n8n/Evolution Go.
 
 ### Dashboard Endpoints
 

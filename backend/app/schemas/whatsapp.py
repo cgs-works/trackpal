@@ -1,6 +1,6 @@
 """Pydantic schemas for the WhatsApp Master Console endpoint."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_serializer
 
 
 class WhatsAppConsoleRequest(BaseModel):
@@ -22,6 +22,17 @@ class WhatsAppConsoleResponse(BaseModel):
 
     Attributes:
         reply: Plain text reply that n8n must relay to the user.
+        status: Optional status signal for n8n workflow routing
+            (e.g. ``"closed"`` when user exits the console).
+            Only included in the serialised response when non-``None``.
     """
 
     reply: str
+    status: str | None = None
+
+    @model_serializer
+    def ser_model(self) -> dict:
+        d: dict = {"reply": self.reply}
+        if self.status is not None:
+            d["status"] = self.status
+        return d
