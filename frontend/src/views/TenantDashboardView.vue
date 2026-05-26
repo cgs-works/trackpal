@@ -429,7 +429,7 @@ onMounted(loadDashboard)
           </label>
 
           <label>
-            {{ i18nStore.t('frontend.clients.section_title') }} local
+            {{ i18nStore.t('frontend.dashboard.client.local_user') }}
             <input v-model.trim="clientForm.local_username" type="text" required />
           </label>
 
@@ -458,7 +458,7 @@ onMounted(loadDashboard)
             <thead>
               <tr>
                 <th>{{ i18nStore.t('frontend.profile.full_name') }}</th>
-                <th>Local Username</th>
+                <th>{{ i18nStore.t('frontend.dashboard.client.local_user') }}</th>
                 <th>Technical Username</th>
                 <th>{{ i18nStore.t('frontend.profile.phone') }}</th>
                 <th>{{ i18nStore.t('frontend.subscriptions.status') }}</th>
