@@ -1,8 +1,10 @@
 # Evolution Go Integration
 
-The backend integrates with **Evolution Go** (WhatsApp Business API proxy) for instance management, webhook registration, and message sending.
+The backend integrates with **Evolution API** (WhatsApp Business API proxy, versions 2.x Node/Express or Evolution Go) for instance management, webhook registration, and message sending.
 
-## Client (`app/services/evolution_client/`)
+> **Note**: The deployed server may run either Evolution API v2.x (Node/Express, `X-Powered-By: Express`) or Evolution Go (Go/Gin). Both expose the same REST contracts for `/instance/create`, `/webhook/*`, and `/send/text`. The `EvolutionClient` is version-agnostic — verify the deployed version via `GET $BASE_URL/` if debugging contract mismatches.
+
+## Client (`app/services/evolution_client/`)`
 
 `EvolutionClient` is a singleton instantiated at module level as `evolution_client`.
 
@@ -32,7 +34,7 @@ Instance names are prefixed with `tenant-` automatically (e.g., `tenant-acme`).
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| `close_chat_session(instance, remote_jid)` | `(no-op, deprecated)` | Session closing now handled by n8n via `POST /webhook/change-status` |
+| `close_chat_session(instance, remote_jid)` | `(no-op, deprecated)` | Session closing handled by n8n via `POST /webhook/change-status` |
 
 `close_chat_session` is deprecated and logs a warning. Session closing is managed entirely from the n8n Bot workflow when the user sends a top-level `0` (logout/exit).
 

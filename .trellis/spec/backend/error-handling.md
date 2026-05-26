@@ -38,3 +38,36 @@ Examples:
 - Translating without locale resolution.
 - Raising HTTPException inside repository layer.
 - Returning mixed-language hardcoded strings in services.
+
+## Gotchas: External API Error Misdiagnosis
+
+### Symptom
+HTTP 403 from external Evolution API with message `"This name \"undefined\" is already in use."`
+
+### Cause
+Body fields arriving as literal `"undefined"` → server can't parse JSON body correctly. Usually means **server version mismatch**: code was written for API version X but deployed server runs version Y.
+
+### Diagnosis
+Check server identity before diving into code:
+```bash
+# Check server version and framework
+curl -s "$BASE_URL/"
+# → {"version":"2.4.0", ...}  # Evolution API (Node/Express)
+# Headers: X-Powered-By: Express → NOT Go version
+
+# Then test raw endpoint
+curl -v -X POST "$BASE_URL/instance/create" \
+  -H "Content-Type: application/json" \
+  -H "apikey: $KEY" \
+  -d '{"name":"test","token":"test123"}'
+```
+
+### Fix
+1. Verify deployed server version (root `/` gives version + framework)
+2. If server is old version, update it or adapt payload to match
+3. If body format correct but 403 persists, check `apikey` header matches server `GLOBAL_API_KEY`
+
+### Prevention
+- Before writing integration code, probe deployed server to confirm version/framework
+- Add a startup check or connectivity test that verifies the expected API contract
+- Treat 403 with body-parsing errors as "server version mismatch" until proven otherwise

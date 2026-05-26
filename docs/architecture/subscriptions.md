@@ -144,7 +144,7 @@ File: `n8n/Trackpal Subscription Reminders.json`. 11 nodes, separate from main b
 4. Transform Items (extract items array)
 5. SplitInBatches (loop, batch 1)
 6. Wait (2s delay)
-7. Evolution API Send
+7. Evolution Send
 8. Evaluate Result
 9. Route by Success? (IF)
 10. Mark Sent (on success)

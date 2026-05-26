@@ -120,7 +120,67 @@ session.selection_map = {str(i): sub.id for i, sub in enumerate(visible, 1)}
 # 8 prev if page>1, 9 next if page<total_pages, 0 cancel always
 ```
 
+## Scenario: External API integration contract must be verified against deployed server
+
+### 1. Scope / Trigger
+- Trigger: Integration code written for Evolution Go (Go/Gin) while deployed server was Evolution API v2.4.0 (Node/Express). Result: 403 "This name 'undefined'" because Express didn't parse body the same way.
+
+### 2. Signatures
+- Server probe: `GET $BASE_URL/` returns `{"version":"2.4.0", ..., "manager":"..."}` + headers reveal framework (`X-Powered-By: Express` vs Gin)
+- Direct test: `curl -v $BASE_URL/instance/create` with exact payload proves whether contract is correct
+
+### 3. Contracts
+- Before coding against any external API endpoint, verify:
+  1. Deployed server version via root `/` endpoint
+  2. Actual response headers (framework signature)
+  3. Raw curl test of target endpoint with example payload
+  4. Response shape matches documented contract
+- If docs live in a local repo, they may describe a different version than deployed
+
+### 4. Validation & Error Matrix
+- 403 + "name 'undefined'" + `X-Powered-By: Express` → server is Node/Express, not Go/Gin
+- 401/403 with no body → `apikey` header mismatch
+- 200 with unexpected response shape → docs contract != deployed contract
+
+### 5. Good/Base/Bad Cases
+- Good: Probe server first, confirm version matches expected contract, then write integration
+- Base: Write code against local docs, test against deployed, debug mismatch
+- Bad: Write code against local docs, ship, discover mismatch only after deployment
+
+### 6. Tests Required
+- Integration test should probe `GET $BASE_URL/` and assert `version` in response as a connectivity check
+- Mock-based unit tests must not silently pass when real contract differs
+
+### 7. Wrong vs Correct
+#### Wrong (blind trust)
+```python
+# Code written against local evolution-go repo docs
+# but deployed server is evolution-api v2.4.0 (Express)
+payload = {"name": name, "token": token}
+response = await client.post("/instance/create", json=payload)
+# → 403 "This name 'undefined'", server didn't parse correctly
+```
+#### Correct (probe first)
+```python
+# Probe server first
+root = await client.get("/")
+version = root.json().get("version")
+
+# If version != expected, stop or adapt
+if version != config.expected_evolution_version:
+    logger.warning(f"Server version {version} != expected {config.expected_evolution_version}")
+
+# Test raw endpoint before integrating
+probe = await client.post("/instance/create", json={"name": "ping", "token": "ping"})
+assert probe.status_code != 403, f"Body parsing failed for /instance/create"
+```
+
 ## Testing Requirements
+
+- Run backend suite before completion: `cd backend && uv run pytest -v`.
+- For scoped edits run focused tests first, then full suite.
+- Keep async test patterns from `backend/tests/conftest.py` fixtures.
+- Always probe external API endpoints directly with curl before assuming contract from docs.
 
 - Run backend suite before completion: `cd backend && uv run pytest -v`.
 - For scoped edits run focused tests first, then full suite.

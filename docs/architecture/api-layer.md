@@ -48,7 +48,7 @@ Client role receives readonly profile data from `GET /api/v1/me`; profile edits 
 
 ### Tenants Endpoints (master-only)
 
-- `POST /api/v1/tenants/` — Create tenant + Evolution API instance
+- `POST /api/v1/tenants/` — Create tenant + Evolution instance
 - `GET /api/v1/tenants/` — List all tenants with counts
 - `GET /api/v1/tenants/{id}` — Get tenant detail
 - `PUT /api/v1/tenants/{id}` — Update tenant fields

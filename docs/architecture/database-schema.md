@@ -43,6 +43,7 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 | email | VARCHAR(255) | Nullable |
 | whatsapp_phone | VARCHAR(50) | Unique, nullable, canonical digits-only |
 | evolution_instance_name | VARCHAR(200) | Unique, nullable |
+| evolution_instance_token | VARCHAR(500) | Nullable, encrypted via app-layer Fernet |
 | is_active | BOOLEAN | Default true |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
@@ -186,6 +187,7 @@ Alembic migrations:
 6. `cd6efe74cae9` — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
 7. `cd7efe74caa0` — Add `subscriptions`, `subscription_events`, `subscription_reminder_logs`, and `subscription_reminder_settings` tables with RLS policies
 8. `cd9efe74caa2` — Rename `clients.local_username` to `clients.username`, rename related tenant+lower index, and backfill canonical values from `users.username`
+9. `cdaefe74caa3` — Add `evolution_instance_token` column to tenants for encrypted instance token storage
 
 ## Key Constraints
 

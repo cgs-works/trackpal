@@ -49,6 +49,26 @@ For each boundary:
 - What is the exact output format?
 - What errors can occur?
 
+#### External API: Verify Deployed Server Before Coding
+
+When integrating with an external HTTP API:
+
+```
+Probe flow:
+1. GET $BASE_URL/  → check {version} and response headers
+2. curl test target endpoint with example payload
+3. Confirm response shape matches documented contract
+4. Only then write integration code
+```
+
+**Common pitfall**: Local repo docs describe a different version than the deployed server.
+Trackpal example: Evolution API v2.4.0 (Node/Express) was deployed while evolution-go repo
+(Go/Gin) was used as the reference.
+
+- `X-Powered-By: Express` → server is Node/Express
+- Root endpoint `GET /` shows `version` and `clientName`
+- 403 with `"This name 'undefined'"` means body parsing mismatch → server version mismatch
+
 ---
 
 ## Common Cross-Layer Mistakes

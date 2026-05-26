@@ -2,7 +2,7 @@
 
 ## Overview
 
-Trackpal is a multi-tenant platform that enables a Master operator to manage WhatsApp-based service delivery. The Master creates and manages tenants (service recipients), each with their own Evolution API WhatsApp instance. Tenants manage clients, catalog, profiles, and subscriptions through REST and WhatsApp.
+Trackpal is a multi-tenant platform that enables a Master operator to manage WhatsApp-based service delivery. The Master creates and manages tenants (service recipients), each with their own Evolution WhatsApp instance. Tenants manage clients, catalog, profiles, and subscriptions through REST and WhatsApp.
 
 ## Core Use Cases
 
@@ -14,7 +14,7 @@ The Master interacts with the system via a WhatsApp chatbot to:
 3. **Edit tenants** — Update tenant fields (name, email, phone, Evolution instance)
 4. **Deactivate tenants** — Disable tenant login and identification, revoke active sessions
 5. **Reactivate tenants** — Restore deactivated tenants
-6. **Delete tenants** — Permanently remove inactive tenants plus their Evolution API instance
+6. **Delete tenants** — Permanently remove inactive tenants plus their Evolution instance
 
 ### Tenant Console (WhatsApp)
 

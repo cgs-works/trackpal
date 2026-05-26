@@ -9,7 +9,7 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
       |                      |                        |
       |                 [Redis HA]             [Alembic Migrations]
       |                      |
-      |                 [Evolution API] ---> [n8n Webhook]
+      |                 [Evolution] ---> [n8n Webhook]
                                          |
                                      [WhatsApp]
 ```
@@ -18,7 +18,7 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 - **Backend**: Python FastAPI hosted on Render (free tier)
 - **Database**: PostgreSQL with asyncpg driver, managed via Alembic
 - **Redis**: Active-passive HA with circuit-breaker failover for ephemeral WhatsApp session state (Master + Tenant consoles)
-- **Evolution API**: External WhatsApp Business API proxy for instance management and message relay
+- **Evolution**: External WhatsApp Business API proxy for instance management, webhook registration, and message relay. The deployed server may run Evolution API v2.x (Node/Express) or Evolution Go (Go/Gin); both expose compatible REST contracts.
 - **n8n**: Dual workflow automation - WhatsApp bot webhook bridge + subscription reminder scheduler
 - **WhatsApp Tenant Console**: Phone-based conversational interface for tenant admins (clients, catalog, profile, subscriptions)
 - **I18n System**: Python-centered localization with in-memory catalogs (`en`/`es`), English default and fallback, tenant locale persisted in DB, frontend catalog served via REST API

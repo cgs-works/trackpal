@@ -21,7 +21,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Redis HA](architecture/redis-ha.md) | Redis failover, session state, and contingency replies |
 | [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master and Tenant WhatsApp console orchestration and menus |
 | [Input Validation Policy](architecture/input-validation-policy.md) | Validation and normalization rules |
-| [Evolution Integration](architecture/evolution-integration.md) | Evolution API client, instance lifecycle, and chat control |
+| [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, instance lifecycle, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge and subscription reminders workflows |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |

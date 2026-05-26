@@ -4,14 +4,14 @@ Trackpal has two WhatsApp conversational consoles:
 - **Master Console** for tenant lifecycle management
 - **Tenant Console** for tenant admins to manage clients, catalog, profile, and subscriptions
 
-Both use n8n + Evolution API + backend relay and store conversation state in Redis.
+Both use n8n + Evolution + backend relay and store conversation state in Redis.
 
 ## Message Flow
 
 ```
 User WhatsApp
     ↓ (message)
-Evolution API
+Evolution
     ↓ (webhook)
 n8n Workflow → POST /api/v1/integrations/n8n/console
     ↓
@@ -23,7 +23,7 @@ Redis Session State (WhatsAppSessionService / WhatsAppAuthSessionService)
     ↓
 Console Service.process_message()
     ↓
-Reply text → n8n → Evolution API → User WhatsApp
+Reply text → n8n → Evolution → User WhatsApp
 ```
 
 ## Master Console

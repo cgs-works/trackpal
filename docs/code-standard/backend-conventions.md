@@ -94,8 +94,8 @@ Tenant WhatsApp console uses i18n key constants stored as class-level attributes
 
 ## n8n Integration Conventions
 
-1. **Config Set node pattern**: All environment-specific values (backend URL, API keys, Evolution API URL) live in a single n8n Set node named `Config`. This works around the missing Variables UI in n8n community edition. Values are referenced via `$('Config').first().json.<field_name>`.
-2. **neverError**: Both HTTP Request nodes (Console Call and Evolution API Send) set `neverError: true`. This prevents workflow failure when backend or Evolution API returns non-2xx responses.
+1. **Config Set node pattern**: All environment-specific values (backend URL, n8n API key, Evolution base URL) live in a single n8n Set node named `Config`. This works around the missing Variables UI in n8n community edition. Values are referenced via `$('Config').first().json.<field_name>`.
+2. **neverError**: Both HTTP Request nodes (Console Call and Evolution Send) set `neverError: true`. This prevents workflow failure when backend or Evolution returns non-2xx responses.
 3. **Input normalisation**: The `Parse Input` Code node always normalises phone numbers (strip JID suffixes, `+` prefix, device suffixes) before passing to backend.
 4. **Reply fallback**: The `Merge Reply` Code node provides a static Spanish fallback message when backend returns no reply.
 5. **Workflow files**: Exported as `n8n/Trackpal WhatsApp Bot.json` and `n8n/Trackpal Subscription Reminders.json`. Config values are visible in plaintext in the JSON export; treat both files as secrets-bearing.
@@ -111,6 +111,7 @@ Tenant WhatsApp console uses i18n key constants stored as class-level attributes
 - `Tenant` is the only tenant entity for active code; obsolete `tenant_profiles` was dropped after migration.
 - Tenant WhatsApp console uses `session:admin:{phone}` as logical key for Redis session isolation.
 - Subscription secrets are encrypted with Fernet via `app/core/encryption.py` and require `DATA_ENCRYPTION_KEY`.
+- Evolution instance tokens are encrypted with the same Fernet mechanism (`app/core/encryption.py`) and `DATA_ENCRYPTION_KEY`, stored in `tenants.evolution_instance_token`.
 - Tenant-scoped queries must filter by `tenant_id` in application code.
 - Postgres/Supabase tenant-scoped operations must set transaction-local RLS context before SQL using dotted GUC names only: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`.
 - Master catalog operations require explicit switched tenant context. Do not infer tenant scope from arbitrary request payload IDs.
