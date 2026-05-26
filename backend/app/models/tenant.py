@@ -33,6 +33,7 @@ class Tenant(Base, TimestampMixin):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     whatsapp_phone: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
     evolution_instance_name: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
+    evolution_instance_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
