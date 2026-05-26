@@ -19,6 +19,7 @@ from app.core.input_validation import (
     validate_phone,
     validate_username,
 )
+from app.core.encryption import encrypt_value
 from app.core.security import get_password_hash
 from app.repositories import clients_repository, tenants_repository, users_repository
 from app.models import Tenant, User
@@ -76,8 +77,11 @@ async def create_tenant(
     await db.flush()
 
     try:
-        await evolution_client.create_instance(payload.evolution_instance_name)
-        await evolution_client.setup_n8n_integration(payload.evolution_instance_name)
+        instance_data = await evolution_client.create_instance(payload.evolution_instance_name)
+        if instance_data and instance_data.get("instance_id"):
+            await evolution_client.register_webhook(instance_data["instance_id"])
+            if instance_data.get("instance_token"):
+                profile.evolution_instance_token = encrypt_value(instance_data["instance_token"])
     except Exception as exc:
         await db.rollback()
         raise ValueError(f"Failed to create Evolution instance: {exc}") from exc

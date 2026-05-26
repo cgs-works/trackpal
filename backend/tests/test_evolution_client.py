@@ -1,4 +1,4 @@
-"""Tests for EvolutionClient.close_chat_session()."""
+"""Tests for EvolutionClient Evolution Go contracts."""
 
 from __future__ import annotations
 
@@ -8,132 +8,128 @@ import pytest
 
 from app.services.evolution_client import EvolutionClient
 
-
-# ---------------------------------------------------------------------------
-# Tests for close_chat_session
-# ---------------------------------------------------------------------------
-
 pytestmark = pytest.mark.asyncio
 
 
-class TestCloseChatSession:
-    """Cover request shape, missing config guard, non-2xx handling."""
+class TestCreateInstance:
+    async def test_create_uses_evolution_go_payload_and_returns_token(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        create_response = MagicMock()
+        create_response.json.return_value = {"message": "success", "data": {"id": "inst-id"}}
+        create_response.raise_for_status = MagicMock()
 
-    async def test_sends_post_to_correct_path(self) -> None:
-        """close_chat_session sends POST to /n8n/changeStatus/{instance}."""
-        from unittest.mock import MagicMock
+        with patch("httpx.AsyncClient") as mock_httpx, patch(
+            "app.services.evolution_client.client.secrets.token_urlsafe",
+            return_value="instance-token",
+        ):
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.post.return_value = create_response
 
-        client = EvolutionClient(base_url="https://evo.test", api_key="test-key-123")
+            result = await client.create_instance("acme")
 
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
+        mock_ctx.post.assert_called_once_with(
+            "/instance/create",
+            json={"name": "tenant-acme", "token": "instance-token"},
+            headers={"Content-Type": "application/json", "apikey": "global-key"},
+        )
+        assert result == {"instance_id": "inst-id", "instance_token": "instance-token"}
+
+    async def test_create_resolves_instance_id_from_instance_all(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        create_response = MagicMock()
+        create_response.json.return_value = {"message": "success", "data": {"name": "tenant-acme"}}
+        create_response.raise_for_status = MagicMock()
+        list_response = MagicMock()
+        list_response.json.return_value = {
+            "message": "success",
+            "data": [{"id": "resolved-id", "name": "tenant-acme"}],
+        }
+        list_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_httpx, patch(
+            "app.services.evolution_client.client.secrets.token_urlsafe",
+            return_value="instance-token",
+        ):
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.post.return_value = create_response
+            mock_ctx.get.return_value = list_response
+
+            result = await client.create_instance("acme")
+
+        mock_ctx.get.assert_called_once_with(
+            "/instance/all",
+            headers={"Content-Type": "application/json", "apikey": "global-key"},
+        )
+        assert result == {"instance_id": "resolved-id", "instance_token": "instance-token"}
+
+
+class TestRegisterWebhook:
+    async def test_register_webhook_create_payload(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        create_response = MagicMock(status_code=200)
 
         with patch("httpx.AsyncClient") as mock_httpx:
             mock_ctx = AsyncMock()
             mock_httpx.return_value.__aenter__.return_value = mock_ctx
-            mock_ctx.post.return_value = mock_response
+            mock_ctx.post.return_value = create_response
 
+            await client.register_webhook("inst-id")
+
+        _, kwargs = mock_ctx.post.call_args
+        assert mock_ctx.post.call_args.args[0] == "/webhook/create/inst-id"
+        assert kwargs["headers"]["apikey"] == "global-key"
+        assert kwargs["json"] == {
+            "enabled": True,
+            "webhookUrl": "https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient",
+            "triggerType": "keyword",
+            "triggerOperator": "startsWith",
+            "triggerValue": "/menu",
+            "isTrusted": True,
+        }
+
+    async def test_register_webhook_updates_existing_wrapped_data(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        create_response = MagicMock(status_code=409)
+        find_response = MagicMock()
+        find_response.json.return_value = {
+            "message": "success",
+            "data": [
+                {
+                    "id": "webhook-id",
+                    "webhookUrl": "https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient",
+                }
+            ],
+        }
+        find_response.raise_for_status = MagicMock()
+        update_response = MagicMock()
+        update_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.post.return_value = create_response
+            mock_ctx.get.return_value = find_response
+            mock_ctx.put.return_value = update_response
+
+            await client.register_webhook("inst-id")
+
+        mock_ctx.get.assert_called_once_with(
+            "/webhook/find/inst-id",
+            headers={"Content-Type": "application/json", "apikey": "global-key"},
+        )
+        assert mock_ctx.put.call_args.args[0] == "/webhook/update/webhook-id"
+        update_response.raise_for_status.assert_called_once()
+
+
+class TestCloseChatSession:
+    async def test_noop_logs_warning_and_returns(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="test-key-123")
+
+        with patch("httpx.AsyncClient") as mock_httpx:
             await client.close_chat_session(
                 instance="inst-test", remote_jid="1234567890@s.whatsapp.net"
             )
 
-            mock_ctx.post.assert_called_once()
-            call_args = mock_ctx.post.call_args
-            url = call_args[0][0] if call_args[0] else call_args[1].get("url", "")
-            assert "/n8n/changeStatus/inst-test" in str(url)
-
-    async def test_payload_includes_remote_jid_and_status_closed(self) -> None:
-        """Payload contains remoteJid and status=closed."""
-        from unittest.mock import MagicMock
-
-        client = EvolutionClient(base_url="https://evo.test", api_key="test-key-123")
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-
-        with patch("httpx.AsyncClient") as mock_httpx:
-            mock_ctx = AsyncMock()
-            mock_httpx.return_value.__aenter__.return_value = mock_ctx
-            mock_ctx.post.return_value = mock_response
-
-            await client.close_chat_session(
-                instance="inst-test", remote_jid="9998887777@s.whatsapp.net"
-            )
-
-            mock_ctx.post.assert_called_once()
-            _, kwargs = mock_ctx.post.call_args
-            payload = kwargs.get("json", {})
-            assert payload.get("remoteJid") == "9998887777@s.whatsapp.net"
-            assert payload.get("status") == "closed"
-
-    async def test_noop_when_api_key_empty(self) -> None:
-        """When api_key is empty, method returns without calling httpx."""
-        client = EvolutionClient(base_url="https://evo.test", api_key="")
-
-        with patch("httpx.AsyncClient") as mock_httpx:
-            await client.close_chat_session(
-                instance="inst-test", remote_jid="1234@s.whatsapp.net"
-            )
-
-            mock_httpx.assert_not_called()
-
-    async def test_noop_when_base_url_empty(self) -> None:
-        """When base_url is empty, method returns without calling httpx."""
-        client = EvolutionClient(base_url="", api_key="test-key")
-
-        with patch("httpx.AsyncClient") as mock_httpx:
-            await client.close_chat_session(
-                instance="inst-test", remote_jid="1234@s.whatsapp.net"
-            )
-
-            mock_httpx.assert_not_called()
-
-    async def test_raises_on_non_2xx(self) -> None:
-        """Non-2xx response raises HTTPStatusError."""
-        from unittest.mock import MagicMock
-        import httpx
-
-        client = EvolutionClient(base_url="https://evo.test", api_key="test-key")
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = (
-            httpx.HTTPStatusError(
-                "Not Found",
-                request=httpx.Request("POST", "http://test/"),
-                response=httpx.Response(404),
-            )
-        )
-
-        with patch("httpx.AsyncClient") as mock_httpx:
-            mock_ctx = AsyncMock()
-            mock_httpx.return_value.__aenter__.return_value = mock_ctx
-            mock_ctx.post.return_value = mock_response
-
-            with pytest.raises(httpx.HTTPStatusError):
-                await client.close_chat_session(
-                    instance="inst-nonexistent", remote_jid="1234@s.whatsapp.net"
-                )
-
-    async def test_passes_headers(self) -> None:
-        """Request includes Content-Type and apikey headers."""
-        from unittest.mock import MagicMock
-
-        client = EvolutionClient(base_url="https://evo.test", api_key="secret-api-key")
-
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-
-        with patch("httpx.AsyncClient") as mock_httpx:
-            mock_ctx = AsyncMock()
-            mock_httpx.return_value.__aenter__.return_value = mock_ctx
-            mock_ctx.post.return_value = mock_response
-
-            await client.close_chat_session(
-                instance="inst-test", remote_jid="1234@s.whatsapp.net"
-            )
-
-            mock_ctx.post.assert_called_once()
-            _, kwargs = mock_ctx.post.call_args
-            headers = kwargs.get("headers", {})
-            assert headers.get("apikey") == "secret-api-key"
-            assert headers.get("Content-Type") == "application/json"
+        mock_httpx.assert_not_called()

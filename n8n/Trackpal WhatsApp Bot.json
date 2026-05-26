@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "trackpal-whatsapp-bot",
+        "path": "trackpalmastertenantclient",
         "responseMode": "lastNode",
         "options": {}
       },
@@ -16,11 +16,11 @@
         944,
         -112
       ],
-      "webhookId": "a9978bf7-c6b1-4abb-9e40-b375cb55eb60"
+      "webhookId": "1a9978bf7-c6b1-4abb-9e40-b375cb55eb60"
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, raw: payload } }];"
+        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\nconst apiKey = body.apiKey || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, remoteJid, apiKey, raw: payload } }];"
       },
       "id": "b2df9013-890c-43b0-96d8-8d4193ffd2ca",
       "name": "Parse input",
@@ -84,13 +84,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Config').first().json.evolution_api_url }}/message/sendText/{{$json.instance || $('Config').first().json.default_instance }}",
+        "url": "{{ $('Config').first().json.evolution_api_url }}/send/text",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{ $('Config').first().json.evolution_api_key }}"
+              "value": "={{ $json.apiKey }}"
             }
           ]
         },
@@ -134,11 +134,6 @@
               "value": "https://rs-evoapi.wilfredocamacho.dev"
             },
             {
-              "name": "evolution_api_key",
-              "type": "string",
-              "value": "CHANGE_ME"
-            },
-            {
               "name": "default_instance",
               "type": "string",
               "value": "Sublify"
@@ -155,6 +150,52 @@
       "position": [
         1536,
         -272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message || '';\nconst reply = $json.reply || '';\nconst isLogout = msg === '0' && (\n  reply.includes('Sesi\u00f3n cerrada') ||\n  reply.includes('goodbye') ||\n  reply.includes('cerrado')\n);\nif (isLogout) {\n  return [{ json: $json }];\n}\nreturn [];"
+      },
+      "id": "f9e8d7c6-b5a4-3c2d-1e0f-9a8b7c6d5e4f",
+      "name": "Check close session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.evolution_api_url }}/webhook/change-status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ remoteJid: String($json.remoteJid), status: \"closed\" }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Close session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2576,
+        -112
       ]
     }
   ],
@@ -209,6 +250,28 @@
         [
           {
             "node": "Console call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution API Send": {
+      "main": [
+        [
+          {
+            "node": "Check close session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check close session": {
+      "main": [
+        [
+          {
+            "node": "Close session",
             "type": "main",
             "index": 0
           }

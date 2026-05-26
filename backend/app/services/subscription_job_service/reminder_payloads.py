@@ -8,6 +8,8 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.encryption import decrypt_value
 from sqlalchemy.orm import selectinload
 
 from app.core.database import restore_rls_context
@@ -198,6 +200,10 @@ async def generate_reminder_payloads(
                             "recipient_phone": recipient_phone,
                             "message": message,
                             "evolution_instance_name": tenant.evolution_instance_name
+                            or "",
+                            "evolution_instance_token": decrypt_value(
+                                tenant.evolution_instance_token
+                            )
                             or "",
                             "days_before_expiry": warning_day,
                         }

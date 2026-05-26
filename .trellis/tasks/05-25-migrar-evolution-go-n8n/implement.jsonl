@@ -1,0 +1,8 @@
+{"file":".trellis/spec/backend/index.md","reason":"Convenciones backend y límites de diseño para servicios, repos y API."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Criterios de calidad y validación antes de implementar cambios sensibles."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Alinear contratos backend<->n8n<->integración externa sin drift."}
+{"file":"docs/architecture/evolution-integration.md","reason":"Contrato actual Trackpal con Evolution a reemplazar."}
+{"file":"docs/architecture/n8n-workflow.md","reason":"Flujos actuales bot/reminders para mapear migración."}
+{"file":"E:/Documentos/GitHub/evolution-go/docs/wiki/guias-api/api-webhooks.md","reason":"Contrato fuente de webhooks/sesiones Evolution Go."}
+{"file":"E:/Documentos/GitHub/evolution-go/docs/wiki/guias-api/api-instances.md","reason":"Contrato de instancias y auth GlobalApiKey/token."}
+{"file":"E:/Documentos/GitHub/evolution-go/docs/wiki/guias-api/api-messages.md","reason":"Contrato de envío `POST /send/text`."}

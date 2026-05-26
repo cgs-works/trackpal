@@ -1,17 +1,17 @@
 # n8n Workflow Architecture
 
-Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution API webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles daily expiry reminder dispatch. The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution API.
+Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles daily expiry reminder dispatch. The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution Go.
 
 ## WhatsApp Bot Workflow
 
 ### Workflow Overview
 
 ```
-Evolution API (inbound message)
-    |  webhook POST
+Evolution Go (inbound message)
+    |  webhook POST (keyword trigger /menu, startsWith)
 n8n Webhook Node
     ↓
-Parse Input (Code Node) — normalises phone, message, instance
+Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJid
     ↓
 [Config (Set Node)] — supplies config vars from node fields
     ↓
@@ -19,9 +19,11 @@ Console Call (HTTP Request Node) — POST /api/v1/integrations/n8n/console
     ↓
 Merge Reply (Code Node) — merges reply with original input
     ↓
-Evolution API Send (HTTP Request Node) — POST /message/sendText/{instance}
+Evolution Go Send (HTTP Request Node) — POST /send/text (uses instance apiKey)
     ↓
-User WhatsApp receives reply
+Check Close Session (Code Node) — conditionally checks for logout
+    ↓
+Close Session (HTTP Request Node) — POST /webhook/change-status (if logout detected)
 ```
 
 ## Workflow File
@@ -32,8 +34,7 @@ User WhatsApp receives reply
 - **Active**: `true`
 - **n8n version**: Compatible with n8n v1.x (nodes use typeVersion 2.1–4.4)
 - **Execution order**: `v1` (sequential)
-
-## Nodes
+- **Webhook path**: `trackpalmastertenantclient`
 
 ### 1. Webhook
 
@@ -41,35 +42,36 @@ User WhatsApp receives reply
 |----------|-------|
 | Type | `n8n-nodes-base.webhook` (v2.1) |
 | HTTP Method | POST |
-| Path | `trackpal-whatsapp-bot` |
+| Path | `trackpalmastertenantclient` |
 | Response Mode | `lastNode` (returns last node output to caller) |
 | Webhook ID | `a9978bf7-c6b1-4abb-9e40-b375cb55eb60` |
 
-Receives inbound WhatsApp messages forwarded by Evolution API.
+Receives inbound WhatsApp messages forwarded by Evolution Go.
 
 The full webhook URL is:
-`https://rs-n8n.wilfredocamacho.dev/webhook/trackpal-whatsapp-bot`
+`https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient`
 
-This URL is configured in `EvolutionClient.setup_n8n_integration()` in the backend, which registers it with Evolution API per-instance at tenant creation time. Evolution API only forwards messages that start with `/menu` (keyword trigger).
+This URL is configured in `EvolutionClient.register_webhook()` in the backend, which registers it with Evolution Go per-instance at tenant creation time. Evolution Go only forwards messages that start with `/menu` (keyword trigger, `startsWith` operator). The webhook is registered with `isTrusted=true`, so Evolution Go includes the instance `apiKey` in the payload for per-message authentication.
 
 ### 2. Parse Input (Code Node)
 
-JavaScript code that normalises the raw Evolution API payload into a consistent `{ phone, message, instance }` structure.
+JavaScript code that normalises the raw Evolution Go payload into a consistent `{ phone, message, instance, remoteJid, apiKey }` structure.
 
-**Input**: Raw webhook payload from Evolution API.
+**Input**: Raw webhook payload from Evolution Go.
 
 **Normalisation logic**:
-- Extracts `body.chatInput`, `body.remoteJid`, `body.instanceName`
+- Extracts `body.chatInput`, `body.remoteJid`, `body.instanceName`, `body.apiKey`
 - Falls back to `data.message.from`, `data.message.key.remoteJid`, `data.message.body`, `data.message.conversation`
 - Strips JID suffixes (`@c.us`, `@s.whatsapp.net`, etc.) and device suffixes (`:N`)
 - Strips `+` prefix from phone numbers
 - Defaults `instance` to `'default'` if not present
+- Preserves `remoteJid` and `apiKey` for downstream use
 
-**Output**: `{ phone, message, instance, raw }`
+**Output**: `{ phone, message, instance, remoteJid, apiKey, raw }`
 
 ### 3. Config (Set Node)
 
-A **Set** node (typeVersion 3.4) that injects configuration values into the workflow as named fields. This is an n8n community-edition pattern that works around the missing "variables" UI for workflow-level config.
+A **Set** node (typeVersion 3.4) that injects configuration values into the workflow as named fields.
 
 **Fields**:
 
@@ -77,11 +79,10 @@ A **Set** node (typeVersion 3.4) that injects configuration values into the work
 |------|-------|---------|
 | `trackpal_backend_url` | `https://trackpal-backend.onrender.com` | Backend API base URL |
 | `trackpal_n8n_api_key` | (set via n8n field) | Shared secret for X-API-Key header |
-| `evolution_api_url` | `https://rs-evoapi.wilfredocamacho.dev` | Evolution API base URL |
-| `evolution_api_key` | (set via n8n field) | API key for Evolution API |
+| `evolution_api_url` | `https://rs-evoapi.wilfredocamacho.dev` | Evolution Go base URL |
 | `default_instance` | `Sublify` | Fallback Evolution instance name |
 
-The node is positioned off the main flow line (y=-272 vs y=-112). Its `includeOtherFields` setting preserves all upstream data and adds the config fields as top-level properties. Downstream nodes reference config values using `$('Config').first().json.<field_name>`.
+Note: `evolution_api_key` is **not** in the Config node. Per-message authentication uses the instance `apiKey` from the Evolution Go trusted webhook payload. Subscription reminders use the per-tenant decrypted token.
 
 ### 4. Console Call (HTTP Request Node)
 
@@ -96,60 +97,90 @@ Calls the backend WhatsApp Master Console endpoint.
 | Body | `{"phone": "...", "message": "...", "instance": "..."}` |
 | Never Error | `true` (backend errors return safe replies, never 5xx) |
 
-**Response handling**: `neverError: true` ensures any HTTP status is treated as a regular response. The backend always returns HTTP 200 with a `reply` field.
-
 ### 5. Merge Reply (Code Node)
 
 Small JavaScript that takes the backend response and merges it with the parsed input.
 
 **Logic**: If `$json.reply` is a non-empty string, use it; otherwise return the fallback Spanish message `"Servicio temporalmente no disponible. Intenta nuevamente."`
 
-**Output**: Spread of original `{ phone, message, instance }` plus `{ reply }`.
+**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply }`.
 
-### 6. Evolution API Send (HTTP Request Node)
+### 6. Evolution Go Send (HTTP Request Node)
 
-Sends the reply text back to the user via Evolution API.
+Sends the reply text back to the user via Evolution Go.
 
 | Property | Value |
 |----------|-------|
 | Type | `n8n-nodes-base.httpRequest` (v4.4) |
 | Method | POST |
-| URL | `{{ $('Config').first().json.evolution_api_url }}/message/sendText/{{ instance or default_instance }}` |
-| Headers | `apikey: {{ $('Config').first().json.evolution_api_key }}` |
+| URL | `{{ $('Config').first().json.evolution_api_url }}/send/text` |
+| Headers | `apikey: {{ $json.apiKey }}` |
 | Body | `{"number": "phone_without_plus", "text": "reply_text"}` |
 | Never Error | `true` |
+
+Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key.
+
+### 7. Check Close Session (Code Node)
+
+JavaScript that conditionally triggers session close.
+
+**Logic**: If the original message is `"0"` (top-level logout/exit) and the reply text indicates session close (contains "Sesión cerrada", "goodbye", or "cerrado"), passes the item to the Close Session node.
+
+### 8. Close Session (HTTP Request Node)
+
+Closes the Evolution Go webhook for the specific chat, preventing further messages from triggering the bot until the user sends `/menu` again.
+
+| Property | Value |
+|----------|-------|
+| Type | `n8n-nodes-base.httpRequest` (v4.4) |
+| Method | POST |
+| URL | `{{ $('Config').first().json.evolution_api_url }}/webhook/change-status` |
+| Headers | `apikey: {{ $json.apiKey }}` |
+| Body | `{"remoteJid": "phone@s.whatsapp.net", "status": "closed"}` |
+| Never Error | `true` |
+
+This replaces the deprecated `EvolutionClient.close_chat_session()` which was previously called directly from the backend facades.
 
 ## Data Flow Detail
 
 ```
-Evolution webhook payload
+Evolution Go webhook payload (isTrusted=true)
   ↓
 Parse Input:
   const phone = normalizePhone(remoteJid || from)
   const message = chatInput || msg.body || conversation
   const instance = instanceName || data.instance || 'default'
+  const remoteJid = body.remoteJid || ''
+  const apiKey = body.apiKey || ''
   ↓
-{ phone: "1234567890", message: "1", instance: "Sublify" }
+{ phone: "1234567890", message: "1", instance: "Sublify", remoteJid: "1234567890@s.whatsapp.net", apiKey: "evo-instance-token" }
   ↓
-Config node adds: { trackpal_backend_url, trackpal_n8n_api_key, evolution_api_url, evolution_api_key, default_instance }
+Config node adds: { trackpal_backend_url, trackpal_n8n_api_key, evolution_api_url, default_instance }
   ↓
 Console Call → POST /api/v1/integrations/n8n/console
   → Backend processes, returns { reply: "📋 *Lista de Tenants*\n..." }
   ↓
 Merge Reply:
-  { phone, message, instance, reply: "📋 *Lista de Tenants*\n..." }
+  { phone, message, instance, remoteJid, apiKey, reply: "📋 *Lista de Tenants*\n..." }
   ↓
-Evolution API Send → POST /message/sendText/Sublify
+Evolution Go Send → POST /send/text
+  → Headers: { apikey: "evo-instance-token" }
   → Body: { number: "1234567890", text: "📋 *Lista de Tenants*\n..." }
   → User receives the WhatsApp message
+  ↓
+Check Close Session (only if message === "0" and reply matches logout)
+  ↓
+Close Session → POST /webhook/change-status
+  → Headers: { apikey: "evo-instance-token" }
+  → Body: { remoteJid: "1234567890@s.whatsapp.net", status: "closed" }
 ```
 
 ## Configuration Pattern (n8n Community Edition)
 
-The Config Set node is a common workaround in n8n community edition (which lacks the "Variables" UI from the pro/cloud edition). All environment-specific values are collated in one node for easy editing:
+All environment-specific values are collated in one Config node for easy editing:
 
 - **Backend URL** — change when deploying to different environments (staging, production)
-- **API keys** — set in the node, stored in the workflow JSON (note: values are visible in the exported JSON)
+- **API keys** — only the n8n API key is set in the Config node; Evolution auth uses per-message/per-tenant instance tokens
 - **Default instance** — fallback when no instance is provided in the webhook payload
 
 To update config values:
@@ -168,21 +199,23 @@ The workflow communicates with two backend services:
    - Response body: `WhatsAppConsoleResponse` schema (reply text)
    - See [API Layer](api-layer.md) and [WhatsApp Console Flow](whatsapp-console-flow.md)
 
-2. **Evolution API** (`POST /message/sendText/{instance}`):
-   - Authenticated via `apikey` header
-   - Sends the reply text back to the WhatsApp user
+2. **Evolution Go** (`POST /send/text`, `POST /webhook/change-status`):
+   - Authenticated via per-instance `apikey` header (from trusted webhook payload or decrypted stored token)
+   - `POST /send/text` sends the reply text back to the WhatsApp user
+   - `POST /webhook/change-status` closes the session on logout
    - See [Evolution Integration](evolution-integration.md)
 
 ## Error Handling
 
 - **Backend unavailable**: The Console Call node has `neverError: true`, so the workflow continues even on non-2xx responses
 - **Empty reply**: Merge Reply falls back to a static Spanish unavailability message
-- **I18n scope**: n8n is pure transport — it never generates, owns, or translates strings. All user-facing messages in both WhatsApp Bot and Reminder workflows are rendered by the backend using `t()`, with tenant locale resolved server-side. n8n passes reply text verbatim to Evolution API.
-- **Evolution API errors**: The Send node also has `neverError: true` to prevent workflow failures from propagating
+- **I18n scope**: n8n is pure transport — it never generates, owns, or translates strings. All user-facing messages in both WhatsApp Bot and Reminder workflows are rendered by the backend using `t()`, with tenant locale resolved server-side. n8n passes reply text verbatim to Evolution Go.
+- **Evolution Go errors**: Both Send and Close Session nodes have `neverError: true` to prevent workflow failures from propagating
 - **n8n-level errors**: If any node throws an unhandled error, n8n marks the execution as "Error" and the user does not receive a reply
 
 
 ---
+
 
 ## Subscription Reminders Workflow
 
@@ -193,7 +226,7 @@ The workflow communicates with two backend services:
 **Total nodes**: 11
 **Execution order**: v1 (sequential)
 
-A scheduled workflow that runs daily at 09:00 (server time) to fetch pending subscription reminders and send them via Evolution API.
+A scheduled workflow that runs daily at 09:00 (server time) to fetch pending subscription reminders and send them via Evolution Go.
 
 ### Workflow Overview
 
@@ -216,7 +249,7 @@ SplitInBatches (loop, batch size 1)
 Wait (2s delay)
     |
     v
-Evolution API Send (HTTP Request) -- POST /message/sendText/{instance}
+Evolution Go Send (HTTP Request) -- POST /send/text (uses per-tenant instance_token)
     |
     v
 Evaluate Result (Code Node) -- check response status
@@ -239,11 +272,17 @@ Mark Sent    Mark Failed
 | 4 | Transform Items | n8n-nodes-base.code | Extract items array, add instance field |
 | 5 | SplitInBatches | n8n-nodes-base.splitInBatches | Loop over reminders one at a time |
 | 6 | Wait | n8n-nodes-base.wait | 2-second delay between sends |
-| 7 | Evolution API Send | n8n-nodes-base.httpRequest | POST /message/sendText/{instance} with Spanish reminder text |
+| 7 | Evolution Go Send | n8n-nodes-base.httpRequest | POST /send/text with per-tenant evolution_instance_token for auth |
 | 8 | Evaluate Result | n8n-nodes-base.code | Check response status, prepare metadata |
 | 9 | Route by Success? | n8n-nodes-base.if | Split by success/failure |
 | 10 | Mark Sent | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/{log_id}/mark-sent |
 | 11 | Mark Failed | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/{log_id}/mark-failed |
+
+### Key Changes from Legacy
+
+- **Send endpoint**: `POST /send/text` instead of legacy `POST /message/sendText/{instance}`.
+- **Authentication**: Uses `evolution_instance_token` (decrypted per-tenant token from the backend) instead of the global `evolution_api_key`. This ensures multi-tenant isolation — each tenant's reminders are sent with their own instance token.
+- **Config**: `evolution_api_key` removed from Config node; replaced by per-item `$json.evolution_instance_token` from the backend pending reminders payload.
 
 ### Endpoints Used
 
