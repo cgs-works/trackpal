@@ -119,8 +119,18 @@ class EvolutionClient:
 
         evolution_instance_name = self._instance_name(instance_name)
         async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
+            instance_id = await self._find_instance_id(
+                client, evolution_instance_name
+            )
+            if not instance_id:
+                logger.warning(
+                    "Evolution instance not found (already deleted): %s",
+                    evolution_instance_name,
+                )
+                return
+
             response = await client.delete(
-                f"/instance/delete/{quote(evolution_instance_name, safe='')}",
+                f"/instance/delete/{quote(instance_id, safe='')}",
                 headers=self._headers,
             )
             if response.status_code == 404:

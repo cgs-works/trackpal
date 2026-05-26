@@ -123,6 +123,107 @@ class TestRegisterWebhook:
         update_response.raise_for_status.assert_called_once()
 
 
+class TestDeleteInstance:
+    async def test_resolves_name_and_deletes_by_id(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        list_response = MagicMock()
+        list_response.json.return_value = {
+            "message": "success",
+            "data": [{"id": "uuid-123", "name": "tenant-acme"}],
+        }
+        list_response.raise_for_status = MagicMock()
+        delete_response = MagicMock(status_code=200)
+        delete_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.get.return_value = list_response
+            mock_ctx.delete.return_value = delete_response
+
+            await client.delete_instance("acme")
+
+        mock_ctx.get.assert_called_once_with(
+            "/instance/all",
+            headers={"Content-Type": "application/json", "apikey": "global-key"},
+        )
+        mock_ctx.delete.assert_called_once_with(
+            "/instance/delete/uuid-123",
+            headers={"Content-Type": "application/json", "apikey": "global-key"},
+        )
+        delete_response.raise_for_status.assert_called_once()
+
+    async def test_not_found_returns_gracefully(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        list_response = MagicMock()
+        list_response.json.return_value = {
+            "message": "success",
+            "data": [],
+        }
+        list_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.get.return_value = list_response
+
+            await client.delete_instance("nonexistent")
+
+        mock_ctx.get.assert_called_once()
+        mock_ctx.delete.assert_not_called()
+
+    async def test_delete_returns_404_gracefully(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        list_response = MagicMock()
+        list_response.json.return_value = {
+            "message": "success",
+            "data": [{"id": "uuid-123", "name": "tenant-acme"}],
+        }
+        list_response.raise_for_status = MagicMock()
+        delete_response = MagicMock(status_code=404)
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.get.return_value = list_response
+            mock_ctx.delete.return_value = delete_response
+
+            await client.delete_instance("acme")
+
+        mock_ctx.delete.assert_called_once()
+        delete_response.raise_for_status.assert_not_called()
+
+    async def test_raises_on_delete_error(self) -> None:
+        client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
+        list_response = MagicMock()
+        list_response.json.return_value = {
+            "message": "success",
+            "data": [{"id": "uuid-123", "name": "tenant-acme"}],
+        }
+        list_response.raise_for_status = MagicMock()
+        delete_response = MagicMock(status_code=500)
+        delete_response.raise_for_status.side_effect = Exception("Internal Server Error")
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_ctx = AsyncMock()
+            mock_httpx.return_value.__aenter__.return_value = mock_ctx
+            mock_ctx.get.return_value = list_response
+            mock_ctx.delete.return_value = delete_response
+
+            with pytest.raises(Exception, match="Internal Server Error"):
+                await client.delete_instance("acme")
+
+        mock_ctx.delete.assert_called_once()
+
+    async def test_skips_when_not_configured(self) -> None:
+        client = EvolutionClient(base_url="", api_key="")
+
+        with patch("httpx.AsyncClient") as mock_httpx:
+            await client.delete_instance("acme")
+
+        mock_httpx.assert_not_called()
+
+
 class TestCloseChatSession:
     async def test_noop_logs_warning_and_returns(self) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="test-key-123")
