@@ -10,21 +10,16 @@ Covers:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID, uuid4
 from unittest.mock import patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from app.core.config import settings
 from app.services.whatsapp_client_console_facade import WhatsAppClientConsoleFacade
-from app.services.whatsapp_session_service import (
-    ConversationSession,
-    WhatsAppSessionService,
-)
-from app.main import app
+from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 @pytest.fixture(autouse=True)
@@ -742,6 +737,7 @@ class TestAmbiguity:
         assert response.status_code == 200
         reply = response.json()["reply"]
         assert "modo *Cliente*" in reply
+        assert "Envía `1` para continuar" in reply
 
     async def test_ambiguity_select_tenant_mode(
         self,
@@ -799,7 +795,76 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "modo *Administrador de tenant*" in reply
+        assert "modo *Panel de administración*" in reply
+        assert "Envía `1` para continuar" in reply
+
+    async def test_ambiguity_continue_one_opens_client_console(
+        self,
+        client: AsyncClient,
+        active_tenant_user: Any,
+        db_session: Any,
+    ) -> None:
+        """After selecting mode 2, sending '1' opens client console menu."""
+        from sqlalchemy import select
+        from app.models import Client as ClientModel, Tenant as TenantModel
+
+        result = await db_session.execute(
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
+        )
+        tenant = result.scalar()
+        tenant.evolution_instance_name = "tenant-ambig-continue-client"
+        await db_session.commit()
+
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Continue Client",
+                username=f"{tenant.client_prefix}_continue_client",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
+        await db_session.commit()
+
+        fake_mgr = FakeManager()
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
+            await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "hola",
+                    "instance": "tenant-ambig-continue-client",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+            await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "2",
+                    "instance": "tenant-ambig-continue-client",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "1",
+                    "instance": "tenant-ambig-continue-client",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+        assert response.status_code == 200
+        reply = response.json()["reply"]
+        assert "Consola de Cliente" in reply
 
     async def test_ambiguity_mode_persists_messages(
         self,
@@ -1011,13 +1076,11 @@ class TestAmbiguity:
         assert "salido" in reply.lower()
 
         # Mode key should be removed — next message should re-prompt
-        mode_key = f"wa:mode:12015550002"
+        mode_key = "wa:mode:12015550002"
         raw = await fake_mgr._redis.get(mode_key)
         assert raw is None
 
         # Conversation sessions should also be cleared
-        from app.services.whatsapp_session_service import ConversationSession
-
         admin_key = "session:admin:12015550002"
         client_key = "session:client:12015550002"
         assert await fake_mgr._redis.get(admin_key) is None
@@ -1045,10 +1108,9 @@ class TestDuplicatePhone:
         can't happen in practice. This test simulates the scenario via
         a mocked repository to verify the hard-fail handling.
         """
-        from unittest.mock import AsyncMock
+        from sqlalchemy import select
         from sqlalchemy.exc import MultipleResultsFound
 
-        from sqlalchemy import select
         from app.models import Tenant as TenantModel
 
         result = await db_session.execute(
@@ -1065,23 +1127,25 @@ class TestDuplicatePhone:
             raise MultipleResultsFound("Multiple rows found")
 
         fake_mgr = FakeManager()
-        with patch(
-            "app.repositories.clients_repository.get_active_client_by_tenant_phone",
-            _mock_duplicate,
-        ):
-            with patch(
+        with (
+            patch(
+                "app.repositories.clients_repository.get_active_client_by_tenant_phone",
+                _mock_duplicate,
+            ),
+            patch(
                 "app.api.v1.endpoints.integrations.console.get_redis_manager",
                 return_value=fake_mgr,
-            ):
-                response = await client.post(
-                    ENDPOINT,
-                    json={
-                        "phone": "+12015550030",
-                        "message": "hola",
-                        "instance": "tenant-dup-test",
-                    },
-                    headers={"X-API-Key": settings.n8n_api_key},
-                )
+            ),
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550030",
+                    "message": "hola",
+                    "instance": "tenant-dup-test",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
         assert response.status_code == 200
         reply = response.json()["reply"]
         assert "Múltiples registros" in reply or "soporte" in reply

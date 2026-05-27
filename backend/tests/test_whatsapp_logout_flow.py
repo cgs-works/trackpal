@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
+from uuid import UUID
 
 import httpx
 import pytest
@@ -33,6 +34,7 @@ from app.services.whatsapp_session_service import (
 # Fake Redis + Manager (same pattern as test_whatsapp_credential_auth_flow)
 # ---------------------------------------------------------------------------
 
+
 class FakeRedis:
     def __init__(self) -> None:
         self._store: dict[str, str] = {}
@@ -41,7 +43,9 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
         if ex is not None:
             self._ttls[key] = ex
@@ -60,7 +64,9 @@ class FakeRedis:
 
 
 class FakeManager:
-    def __init__(self, fake_redis: FakeRedis | None = None, *, used_backup: bool = False) -> None:
+    def __init__(
+        self, fake_redis: FakeRedis | None = None, *, used_backup: bool = False
+    ) -> None:
         self._redis = fake_redis or FakeRedis()
         self._used_backup = used_backup
 
@@ -75,6 +81,7 @@ class FakeManager:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fake_redis() -> FakeRedis:
@@ -114,6 +121,7 @@ def console_service() -> WhatsAppConsoleService:
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _make_facade(
     console_service: WhatsAppConsoleService,
     session_service: WhatsAppSessionService,
@@ -139,7 +147,7 @@ async def _setup_auth_session(
     """Create a master auth session for the given phone."""
     auth_session = WhatsAppAuthSession(
         phone=phone,
-        user_id="00000000-0000-0000-0000-000000000001",
+        user_id=UUID("00000000-0000-0000-0000-000000000001"),
         username="master",
         role="master",
         authenticated_at=datetime.now(timezone.utc),
@@ -153,6 +161,7 @@ pytestmark = pytest.mark.asyncio
 # ===========================================================================
 # Tests: Logout from main menu (authenticated, no active flow)
 # ===========================================================================
+
 
 class TestLogoutFromMainMenu:
     """Authenticated + ``0`` + no active flow → full logout."""
@@ -241,9 +250,7 @@ class TestLogoutFromMainMenu:
         await _setup_auth_session(auth_session_service)
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session"
-        ):
+        with patch("app.services.evolution_client.evolution_client.close_chat_session"):
             reply = await facade.process_message(
                 phone="+12015550001",
                 message="0",
@@ -252,7 +259,11 @@ class TestLogoutFromMainMenu:
             )
 
         # Should mention logout/session closed
-        assert "sesión" in reply.lower() or "cerrada" in reply.lower() or "cerrado" in reply.lower()
+        assert (
+            "sesión" in reply.lower()
+            or "cerrada" in reply.lower()
+            or "cerrado" in reply.lower()
+        )
 
     async def test_logout_does_not_touch_auth_session(
         self,
@@ -374,6 +385,7 @@ class TestLogoutFromMainMenu:
 # Tests: Cancel inside active flow (0 does NOT logout)
 # ===========================================================================
 
+
 class TestCancelInsideActiveFlow:
     """Authenticated + ``0`` + active flow → cancel flow, no logout."""
 
@@ -423,9 +435,7 @@ class TestCancelInsideActiveFlow:
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session"
-        ):
+        with patch("app.services.evolution_client.evolution_client.close_chat_session"):
             await facade.process_message(
                 phone="+12015550001",
                 message="0",
@@ -452,9 +462,7 @@ class TestCancelInsideActiveFlow:
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session"
-        ):
+        with patch("app.services.evolution_client.evolution_client.close_chat_session"):
             await facade.process_message(
                 phone="+12015550001",
                 message="0",
@@ -510,9 +518,7 @@ class TestCancelInsideActiveFlow:
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session"
-        ):
+        with patch("app.services.evolution_client.evolution_client.close_chat_session"):
             reply = await facade.process_message(
                 phone="+12015550001",
                 message="0",
@@ -527,6 +533,7 @@ class TestCancelInsideActiveFlow:
 # ===========================================================================
 # Tests: Login reset (0 during login clears both auth + conversation)
 # ===========================================================================
+
 
 class TestLoginReset:
     """Unauthenticated + reset commands clear auth + conversation sessions."""
@@ -566,13 +573,13 @@ class TestLoginReset:
         # Reply should be username prompt (not main menu)
         assert "usuario" in reply.lower()
 
-    async def test_login_reset_clears_conversation_session(
+    async def test_login_reset_reinitializes_auth_conversation_session(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Reset during login clears any lingering conversation session."""
+        """Reset during login reinitializes session at auth username step."""
         # Create a conversation session (simulating leftover from previous flow)
         conv = await session_service.create_session("+9999999999")
         conv.flow = "create_tenant"
@@ -590,9 +597,12 @@ class TestLoginReset:
             db=None,
         )
 
-        # Conversation session should be cleared
+        # Conversation session should be reset to auth username step
         conv_session = await session_service.get_session("+9999999999")
-        assert conv_session is None
+        assert conv_session is not None
+        assert conv_session.flow == "auth"
+        assert conv_session.step == "username"
+        assert "usuario" in reply.lower()
 
     async def test_login_reset_menu_also_clears_sessions(
         self,
@@ -633,10 +643,11 @@ class TestLoginReset:
             '{"phone":"+9999999999","user_id":"uuid","username":"master","role":"master","authenticated_at":"2026-01-01T00:00:00Z"}',
             ex=900,
         )
-        import json
         await fake_redis.set(
             conv_key,
-            ConversationSession(phone="+9999999999", flow="create_tenant").model_dump_json(),
+            ConversationSession(
+                phone="+9999999999", flow="create_tenant"
+            ).model_dump_json(),
             ex=900,
         )
 
@@ -649,17 +660,20 @@ class TestLoginReset:
             db=None,
         )
 
-        # Both should be cleared
+        # Auth should be cleared; conversation should be reinitialized at auth step
         auth = await auth_session_service.get_auth_session("+9999999999")
         assert auth is None
         conv = await session_service.get_session("+9999999999")
-        assert conv is None
+        assert conv is not None
+        assert conv.flow == "auth"
+        assert conv.step == "username"
         assert "usuario" in reply.lower()
 
 
 # ===========================================================================
 # Tests: Failover — backup Redis, no session, authenticated "0"
 # ===========================================================================
+
 
 class TestFailoverBackupNoSession:
     """Authenticated + ``0`` + ``used_backup=True`` + no conv session → cancel/menu path, not logout."""
@@ -784,6 +798,7 @@ class TestFailoverBackupNoSession:
 # Tests: Invalid / empty phone during _perform_logout
 # ===========================================================================
 
+
 class TestLogoutInvalidPhone:
     """Invalid or empty phone in _perform_logout must skip Evolution call but still logout."""
 
@@ -825,6 +840,7 @@ class TestLogoutInvalidPhone:
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         import logging
+
         with caplog.at_level(logging.WARNING):
             await facade._perform_logout(
                 phone="abc",
@@ -841,6 +857,7 @@ class TestLogoutInvalidPhone:
 # ===========================================================================
 # Tests: HTTPError logging context in _perform_logout
 # ===========================================================================
+
 
 class TestLogoutHttpErrorLogging:
     """HTTPError during Evolution close should include exception context."""
@@ -862,6 +879,7 @@ class TestLogoutHttpErrorLogging:
             side_effect=httpx.HTTPError("Connection refused"),
         ):
             import logging
+
             with caplog.at_level(logging.WARNING):
                 await facade._perform_logout(
                     phone="+12015550001",
@@ -870,7 +888,8 @@ class TestLogoutHttpErrorLogging:
 
         # Find the relevant log record
         matching = [
-            rec for rec in caplog.records
+            rec
+            for rec in caplog.records
             if "Evolution API call failed during logout" in rec.message
         ]
         assert len(matching) >= 1, "Warning about Evolution failure should be logged"
