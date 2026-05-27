@@ -1,8 +1,9 @@
 # WhatsApp Console Flow Architecture
 
-Trackpal has two WhatsApp conversational consoles:
+Trackpal has three WhatsApp conversational consoles:
 - **Master Console** for tenant lifecycle management
 - **Tenant Console** for tenant admins to manage clients, catalog, profile, and subscriptions
+- **Client Console** (read-only) for tenant clients
 
 Both use n8n + Evolution + backend relay and store conversation state in Redis.
 
@@ -69,8 +70,15 @@ The console endpoint now routes by **WhatsApp instance** before resolving identi
 2. If `instance == MASTER_WHATSAPP_INSTANCE` → master flow only.
 3. If instance belongs to a tenant → resolve tenant by `evolution_instance_name`.
 4. Within tenant context:
-   - Match `tenant.whatsapp_phone` → tenant admin flow.
-   - Match `(tenant_id, phone)` in `clients` table → client flow.
+   - Match `tenant.whatsapp_phone` (or `tenant.whatsapp_lid`) → tenant admin flow.
+   - Match `(tenant_id, phone)` or `(tenant_id, whatsapp_lid)` in `clients` → client flow.
+
+### LID-aware identity path
+
+When Evolution sends `@lid` identifiers:
+- n8n forwards `sender_lid` and avoids deriving `phone` from LID digits.
+- Backend resolves identity phone-first, then falls back to `whatsapp_lid`.
+- Progressive fill: when both `phone` and `sender_lid` arrive, backend stores `whatsapp_lid` in matched Master/Tenant/Client rows for future LID-only resolution.
 
 ### Ambiguity handling
 
@@ -85,7 +93,6 @@ If the same phone matches both `tenant.whatsapp_phone` and a `client` record wit
 When a client exits the console (option `0` / `salir`), the response includes `status="closed"` in the payload. This triggers the n8n/Evolution Go `change-status` node to close the Evolution chat session. The `status` field is omitted (serialized as `None`) for all non-exit responses to maintain backward compatibility.
 
 ### Orchestration — `WhatsAppClientConsoleFacade`
-
 Package: `backend/app/services/whatsapp_client_console_facade/`. Submodules: `facade.py`.
 
 1. Client is resolved by `(tenant_id, phone)` — not by global phone lookup.

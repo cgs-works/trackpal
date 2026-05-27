@@ -28,6 +28,7 @@ Relationships: `master_profile` (1:1), `owned_tenant` (1:1 canonical tenant acco
 | id | UUID | PK, FK → users.id CASCADE |
 | name | VARCHAR(200) | Full name of master |
 | phone | VARCHAR(50) | Unique, nullable, canonical digits-only |
+| whatsapp_lid | VARCHAR(100) | Unique, nullable, `@lid` fallback identity |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
 ### `Tenant` — `tenants` table
@@ -42,6 +43,7 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 | name | VARCHAR(200) | Display name |
 | email | VARCHAR(255) | Nullable |
 | whatsapp_phone | VARCHAR(50) | Unique, nullable, canonical digits-only |
+| whatsapp_lid | VARCHAR(100) | Unique, nullable, `@lid` fallback identity |
 | evolution_instance_name | VARCHAR(200) | Unique, nullable |
 | evolution_instance_token | VARCHAR(500) | Nullable, encrypted via app-layer Fernet |
 | is_active | BOOLEAN | Default true |
@@ -59,6 +61,7 @@ Tenant-owned end-customer profile linked to a `users` login row.
 | full_name | VARCHAR(200) | Required |
 | username | VARCHAR(100) | Canonical client login username (`<tenant_prefix>_<local_username>`), tenant-scoped case-insensitive unique |
 | phone | VARCHAR(50) | Nullable, canonical digits-only, unique per tenant |
+| whatsapp_lid | VARCHAR(100) | Nullable, indexed, `@lid` fallback identity |
 | is_active | BOOLEAN | Default true |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
@@ -188,11 +191,13 @@ Alembic migrations:
 7. `cd7efe74caa0` — Add `subscriptions`, `subscription_events`, `subscription_reminder_logs`, and `subscription_reminder_settings` tables with RLS policies
 8. `cd9efe74caa2` — Rename `clients.local_username` to `clients.username`, rename related tenant+lower index, and backfill canonical values from `users.username`
 9. `cdaefe74caa3` — Add `evolution_instance_token` column to tenants for encrypted instance token storage
+10. `cdaefe74caa4` — Add `whatsapp_lid` columns + indexes to `master_profiles`, `tenants`, and `clients` for LID fallback identity resolution
 
 ## Key Constraints
 
 - Username unique across all users; client canonical usernames use tenant prefix + local username and are stored in both `users` and `clients`
 - Master phone is unique in `master_profiles`; tenant WhatsApp phone is unique in `tenants.whatsapp_phone`
+- `whatsapp_lid` is unique in `master_profiles` and `tenants`; indexed (non-unique) in `clients` for tenant-scoped resolution
 - Tenant `client_prefix` is unique and required for client login generation
 - `User` row is the parent for identity; canonical tenant rows cascade on owner delete
 - `RefreshSession` rows cascade delete when parent user is deleted

@@ -44,15 +44,16 @@ Centralized input validation lives in `app/core/input_validation/` and is the si
 - Returns canonical digits-only form (no `+` prefix)
 - Strips WhatsApp JID suffixes (`@c.us`, `@s.whatsapp.net`) and device suffixes (`:N`)
 - Rejects extension patterns (ext, x, #) and invalid characters
+- LID (`@lid`) is not a phone identifier; phone validation/normalization must not treat LID digits as canonical phones
 
 ## Phone Normalizer (`app/core/phone.py`)
 
 `normalize_phone(value: str | None) → str | None`:
-- Removes `+` prefix, JID suffixes, device suffixes
-- Strips all non-digit characters
+- Removes `+` prefix, phone-JID suffixes, and device suffixes
+- Explicitly returns `None` for any input containing `@lid`
+- Strips all non-digit characters for non-LID values
 - Returns `None` for blank/no-digit input
 - Used by CRUD, auth, and integrations for phone lookup
-
 ## Schema Integration
 
 Pydantic schemas in `app/schemas/tenant.py`, `app/schemas/me.py` use `@field_validator` decorators that call input validation functions. The service layer also applies defensive normalization as a safety net.

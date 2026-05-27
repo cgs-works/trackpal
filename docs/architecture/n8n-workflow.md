@@ -55,20 +55,20 @@ This URL is configured in `EvolutionClient.register_webhook()` in the backend, w
 
 ### 2. Parse Input (Code Node)
 
-JavaScript code that normalises the raw Evolution Go payload into a consistent `{ phone, message, instance, remoteJid, apiKey }` structure.
-
+JavaScript code that normalises the raw Evolution Go payload into a consistent `{ phone, message, instance, remoteJid, apiKey, sender_lid }` structure.
 **Input**: Raw webhook payload from Evolution Go.
 
 **Normalisation logic**:
 - Extracts `body.chatInput`, `body.remoteJid`, `body.instanceName`, `body.apiKey`
+- Extracts `body.senderPn` and `body.senderLid` (from Evolution Go payload enrichment)
 - Falls back to `data.message.from`, `data.message.key.remoteJid`, `data.message.body`, `data.message.conversation`
-- Strips JID suffixes (`@c.us`, `@s.whatsapp.net`, etc.) and device suffixes (`:N`)
-- Strips `+` prefix from phone numbers
+- Derives `phone` from `senderPn` first
+- If no `senderPn` and inbound JID is `@lid`, keeps `phone` empty and forwards `sender_lid`
+- Never derives canonical phone from `@lid` digits
 - Defaults `instance` to `'default'` if not present
-- Preserves `remoteJid` and `apiKey` for downstream use
+- Preserves original `remoteJid` and `apiKey` for downstream send/close nodes
 
-**Output**: `{ phone, message, instance, remoteJid, apiKey, raw }`
-
+**Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, raw }`
 ### 3. Config (Set Node)
 
 A **Set** node (typeVersion 3.4) that injects configuration values into the workflow as named fields.
@@ -94,7 +94,7 @@ Calls the backend WhatsApp Master Console endpoint.
 | Method | POST |
 | URL | `{{ $('Config').first().json.trackpal_backend_url }}/api/v1/integrations/n8n/console` |
 | Headers | `X-API-Key: {{ $('Config').first().json.trackpal_n8n_api_key }}` |
-| Body | `{"phone": "...", "message": "...", "instance": "..."}` |
+| Body | `{"phone": "...", "message": "...", "instance": "...", "sender_lid": "..."}` |
 | Never Error | `true` (backend errors return safe replies, never 5xx) |
 
 ### 5. Merge Reply (Code Node)
@@ -118,8 +118,7 @@ Sends the reply text back to the user via Evolution Go.
 | Body | `{"number": "phone_without_plus", "text": "reply_text"}` |
 | Never Error | `true` |
 
-Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key.
-
+Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. Reply target uses preserved `remoteJid` (can be `@lid` or phone JID depending on Evolution session state).
 ### 7. Check Close Session (Code Node)
 
 JavaScript that conditionally triggers session close.

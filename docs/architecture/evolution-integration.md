@@ -19,9 +19,13 @@ The backend integrates with **Evolution API** (WhatsApp Business API proxy, vers
 Instance names are prefixed with `tenant-` automatically (e.g., `tenant-acme`).
 
 ### Webhook Registration
+`register_webhook` replaces the legacy `setup_n8n_integration`. It uses a defensive upsert pattern and chatbot payload now includes LID-aware sender identity fields for n8n:
 
-`register_webhook` replaces the legacy `setup_n8n_integration`. It uses a defensive upsert pattern:
+- `remoteJid` (conversation target)
+- `senderPn` (phone JID when resolvable)
+- `senderLid` (`@lid` identifier when present)
 
+Upsert flow:
 1. Attempt `POST /webhook/create/{instanceId}` with:
    - `enabled=true`, `webhookUrl=https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient`
    - `triggerType=keyword`, `triggerOperator=startsWith`, `triggerValue=/menu`

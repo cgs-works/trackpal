@@ -19,11 +19,11 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [API Layer](architecture/api-layer.md) | REST routes, auth, dependencies, and integrations |
 | [Database Schema](architecture/database-schema.md) | ORM models, relationships, constraints, and migrations |
 | [Redis HA](architecture/redis-ha.md) | Redis failover, session state, and contingency replies |
-| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master and Tenant WhatsApp console orchestration and menus |
+| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master/Tenant/Client WhatsApp console orchestration, instance-first routing, and LID fallback |
 | [Input Validation Policy](architecture/input-validation-policy.md) | Validation and normalization rules |
-| [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, instance lifecycle, token encryption, and n8n relay |
+| [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
-| [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge and subscription reminders workflows |
+| [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract) and subscription reminders workflows |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
 
@@ -46,7 +46,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | File | Description |
 |------|-------------|
 | [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
-| [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone handling, validation, and deployment constraints |
+| [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone/LID handling, validation, and deployment constraints |
 
 ## Other
 

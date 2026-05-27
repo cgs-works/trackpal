@@ -122,7 +122,9 @@ backend/
 │       ├── cd4efe74cae7_fix_tenants_master_rls.py
 │       ├── cd5efe74cae8_drop_tenant_profiles.py
 │       ├── cd6efe74cae9_add_client_prefix_and_clients.py
-│       └── cd7efe74caa0_add_subscriptions.py
+│       ├── cd7efe74caa0_add_subscriptions.py
+│       ├── cdaefe74caa3_add_tenant_evolution_instance_token.py
+│       └── cdaefe74caa4_add_whatsapp_lid_columns.py
 ├── scripts/
 │   └── seed.py
 ├── tests/

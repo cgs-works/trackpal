@@ -59,7 +59,14 @@ Error codes are machine-readable strings (`username_required`, `phone_invalid`) 
 
 ## Phone Format
 
-All phone numbers stored as canonical digits-only (no `+` prefix, no `@c.us` JID suffix, no `:N` device suffix). Key functions:
+All phone numbers stored as canonical digits-only (no `+` prefix, no `@c.us` JID suffix, no `:N` device suffix).
+
+LID rule:
+- Inputs containing `@lid` are **not** canonical phones.
+- `normalize_phone()` must return `None` for `@lid` values.
+- LID identity uses dedicated `whatsapp_lid` columns (master/tenant/client), not phone fields.
+
+Key functions:
 - `normalize_phone()` in `app/core/phone.py`
 - `_strip_phone_suffixes()` in `app/core/input_validation/contact_validators.py`
 - `validate_phone()` in `app/core/input_validation/contact_validators.py`
@@ -96,7 +103,7 @@ Tenant WhatsApp console uses i18n key constants stored as class-level attributes
 
 1. **Config Set node pattern**: All environment-specific values (backend URL, n8n API key, Evolution base URL) live in a single n8n Set node named `Config`. This works around the missing Variables UI in n8n community edition. Values are referenced via `$('Config').first().json.<field_name>`.
 2. **neverError**: Both HTTP Request nodes (Console Call and Evolution Send) set `neverError: true`. This prevents workflow failure when backend or Evolution returns non-2xx responses.
-3. **Input normalisation**: The `Parse Input` Code node always normalises phone numbers (strip JID suffixes, `+` prefix, device suffixes) before passing to backend.
+3. **Input normalisation**: The `Parse Input` Code node derives `phone` from `senderPn` first. If inbound id is `@lid` and no PN exists, send empty `phone` plus `sender_lid`; never derive phone digits from LID.
 4. **Reply fallback**: The `Merge Reply` Code node provides a static Spanish fallback message when backend returns no reply.
 5. **Workflow files**: Exported as `n8n/Trackpal WhatsApp Bot.json` and `n8n/Trackpal Subscription Reminders.json`. Config values are visible in plaintext in the JSON export; treat both files as secrets-bearing.
 
