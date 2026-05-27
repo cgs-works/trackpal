@@ -13,11 +13,10 @@ from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
 MODE_KEY_PREFIX = "wa:mode:"
-MODE_PENDING_KEY_PREFIX = "wa:mode:pending:"
 MODE_TTL = 900
 
 
-async def _get_mode(redis_manager: RedisConnectionManager, phone: str) -> str | None:
+async def _get_mode(manager: RedisConnectionManager, phone: str) -> str | None:
     key = f"{MODE_KEY_PREFIX}{phone}"
 
     async def _get(client: Any) -> str | None:
@@ -26,51 +25,25 @@ async def _get_mode(redis_manager: RedisConnectionManager, phone: str) -> str | 
             return None
         return raw.decode() if isinstance(raw, bytes) else raw
 
-    return await redis_manager.execute("get_mode", _get)
+    return await manager.execute("get_mode", _get)
 
 
-async def _set_mode(
-    redis_manager: RedisConnectionManager, phone: str, mode: str
-) -> None:
+async def _set_mode(manager: RedisConnectionManager, phone: str, mode: str) -> None:
     key = f"{MODE_KEY_PREFIX}{phone}"
 
     async def _set(client: Any) -> None:
         await client.set(key, mode, ex=MODE_TTL)
 
-    await redis_manager.execute("set_mode", _set)
+    await manager.execute("set_mode", _set)
 
 
-async def _get_mode_pending(redis_manager: RedisConnectionManager, phone: str) -> bool:
-    key = f"{MODE_PENDING_KEY_PREFIX}{phone}"
-
-    async def _get(client: Any) -> bool:
-        raw = await client.get(key)
-        if raw is None:
-            return False
-        value = raw.decode() if isinstance(raw, bytes) else str(raw)
-        return value == "1"
-
-    return await redis_manager.execute("get_mode_pending", _get)
-
-
-async def _set_mode_pending(redis_manager: RedisConnectionManager, phone: str) -> None:
-    key = f"{MODE_PENDING_KEY_PREFIX}{phone}"
-
-    async def _set(client: Any) -> None:
-        await client.set(key, "1", ex=MODE_TTL)
-
-    await redis_manager.execute("set_mode_pending", _set)
-
-
-async def _clear_mode(redis_manager: RedisConnectionManager, phone: str) -> None:
+async def _clear_mode(manager: RedisConnectionManager, phone: str) -> None:
     mode_key = f"{MODE_KEY_PREFIX}{phone}"
-    pending_key = f"{MODE_PENDING_KEY_PREFIX}{phone}"
 
     async def _del(client: Any) -> None:
         await client.delete(mode_key)
-        await client.delete(pending_key)
 
-    await redis_manager.execute("clear_mode", _del)
+    await manager.execute("clear_mode", _del)
 
 
 async def _handle_ambiguity(
@@ -106,7 +79,6 @@ async def _handle_ambiguity(
         )
 
     stored_mode = await _get_mode(manager, phone)
-    mode_pending = await _get_mode_pending(manager, phone)
 
     if msg_lower in ("menu", "/menu"):
         if stored_mode == "tenant":
@@ -133,16 +105,6 @@ async def _handle_ambiguity(
         return WhatsAppConsoleResponse(reply=prompt)
 
     if stored_mode == "tenant":
-        if mode_pending and msg == "1":
-            await _clear_mode(manager, phone)
-            await _set_mode(manager, phone, "tenant")
-            return await _handle_tenant_console(
-                phone=phone,
-                message="",
-                instance=instance,
-                manager=manager,
-                db=db,
-            )
         return await _handle_tenant_console(
             phone=phone,
             message=message,
@@ -151,18 +113,6 @@ async def _handle_ambiguity(
             db=db,
         )
     if stored_mode == "client":
-        if mode_pending and msg == "1":
-            await _clear_mode(manager, phone)
-            await _set_mode(manager, phone, "client")
-            return await _handle_client_console(
-                phone=phone,
-                message="",
-                instance=instance,
-                manager=manager,
-                db=db,
-                identity=_client_identity(client, tenant),
-                locale=locale,
-            )
         return await _handle_client_console(
             phone=phone,
             message=message,
@@ -175,12 +125,24 @@ async def _handle_ambiguity(
 
     if msg == "1":
         await _set_mode(manager, phone, "tenant")
-        await _set_mode_pending(manager, phone)
-        return WhatsAppConsoleResponse(reply=t(locale, "wa.client.mode_confirm_tenant"))
+        return await _handle_tenant_console(
+            phone=phone,
+            message="",
+            instance=instance,
+            manager=manager,
+            db=db,
+        )
     if msg == "2":
         await _set_mode(manager, phone, "client")
-        await _set_mode_pending(manager, phone)
-        return WhatsAppConsoleResponse(reply=t(locale, "wa.client.mode_confirm_client"))
+        return await _handle_client_console(
+            phone=phone,
+            message="",
+            instance=instance,
+            manager=manager,
+            db=db,
+            identity=_client_identity(client, tenant),
+            locale=locale,
+        )
 
     return WhatsAppConsoleResponse(reply=t(locale, "wa.client.mode_prompt"))
 

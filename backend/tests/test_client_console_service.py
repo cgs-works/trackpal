@@ -736,8 +736,7 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "modo *Cliente*" in reply
-        assert "Envía `1` para continuar" in reply
+        assert "Consola de Cliente" in reply
 
     async def test_ambiguity_select_tenant_mode(
         self,
@@ -745,7 +744,7 @@ class TestAmbiguity:
         active_tenant_user: Any,
         db_session: Any,
     ) -> None:
-        """After ambiguity prompt, selecting tenant mode persists and confirms."""
+        """After ambiguity prompt, selecting tenant mode opens tenant console."""
         from sqlalchemy import select
         from app.models import Client as ClientModel, Tenant as TenantModel
 
@@ -795,16 +794,15 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "modo *Panel de administración*" in reply
-        assert "Envía `1` para continuar" in reply
+        assert "Trackpal Admin Console" in reply
 
-    async def test_ambiguity_continue_one_opens_client_console(
+    async def test_ambiguity_select_client_mode_opens_console_directly(
         self,
         client: AsyncClient,
         active_tenant_user: Any,
         db_session: Any,
     ) -> None:
-        """After selecting mode 2, sending '1' opens client console menu."""
+        """After selecting mode 2, client console opens immediately."""
         from sqlalchemy import select
         from app.models import Client as ClientModel, Tenant as TenantModel
 
@@ -843,20 +841,11 @@ class TestAmbiguity:
                 },
                 headers={"X-API-Key": settings.n8n_api_key},
             )
-            await client.post(
-                ENDPOINT,
-                json={
-                    "phone": "+12015550002",
-                    "message": "2",
-                    "instance": "tenant-ambig-continue-client",
-                },
-                headers={"X-API-Key": settings.n8n_api_key},
-            )
             response = await client.post(
                 ENDPOINT,
                 json={
                     "phone": "+12015550002",
-                    "message": "1",
+                    "message": "2",
                     "instance": "tenant-ambig-continue-client",
                 },
                 headers={"X-API-Key": settings.n8n_api_key},

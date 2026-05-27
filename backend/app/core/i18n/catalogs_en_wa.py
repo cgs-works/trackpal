@@ -169,8 +169,6 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.client.goodbye": "✅ You have exited the client console.\n\nGoodbye!",
     "wa.client.access_denied": "❌ Access denied, you do not have an active account.",
     "wa.client.mode_prompt": "⚠️ Two profiles detected for your phone number.\n\nHow do you want to proceed?\n1️⃣ Admin panel\n2️⃣ Client\n\n0️⃣ Exit\n\nChoose an option:",
-    "wa.client.mode_confirm_client": "👤 You are in *Client* mode.\n\nSend `1` to continue or `0` to return to previous menu (mode selection).",
-    "wa.client.mode_confirm_tenant": "🛠️ You are in *Admin panel* mode.\n\nSend `1` to continue or `0` to return to previous menu (mode selection).",
     "wa.client.mode_exit": "✅ You have exited. Goodbye!",
     "wa.client.mode_reset": "🔄 Mode reset. Send a message to start.",
     "wa.client.multiple_matches": "❌ Account error. Multiple records found. Contact support.",
