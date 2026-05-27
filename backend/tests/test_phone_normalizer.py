@@ -75,3 +75,9 @@ class TestNormalizePhone:
         """Input that becomes empty after JID/device stripping returns None."""
         assert normalize_phone("@c.us") is None
         assert normalize_phone(":45@s.whatsapp.net") is None
+
+    def test_lid_jid_returns_none(self) -> None:
+        """LID JID input (``@lid``) must never produce canonical phone digits."""
+        assert normalize_phone("123456789012345@lid") is None
+        assert normalize_phone("998877665544@lid") is None
+        assert normalize_phone("+1234567890@s.whatsapp.net") is not None  # sanity
