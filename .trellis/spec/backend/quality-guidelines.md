@@ -265,6 +265,62 @@ else:
     return access_denied(locale)
 ```
 
+## Scenario: WhatsApp LID must never be normalized as phone
+
+### 1. Scope / Trigger
+- Trigger: inbound WhatsApp payload arrives with `remoteJid`/sender as `@lid`, and normalization strips suffix then uses LID digits as canonical phone.
+
+### 2. Signatures
+- n8n Parse Input must forward:
+  - `phone` from `senderPn` only (when available)
+  - `sender_lid` separately for `@lid` paths
+- Backend endpoint request shape supports optional LID:
+  - `{"phone": str|None, "sender_lid": str|None, "instance": str|None, "message": str}`
+
+### 3. Contracts
+- `normalize_phone()` returns `None` for inputs containing `@lid`.
+- Identity resolution precedence:
+  1. canonical phone lookup
+  2. fallback LID lookup (`whatsapp_lid`)
+- Instance-first routing (`_route_by_instance`) must support LID for tenant/client branches and ambiguity handling.
+- Progressive fill required: when request has `senderPn` + `senderLid`, persist/update `whatsapp_lid` on matched identity.
+- n8n must preserve original `remoteJid` for outbound reply target.
+
+### 4. Validation & Error Matrix
+- `@s.whatsapp.net` + valid phone -> existing flow unchanged.
+- `@lid` + `senderPn` -> resolves by phone; `whatsapp_lid` gets updated.
+- `@lid` without `senderPn`, known `whatsapp_lid` -> resolves by LID.
+- `@lid` without mapping -> deterministic unknown-access reply.
+
+### 5. Good/Base/Bad Cases
+- Good: sender `123@s.whatsapp.net`, senderLid present -> reply works, LID persisted.
+- Base: sender only `abc@lid`, already mapped -> resolve by LID and continue flow.
+- Bad: treating `abc@lid` digits as phone and searching phone columns.
+
+### 6. Tests Required
+- `tests/test_phone_normalizer.py`:
+  - assert `@lid` input returns `None`.
+- `tests/test_whatsapp_endpoint.py`:
+  - `@s.whatsapp.net` regression pass
+  - `@lid` + `senderPn` resolves and persists LID
+  - `@lid` + persisted LID resolves
+  - unknown `@lid` denied deterministically
+  - instance-first tenant/client LID routing and ambiguity branch deterministic
+
+### 7. Wrong vs Correct
+#### Wrong
+```python
+phone = normalize_phone("12345678901234@lid")  # "12345678901234"
+identity = await auth_service.identify_by_phone(db, phone)
+```
+
+#### Correct
+```python
+phone = normalize_phone(sender_pn) if sender_pn else None
+sender_lid = raw_sender_lid if raw_sender_lid and raw_sender_lid.endswith("@lid") else None
+identity = await auth_service.identify_by_contact(db, phone=phone, sender_lid=sender_lid)
+```
+
 ## Testing Requirements
 
 - Run backend suite before completion: `cd backend && uv run pytest -v`.
