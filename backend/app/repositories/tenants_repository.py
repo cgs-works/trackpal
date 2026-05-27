@@ -109,12 +109,30 @@ async def resolve_locale_by_client(db: AsyncSession, client_owner_user_id: UUID)
     return row if row else "en"
 
 
+def _instance_aliases(instance_name: str) -> tuple[str, ...]:
+    raw = (instance_name or "").strip()
+    if not raw:
+        return ()
+
+    aliases = {raw}
+    if raw.startswith("tenant-"):
+        aliases.add(raw.removeprefix("tenant-"))
+    else:
+        aliases.add(f"tenant-{raw}")
+
+    return tuple(alias for alias in aliases if alias)
+
+
 async def get_by_instance(db: AsyncSession, instance_name: str) -> Tenant | None:
-    """Get active tenant by Evolution instance name."""
+    """Get tenant by Evolution instance name, accepting tenant-* aliases."""
+    aliases = _instance_aliases(instance_name)
+    if not aliases:
+        return None
+
     result = await db.execute(
         select(Tenant)
         .options(selectinload(Tenant.owner))
-        .where(Tenant.evolution_instance_name == instance_name)
+        .where(Tenant.evolution_instance_name.in_(aliases))
     )
     return result.scalar_one_or_none()
 

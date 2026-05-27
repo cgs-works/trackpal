@@ -41,6 +41,7 @@ def _force_spanish_locale(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda _tenant: "es",
     )
 
+
 pytestmark = pytest.mark.asyncio
 
 ENDPOINT = "/api/v1/integrations/n8n/console"
@@ -59,7 +60,9 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
 
     async def delete(self, key: str) -> int:
@@ -103,7 +106,9 @@ def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
 
 
 @pytest.fixture
-def client_facade(session_service: WhatsAppSessionService) -> WhatsAppClientConsoleFacade:
+def client_facade(
+    session_service: WhatsAppSessionService,
+) -> WhatsAppClientConsoleFacade:
     return WhatsAppClientConsoleFacade(
         session_service=session_service,
     )
@@ -228,7 +233,10 @@ class TestClientConsoleMenu:
         )
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -275,9 +283,14 @@ class TestInstanceFirstRouting:
             role="master",
             authenticated_at=datetime.now(timezone.utc),
         )
-        await fake_mgr._redis.set("wa:auth:12015550001", auth_session.model_dump_json(), ex=900)
+        await fake_mgr._redis.set(
+            "wa:auth:12015550001", auth_session.model_dump_json(), ex=900
+        )
 
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -304,7 +317,10 @@ class TestInstanceFirstRouting:
         )
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -329,8 +345,11 @@ class TestInstanceFirstRouting:
         # Set the tenant's evolution_instance_name
         from sqlalchemy import select
         from app.models import Tenant as TenantModel
+
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar_one()
         tenant.evolution_instance_name = "tenant-instance-test"
@@ -338,7 +357,10 @@ class TestInstanceFirstRouting:
 
         fake_mgr = FakeManager()
 
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -369,9 +391,14 @@ class TestInstanceFirstRouting:
             role="master",
             authenticated_at=datetime.now(timezone.utc),
         )
-        await fake_mgr._redis.set("wa:auth:12015550001", auth_session.model_dump_json(), ex=900)
+        await fake_mgr._redis.set(
+            "wa:auth:12015550001", auth_session.model_dump_json(), ex=900
+        )
 
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -407,8 +434,11 @@ class TestClientWithinTenant:
         # Set the tenant's evolution_instance_name
         from sqlalchemy import select
         from app.models import Tenant as TenantModel
+
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-client-test"
@@ -416,7 +446,10 @@ class TestClientWithinTenant:
 
         fake_mgr = FakeManager()
 
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -440,8 +473,11 @@ class TestClientWithinTenant:
         """Unknown phone in tenant instance → access denied."""
         from sqlalchemy import select
         from app.models import Tenant as TenantModel
+
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-deny-test"
@@ -449,7 +485,10 @@ class TestClientWithinTenant:
 
         fake_mgr = FakeManager()
 
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -473,8 +512,11 @@ class TestClientWithinTenant:
         """Inactive client phone in tenant instance → access denied."""
         from sqlalchemy import select
         from app.models import Tenant as TenantModel
+
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-inactive-test"
@@ -482,7 +524,10 @@ class TestClientWithinTenant:
 
         fake_mgr = FakeManager()
 
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -509,18 +554,27 @@ class TestClientWithinTenant:
         with the same phone returns access denied.
         """
         from app.core.security import get_password_hash
-        from app.models import Client as ClientModel, Tenant as TenantModel, User as UserModel
+        from app.models import (
+            Client as ClientModel,
+            Tenant as TenantModel,
+            User as UserModel,
+        )
 
         # Tenant A (fixture gives us active_client_user under active_tenant_user)
         from sqlalchemy import select
+
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_client_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_client_user.id
+            )
         )
         tenant_a = result.scalar_one_or_none()
         # Actually active_client_user is under active_tenant_user's tenant.
         # Let's find tenant A from the client's tenant_id
         client_obj = await db_session.execute(
-            select(ClientModel).where(ClientModel.owner_user_id == active_client_user.id)
+            select(ClientModel).where(
+                ClientModel.owner_user_id == active_client_user.id
+            )
         )
         client_obj = client_obj.scalar_one()
         result = await db_session.execute(
@@ -550,7 +604,10 @@ class TestClientWithinTenant:
 
         # Phone +12015550030 belongs to a client in tenant A, NOT tenant B
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -587,7 +644,9 @@ class TestAmbiguity:
 
         # Set tenant instance
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-ambiguity-test"
@@ -606,7 +665,10 @@ class TestAmbiguity:
         await db_session.commit()
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
@@ -631,25 +693,32 @@ class TestAmbiguity:
         from app.models import Client as ClientModel, Tenant as TenantModel
 
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-ambig-client"
         await db_session.commit()
 
         # Client with same phone as tenant admin
-        db_session.add(ClientModel(
-            tenant_id=tenant.id,
-            owner_user_id=active_tenant_user.id,
-            full_name="Ambiguous Client",
-            username=f"{tenant.client_prefix}_ambig",
-            phone="+12015550002",
-            is_active=True,
-        ))
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Ambiguous Client",
+                username=f"{tenant.client_prefix}_ambig",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
         await db_session.commit()
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             # First message triggers prompt
             await client.post(
                 ENDPOINT,
@@ -685,24 +754,31 @@ class TestAmbiguity:
         from app.models import Client as ClientModel, Tenant as TenantModel
 
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-ambig-tenant"
         await db_session.commit()
 
-        db_session.add(ClientModel(
-            tenant_id=tenant.id,
-            owner_user_id=active_tenant_user.id,
-            full_name="Another Client",
-            username=f"{tenant.client_prefix}_another",
-            phone="+12015550002",
-            is_active=True,
-        ))
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Another Client",
+                username=f"{tenant.client_prefix}_another",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
         await db_session.commit()
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             await client.post(
                 ENDPOINT,
                 json={
@@ -736,24 +812,31 @@ class TestAmbiguity:
         from app.models import Client as ClientModel, Tenant as TenantModel
 
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-ambig-persist"
         await db_session.commit()
 
-        db_session.add(ClientModel(
-            tenant_id=tenant.id,
-            owner_user_id=active_tenant_user.id,
-            full_name="Persist Client",
-            username=f"{tenant.client_prefix}_persist",
-            phone="+12015550002",
-            is_active=True,
-        ))
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Persist Client",
+                username=f"{tenant.client_prefix}_persist",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
         await db_session.commit()
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             # Trigger ambiguity
             await client.post(
                 ENDPOINT,
@@ -799,24 +882,31 @@ class TestAmbiguity:
         from app.models import Client as ClientModel, Tenant as TenantModel
 
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-ambig-exit"
         await db_session.commit()
 
-        db_session.add(ClientModel(
-            tenant_id=tenant.id,
-            owner_user_id=active_tenant_user.id,
-            full_name="Exit Client",
-            username=f"{tenant.client_prefix}_exit",
-            phone="+12015550002",
-            is_active=True,
-        ))
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Exit Client",
+                username=f"{tenant.client_prefix}_exit",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
         await db_session.commit()
 
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             # Trigger ambiguity
             await client.post(
                 ENDPOINT,
@@ -858,6 +948,7 @@ class TestAmbiguity:
 
         # Conversation sessions should also be cleared
         from app.services.whatsapp_session_service import ConversationSession
+
         admin_key = "session:admin:12015550002"
         client_key = "session:client:12015550002"
         assert await fake_mgr._redis.get(admin_key) is None
@@ -892,7 +983,9 @@ class TestDuplicatePhone:
         from app.models import Tenant as TenantModel
 
         result = await db_session.execute(
-            select(TenantModel).where(TenantModel.owner_user_id == active_tenant_user.id)
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
         )
         tenant = result.scalar()
         tenant.evolution_instance_name = "tenant-dup-test"
@@ -907,7 +1000,10 @@ class TestDuplicatePhone:
             "app.repositories.clients_repository.get_active_client_by_tenant_phone",
             _mock_duplicate,
         ):
-            with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+            with patch(
+                "app.api.v1.endpoints.integrations.console.get_redis_manager",
+                return_value=fake_mgr,
+            ):
                 response = await client.post(
                     ENDPOINT,
                     json={
@@ -938,7 +1034,10 @@ class TestLegacyFlowWithInstance:
     ) -> None:
         """Tenant phone + unknown instance → legacy tenant console."""
         fake_mgr = FakeManager()
-        with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
             response = await client.post(
                 ENDPOINT,
                 json={
