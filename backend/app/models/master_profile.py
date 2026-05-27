@@ -15,5 +15,8 @@ class MasterProfile(Base, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
+    whatsapp_lid: Mapped[str | None] = mapped_column(
+        String(100), unique=True, nullable=True
+    )
 
     user = relationship("User", back_populates="master_profile")

@@ -1,5 +1,6 @@
 """Tenant repository — tenant table queries."""
 
+import uuid
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -11,9 +12,7 @@ from app.models import Client, Tenant
 
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
     """Resolve tenant locale, defaulting to ``"en"``."""
-    result = await db.execute(
-        select(Tenant.locale).where(Tenant.id == tenant_id)
-    )
+    result = await db.execute(select(Tenant.locale).where(Tenant.id == tenant_id))
     row = result.scalar_one_or_none()
     return row if row else "en"
 
@@ -21,9 +20,7 @@ async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
 async def get(db: AsyncSession, tenant_id: UUID) -> Tenant | None:
     """Get tenant by id (with owner)."""
     result = await db.execute(
-        select(Tenant)
-        .options(selectinload(Tenant.owner))
-        .where(Tenant.id == tenant_id)
+        select(Tenant).options(selectinload(Tenant.owner)).where(Tenant.id == tenant_id)
     )
     return result.scalar_one_or_none()
 
@@ -38,9 +35,7 @@ async def get_by_owner(db: AsyncSession, owner_user_id: UUID) -> Tenant | None:
     return result.scalar_one_or_none()
 
 
-async def get_active_by_owner(
-    db: AsyncSession, owner_user_id: UUID
-) -> Tenant | None:
+async def get_active_by_owner(db: AsyncSession, owner_user_id: UUID) -> Tenant | None:
     """Get active tenant for a given owner."""
     result = await db.execute(
         select(Tenant)
@@ -72,9 +67,7 @@ async def get_all(db: AsyncSession) -> tuple[list[Tenant], dict]:
     return profiles, {"total": total, "active": active, "inactive": inactive}
 
 
-async def get_by_id_or_owner(
-    db: AsyncSession, tenant_id: UUID
-) -> Tenant | None:
+async def get_by_id_or_owner(db: AsyncSession, tenant_id: UUID) -> Tenant | None:
     """Get tenant by id or owner user id (with owner loaded)."""
     result = await db.execute(
         select(Tenant)
@@ -95,9 +88,7 @@ async def get_stats(db: AsyncSession) -> dict:
     return {"total": t, "active": a, "inactive": t - a}
 
 
-async def resolve_locale_by_owner(
-    db: AsyncSession, owner_user_id: UUID
-) -> str:
+async def resolve_locale_by_owner(db: AsyncSession, owner_user_id: UUID) -> str:
     """Resolve tenant locale by owner user id, defaulting to ``"en"``."""
     result = await db.execute(
         select(Tenant.locale).where(Tenant.owner_user_id == owner_user_id)
@@ -106,9 +97,7 @@ async def resolve_locale_by_owner(
     return row if row else "en"
 
 
-async def resolve_locale_by_client(
-    db: AsyncSession, client_owner_user_id: UUID
-) -> str:
+async def resolve_locale_by_client(db: AsyncSession, client_owner_user_id: UUID) -> str:
     """Resolve tenant locale from a client owner user id."""
     result = await db.execute(
         select(Tenant.locale)
@@ -120,9 +109,7 @@ async def resolve_locale_by_client(
     return row if row else "en"
 
 
-async def get_by_instance(
-    db: AsyncSession, instance_name: str
-) -> Tenant | None:
+async def get_by_instance(db: AsyncSession, instance_name: str) -> Tenant | None:
     """Get active tenant by Evolution instance name."""
     result = await db.execute(
         select(Tenant)
@@ -130,6 +117,25 @@ async def get_by_instance(
         .where(Tenant.evolution_instance_name == instance_name)
     )
     return result.scalar_one_or_none()
+
+
+async def get_by_whatsapp_lid(db: AsyncSession, lid: str) -> Tenant | None:
+    """Get active tenant by whatsapp_lid."""
+    result = await db.execute(
+        select(Tenant)
+        .options(selectinload(Tenant.owner))
+        .where(Tenant.whatsapp_lid == lid, Tenant.is_active)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_tenant_lid(db: AsyncSession, tenant_id: uuid.UUID, lid: str) -> None:
+    """Persist whatsapp_lid on a tenant (progressive fill)."""
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if tenant and not tenant.whatsapp_lid:
+        tenant.whatsapp_lid = lid
+        await db.commit()
 
 
 async def client_prefix_exists(
@@ -158,4 +164,7 @@ __all__ = [
     "resolve_locale_by_owner",
     "resolve_locale_by_client",
     "client_prefix_exists",
+    "get_by_instance",
+    "get_by_whatsapp_lid",
+    "update_tenant_lid",
 ]

@@ -6,8 +6,6 @@ from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core import VALID_LOCALES
-
 from app.models.base import Base, TimestampMixin
 
 
@@ -24,22 +22,38 @@ class Tenant(Base, TimestampMixin):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     owner_user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     client_prefix: Mapped[str] = mapped_column(
         String(5), unique=True, nullable=False, default=_default_client_prefix
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    whatsapp_phone: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
-    evolution_instance_name: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
-    evolution_instance_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    whatsapp_phone: Mapped[str | None] = mapped_column(
+        String(50), unique=True, nullable=True
+    )
+    evolution_instance_name: Mapped[str | None] = mapped_column(
+        String(200), unique=True, nullable=True
+    )
+    evolution_instance_token: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    whatsapp_lid: Mapped[str | None] = mapped_column(
+        String(100), unique=True, nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     owner = relationship("User", back_populates="owned_tenant")
-    clients = relationship("Client", back_populates="tenant", cascade="all, delete-orphan")
-    services = relationship("Service", back_populates="tenant", cascade="all, delete-orphan")
+    clients = relationship(
+        "Client", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    services = relationship(
+        "Service", back_populates="tenant", cascade="all, delete-orphan"
+    )
     plans = relationship("Plan", back_populates="tenant", cascade="all, delete-orphan")
 
     @property

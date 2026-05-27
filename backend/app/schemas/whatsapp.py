@@ -10,11 +10,14 @@ class WhatsAppConsoleRequest(BaseModel):
         phone:    Normalised phone number of the WhatsApp user.
         message:  Text of the WhatsApp message.
         instance: Optional Evolution API instance name for context.
+        sender_lid: Optional LID JID string when ``remoteJid`` uses ``@lid``
+            and no phone JID is resolvable (LID fallback identity).
     """
 
     phone: str
     message: str
     instance: str | None = None
+    sender_lid: str | None = None
 
 
 class WhatsAppConsoleResponse(BaseModel):

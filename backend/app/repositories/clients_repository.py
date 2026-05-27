@@ -6,12 +6,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Client, Tenant, User
+from app.models import Client, Tenant
 
 
-async def get(
-    db: AsyncSession, tenant_id: UUID, client_id: UUID
-) -> Client | None:
+async def get(db: AsyncSession, tenant_id: UUID, client_id: UUID) -> Client | None:
     """Get a client by tenant and client id, with user and tenant loaded."""
     result = await db.execute(
         select(Client)
@@ -34,7 +32,10 @@ async def get_active_client_tenant_join(
             Tenant.is_active,
         )
     )
-    return result.first()
+    row = result.first()
+    if row is not None:
+        return row._tuple()  # type: ignore[return-value]
+    return None
 
 
 async def get_active_client_in_tenant(
@@ -54,9 +55,7 @@ async def get_active_client_in_tenant(
     return result.scalar_one_or_none()
 
 
-async def list_clients(
-    db: AsyncSession, tenant_id: UUID
-) -> list[Client]:
+async def list_clients(db: AsyncSession, tenant_id: UUID) -> list[Client]:
     """List all clients for a tenant, newest first."""
     result = await db.execute(
         select(Client)
@@ -90,9 +89,7 @@ async def phone_exists(
     exclude_id: UUID | None = None,
 ) -> bool:
     """Check if a phone is taken within a tenant."""
-    stmt = select(Client.id).where(
-        Client.tenant_id == tenant_id, Client.phone == phone
-    )
+    stmt = select(Client.id).where(Client.tenant_id == tenant_id, Client.phone == phone)
     if exclude_id is not None:
         stmt = stmt.where(Client.id != exclude_id)
     return (await db.execute(stmt)).first() is not None
@@ -124,9 +121,42 @@ async def get_active_client_by_tenant_phone(
     return result.scalar_one_or_none()
 
 
-async def get_clients_with_user(
-    db: AsyncSession, tenant_id: UUID
-) -> list[Client]:
+async def get_active_client_by_tenant_lid(
+    db: AsyncSession, tenant_id: UUID, lid: str
+) -> Client | None:
+    """Get active client by tenant_id and whatsapp_lid."""
+    result = await db.execute(
+        select(Client)
+        .options(selectinload(Client.user), selectinload(Client.tenant))
+        .where(
+            Client.tenant_id == tenant_id,
+            Client.whatsapp_lid == lid,
+            Client.is_active,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_client_by_lid(db: AsyncSession, lid: str) -> Client | None:
+    """Get a client (within any tenant) by whatsapp_lid."""
+    result = await db.execute(
+        select(Client)
+        .options(selectinload(Client.user), selectinload(Client.tenant))
+        .where(Client.whatsapp_lid == lid, Client.is_active)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_client_lid(db: AsyncSession, client_id: UUID, lid: str) -> None:
+    """Persist whatsapp_lid on a client (progressive fill)."""
+    result = await db.execute(select(Client).where(Client.id == client_id))
+    client = result.scalar_one_or_none()
+    if client and not client.whatsapp_lid:
+        client.whatsapp_lid = lid
+        await db.commit()
+
+
+async def get_clients_with_user(db: AsyncSession, tenant_id: UUID) -> list[Client]:
     """Get clients with their user loaded, ordered by creation time."""
     result = await db.execute(
         select(Client)
@@ -139,7 +169,9 @@ async def get_clients_with_user(
 
 __all__ = [
     "get_active_client_by_tenant_phone",
-
+    "get_active_client_by_tenant_lid",
+    "get_client_by_lid",
+    "update_client_lid",
     "get",
     "get_active_client_tenant_join",
     "get_active_client_in_tenant",

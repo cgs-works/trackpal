@@ -22,6 +22,7 @@ class Client(Base, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
     username: Mapped[str] = mapped_column(String(94), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    whatsapp_lid: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     __table_args__ = (

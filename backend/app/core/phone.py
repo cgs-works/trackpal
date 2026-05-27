@@ -23,12 +23,14 @@ def normalize_phone(value: str | None) -> str | None:
     Handles:
     - ``+`` prefix removal
     - WhatsApp JID suffixes (``@c.us``, ``@s.whatsapp.net``)
+    - LID JID suffix ``@lid`` → returns ``None`` (LID digits are not phone)
     - Device suffixes after ``:``
     - Spaces, dashes, parentheses, and other non-digit characters
     - Blank, ``None``, or no-digit input → ``None``
 
     Returns:
-        Canonical digits-only string, or ``None`` for blank/empty input.
+        Canonical digits-only string, or ``None`` for blank/empty input
+        or ``@lid`` JID input.
     """
     if value is None:
         return None
@@ -36,6 +38,10 @@ def normalize_phone(value: str | None) -> str | None:
     raw = str(value).strip()
 
     if not raw:
+        return None
+
+    # Reject LID JID — LID digits must never be treated as a phone number
+    if "@lid" in raw:
         return None
 
     # Strip WhatsApp JID suffix and device suffix via shared helper

@@ -21,9 +21,7 @@ async def get(db: AsyncSession, user_id: UUID | str) -> User | None:
     return result.scalar_one_or_none()
 
 
-async def get_by_phone(
-    db: AsyncSession, phone: str
-) -> tuple[User, str | None] | None:
+async def get_by_phone(db: AsyncSession, phone: str) -> tuple[User, str | None] | None:
     """Look up a user by phone across MasterProfile and Tenant profiles.
 
     Normalizes input to digits-only, then searches for both canonical and
@@ -45,9 +43,7 @@ async def get_by_phone(
         if user:
             return user, master_profile.phone
 
-    result = await db.execute(
-        select(Tenant).where(Tenant.whatsapp_phone.in_(variants))
-    )
+    result = await db.execute(select(Tenant).where(Tenant.whatsapp_phone.in_(variants)))
     tenant = result.scalar_one_or_none()
     if tenant:
         user = await get(db, tenant.owner_user_id)
@@ -55,6 +51,42 @@ async def get_by_phone(
             return user, tenant.whatsapp_phone
 
     return None
+
+
+async def get_by_lid(db: AsyncSession, lid: str) -> tuple[User, str] | None:
+    """Look up a user by WhatsApp LID across MasterProfile and Tenant.
+
+    Returns ``(user, role_label)`` or ``None``.
+    Role label is one of ``"master"`` or ``"tenant"``.
+    """
+    # Check master profile
+    result = await db.execute(
+        select(MasterProfile).where(MasterProfile.whatsapp_lid == lid)
+    )
+    master_profile = result.scalar_one_or_none()
+    if master_profile:
+        user = await get(db, master_profile.id)
+        if user:
+            return user, "master"
+
+    # Check tenant
+    result = await db.execute(select(Tenant).where(Tenant.whatsapp_lid == lid))
+    tenant = result.scalar_one_or_none()
+    if tenant:
+        user = await get(db, tenant.owner_user_id)
+        if user:
+            return user, "tenant"
+
+    return None
+
+
+async def update_master_lid(db: AsyncSession, user_id: UUID, lid: str) -> None:
+    """Persist whatsapp_lid on a master profile (progressive fill)."""
+    result = await db.execute(select(MasterProfile).where(MasterProfile.id == user_id))
+    profile = result.scalar_one_or_none()
+    if profile and not profile.whatsapp_lid:
+        profile.whatsapp_lid = lid
+        await db.commit()
 
 
 async def username_exists(
@@ -68,4 +100,11 @@ async def username_exists(
 
 
 # re-export module-level shim name (same interface as old app.crud.users)
-__all__ = ["get", "get_by_username", "get_by_phone", "username_exists"]
+__all__ = [
+    "get",
+    "get_by_username",
+    "get_by_phone",
+    "get_by_lid",
+    "update_master_lid",
+    "username_exists",
+]

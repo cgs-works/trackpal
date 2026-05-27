@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\nconst apiKey = body.apiKey || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\nconst phone = normalizePhone(remoteJid || from);\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, remoteJid, apiKey, raw: payload } }];"
+        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst isLidJid = (value) => String(value || '').includes('@lid');\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\nconst apiKey = body.apiKey || '';\n\n// LID/JID resolution fields from evolution-go\nconst senderPn = body.senderPn || '';\nconst senderLid = body.senderLid || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\n// Derive phone from senderPn first (phone JID), never from @lid\nlet phone;\nlet senderLidOut = senderLid;\n\nif (senderPn) {\n  // Use senderPn for canonical phone and preserve LID for progressive fill\n  phone = normalizePhone(senderPn);\n} else {\n  const rawJid = remoteJid || from;\n  if (rawJid && isLidJid(rawJid)) {\n    // LID-only - no phone, pass sender_lid explicitly\n    phone = '';\n    senderLidOut = senderLid || rawJid;\n  } else {\n    phone = normalizePhone(rawJid);\n  }\n}\n\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, remoteJid, apiKey, sender_lid: senderLidOut, raw: payload } }];"
       },
       "id": "b2df9013-890c-43b0-96d8-8d4193ffd2ca",
       "name": "Parse input",
@@ -154,7 +154,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const msg = $json.message || '';\nconst reply = $json.reply || '';\nconst isLogout = msg === '0' && (\n  reply.includes('Sesi\u00f3n cerrada') ||\n  reply.includes('goodbye') ||\n  reply.includes('cerrado')\n);\nif (isLogout) {\n  return [{ json: $json }];\n}\nreturn [];"
+        "jsCode": "const msg = $json.message || '';\nconst reply = $json.reply || '';\nconst isLogout = msg === '0' && (\n  reply.includes('Sesión cerrada') ||\n  reply.includes('goodbye') ||\n  reply.includes('cerrado')\n);\nif (isLogout) {\n  return [{ json: $json }];\n}\nreturn [];"
       },
       "id": "f9e8d7c6-b5a4-3c2d-1e0f-9a8b7c6d5e4f",
       "name": "Check close session",

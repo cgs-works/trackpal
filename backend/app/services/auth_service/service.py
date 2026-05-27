@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -16,8 +15,13 @@ from app.core.security import (
     generate_secure_token,
     verify_password,
 )
-from app.repositories import clients_repository, sessions_repository, tenants_repository, users_repository
 from app.models import RefreshSession, User
+from app.repositories import (
+    clients_repository,
+    sessions_repository,
+    tenants_repository,
+    users_repository,
+)
 
 
 def _hash_refresh_token(refresh_token: str) -> str:
@@ -43,7 +47,9 @@ class AuthService:
             return None
         return user
 
-    async def _active_tenant_id_for_user(self, db: AsyncSession, user: User) -> UUID | None:
+    async def _active_tenant_id_for_user(
+        self, db: AsyncSession, user: User
+    ) -> UUID | None:
         if user.role == "tenant":
             await set_internal_rls_context(db)
             tenant = await tenants_repository.get_active_by_owner(db, user.id)
@@ -54,12 +60,18 @@ class AuthService:
         row = await clients_repository.get_active_client_tenant_join(db, user.id)
         return row[0].tenant_id if row else None
 
-    async def create_tokens(self, db: AsyncSession, user: User, active_tenant_id: UUID | None = None) -> dict | None:
+    async def create_tokens(
+        self, db: AsyncSession, user: User, active_tenant_id: UUID | None = None
+    ) -> dict | None:
         if user.role in {"tenant", "client"}:
             active_tenant_id = await self._active_tenant_id_for_user(db, user)
             if active_tenant_id is None:
                 return None
-        access_token = create_access_token(subject=str(user.id), role=user.role, active_tenant_id=str(active_tenant_id) if active_tenant_id else None)
+        access_token = create_access_token(
+            subject=str(user.id),
+            role=user.role,
+            active_tenant_id=str(active_tenant_id) if active_tenant_id else None,
+        )
         refresh_token = create_refresh_token(subject=str(user.id))
         generate_secure_token()
         refresh_token_hash = _hash_refresh_token(refresh_token)
@@ -123,7 +135,9 @@ class AuthService:
                 active_tenant_id = None
         return await self.create_tokens(db, user, active_tenant_id)
 
-    async def switch_tenant(self, db: AsyncSession, user: User, tenant_id: UUID | None) -> dict | None:
+    async def switch_tenant(
+        self, db: AsyncSession, user: User, tenant_id: UUID | None
+    ) -> dict | None:
         if user.role != "master":
             return None
         if tenant_id is not None:
@@ -156,3 +170,36 @@ class AuthService:
             if profile and not profile.is_active:
                 return None
         return {"user_id": user.id, "role": user.role, "username": user.username}
+
+    async def identify_by_lid(self, db: AsyncSession, lid: str) -> dict | None:
+        """Resolve identity by WhatsApp LID.
+
+        Checks master_profiles, tenants, and clients for a match.
+        Returns the same shape as ``identify_by_phone``.
+        """
+        if not lid or not lid.strip():
+            return None
+        await set_internal_rls_context(db)
+
+        # Check master/tenant profiles via user table
+        result = await users_repository.get_by_lid(db, lid)
+        if result:
+            user, role = result
+            if role == "tenant":
+                profile = await tenants_repository.get_by_owner(db, user.id)
+                if profile and not profile.is_active:
+                    return None
+            return {"user_id": user.id, "role": role, "username": user.username}
+
+        # Check client profiles
+        client = await clients_repository.get_client_by_lid(db, lid)
+        if client and client.tenant and client.tenant.is_active:
+            user = await users_repository.get(db, client.owner_user_id)
+            if user:
+                return {
+                    "user_id": user.id,
+                    "role": "client",
+                    "username": user.username,
+                }
+
+        return None
