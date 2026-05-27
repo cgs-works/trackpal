@@ -871,6 +871,75 @@ class TestAmbiguity:
         reply = response.json()["reply"]
         assert "Consola de Cliente" in reply
 
+    async def test_ambiguity_menu_keeps_selected_client_mode(
+        self,
+        client: AsyncClient,
+        active_tenant_user: Any,
+        db_session: Any,
+    ) -> None:
+        """After selecting client mode, 'menu' must show client console, not mode selector."""
+        from sqlalchemy import select
+        from app.models import Client as ClientModel, Tenant as TenantModel
+
+        result = await db_session.execute(
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
+        )
+        tenant = result.scalar()
+        tenant.evolution_instance_name = "tenant-ambig-menu"
+        await db_session.commit()
+
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Menu Client",
+                username=f"{tenant.client_prefix}_menu",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
+        await db_session.commit()
+
+        fake_mgr = FakeManager()
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
+            await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "hola",
+                    "instance": "tenant-ambig-menu",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+            await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "2",
+                    "instance": "tenant-ambig-menu",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "menu",
+                    "instance": "tenant-ambig-menu",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+        assert response.status_code == 200
+        reply = response.json()["reply"]
+        assert "Consola de Cliente" in reply
+        assert "Selecciona tu modo" not in reply
+
     async def test_ambiguity_zero_exits_and_clears_mode(
         self,
         client: AsyncClient,

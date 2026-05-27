@@ -80,12 +80,32 @@ async def _handle_ambiguity(
             reply=t(locale, "wa.client.mode_exit"), status="closed"
         )
 
+    stored_mode = await _get_mode(manager, phone)
+
     if msg_lower in ("menu", "/menu"):
+        if stored_mode == "tenant":
+            return await _handle_tenant_console(
+                phone=phone,
+                message=message,
+                instance=instance,
+                manager=manager,
+                db=db,
+            )
+        if stored_mode == "client":
+            return await _handle_client_console(
+                phone=phone,
+                message=message,
+                instance=instance,
+                manager=manager,
+                db=db,
+                identity=_client_identity(client, tenant),
+                locale=locale,
+            )
+
         await _clear_mode(manager, phone)
         prompt = t(locale, "wa.client.mode_prompt")
         return WhatsAppConsoleResponse(reply=prompt)
 
-    stored_mode = await _get_mode(manager, phone)
     if stored_mode == "tenant":
         return await _handle_tenant_console(
             phone=phone,
