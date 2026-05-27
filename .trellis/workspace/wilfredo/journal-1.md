@@ -175,3 +175,40 @@ Cliente acceso multi-tenant con routing instance-first (MASTER_WHATSAPP_INSTANCE
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Complete LID/JID resolution rollout
+
+**Date**: 2026-05-26
+**Task**: Complete LID/JID resolution rollout
+**Branch**: `main`
+
+### Summary
+
+Implemented and documented LID-aware WhatsApp identity flow across backend, n8n, and evolution-go payload contract; added tests, specs, and task artifacts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9b39987` | (see git log) |
+| `e5b1409` | (see git log) |
+| `61ee029` | (see git log) |
+| `5b2e9ea` | (see git log) |
+| `4844590` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
