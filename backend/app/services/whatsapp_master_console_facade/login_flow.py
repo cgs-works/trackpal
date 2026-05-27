@@ -8,13 +8,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.phone import normalize_phone
 from app.repositories import users_repository
 from app.services.auth_service import AuthService
-from app.services.evolution_client import evolution_client
-from app.services.whatsapp_auth_session_service import (
-    WhatsAppAuthSession,
-)
+from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
 
 from . import constants as c
 
@@ -34,6 +30,13 @@ async def _run_login_flow(
     if msg_lower in c.RESET_COMMANDS:
         await self._auth_session_service.clear_auth_session(phone)
         await self._session_service.clear_session(phone)
+
+        session = await self._session_service.create_session(phone)
+        session.flow = c.AUTH_FLOW
+        session.step = c.AUTH_STEP_USERNAME
+        session.temp_data = {}
+        await self._session_service.save_session(session)
+
         return c.USERNAME_PROMPT
 
     if msg_lower in c.HELP_COMMANDS:
@@ -121,6 +124,7 @@ async def _handle_password_step(
 
     if db is None:
         from app.services.contingency_reply_policy import ContingencyReplyPolicy
+
         return ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
     auth_service = AuthService()
@@ -162,9 +166,7 @@ async def _handle_password_step(
     return self._console_service.MAIN_MENU
 
 
-async def _record_failure_and_check_lockout(
-    self, phone: str
-) -> str | None:
+async def _record_failure_and_check_lockout(self, phone: str) -> str | None:
     """Record a failed login attempt and return lockout reply if threshold reached."""
     _, lock_state = await self._auth_session_service.record_failed_attempt(phone)
     if lock_state is not None:

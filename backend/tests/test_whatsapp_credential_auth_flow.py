@@ -30,6 +30,7 @@ from app.core.security import get_password_hash
 # Fake Redis + Manager (same pattern as test_whatsapp_menu_flow)
 # ---------------------------------------------------------------------------
 
+
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
 
@@ -40,7 +41,9 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
         if ex is not None:
             self._ttls[key] = ex
@@ -79,6 +82,7 @@ class FakeManager:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fake_redis() -> FakeRedis:
@@ -200,16 +204,22 @@ class TestLoginFlow:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # First message → username prompt
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
 
         # Send username
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
 
         # Send password
         reply = await facade.process_message(
@@ -247,14 +257,20 @@ class TestLoginFlow:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
 
         # Send mixed-case password
         reply = await facade.process_message(
@@ -271,14 +287,20 @@ class TestLoginFlow:
 
         # Verifying lowercased version does NOT work
         await auth_session_service.clear_auth_session("+12015550001")
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
         reply2 = await facade.process_message(
             phone="+12015550001",
             message="myp@ssw0rd!",
             db=db_session,
         )
-        assert "contraseña incorrecta" in reply2.lower() or "incorrecta" in reply2.lower()
+        assert (
+            "contraseña incorrecta" in reply2.lower() or "incorrecta" in reply2.lower()
+        )
 
 
 class TestLoginErrors:
@@ -302,13 +324,17 @@ class TestLoginErrors:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
 
         # Submit a non-existent username — rejected at username step
         reply = await facade.process_message(
@@ -350,15 +376,21 @@ class TestLoginErrors:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
         # Enter username
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
 
         # Send wrong password
         reply = await facade.process_message(
@@ -400,9 +432,13 @@ class TestLoginErrors:
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow
-        await facade.process_message(phone="+12015550002", message="hola", db=db_session)
+        await facade.process_message(
+            phone="+12015550002", message="hola", db=db_session
+        )
         # Enter username
-        await facade.process_message(phone="+12015550002", message="tenant", db=db_session)
+        await facade.process_message(
+            phone="+12015550002", message="tenant", db=db_session
+        )
 
         # Send correct password (but tenant role)
         reply = await facade.process_message(
@@ -411,7 +447,10 @@ class TestLoginErrors:
             db=db_session,
         )
 
-        assert "solo los usuarios con rol master" in reply.lower() or "master" in reply.lower()
+        assert (
+            "solo los usuarios con rol master" in reply.lower()
+            or "master" in reply.lower()
+        )
 
         # No auth session should exist
         auth_session = await auth_session_service.get_auth_session("+12015550002")
@@ -420,6 +459,30 @@ class TestLoginErrors:
 
 class TestResetDuringLogin:
     """Global reset commands during login return to username prompt."""
+
+    async def test_reset_then_username_advances_to_password_prompt(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+        auth_session_service: WhatsAppAuthSessionService,
+    ) -> None:
+        """After '/menu', first username message must go directly to password prompt."""
+        facade = _make_facade(console_service, session_service, auth_session_service)
+
+        reply = await facade.process_message(
+            phone="+9999999999",
+            message="/menu",
+            db=None,
+        )
+        assert "usuario" in reply.lower()
+
+        reply = await facade.process_message(
+            phone="+9999999999",
+            message="master",
+            db=None,
+        )
+        assert "contraseña" in reply.lower()
+        assert "master" in reply
 
     async def test_reset_during_username_step_returns_username_prompt(
         self,
@@ -489,14 +552,20 @@ class TestLockout:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
 
         # Send wrong password multiple times to trigger lockout
         threshold = settings.whatsapp_auth_fail_threshold
@@ -508,7 +577,10 @@ class TestLockout:
                 db=db_session,
             )
 
-        assert "demasiados intentos" in last_reply.lower() or "espera" in last_reply.lower()
+        assert (
+            "demasiados intentos" in last_reply.lower()
+            or "espera" in last_reply.lower()
+        )
 
     async def test_unknown_username_triggers_lockout(
         self,
@@ -528,15 +600,21 @@ class TestLockout:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow — first message
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
         # Enter a non-existent username
-        await facade.process_message(phone="+12015550001", message="nonexistent_user", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="nonexistent_user", db=db_session
+        )
 
         # Send wrong password for non-existent username — each attempt counts toward lockout
         threshold = settings.whatsapp_auth_fail_threshold
@@ -548,7 +626,10 @@ class TestLockout:
                 db=db_session,
             )
 
-        assert "demasiados intentos" in last_reply.lower() or "espera" in last_reply.lower()
+        assert (
+            "demasiados intentos" in last_reply.lower()
+            or "espera" in last_reply.lower()
+        )
 
     async def test_lockout_clears_when_lock_key_removed(
         self,
@@ -570,14 +651,20 @@ class TestLockout:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Start login flow
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
 
         # Trigger lockout
         threshold = settings.whatsapp_auth_fail_threshold
@@ -587,7 +674,10 @@ class TestLockout:
                 message="wrong-password",
                 db=db_session,
             )
-        assert "demasiados intentos" in last_reply.lower() or "espera" in last_reply.lower()
+        assert (
+            "demasiados intentos" in last_reply.lower()
+            or "espera" in last_reply.lower()
+        )
 
         # Remove the lock key from fake redis (simulating expiry)
         lock_key = auth_session_service._lock_key("+12015550001")
@@ -620,6 +710,7 @@ class TestLockout:
         fake_redis = FakeRedis()
         lock_key = f"wa:auth:lock:+12015550001"
         import json
+
         await fake_redis.set(lock_key, lock.model_dump_json(), ex=300)
 
         # Create new services using this fake_redis
@@ -635,7 +726,9 @@ class TestLockout:
             connection_manager=fm,
             ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
         )
-        facade = _make_facade(console_service, local_session_service, local_auth_service)
+        facade = _make_facade(
+            console_service, local_session_service, local_auth_service
+        )
 
         reply = await facade.process_message(
             phone="+12015550001",
@@ -643,7 +736,11 @@ class TestLockout:
             db=db_session,
         )
 
-        assert "demasiados intentos" in reply.lower() or "espera" in reply.lower() or "intentos" in reply.lower()
+        assert (
+            "demasiados intentos" in reply.lower()
+            or "espera" in reply.lower()
+            or "intentos" in reply.lower()
+        )
 
 
 class TestAuthSessionActive:
@@ -706,10 +803,23 @@ class TestAuthSessionActive:
         original_process = console_service.process_message
         called_with_master = None
 
-        async def tracking_process(phone, message, *, is_master=False, session_service=None, tenant_service=None):
+        async def tracking_process(
+            phone,
+            message,
+            *,
+            is_master=False,
+            session_service=None,
+            tenant_service=None,
+        ):
             nonlocal called_with_master
             called_with_master = is_master
-            return await original_process(phone, message, is_master=is_master, session_service=session_service, tenant_service=tenant_service)
+            return await original_process(
+                phone,
+                message,
+                is_master=is_master,
+                session_service=session_service,
+                tenant_service=tenant_service,
+            )
 
         console_service.process_message = tracking_process
 
@@ -840,7 +950,9 @@ class TestAuthSessionExpiry:
         # Conversation session should now be an auth flow session
         remaining = await session_service.get_session("+12015550001")
         assert remaining is not None
-        assert remaining.flow == "auth", "Old CRUD flow should be replaced with auth flow"
+        assert remaining.flow == "auth", (
+            "Old CRUD flow should be replaced with auth flow"
+        )
         # Reply should be the username prompt
         assert "usuario" in reply.lower()
 
@@ -907,14 +1019,20 @@ class TestPasswordNotPersisted:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Complete login flow
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
         await facade.process_message(
             phone="+12015550001",
             message="master-password",
@@ -947,14 +1065,20 @@ class TestPasswordNotPersisted:
         )
         db_session.add(user)
         await db_session.flush()
-        db_session.add(MasterProfile(id=user.id, name="Master User", phone="+12015550001"))
+        db_session.add(
+            MasterProfile(id=user.id, name="Master User", phone="+12015550001")
+        )
         await db_session.commit()
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
         # Complete up to password step
-        await facade.process_message(phone="+12015550001", message="hola", db=db_session)
-        await facade.process_message(phone="+12015550001", message="master", db=db_session)
+        await facade.process_message(
+            phone="+12015550001", message="hola", db=db_session
+        )
+        await facade.process_message(
+            phone="+12015550001", message="master", db=db_session
+        )
 
         # Send wrong password
         await facade.process_message(
@@ -993,4 +1117,8 @@ class TestHelpDuringLogin:
             db=None,
         )
 
-        assert "usuario" in reply.lower() or "contraseña" in reply.lower() or "inicio de sesión" in reply.lower()
+        assert (
+            "usuario" in reply.lower()
+            or "contraseña" in reply.lower()
+            or "inicio de sesión" in reply.lower()
+        )
