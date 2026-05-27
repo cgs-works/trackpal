@@ -459,7 +459,6 @@ onMounted(loadDashboard)
               <tr>
                 <th>{{ i18nStore.t('frontend.profile.full_name') }}</th>
                 <th>{{ i18nStore.t('frontend.dashboard.client.local_user') }}</th>
-                <th>Technical Username</th>
                 <th>{{ i18nStore.t('frontend.profile.phone') }}</th>
                 <th>{{ i18nStore.t('frontend.subscriptions.status') }}</th>
                 <th>{{ i18nStore.t('frontend.subscriptions.actions') }}</th>
@@ -468,7 +467,6 @@ onMounted(loadDashboard)
             <tbody>
               <tr v-for="client in clients" :key="client.id">
                 <td>{{ client.full_name }}</td>
-                <td>{{ client.local_username }}</td>
                 <td>{{ client.username }}</td>
                 <td>{{ client.phone || '—' }}</td>
                 <td>

@@ -6,3 +6,5 @@ specs/README.md
 specs/TEMPLATE.md
 skills-lock.json
 /frontend/.pi-lens
+.pytest_cache
+.ruff_cache
