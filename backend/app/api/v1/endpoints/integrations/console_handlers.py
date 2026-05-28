@@ -138,7 +138,35 @@ async def _handle_tenant_console(
         )
     except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
-    return WhatsAppConsoleResponse(reply=reply)
+
+    # Check session for pending lookup job from codigo flow
+    pending_job_id = None
+    session = None
+    try:
+        session = await session_service.get_session(f"admin:{phone}")
+        if session is not None and session.temp_data.get("pending_job_id"):
+            pending_job_id = session.temp_data["pending_job_id"]
+    except Exception:
+        logger.exception("Failed to check pending_job_id for phone=%s", phone)
+
+    # Resolve tenant_id for n8n mail lookup poll scoping
+    tenant_id = None
+    if pending_job_id and identity and identity.get("role") == "tenant":
+        try:
+            tenant = await tenants_repository.get_by_owner(db, identity["user_id"])
+            if tenant:
+                tenant_id = str(tenant.id)
+                if session is not None:
+                    del session.temp_data["pending_job_id"]
+                    await session_service.save_session(session, touch_ttl=False)
+        except Exception:
+            logger.exception("Failed to resolve tenant_id for phone=%s", phone)
+
+    return WhatsAppConsoleResponse(
+        reply=reply,
+        lookup_job_id=pending_job_id,
+        tenant_id=tenant_id,
+    )
 
 
 # ====================================================================

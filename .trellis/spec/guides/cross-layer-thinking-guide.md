@@ -140,6 +140,8 @@ After implementation:
       casting payload fields locally
 - [ ] Checked that derived state points back to the source event identifier
       (`seq`, `id`, `version`) instead of inventing a second cursor
+- [ ] For async polling contracts, verified required scope fields travel end-to-end
+      (example: `lookup_job_id` + `tenant_id` in n8n mail lookup polling)
 
 ---
 

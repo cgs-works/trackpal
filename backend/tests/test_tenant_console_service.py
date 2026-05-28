@@ -16,6 +16,7 @@ from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -33,6 +34,7 @@ from app.services.whatsapp_tenant_console_facade import (
     WhatsAppTenantConsoleFacade,
 )
 from app.core.errors import UserFacingError
+from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.whatsapp_tenant_console_service import (
     WhatsAppTenantConsoleService,
 )
@@ -51,7 +53,9 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, **kwargs: Any
+    ) -> None:
         self._store[key] = value
 
     async def delete(self, key: str) -> int:
@@ -248,7 +252,12 @@ class FakeSubscriptionObj:
 class FakeSubscriptionService:
     """In-memory double for ``SubscriptionServiceProtocol``."""
 
-    def __init__(self, tenant_id: UUID, client_service: FakeClientService, catalog_service: FakeCatalogService) -> None:
+    def __init__(
+        self,
+        tenant_id: UUID,
+        client_service: FakeClientService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
         self.tenant_id = tenant_id
         self.client_service = client_service
         self.catalog_service = catalog_service
@@ -938,7 +947,21 @@ class TestServiceMainMenu:
             db=object(),
             session_service=session_service,
         )
-        steps = ["2", "1", "1", "1", "nuevo@test.com", "clave123", "clave123", "1", "Perfil Kids", "7788", "7788", "1", "CONFIRMAR"]
+        steps = [
+            "2",
+            "1",
+            "1",
+            "1",
+            "nuevo@test.com",
+            "clave123",
+            "clave123",
+            "1",
+            "Perfil Kids",
+            "7788",
+            "7788",
+            "1",
+            "CONFIRMAR",
+        ]
         reply = ""
         for step in steps:
             reply = await console_service.process_message(
@@ -967,7 +990,10 @@ class TestServiceMainMenu:
                 session_service=session_service,
             )
         assert "Suscripción actualizada exitosamente" in reply
-        assert subscription_service.default_subscription.streaming_email == "editado@test.com"
+        assert (
+            subscription_service.default_subscription.streaming_email
+            == "editado@test.com"
+        )
 
     async def test_service_subscriptions_cancel_flow(
         self,
@@ -1318,6 +1344,7 @@ class TestClientSelect:
         assert "El nombre de usuario ya existe" in reply
         assert "username_already_registered" not in reply
 
+
 # ===================================================================
 # UserFacingError translation tests
 # ===================================================================
@@ -1346,6 +1373,7 @@ class TestUserFacingErrorTranslation:
             return SimpleNamespace(id=user_id, role="tenant")
 
         import app.repositories.users_repository as users_repo
+
         monkeypatch.setattr(users_repo, "get", _fake_get)
 
         reply = await console_service._handle_profile_edit_value(
@@ -1450,3 +1478,297 @@ class TestUserFacingErrorTranslation:
 
         assert "Cliente no encontrado" in reply
         assert "subscription_client_not_found" not in reply
+
+
+# ===================================================================
+# Codigo flow tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestCodigoFlow:
+    """Tests for the "codigo" lookup flow (service + target email)."""
+
+    async def test_codigo_start_shows_service_list(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Starting codigo flow shows list of available services."""
+        # We can't test full session flow without FakeRedis/db,
+        # but we can verify the method exists and returns a prompt.
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.flow = ""
+        mock_session.step = ""
+        mock_session.temp_data = {}
+        mock_session_service.get_session.return_value = None
+        mock_session_service.create_session.return_value = mock_session
+
+        # By calling _start_codigo_flow we verify no import errors
+        result = await console_service._start_codigo_flow(
+            phone="+10000000000",
+            session_service=mock_session_service,
+            tenant_id=None,
+            db=None,
+        )
+        assert result is not None
+        assert "Netflix" in result or "netflix" in result.lower()
+        assert "0" in result  # cancel option shown
+
+    async def test_codigo_trigger_words_in_process_message(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Trigger words codigo/código/code start the codigo flow."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.flow = ""
+        mock_session.step = ""
+        mock_session.temp_data = {}
+        mock_session_service.get_session.return_value = None
+        mock_session_service.create_session.return_value = mock_session
+
+        for trigger in ("codigo", "código", "code"):
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=trigger,
+                session_service=mock_session_service,
+                locale="es",
+            )
+            assert reply is not None
+            # Should not return fallback or menu help
+            assert "No entendí" not in reply
+
+    async def test_codigo_flow_service_1_selected(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Selecting service 1 asks for email."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {}
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_SERVICE
+        mock_session_service.get_session.return_value = mock_session
+
+        reply = await console_service._handle_codigo_service(
+            phone="+10000000000",
+            msg="1",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=None,
+            db=None,
+        )
+        assert reply is not None
+        assert "Netflix" in reply or "email" in reply.lower()
+
+    async def test_codigo_flow_invalid_service(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Invalid service selection returns error."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {}
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_SERVICE
+
+        reply = await console_service._handle_codigo_service(
+            phone="+10000000000",
+            msg="99",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=None,
+            db=None,
+        )
+        assert "inválido" in reply.lower() or "invalid" in reply.lower()
+
+    async def test_codigo_flow_cancel(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Cancel (0) returns to main menu."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {}
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_SERVICE
+
+        reply = await console_service._handle_codigo_service(
+            phone="+10000000000",
+            msg="0",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=None,
+            db=None,
+        )
+        assert (
+            "cancelada" in reply.lower()
+            or "cancelled" in reply.lower()
+            or "menú" in reply
+            or "menu" in reply
+        )
+
+    async def test_codigo_email_empty(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Empty/invalid email returns error."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {"service_key": "netflix"}
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_EMAIL
+
+        reply = await console_service._handle_codigo_email(
+            phone="+10000000000",
+            msg="ab",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=None,
+            db=None,
+        )
+        assert "inválido" in reply.lower() or "invalid" in reply.lower()
+
+
+@pytest.mark.asyncio
+class TestConsoleHandlersCodigoScope:
+    """Verify WhatsApp console handlers return codigo poll scope reliably.
+
+    When ``_handle_tenant_console`` processes a message that leaves a
+    ``pending_job_id`` in the session, the returned
+    ``WhatsAppConsoleResponse`` MUST include both ``lookup_job_id``
+    and ``tenant_id`` so that n8n can poll the job status with the
+    correct tenant scope.
+
+    Tests cover the tenant handler directly with mocked auth + repos,
+    proving the response contract is satisfied for the only console path
+    that currently supports the codigo flow (operationally tenant instances).
+    """
+
+    async def test_tenant_handler_returns_lookup_job_id_with_tenant_scope(
+        self,
+    ) -> None:
+        """When codigo flow creates a job, response includes both fields."""
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        # 1. Pre-seed fake Redis with session containing pending_job_id
+        fake_redis = FakeRedis()
+        tenant_uuid = uuid4()
+        job_id = str(uuid4())
+
+        session = ConversationSession(
+            phone="admin:+12015550002",
+            temp_data={"pending_job_id": job_id},
+        )
+        await fake_redis.set(
+            "session:admin:+12015550002",
+            session.model_dump_json(),
+        )
+        manager = FakeManager(fake_redis=fake_redis)
+
+        # 2. Fake tenant returned by get_by_owner
+        fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
+
+        # 3. Patch auth, repo, and facade
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.auth_service.identify_by_phone",
+                AsyncMock(
+                    return_value={
+                        "user_id": str(uuid4()),
+                        "role": "tenant",
+                        "username": "testadmin",
+                    }
+                ),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.tenants_repository.get_by_owner",
+                AsyncMock(return_value=fake_tenant),
+            ),
+            patch.object(
+                WhatsAppTenantConsoleFacade,
+                "process_message",
+                AsyncMock(return_value="\U0001f50d Buscando c\u00f3digo\u2026"),
+            ),
+        ):
+            result = await _handle_tenant_console(
+                phone="+12015550002",
+                message="cliente@test.com",
+                instance=None,
+                manager=manager,
+                db=None,
+            )
+
+        # 4. Verify response contract
+        assert isinstance(result, WhatsAppConsoleResponse)
+        assert result.reply == "\U0001f50d Buscando c\u00f3digo\u2026"
+        assert result.lookup_job_id == job_id
+        assert result.tenant_id == str(tenant_uuid)
+        # status is not set (not a closed/exit response)
+        assert result.status is None
+
+        # 5. Verify JSON serialization includes both fields
+        serialized = result.model_dump(mode="json")
+        assert serialized.get("lookup_job_id") == job_id
+        assert serialized.get("tenant_id") == str(tenant_uuid)
+        assert serialized.get("reply") == "\U0001f50d Buscando c\u00f3digo\u2026"
+
+    async def test_tenant_handler_no_scope_when_no_job(
+        self,
+    ) -> None:
+        """Without a pending_job_id, neither field appears in the response."""
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        fake_redis = FakeRedis()
+        manager = FakeManager(fake_redis=fake_redis)
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.auth_service.identify_by_phone",
+                AsyncMock(
+                    return_value={
+                        "user_id": str(uuid4()),
+                        "role": "tenant",
+                        "username": "testadmin",
+                    }
+                ),
+            ),
+            patch.object(
+                WhatsAppTenantConsoleFacade,
+                "process_message",
+                AsyncMock(return_value="\U0001f4cb Men\u00fa principal"),
+            ),
+        ):
+            result = await _handle_tenant_console(
+                phone="+12015550002",
+                message="menu",
+                instance=None,
+                manager=manager,
+                db=None,
+            )
+
+        assert isinstance(result, WhatsAppConsoleResponse)
+        assert result.reply == "\U0001f4cb Men\u00fa principal"
+        assert result.lookup_job_id is None
+        assert result.tenant_id is None
+
+        serialized = result.model_dump(mode="json")
+        assert "lookup_job_id" not in serialized
+        assert "tenant_id" not in serialized

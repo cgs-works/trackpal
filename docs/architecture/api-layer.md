@@ -26,6 +26,8 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/subscription-settings` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
 | `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
 | `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
+| `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
+| `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
 
 ### I18n Endpoints
 
@@ -72,6 +74,17 @@ Tenant prefix edits update client technical usernames transactionally.
 
 - `GET /api/v1/integrations/n8n/identify?phone=` — Identify user by phone (X-API-Key)
 - `POST /api/v1/integrations/n8n/console` — WhatsApp Master + Tenant + Client Console message processing (X-API-Key). Routes by instance first (`MASTER_WHATSAPP_INSTANCE`), resolves tenant by instance name, then identity within tenant. Client exit returns `status="closed"` for n8n/Evolution Go.
+- `POST /api/v1/integrations/n8n/mail/lookups` — Create mailbox lookup job (`service_key`, `target_email`, `tenant_instance|tenant_id`) with `status=pending`.
+- `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` — Poll mailbox lookup status; tenant scope required.
+
+### Tenant Mailbox Endpoints (tenant-scoped)
+
+- `GET /api/v1/tenant/mailbox/` — Current tenant mailbox config
+- `PUT /api/v1/tenant/mailbox/` — Upsert mailbox config (OAuth/IMAP exclusivity)
+- `POST /api/v1/tenant/mailbox/test` — Connection test
+- `POST /api/v1/tenant/mailbox/oauth/{provider}/start` — Start OAuth
+- `GET /api/v1/tenant/mailbox/oauth/{provider}/callback` — Complete OAuth callback
+- `POST /api/v1/tenant/mailbox/disconnect` — Disconnect and clear stored credentials
 
 ### Dashboard Endpoints
 

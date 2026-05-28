@@ -125,6 +125,10 @@ class WhatsAppTenantConsoleService(
     _route_catalog_flow = _._route_catalog_flow
     _route_profile_flow = _._route_profile_flow
     _route_subscriptions_flow = _._route_subscriptions_flow
+    _route_codigo_flow = _._route_codigo_flow
+    _start_codigo_flow = _._start_codigo_flow
+    _handle_codigo_service = _._handle_codigo_service
+    _handle_codigo_email = _._handle_codigo_email
     # fmt: on
 
     # ------------------------------------------------------------------
@@ -174,9 +178,13 @@ class WhatsAppTenantConsoleService(
                 if session_service is not None:
                     await session_service.clear_session(f"admin:{phone}")
                 if has_active_flow:
-                    return self._with_main_menu(_i18n_t(ctx.get_locale(), "wa.tenant.cancelled"))
+                    return self._with_main_menu(
+                        _i18n_t(ctx.get_locale(), "wa.tenant.cancelled")
+                    )
                 if msg == "0":
-                    return self._with_main_menu(_i18n_t(ctx.get_locale(), "wa.tenant.goodbye"))
+                    return self._with_main_menu(
+                        _i18n_t(ctx.get_locale(), "wa.tenant.goodbye")
+                    )
                 return self._t(self.KEY_MAIN_MENU)
 
             if (
@@ -193,20 +201,38 @@ class WhatsAppTenantConsoleService(
 
             if has_active_flow:
                 return await self._route_active_flow(
-                    phone, msg, session, session_service, tenant_id, user_id, db,
+                    phone,
+                    msg,
+                    session,
+                    session_service,
+                    tenant_id,
+                    user_id,
+                    db,
                 )
 
             if not msg:
                 return self._t(self.KEY_MAIN_MENU)
 
             if msg == "1":
-                return await self._start_clients_flow(phone, session_service, tenant_id, db)
+                return await self._start_clients_flow(
+                    phone, session_service, tenant_id, db
+                )
             elif msg == "2":
-                return await self._start_catalog_flow(phone, session_service, tenant_id, db)
+                return await self._start_catalog_flow(
+                    phone, session_service, tenant_id, db
+                )
             elif msg == "3":
-                return await self._start_profile_flow(phone, session_service, user_id, db)
+                return await self._start_profile_flow(
+                    phone, session_service, user_id, db
+                )
             elif msg == "4":
-                return await self._start_subscriptions_flow(phone, session_service, tenant_id, db)
+                return await self._start_subscriptions_flow(
+                    phone, session_service, tenant_id, db
+                )
+            elif msg.lower() in ("codigo", "código", "code", "6"):
+                return await self._start_codigo_flow(
+                    phone, session_service, tenant_id, db
+                )
             return self._t(self.KEY_FALLBACK_NO_FLOW)
 
         except RedisUnavailableError:
@@ -216,25 +242,66 @@ class WhatsAppTenantConsoleService(
                 ctx.reset_locale(_token)
 
     async def _route_active_flow(
-        self, phone, msg, session, session_service, tenant_id, user_id, db,
+        self,
+        phone,
+        msg,
+        session,
+        session_service,
+        tenant_id,
+        user_id,
+        db,
     ) -> str:
         flow = session.flow
         step = session.step
 
         if flow == self.CLIENTS_FLOW:
             return await self._route_clients_flow(
-                phone, msg, step, session, session_service, tenant_id, db,
+                phone,
+                msg,
+                step,
+                session,
+                session_service,
+                tenant_id,
+                db,
             )
         if flow == self.CATALOG_FLOW:
             return await self._route_catalog_flow(
-                phone, msg, step, session, session_service, tenant_id, db,
+                phone,
+                msg,
+                step,
+                session,
+                session_service,
+                tenant_id,
+                db,
             )
         if flow == self.PROFILE_FLOW:
             return await self._route_profile_flow(
-                phone, msg, step, session, session_service, user_id, db,
+                phone,
+                msg,
+                step,
+                session,
+                session_service,
+                user_id,
+                db,
             )
         if flow == self.SUBSCRIPTIONS_FLOW:
             return await self._route_subscriptions_flow(
-                phone, msg, step, session, session_service, tenant_id, db,
+                phone,
+                msg,
+                step,
+                session,
+                session_service,
+                tenant_id,
+                db,
+            )
+        if flow == self.CODIGO_FLOW:
+            return await self._route_codigo_flow(
+                phone,
+                msg,
+                step,
+                session,
+                session_service,
+                tenant_id,
+                db,
             )
         return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)

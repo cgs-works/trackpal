@@ -14,10 +14,15 @@ from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_master_console_facade import WhatsAppMasterConsoleFacade
 from app.services.whatsapp_session_service import WhatsAppSessionService
 from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
+from app.services.imap_service import ImapConnectionError, test_imap_connection
+from app.services.oauth_service import MailboxOAuthService
 from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
 
 __all__ = [
     "AuthService",
+    "ImapConnectionError",
+    "MailboxOAuthService",
+    "test_imap_connection",
     "CatalogService",
     "CatalogServiceProtocol",
     "ClientService",
