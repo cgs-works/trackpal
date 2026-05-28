@@ -14,11 +14,10 @@ const props = defineProps({
 const mailboxError = ref('')
 const mailboxSuccess = ref('')
 const showImapForm = ref(false)
-const showProviderSelect = ref(false)
 const isTestingMailbox = ref(false)
 const isDisconnectingMailbox = ref(false)
 const isSavingImap = ref(false)
-const oauthProvider = ref('')
+const isStartingOAuth = ref(false)
 
 const hasMailbox = computed(() => !!props.mailbox)
 const isConnected = computed(() => props.mailbox?.status === 'connected')
@@ -30,6 +29,11 @@ const imapForm = ref({
   imap_ssl: true,
   imap_password: '',
 })
+
+const imapTemplates = {
+  gmail: { host: 'imap.gmail.com', port: 993, ssl: true },
+  outlook: { host: 'outlook.office365.com', port: 993, ssl: true },
+}
 
 function getApiError(error, fallback) {
   const detail = error.response?.data?.detail
@@ -54,7 +58,6 @@ async function saveImapConfig() {
     })
     mailboxSuccess.value = i18nStore.t('frontend.mailbox.success_saved')
     showImapForm.value = false
-    showProviderSelect.value = false
     emit('updated')
   } catch (error) {
     mailboxError.value = getApiError(error, i18nStore.t('frontend.mailbox.error_save'))
@@ -85,7 +88,7 @@ async function testMailbox() {
 async function startOAuth(provider) {
   mailboxError.value = ''
   mailboxSuccess.value = ''
-  oauthProvider.value = provider
+  isStartingOAuth.value = true
   try {
     const response = await api.post(`/tenant/mailbox/oauth/${provider}/start`)
     const popup = window.open(response.data.auth_url, '_blank', 'noopener,noreferrer')
@@ -97,10 +100,10 @@ async function startOAuth(provider) {
     }
   } catch (error) {
     mailboxError.value = getApiError(error, i18nStore.t('frontend.mailbox.error_oauth'))
-    oauthProvider.value = ''
+  } finally {
+    isStartingOAuth.value = false
   }
 }
-
 
 async function disconnectMailbox() {
   mailboxError.value = ''
@@ -117,19 +120,27 @@ async function disconnectMailbox() {
   }
 }
 
-async function selectProvider(provider) {
+function openImapSetup(templateKey = 'custom') {
   mailboxError.value = ''
   mailboxSuccess.value = ''
+  imapForm.value.mailbox_email = props.mailbox?.mailbox_email || ''
 
-  if (provider === 'imap_custom') {
-    showProviderSelect.value = false
-    imapForm.value.mailbox_email = props.mailbox?.mailbox_email || ''
-    showImapForm.value = true
-    return
+  if (templateKey === 'gmail') {
+    imapForm.value.imap_host = imapTemplates.gmail.host
+    imapForm.value.imap_port = imapTemplates.gmail.port
+    imapForm.value.imap_ssl = imapTemplates.gmail.ssl
+  } else if (templateKey === 'outlook') {
+    imapForm.value.imap_host = imapTemplates.outlook.host
+    imapForm.value.imap_port = imapTemplates.outlook.port
+    imapForm.value.imap_ssl = imapTemplates.outlook.ssl
+  } else {
+    imapForm.value.imap_host = props.mailbox?.imap_host || ''
+    imapForm.value.imap_port = props.mailbox?.imap_port || 993
+    imapForm.value.imap_ssl = props.mailbox?.imap_ssl ?? true
   }
 
-  showProviderSelect.value = false
-  await startOAuth(provider)
+  imapForm.value.imap_password = ''
+  showImapForm.value = true
 }
 
 function cancelImapSetup() {
@@ -152,59 +163,80 @@ function cancelImapSetup() {
 
     <p v-if="!mailbox" class="placeholder-message">{{ i18nStore.t('frontend.mailbox.not_configured') }}</p>
 
-    <template v-if="showConnectActions">
-      <template v-if="!showImapForm && !showProviderSelect">
-        <button class="button button-primary" type="button" @click="showProviderSelect = true">
-          {{ i18nStore.t('frontend.mailbox.connect_oauth') }}
-        </button>
-      </template>
+    <template v-if="showConnectActions && !showImapForm">
+      <div class="connection-sections">
+        <div class="connection-card">
+          <h3>{{ i18nStore.t('frontend.mailbox.oauth_title') }}</h3>
+          <p>{{ i18nStore.t('frontend.mailbox.oauth_description') }}</p>
+          <p class="helper-note">{{ i18nStore.t('frontend.mailbox.oauth_note') }}</p>
+          <div class="provider-grid">
+            <button class="provider-btn" type="button" :disabled="isStartingOAuth" @click="startOAuth('google')">
+              <span class="provider-icon">G</span>
+              {{ i18nStore.t('frontend.mailbox.connect_google') }}
+            </button>
+            <button class="provider-btn" type="button" :disabled="isStartingOAuth" @click="startOAuth('microsoft')">
+              <span class="provider-icon">M</span>
+              {{ i18nStore.t('frontend.mailbox.connect_microsoft') }}
+            </button>
+          </div>
+        </div>
 
-      <div v-if="showProviderSelect" class="provider-grid">
-        <button class="provider-btn" type="button" @click="selectProvider('google')">
-          <span class="provider-icon">G</span>
-          {{ i18nStore.t('frontend.mailbox.connect_google') }}
+        <div class="connection-card recommended-card">
+          <h3>{{ i18nStore.t('frontend.mailbox.imap_title') }}</h3>
+          <p>{{ i18nStore.t('frontend.mailbox.imap_description') }}</p>
+          <p class="helper-note">{{ i18nStore.t('frontend.mailbox.imap_note') }}</p>
+          <div class="provider-grid">
+            <button class="provider-btn" type="button" @click="openImapSetup('gmail')">
+              <span class="provider-icon">G</span>
+              {{ i18nStore.t('frontend.mailbox.template_gmail') }}
+              <small>{{ i18nStore.t('frontend.mailbox.template_gmail_hint') }}</small>
+            </button>
+            <button class="provider-btn" type="button" @click="openImapSetup('outlook')">
+              <span class="provider-icon">M</span>
+              {{ i18nStore.t('frontend.mailbox.template_outlook') }}
+              <small>{{ i18nStore.t('frontend.mailbox.template_outlook_hint') }}</small>
+            </button>
+            <button class="provider-btn" type="button" @click="openImapSetup('custom')">
+              <span class="provider-icon">IMAP</span>
+              {{ i18nStore.t('frontend.mailbox.template_custom') }}
+              <small>{{ i18nStore.t('frontend.mailbox.template_custom_hint') }}</small>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <form v-if="showImapForm" class="form-grid" @submit.prevent="saveImapConfig">
+      <p class="form-guidance">{{ i18nStore.t('frontend.mailbox.imap_form_help') }}</p>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.email') }}
+        <input v-model.trim="imapForm.mailbox_email" type="email" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.imap_host') }}
+        <input v-model.trim="imapForm.imap_host" type="text" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.imap_port') }}
+        <input v-model.number="imapForm.imap_port" type="number" min="1" max="65535" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.imap_password') }}
+        <input v-model="imapForm.imap_password" type="password" required />
+      </label>
+      <label class="checkbox-label">
+        <input v-model="imapForm.imap_ssl" type="checkbox" />
+        {{ i18nStore.t('frontend.mailbox.imap_ssl') }}
+      </label>
+      <div class="form-actions">
+        <button class="button button-secondary" type="button" @click="cancelImapSetup">
+          {{ i18nStore.t('frontend.clients.clear') }}
         </button>
-        <button class="provider-btn" type="button" @click="selectProvider('microsoft')">
-          <span class="provider-icon">M</span>
-          {{ i18nStore.t('frontend.mailbox.connect_microsoft') }}
-        </button>
-        <button class="provider-btn" type="button" @click="selectProvider('imap_custom')">
-          <span class="provider-icon">IMAP</span>
-          {{ i18nStore.t('frontend.mailbox.setup_imap') }}
+        <button class="button button-primary" type="submit" :disabled="isSavingImap">
+          {{ isSavingImap ? i18nStore.t('frontend.mailbox.saving') : i18nStore.t('frontend.mailbox.save_imap') }}
         </button>
       </div>
-
-      <form v-if="showImapForm" class="form-grid" @submit.prevent="saveImapConfig">
-        <label>
-          {{ i18nStore.t('frontend.mailbox.email') }}
-          <input v-model.trim="imapForm.mailbox_email" type="email" required />
-        </label>
-        <label>
-          {{ i18nStore.t('frontend.mailbox.imap_host') }}
-          <input v-model.trim="imapForm.imap_host" type="text" required />
-        </label>
-        <label>
-          {{ i18nStore.t('frontend.mailbox.imap_port') }}
-          <input v-model.number="imapForm.imap_port" type="number" min="1" max="65535" required />
-        </label>
-        <label>
-          {{ i18nStore.t('frontend.mailbox.imap_password') }}
-          <input v-model="imapForm.imap_password" type="password" required />
-        </label>
-        <label class="checkbox-label">
-          <input v-model="imapForm.imap_ssl" type="checkbox" />
-          {{ i18nStore.t('frontend.mailbox.imap_ssl') }}
-        </label>
-        <div class="form-actions">
-          <button class="button button-secondary" type="button" @click="cancelImapSetup">
-            {{ i18nStore.t('frontend.clients.clear') }}
-          </button>
-          <button class="button button-primary" type="submit" :disabled="isSavingImap">
-            {{ isSavingImap ? i18nStore.t('frontend.mailbox.saving') : i18nStore.t('frontend.mailbox.save_imap') }}
-          </button>
-        </div>
-      </form>
-    </template>
+    </form>
 
     <template v-if="mailbox">
       <div class="mailbox-info">
@@ -247,6 +279,9 @@ function cancelImapSetup() {
         <button class="button button-secondary" type="button" :disabled="isTestingMailbox" @click="testMailbox">
           {{ isTestingMailbox ? i18nStore.t('frontend.mailbox.testing') : i18nStore.t('frontend.mailbox.test') }}
         </button>
+        <button v-if="showConnectActions" class="button button-secondary" type="button" @click="openImapSetup('custom')">
+          {{ i18nStore.t('frontend.mailbox.setup_imap') }}
+        </button>
         <button v-if="isConnected" class="button button-secondary" type="button" :disabled="isDisconnectingMailbox" @click="disconnectMailbox">
           {{ isDisconnectingMailbox ? i18nStore.t('frontend.mailbox.disconnecting') : i18nStore.t('frontend.mailbox.disconnect') }}
         </button>
@@ -288,7 +323,6 @@ function cancelImapSetup() {
   margin-top: 18px;
 }
 
-
 label {
   display: grid;
   gap: 8px;
@@ -318,17 +352,48 @@ input:focus {
   gap: 12px;
 }
 
-.mailbox-card .provider-grid {
+.connection-sections {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.connection-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.connection-card h3 {
+  margin: 0;
+}
+
+.connection-card p {
+  margin: 8px 0 0;
+  color: var(--text-secondary, #64748b);
+}
+
+.helper-note {
+  font-size: 0.85rem;
+}
+
+.recommended-card {
+  border-color: var(--primary, #4f46e5);
+  box-shadow: 0 1px 6px rgb(79 70 229 / 8%);
+}
+
+.provider-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .provider-btn {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 12px;
   padding: 14px 20px;
@@ -355,6 +420,18 @@ input:focus {
   background: var(--bg, #f8fafc);
   font-weight: 800;
   font-size: 0.85rem;
+}
+
+.provider-btn small {
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.form-guidance {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.9rem;
 }
 
 .mailbox-info {
