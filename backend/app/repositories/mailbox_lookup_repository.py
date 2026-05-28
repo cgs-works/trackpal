@@ -13,7 +13,7 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
     "processing": {"completed", "failed", "timeout"},
 }
 
-JOB_TTL_DEFAULT_HOURS = 72
+JOB_TTL_DEFAULT_MINUTES = 5
 
 
 async def create_job(
@@ -22,7 +22,7 @@ async def create_job(
     mailbox_id: UUID,
     service_key: str,
     target_email: str = "",
-    ttl_hours: int = JOB_TTL_DEFAULT_HOURS,
+    ttl_minutes: int = JOB_TTL_DEFAULT_MINUTES,
 ) -> MailLookupJob:
     """Create a new lookup job in pending status."""
     from datetime import timedelta
@@ -33,7 +33,7 @@ async def create_job(
         service_key=service_key,
         target_email=target_email,
         status="pending",
-        expires_at=datetime.now(timezone.utc) + timedelta(hours=ttl_hours),
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes),
     )
     db.add(job)
     await db.flush()
@@ -128,12 +128,12 @@ async def delete_expired_jobs(db: AsyncSession, before: datetime | None = None) 
     """Hard-delete expired jobs older than given cutoff.
 
     Returns count of deleted rows.
-    Default cutoff: now - 72h.
+    Default cutoff: now - 5m.
     """
     from datetime import timedelta
 
     cutoff = before or (
-        datetime.now(timezone.utc) - timedelta(hours=JOB_TTL_DEFAULT_HOURS)
+        datetime.now(timezone.utc) - timedelta(minutes=JOB_TTL_DEFAULT_MINUTES)
     )
     result = await db.execute(
         select(MailLookupJob).where(MailLookupJob.expires_at <= cutoff)

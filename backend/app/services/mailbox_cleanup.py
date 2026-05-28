@@ -35,7 +35,7 @@ async def run_cleanup_once(db: AsyncSession) -> dict[str, int]:
     results["expired_jobs"] = expired
 
     # 2. Hard-delete expired jobs past TTL
-    ttl = timedelta(hours=settings.mailbox_lookup_job_ttl_hours)
+    ttl = timedelta(minutes=settings.mailbox_lookup_job_ttl_minutes)
     cutoff_jobs = datetime.now(timezone.utc) - ttl
     deleted_jobs = await mailbox_lookup_repository.delete_expired_jobs(
         db, before=cutoff_jobs
@@ -60,9 +60,9 @@ async def cleanup_loop() -> None:
     """
     logger.info(
         "Mailbox cleanup loop starting (interval=%ds, "
-        "job_ttl=%dh, delivery_retention=%dd)",
+        "job_ttl=%dm, delivery_retention=%dd)",
         _CLEANUP_INTERVAL_SECONDS,
-        settings.mailbox_lookup_job_ttl_hours,
+        settings.mailbox_lookup_job_ttl_minutes,
         settings.mailbox_delivery_log_retention_days,
     )
 

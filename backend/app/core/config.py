@@ -48,8 +48,8 @@ class Settings(BaseSettings):
     # Mailbox lookup defaults
     mailbox_lookup_timeout_seconds: int = 20
     mailbox_lookup_window_minutes: int = 5
-    mailbox_lookup_job_ttl_hours: int = 72
-    mailbox_delivery_log_retention_days: int = 90
+    mailbox_lookup_job_ttl_minutes: int = 5
+    mailbox_delivery_log_retention_days: int = 7
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
