@@ -1,17 +1,46 @@
 """Integration tests for n8n mailbox lookup endpoints (create + status poll)."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
 
 from app.core.config import settings
-from app.repositories import mailbox_config_repository, mailbox_lookup_repository
-from app.services.mail_lookup_worker import enqueue_job, process_job
-from app.services.mail_lookup_worker.providers import StubProvider, active_provider
+from app.repositories import mailbox_lookup_repository
+from app.services.mail_lookup_worker import process_job
+from app.services.mail_lookup_worker.providers import EmailMessage, StubProvider
+from app.services.whatsapp_session_service import ConversationSession
 
 _N8N_API_KEY = settings.n8n_api_key
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def set(
+        self, key: str, value: str, ex: int | None = None, **kwargs: Any
+    ) -> None:
+        del ex, kwargs
+        self._store[key] = value
+
+    async def delete(self, key: str) -> int:
+        return 1 if self._store.pop(key, None) is not None else 0
+
+
+class _FakeManager:
+    def __init__(self, redis: _FakeRedis) -> None:
+        self._redis = redis
+
+    async def execute(self, operation_name: str, async_callable: Any) -> Any:
+        del operation_name
+        return await async_callable(self._redis)
 
 
 async def _seed_tenant(db_session, instance_name="test-mailbox-instance"):
@@ -221,18 +250,13 @@ class TestGetLookupStatusEndpoint:
         # Process job directly with mock provider
         provider = StubProvider(
             emails=[
-                type(
-                    "EmailMessage",
-                    (),
-                    {
-                        "subject": "Your Spotify login code",
-                        "body": "Enter this code 654321",
-                        "received_at": datetime.now(timezone.utc),
-                        "message_id": "msg-001",
-                        "sender": "noreply@spotify.com",
-                        "__class__": type("EmailMessage", (), {}),
-                    },
-                )()
+                EmailMessage(
+                    subject="Your Spotify login code",
+                    body="Enter this code 654321",
+                    received_at=datetime.now(timezone.utc),
+                    message_id="msg-001",
+                    sender="noreply@spotify.com",
+                )
             ]
         )
 
@@ -242,9 +266,6 @@ class TestGetLookupStatusEndpoint:
         old_active = pmod.active_provider
 
         try:
-            # Create an actual EmailMessage
-            from app.services.mail_lookup_worker.providers import EmailMessage
-
             real_email = EmailMessage(
                 subject="Your Spotify login code",
                 body="Enter this code 654321",
@@ -330,8 +351,6 @@ class TestGetLookupStatusEndpoint:
 
     async def test_get_duplicate_suppressed(self, client: AsyncClient, db_session):
         """Duplicate code -> result_type=duplicate_suppressed, no result_value."""
-        from datetime import timezone as dt_tz
-
         tenant, _ = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)
         job = await mailbox_lookup_repository.create_job(
@@ -362,7 +381,6 @@ class TestGetLookupStatusEndpoint:
         await db_session.flush()
 
         # Process job
-        from app.services.mail_lookup_worker.providers import EmailMessage
         import app.services.mail_lookup_worker.providers as pmod
 
         old_active = pmod.active_provider
@@ -441,8 +459,6 @@ class TestCreateThenPoll:
 
     async def test_create_and_poll_flow(self, client: AsyncClient, db_session):
         """Full create -> process -> poll flow."""
-        from app.models import Tenant, User
-
         tenant, _ = await _seed_tenant(db_session)
         await _seed_mailbox(db_session, tenant.id)
 
@@ -477,7 +493,6 @@ class TestCreateThenPoll:
         job = result.scalar_one_or_none()
         assert job is not None
 
-        from app.services.mail_lookup_worker.providers import EmailMessage
         import app.services.mail_lookup_worker.providers as pmod
 
         old_active = pmod.active_provider
@@ -510,3 +525,71 @@ class TestCreateThenPoll:
         assert data["status"] == "completed"
         assert data["result_type"] == "code"
         assert data["result_value"] == "654321"
+
+    async def test_codigo_console_response_job_can_be_polled(
+        self, client: AsyncClient, db_session
+    ):
+        """Codigo final step returns durable job; correct tenant polls it."""
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        tenant, _ = await _seed_tenant(db_session)
+        tenant.whatsapp_phone = "+12015550002"
+        await db_session.commit()
+        await _seed_mailbox(db_session, tenant.id)
+
+        fake_redis = _FakeRedis()
+        manager = _FakeManager(fake_redis)
+        session = ConversationSession(
+            phone="admin:+12015550002",
+            flow="codigo",
+            step="email",
+            temp_data={"service_key": "netflix"},
+        )
+        await fake_redis.set(
+            "session:admin:+12015550002",
+            session.model_dump_json(),
+        )
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_redis_manager",
+                return_value=object(),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
+                AsyncMock(return_value=True),
+            ),
+        ):
+            response = await _handle_tenant_console(
+                phone="+12015550002",
+                message="user@example.com",
+                instance="test-mailbox-instance",
+                manager=manager,
+                db=db_session,
+            )
+
+        assert response.lookup_job_id is not None
+        assert response.tenant_id == str(tenant.id)
+        job_id = uuid.UUID(response.lookup_job_id)
+        job = await mailbox_lookup_repository.get_job(
+            db_session, job_id, tenant_id=tenant.id
+        )
+        assert job is not None
+        assert job.target_email == "user@example.com"
+
+        poll_ok = await client.get(
+            f"{self.CREATE_URL}/{job_id}",
+            headers=_n8n_headers(),
+            params={"tenant_id": str(tenant.id)},
+        )
+        assert poll_ok.status_code == 200
+        assert poll_ok.json()["status"] == "pending"
+
+        poll_wrong_tenant = await client.get(
+            f"{self.CREATE_URL}/{job_id}",
+            headers=_n8n_headers(),
+            params={"tenant_id": str(uuid.uuid4())},
+        )
+        assert poll_wrong_tenant.status_code == 404

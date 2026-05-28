@@ -7,23 +7,23 @@ has resolved the caller's identity/role.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.database import set_internal_rls_context
-from app.core.i18n import t
-from app.core.phone import normalize_phone
-from app.core.redis_client import RedisUnavailableError
-from app.repositories import clients_repository, tenants_repository
+from app.core.redis_client import RedisUnavailableError, get_redis_manager
+from app.repositories import (
+    mailbox_config_repository,
+    mailbox_lookup_repository,
+    tenants_repository,
+)
 from app.schemas.whatsapp import WhatsAppConsoleResponse
+from app.services.mail_lookup_worker import enqueue_job
 from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService
 from app.services.client_service import ClientService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
-from app.services.evolution_client import evolution_client
+
 from app.services.profile_service import ProfileService
 from app.services.subscription_service import SubscriptionService
 from app.services.tenant_service import TenantService
@@ -139,33 +139,122 @@ async def _handle_tenant_console(
     except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
         return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
-    # Check session for pending lookup job from codigo flow
-    pending_job_id = None
+    # === Lookup job orchestration (for codigo flow intent) ===
+    lookup_job_id: str | None = None
+    tenant_id_out: str | None = None
     session = None
+
     try:
         session = await session_service.get_session(f"admin:{phone}")
-        if session is not None and session.temp_data.get("pending_job_id"):
-            pending_job_id = session.temp_data["pending_job_id"]
-    except Exception:
-        logger.exception("Failed to check pending_job_id for phone=%s", phone)
+        has_lookup_intent = (
+            session is not None
+            and session.temp_data.get("pending_lookup_intent") == "true"
+        )
+        if has_lookup_intent:
+            assert session is not None
+            pending_service_key = session.temp_data.get("service_key")
+            pending_target_email = session.temp_data.get("target_email")
 
-    # Resolve tenant_id for n8n mail lookup poll scoping
-    tenant_id = None
-    if pending_job_id and identity and identity.get("role") == "tenant":
-        try:
-            tenant = await tenants_repository.get_by_owner(db, identity["user_id"])
-            if tenant:
-                tenant_id = str(tenant.id)
-                if session is not None:
-                    del session.temp_data["pending_job_id"]
-                    await session_service.save_session(session, touch_ttl=False)
-        except Exception:
-            logger.exception("Failed to resolve tenant_id for phone=%s", phone)
+            if (
+                pending_service_key
+                and pending_target_email
+                and identity is not None
+                and identity.get("role") == "tenant"
+            ):
+                tenant = await tenants_repository.get_by_owner(db, identity["user_id"])
+                if tenant is not None:
+                    mailbox = await mailbox_config_repository.get_by_tenant(
+                        db, tenant.id
+                    )
+                    if mailbox is not None and mailbox.status == "connected":
+                        job = await mailbox_lookup_repository.create_job(
+                            db,
+                            tenant_id=tenant.id,
+                            mailbox_id=mailbox.id,
+                            service_key=pending_service_key,
+                            target_email=pending_target_email,
+                        )
+                        await db.flush()
+                        await db.commit()
+
+                        redis_manager = get_redis_manager()
+                        try:
+                            enqueued = (
+                                await enqueue_job(redis_manager, job.id)
+                                if redis_manager is not None
+                                else False
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Failed to enqueue lookup job %s for tenant %s",
+                                job.id,
+                                tenant.id,
+                            )
+                            enqueued = False
+
+                        if enqueued:
+                            lookup_job_id = str(job.id)
+                            tenant_id_out = str(tenant.id)
+                            session.temp_data.pop("pending_lookup_intent", None)
+                            session.temp_data.pop("service_key", None)
+                            session.temp_data.pop("target_email", None)
+                            await session_service.save_session(session, touch_ttl=False)
+                        else:
+                            reply = tenant_console_service._t(
+                                tenant_console_service.KEY_CODIGO_ERROR
+                            )
+                            logger.warning(
+                                "Compensating: deleting job %s after enqueue "
+                                "failure for tenant %s",
+                                job.id,
+                                tenant.id,
+                            )
+                            try:
+                                await db.delete(job)
+                                await db.commit()
+                            except Exception:
+                                logger.critical(
+                                    "Job %s created but enqueue failed AND "
+                                    "compensating delete failed. Marking failed.",
+                                    job.id,
+                                )
+                                try:
+                                    await db.rollback()
+                                    await mailbox_lookup_repository.transition_status(
+                                        db,
+                                        job,
+                                        "failed",
+                                        error_code="queue_unavailable",
+                                        error_detail_safe=(
+                                            "Queue processing unavailable"
+                                        ),
+                                    )
+                                    await db.commit()
+                                except Exception:
+                                    logger.exception(
+                                        "Failed to mark job %s as failed",
+                                        job.id,
+                                    )
+                    else:
+                        reply = tenant_console_service._t(
+                            tenant_console_service.KEY_CODIGO_ERROR
+                        )
+                        logger.warning(
+                            "No connected mailbox for tenant %s; keeping lookup intent",
+                            tenant.id,
+                        )
+    except Exception:
+        logger.exception("Failed to orchestrate lookup job for phone=%s", phone)
+        if (
+            session is not None
+            and session.temp_data.get("pending_lookup_intent") == "true"
+        ):
+            reply = tenant_console_service._t(tenant_console_service.KEY_CODIGO_ERROR)
 
     return WhatsAppConsoleResponse(
         reply=reply,
-        lookup_job_id=pending_job_id,
-        tenant_id=tenant_id,
+        lookup_job_id=lookup_job_id,
+        tenant_id=tenant_id_out,
     )
 
 

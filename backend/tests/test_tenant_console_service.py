@@ -14,17 +14,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
-from app.services.tenant_console_protocols import (
-    CatalogServiceProtocol,
-    ClientServiceProtocol,
-    SubscriptionServiceProtocol,
-)
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.whatsapp_session_service import (
     ConversationSession,
     WhatsAppSessionService,
@@ -35,6 +30,7 @@ from app.services.whatsapp_tenant_console_facade import (
 )
 from app.core.errors import UserFacingError
 from app.schemas.whatsapp import WhatsAppConsoleResponse
+from app.services.tenant_service import TenantService
 from app.services.whatsapp_tenant_console_service import (
     WhatsAppTenantConsoleService,
 )
@@ -125,7 +121,7 @@ class FakeClientService:
             phone=getattr(payload, "phone", None),
             is_active=True,
             created_at=None,
-            local_username=getattr(payload, "local_username", ""),
+            username=getattr(payload, "username", ""),
         )
         self._clients[str(client_id)] = obj
         return obj
@@ -459,9 +455,7 @@ class FakeProfileService:
     async def change_password(
         self, db: Any, user: Any, old_password: str, new_password: str
     ) -> bool:
-        if old_password != "correct-password":
-            return False
-        return True
+        return old_password == "correct-password"
 
 
 @dataclass
@@ -573,7 +567,7 @@ def facade(
     return WhatsAppTenantConsoleFacade(
         console_service=console_service,
         session_service=session_service,
-        tenant_service=tenant_service,
+        tenant_service=cast(TenantService, tenant_service),
     )
 
 
@@ -618,7 +612,7 @@ class TestFacade:
             phone="+10000000000",
             message="1",
             identity=identity,
-            db=object(),  # Needs db to trigger tenant lookup
+            db=cast(AsyncSession, object()),  # Needs db to trigger tenant lookup
         )
         assert "desactivada" in reply and "Master de Trackpal" in reply
 
@@ -632,7 +626,7 @@ class TestFacade:
             phone="+10000000000",
             message="",
             identity=identity,
-            db=object(),
+            db=cast(AsyncSession, object()),
         )
         # The service returns MAIN_MENU for empty message
         assert "Trackpal Consola de Administración" in reply
@@ -647,7 +641,7 @@ class TestFacade:
             phone="+10000000000",
             message="0",
             identity=identity,
-            db=object(),
+            db=cast(AsyncSession, object()),
         )
         assert "Sesión cerrada" in reply and "consola de administración" in reply
 
@@ -673,7 +667,7 @@ class TestFacade:
             message="0",
             identity=identity,
             instance="tenant-instance",
-            db=object(),
+            db=cast(AsyncSession, object()),
         )
 
         assert "Sesión cerrada" in reply and "consola de administración" in reply
@@ -701,7 +695,7 @@ class TestFacade:
             phone="+10000000000",
             message="0",
             identity=identity,
-            db=object(),
+            db=cast(AsyncSession, object()),
         )
         # Should cancel (not goodbye), returning main menu
         assert "Operación cancelada" in reply or "Consola de Administración" in reply
@@ -1647,44 +1641,53 @@ class TestCodigoFlow:
 class TestConsoleHandlersCodigoScope:
     """Verify WhatsApp console handlers return codigo poll scope reliably.
 
-    When ``_handle_tenant_console`` processes a message that leaves a
-    ``pending_job_id`` in the session, the returned
-    ``WhatsAppConsoleResponse`` MUST include both ``lookup_job_id``
-    and ``tenant_id`` so that n8n can poll the job status with the
-    correct tenant scope.
+    The handler now orchestrates job creation after the flow returns,
+    using session intent data (``pending_lookup_intent``) instead of
+    a pre-set ``pending_job_id``.  The job is created durably (committed)
+    before the response includes ``lookup_job_id`` + ``tenant_id``.
 
     Tests cover the tenant handler directly with mocked auth + repos,
-    proving the response contract is satisfied for the only console path
-    that currently supports the codigo flow (operationally tenant instances).
+    proving the response contract is satisfied.
     """
 
-    async def test_tenant_handler_returns_lookup_job_id_with_tenant_scope(
-        self,
-    ) -> None:
-        """When codigo flow creates a job, response includes both fields."""
-        from app.api.v1.endpoints.integrations.console_handlers import (
-            _handle_tenant_console,
-        )
-
-        # 1. Pre-seed fake Redis with session containing pending_job_id
-        fake_redis = FakeRedis()
-        tenant_uuid = uuid4()
-        job_id = str(uuid4())
-
+    async def _seed_codigo_intent_session(
+        self, fake_redis, tenant_uuid, intent_data=None
+    ):
+        """Seed a session with pending_lookup_intent for codigo flow."""
+        data = intent_data or {
+            "pending_lookup_intent": "true",
+            "service_key": "netflix",
+            "target_email": "user@example.com",
+        }
         session = ConversationSession(
             phone="admin:+12015550002",
-            temp_data={"pending_job_id": job_id},
+            temp_data=data,
         )
         await fake_redis.set(
             "session:admin:+12015550002",
             session.model_dump_json(),
         )
+
+    async def test_tenant_handler_returns_lookup_job_id_with_tenant_scope(
+        self,
+    ) -> None:
+        """When codigo flow stores intent, handler creates job and returns both fields."""
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        mock_db = AsyncMock()
+        fake_redis = FakeRedis()
+        tenant_uuid = uuid4()
+
+        # Seed session with intent
+        await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
         manager = FakeManager(fake_redis=fake_redis)
 
-        # 2. Fake tenant returned by get_by_owner
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
+        fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
+        fake_job = SimpleNamespace(id=uuid4())
 
-        # 3. Patch auth, repo, and facade
         with (
             patch(
                 "app.api.v1.endpoints.integrations.console_handlers.auth_service.identify_by_phone",
@@ -1700,6 +1703,22 @@ class TestConsoleHandlersCodigoScope:
                 "app.api.v1.endpoints.integrations.console_handlers.tenants_repository.get_by_owner",
                 AsyncMock(return_value=fake_tenant),
             ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+                AsyncMock(return_value=fake_mailbox),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=fake_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
+                AsyncMock(return_value=True),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_redis_manager",
+                return_value=object(),
+            ),
             patch.object(
                 WhatsAppTenantConsoleFacade,
                 "process_message",
@@ -1711,31 +1730,34 @@ class TestConsoleHandlersCodigoScope:
                 message="cliente@test.com",
                 instance=None,
                 manager=manager,
-                db=None,
+                db=mock_db,
             )
 
-        # 4. Verify response contract
         assert isinstance(result, WhatsAppConsoleResponse)
         assert result.reply == "\U0001f50d Buscando c\u00f3digo\u2026"
-        assert result.lookup_job_id == job_id
+        assert result.lookup_job_id == str(fake_job.id)
         assert result.tenant_id == str(tenant_uuid)
-        # status is not set (not a closed/exit response)
         assert result.status is None
 
-        # 5. Verify JSON serialization includes both fields
+        # Verify db.flush() and db.commit() were called for durability
+        mock_db.flush.assert_awaited_once()
+        mock_db.commit.assert_awaited_once()
+
+        # Verify JSON serialization includes both fields
         serialized = result.model_dump(mode="json")
-        assert serialized.get("lookup_job_id") == job_id
+        assert serialized.get("lookup_job_id") == str(fake_job.id)
         assert serialized.get("tenant_id") == str(tenant_uuid)
         assert serialized.get("reply") == "\U0001f50d Buscando c\u00f3digo\u2026"
 
-    async def test_tenant_handler_no_scope_when_no_job(
+    async def test_tenant_handler_no_scope_when_no_intent(
         self,
     ) -> None:
-        """Without a pending_job_id, neither field appears in the response."""
+        """Without pending_lookup_intent, neither field appears in response."""
         from app.api.v1.endpoints.integrations.console_handlers import (
             _handle_tenant_console,
         )
 
+        mock_db = AsyncMock()
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis)
 
@@ -1761,7 +1783,7 @@ class TestConsoleHandlersCodigoScope:
                 message="menu",
                 instance=None,
                 manager=manager,
-                db=None,
+                db=mock_db,
             )
 
         assert isinstance(result, WhatsAppConsoleResponse)
@@ -1769,6 +1791,187 @@ class TestConsoleHandlersCodigoScope:
         assert result.lookup_job_id is None
         assert result.tenant_id is None
 
+        # Verify no db operations were attempted (no intent)
+        mock_db.flush.assert_not_called()
+        mock_db.commit.assert_not_called()
+
         serialized = result.model_dump(mode="json")
         assert "lookup_job_id" not in serialized
         assert "tenant_id" not in serialized
+
+    async def test_tenant_handler_no_scope_when_enqueue_fails(
+        self,
+    ) -> None:
+        """When Redis enqueue fails, handler does NOT return lookup_job_id."""
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        mock_db = AsyncMock()
+        fake_redis = FakeRedis()
+        tenant_uuid = uuid4()
+
+        await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
+        manager = FakeManager(fake_redis=fake_redis)
+
+        fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
+        fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
+        fake_job = SimpleNamespace(id=uuid4())
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.auth_service.identify_by_phone",
+                AsyncMock(
+                    return_value={
+                        "user_id": str(uuid4()),
+                        "role": "tenant",
+                        "username": "testadmin",
+                    }
+                ),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.tenants_repository.get_by_owner",
+                AsyncMock(return_value=fake_tenant),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+                AsyncMock(return_value=fake_mailbox),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=fake_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_redis_manager",
+                return_value=object(),
+            ),
+            patch.object(
+                WhatsAppTenantConsoleFacade,
+                "process_message",
+                AsyncMock(return_value="\U0001f50d Buscando c\u00f3digo\u2026"),
+            ),
+        ):
+            result = await _handle_tenant_console(
+                phone="+12015550002",
+                message="cliente@test.com",
+                instance=None,
+                manager=manager,
+                db=mock_db,
+            )
+
+        assert isinstance(result, WhatsAppConsoleResponse)
+        assert "Error" in result.reply or "error" in result.reply.lower()
+        # Enqueue failure = no lookup_job_id and lookup intent remains for retry
+        assert result.lookup_job_id is None
+        assert result.tenant_id is None
+
+        saved = await fake_redis.get("session:admin:+12015550002")
+        assert saved is not None
+        saved_session = ConversationSession.model_validate_json(saved)
+        assert saved_session.temp_data.get("pending_lookup_intent") == "true"
+
+        # db.commit() called for job creation + compensating delete
+        assert mock_db.commit.await_count >= 2
+        mock_db.delete.assert_awaited_once()
+
+    async def test_tenant_handler_no_scope_when_mailbox_not_connected(
+        self,
+    ) -> None:
+        """When mailbox is not connected, handler does NOT return lookup_job_id."""
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        mock_db = AsyncMock()
+        fake_redis = FakeRedis()
+        tenant_uuid = uuid4()
+
+        await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
+        manager = FakeManager(fake_redis=fake_redis)
+
+        fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
+        fake_mailbox = SimpleNamespace(id=uuid4(), status="disconnected")
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.auth_service.identify_by_phone",
+                AsyncMock(
+                    return_value={
+                        "user_id": str(uuid4()),
+                        "role": "tenant",
+                        "username": "testadmin",
+                    }
+                ),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.tenants_repository.get_by_owner",
+                AsyncMock(return_value=fake_tenant),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+                AsyncMock(return_value=fake_mailbox),
+            ),
+            patch.object(
+                WhatsAppTenantConsoleFacade,
+                "process_message",
+                AsyncMock(return_value="\U0001f50d Buscando c\u00f3digo\u2026"),
+            ),
+        ):
+            result = await _handle_tenant_console(
+                phone="+12015550002",
+                message="cliente@test.com",
+                instance=None,
+                manager=manager,
+                db=mock_db,
+            )
+
+        assert isinstance(result, WhatsAppConsoleResponse)
+        assert "Error" in result.reply or "error" in result.reply.lower()
+        assert result.lookup_job_id is None
+        assert result.tenant_id is None
+        saved = await fake_redis.get("session:admin:+12015550002")
+        assert saved is not None
+        saved_session = ConversationSession.model_validate_json(saved)
+        assert saved_session.temp_data.get("pending_lookup_intent") == "true"
+        # No job was created — no db operations
+        mock_db.flush.assert_not_called()
+        mock_db.commit.assert_not_called()
+
+    async def test_codigo_flow_no_direct_persistence(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """codigo_flow._handle_codigo_email no longer creates jobs or enqueues."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {"service_key": "netflix"}
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_EMAIL
+        mock_session_service.get_session.return_value = mock_session
+
+        result = await console_service._handle_codigo_email(
+            phone="+10000000000",
+            msg="user@example.com",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=uuid4(),
+            db=None,
+        )
+
+        # Should return buscando message
+        assert result is not None
+        assert "buscando" in result.lower() or "código" in result.lower()
+
+        # Should NOT have created any job or enqueued
+        # (no mocking of job repos or redis needed) - verifies no such calls
+        # Session should have intent data instead of pending_job_id
+        assert mock_session.temp_data.get("pending_lookup_intent") == "true"
+        assert mock_session.temp_data.get("service_key") == "netflix"
+        assert mock_session.temp_data.get("target_email") == "user@example.com"
+        assert "pending_job_id" not in mock_session.temp_data
