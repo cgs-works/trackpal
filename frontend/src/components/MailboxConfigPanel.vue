@@ -19,6 +19,7 @@ const isTestingMailbox = ref(false)
 const isDisconnectingMailbox = ref(false)
 const isSavingImap = ref(false)
 const oauthProvider = ref('')
+const oauthMailboxEmail = ref('')
 const imapForm = ref({
   mailbox_email: '',
   imap_host: '',
@@ -97,6 +98,13 @@ async function startOAuth(provider) {
   }
 }
 
+async function upsertOAuthMailbox(provider) {
+  await api.put('/tenant/mailbox/', {
+    provider,
+    mailbox_email: oauthMailboxEmail.value,
+  })
+}
+
 async function disconnectMailbox() {
   mailboxError.value = ''
   mailboxSuccess.value = ''
@@ -112,15 +120,29 @@ async function disconnectMailbox() {
   }
 }
 
-function selectProvider(provider) {
-  showProviderSelect.value = false
+async function selectProvider(provider) {
+  mailboxError.value = ''
+  mailboxSuccess.value = ''
+
   if (provider === 'imap_custom') {
-    if (props.mailbox) {
-      imapForm.value.mailbox_email = props.mailbox.mailbox_email
-    }
+    showProviderSelect.value = false
+    imapForm.value.mailbox_email = props.mailbox?.mailbox_email || oauthMailboxEmail.value
     showImapForm.value = true
-  } else {
-    startOAuth(provider)
+    return
+  }
+
+  if (!oauthMailboxEmail.value) {
+    mailboxError.value = i18nStore.t('frontend.mailbox.email') + ' is required'
+    return
+  }
+
+  try {
+    showProviderSelect.value = false
+    await upsertOAuthMailbox(provider)
+    await startOAuth(provider)
+    emit('updated')
+  } catch (error) {
+    mailboxError.value = getApiError(error, i18nStore.t('frontend.mailbox.error_save'))
   }
 }
 
@@ -146,6 +168,12 @@ function cancelImapSetup() {
       <p class="placeholder-message">{{ i18nStore.t('frontend.mailbox.not_configured') }}</p>
 
       <template v-if="!showImapForm && !showProviderSelect">
+        <div class="form-grid compact-grid">
+          <label>
+            {{ i18nStore.t('frontend.mailbox.email') }}
+            <input v-model.trim="oauthMailboxEmail" type="email" required />
+          </label>
+        </div>
         <button class="button button-primary" type="button" @click="showProviderSelect = true">
           {{ i18nStore.t('frontend.mailbox.connect_oauth') }}
         </button>
@@ -248,6 +276,72 @@ function cancelImapSetup() {
 </template>
 
 <style scoped>
+.button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button-primary {
+  background: var(--primary, #4f46e5);
+  color: #ffffff;
+}
+
+.button-secondary {
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #1e293b);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.compact-grid {
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text, #1e293b);
+  font: inherit;
+}
+
+input:focus {
+  border-color: var(--primary, #4f46e5);
+  outline: 3px solid rgb(79 70 229 / 15%);
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .mailbox-card .provider-grid {
   display: flex;
   flex-wrap: wrap;
