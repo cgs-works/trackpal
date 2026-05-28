@@ -276,7 +276,13 @@ function cancelImapSetup() {
       </div>
 
       <div class="mailbox-actions">
-        <button class="button button-secondary" type="button" :disabled="isTestingMailbox" @click="testMailbox">
+        <button
+          v-if="mailbox.auth_method !== 'oauth'"
+          class="button button-secondary"
+          type="button"
+          :disabled="isTestingMailbox"
+          @click="testMailbox"
+        >
           {{ isTestingMailbox ? i18nStore.t('frontend.mailbox.testing') : i18nStore.t('frontend.mailbox.test') }}
         </button>
         <button v-if="showConnectActions" class="button button-secondary" type="button" @click="openImapSetup('custom')">

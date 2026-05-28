@@ -147,6 +147,12 @@ async def test_mailbox_connection(
     if mailbox is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Mailbox not configured")
 
+    if mailbox.auth_method == "oauth":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Manual test is only available for IMAP mailboxes",
+        )
+
     try:
         result = await _run_mailbox_test(db, mailbox)
         await db.commit()
