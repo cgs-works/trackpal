@@ -677,6 +677,63 @@ class TestAmbiguity:
         reply = response.json()["reply"]
         assert "dos perfiles" in reply or "cómo quieres proceder" in reply
 
+    async def test_ambiguity_code_routes_direct_to_tenant_codigo_flow(
+        self,
+        client: AsyncClient,
+        active_tenant_user: Any,
+        db_session: Any,
+    ) -> None:
+        """In ambiguity, codigo/code must route to tenant codigo flow directly."""
+        from sqlalchemy import select
+        from app.models import Client as ClientModel, Tenant as TenantModel
+
+        result = await db_session.execute(
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
+        )
+        tenant = result.scalar()
+        tenant.evolution_instance_name = "tenant-ambig-codigo"
+        await db_session.commit()
+
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Codigo Client",
+                username=f"{tenant.client_prefix}_codigo",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
+        await db_session.commit()
+
+        fake_mgr = FakeManager()
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "code",
+                    "instance": "tenant-ambig-codigo",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+        assert response.status_code == 200
+        reply = response.json()["reply"].lower()
+        assert "two profiles detected" not in reply
+        assert "dos perfiles" not in reply
+        assert (
+            "find access code" in reply
+            or "buscar código de acceso" in reply
+            or "mailbox not configured" in reply
+            or "buzón no configurado" in reply
+        )
+
     async def test_ambiguity_select_client_mode(
         self,
         client: AsyncClient,

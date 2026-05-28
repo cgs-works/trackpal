@@ -15,12 +15,18 @@ class TestCreateInstance:
     async def test_create_uses_evolution_go_payload_and_returns_token(self) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
         create_response = MagicMock()
-        create_response.json.return_value = {"message": "success", "data": {"id": "inst-id"}}
+        create_response.json.return_value = {
+            "message": "success",
+            "data": {"id": "inst-id"},
+        }
         create_response.raise_for_status = MagicMock()
 
-        with patch("httpx.AsyncClient") as mock_httpx, patch(
-            "app.services.evolution_client.client.secrets.token_urlsafe",
-            return_value="instance-token",
+        with (
+            patch("httpx.AsyncClient") as mock_httpx,
+            patch(
+                "app.services.evolution_client.client.secrets.token_urlsafe",
+                return_value="instance-token",
+            ),
         ):
             mock_ctx = AsyncMock()
             mock_httpx.return_value.__aenter__.return_value = mock_ctx
@@ -38,7 +44,10 @@ class TestCreateInstance:
     async def test_create_resolves_instance_id_from_instance_all(self) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
         create_response = MagicMock()
-        create_response.json.return_value = {"message": "success", "data": {"name": "tenant-acme"}}
+        create_response.json.return_value = {
+            "message": "success",
+            "data": {"name": "tenant-acme"},
+        }
         create_response.raise_for_status = MagicMock()
         list_response = MagicMock()
         list_response.json.return_value = {
@@ -47,9 +56,12 @@ class TestCreateInstance:
         }
         list_response.raise_for_status = MagicMock()
 
-        with patch("httpx.AsyncClient") as mock_httpx, patch(
-            "app.services.evolution_client.client.secrets.token_urlsafe",
-            return_value="instance-token",
+        with (
+            patch("httpx.AsyncClient") as mock_httpx,
+            patch(
+                "app.services.evolution_client.client.secrets.token_urlsafe",
+                return_value="instance-token",
+            ),
         ):
             mock_ctx = AsyncMock()
             mock_httpx.return_value.__aenter__.return_value = mock_ctx
@@ -62,7 +74,10 @@ class TestCreateInstance:
             "/instance/all",
             headers={"Content-Type": "application/json", "apikey": "global-key"},
         )
-        assert result == {"instance_id": "resolved-id", "instance_token": "instance-token"}
+        assert result == {
+            "instance_id": "resolved-id",
+            "instance_token": "instance-token",
+        }
 
 
 class TestRegisterWebhook:
@@ -84,8 +99,8 @@ class TestRegisterWebhook:
             "enabled": True,
             "webhookUrl": "https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient",
             "triggerType": "keyword",
-            "triggerOperator": "startsWith",
-            "triggerValue": "/menu",
+            "triggerOperator": "regex",
+            "triggerValue": r"(?i)^\s*(?:/menu|codigo|código|code)\b",
             "isTrusted": True,
         }
 
@@ -202,7 +217,9 @@ class TestDeleteInstance:
         }
         list_response.raise_for_status = MagicMock()
         delete_response = MagicMock(status_code=500)
-        delete_response.raise_for_status.side_effect = Exception("Internal Server Error")
+        delete_response.raise_for_status.side_effect = Exception(
+            "Internal Server Error"
+        )
 
         with patch("httpx.AsyncClient") as mock_httpx:
             mock_ctx = AsyncMock()

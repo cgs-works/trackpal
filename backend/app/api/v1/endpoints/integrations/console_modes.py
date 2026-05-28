@@ -7,8 +7,8 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.redis_client import RedisConnectionManager
 from app.core.i18n import t
+from app.core.redis_client import RedisConnectionManager
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
@@ -121,6 +121,16 @@ async def _handle_ambiguity(
             db=db,
             identity=_client_identity(client, tenant),
             locale=locale,
+        )
+
+    if msg_lower in ("codigo", "código", "code", "6"):
+        await _set_mode(manager, phone, "tenant")
+        return await _handle_tenant_console(
+            phone=phone,
+            message=message,
+            instance=instance,
+            manager=manager,
+            db=db,
         )
 
     if msg == "1":
