@@ -192,7 +192,7 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.section_title": "Code Mailbox",
     "frontend.mailbox.section_heading": "Access Code Mailbox",
     "frontend.mailbox.not_configured": "No mailbox configured yet.",
-    "frontend.mailbox.email": "Contact Email",
+    "frontend.mailbox.email": "Email",
     "frontend.mailbox.status": "Status",
     "frontend.mailbox.method": "Method",
     "frontend.mailbox.provider": "Provider",
