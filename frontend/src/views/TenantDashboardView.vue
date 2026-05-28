@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { useI18nStore } from '../stores/i18n'
@@ -9,6 +9,7 @@ import CatalogPanel from '../components/CatalogPanel.vue'
 import ClientManagementPanel from '../components/ClientManagementPanel.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const i18nStore = useI18nStore()
 
@@ -34,6 +35,7 @@ const mailbox = ref(null)
 const mailboxLoading = ref(false)
 const mailboxError = ref('')
 const mailboxSuccess = ref('')
+const oauthToast = ref('')
 
 const username = computed(() => authStore.username || authStore.user?.username || 'Usuario')
 const isMasterSupport = computed(() => authStore.role === 'master' && !!authStore.activeTenantId)
@@ -153,12 +155,27 @@ function onMailboxUpdated() {
   loadMailbox()
 }
 
+function maybeShowOAuthToastFromQuery() {
+  if (route.query.mailbox_oauth === 'success') {
+    oauthToast.value = i18nStore.t('frontend.mailbox.oauth_connected')
+    const nextQuery = { ...route.query }
+    delete nextQuery.mailbox_oauth
+    router.replace({ path: route.path, query: nextQuery })
+    setTimeout(() => {
+      oauthToast.value = ''
+    }, 4000)
+  }
+}
+
 async function handleLogout() {
   await authStore.logout()
   router.push('/login')
 }
 
-onMounted(loadDashboard)
+onMounted(async () => {
+  maybeShowOAuthToastFromQuery()
+  await loadDashboard()
+})
 </script>
 
 <template>
@@ -183,6 +200,7 @@ onMounted(loadDashboard)
 
     <template v-else>
       <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
+      <p v-if="oauthToast" class="toast toast-success">{{ oauthToast }}</p>
 
       <section class="content-card welcome-card">
         <p class="eyebrow">{{ isMasterSupport ? 'Soporte Master' : i18nStore.t('frontend.dashboard.tenant.title') }}</p>
@@ -444,6 +462,23 @@ input:focus {
 .alert-success {
   border: 1px solid rgb(34 197 94 / 30%);
   background: rgb(34 197 94 / 10%);
+  color: #15803d;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 20%);
+}
+
+.toast-success {
+  border: 1px solid rgb(34 197 94 / 35%);
+  background: #f0fdf4;
   color: #15803d;
 }
 

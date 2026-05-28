@@ -1,8 +1,12 @@
 """Tenant mailbox configuration endpoints."""
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 
 from app.api.dependencies import ActiveTenantId, DbDep
+from app.core.config import settings
 from app.api.v1.endpoints._mailbox_helpers import (
     derive_auth_method,
     handle_test_error,
@@ -23,6 +27,39 @@ from app.schemas.mailbox import (
 from app.services.imap_service import ImapConnectionError
 
 router = APIRouter(prefix="/tenant/mailbox", tags=["tenant-mailbox"])
+
+
+def _frontend_dashboard_url() -> str:
+    origins = [
+        item.strip() for item in settings.cors_origins.split(",") if item.strip()
+    ]
+    base_url = origins[0] if origins else "http://localhost:5173"
+    return f"{base_url.rstrip('/')}/admin/dashboard"
+
+
+def _oauth_callback_html(status_value: str) -> str:
+    target = f"{_frontend_dashboard_url()}?mailbox_oauth={quote(status_value)}"
+    return f"""<!doctype html>
+<html>
+  <head>
+    <meta charset=\"utf-8\" />
+    <title>Mailbox OAuth</title>
+  </head>
+  <body>
+    <script>
+      (function () {{
+        var target = {target!r};
+        if (window.opener && !window.opener.closed) {{
+          window.opener.location.assign(target);
+          window.close();
+          return;
+        }}
+        window.location.assign(target);
+      }})();
+    </script>
+    <p>Redirecting...</p>
+  </body>
+</html>"""
 
 
 @router.get("/", response_model=MailboxResponse)
@@ -148,7 +185,7 @@ async def oauth_start(
     return result
 
 
-@router.get("/oauth/{provider}/callback")
+@router.get("/oauth/{provider}/callback", response_class=HTMLResponse)
 async def oauth_callback(
     provider: str,
     db: DbDep,
@@ -167,7 +204,7 @@ async def oauth_callback(
         )
 
     try:
-        mailbox = await oauth_service.complete_oauth(db, provider, code, state)
+        await oauth_service.complete_oauth(db, provider, code, state)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -175,7 +212,7 @@ async def oauth_callback(
         ) from exc
 
     await db.commit()
-    return mailbox_response(mailbox)
+    return HTMLResponse(content=_oauth_callback_html("success"))
 
 
 @router.post("/disconnect", status_code=status.HTTP_204_NO_CONTENT)

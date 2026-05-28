@@ -228,7 +228,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.testing": "Probando...",
     "frontend.mailbox.disconnect": "Desconectar",
     "frontend.mailbox.disconnecting": "Desconectando...",
-    "frontend.mailbox.oauth_started": "Ventana OAuth abierta. Completa la autorización y haz clic en Verificar.",
+    "frontend.mailbox.oauth_started": "Ventana OAuth abierta. Completa la autorización para volver al dashboard.",
     "frontend.mailbox.verify": "Verificar conexión",
     "frontend.mailbox.oauth_provider_email": "Cuenta conectada",
     "frontend.mailbox.imap_yes": "Sí",
@@ -242,5 +242,6 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.success_disconnected": "Buzón desconectado.",
     "frontend.mailbox.success_test": "Conexión exitosa.",
     "frontend.mailbox.test_failed": "Conexión fallida: {error}",
+    "frontend.mailbox.oauth_connected": "Buzón conectado correctamente.",
     "frontend.mailbox.oauth_reconnect": "Tokens OAuth revocados. Reconecta el buzón.",
 }
