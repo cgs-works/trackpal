@@ -112,6 +112,11 @@ Result types: `code`, `url`, `not_found`, `duplicate_suppressed`.
 
 Polling scope contract: n8n must send both `lookup_job_id` and `tenant_id`.
 
+Durability contract for WhatsApp `codigo` handoff:
+- `lookup_job_id` must be emitted only after `mail_lookup_jobs` row is committed.
+- If enqueue fails after commit, backend compensates (delete job; fallback mark `failed` with `queue_unavailable`).
+- On compensation/failure branch, `lookup_job_id` is omitted from console response.
+
 ## Observability
 
 ### Metrics (`GET /metrics`)

@@ -85,8 +85,8 @@ When Evolution sends `@lid` identifiers:
 If the same phone matches both `tenant.whatsapp_phone` and a `client` record within the same tenant:
 - System **prompts** the user to choose mode: `1) Tenant` or `2) Cliente`.
 - Selection is persisted in Redis at key `wa:mode:{phone}` for the current session.
-- A confirmation message is sent indicating the chosen mode and that it stays until exit.
-- When user exits (`0`, `salir`, or `/menu`), the mode key is cleared from Redis.
+- Special shortcut: messages `codigo|código|code|6` skip ambiguity prompt and route directly to tenant `codigo` flow.
+- When user exits (`0` or `salir`), the mode key is cleared from Redis.
 
 ### Exit contract (`status="closed"`)
 
@@ -141,13 +141,19 @@ Tenant console now supports a dedicated code-retrieval dialog:
 1. Trigger by exact message `codigo`, `código`, or `code`.
 2. Backend asks for service (`disney`, `hbo_max`, `netflix`, `prime_video`, `spotify`, `universal`), prioritizing tenant catalog when available.
 3. Backend asks for target email.
-4. Backend creates mailbox lookup job and stores pending job in session.
-5. Response includes lookup scope for n8n polling (`lookup_job_id` + `tenant_id`).
+4. Backend stores lookup intent in session (`service_key`, `target_email`) and keeps dialog response immediate.
+5. Integration handler performs lookup orchestration: create job, commit durable row, enqueue Redis.
+6. Response includes lookup scope for n8n polling (`lookup_job_id` + `tenant_id`) **only after** durable commit + successful enqueue.
 
 n8n behavior for this path:
 - sends immediate "buscando..."
 - polls every 4s up to 20s on `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`
 - sends final result (`code|url|not_found|duplicate_suppressed|timeout|failed` mapping).
+
+Failure contract for orchestration:
+- If enqueue fails after commit, backend runs compensating delete of created job.
+- If compensating delete fails, backend marks job `failed` with `error_code=queue_unavailable` and logs critical.
+- In both failure branches, response must not include `lookup_job_id`.
 
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`
