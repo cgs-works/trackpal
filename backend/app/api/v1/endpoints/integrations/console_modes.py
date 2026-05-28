@@ -80,6 +80,16 @@ async def _handle_ambiguity(
 
     stored_mode = await _get_mode(manager, phone)
 
+    if msg_lower in ("codigo", "código", "code"):
+        await _set_mode(manager, phone, "tenant")
+        return await _handle_tenant_console(
+            phone=phone,
+            message=message,
+            instance=instance,
+            manager=manager,
+            db=db,
+        )
+
     if msg_lower in ("menu", "/menu"):
         if stored_mode == "tenant":
             return await _handle_tenant_console(
@@ -121,16 +131,6 @@ async def _handle_ambiguity(
             db=db,
             identity=_client_identity(client, tenant),
             locale=locale,
-        )
-
-    if msg_lower in ("codigo", "código", "code", "6"):
-        await _set_mode(manager, phone, "tenant")
-        return await _handle_tenant_console(
-            phone=phone,
-            message=message,
-            instance=instance,
-            manager=manager,
-            db=db,
         )
 
     if msg == "1":

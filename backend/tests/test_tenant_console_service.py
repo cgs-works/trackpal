@@ -1506,10 +1506,11 @@ class TestCodigoFlow:
             session_service=mock_session_service,
             tenant_id=None,
             db=None,
+            started_from_menu=False,
         )
         assert result is not None
         assert "Netflix" in result or "netflix" in result.lower()
-        assert "0" in result  # cancel option shown
+        assert "Cancelar" in result
 
     async def test_codigo_trigger_words_in_process_message(
         self,
@@ -1536,6 +1537,31 @@ class TestCodigoFlow:
             assert reply is not None
             # Should not return fallback or menu help
             assert "No entendí" not in reply
+
+    async def test_codigo_cancel_direct_does_not_render_main_menu(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Direct command flow cancel returns cancelled text only."""
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {"codigo_started_from_menu": "false"}
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_SERVICE
+
+        reply = await console_service._handle_codigo_service(
+            phone="+10000000000",
+            msg="0",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=None,
+            db=None,
+        )
+
+        assert "Operación cancelada" in reply
+        assert "Trackpal Consola" not in reply
 
     async def test_codigo_flow_service_1_selected(
         self,

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.i18n import t as _i18n_t
 from app.core.redis_client import RedisUnavailableError
@@ -229,9 +232,23 @@ class WhatsAppTenantConsoleService(
                 return await self._start_subscriptions_flow(
                     phone, session_service, tenant_id, db
                 )
-            elif msg.lower() in ("codigo", "código", "code", "6"):
+            elif msg == "5":
+                return self._t(self.KEY_HELP_TEXT)
+            elif msg == "6":
                 return await self._start_codigo_flow(
-                    phone, session_service, tenant_id, db
+                    phone,
+                    session_service,
+                    tenant_id,
+                    db,
+                    started_from_menu=True,
+                )
+            elif msg.lower() in ("codigo", "código", "code"):
+                return await self._start_codigo_flow(
+                    phone,
+                    session_service,
+                    tenant_id,
+                    db,
+                    started_from_menu=False,
                 )
             return self._t(self.KEY_FALLBACK_NO_FLOW)
 

@@ -982,6 +982,79 @@ class TestAmbiguity:
         reply = response.json()["reply"]
         assert "Consola de Cliente" in reply
 
+    async def test_ambiguity_code_switches_to_tenant_flow_from_client_mode(
+        self,
+        client: AsyncClient,
+        active_tenant_user: Any,
+        db_session: Any,
+    ) -> None:
+        """When mode=client, code command must route tenant codigo flow."""
+        from sqlalchemy import select
+        from app.models import Client as ClientModel, Tenant as TenantModel
+
+        result = await db_session.execute(
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
+        )
+        tenant = result.scalar()
+        tenant.evolution_instance_name = "tenant-ambig-code-from-client"
+        await db_session.commit()
+
+        db_session.add(
+            ClientModel(
+                tenant_id=tenant.id,
+                owner_user_id=active_tenant_user.id,
+                full_name="Code From Client",
+                username=f"{tenant.client_prefix}_code_from_client",
+                phone="+12015550002",
+                is_active=True,
+            )
+        )
+        await db_session.commit()
+
+        fake_mgr = FakeManager()
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
+            await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "hola",
+                    "instance": "tenant-ambig-code-from-client",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+            await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "2",
+                    "instance": "tenant-ambig-code-from-client",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "code",
+                    "instance": "tenant-ambig-code-from-client",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+        assert response.status_code == 200
+        reply = response.json()["reply"].lower()
+        assert (
+            "find access code" in reply
+            or "buscar código de acceso" in reply
+            or "mailbox not configured" in reply
+            or "buzón no configurado" in reply
+        )
+
     async def test_ambiguity_menu_keeps_selected_client_mode(
         self,
         client: AsyncClient,

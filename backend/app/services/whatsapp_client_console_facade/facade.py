@@ -9,6 +9,7 @@ All user-facing text goes through i18n (``wa.client.*`` keys).
 """
 
 from __future__ import annotations
+
 import logging
 from typing import Any
 from uuid import UUID
@@ -91,6 +92,8 @@ class WhatsAppClientConsoleFacade:
                 client_id=UUID(client_id) if isinstance(client_id, str) else client_id,
                 db=db,
             )
+        elif msg == "3":
+            return _t(self._locale, "wa.client.codigo.redirect")
         return self._main_menu()
 
     def _main_menu(self) -> str:
@@ -108,6 +111,7 @@ class WhatsAppClientConsoleFacade:
         if db is None:
             return _t(self._locale, "wa.client.internal_error")
         from app.core.database import set_internal_rls_context
+
         await set_internal_rls_context(db)
         client = await clients_repository.get(db, tenant_id, client_id)
         if client is None:
@@ -122,9 +126,12 @@ class WhatsAppClientConsoleFacade:
             else _t(self._locale, "wa.client.profile.status_inactive")
         )
         return _t(
-            self._locale, "wa.client.profile.body",
-            full_name=client.full_name, tenant_name=tenant_name,
-            phone=client.phone or "—", status=status,
+            self._locale,
+            "wa.client.profile.body",
+            full_name=client.full_name,
+            tenant_name=tenant_name,
+            phone=client.phone or "—",
+            status=status,
         )
 
     # ------------------------------------------------------------------
@@ -139,8 +146,11 @@ class WhatsAppClientConsoleFacade:
         if db is None:
             return _t(self._locale, "wa.client.internal_error")
         from app.core.database import set_internal_rls_context
+
         await set_internal_rls_context(db)
-        subs = await list_subscriptions(db, tenant_id, status="active", client_id=client_id)
+        subs = await list_subscriptions(
+            db, tenant_id, status="active", client_id=client_id
+        )
         return self._format_subs(subs)
 
     def _format_subs(self, subs: list[Any]) -> str:
@@ -148,10 +158,24 @@ class WhatsAppClientConsoleFacade:
             return _t(self._locale, "wa.client.subscriptions.empty")
         lines = [_t(self._locale, "wa.client.subscriptions.header")]
         for i, s in enumerate(subs, 1):
-            svc = getattr(s, "service_name", None) or getattr(s, "service", None)
-            svc_name = svc.name if hasattr(svc, "name") else str(svc) if svc else "—"
-            plan = getattr(s, "plan_name", None) or getattr(s, "plan", None)
-            plan_name = plan.name if hasattr(plan, "name") else str(plan) if plan else "—"
+            svc: Any = getattr(s, "service_name", None) or getattr(s, "service", None)
+            svc_name_attr = getattr(svc, "name", None)
+            svc_name = (
+                str(svc_name_attr)
+                if svc_name_attr is not None
+                else str(svc)
+                if svc is not None
+                else "—"
+            )
+            plan: Any = getattr(s, "plan_name", None) or getattr(s, "plan", None)
+            plan_name_attr = getattr(plan, "name", None)
+            plan_name = (
+                str(plan_name_attr)
+                if plan_name_attr is not None
+                else str(plan)
+                if plan is not None
+                else "—"
+            )
             start = getattr(s, "starts_at", None)
             exp = getattr(s, "expires_at", None)
             start_str = start.strftime("%d/%m/%Y") if start else "—"
@@ -159,12 +183,23 @@ class WhatsAppClientConsoleFacade:
             status_label = (
                 _t(self._locale, "wa.client.subscriptions.status_active")
                 if s.status == "active"
-                else _t(self._locale, "wa.client.subscriptions.status_other", status=s.status)
+                else _t(
+                    self._locale,
+                    "wa.client.subscriptions.status_other",
+                    status=s.status,
+                )
             )
             lines.append(
-                _t(self._locale, "wa.client.subscriptions.item",
-                   num=i, service=svc_name, plan=plan_name,
-                   start=start_str, exp=exp_str, status=status_label)
+                _t(
+                    self._locale,
+                    "wa.client.subscriptions.item",
+                    num=i,
+                    service=svc_name,
+                    plan=plan_name,
+                    start=start_str,
+                    exp=exp_str,
+                    status=status_label,
+                )
             )
         return "\n".join(lines)
 
@@ -186,13 +221,19 @@ class WhatsAppClientConsoleFacade:
                 remote_jid = f"{digits}@s.whatsapp.net"
                 try:
                     await evolution_client.close_chat_session(
-                        instance=instance, remote_jid=remote_jid,
+                        instance=instance,
+                        remote_jid=remote_jid,
                     )
                 except httpx.HTTPError:
                     logger.warning(
-                        "Evolution close failed phone=%s instance=%s", phone, instance,
+                        "Evolution close failed phone=%s instance=%s",
+                        phone,
+                        instance,
                         exc_info=True,
                     )
             else:
-                logger.warning("Cannot close Evolution session: normalize_phone empty for %s", phone)
+                logger.warning(
+                    "Cannot close Evolution session: normalize_phone empty for %s",
+                    phone,
+                )
         return _t(self._locale, "wa.client.goodbye")

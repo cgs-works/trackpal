@@ -28,7 +28,15 @@ _CODIGO_SERVICE_LABELS: dict[str, str] = {
 }
 
 
-async def _start_codigo_flow(self, phone, session_service, tenant_id, db):
+async def _start_codigo_flow(
+    self,
+    phone,
+    session_service,
+    tenant_id,
+    db,
+    *,
+    started_from_menu: bool = False,
+):
     """Entry point — show list of available services for code lookup."""
     loc = ctx.get_locale()
 
@@ -45,7 +53,12 @@ async def _start_codigo_flow(self, phone, session_service, tenant_id, db):
     for i, key in enumerate(self.STREAMING_SERVICE_KEYS, start=1):
         label = _CODIGO_SERVICE_LABELS.get(key, key.capitalize())
         lines.append(f"{i}️⃣ {label}")
-    lines.append("0️⃣ " + _i18n_t(loc, "wa.tenant.codigo.cancel"))
+    cancel_key = (
+        "wa.tenant.codigo.cancel"
+        if started_from_menu
+        else "wa.tenant.codigo.cancel_direct"
+    )
+    lines.append("0️⃣ " + _i18n_t(loc, cancel_key))
 
     service_list = "\n".join(lines)
 
@@ -56,7 +69,9 @@ async def _start_codigo_flow(self, phone, session_service, tenant_id, db):
 
     session.flow = self.CODIGO_FLOW
     session.step = self.CODIGO_STEP_SERVICE
-    session.temp_data = {}
+    session.temp_data = {
+        "codigo_started_from_menu": "true" if started_from_menu else "false"
+    }
     await session_service.save_session(session)
 
     return self._t(self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list)
@@ -76,9 +91,15 @@ async def _handle_codigo_service(
 
     if idx < 1 or idx > len(self.STREAMING_SERVICE_KEYS):
         if idx == 0:
-            # Cancel — reset flow
+            started_from_menu = (
+                session.temp_data.get("codigo_started_from_menu") == "true"
+            )
             await session_service.clear_session(f"admin:{phone}")
-            return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
+            if started_from_menu:
+                return self._with_main_menu(
+                    _i18n_t(loc, "wa.tenant.cancelled"), locale=loc
+                )
+            return _i18n_t(loc, "wa.tenant.cancelled")
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
     service_key = self.STREAMING_SERVICE_KEYS[idx - 1]
