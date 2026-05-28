@@ -279,3 +279,39 @@ Fixed disconnected nodes in Trackpal WhatsApp Bot via n8n MCP, restored polling 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: Fix n8n mail lookup 404 durability
+
+**Date**: 2026-05-28
+**Task**: Fix n8n mail lookup 404 durability
+**Branch**: `main`
+
+### Summary
+
+Root-caused poll 404 with MCP evidence, implemented central durable codigo lookup orchestration, added regression tests, updated specs/docs, and archived task 05-28-n8n-mail-lookup-404.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4ebf7c5` | (see git log) |
+| `c9eaa8d` | (see git log) |
+| `19504b7` | (see git log) |
+| `8af72f0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
