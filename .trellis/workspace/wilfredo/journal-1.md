@@ -212,3 +212,37 @@ Implemented and documented LID-aware WhatsApp identity flow across backend, n8n,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: Mailbox oauth/imap hardening and wrap-up
+
+**Date**: 2026-05-28
+**Task**: Mailbox oauth/imap hardening and wrap-up
+**Branch**: `feat/tenant-mailbox-oauth-imap`
+
+### Summary
+
+Completed tenant mailbox ingestion flow end-to-end, applied CodeRabbit fixes across backend/frontend/n8n, revalidated focused backend suites, and archived task 05-27-tenant-mailbox-oauth-imap.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d87750b` | (see git log) |
+| `c946e07` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
