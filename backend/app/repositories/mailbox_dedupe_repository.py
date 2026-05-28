@@ -1,9 +1,10 @@
 """Dedupe delivery log repository — mail_code_delivery_log insert/check."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import MailCodeDeliveryLog
@@ -67,10 +68,7 @@ async def delete_older_than(db: AsyncSession, before: datetime | None = None) ->
 
     Default: RETENTION_DAYS days ago. Returns count deleted.
     """
-    cutoff = before or (datetime.now(timezone.utc))
-    from datetime import timedelta
-
-    cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)
+    cutoff = before or (datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS))
 
     result = await db.execute(
         select(MailCodeDeliveryLog).where(MailCodeDeliveryLog.delivered_at < cutoff)
@@ -82,8 +80,48 @@ async def delete_older_than(db: AsyncSession, before: datetime | None = None) ->
     return len(entries)
 
 
+async def record_delivery_atomic(
+    db: AsyncSession,
+    tenant_id: UUID,
+    mailbox_id: UUID,
+    service_key: str,
+    message_id: str | None,
+    fingerprint: str,
+) -> bool:
+    """Insert dedupe row atomically.
+
+    Returns ``True`` when inserted, ``False`` when unique conflict indicates duplicate.
+    """
+    if message_id is None:
+        exists = await is_duplicate(
+            db,
+            tenant_id=tenant_id,
+            mailbox_id=mailbox_id,
+            service_key=service_key,
+            message_id=None,
+            fingerprint=fingerprint,
+        )
+        if exists:
+            return False
+
+    try:
+        async with db.begin_nested():
+            await record_delivery(
+                db,
+                tenant_id=tenant_id,
+                mailbox_id=mailbox_id,
+                service_key=service_key,
+                message_id=message_id,
+                fingerprint=fingerprint,
+            )
+        return True
+    except IntegrityError:
+        return False
+
+
 __all__ = [
     "is_duplicate",
     "record_delivery",
+    "record_delivery_atomic",
     "delete_older_than",
 ]

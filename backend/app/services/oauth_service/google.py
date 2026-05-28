@@ -52,7 +52,10 @@ async def exchange_code(
             },
             headers={"Accept": "application/json"},
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise OAuthTokenError(f"Invalid token response body: {resp.text}") from exc
 
     _check_token_error(data)
     resp.raise_for_status()
@@ -82,7 +85,10 @@ async def refresh_access_token(
             },
             headers={"Accept": "application/json"},
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise OAuthTokenError(f"Invalid token response body: {resp.text}") from exc
 
     _check_token_error(data)
     resp.raise_for_status()

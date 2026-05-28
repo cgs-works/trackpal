@@ -3,10 +3,13 @@
 Migrated from ``pending-migration/subjects.py``.
 """
 
+from collections.abc import Mapping
+from types import MappingProxyType
+
 from ._types import ServiceEntry
 from .catalog import CATALOG_V1 as _DATA
 
-CATALOG_V1: dict[str, ServiceEntry] = _DATA
+CATALOG_V1: Mapping[str, ServiceEntry] = MappingProxyType(_DATA)
 
 
 def get_service_entry(service_key: str) -> ServiceEntry | None:

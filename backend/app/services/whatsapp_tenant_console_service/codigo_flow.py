@@ -105,7 +105,12 @@ async def _handle_codigo_email(
     loc = ctx.get_locale()
 
     target_email = msg.strip()
-    if not target_email or len(target_email) < 3:
+    if (
+        not target_email
+        or len(target_email) < 3
+        or "@" not in target_email
+        or "." not in target_email.split("@", 1)[1]
+    ):
         return _i18n_t(loc, "wa.tenant.codigo.invalid_email")
 
     service_key = session.temp_data.get("service_key")
@@ -136,7 +141,17 @@ async def _handle_codigo_email(
         # Enqueue to Redis for worker processing
         manager = get_redis_manager()
         if manager is not None:
-            await enqueue_job(manager, job.id)
+            try:
+                await enqueue_job(manager, job.id)
+            except Exception:
+                logger.exception(
+                    "Failed to enqueue lookup job %s for tenant %s",
+                    job.id,
+                    tenant_id,
+                )
+                await db.delete(job)
+                await db.flush()
+                return self._t(self.KEY_CODIGO_ERROR)
     except Exception:
         logger.exception("Failed to create lookup job for tenant %s", tenant_id)
         return self._t(self.KEY_CODIGO_ERROR)

@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import TenantMailbox
@@ -66,7 +66,9 @@ async def update_connection_test(
     from datetime import datetime, timezone
 
     mailbox.last_connection_test_at = datetime.now(timezone.utc)
-    if error is not None:
+    if success:
+        mailbox.last_connection_error = None
+    elif error is not None:
         mailbox.last_connection_error = error
     await db.flush()
     return mailbox
@@ -81,9 +83,11 @@ async def delete(db: AsyncSession, mailbox: TenantMailbox) -> None:
 async def count_by_status(db: AsyncSession, status: str) -> int:
     """Count mailboxes with a given status."""
     result = await db.execute(
-        select(TenantMailbox).where(TenantMailbox.status == status)
+        select(func.count())
+        .select_from(TenantMailbox)
+        .where(TenantMailbox.status == status)
     )
-    return len(result.scalars().all())
+    return int(result.scalar_one())
 
 
 __all__ = [

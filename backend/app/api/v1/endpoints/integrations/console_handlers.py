@@ -141,13 +141,11 @@ async def _handle_tenant_console(
 
     # Check session for pending lookup job from codigo flow
     pending_job_id = None
+    session = None
     try:
         session = await session_service.get_session(f"admin:{phone}")
         if session is not None and session.temp_data.get("pending_job_id"):
             pending_job_id = session.temp_data["pending_job_id"]
-            # Clear it from session once consumed
-            del session.temp_data["pending_job_id"]
-            await session_service.save_session(session, touch_ttl=False)
     except Exception:
         logger.exception("Failed to check pending_job_id for phone=%s", phone)
 
@@ -158,6 +156,9 @@ async def _handle_tenant_console(
             tenant = await tenants_repository.get_by_owner(db, identity["user_id"])
             if tenant:
                 tenant_id = str(tenant.id)
+                if session is not None:
+                    del session.temp_data["pending_job_id"]
+                    await session_service.save_session(session, touch_ttl=False)
         except Exception:
             logger.exception("Failed to resolve tenant_id for phone=%s", phone)
 

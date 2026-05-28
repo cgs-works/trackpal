@@ -3,6 +3,7 @@
 import asyncio
 import imaplib
 import logging
+from contextlib import suppress
 
 logger = logging.getLogger(__name__)
 
@@ -53,27 +54,30 @@ async def _connect_and_login(
     loop = asyncio.get_running_loop()
 
     def _sync_imap() -> bool:
+        conn: imaplib.IMAP4 | imaplib.IMAP4_SSL | None = None
         try:
             if ssl:
                 conn = imaplib.IMAP4_SSL(host, port)
             else:
                 conn = imaplib.IMAP4(host, port)
-        except Exception as exc:
-            raise ImapConnectionError(
-                f"Cannot connect to {host}:{port}: {exc}"
-            ) from exc
 
-        try:
             result = conn.login(username, password)
             if result[0] != "OK":
                 raise ImapConnectionError(
                     f"Authentication failed: {result[1].decode('utf-8', errors='replace')}"
                 )
-            conn.logout()
             return True
         except ImapConnectionError:
             raise
         except Exception as exc:
+            if conn is None:
+                raise ImapConnectionError(
+                    f"Cannot connect to {host}:{port}: {exc}"
+                ) from exc
             raise ImapConnectionError(f"Login failed: {exc}") from exc
+        finally:
+            if conn is not None:
+                with suppress(Exception):
+                    conn.logout()
 
     return await loop.run_in_executor(None, _sync_imap)

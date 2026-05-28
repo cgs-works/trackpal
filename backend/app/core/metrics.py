@@ -40,8 +40,9 @@ class _MetricsRegistry:
         lines: list[str] = []
         with self._lock:
             for key, val in sorted(self._counters.items()):
-                lines.append(f"# HELP {key} Counter")
-                lines.append(f"# TYPE {key} counter")
+                name = key.split("{", 1)[0]
+                lines.append(f"# HELP {name} Counter")
+                lines.append(f"# TYPE {name} counter")
                 lines.append(f"{key} {val}")
             for name, vals in sorted(self._latencies.items()):
                 if not vals:

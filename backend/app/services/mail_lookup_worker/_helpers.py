@@ -172,7 +172,7 @@ async def handle_deduped_result(
         payload_normalized=extracted_value,
     )
 
-    is_dup = await mailbox_dedupe_repository.is_duplicate(
+    inserted = await mailbox_dedupe_repository.record_delivery_atomic(
         db,
         tenant_id=job.tenant_id,
         mailbox_id=mailbox.id,
@@ -181,20 +181,11 @@ async def handle_deduped_result(
         fingerprint=fingerprint,
     )
 
-    if is_dup:
+    if not inserted:
         await mailbox_lookup_repository.transition_status(
             db, job, "completed", result_type="duplicate_suppressed"
         )
         return
-
-    await mailbox_dedupe_repository.record_delivery(
-        db,
-        tenant_id=job.tenant_id,
-        mailbox_id=mailbox.id,
-        service_key=service_key,
-        message_id=message_id,
-        fingerprint=fingerprint,
-    )
 
     store_result(job.id, extracted_type, extracted_value)
 

@@ -14,10 +14,12 @@ from app.services.mail_lookup_worker import (
     get_ephemeral_result,
     process_job,
 )
+from app.services.mail_lookup_worker._helpers import _filter_emails_by_target_email
 from app.services.mail_lookup_worker.ephemeral_cache import purge_expired, store_result
 from app.services.mail_lookup_worker.fingerprint import (
     compute_fingerprint as _fingerprint,
 )
+import app.services.mail_lookup_worker.providers as pmod
 from app.services.mail_lookup_worker.providers import (
     EmailMessage,
     NonTransientProviderError,
@@ -197,8 +199,6 @@ class TestWorkerPipeline:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -228,8 +228,6 @@ class TestWorkerPipeline:
         provider = StubProvider(emails=[])
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -278,8 +276,6 @@ class TestWorkerPipeline:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -305,8 +301,6 @@ class TestWorkerPipeline:
         provider = StubProvider(emails=[])
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -335,8 +329,6 @@ class TestWorkerPipeline:
         provider = FailingStub()
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -364,8 +356,6 @@ class TestWorkerPipeline:
         provider = RevokedStub()
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -398,8 +388,6 @@ class TestNonTransientErrorCodes:
         provider = FailStub()
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
             await process_job(db_session, job)
             await db_session.commit()
@@ -466,8 +454,6 @@ class TestNonTransientErrorCodes:
         provider = SensitiveStub()
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
             await process_job(db_session, job)
             await db_session.commit()
@@ -498,8 +484,6 @@ class TestNonTransientErrorCodes:
         fixed_received = datetime.now(dt_tz.utc) - timedelta(minutes=2)
 
         # Pre-record without message_id
-        import app.services.mail_lookup_worker.providers as pmod
-
         fp = compute_fingerprint(
             service_key="spotify",
             message_id=None,
@@ -564,8 +548,6 @@ class TestStateTransitions:
         provider = StubProvider(emails=[])
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -591,8 +573,6 @@ class TestStateTransitions:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -623,8 +603,6 @@ class TestTargetEmailFiltering:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
             result = await pmod.fetch_recent_emails(TenantMailbox(), 5)
         finally:
@@ -635,19 +613,6 @@ class TestTargetEmailFiltering:
     # Content-level filtering via _filter_emails_by_target_email —
     # these test the semantic matching layer in _helpers.py
 
-    def _filter_emails_by_target_email_static(
-        self, emails: list, target_email: str
-    ) -> list:
-        """Inline copy of _helpers._filter_emails_by_target_email."""
-        target_lower = target_email.strip().lower()
-        return [
-            e
-            for e in emails
-            if target_lower in e.subject.lower()
-            or target_lower in e.body.lower()
-            or target_lower in [r.lower() for r in e.to_recipients]
-        ]
-
     async def test_content_filter_matches_recipients(self):
         """Email kept when target_email matches to_recipients."""
         email = _make_email(
@@ -655,7 +620,7 @@ class TestTargetEmailFiltering:
             body="Code: ABC123",
             to_recipients=["user@example.com"],
         )
-        result = self._filter_emails_by_target_email_static([email], "user@example.com")
+        result = _filter_emails_by_target_email([email], "user@example.com")
         assert len(result) == 1
 
     async def test_content_filter_matches_body(self):
@@ -666,9 +631,7 @@ class TestTargetEmailFiltering:
             to_recipients=["group@domain.com"],
             message_id="msg-body",
         )
-        result = self._filter_emails_by_target_email_static(
-            [email], "forwarded-user@domain.com"
-        )
+        result = _filter_emails_by_target_email([email], "forwarded-user@domain.com")
         assert len(result) == 1
 
     async def test_content_filter_matches_subject(self):
@@ -679,9 +642,7 @@ class TestTargetEmailFiltering:
             to_recipients=["group-list@domain.com"],
             message_id="msg-subject",
         )
-        result = self._filter_emails_by_target_email_static(
-            [email], "alias-user@domain.com"
-        )
+        result = _filter_emails_by_target_email([email], "alias-user@domain.com")
         assert len(result) == 1
 
     async def test_content_filter_no_match(self):
@@ -692,9 +653,7 @@ class TestTargetEmailFiltering:
             to_recipients=["other@domain.com"],
             message_id="msg-no-match",
         )
-        result = self._filter_emails_by_target_email_static(
-            [email], "unrelated@other.com"
-        )
+        result = _filter_emails_by_target_email([email], "unrelated@other.com")
         assert len(result) == 0
 
     async def test_content_filter_empty_recipients_with_body_match(self):
@@ -705,9 +664,7 @@ class TestTargetEmailFiltering:
             to_recipients=[],
             message_id="msg-empty-recip",
         )
-        result = self._filter_emails_by_target_email_static(
-            [email], "target@example.com"
-        )
+        result = _filter_emails_by_target_email([email], "target@example.com")
         assert len(result) == 1
 
     async def test_content_filter_case_insensitive(self):
@@ -718,7 +675,7 @@ class TestTargetEmailFiltering:
             to_recipients=[],
             message_id="msg-case",
         )
-        result = self._filter_emails_by_target_email_static([email], "user@example.com")
+        result = _filter_emails_by_target_email([email], "user@example.com")
         assert len(result) == 1
 
     async def test_worker_with_target_email_found(self, db_session):
@@ -742,8 +699,6 @@ class TestTargetEmailFiltering:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -776,8 +731,6 @@ class TestTargetEmailFiltering:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -813,8 +766,6 @@ class TestTargetEmailFiltering:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -853,8 +804,6 @@ class TestTargetEmailFiltering:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)
@@ -889,8 +838,6 @@ class TestTargetEmailFiltering:
         )
         old_active = active_provider
         try:
-            import app.services.mail_lookup_worker.providers as pmod
-
             pmod.active_provider = provider
 
             await process_job(db_session, job)

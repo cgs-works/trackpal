@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -37,7 +37,9 @@ class MailCodeDeliveryLog(Base, TimestampMixin):
     message_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
     fingerprint: Mapped[str] = mapped_column(String(128), nullable=False)
     delivered_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=datetime.now
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
     )
 
     tenant = relationship("Tenant")

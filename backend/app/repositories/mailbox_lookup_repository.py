@@ -21,7 +21,7 @@ async def create_job(
     tenant_id: UUID,
     mailbox_id: UUID,
     service_key: str,
-    target_email: str | None = None,
+    target_email: str = "",
     ttl_hours: int = JOB_TTL_DEFAULT_HOURS,
 ) -> MailLookupJob:
     """Create a new lookup job in pending status."""
@@ -55,7 +55,10 @@ async def list_pending_jobs(db: AsyncSession, limit: int = 10) -> list[MailLooku
     """List pending jobs ready for processing, ordered by creation."""
     result = await db.execute(
         select(MailLookupJob)
-        .where(MailLookupJob.status == "pending")
+        .where(
+            MailLookupJob.status == "pending",
+            MailLookupJob.expires_at > datetime.now(timezone.utc),
+        )
         .order_by(MailLookupJob.created_at.asc())
         .limit(limit)
     )

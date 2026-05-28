@@ -36,10 +36,6 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 # Intervalo de polling (segundos) para reescanear correos
 POLL_INTERVAL_SECONDS = int(os.environ.get("IMAP_POLL_INTERVAL_SECONDS", "10"))
 
-mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-mail.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
-mail.select("inbox")
-
 
 def get_bot_mode():
     """
@@ -503,7 +499,7 @@ def process_email(email_message, og_mail, subject, service_name, admin_id: int):
         else:
             print("Ignoring email with subject:", subject)
             logging.info(f"Processed email: og_mail: {og_mail}, Subject: {subject}")
-    except BaseException as error:
+    except Exception as error:
         print(f"An error occurred: {error}")
         logging.error(f"An error occurred: {error}")
 
@@ -640,20 +636,11 @@ def sendToPostgreSQL(
 
         # Consulta SQL con placeholders %s para psycopg2
         if message_id:
-            # Intentar insertar también el message_id si la columna existe
-            try:
-                sql = (
-                    "INSERT INTO codes (admin_id, mail, url, date, service, used, message_id) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-                )
-                val = (admin_id, mail, url, date, serv, used, message_id)
-            except psycopg2.errors.UndefinedColumn:
-                conexion.rollback()
-                sql = (
-                    "INSERT INTO codes (admin_id, mail, url, date, service, used) "
-                    "VALUES (%s, %s, %s, %s, %s, %s)"
-                )
-                val = (admin_id, mail, url, date, serv, used)
+            sql = (
+                "INSERT INTO codes (admin_id, mail, url, date, service, used, message_id) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            )
+            val = (admin_id, mail, url, date, serv, used, message_id)
         else:
             sql = (
                 "INSERT INTO codes (admin_id, mail, url, date, service, used) "
@@ -661,7 +648,16 @@ def sendToPostgreSQL(
             )
             val = (admin_id, mail, url, date, serv, used)
 
-        cursor.execute(sql, val)
+        try:
+            cursor.execute(sql, val)
+        except psycopg2.errors.UndefinedColumn:
+            conexion.rollback()
+            sql = (
+                "INSERT INTO codes (admin_id, mail, url, date, service, used) "
+                "VALUES (%s, %s, %s, %s, %s, %s)"
+            )
+            val = (admin_id, mail, url, date, serv, used)
+            cursor.execute(sql, val)
 
         conexion.commit()
 

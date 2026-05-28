@@ -10,7 +10,7 @@ happens in the worker.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import NamedTuple, TypedDict
 
 from ._types import ResultType
@@ -141,16 +141,14 @@ def extract_newest_from_emails(
     Expects ``emails`` to be pre-filtered by provider (Gmail API, Graph,
     IMAP) before calling this function.
     """
-    now = datetime.now(timezone.utc)
-    cutoff = now.replace(tzinfo=None) - __import__("datetime").timedelta(
-        minutes=max_age_minutes
-    )
+    now = datetime.now(UTC)
+    cutoff = now - __import__("datetime").timedelta(minutes=max_age_minutes)
 
     # Filter by age window
-    candidates = [e for e in emails if _ensure_naive(e["received_at"]) >= cutoff]
+    candidates = [e for e in emails if _ensure_utc_aware(e["received_at"]) >= cutoff]
 
     # Sort newest first
-    candidates.sort(key=lambda e: e["received_at"], reverse=True)
+    candidates.sort(key=lambda e: _ensure_utc_aware(e["received_at"]), reverse=True)
 
     for email in candidates:
         result = extract_from_body(email["body"], service_key, subject=email["subject"])
@@ -160,6 +158,8 @@ def extract_newest_from_emails(
     return None
 
 
-def _ensure_naive(dt: datetime) -> datetime:
-    """Strip timezone info for comparison when mixing aware/naive datetimes."""
-    return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+def _ensure_utc_aware(dt: datetime) -> datetime:
+    """Normalize datetime to UTC-aware for safe comparisons/sorting."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)

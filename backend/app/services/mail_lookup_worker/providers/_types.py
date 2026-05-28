@@ -82,8 +82,6 @@ def _parse_email_date(date_str: str) -> datetime:
     """Parse RFC 2822 or similar date string to datetime (UTC)."""
     try:
         dt = parsedate_to_datetime(date_str)
-        if dt is None:
-            return datetime.now(timezone.utc)
         if dt.tzinfo is None:
             return dt.replace(tzinfo=timezone.utc)
         return dt

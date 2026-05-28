@@ -83,6 +83,12 @@ async def _perform_oauth_test(db, mailbox: TenantMailbox) -> MailboxTestResponse
             detail="Mailbox is not OAuth-configured",
         )
     if result.status == "revoked":
+        await mailbox_config_repository.update_connection_test(
+            db,
+            mailbox,
+            success=False,
+            error="OAuth tokens revoked",
+        )
         metrics.inc("mailbox_test_total", method="oauth", status="revoked")
         return MailboxTestResponse(
             success=False,

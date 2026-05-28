@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -23,9 +23,11 @@ class MailLookupJob(Base, TimestampMixin):
         nullable=False,
     )
     service_key: Mapped[str] = mapped_column(String(64), nullable=False)
-    target_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    target_email: Mapped[str] = mapped_column(String(255), nullable=False)
     requested_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=datetime.now
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
     )
     status: Mapped[str] = mapped_column(
         String(20), default="pending", server_default="pending", nullable=False

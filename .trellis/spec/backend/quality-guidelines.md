@@ -324,15 +324,18 @@ identity = await auth_service.identify_by_contact(db, phone=phone, sender_lid=se
 ## Scenario: Mail lookup polling contract must be tenant-scoped and target-email-bound
 
 ### 1. Scope / Trigger
+
 - Trigger: n8n mail lookup polling (`/integrations/n8n/mail/lookups/{job_id}`) and worker extraction flow for tenant mailbox codes.
 
 ### 2. Signatures
+
 - API create: `POST /api/v1/integrations/n8n/mail/lookups`
 - API poll: `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
 - Request schema: `LookupCreateRequest(service_key, target_email, tenant_instance|tenant_id)`
 - Response schema: `LookupStatusResponse(job_id, status, result_type, result_value?, error_code?)`
 
 ### 3. Contracts
+
 - `tenant_id` is mandatory for poll in n8n integration path.
 - `job_id` must always be resolved with tenant scope (never raw job lookup only).
 - `target_email` is required on create.
@@ -340,6 +343,7 @@ identity = await auth_service.identify_by_contact(db, phone=phone, sender_lid=se
 - WhatsApp->n8n handoff must carry both `lookup_job_id` and `tenant_id` for polling.
 
 ### 4. Validation & Error Matrix
+
 - Missing `tenant_id` on poll -> 422 validation error.
 - `job_id` not owned by `tenant_id` -> 404 not found.
 - Missing/invalid `target_email` -> safe validation error (`missing_target_email` / 400).
@@ -347,11 +351,13 @@ identity = await auth_service.identify_by_contact(db, phone=phone, sender_lid=se
 - Non-transient provider failures -> explicit safe `error_code` (`auth_failed`, `permission_denied`, `provider_config_error`), not generic `internal_error`.
 
 ### 5. Good/Base/Bad Cases
+
 - Good: tenant polls own job with `tenant_id`; target email present in mail body; returns `code|url`.
 - Base: tenant polls own job, no matching mail in 5m window; returns `not_found`.
 - Bad: tenant B polls tenant A job by guessed `job_id`; endpoint leaks status/result.
 
 ### 6. Tests Required
+
 - API integration:
   - poll without `tenant_id` -> 422
   - cross-tenant poll with valid foreign `job_id` -> 404
@@ -364,12 +370,15 @@ identity = await auth_service.identify_by_contact(db, phone=phone, sender_lid=se
   - when `lookup_job_id` present, response also includes `tenant_id` for n8n polling scope
 
 ### 7. Wrong vs Correct
+
 #### Wrong
+
 ```python
 job = await mailbox_lookup_repository.get_job(db, job_id)
 ```
 
 #### Correct
+
 ```python
 job = await mailbox_lookup_repository.get_job(db, job_id, tenant_id=tenant_id)
 ```

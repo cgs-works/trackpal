@@ -88,7 +88,11 @@ async def upsert_mailbox(
             mailbox.imap_host = payload.imap_host
             mailbox.imap_port = payload.imap_port
             mailbox.imap_ssl = payload.imap_ssl
-            mailbox.imap_password_encrypted = encrypt_value(payload.imap_password)
+            mailbox.imap_password_encrypted = (
+                encrypt_value(payload.imap_password)
+                if payload.imap_password is not None
+                else None
+            )
         mailbox = await mailbox_config_repository.create(db, tenant_id, mailbox)
 
     await db.commit()

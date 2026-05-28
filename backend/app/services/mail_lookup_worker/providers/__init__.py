@@ -70,6 +70,11 @@ async def fetch_recent_emails(
             mailbox, window_minutes, target_email=target_email, db=db
         )
     elif mailbox.auth_method == "oauth":
+        if db is None:
+            raise NonTransientProviderError(
+                "DB session required for OAuth provider fetch",
+                error_code="provider_config_error",
+            )
         if mailbox.provider == "google":
             emails = await fetch_google_emails(mailbox, window_minutes, db=db)
         elif mailbox.provider == "microsoft":

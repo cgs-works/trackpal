@@ -33,7 +33,6 @@ def upgrade() -> None:
             postgresql.UUID(as_uuid=True),
             sa.ForeignKey("tenants.id", ondelete="CASCADE"),
             nullable=False,
-            unique=True,
         ),
         sa.Column("mailbox_email", sa.String(255), nullable=False),
         sa.Column("provider", sa.String(50), nullable=False),

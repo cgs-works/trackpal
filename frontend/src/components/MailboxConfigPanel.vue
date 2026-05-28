@@ -84,8 +84,13 @@ async function startOAuth(provider) {
   oauthProvider.value = provider
   try {
     const response = await api.post(`/tenant/mailbox/oauth/${provider}/start`)
-    window.open(response.data.auth_url, '_blank')
-    mailboxSuccess.value = i18nStore.t('frontend.mailbox.oauth_started')
+    const popup = window.open(response.data.auth_url, '_blank', 'noopener,noreferrer')
+    if (popup && !popup.closed) {
+      mailboxSuccess.value = i18nStore.t('frontend.mailbox.oauth_started')
+    } else {
+      mailboxError.value = i18nStore.t('frontend.mailbox.error_oauth')
+      console.error('OAuth popup blocked or failed to open')
+    }
   } catch (error) {
     mailboxError.value = getApiError(error, i18nStore.t('frontend.mailbox.error_oauth'))
     oauthProvider.value = ''

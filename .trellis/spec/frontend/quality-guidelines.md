@@ -19,9 +19,11 @@
 ## Scenario: Tenant mailbox panel and WhatsApp code lookup handoff
 
 ### 1. Scope / Trigger
+
 - Trigger: tenant dashboard mailbox configuration UI + WhatsApp/n8n code lookup flow integration.
 
 ### 2. Signatures
+
 - Frontend API calls:
   - `GET /api/v1/tenant/mailbox/`
   - `PUT /api/v1/tenant/mailbox/`
@@ -32,6 +34,7 @@
   - `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
 
 ### 3. Contracts
+
 - Mailbox panel must render status/method/provider from backend response (`disconnected|connected|error|revoked`).
 - IMAP submit path must send `provider=imap_custom` and required IMAP fields.
 - OAuth connect buttons must call provider-specific start endpoint and open returned `auth_url`.
@@ -39,6 +42,7 @@
 - WhatsApp lookup flow requires n8n to poll with both `lookup_job_id` and `tenant_id` when present.
 
 ### 4. Validation & Error Matrix
+
 - `GET mailbox` 404 -> render "not configured" state (not global error screen).
 - `PUT mailbox` invalid IMAP fields -> show inline/form error and keep form state.
 - `POST mailbox/test` failure -> show user-facing failure status; keep credentials unchanged.
@@ -46,11 +50,13 @@
 - n8n poll without `tenant_id` -> backend 422 (workflow misconfiguration; treat as integration bug).
 
 ### 5. Good/Base/Bad Cases
+
 - Good: user clicks "Connect Google" -> OAuth starts -> dashboard reflects `connected` on return.
 - Base: mailbox disconnected -> panel still allows IMAP configure + OAuth connect actions.
 - Bad: UI sending poll calls without `tenant_id` or hiding backend error while loop continues.
 
 ### 6. Tests Required
+
 - Frontend build: `cd frontend && npm run build`.
 - Manual UI checks:
   - mailbox disconnected/connected/error/revoked states
@@ -61,12 +67,15 @@
   - verify n8n workflow JSON poll URL includes `tenant_id` query binding.
 
 ### 7. Wrong vs Correct
+
 #### Wrong
+
 ```js
 const pollUrl = `/api/v1/integrations/n8n/mail/lookups/${jobId}`;
 ```
 
 #### Correct
+
 ```js
 const pollUrl = `/api/v1/integrations/n8n/mail/lookups/${jobId}?tenant_id=${tenantId}`;
 ```

@@ -8,3 +8,4 @@ skills-lock.json
 /frontend/.pi-lens
 .pytest_cache
 .ruff_cache
+/.pi-lens

@@ -63,6 +63,7 @@ async def _seed_job(
         tenant_id=tenant_id,
         mailbox_id=mailbox_id,
         service_key=service_key,
+        target_email=f"test+{mailbox_id}@example.com",
         status=status,
         expires_at=datetime.now(dt_tz.utc) + timedelta(hours=expires_in_hours),
     )

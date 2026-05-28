@@ -72,7 +72,7 @@
             {
               "name": "trackpal_n8n_api_key",
               "type": "string",
-              "value": "fXzqZpBtpAKC9ipa7St83cAYJadAK72P",
+              "value": "={{ $env.TRACKPAL_N8N_API_KEY || '' }}",
               "id": "be563e0a-1c0d-44ce-b859-c4f94c0d6363"
             },
             {
@@ -125,7 +125,7 @@
           "number": [],
           "boolean": [
             {
-              "value1": "={{ lookup_job_id !== null }}",
+              "value1": "={{ $json.lookup_job_id !== null }}",
               "value2": "",
               "options": {}
             }

@@ -51,6 +51,8 @@ async function createService() {
 }
 
 async function renameService(service) {
+  catalogMessage.value = ''
+  errorMessage.value = ''
   const name = window.prompt(i18nStore.t('frontend.catalog.rename_service_prompt'), service.name)
   if (!name) return
   try {
@@ -62,6 +64,8 @@ async function renameService(service) {
 }
 
 async function deleteService(service) {
+  catalogMessage.value = ''
+  errorMessage.value = ''
   if (!window.confirm(i18nStore.t('frontend.catalog.delete_service_confirm', { name: service.name }))) return
   try {
     await api.delete(`/catalog/services/${service.id}`)
@@ -73,6 +77,8 @@ async function deleteService(service) {
 }
 
 async function createPlan() {
+  catalogMessage.value = ''
+  errorMessage.value = ''
   if (!selectedServiceId.value) return
   try {
     await api.post(`/catalog/services/${selectedServiceId.value}/plans`, { name: planName.value })
@@ -84,6 +90,8 @@ async function createPlan() {
 }
 
 async function renamePlan(plan) {
+  catalogMessage.value = ''
+  errorMessage.value = ''
   const name = window.prompt(i18nStore.t('frontend.catalog.rename_plan_prompt'), plan.name)
   if (!name) return
   try {
@@ -95,6 +103,8 @@ async function renamePlan(plan) {
 }
 
 async function deletePlan(plan) {
+  catalogMessage.value = ''
+  errorMessage.value = ''
   if (!window.confirm(i18nStore.t('frontend.catalog.delete_plan_confirm', { name: plan.name }))) return
   try {
     await api.delete(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`)

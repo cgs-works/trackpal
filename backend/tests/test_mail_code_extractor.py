@@ -640,12 +640,57 @@ class TestLegacyCompatibility:
         assert match_subject("Universal+ código de activación", "universal_plus")
 
     def test_all_regexes_match_at_least_one_test_case(self):
-        """Smoke check: every extraction rule has at least one test that hits it.
+        """Every regex must match at least one known positive sample."""
+        positive_cases = {
+            "netflix": [
+                f"[{URL}]",
+                f'<a href="{URL}">Verify</a>',
+                f'"{URL}"',
+                f"Escribe este código para iniciar sesión\n\n{CODE_4}",
+                f"Ingresa este código para iniciar sesión\n\n{CODE_4}",
+                f"Enter this code to sign in\n\n{CODE_4}",
+                f'<td style="font-size: 28px; line-height: 32px; letter-spacing: 6px; font-family: NetflixSans-Regular, Helvetica, Roboto, Segoe UI, sans-serif; font-weight: 400; padding-top: 20px; color: #221f1f;">{CODE_4}</td>',
+                f"Confirma el cambio en tu cuenta con este código:\n\n{CODE_6}",
+                f"Confirma el cambio de cuenta con este código:\n\n{CODE_6}",
+                f"Confirm your account change with this code:\n\n{CODE_6}",
+                f"Código de verificación:\n\n{CODE_6}",
+            ],
+            "disney": [
+                f'<td style="x"> {CODE_6} </td>',
+                f"token {CODE_6} body",
+            ],
+            "hbo_max": [
+                f"Tu código de un solo uso - {CODE_6}",
+                f"Utiliza este código para iniciar sesión en tu cuenta de Max. Tu código de un solo uso: {CODE_6}",
+                f"\n\n{CODE_6}\n\n",
+            ],
+            "spotify": [
+                f"Enter this code on the login screen: {SPOTIFY_CODE}",
+                f"Tu código de inicio de sesión de Spotify: {CODE_6}",
+                f"Tu código de inicio de sesión de Spotify es {CODE_6}",
+                f"Ingresa este código en la pantalla de inicio de sesión: {CODE_6}",
+                f"{CODE_6} Este código es válido por 5 minutos",
+                f"{CODE_6} - Your Spotify login code",
+                f"{CODE_6} This code is valid for 5 minutes",
+            ],
+            "universal_plus": [
+                f"<p>código de activación</p><strong>{UNIVERSAL_CODE}</strong>",
+                f"<strong>{UNIVERSAL_CODE}</strong>",
+                f"\n{UNIVERSAL_CODE}\n",
+                f"código de activación usa {UNIVERSAL_CODE}",
+            ],
+            "prime_video": [
+                f"Tu código de verificación es: {CODE_6}",
+                f'<td style="background-color: #D3D3D3;"> {CODE_6} </td>',
+                f"\n{CODE_6}\n",
+            ],
+        }
 
-        Note: This is a structural test that confirms each rule compiles
-        and is reachable by at least one test case in this suite.
-        """
-        for _key, entry in CATALOG_V1.items():
+        for key, entry in CATALOG_V1.items():
+            samples = positive_cases.get(key, [])
+            assert samples, f"No positive samples configured for {key}"
             for rule in entry["extraction_rules"]:
                 pattern = re.compile(rule["regex"])
-                assert pattern.search("") is None  # doesn't crash on empty
+                assert any(pattern.search(sample) for sample in samples), (
+                    f"Regex '{rule['desc']}' in {key} has no matching positive sample"
+                )

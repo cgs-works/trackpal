@@ -99,7 +99,7 @@ async def create_lookup(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tenant has no mailbox configured",
         )
-    if mailbox.status not in ("connected", "error"):
+    if mailbox.status != "connected":
         metrics.inc(
             "lookup_api_create",
             status="bad_mailbox_status",
@@ -119,14 +119,13 @@ async def create_lookup(
         target_email=payload.target_email,
     )
     await db.flush()
+    await db.commit()
 
     # 5. Enqueue to Redis (best-effort)
     manager = get_redis_manager()
     enqueued = await enqueue_job(manager, job.id)
     if not enqueued:
         logger.warning("Job %s created but not enqueued (Redis unavailable)", job.id)
-
-    await db.commit()
     metrics.inc("lookup_api_create", status="ok", service=payload.service_key)
     return LookupCreateResponse(
         job_id=job.id,

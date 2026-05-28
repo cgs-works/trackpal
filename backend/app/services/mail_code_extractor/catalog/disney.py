@@ -12,14 +12,14 @@ SERVICE: ServiceEntry = {
     ],
     "extraction_rules": [
         {
-            "regex": r'exactly;">(\d{6})\s*<\/td>',
+            "regex": r"<td\b[^>]*>\s*(\d{6})\s*</td>",
             "type": "code",
-            "desc": "6-digit code in <td> with inline style",
+            "desc": "6-digit code inside any <td>",
         },
         {
-            "regex": r'line-height:38px; mso-line-height-rule: exactly;">\s*(\d{6})\s*<\/td>',
+            "regex": r"\b(\d{6})\b",
             "type": "code",
-            "desc": "6-digit code in <td> with mso style",
+            "desc": "Fallback standalone 6-digit code",
         },
     ],
 }

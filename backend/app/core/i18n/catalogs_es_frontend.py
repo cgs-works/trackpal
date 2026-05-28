@@ -199,7 +199,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.status_connected": "Conectado",
     "frontend.mailbox.status_disconnected": "Desconectado",
     "frontend.mailbox.status_error": "Error",
-    "frontend.mailbox.status_revoked": "Revocado — Reconocexión requerida",
+    "frontend.mailbox.status_revoked": "Revocado — Reconexión requerida",
     "frontend.mailbox.connect_google": "Conectar Gmail",
     "frontend.mailbox.connect_microsoft": "Conectar Outlook",
     "frontend.mailbox.connect_oauth": "Conectar con OAuth",

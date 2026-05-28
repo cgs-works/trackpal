@@ -26,17 +26,17 @@ SERVICE: ServiceEntry = {
             "desc": "Travel verify link (HTML href)",
         },
         {
-            "regex": r"Escribe este código para iniciar sesión\r\n\r\nEscribe este código para iniciar sesión\r\n\r\n(\d{4})\r\n\r\n",
+            "regex": r"Escribe este código para iniciar sesión(?:\r?\n\s*){1,3}(?:Escribe este código para iniciar sesión(?:\r?\n\s*){1,3})?(\d{4})",
             "type": "code",
             "desc": "4-digit sign-in (ES)",
         },
         {
-            "regex": r"Ingresa este código para iniciar sesión\r\n\r\nIngresa este código para iniciar sesión\r\n\r\n(\d{4})\r\n\r\n",
+            "regex": r"Ingresa este código para iniciar sesión(?:\r?\n\s*){1,3}(?:Ingresa este código para iniciar sesión(?:\r?\n\s*){1,3})?(\d{4})",
             "type": "code",
             "desc": "4-digit sign-in (ES alt)",
         },
         {
-            "regex": r"Enter this code to sign in\r\n\r\nEnter this code to sign in\r\n\r\n(\d{4})\r\n\r\n",
+            "regex": r"Enter this code to sign in(?:\r?\n\s*){1,3}(?:Enter this code to sign in(?:\r?\n\s*){1,3})?(\d{4})",
             "type": "code",
             "desc": "4-digit sign-in (EN)",
         },
@@ -46,22 +46,22 @@ SERVICE: ServiceEntry = {
             "desc": "4-digit sign-in (inline style HTML)",
         },
         {
-            "regex": r"Confirma el cambio en tu cuenta con este código:\r\n\r\n(\d{6})\r\n\r\n",
+            "regex": r"Confirma el cambio en tu cuenta con este código:(?:\r?\n\s*)+(\d{6})",
             "type": "code",
             "desc": "6-digit account change (ES)",
         },
         {
-            "regex": r"Confirma el cambio de cuenta con este código:\r\n\r\n(\d{6})\r\n\r\n",
+            "regex": r"Confirma el cambio de cuenta con este código:(?:\r?\n\s*)+(\d{6})",
             "type": "code",
             "desc": "6-digit account change (ES alt)",
         },
         {
-            "regex": r"Confirm your account change with this code:\r\n\r\n(\d{6})\r\n\r\n",
+            "regex": r"Confirm your account change with this code:(?:\r?\n\s*)+(\d{6})",
             "type": "code",
             "desc": "6-digit account change (EN)",
         },
         {
-            "regex": r"Código de verificación:\r\n\r\n(\d{6})\r\n\r\n",
+            "regex": r"Código de verificación:(?:\r?\n\s*)+(\d{6})",
             "type": "code",
             "desc": "6-digit access attempt code",
         },

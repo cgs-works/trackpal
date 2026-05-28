@@ -55,9 +55,10 @@ async def exchange_code(
     tenant_id: str | None = None,
 ) -> MicrosoftTokenResult:
     """Exchange authorization code for tokens via Microsoft identity platform."""
+    token_url = f"{_authority(tenant_id)}/oauth2/v2.0/token"
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            MICROSOFT_TOKEN_URL,
+            token_url,
             data={
                 "client_id": client_id,
                 "client_secret": client_secret,
@@ -67,7 +68,10 @@ async def exchange_code(
             },
             headers={"Accept": "application/json"},
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise OAuthTokenError(f"Invalid token response body: {resp.text}") from exc
 
     _check_token_error(data)
     resp.raise_for_status()
@@ -89,9 +93,10 @@ async def refresh_access_token(
 
     Raises ``InvalidGrantError`` when the refresh token is invalid/revoked.
     """
+    token_url = f"{_authority(tenant_id)}/oauth2/v2.0/token"
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            MICROSOFT_TOKEN_URL,
+            token_url,
             data={
                 "client_id": client_id,
                 "client_secret": client_secret,
@@ -100,7 +105,10 @@ async def refresh_access_token(
             },
             headers={"Accept": "application/json"},
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise OAuthTokenError(f"Invalid token response body: {resp.text}") from exc
 
     _check_token_error(data)
     resp.raise_for_status()
