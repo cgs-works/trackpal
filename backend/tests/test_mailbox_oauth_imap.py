@@ -1,10 +1,9 @@
 """Tests for Phase 2: OAuth service, IMAP test, exclusivity, refresh failure."""
 
 import asyncio
-import re
 import uuid
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
@@ -575,16 +574,16 @@ class TestImapService:
                 "app.services.imap_service.asyncio.wait_for",
                 side_effect=asyncio.TimeoutError,
             ),
+            pytest.raises(ImapConnectionError, match="timed out"),
         ):
-            with pytest.raises(ImapConnectionError, match="timed out"):
-                await _test_imap_connection(
-                    host="imap.example.com",
-                    port=993,
-                    ssl=True,
-                    username="user",
-                    password="pass",
-                    timeout=1,
-                )
+            await _test_imap_connection(
+                host="imap.example.com",
+                port=993,
+                ssl=True,
+                username="user",
+                password="pass",
+                timeout=1,
+            )
 
     @pytest.mark.asyncio
     async def test_imap_connection_failure_raises_imap_error(self):
@@ -796,6 +795,61 @@ class TestMailboxProviderTokenRefresh:
         # Refresh updated the stored token
         new_token = decrypt_value(mb.oauth_access_token_encrypted)
         assert new_token == "new-access-token"
+
+    @respx.mock
+    async def test_google_html_only_message_body_supported(self, db_session):
+        """HTML-only Gmail message should still be parsed and returned."""
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(
+            db_session,
+            tenant.id,
+            provider="google",
+            auth_method="oauth",
+            status="connected",
+            oauth_access_token_encrypted=encrypt_value("valid-token"),
+            oauth_refresh_token_encrypted=encrypt_value("valid-refresh"),
+        )
+
+        list_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+        msg_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/msg-html-1"
+
+        respx.get(list_url).respond(
+            200,
+            json={
+                "messages": [{"id": "msg-html-1"}],
+                "resultSizeEstimate": 1,
+            },
+        )
+
+        respx.get(msg_url).respond(
+            200,
+            json={
+                "id": "msg-html-1",
+                "payload": {
+                    "mimeType": "text/html",
+                    "headers": [
+                        {"name": "Subject", "value": "Universal+ código de activación"},
+                        {"name": "Message-ID", "value": "<html@mail>"},
+                        {"name": "From", "value": "no-reply@universalplus.com"},
+                        {"name": "To", "value": "ann773@netshopping.vip"},
+                        {"name": "Date", "value": "Thu, 28 May 2026 22:55:20 +0000"},
+                    ],
+                    "body": {
+                        "data": "PGh0bWw+PGJvZHk+PHA+VW5pdmVyc2FsKyBjw7NkaWdvIGRlIGFjdGl2YWNpw7NuPC9wPjxoMT48c3Ryb25nPlBGSlFYVjwvc3Ryb25nPjwvaDE+PC9ib2R5PjwvaHRtbD4="
+                    },
+                },
+            },
+        )
+
+        from app.services.mail_lookup_worker.providers._google import (
+            fetch_google_emails,
+        )
+
+        result = await fetch_google_emails(mb, 5, db=db_session)
+
+        assert len(result) == 1
+        assert result[0].message_id == "<html@mail>"
+        assert "PFJQXV" in result[0].body
 
     # ── Google: invalid_grant revoked ────────────────────────────────────
 

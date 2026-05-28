@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import base64
 import logging
+import re
+from html import unescape
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -166,23 +168,51 @@ async def _maybe_refresh_oauth(db: AsyncSession, mailbox: TenantMailbox) -> None
 
 
 def _extract_gmail_body(payload: dict) -> str | None:
-    """Recursively extract plain text body from Gmail message payload."""
-    if payload.get("mimeType") == "text/plain":
-        body_data = payload.get("body", {}).get("data", "")
-        if body_data:
-            try:
-                decoded = base64.urlsafe_b64decode(body_data).decode(
-                    "utf-8", errors="replace"
-                )
-                return decoded
-            except Exception:
-                return body_data
-        return ""
+    """Recursively extract body from Gmail payload.
+
+    Priority:
+    1) text/plain
+    2) text/html (stripped to text)
+    """
+    mime_type = payload.get("mimeType")
+    body_data = payload.get("body", {}).get("data", "")
+
+    if mime_type == "text/plain" and body_data:
+        return _decode_gmail_body_data(body_data)
+
+    if mime_type == "text/html" and body_data:
+        html_body = _decode_gmail_body_data(body_data)
+        return _html_to_text(html_body)
 
     parts = payload.get("parts", [])
+    html_fallback: str | None = None
     for part in parts:
+        part_mime = part.get("mimeType")
         result = _extract_gmail_body(part)
-        if result:
+        if not result:
+            continue
+        if part_mime == "text/plain":
             return result
+        if part_mime == "text/html" and html_fallback is None:
+            html_fallback = result
 
-    return ""
+    return html_fallback or ""
+
+
+def _decode_gmail_body_data(body_data: str) -> str:
+    """Decode Gmail base64url body payload."""
+    try:
+        return base64.urlsafe_b64decode(body_data).decode("utf-8", errors="replace")
+    except Exception:
+        return body_data
+
+
+def _html_to_text(html_body: str) -> str:
+    """Convert HTML email body to readable text for extractor regexes."""
+    text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html_body)
+    text = re.sub(r"(?is)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?is)</p>|</div>|</tr>|</li>|</h[1-6]>", "\n", text)
+    text = re.sub(r"(?is)<[^>]+>", " ", text)
+    text = unescape(text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
