@@ -18,6 +18,12 @@ class GoogleTokenResult:
     scope: str
 
 
+@dataclass
+class GoogleUserInfo:
+    user_id: str
+    email: str | None
+
+
 def build_auth_url(client_id: str, redirect_uri: str, state: str) -> str:
     """Build Google OAuth authorization URL for Gmail read-only access.
 
@@ -121,3 +127,19 @@ class InvalidGrantError(Exception):
 
 class OAuthTokenError(Exception):
     """Transient or provider-level token error (not invalid_grant)."""
+
+
+async def fetch_user_info(access_token: str) -> GoogleUserInfo:
+    """Fetch Google profile email/id from userinfo endpoint."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    return GoogleUserInfo(
+        user_id=str(data.get("sub", "")),
+        email=data.get("email"),
+    )

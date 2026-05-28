@@ -22,6 +22,12 @@ class MicrosoftTokenResult:
     scope: str
 
 
+@dataclass
+class MicrosoftUserInfo:
+    user_id: str
+    email: str | None
+
+
 def _authority(tenant_id: str | None = None) -> str:
     """Build Microsoft authority URL from tenant ID (default: ``consumers``)."""
     tid = tenant_id or settings.microsoft_oauth_tenant_id
@@ -129,3 +135,19 @@ def _check_token_error(data: dict) -> None:
     if error == "invalid_grant":
         raise InvalidGrantError(desc)
     raise OAuthTokenError(desc)
+
+
+async def fetch_user_info(access_token: str) -> MicrosoftUserInfo:
+    """Fetch Microsoft profile email/id via Graph /me."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    return MicrosoftUserInfo(
+        user_id=str(data.get("id", "")),
+        email=data.get("mail") or data.get("userPrincipalName"),
+    )

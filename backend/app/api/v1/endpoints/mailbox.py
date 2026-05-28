@@ -139,13 +139,6 @@ async def oauth_start(
             detail=f"Unsupported OAuth provider: {provider}",
         )
 
-    mailbox = await mailbox_config_repository.get_by_tenant(db, tenant_id)
-    if mailbox is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Configure mailbox email before connecting OAuth",
-        )
-
     result = await oauth_service.start_oauth(db, tenant_id, provider)
     if result is None:
         raise HTTPException(
@@ -185,12 +178,12 @@ async def oauth_callback(
     return mailbox_response(mailbox)
 
 
-@router.post("/disconnect", response_model=MailboxResponse)
+@router.post("/disconnect", status_code=status.HTTP_204_NO_CONTENT)
 async def disconnect_mailbox(
     db: DbDep,
     tenant_id: ActiveTenantId,
 ):
-    """Disconnect mailbox and clear all credentials."""
+    """Disconnect mailbox by deleting tenant mailbox config."""
     mailbox = await mailbox_config_repository.get_by_tenant(db, tenant_id)
     if mailbox is None:
         raise HTTPException(
@@ -198,6 +191,5 @@ async def disconnect_mailbox(
             detail="Mailbox not configured",
         )
 
-    await oauth_service.disconnect(db, mailbox)
+    await mailbox_config_repository.delete(db, mailbox)
     await db.commit()
-    return mailbox_response(mailbox)

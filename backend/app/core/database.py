@@ -42,11 +42,15 @@ async def restore_rls_context(session: AsyncSession) -> None:
     context = get_rls_context(session)
     if context is None:
         return
+    user_id = context.get("user_id")
+    role = context.get("role")
+    if not isinstance(user_id, str) or not isinstance(role, str):
+        return
     await set_rls_context(
         session,
-        context["user_id"],
-        context["role"],
-        context["active_tenant_id"],
+        user_id,
+        role,
+        context.get("active_tenant_id"),
     )
 
 
@@ -65,7 +69,9 @@ async def set_internal_rls_context(session: AsyncSession) -> None:
     await set_rls_context(session, SYSTEM_RLS_USER_ID, "master", None)
 
 
-async def set_internal_tenant_rls_context(session: AsyncSession, tenant_id: str) -> None:
+async def set_internal_tenant_rls_context(
+    session: AsyncSession, tenant_id: str
+) -> None:
     """Set internal master context scoped to a tenant-owned FORCE-RLS table.
 
     Use for maintenance operations that must see tenant-owned rows even when

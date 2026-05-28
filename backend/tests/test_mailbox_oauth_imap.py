@@ -347,6 +347,7 @@ class TestMailboxOAuthService:
         assert isinstance(result, OAuthStartResponse)
         assert "login.microsoftonline.com" in result.auth_url
         payload = _decode_state_token(result.state)
+        assert payload is not None
         assert payload["provider"] == "microsoft"
 
     @pytest.mark.asyncio
@@ -399,14 +400,33 @@ class TestMailboxOAuthService:
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_complete_oauth_no_mailbox_config(self, db_session):
-        """Should fail if mailbox not configured before OAuth."""
+    async def test_complete_oauth_creates_mailbox_from_provider_email(self, db_session):
+        """Should create mailbox when OAuth succeeds and tenant had no mailbox."""
         tenant = await _seed_tenant(db_session)
         state = _create_state_token(tenant.id, "google")
 
-        # No mailbox seeded for this tenant
-        with pytest.raises(ValueError, match="No mailbox config found"):
-            await oauth_service.complete_oauth(db_session, "google", "code", state)
+        respx.post("https://oauth2.googleapis.com/token").respond(
+            200,
+            json={
+                "access_token": "ya29.new-token",
+                "refresh_token": "1//refresh-new",
+                "expires_in": 3600,
+                "scope": "gmail.readonly",
+            },
+        )
+        respx.get("https://www.googleapis.com/oauth2/v3/userinfo").respond(
+            200,
+            json={"sub": "google-user-1", "email": "tenant-mailbox@example.com"},
+        )
+
+        mailbox = await oauth_service.complete_oauth(
+            db_session, "google", "code", state
+        )
+
+        assert mailbox.status == "connected"
+        assert mailbox.provider == "google"
+        assert mailbox.auth_method == "oauth"
+        assert mailbox.mailbox_email == "tenant-mailbox@example.com"
 
     @pytest.mark.asyncio
     @respx.mock
@@ -445,6 +465,7 @@ class TestMailboxOAuthService:
         result = await oauth_service.refresh_token(db_session, mb)
         assert result is not None
         assert result.status == "connected"
+        assert result.oauth_token_expires_at is not None
         assert result.oauth_token_expires_at > old_expiry
 
     @pytest.mark.asyncio
@@ -477,7 +498,7 @@ class TestMailboxOAuthService:
 
     @pytest.mark.asyncio
     async def test_refresh_token_not_oauth(self, db_session):
-        """Non-OAuth mailbox should return None."""
+        """Non-OAuth mailbox should return mailbox unchanged."""
         mb = TenantMailbox(
             tenant_id=uuid.uuid4(),
             mailbox_email="test@imap.com",
@@ -486,7 +507,7 @@ class TestMailboxOAuthService:
             status="connected",
         )
         result = await oauth_service.refresh_token(db_session, mb)
-        assert result is None
+        assert result is mb
 
     @pytest.mark.asyncio
     async def test_disconnect_clears_all_secrets(self, db_session):
@@ -568,18 +589,20 @@ class TestImapService:
     @pytest.mark.asyncio
     async def test_imap_connection_failure_raises_imap_error(self):
         """Connection error raises ImapConnectionError."""
-        with patch(
-            "app.services.imap_service._connect_and_login",
-            side_effect=ImapConnectionError("Cannot connect"),
+        with (
+            patch(
+                "app.services.imap_service._connect_and_login",
+                side_effect=ImapConnectionError("Cannot connect"),
+            ),
+            pytest.raises(ImapConnectionError, match="Cannot connect"),
         ):
-            with pytest.raises(ImapConnectionError, match="Cannot connect"):
-                await _test_imap_connection(
-                    host="bad.host",
-                    port=993,
-                    ssl=True,
-                    username="u",
-                    password="p",
-                )
+            await _test_imap_connection(
+                host="bad.host",
+                port=993,
+                ssl=True,
+                username="u",
+                password="p",
+            )
 
     @pytest.mark.asyncio
     async def test_imap_connection_success(self):
@@ -601,18 +624,20 @@ class TestImapService:
     @pytest.mark.asyncio
     async def test_imap_connection_auth_failure(self):
         """Failed login raises ImapConnectionError."""
-        with patch(
-            "app.services.imap_service._connect_and_login",
-            side_effect=ImapConnectionError("Authentication failed"),
+        with (
+            patch(
+                "app.services.imap_service._connect_and_login",
+                side_effect=ImapConnectionError("Authentication failed"),
+            ),
+            pytest.raises(ImapConnectionError, match="Authentication failed"),
         ):
-            with pytest.raises(ImapConnectionError, match="Authentication failed"):
-                await _test_imap_connection(
-                    host="imap.example.com",
-                    port=993,
-                    ssl=True,
-                    username="user",
-                    password="wrong",
-                )
+            await _test_imap_connection(
+                host="imap.example.com",
+                port=993,
+                ssl=True,
+                username="user",
+                password="wrong",
+            )
 
 
 # ─── Exclusivity (OAuth vs IMAP) ──────────────────────────────────────────

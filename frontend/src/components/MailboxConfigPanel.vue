@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import api from '../services/api'
 import { useI18nStore } from '../stores/i18n'
 
@@ -19,7 +19,10 @@ const isTestingMailbox = ref(false)
 const isDisconnectingMailbox = ref(false)
 const isSavingImap = ref(false)
 const oauthProvider = ref('')
-const oauthMailboxEmail = ref('')
+
+const hasMailbox = computed(() => !!props.mailbox)
+const isConnected = computed(() => props.mailbox?.status === 'connected')
+const showConnectActions = computed(() => !hasMailbox.value || !isConnected.value)
 const imapForm = ref({
   mailbox_email: '',
   imap_host: '',
@@ -98,12 +101,6 @@ async function startOAuth(provider) {
   }
 }
 
-async function upsertOAuthMailbox(provider) {
-  await api.put('/tenant/mailbox/', {
-    provider,
-    mailbox_email: oauthMailboxEmail.value,
-  })
-}
 
 async function disconnectMailbox() {
   mailboxError.value = ''
@@ -126,24 +123,13 @@ async function selectProvider(provider) {
 
   if (provider === 'imap_custom') {
     showProviderSelect.value = false
-    imapForm.value.mailbox_email = props.mailbox?.mailbox_email || oauthMailboxEmail.value
+    imapForm.value.mailbox_email = props.mailbox?.mailbox_email || ''
     showImapForm.value = true
     return
   }
 
-  if (!oauthMailboxEmail.value) {
-    mailboxError.value = i18nStore.t('frontend.mailbox.email') + ' is required'
-    return
-  }
-
-  try {
-    showProviderSelect.value = false
-    await upsertOAuthMailbox(provider)
-    await startOAuth(provider)
-    emit('updated')
-  } catch (error) {
-    mailboxError.value = getApiError(error, i18nStore.t('frontend.mailbox.error_save'))
-  }
+  showProviderSelect.value = false
+  await startOAuth(provider)
 }
 
 function cancelImapSetup() {
@@ -164,16 +150,10 @@ function cancelImapSetup() {
     <p v-if="mailboxError" class="alert alert-error">{{ mailboxError }}</p>
     <p v-if="mailboxSuccess" class="alert alert-success">{{ mailboxSuccess }}</p>
 
-    <template v-if="!mailbox">
-      <p class="placeholder-message">{{ i18nStore.t('frontend.mailbox.not_configured') }}</p>
+    <p v-if="!mailbox" class="placeholder-message">{{ i18nStore.t('frontend.mailbox.not_configured') }}</p>
 
+    <template v-if="showConnectActions">
       <template v-if="!showImapForm && !showProviderSelect">
-        <div class="form-grid compact-grid">
-          <label>
-            {{ i18nStore.t('frontend.mailbox.email') }}
-            <input v-model.trim="oauthMailboxEmail" type="email" required />
-          </label>
-        </div>
         <button class="button button-primary" type="button" @click="showProviderSelect = true">
           {{ i18nStore.t('frontend.mailbox.connect_oauth') }}
         </button>
@@ -226,7 +206,7 @@ function cancelImapSetup() {
       </form>
     </template>
 
-    <template v-else>
+    <template v-if="mailbox">
       <div class="mailbox-info">
         <div class="mailbox-field">
           <span class="field-label">{{ i18nStore.t('frontend.mailbox.email') }}</span>
@@ -267,7 +247,7 @@ function cancelImapSetup() {
         <button class="button button-secondary" type="button" :disabled="isTestingMailbox" @click="testMailbox">
           {{ isTestingMailbox ? i18nStore.t('frontend.mailbox.testing') : i18nStore.t('frontend.mailbox.test') }}
         </button>
-        <button class="button button-secondary" type="button" :disabled="isDisconnectingMailbox" @click="disconnectMailbox">
+        <button v-if="isConnected" class="button button-secondary" type="button" :disabled="isDisconnectingMailbox" @click="disconnectMailbox">
           {{ isDisconnectingMailbox ? i18nStore.t('frontend.mailbox.disconnecting') : i18nStore.t('frontend.mailbox.disconnect') }}
         </button>
       </div>
@@ -308,10 +288,6 @@ function cancelImapSetup() {
   margin-top: 18px;
 }
 
-.compact-grid {
-  grid-template-columns: 1fr;
-  margin-bottom: 12px;
-}
 
 label {
   display: grid;

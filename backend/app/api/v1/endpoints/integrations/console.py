@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.database import set_internal_rls_context
 from app.core.i18n import t
 from app.core.phone import normalize_phone
-from app.core.redis_client import get_redis_manager
+from app.core.redis_client import RedisConnectionManager, get_redis_manager
 from app.repositories import clients_repository, tenants_repository, users_repository
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
@@ -96,7 +96,7 @@ async def _route_by_instance(
     message: str,
     instance: str,
     sender_lid: str | None,
-    manager: object,
+    manager: RedisConnectionManager,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     master_instance = settings.master_whatsapp_instance

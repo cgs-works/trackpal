@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # Microsoft OAuth
     microsoft_oauth_client_id: str = ""
     microsoft_oauth_client_secret: str = ""
-    microsoft_oauth_tenant_id: str = "consumers"
+    microsoft_oauth_tenant_id: str = "common"
     microsoft_oauth_redirect_uri: str = (
         "http://localhost:8000/api/v1/tenant/mailbox/oauth/microsoft/callback"
     )
@@ -54,4 +54,4 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
-settings = Settings()
+settings = Settings()  # pyright: ignore[reportCallIssue]
