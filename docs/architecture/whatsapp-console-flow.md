@@ -128,12 +128,27 @@ wa.client.mode_reset
 
 ### Split routing architecture
 
-To keep file size under the 240 LoC limit, the console endpoint package was split:
+To keep endpoint modules maintainable and within team size policy, the console endpoint package was split:
 - `console.py` — entry point, routing, dependency injection (~214 LoC)
 - `console_handlers.py` — individual handler functions (~300 LoC)
 - `console_modes.py` — ambiguity mode selection logic
 
 ## Tenant Console
+
+### Código lookup flow (`codigo|código|code`)
+
+Tenant console now supports a dedicated code-retrieval dialog:
+1. Trigger by exact message `codigo`, `código`, or `code`.
+2. Backend asks for service (`disney`, `hbo_max`, `netflix`, `prime_video`, `spotify`, `universal`), prioritizing tenant catalog when available.
+3. Backend asks for target email.
+4. Backend creates mailbox lookup job and stores pending job in session.
+5. Response includes lookup scope for n8n polling (`lookup_job_id` + `tenant_id`).
+
+n8n behavior for this path:
+- sends immediate "buscando..."
+- polls every 4s up to 20s on `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`
+- sends final result (`code|url|not_found|duplicate_suppressed|timeout|failed` mapping).
+
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`
 

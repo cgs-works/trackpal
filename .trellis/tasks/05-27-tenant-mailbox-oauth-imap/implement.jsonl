@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/index.md","reason":"Normas backend base para nuevos endpoints, servicios y modelos mailbox."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Diseño de tablas, constraints e índices para mailbox/jobs/dedupe."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Contrato de errores seguros para OAuth, IMAP y lookup async."}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"Evitar exposición de códigos/tokens en logs y trazas."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Cobertura de pruebas para extractor, dedupe y aislamiento tenant."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Sincronizar contrato frontend dashboard + backend + n8n polling."}

@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { useI18nStore } from '../stores/i18n'
+import MailboxConfigPanel from '../components/MailboxConfigPanel.vue'
+import CatalogPanel from '../components/CatalogPanel.vue'
+import ClientManagementPanel from '../components/ClientManagementPanel.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -26,19 +29,11 @@ const isSavingPassword = ref(false)
 const errorMessage = ref('')
 const profileSuccess = ref('')
 const passwordSuccess = ref('')
-const services = ref([])
-const selectedServiceId = ref('')
-const plans = ref([])
-const serviceName = ref('')
-const planName = ref('')
-const catalogMessage = ref('')
-const clients = ref([])
-const clientForm = ref(getEmptyClientForm())
-const clientMessage = ref('')
-const clientError = ref('')
-const isSavingClient = ref(false)
-const isLoadingClients = ref(false)
-const isEditingClient = computed(() => !!clientForm.value.id)
+// Mailbox state
+const mailbox = ref(null)
+const mailboxLoading = ref(false)
+const mailboxError = ref('')
+const mailboxSuccess = ref('')
 
 const username = computed(() => authStore.username || authStore.user?.username || 'Usuario')
 const isMasterSupport = computed(() => authStore.role === 'master' && !!authStore.activeTenantId)
@@ -58,124 +53,6 @@ function setProfile(data) {
     email: data?.email || '',
     phone: data?.phone || '',
     locale: data?.locale || 'en',
-  }
-}
-
-function getEmptyClientForm() {
-  return {
-    id: null,
-    full_name: '',
-    local_username: '',
-    phone: '',
-    password: '',
-  }
-}
-
-function resetClientForm() {
-  clientForm.value = getEmptyClientForm()
-}
-
-function getClientError(error, fallback) {
-  return getApiError(error, fallback)
-}
-
-async function loadClients() {
-  clientError.value = ''
-  isLoadingClients.value = true
-
-  try {
-    const response = await api.get('/clients')
-    clients.value = response.data || []
-  } catch (error) {
-    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_load'))
-  } finally {
-    isLoadingClients.value = false
-  }
-}
-
-function editClient(client) {
-  clientError.value = ''
-  clientMessage.value = ''
-  clientForm.value = {
-    id: client.id,
-    full_name: client.full_name || '',
-    local_username: client.local_username || '',
-    phone: client.phone || '',
-    password: '',
-  }
-}
-
-function cancelClientEdit() {
-  resetClientForm()
-  clientError.value = ''
-}
-
-async function saveClient() {
-  clientError.value = ''
-  clientMessage.value = ''
-  isSavingClient.value = true
-
-  try {
-    if (isEditingClient.value) {
-      const response = await api.put(`/clients/${clientForm.value.id}`, {
-        full_name: clientForm.value.full_name,
-        local_username: clientForm.value.local_username,
-        phone: clientForm.value.phone,
-      })
-      clientMessage.value = i18nStore.t('frontend.clients.updated', { login: response.data.username })
-    } else {
-      const response = await api.post('/clients', {
-        full_name: clientForm.value.full_name,
-        local_username: clientForm.value.local_username,
-        phone: clientForm.value.phone,
-        password: clientForm.value.password,
-      })
-      clientMessage.value = i18nStore.t('frontend.clients.created', { login: response.data.username })
-    }
-    resetClientForm()
-    await loadClients()
-  } catch (error) {
-    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_save'))
-  } finally {
-    isSavingClient.value = false
-  }
-}
-
-async function toggleClientStatus(client) {
-  clientError.value = ''
-  clientMessage.value = ''
-  const endpoint = client.is_active
-    ? `/clients/${client.id}/deactivate`
-    : `/clients/${client.id}/activate`
-
-  try {
-    const response = await api.patch(endpoint)
-    clientMessage.value = client.is_active ? i18nStore.t('frontend.clients.deactivated') : i18nStore.t('frontend.clients.activated')
-    clients.value = clients.value.map((entry) => (entry.id === client.id ? response.data : entry))
-  } catch (error) {
-    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_toggle_status'))
-  }
-}
-
-async function deleteClient(client) {
-  clientError.value = ''
-  clientMessage.value = ''
-
-  if (client.is_active) {
-    clientError.value = i18nStore.t('frontend.clients.cannot_delete_active')
-    return
-  }
-
-  if (!window.confirm(i18nStore.t('frontend.clients.confirm_delete', { name: client.full_name }))) {
-    return
-  }
-
-  try {
-    await api.delete(`/clients/${client.id}`)
-    clientMessage.value = i18nStore.t('frontend.clients.deleted')
-    await loadClients()
-  } catch (error) {
-    clientError.value = getClientError(error, i18nStore.t('frontend.clients.error_delete'))
   }
 }
 
@@ -200,97 +77,13 @@ async function loadDashboard() {
       dashboard.value = dashboardResponse.data || null
       setProfile(profileResponse.data || dashboardResponse.data)
     }
-    await loadServices()
     if (!isMasterSupport.value) {
-      await loadClients()
+      await loadMailbox()
     }
   } catch (error) {
     errorMessage.value = getApiError(error, i18nStore.t('frontend.dashboard.error_load'))
   } finally {
     isLoading.value = false
-  }
-}
-
-async function loadServices() {
-  const response = await api.get('/catalog/services')
-  services.value = response.data || []
-  if (!selectedServiceId.value && services.value.length) selectedServiceId.value = services.value[0].id
-  if (selectedServiceId.value) await loadPlans()
-}
-
-async function loadPlans() {
-  if (!selectedServiceId.value) {
-    plans.value = []
-    return
-  }
-  const response = await api.get(`/catalog/services/${selectedServiceId.value}/plans`)
-  plans.value = response.data || []
-}
-
-async function createService() {
-  catalogMessage.value = ''
-  try {
-    const response = await api.post('/catalog/services', { name: serviceName.value })
-    serviceName.value = ''
-    selectedServiceId.value = response.data.id
-    await loadServices()
-    catalogMessage.value = i18nStore.t('frontend.catalog.service_created')
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_create_service'))
-  }
-}
-
-async function renameService(service) {
-  const name = window.prompt(i18nStore.t('frontend.catalog.rename_service_prompt'), service.name)
-  if (!name) return
-  try {
-    await api.put(`/catalog/services/${service.id}`, { name })
-    await loadServices()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_update_service'))
-  }
-}
-
-async function deleteService(service) {
-  if (!window.confirm(i18nStore.t('frontend.catalog.delete_service_confirm', { name: service.name }))) return
-  try {
-    await api.delete(`/catalog/services/${service.id}`)
-    if (selectedServiceId.value === service.id) selectedServiceId.value = ''
-    await loadServices()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_service'))
-  }
-}
-
-async function createPlan() {
-  if (!selectedServiceId.value) return
-  try {
-    await api.post(`/catalog/services/${selectedServiceId.value}/plans`, { name: planName.value })
-    planName.value = ''
-    await loadPlans()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_create_plan'))
-  }
-}
-
-async function renamePlan(plan) {
-  const name = window.prompt(i18nStore.t('frontend.catalog.rename_plan_prompt'), plan.name)
-  if (!name) return
-  try {
-    await api.put(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`, { name })
-    await loadPlans()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_update_plan'))
-  }
-}
-
-async function deletePlan(plan) {
-  if (!window.confirm(i18nStore.t('frontend.catalog.delete_plan_confirm', { name: plan.name }))) return
-  try {
-    await api.delete(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`)
-    await loadPlans()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_plan'))
   }
 }
 
@@ -338,6 +131,28 @@ async function changePassword() {
   }
 }
 
+// Mailbox functions — delegated to MailboxConfigPanel component
+async function loadMailbox() {
+  mailboxError.value = ''
+  mailboxLoading.value = true
+  try {
+    const response = await api.get('/tenant/mailbox/')
+    mailbox.value = response.data
+  } catch (error) {
+    if (error.response?.status === 404) {
+      mailbox.value = null
+    } else {
+      mailboxError.value = getApiError(error, i18nStore.t('frontend.mailbox.error_load'))
+    }
+  } finally {
+    mailboxLoading.value = false
+  }
+}
+
+function onMailboxUpdated() {
+  loadMailbox()
+}
+
 async function handleLogout() {
   await authStore.logout()
   router.push('/login')
@@ -379,116 +194,15 @@ onMounted(loadDashboard)
         </button>
       </section>
 
-      <section v-if="!isMasterSupport" class="content-card profile-card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">{{ i18nStore.t('frontend.catalog.section_title') }}</p>
-            <h2>{{ i18nStore.t('frontend.catalog.section_heading') }}</h2>
-          </div>
-        </div>
-        <p v-if="catalogMessage" class="alert alert-success">{{ catalogMessage }}</p>
-        <form class="form-grid" @submit.prevent="createService">
-          <label>{{ i18nStore.t('frontend.catalog.new_service') }}<input v-model.trim="serviceName" type="text" required /></label>
-          <div class="form-actions"><button class="button button-primary" type="submit">{{ i18nStore.t('frontend.catalog.create_service') }}</button></div>
-        </form>
-        <ul>
-          <li v-for="service in services" :key="service.id">
-            <button class="link-button" type="button" @click="selectedServiceId = service.id; loadPlans()">{{ service.name }}</button>
-            <button class="link-button" type="button" @click="renameService(service)">{{ i18nStore.t('frontend.catalog.edit') }}</button>
-            <button class="link-button danger" type="button" @click="deleteService(service)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
-          </li>
-        </ul>
-        <form v-if="selectedServiceId" class="form-grid" @submit.prevent="createPlan">
-          <label>{{ i18nStore.t('frontend.catalog.new_plan') }}<input v-model.trim="planName" type="text" required /></label>
-          <div class="form-actions"><button class="button button-primary" type="submit">{{ i18nStore.t('frontend.catalog.create_plan') }}</button></div>
-        </form>
-        <ul v-if="selectedServiceId">
-          <li v-for="plan in plans" :key="plan.id">
-            {{ plan.name }}
-            <button class="link-button" type="button" @click="renamePlan(plan)">{{ i18nStore.t('frontend.catalog.edit') }}</button>
-            <button class="link-button danger" type="button" @click="deletePlan(plan)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
-          </li>
-        </ul>
-      </section>
+      <!-- Mailbox section -- delegated to MailboxConfigPanel -->
+      <MailboxConfigPanel
+        v-if="!isMasterSupport"
+        :mailbox="mailbox"
+        @updated="onMailboxUpdated"
+      />
 
-      <section v-if="!isMasterSupport" class="content-card profile-card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">{{ i18nStore.t('frontend.clients.section_title') }}</p>
-            <h2>{{ i18nStore.t('frontend.clients.section_heading') }}</h2>
-          </div>
-        </div>
-
-        <p v-if="clientError" class="alert alert-error">{{ clientError }}</p>
-        <p v-if="clientMessage" class="alert alert-success">{{ clientMessage }}</p>
-
-        <form class="form-grid" @submit.prevent="saveClient">
-          <label>
-            {{ i18nStore.t('frontend.profile.full_name') }}
-            <input v-model.trim="clientForm.full_name" type="text" required />
-          </label>
-
-          <label>
-            {{ i18nStore.t('frontend.dashboard.client.local_user') }}
-            <input v-model.trim="clientForm.local_username" type="text" required />
-          </label>
-
-          <label>
-            {{ i18nStore.t('frontend.profile.phone') }}
-            <input v-model.trim="clientForm.phone" type="tel" />
-          </label>
-
-          <label v-if="!isEditingClient">
-            {{ i18nStore.t('frontend.clients.password') }}
-            <input v-model="clientForm.password" type="password" autocomplete="new-password" required />
-          </label>
-
-          <div class="form-actions">
-            <button class="button button-secondary" type="button" @click="cancelClientEdit">{{ i18nStore.t('frontend.clients.clear') }}</button>
-            <button class="button button-primary" type="submit" :disabled="isSavingClient">
-              {{ isSavingClient ? i18nStore.t('frontend.clients.saving') : (isEditingClient ? i18nStore.t('frontend.clients.update') : i18nStore.t('frontend.clients.create')) }}
-            </button>
-          </div>
-        </form>
-
-        <div v-if="isLoadingClients" class="empty-state">{{ i18nStore.t('frontend.clients.loading') }}</div>
-        <div v-else-if="!clients.length" class="empty-state">{{ i18nStore.t('frontend.clients.no_clients') }}</div>
-        <div v-else class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ i18nStore.t('frontend.profile.full_name') }}</th>
-                <th>{{ i18nStore.t('frontend.dashboard.client.local_user') }}</th>
-                <th>{{ i18nStore.t('frontend.profile.phone') }}</th>
-                <th>{{ i18nStore.t('frontend.subscriptions.status') }}</th>
-                <th>{{ i18nStore.t('frontend.subscriptions.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="client in clients" :key="client.id">
-                <td>{{ client.full_name }}</td>
-                <td>{{ client.username }}</td>
-                <td>{{ client.phone || '—' }}</td>
-                <td>
-                  <span class="status-badge" :class="client.is_active ? 'active' : 'inactive'">
-                    {{ client.is_active ? i18nStore.t('frontend.dashboard.client.status_active') : i18nStore.t('frontend.dashboard.client.status_inactive') }}
-                  </span>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <button class="link-button" type="button" @click="editClient(client)">{{ i18nStore.t('frontend.clients.edit') }}</button>
-                    <button class="link-button" type="button" @click="toggleClientStatus(client)">
-                      {{ client.is_active ? i18nStore.t('frontend.clients.deactivate') : i18nStore.t('frontend.clients.activate') }}
-                    </button>
-                    <button class="link-button" type="button" @click="router.push('/admin/subscriptions?client_id=' + client.id)">{{ i18nStore.t('frontend.clients.subscriptions') }}</button>
-                    <button class="link-button danger" type="button" @click="deleteClient(client)">{{ i18nStore.t('frontend.clients.delete') }}</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <CatalogPanel v-if="!isMasterSupport" />
+      <ClientManagementPanel v-if="!isMasterSupport" />
 
       <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">

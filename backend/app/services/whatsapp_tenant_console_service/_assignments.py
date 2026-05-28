@@ -123,9 +123,16 @@ _build_subscription_create_confirm = sb._build_subscription_create_confirm
 _build_subscription_reactivate_confirm = sb._build_subscription_reactivate_confirm
 _build_subscription_renew_confirm = sb._build_subscription_renew_confirm
 
+# -- Codigo flow handlers
+from . import codigo_flow as cgf
+_start_codigo_flow = cgf._start_codigo_flow
+_handle_codigo_service = cgf._handle_codigo_service
+_handle_codigo_email = cgf._handle_codigo_email
+
 # -- Sub-routers
 _route_clients_flow = rt._route_clients_flow
 _route_catalog_flow = rt._route_catalog_flow
 _route_profile_flow = rt._route_profile_flow
 _route_subscriptions_flow = rt._route_subscriptions_flow
+_route_codigo_flow = rt._route_codigo_flow
 # fmt: on

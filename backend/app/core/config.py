@@ -30,6 +30,27 @@ class Settings(BaseSettings):
     master_whatsapp_instance: str = ""
     data_encryption_key: str = ""
 
+    # Google OAuth
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    google_oauth_redirect_uri: str = (
+        "http://localhost:8000/api/v1/tenant/mailbox/oauth/google/callback"
+    )
+
+    # Microsoft OAuth
+    microsoft_oauth_client_id: str = ""
+    microsoft_oauth_client_secret: str = ""
+    microsoft_oauth_tenant_id: str = "consumers"
+    microsoft_oauth_redirect_uri: str = (
+        "http://localhost:8000/api/v1/tenant/mailbox/oauth/microsoft/callback"
+    )
+
+    # Mailbox lookup defaults
+    mailbox_lookup_timeout_seconds: int = 20
+    mailbox_lookup_window_minutes: int = 5
+    mailbox_lookup_job_ttl_hours: int = 72
+    mailbox_delivery_log_retention_days: int = 90
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
