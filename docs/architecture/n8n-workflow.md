@@ -8,10 +8,10 @@ Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webho
 
 ```
 Evolution Go (inbound message)
-    |  webhook POST (keyword trigger /menu, startsWith)
+    |  webhook POST
 n8n Webhook Node
     ↓
-Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJid
+Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJid, sender_lid
     ↓
 [Config (Set Node)] — supplies config vars from node fields
     ↓
@@ -19,11 +19,11 @@ Console Call (HTTP Request Node) — POST /api/v1/integrations/n8n/console
     ↓
 Merge Reply (Code Node) — merges reply with original input
     ↓
-Evolution Go Send (HTTP Request Node) — POST /send/text (uses instance apiKey)
-    ↓
-Check Close Session (Code Node) — conditionally checks for logout
-    ↓
-Close Session (HTTP Request Node) — POST /webhook/change-status (if logout detected)
+IF has lookup_job_id?
+   ├─ No  → Evolution Go Send → Check Close Session → Close Session(if logout)
+   └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
+              (`GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`)
+              → Build result message → Send final result
 ```
 
 ## Workflow File
@@ -51,7 +51,7 @@ Receives inbound WhatsApp messages forwarded by Evolution Go.
 The full webhook URL is:
 `https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient`
 
-This URL is configured in `EvolutionClient.register_webhook()` in the backend, which registers it with Evolution Go per-instance at tenant creation time. Evolution Go only forwards messages that start with `/menu` (keyword trigger, `startsWith` operator). The webhook is registered with `isTrusted=true`, so Evolution Go includes the instance `apiKey` in the payload for per-message authentication.
+This URL is configured in `EvolutionClient.register_webhook()` in the backend, which registers it with Evolution Go per-instance at tenant creation time. The webhook is registered with `isTrusted=true`, so Evolution Go includes the instance `apiKey` in the payload for per-message authentication.
 
 ### 2. Parse Input (Code Node)
 
@@ -146,13 +146,14 @@ This replaces the deprecated `EvolutionClient.close_chat_session()` which was pr
 Evolution Go webhook payload (isTrusted=true)
   ↓
 Parse Input:
-  const phone = normalizePhone(remoteJid || from)
+  const phone = senderPn ? normalizePhone(senderPn) : ''
+  const sender_lid = senderLid || (remoteJid?.includes('@lid') ? remoteJid : '')
   const message = chatInput || msg.body || conversation
   const instance = instanceName || data.instance || 'default'
   const remoteJid = body.remoteJid || ''
   const apiKey = body.apiKey || ''
   ↓
-{ phone: "1234567890", message: "1", instance: "Sublify", remoteJid: "1234567890@s.whatsapp.net", apiKey: "evo-instance-token" }
+{ phone: "1234567890", sender_lid: "1234567890123@lid", message: "1", instance: "Sublify", remoteJid: "1234567890@s.whatsapp.net", apiKey: "evo-instance-token" }
   ↓
 Config node adds: { trackpal_backend_url, trackpal_n8n_api_key, evolution_api_url, default_instance }
   ↓
@@ -190,15 +191,19 @@ To update config values:
 
 ## Integration with Backend
 
-The workflow communicates with two backend services:
+The workflow communicates with backend services:
 
-1. **Trackpal Backend** (`POST /api/v1/integrations/n8n/console`):
+1. **Trackpal Backend Console** (`POST /api/v1/integrations/n8n/console`):
    - Authenticated via `X-API-Key` header matching `settings.n8n_api_key`
-   - Request body: `WhatsAppConsoleRequest` schema (phone, message, optional instance)
-   - Response body: `WhatsAppConsoleResponse` schema (reply text)
-   - See [API Layer](api-layer.md) and [WhatsApp Console Flow](whatsapp-console-flow.md)
+   - Request body: `WhatsAppConsoleRequest` schema (phone, message, optional instance, optional sender_lid)
+   - Response body: `WhatsAppConsoleResponse` schema (reply text, optional `lookup_job_id`, optional `tenant_id`)
 
-2. **Evolution Go** (`POST /send/text`, `POST /webhook/change-status`):
+2. **Trackpal Backend Mail Lookup**:
+   - `POST /api/v1/integrations/n8n/mail/lookups`
+   - `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
+   - Polling cadence: every 4s, max 20s.
+
+3. **Evolution Go** (`POST /send/text`, `POST /webhook/change-status`):
    - Authenticated via per-instance `apikey` header (from trusted webhook payload or decrypted stored token)
    - `POST /send/text` sends the reply text back to the WhatsApp user
    - `POST /webhook/change-status` closes the session on logout

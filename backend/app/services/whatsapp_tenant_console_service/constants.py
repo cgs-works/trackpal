@@ -182,3 +182,32 @@ KEY_PROFILE_CHANGE_PASSWORD_ERROR_OLD = "wa.tenant.profile.change_password_error
 KEY_PROFILE_CHANGE_PASSWORD_SUCCESS = "wa.tenant.profile.change_password_success"
 
 KEY_PROFILE_LOCALE_SELECT = "wa.tenant.profile.locale_select"
+
+# -- Codigo flow constants ------------------------------------------------
+
+CODIGO_FLOW = "codigo"
+CODIGO_STEP_SERVICE = "service"
+CODIGO_STEP_EMAIL = "email"
+
+KEY_CODIGO_MENU = "wa.tenant.codigo.menu"
+KEY_CODIGO_SERVICE_PROMPT = "wa.tenant.codigo.service_prompt"
+KEY_CODIGO_EMAIL_PROMPT = "wa.tenant.codigo.email_prompt"
+KEY_CODIGO_BUSCANDO = "wa.tenant.codigo.buscando"
+KEY_CODIGO_FOUND_CODE = "wa.tenant.codigo.found_code"
+KEY_CODIGO_FOUND_URL = "wa.tenant.codigo.found_url"
+KEY_CODIGO_NOT_FOUND = "wa.tenant.codigo.not_found"
+KEY_CODIGO_DUPLICATE = "wa.tenant.codigo.duplicate"
+KEY_CODIGO_ERROR = "wa.tenant.codigo.error"
+KEY_CODIGO_TIMEOUT = "wa.tenant.codigo.timeout"
+KEY_CODIGO_INVALID_SERVICE = "wa.tenant.codigo.invalid_service"
+KEY_CODIGO_NO_MAILBOX = "wa.tenant.codigo.no_mailbox"
+
+# Global service keys available for code lookup
+STREAMING_SERVICE_KEYS: list[str] = [
+    "netflix",
+    "disney",
+    "hbo_max",
+    "prime_video",
+    "spotify",
+    "universal_plus",
+]

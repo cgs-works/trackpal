@@ -135,10 +135,6 @@ onMounted(loadDashboard)
             <dd>{{ clientInfo.username }}</dd>
           </div>
           <div>
-            <dt>{{ i18nStore.t('frontend.dashboard.client.local_user') }}</dt>
-            <dd>{{ clientInfo.local_username }}</dd>
-          </div>
-          <div>
             <dt>{{ i18nStore.t('frontend.profile.phone') }}</dt>
             <dd>{{ clientInfo.phone || '—' }}</dd>
           </div>

@@ -169,6 +169,61 @@ Unique index: (subscription_id, recipient_type, days_before_expiry, sent_for_dat
 | reminder_time | VARCHAR(5) | Default 09:00 (HH:MM) |
 | recipient_mode | VARCHAR(20) | tenant_only, client_only, tenant_client, tenant_and_client |
 
+### `TenantMailbox` -- `tenant_mailboxes`
+
+Tenant-scoped technical mailbox used for centralized code ingestion.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | Unique FK -> tenants.id CASCADE |
+| mailbox_email | VARCHAR(255) | Required |
+| provider | VARCHAR(50) | `google`, `microsoft`, `imap_custom` |
+| auth_method | VARCHAR(50) | `oauth`, `imap_app_password` |
+| status | VARCHAR(50) | `disconnected`, `connected`, `error`, `revoked` |
+| oauth_access_token_encrypted | VARCHAR(500) | Nullable, encrypted |
+| oauth_refresh_token_encrypted | VARCHAR(500) | Nullable, encrypted |
+| oauth_token_expires_at | TIMESTAMPTZ | Nullable |
+| imap_host / imap_port / imap_ssl | mixed | IMAP fallback config |
+| imap_password_encrypted | VARCHAR(500) | Nullable, encrypted |
+| last_connection_test_at | TIMESTAMPTZ | Nullable |
+| last_connection_error | TEXT | Nullable, safe error string |
+
+### `MailLookupJob` -- `mail_lookup_jobs`
+
+Asynchronous mailbox lookup jobs created by n8n.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK -> tenants.id CASCADE |
+| mailbox_id | UUID | FK -> tenant_mailboxes.id CASCADE |
+| service_key | VARCHAR(64) | Streaming service key |
+| target_email | VARCHAR(255) | Required content filter |
+| status | VARCHAR(50) | `pending`, `processing`, `completed`, `failed`, `timeout` |
+| result_type | VARCHAR(50) | Nullable: `code`, `url`, `not_found`, `duplicate_suppressed` |
+| result_value_encrypted | VARCHAR(500) | Nullable; kept null in v1 (ephemeral response) |
+| error_code / error_detail_safe | VARCHAR/TEXT | Safe failure payload for polling |
+| expires_at | TIMESTAMPTZ | TTL boundary |
+
+### `MailCodeDeliveryLog` -- `mail_code_delivery_log`
+
+Dedupe tracking per tenant mailbox/service.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK -> tenants.id CASCADE |
+| mailbox_id | UUID | FK -> tenant_mailboxes.id CASCADE |
+| service_key | VARCHAR(64) | Service key |
+| message_id | VARCHAR(500) | Nullable mail Message-ID |
+| fingerprint | VARCHAR(128) | Required fallback dedupe hash |
+| delivered_at | TIMESTAMPTZ | Delivery timestamp |
+
+Unique constraints/indexes:
+- Partial unique index when `message_id IS NOT NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `message_id`, `fingerprint`)
+- Partial unique index when `message_id IS NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `fingerprint`)
+
 ## RLS
 
 Postgres RLS is enabled and forced on `tenants`, `services`, and `plans`. Policies use transaction-local custom settings set by the API before tenant-scoped queries:
@@ -192,6 +247,8 @@ Alembic migrations:
 8. `cd9efe74caa2` — Rename `clients.local_username` to `clients.username`, rename related tenant+lower index, and backfill canonical values from `users.username`
 9. `cdaefe74caa3` — Add `evolution_instance_token` column to tenants for encrypted instance token storage
 10. `cdaefe74caa4` — Add `whatsapp_lid` columns + indexes to `master_profiles`, `tenants`, and `clients` for LID fallback identity resolution
+11. `cdbfefe74caa5` — Add `tenant_mailboxes`, `mail_lookup_jobs`, and `mail_code_delivery_log` for tenant mailbox ingestion
+12. `cdbfefe74caa6` — Add `mail_lookup_jobs.target_email` and replace dedupe uniqueness with partial indexes for nullable `message_id`
 
 ## Key Constraints
 
