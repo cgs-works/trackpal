@@ -246,3 +246,36 @@ Completed tenant mailbox ingestion flow end-to-end, applied CodeRabbit fixes acr
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: n8n workflow reconnection and validation
+
+**Date**: 2026-05-28
+**Task**: n8n workflow reconnection and validation
+**Branch**: `main`
+
+### Summary
+
+Fixed disconnected nodes in Trackpal WhatsApp Bot via n8n MCP, restored polling branch and IF filter schema, and validated workflow as valid with zero errors.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e237fae` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

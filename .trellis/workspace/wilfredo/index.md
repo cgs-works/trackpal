@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-05-28
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~248 | Active |
+| `journal-1.md` | ~281 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-05-28 | n8n workflow reconnection and validation | `e237fae` | `main` |
 | 7 | 2026-05-28 | Mailbox oauth/imap hardening and wrap-up | `d87750b`, `c946e07` | `feat/tenant-mailbox-oauth-imap` |
 | 6 | 2026-05-26 | Complete LID/JID resolution rollout | `9b39987`, `e5b1409`, `61ee029`, `5b2e9ea`, `4844590` | `main` |
 | 5 | 2026-05-26 | Extender acceso cliente multi-tenant (dashboard + WhatsApp) - implementación + i18n + docs | `b75a948` | `feat/client-console-i18n` |
