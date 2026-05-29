@@ -3,7 +3,8 @@ name: trellis-implement
 description: |
   Code implementation expert. Understands Trellis specs and requirements, then implements features. No git commit allowed.
 tools: search_context, Read, Write, Edit, Bash, Glob, Grep
-model: opencode/deepseek-v4-flash-free
+model: opencode/mimo-v2.5-free
+thinking: high
 ---
 
 ## Required: Run search_context First
