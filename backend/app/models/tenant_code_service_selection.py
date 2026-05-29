@@ -9,10 +9,10 @@ from sqlalchemy import DateTime, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.models.base import Base
 
 
-class TenantCodeServiceSelection(Base, TimestampMixin):
+class TenantCodeServiceSelection(Base):
     """Records which code services a tenant has selected.
 
     Full-replace sync: saving selections replaces all rows for the
