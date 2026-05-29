@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+from sqlalchemy import update as sa_update
+
 from app.core.errors import UserFacingError, translate_error
-from app.core.i18n import t as _i18n_t, LOCALE_NAMES
+from app.core.i18n import LOCALE_NAMES, t as _i18n_t
+from app.models import Tenant
 
 from . import _context as ctx
 
 
-async def _start_profile_flow(self, phone, session_service, user_id, db):
+async def _start_profile_flow(
+    self, phone: str, session_service: Any, user_id: Any, db: Any
+) -> str:
     if session_service is not None:
         session = await session_service.get_session(f"admin:{phone}")
         if session is None:
@@ -21,8 +28,14 @@ async def _start_profile_flow(self, phone, session_service, user_id, db):
 
 
 async def _handle_profile_action(
-    self, phone, msg, session, session_service, user_id, db
-):
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    user_id: Any,
+    db: Any,
+) -> str:
     if msg == "1":
         return await self._show_profile(phone, session_service, user_id, db)
     elif msg == "2":
@@ -33,7 +46,7 @@ async def _handle_profile_action(
         )
     elif msg == "4":
         return await self._start_profile_change_locale(phone, session, session_service)
-    elif msg == "0":
+    elif msg == "9":
         return self._with_main_menu("")
     return self._t(self.KEY_FALLBACK_NO_FLOW)
 
@@ -52,7 +65,9 @@ async def _show_profile(self, phone, session_service, user_id, db):
     return self._format_profile_detail(profile, user.username)
 
 
-async def _start_profile_edit(self, phone, session, session_service):
+async def _start_profile_edit(
+    self, phone: str, session: Any, session_service: Any
+) -> str:
     session.flow = self.PROFILE_FLOW
     session.step = self.PROFILE_STEP_EDIT_FIELD
     session.temp_data = {}
@@ -61,8 +76,10 @@ async def _start_profile_edit(self, phone, session, session_service):
     return self._t(self.KEY_PROFILE_EDIT_FIELD_PROMPT)
 
 
-async def _handle_profile_edit_field(self, phone, msg, session, session_service):
-    if msg == "0":
+async def _handle_profile_edit_field(
+    self, phone: str, msg: str, session: Any, session_service: Any
+) -> str:
+    if msg == "9":
         await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
     field = self.PROFILE_EDIT_FIELD_MAP.get(msg)
@@ -76,8 +93,14 @@ async def _handle_profile_edit_field(self, phone, msg, session, session_service)
 
 
 async def _handle_profile_edit_value(
-    self, phone, msg, session, session_service, user_id, db
-):
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    user_id: Any,
+    db: Any,
+) -> str:
     field = session.temp_data.get("field", "")
     new_value = msg.strip()
     if user_id is None or db is None or self._profile_service is None:
@@ -106,7 +129,9 @@ async def _handle_profile_edit_value(
     )
 
 
-async def _start_profile_change_password(self, phone, session, session_service):
+async def _start_profile_change_password(
+    self, phone: str, session: Any, session_service: Any
+) -> str:
     session.flow = self.PROFILE_FLOW
     session.step = self.PROFILE_STEP_CHANGE_PASSWORD_OLD
     session.temp_data = {}
@@ -116,8 +141,14 @@ async def _start_profile_change_password(self, phone, session, session_service):
 
 
 async def _handle_profile_change_password_old(
-    self, phone, msg, session, session_service, user_id, db
-):
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    user_id: Any,
+    db: Any,
+) -> str:
     old_password = msg.strip()
     if not old_password:
         return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_OLD)
@@ -129,8 +160,14 @@ async def _handle_profile_change_password_old(
 
 
 async def _handle_profile_change_password_new(
-    self, phone, msg, session, session_service, user_id, db
-):
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    user_id: Any,
+    db: Any,
+) -> str:
     new_password = msg.strip()
     old_password = session.temp_data.get("old_password", "")
     if len(new_password) < 6:
@@ -159,7 +196,9 @@ async def _handle_profile_change_password_new(
     )
 
 
-async def _start_profile_change_locale(self, phone, session, session_service):
+async def _start_profile_change_locale(
+    self, phone: str, session: Any, session_service: Any
+) -> str:
     current_locale = ctx.get_locale()
     current_locale_name = LOCALE_NAMES.get(current_locale, current_locale)
     if session_service is not None:
@@ -170,9 +209,15 @@ async def _start_profile_change_locale(self, phone, session, session_service):
 
 
 async def _handle_profile_change_locale_select(
-    self, phone, msg, session, session_service, user_id, db
-):
-    if msg == "0":
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    user_id: Any,
+    db: Any,
+) -> str:
+    if msg == "9":
         return self._with_main_menu("")
     if msg not in ("1", "2"):
         return self._t(self.KEY_FALLBACK_NO_FLOW)
@@ -180,9 +225,6 @@ async def _handle_profile_change_locale_select(
     new_locale = "en" if msg == "1" else "es"
 
     if user_id is not None and db is not None:
-        from app.models import Tenant
-        from sqlalchemy import update as sa_update
-
         await db.execute(
             sa_update(Tenant)
             .where(Tenant.owner_user_id == user_id)

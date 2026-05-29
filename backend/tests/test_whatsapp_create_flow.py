@@ -13,15 +13,13 @@ from typing import Any
 import pytest
 
 from app.services.whatsapp_console_service import WhatsAppConsoleService
-from app.services.whatsapp_session_service import (
-    ConversationSession,
-    WhatsAppSessionService,
-)
+from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 # ---------------------------------------------------------------------------
 # Fake Redis — dict-based async double
 # ---------------------------------------------------------------------------
+
 
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
@@ -66,6 +64,7 @@ class FakeManager:
 # ---------------------------------------------------------------------------
 # Fake tenant service with create support
 # ---------------------------------------------------------------------------
+
 
 class FakeTenant:
     """Minimal tenant data object."""
@@ -186,6 +185,7 @@ class FakeTenantService:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()
@@ -221,6 +221,7 @@ def tenant_service() -> FakeTenantService:
 # ===========================================================================
 # Tests
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestCreateFlowStart:
@@ -272,6 +273,7 @@ class TestCreateFlowStart:
 # ===========================================================================
 # REGRESSION TEST: Full name → email continuation (the original bug)
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestFullNameStepRegression:
@@ -503,6 +505,7 @@ class TestFullNameStepRegression:
 # Email step
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestEmailStep:
     """Optional email collection with skip semantics."""
@@ -706,6 +709,7 @@ class TestEmailStep:
 # Phone step
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestPhoneStep:
     """Optional phone collection with skip semantics."""
@@ -876,6 +880,7 @@ class TestPhoneStep:
 # Username step
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestUsernameStep:
     """Username collection with duplicate validation."""
@@ -946,7 +951,11 @@ class TestUsernameStep:
             tenant_service=tenant_service,
         )
         # Should show error about duplicate username
-        assert "registrado" in reply.lower() or "duplicate" in reply.lower() or "already" in reply.lower()
+        assert (
+            "registrado" in reply.lower()
+            or "duplicate" in reply.lower()
+            or "already" in reply.lower()
+        )
         # Should NOT reset flow — stay on username step
         session = await session_service.get_session("+10000000000")
         assert session is not None
@@ -997,19 +1006,27 @@ class TestUsernameStep:
     ) -> None:
         # Progress to username step manually
         await console_service.process_message(
-            phone="+10000000000", message="2", is_master=True,
+            phone="+10000000000",
+            message="2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="Juan Pérez", is_master=True,
+            phone="+10000000000",
+            message="Juan Pérez",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="juan@example.com", is_master=True,
+            phone="+10000000000",
+            message="juan@example.com",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="—", is_master=True,
+            phone="+10000000000",
+            message="—",
+            is_master=True,
             session_service=session_service,
         )
 
@@ -1035,19 +1052,27 @@ class TestUsernameStep:
     ) -> None:
         """Helper: progress to the username step with basic valid data."""
         await console_service.process_message(
-            phone="+10000000000", message="2", is_master=True,
+            phone="+10000000000",
+            message="2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="Test User", is_master=True,
+            phone="+10000000000",
+            message="Test User",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="test@example.com", is_master=True,
+            phone="+10000000000",
+            message="test@example.com",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="—", is_master=True,
+            phone="+10000000000",
+            message="—",
+            is_master=True,
             session_service=session_service,
         )
 
@@ -1092,22 +1117,22 @@ class TestUsernameStep:
         session = await session_service.get_session("+10000000000")
         assert session is None
 
-    async def test_username_zero_rejected(
+    async def test_username_menu_rejected(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """REGRESSION: '0' is a global reset command; returns to menu
+        """REGRESSION: 'menu' is a global reset command; returns to menu
         instead of being accepted as username."""
         await self._progress_to_username(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="0",
+            message="menu",
             is_master=True,
             session_service=session_service,
         )
-        # '0' triggers global reset, returns main menu
+        # 'menu' triggers global reset, returns main menu
         assert "Trackpal Master Console" in reply
         # Session cleared
         session = await session_service.get_session("+10000000000")
@@ -1301,6 +1326,7 @@ class TestUsernameStep:
 # Evolution Instance step
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestEvolutionInstanceStep:
     """Evolution Instance name collection."""
@@ -1384,6 +1410,7 @@ class TestEvolutionInstanceStep:
 # ===========================================================================
 # Password mode step
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestPasswordModeStep:
@@ -1497,6 +1524,7 @@ class TestPasswordModeStep:
 # Manual password step
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestManualPasswordStep:
     """Manual password entry after selecting manual mode."""
@@ -1586,7 +1614,11 @@ class TestManualPasswordStep:
             session_service=session_service,
         )
         # Should show error and reprompt
-        assert "6 caracteres" in reply.lower() or "corta" in reply.lower() or "password" in reply.lower()
+        assert (
+            "6 caracteres" in reply.lower()
+            or "corta" in reply.lower()
+            or "password" in reply.lower()
+        )
         session = await session_service.get_session("+10000000000")
         assert session is not None
         assert session.step == "manual_password"
@@ -1613,6 +1645,7 @@ class TestManualPasswordStep:
 # ===========================================================================
 # Confirmation step
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestConfirmationStep:
@@ -1694,9 +1727,7 @@ class TestConfirmationStep:
         session_service: WhatsAppSessionService,
         tenant_service: FakeTenantService,
     ) -> None:
-        await self._start_through_auto(
-            console_service, session_service, tenant_service
-        )
+        await self._start_through_auto(console_service, session_service, tenant_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -1707,7 +1738,11 @@ class TestConfirmationStep:
         )
 
         # Should show success message
-        assert "creado" in reply.lower() or "éxito" in reply.lower() or "exitoso" in reply.lower()
+        assert (
+            "creado" in reply.lower()
+            or "éxito" in reply.lower()
+            or "exitoso" in reply.lower()
+        )
         assert "Juan Pérez" in reply
 
         # Session should be cleared after success
@@ -1726,9 +1761,7 @@ class TestConfirmationStep:
         session_service: WhatsAppSessionService,
         tenant_service: FakeTenantService,
     ) -> None:
-        await self._start_through_auto(
-            console_service, session_service, tenant_service
-        )
+        await self._start_through_auto(console_service, session_service, tenant_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -1779,6 +1812,7 @@ class TestConfirmationStep:
 # ===========================================================================
 # Full flow success
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestFullCreateFlow:
@@ -2104,7 +2138,11 @@ class TestFullCreateFlow:
             tenant_service=tenant_service,
         )
         # Should show error about duplicate phone
-        assert "ya registrado" in reply.lower() or "duplicate" in reply.lower() or "phone" in reply.lower()
+        assert (
+            "ya registrado" in reply.lower()
+            or "duplicate" in reply.lower()
+            or "phone" in reply.lower()
+        )
         # Session might still exist - let the user know what happened
         # Actually, since the duplicate phone was collected at the phone step
         # and the validation happens at creation time, we need to handle this.
@@ -2158,39 +2196,56 @@ class TestFullCreateFlow:
     ) -> None:
         """Create-time duplicate username can be corrected in-flow."""
         await console_service.process_message(
-            phone="+10000000000", message="2", is_master=True,
+            phone="+10000000000",
+            message="2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="Test User", is_master=True,
+            phone="+10000000000",
+            message="Test User",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="test@example.com", is_master=True,
+            phone="+10000000000",
+            message="test@example.com",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="—", is_master=True,
+            phone="+10000000000",
+            message="—",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="raceuser", is_master=True,
+            phone="+10000000000",
+            message="raceuser",
+            is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="inst-race", is_master=True,
+            phone="+10000000000",
+            message="inst-race",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="1", is_master=True,
+            phone="+10000000000",
+            message="1",
+            is_master=True,
             session_service=session_service,
         )
         tenant_service._existing_usernames.add("raceuser")
 
         reply = await console_service.process_message(
-            phone="+10000000000", message="CONFIRMAR", is_master=True,
-            session_service=session_service, tenant_service=tenant_service,
+            phone="+10000000000",
+            message="CONFIRMAR",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
         )
 
         assert "username" in reply.lower() or "usuario" in reply.lower()
@@ -2200,20 +2255,30 @@ class TestFullCreateFlow:
         assert session.temp_data["full_name"] == "Test User"
 
         await console_service.process_message(
-            phone="+10000000000", message="raceuser2", is_master=True,
-            session_service=session_service, tenant_service=tenant_service,
+            phone="+10000000000",
+            message="raceuser2",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="inst-race2", is_master=True,
+            phone="+10000000000",
+            message="inst-race2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="1", is_master=True,
+            phone="+10000000000",
+            message="1",
+            is_master=True,
             session_service=session_service,
         )
         reply = await console_service.process_message(
-            phone="+10000000000", message="CONFIRMAR", is_master=True,
-            session_service=session_service, tenant_service=tenant_service,
+            phone="+10000000000",
+            message="CONFIRMAR",
+            is_master=True,
+            session_service=session_service,
+            tenant_service=tenant_service,
         )
         assert "creado" in reply.lower() or "éxito" in reply.lower()
 
@@ -2412,6 +2477,7 @@ class TestFullCreateFlow:
 # Error handling during creation
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestCreateErrorHandling:
     """Error handling during the create flow."""
@@ -2423,6 +2489,7 @@ class TestCreateErrorHandling:
     ) -> None:
         """If TenantService raises an error during create, the error is
         shown to the user and the session state is handled gracefully."""
+
         # Use a tenant service that always fails
         class FailingTenantService(FakeTenantService):
             async def create_tenant(self, payload: dict) -> dict:
@@ -2537,6 +2604,7 @@ class TestCreateErrorHandling:
 # TTL noise guards during create flow
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestTTLNoiseDuringCreateFlow:
     """Invalid/noise input during create flow must not extend TTL."""
@@ -2550,27 +2618,39 @@ class TestTTLNoiseDuringCreateFlow:
         """Invalid selection at password_mode step must not reset TTL."""
         # Progress to password_mode step
         await console_service.process_message(
-            phone="+10000000000", message="2", is_master=True,
+            phone="+10000000000",
+            message="2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="Test User", is_master=True,
+            phone="+10000000000",
+            message="Test User",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="test@example.com", is_master=True,
+            phone="+10000000000",
+            message="test@example.com",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="+525512345678", is_master=True,
+            phone="+10000000000",
+            message="+525512345678",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="testuser", is_master=True,
+            phone="+10000000000",
+            message="testuser",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="inst-test", is_master=True,
+            phone="+10000000000",
+            message="inst-test",
+            is_master=True,
             session_service=session_service,
         )
 
@@ -2601,31 +2681,45 @@ class TestTTLNoiseDuringCreateFlow:
         """Non-CONFIRMAR at confirm step must not extend TTL."""
         # Progress to confirm step with auto password
         await console_service.process_message(
-            phone="+10000000000", message="2", is_master=True,
+            phone="+10000000000",
+            message="2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="Test User", is_master=True,
+            phone="+10000000000",
+            message="Test User",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="test@example.com", is_master=True,
+            phone="+10000000000",
+            message="test@example.com",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="+525512345678", is_master=True,
+            phone="+10000000000",
+            message="+525512345678",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="testuser", is_master=True,
+            phone="+10000000000",
+            message="testuser",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="inst-test", is_master=True,
+            phone="+10000000000",
+            message="inst-test",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="1", is_master=True,
+            phone="+10000000000",
+            message="1",
+            is_master=True,
             session_service=session_service,
         )
 
@@ -2653,19 +2747,27 @@ class TestTTLNoiseDuringCreateFlow:
         """Empty/whitespace at username step must not extend TTL."""
         # Progress to username step
         await console_service.process_message(
-            phone="+10000000000", message="2", is_master=True,
+            phone="+10000000000",
+            message="2",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="Test User", is_master=True,
+            phone="+10000000000",
+            message="Test User",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="test@example.com", is_master=True,
+            phone="+10000000000",
+            message="test@example.com",
+            is_master=True,
             session_service=session_service,
         )
         await console_service.process_message(
-            phone="+10000000000", message="+525512345678", is_master=True,
+            phone="+10000000000",
+            message="+525512345678",
+            is_master=True,
             session_service=session_service,
         )
 

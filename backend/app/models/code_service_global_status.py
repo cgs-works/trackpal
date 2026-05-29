@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String, text
+from sqlalchemy import Boolean, DateTime, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -34,5 +34,6 @@ class CodeServiceGlobalStatus(Base, TimestampMixin):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         server_default=text("now()"),
+        onupdate=func.now(),
         nullable=False,
     )

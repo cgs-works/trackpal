@@ -683,11 +683,11 @@ class TestFacade:
         # Should cancel (not goodbye), returning main menu
         assert "Operación cancelada" in reply or "Consola de Administración" in reply
 
-    async def test_facade_top_level_zero_returns_goodbye_with_n8n_keyword(
+    async def test_facade_top_level_zero_returns_goodbye_message(
         self,
         facade: WhatsAppTenantConsoleFacade,
     ) -> None:
-        """Top-level '0' goodbye contains 'goodbye' for n8n detection."""
+        """Top-level '0' returns closed-session goodbye message."""
         identity = _tenant_identity(role="tenant")
         reply = await facade.process_message(
             phone="+10000000000",
@@ -695,7 +695,8 @@ class TestFacade:
             identity=identity,
             db=cast(AsyncSession, object()),
         )
-        assert "goodbye" in reply.lower()
+        lowered = reply.lower()
+        assert "sesión cerrada" in lowered or "sesion cerrada" in lowered
 
 
 # ===================================================================
@@ -823,14 +824,14 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="4",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         reply_filter = await console_service.process_message(
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Filtrar por estado" in reply_filter
@@ -839,7 +840,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Lista" in reply_list or "Suscripciones" in reply_list
@@ -848,7 +849,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Detalle de Suscripción" in reply_detail
@@ -878,7 +879,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
 
@@ -886,7 +887,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         session = await session_service.get_session("admin:+10000000000")
@@ -901,9 +902,9 @@ class TestServiceMainMenu:
 
         reply_page_2 = await console_service.process_message(
             phone="+10000000000",
-            message="9",
+            message="8",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         session = await session_service.get_session("admin:+10000000000")
@@ -918,7 +919,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Detalle de Suscripción" in reply_detail
@@ -935,7 +936,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="4",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         steps = [
@@ -959,7 +960,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción creada exitosamente" in reply
@@ -977,7 +978,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción actualizada exitosamente" in reply
@@ -998,7 +999,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción cancelada exitosamente" in reply
@@ -1016,7 +1017,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción renovada exitosamente" in reply
@@ -1027,7 +1028,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción reactivada exitosamente" in reply
@@ -1230,7 +1231,7 @@ class TestClientSelect:
             message="1",
             session_service=session_service,
             tenant_id=tenant_id,
-            db="fake",  # db needed for list_clients
+            db=AsyncMock(),  # db needed for list_clients
         )
         assert "Test Client" in reply
 
@@ -1245,7 +1246,7 @@ class TestClientSelect:
             message="1",
             session_service=session_service,
             tenant_id=tenant_id,
-            db="fake",
+            db=AsyncMock(),
         )
         assert "Detalle" in reply or "Test Client" in reply
         # Session should advance to detail_action
@@ -1302,7 +1303,7 @@ class TestClientSelect:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El teléfono ya está registrado" in reply
@@ -1329,7 +1330,7 @@ class TestClientSelect:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El nombre de usuario ya existe" in reply
@@ -1377,7 +1378,7 @@ class TestPostActionPrompt:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "Cliente Test" in reply
@@ -1405,7 +1406,7 @@ class TestPostActionPrompt:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "cancelada" in reply.lower() or "cancelled" in reply.lower()
@@ -1449,7 +1450,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             user_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El teléfono ya está registrado" in reply
@@ -1475,7 +1476,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El nombre del servicio ya existe" in reply
@@ -1502,7 +1503,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El nombre del plan ya existe" in reply
@@ -1540,7 +1541,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "Cliente no encontrado" in reply
@@ -1599,6 +1600,7 @@ class TestCodigoFlow:
                 tenant_id="00000000-0000-0000-0000-000000000001",
                 db=AsyncMock(),
                 started_from_menu=False,
+                role="tenant",
             )
         assert result is not None
         assert "Netflix" in result or "netflix" in result.lower()
@@ -1639,7 +1641,17 @@ class TestCodigoFlow:
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {"codigo_started_from_menu": "false"}
+        mock_session.temp_data = {
+            "codigo_started_from_menu": "false",
+            "codigo_effective_keys": [
+                "disney",
+                "hbo_max",
+                "netflix",
+                "prime_video",
+                "spotify",
+                "universal_plus",
+            ],
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_SERVICE
 
@@ -1664,7 +1676,16 @@ class TestCodigoFlow:
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {}
+        mock_session.temp_data = {
+            "codigo_effective_keys": [
+                "disney",
+                "hbo_max",
+                "netflix",
+                "prime_video",
+                "spotify",
+                "universal_plus",
+            ]
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_SERVICE
         mock_session_service.get_session.return_value = mock_session
@@ -1689,7 +1710,16 @@ class TestCodigoFlow:
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {}
+        mock_session.temp_data = {
+            "codigo_effective_keys": [
+                "disney",
+                "hbo_max",
+                "netflix",
+                "prime_video",
+                "spotify",
+                "universal_plus",
+            ]
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_SERVICE
 
@@ -1789,7 +1819,7 @@ class TestCodigoFlow:
         for i, expected_key in enumerate(expected_keys, start=1):
             mock_session_service = AsyncMock()
             mock_session = AsyncMock()
-            mock_session.temp_data = {}
+            mock_session.temp_data = {"codigo_effective_keys": expected_keys}
             mock_session.flow = console_service.CODIGO_FLOW
             mock_session.step = console_service.CODIGO_STEP_SERVICE
             mock_session_service.get_session.return_value = mock_session
@@ -2157,13 +2187,13 @@ class TestConsoleHandlersCodigoScope:
 class TestNavigationContract:
     """Verify that 9=back and 0=exit semantics hold across consoles."""
 
-    async def test_nine_goes_to_next_page_in_subscription_list(
+    async def test_eight_goes_to_next_page_in_subscription_list(
         self,
         console_service: WhatsAppTenantConsoleService,
         session_service: WhatsAppSessionService,
         subscription_service: FakeSubscriptionService,
     ) -> None:
-        """'9' in subscription list triggers next-page, not global exit."""
+        """'8' in subscription list triggers next-page, not global exit."""
         tenant_id = subscription_service.tenant_id
         subscription_service._subscriptions = {}
         subs = [
@@ -2182,16 +2212,16 @@ class TestNavigationContract:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
 
-        # Send 9 → should go to page 2, NOT exit
+        # Send 8 → should go to page 2, NOT exit
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="9",
+            message="8",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         # Page 2 shows sub 8 only

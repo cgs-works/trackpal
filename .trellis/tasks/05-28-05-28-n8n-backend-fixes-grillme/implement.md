@@ -80,7 +80,6 @@ uv run pytest -q tests/test_tenant_console_service.py -k "menu or codigo"
 8. Agregar tests backend/frontend para permisos, filtros, orden, mensajes y validación 400 en `service_key` inválida.
 9. Confirmar explícitamente que n8n no construye lista; solo transporta respuesta backend.
 10. Validar manualmente con tenants configurados/no configurados y servicio global inactivo.
-9. Validar manualmente con tenants configurados/no configurados y servicio global inactivo.
 
 ## Commit policy
 

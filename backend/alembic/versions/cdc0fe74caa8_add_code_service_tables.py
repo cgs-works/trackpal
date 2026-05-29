@@ -74,7 +74,12 @@ def upgrade() -> None:
             sa.ForeignKey("tenants.id", ondelete="CASCADE"),
             primary_key=True,
         ),
-        sa.Column("service_key", sa.String(50), primary_key=True),
+        sa.Column(
+            "service_key",
+            sa.String(50),
+            sa.ForeignKey("code_service_global_status.service_key", ondelete="CASCADE"),
+            primary_key=True,
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

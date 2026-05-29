@@ -42,7 +42,9 @@ def _build_tenant_response(
 
 
 @router.get("/global", response_model=CodeServiceGlobalListResponse)
-async def list_global_code_services(db: DbDep, _master: MasterUser):
+async def list_global_code_services(
+    db: DbDep, _master: MasterUser
+) -> CodeServiceGlobalListResponse:
     """List all globally supported code services with active status."""
     rows = await code_services_repository.get_all_global(db)
     items = [
@@ -62,7 +64,7 @@ async def update_global_code_service(
     payload: CodeServiceGlobalUpdateRequest,
     db: DbDep,
     _master: MasterUser,
-):
+) -> CodeServiceGlobalItem:
     """Toggle global active status for a single service key."""
     if service_key not in VALID_SERVICE_KEYS:
         raise HTTPException(
@@ -85,7 +87,7 @@ async def bulk_update_global_code_services(
     payload: CodeServiceGlobalBulkUpdateRequest,
     db: DbDep,
     _master: MasterUser,
-):
+) -> CodeServiceGlobalListResponse:
     """Bulk-set global active status for multiple services."""
     try:
         payload.validate_keys()
@@ -115,7 +117,7 @@ async def bulk_update_global_code_services(
 async def get_my_tenant_code_services(
     db: DbDep,
     tenant_id: ActiveTenantId,
-):
+) -> TenantCodeServiceListResponse:
     """Get current tenant's code service selection with global active status."""
     selected_keys = await code_services_repository.get_tenant_selected_keys(
         db, tenant_id
@@ -129,7 +131,7 @@ async def update_my_tenant_code_services(
     payload: TenantCodeServiceUpdateRequest,
     db: DbDep,
     tenant_id: ActiveTenantId,
-):
+) -> TenantCodeServiceListResponse:
     """Replace current tenant's code service selection (full-replace sync)."""
     try:
         payload.validate_keys()
@@ -152,7 +154,7 @@ async def update_my_tenant_code_services(
 async def get_my_effective_code_services(
     db: DbDep,
     tenant_id: ActiveTenantId,
-):
+) -> list[str]:
     """Return effective service keys for current tenant, sorted A-Z."""
     return await code_services_repository.get_effective_service_keys(db, tenant_id)
 
@@ -165,7 +167,7 @@ async def get_tenant_code_services(
     tenant_id: UUID,
     db: DbDep,
     _master: MasterUser,
-):
+) -> TenantCodeServiceListResponse:
     """Get tenant's code service selection with global active status."""
     selected_keys = await code_services_repository.get_tenant_selected_keys(
         db, tenant_id
@@ -180,7 +182,7 @@ async def update_tenant_code_services(
     payload: TenantCodeServiceUpdateRequest,
     db: DbDep,
     _master: MasterUser,
-):
+) -> TenantCodeServiceListResponse:
     """Replace tenant's code service selection (full-replace sync)."""
     try:
         payload.validate_keys()
@@ -204,6 +206,6 @@ async def get_effective_code_services(
     tenant_id: UUID,
     db: DbDep,
     _master: MasterUser,
-):
+) -> list[str]:
     """Return effective service keys (tenant_selected ∩ global_active), sorted A-Z."""
     return await code_services_repository.get_effective_service_keys(db, tenant_id)

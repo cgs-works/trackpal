@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-from datetime import datetime, timezone
-
 from app.core.errors import UserFacingError, translate_error
 
 from . import _context as ctx
@@ -111,7 +108,7 @@ async def _handle_subscriptions_list(
     status_filter = session.temp_data.get("status_filter")
 
     # Handle page navigation
-    if msg == "8" and page > 1:
+    if msg == "9" and page > 1:
         subscriptions = await self._query_subscriptions_by_filter(
             db, tenant_id, status_filter
         )
@@ -133,7 +130,7 @@ async def _handle_subscriptions_list(
             await session_service.save_session(session)
         return reply + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_SELECT_PROMPT)
 
-    if msg == "9":
+    if msg == "8":
         subscriptions = await self._query_subscriptions_by_filter(
             db, tenant_id, status_filter
         )

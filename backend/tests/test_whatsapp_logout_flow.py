@@ -410,13 +410,13 @@ class TestCancelInsideActiveFlow:
 
             mock_close.assert_not_called()
 
-    async def test_auth_session_preserved(
+    async def test_auth_session_cleared(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Auth session is NOT cleared when 0 is sent inside an active flow."""
+        """Auth session is cleared when 0 is sent inside an active flow (global exit)."""
         await _setup_auth_session(auth_session_service)
 
         session = await session_service.create_session("+12015550001")
@@ -435,7 +435,7 @@ class TestCancelInsideActiveFlow:
             )
 
         auth = await auth_session_service.get_auth_session("+12015550001")
-        assert auth is not None, "Auth session must remain after cancel (not logout)"
+        assert auth is None, "Auth session must clear on global exit"
 
     async def test_conversation_session_cleared(
         self,
@@ -464,13 +464,13 @@ class TestCancelInsideActiveFlow:
         conv = await session_service.get_session("+12015550001")
         assert conv is None, "Conversation session should be cleared on cancel"
 
-    async def test_cancel_touches_auth_session(
+    async def test_zero_does_not_touch_auth_session(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Cancel inside active flow MUST refresh auth session TTL."""
+        """Global exit does not touch auth session; it clears auth session."""
         await _setup_auth_session(auth_session_service)
 
         session = await session_service.create_session("+12015550001")
@@ -491,15 +491,15 @@ class TestCancelInsideActiveFlow:
                     db=None,
                 )
 
-            mock_touch.assert_awaited_once_with("+12015550001")
+            mock_touch.assert_not_awaited()
 
-    async def test_cancel_returns_main_menu(
+    async def test_zero_returns_logout_confirmation(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Cancel inside active flow returns MAIN_MENU (Phase 3 adds cancel msg)."""
+        """Global exit inside active flow returns logout confirmation."""
         await _setup_auth_session(auth_session_service)
 
         session = await session_service.create_session("+12015550001")
@@ -517,8 +517,9 @@ class TestCancelInsideActiveFlow:
                 db=None,
             )
 
-        # Must contain main menu (Phase 3 will refine to cancellation + menu)
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert (
+            "sesión cerrada" in reply.lower() or "has cerrado sesión" in reply.lower()
+        )
 
 
 # ===========================================================================
@@ -667,14 +668,14 @@ class TestLoginReset:
 
 
 class TestFailoverBackupNoSession:
-    """Authenticated + ``0`` + ``used_backup=True`` + no conv session → cancel/menu path, not logout."""
+    """Authenticated + ``0`` + ``used_backup=True`` + no conv session → global logout path."""
 
-    async def test_auth_session_preserved_on_failover(
+    async def test_auth_session_cleared_on_failover(
         self,
         console_service: WhatsAppConsoleService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Auth session is NOT cleared when on backup and conv session is missing."""
+        """Auth session is cleared even when on backup and conv session is missing."""
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
@@ -703,23 +704,23 @@ class TestFailoverBackupNoSession:
                 db=None,
             )
 
-        # Auth session must remain
+        # Auth session must clear
         auth = await auth_service.get_auth_session("+12015550001")
-        assert auth is not None, "Auth session must survive failover 0"
+        assert auth is None, "Auth session must clear on failover 0"
 
-        # Evolution close should NOT be called (not a real logout)
+        # Evolution close should NOT be called (handled by n8n)
         mock_close.assert_not_called()
 
-        # Reply should preserve cancel + menu single-reply shape.
-        assert "Operación cancelada" in reply
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert (
+            "sesión cerrada" in reply.lower() or "has cerrado sesión" in reply.lower()
+        )
 
-    async def test_session_touched_on_failover(
+    async def test_session_not_touched_on_failover(
         self,
         console_service: WhatsAppConsoleService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Auth session TTL is refreshed on failover path."""
+        """Auth session is not touched on failover because it is cleared."""
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
@@ -749,14 +750,14 @@ class TestFailoverBackupNoSession:
                     db=None,
                 )
 
-            mock_touch.assert_awaited_once_with("+12015550001")
+            mock_touch.assert_not_awaited()
 
-    async def test_failover_returns_cancel_plus_menu_shape(
+    async def test_failover_returns_logout_confirmation(
         self,
         console_service: WhatsAppConsoleService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Failover path returns cancel message and main menu in one reply."""
+        """Failover path returns logout confirmation reply."""
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
@@ -782,7 +783,9 @@ class TestFailoverBackupNoSession:
             db=None,
         )
 
-        assert reply == console_service._with_main_menu("🚫 Operación cancelada.")
+        assert (
+            "sesión cerrada" in reply.lower() or "has cerrado sesión" in reply.lower()
+        )
 
 
 # ===========================================================================

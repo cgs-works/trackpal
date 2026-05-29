@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from . import messages as msg
-from . import formatters as fmt
-from app.services.whatsapp_master_console_facade.constants import POST_ACTION_PROMPT
 
 
 async def _handle_create_confirm(
@@ -61,7 +59,7 @@ async def _handle_create_confirm(
             else:
                 reply += "\n🔑 Contraseña configurada manualmente.\n"
 
-            return self._with_main_menu(reply) + POST_ACTION_PROMPT
+            return self._with_main_menu(reply)
         else:
             error = result.get("error", "Error desconocido al crear el tenant.")
             error_lower = error.lower()

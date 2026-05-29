@@ -159,11 +159,7 @@ class WhatsAppConsoleService:
             # can process "9" (back) before the global RESET_COMMANDS
             # check intercepts it.
             if has_active_flow:
-                # Global exit: "0" clears session + returns main menu
-                if msg_text in ("0",):
-                    if session_service is not None:
-                        await session_service.clear_session(phone)
-                    return self._with_main_menu("🚫 Operación cancelada.")
+                assert session is not None
                 if msg_text.lower() in ("menu", "menú", "/menu", "cancelar"):
                     if session_service is not None:
                         await session_service.clear_session(phone)

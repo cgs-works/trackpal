@@ -23,6 +23,7 @@ from app.services.whatsapp_session_service import (
 # Fake tenant data objects
 # ---------------------------------------------------------------------------
 
+
 class FakeTenant:
     """Minimal tenant data object for testing WhatsApp formatting."""
 
@@ -76,6 +77,7 @@ class FakeTenantService:
 # ---------------------------------------------------------------------------
 # Fake Redis — dict-based async double
 # ---------------------------------------------------------------------------
+
 
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
@@ -180,6 +182,7 @@ def tenant_service(sample_tenants: list[FakeTenant]) -> FakeTenantService:
 # ===========================================================================
 # Tests
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestListTenantsFlow:
@@ -459,7 +462,7 @@ class TestSelectTenantFlow:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="0",
+            message="menu",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,

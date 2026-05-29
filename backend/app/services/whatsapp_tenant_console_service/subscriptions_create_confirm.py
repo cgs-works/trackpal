@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
 
 from app.core.errors import UserFacingError, translate_error
 
@@ -12,7 +12,7 @@ from . import _context as ctx
 
 async def _handle_subscriptions_create_duration(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     del phone, tenant_id, db
     duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
     if duration_type is None:
@@ -34,7 +34,7 @@ async def _handle_subscriptions_create_duration(
 
 async def _handle_subscriptions_create_custom_date(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     del phone, tenant_id, db
     expires_at = self._parse_iso_date(msg)
     if expires_at is None:
@@ -48,7 +48,7 @@ async def _handle_subscriptions_create_custom_date(
 
 async def _handle_subscriptions_create_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     if msg.strip().lower() not in ("confirmar", "confirm"):
         return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
     if tenant_id is None or db is None or self._subscription_service is None:

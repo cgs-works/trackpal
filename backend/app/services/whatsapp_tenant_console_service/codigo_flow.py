@@ -9,6 +9,7 @@ Flow structure:
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from app.core.i18n import t as _i18n_t
 from app.repositories import code_services_repository, mailbox_config_repository
@@ -30,14 +31,14 @@ _CODIGO_SERVICE_LABELS: dict[str, str] = {
 
 async def _start_codigo_flow(
     self,
-    phone,
-    session_service,
-    tenant_id,
-    db,
+    phone: str,
+    session_service: Any,
+    tenant_id: Any,
+    db: Any,
     *,
     started_from_menu: bool = False,
     role: str = "tenant",
-):
+) -> str:
     """Entry point — show list of available services for code lookup."""
     loc = ctx.get_locale()
 
@@ -92,16 +93,34 @@ async def _start_codigo_flow(
 
 
 async def _handle_codigo_service(
-    self, phone, msg, session, session_service, tenant_id, db
-):
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    tenant_id: Any,
+    db: Any,
+) -> str:
     """Handle service selection — store service_key, ask for email."""
     loc = ctx.get_locale()
 
     # Use effective keys from session (set during _start_codigo_flow)
     effective_keys = session.temp_data.get("codigo_effective_keys", [])
     if not effective_keys:
-        # Fallback to global list if session is stale
-        effective_keys = list(self.STREAMING_SERVICE_KEYS)
+        # Recompute from authoritative DB source; never fallback to global list.
+        if tenant_id is None or db is None:
+            await session_service.clear_session(f"admin:{phone}")
+            return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant_id
+        )
+        if not effective_keys:
+            await session_service.clear_session(f"admin:{phone}")
+            return self._with_main_menu(
+                self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT), locale=loc
+            )
+        session.temp_data["codigo_effective_keys"] = effective_keys
+        await session_service.save_session(session)
 
     # Parse selection
     try:
@@ -135,8 +154,14 @@ async def _handle_codigo_service(
 
 
 async def _handle_codigo_email(
-    self, phone, msg, session, session_service, tenant_id, db
-):
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    tenant_id: Any,
+    db: Any,
+) -> str:
     """Handle email input — store lookup intent for handler orchestration.
 
     No longer creates jobs or enqueues to Redis.  Stores intent data

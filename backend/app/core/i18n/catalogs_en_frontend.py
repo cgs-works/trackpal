@@ -267,4 +267,5 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.code_services.tenant_select_all": "Select All",
     "frontend.code_services.tenant_deselect_all": "Deselect All",
     "frontend.code_services.tenant_globally_inactive": "(Globally inactive)",
+    "frontend.code_services.none": "No code services available.",
 }

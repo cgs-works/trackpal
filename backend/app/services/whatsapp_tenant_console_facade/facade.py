@@ -128,8 +128,8 @@ class WhatsAppTenantConsoleFacade:
                 )
             elif self._session_service.used_backup:
                 # Failover: session may be missing on backup
-                return self._console_service._with_main_menu(
-                    _t(locale, "wa.tenant.cancelled"), locale=locale
+                return await self._perform_exit(
+                    phone=phone, instance=instance, locale=locale
                 )
             else:
                 # Top-level → clear session, close Evolution chat, and goodbye

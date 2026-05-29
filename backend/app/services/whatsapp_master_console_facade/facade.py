@@ -80,30 +80,12 @@ class WhatsAppMasterConsoleFacade:
         if auth_session is not None and auth_session.role == "master":
             msg_stripped = message.strip()
 
-            # 2a. Contextual "0" handling
+            # 2a. Global "0" handling
             if msg_stripped == "0":
-                conv_session = await self._session_service.get_session(phone)
-                has_active_flow = conv_session is not None and bool(conv_session.flow)
-
-                if has_active_flow:
-                    await self._auth_session_service.touch_auth_session(phone)
-                    return await self._console_service.process_message(
-                        phone=phone,
-                        message=message,
-                        is_master=True,
-                        session_service=self._session_service,
-                        tenant_service=self._tenant_service,
-                    )
-                elif self._session_service.used_backup:
-                    await self._auth_session_service.touch_auth_session(phone)
-                    return self._console_service._with_main_menu(
-                        "🚫 Operación cancelada."
-                    )
-                else:
-                    return await self._perform_logout(
-                        phone=phone,
-                        instance=instance,
-                    )
+                return await self._perform_logout(
+                    phone=phone,
+                    instance=instance,
+                )
 
             # 2b. Normal authenticated message
             await self._auth_session_service.touch_auth_session(phone)

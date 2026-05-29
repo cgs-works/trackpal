@@ -10,8 +10,8 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
-from app.core.config import settings
 from app.api.v1.endpoints.integrations import _TenantConsoleAdapter
+from app.core.config import settings
 from app.models import MasterProfile, Tenant
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_auth_session_service import (
@@ -635,6 +635,10 @@ async def test_unknown_instance_denies_even_with_lockout(client, master_user):
         reply = resp.json()["reply"].lower()
         # Strict instance isolation: unknown instance → deny, not lockout
         assert "no tienes acceso" in reply or "no está registrado" in reply
+        assert "bloqueado" not in reply
+        assert "estás bloqueado" not in reply
+        assert "espera" not in reply
+        assert "locked" not in reply
 
 
 # ---------------------------------------------------------------------------

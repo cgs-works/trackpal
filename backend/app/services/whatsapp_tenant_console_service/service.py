@@ -183,6 +183,7 @@ class WhatsAppTenantConsoleService(
             # can process "9" (back / pagination) before the global
             # RESET_COMMANDS check intercepts it.
             if has_active_flow:
+                assert session is not None
                 # Global exit: "0" or "menu" clears session + returns
                 if msg in ("0",) or msg.lower() in (
                     "menu",

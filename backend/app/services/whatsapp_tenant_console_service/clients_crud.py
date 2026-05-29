@@ -76,7 +76,7 @@ async def _handle_client_create_password(self, phone, msg, session, session_serv
 
 async def _handle_client_create_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     stripped = msg.strip()
     if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
         data = session.temp_data
@@ -190,7 +190,7 @@ async def _handle_client_edit_field(self, phone, msg, session, session_service):
 
 async def _handle_client_edit_value(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     field = session.temp_data.get("field", "")
     new_value = msg.strip()
     client_id = session.selected_tenant_id
@@ -229,7 +229,7 @@ async def _handle_client_edit_value(
 
 async def _handle_client_deactivate_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     stripped = msg.strip()
     if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
         return self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)
@@ -254,7 +254,7 @@ async def _handle_client_deactivate_confirm(
 
 async def _handle_client_delete_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     stripped = msg.strip()
     if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
         return self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)

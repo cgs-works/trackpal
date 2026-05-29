@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from httpx import AsyncClient
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
@@ -17,7 +17,7 @@ from app.schemas.code_services import VALID_SERVICE_KEYS
 
 
 @pytest_asyncio.fixture
-async def master_user(db_session: AsyncSession):
+async def master_user(db_session: AsyncSession) -> User:
     user = User(
         username="cs_master",
         password_hash=get_password_hash("pass123"),
@@ -33,7 +33,7 @@ async def master_user(db_session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def tenant_user(db_session: AsyncSession):
+async def tenant_user(db_session: AsyncSession) -> User:
     user = User(
         username="cs_tenant",
         password_hash=get_password_hash("pass123"),
@@ -55,7 +55,7 @@ async def tenant_user(db_session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def seed_global_services(db_session: AsyncSession):
+async def seed_global_services(db_session: AsyncSession) -> None:
     """Seed global status rows for all supported services."""
     for key in VALID_SERVICE_KEYS:
         db_session.add(CodeServiceGlobalStatus(service_key=key, is_active=True))
@@ -63,7 +63,7 @@ async def seed_global_services(db_session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def master_headers(client: AsyncClient, master_user: User) -> dict:
+async def master_headers(client: AsyncClient, master_user: User) -> dict[str, str]:
     resp = await client.post(
         "/api/v1/auth/login",
         json={"username": "cs_master", "password": "pass123"},
@@ -72,7 +72,7 @@ async def master_headers(client: AsyncClient, master_user: User) -> dict:
 
 
 @pytest_asyncio.fixture
-async def tenant_headers(client: AsyncClient, tenant_user: User) -> dict:
+async def tenant_headers(client: AsyncClient, tenant_user: User) -> dict[str, str]:
     resp = await client.post(
         "/api/v1/auth/login",
         json={"username": "cs_tenant", "password": "pass123"},

@@ -27,7 +27,11 @@ class TenantCodeServiceSelection(Base, TimestampMixin):
         ForeignKey("tenants.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    service_key: Mapped[str] = mapped_column(String(50), primary_key=True)
+    service_key: Mapped[str] = mapped_column(
+        String(50),
+        ForeignKey("code_service_global_status.service_key", ondelete="CASCADE"),
+        primary_key=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

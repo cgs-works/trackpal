@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 async def _handle_subscriptions_cancel_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     if msg.strip().lower() not in ("confirmar", "confirm"):
         return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
     subscription_id = self._safe_uuid(session.selected_tenant_id)
@@ -25,15 +25,12 @@ async def _handle_subscriptions_cancel_confirm(
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return (
-        self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_CANCEL_SUCCESS))
-        + self._post_action_prompt()
-    )
+    return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_CANCEL_SUCCESS))
 
 
 async def _handle_subscriptions_reactivate_duration(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     del phone, tenant_id, db
     duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
     if duration_type is None:
@@ -55,7 +52,7 @@ async def _handle_subscriptions_reactivate_duration(
 
 async def _handle_subscriptions_reactivate_custom_date(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     del phone, tenant_id, db
     expires_at = self._parse_iso_date(msg)
     if expires_at is None:
@@ -69,7 +66,7 @@ async def _handle_subscriptions_reactivate_custom_date(
 
 async def _handle_subscriptions_reactivate_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     if msg.strip().lower() not in ("confirmar", "confirm"):
         return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
     subscription_id = self._safe_uuid(session.selected_tenant_id)
@@ -96,15 +93,12 @@ async def _handle_subscriptions_reactivate_confirm(
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return (
-        self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_SUCCESS))
-        + self._post_action_prompt()
-    )
+    return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_SUCCESS))
 
 
 async def _handle_subscriptions_renew_duration(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     del phone
     duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
     if duration_type is None:
@@ -123,7 +117,7 @@ async def _handle_subscriptions_renew_duration(
 
 async def _handle_subscriptions_renew_custom_date(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     del phone
     expires_at = self._parse_iso_date(msg)
     if expires_at is None:
@@ -137,7 +131,7 @@ async def _handle_subscriptions_renew_custom_date(
 
 async def _handle_subscriptions_renew_confirm(
     self, phone, msg, session, session_service, tenant_id, db
-):
+) -> str:
     if msg.strip().lower() not in ("confirmar", "confirm"):
         return self._t(self.KEY_SUBSCRIPTIONS_CONFIRM_REPROMPT)
     subscription_id = self._safe_uuid(session.selected_tenant_id)
@@ -162,7 +156,4 @@ async def _handle_subscriptions_renew_confirm(
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return (
-        self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_RENEW_SUCCESS))
-        + self._post_action_prompt()
-    )
+    return self._with_main_menu(self._t(self.KEY_SUBSCRIPTIONS_RENEW_SUCCESS))

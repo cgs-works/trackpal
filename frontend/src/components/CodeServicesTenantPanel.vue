@@ -14,7 +14,6 @@ const successMessage = ref('')
 
 async function loadServices() {
   errorMessage.value = ''
-  successMessage.value = ''
   isLoading.value = true
   try {
     const response = await api.get('/code-services/tenants/current')
@@ -59,8 +58,8 @@ async function saveSelection() {
     await api.put('/code-services/tenants/current', {
       service_keys: Array.from(selectedKeys.value),
     })
-    successMessage.value = i18nStore.t('frontend.code_services.tenant_saved')
     await loadServices()
+    successMessage.value = i18nStore.t('frontend.code_services.tenant_saved')
   } catch (error) {
     errorMessage.value = getApiError(error, i18nStore.t('frontend.code_services.tenant_error_save'))
   } finally {

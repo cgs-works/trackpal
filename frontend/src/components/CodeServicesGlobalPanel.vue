@@ -105,6 +105,8 @@ onMounted(loadServices)
         </button>
       </div>
     </template>
+
+    <div v-else class="empty-state">{{ i18nStore.t('frontend.code_services.none') }}</div>
   </section>
 </template>
 
