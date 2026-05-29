@@ -5,10 +5,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.core.encryption import encrypt_value
-from app.models import MailCodeDeliveryLog, MailLookupJob, Tenant, TenantMailbox
+from app.models import MailLookupJob, Tenant, TenantMailbox
 from app.repositories import mailbox_dedupe_repository, mailbox_lookup_repository
-from app.services.mail_code_extractor import ExtractedCode
 from app.services.mail_lookup_worker import (
     compute_fingerprint,
     get_ephemeral_result,
@@ -16,9 +14,6 @@ from app.services.mail_lookup_worker import (
 )
 from app.services.mail_lookup_worker._helpers import _filter_emails_by_target_email
 from app.services.mail_lookup_worker.ephemeral_cache import purge_expired, store_result
-from app.services.mail_lookup_worker.fingerprint import (
-    compute_fingerprint as _fingerprint,
-)
 import app.services.mail_lookup_worker.providers as pmod
 from app.services.mail_lookup_worker.providers import (
     EmailMessage,
@@ -237,6 +232,95 @@ class TestWorkerPipeline:
 
         assert job.status == "completed"
         assert job.result_type == "not_found"
+
+    async def test_process_job_netflix_url_resolves_to_code(
+        self, db_session, monkeypatch
+    ):
+        """Netflix travel verify URL is resolved to OTP code, never returned as URL."""
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mb.id, "netflix"
+        )
+
+        provider = StubProvider(
+            emails=[
+                _make_email(
+                    subject="Tu código de acceso temporal de Netflix",
+                    body=(
+                        "Click verify "
+                        "[https://www.netflix.com/account/travel/verify?nftoken=abc123]"
+                    ),
+                    message_id="msg-netflix-url",
+                    sender="noreply@netflix.com",
+                ),
+            ]
+        )
+
+        async def _fake_fetch_netflix_code_from_url(url: str) -> str | None:
+            assert "travel/verify" in url
+            return "839201"
+
+        monkeypatch.setattr(
+            "app.services.mail_lookup_worker.worker.fetch_netflix_code_from_url",
+            _fake_fetch_netflix_code_from_url,
+        )
+
+        old_active = active_provider
+        try:
+            pmod.active_provider = provider
+            await process_job(db_session, job)
+            await db_session.commit()
+        finally:
+            pmod.active_provider = old_active
+
+        assert job.status == "completed"
+        assert job.result_type == "code"
+        cached = get_ephemeral_result(job.id)
+        assert cached is not None
+        assert cached[0] == "code"
+        assert cached[1] == "839201"
+
+    async def test_process_job_netflix_url_without_otp_returns_not_found(
+        self, db_session, monkeypatch
+    ):
+        """If Netflix verify URL cannot be resolved, worker returns not_found (never URL)."""
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mb.id, "netflix"
+        )
+
+        provider = StubProvider(
+            emails=[
+                _make_email(
+                    subject="Your Netflix temporary access code",
+                    body='<a href="https://www.netflix.com/account/travel/verify?nftoken=zzz">Verify</a>',
+                    message_id="msg-netflix-url-fail",
+                    sender="noreply@netflix.com",
+                ),
+            ]
+        )
+
+        async def _fake_fetch_netflix_code_from_url(_url: str) -> str | None:
+            return None
+
+        monkeypatch.setattr(
+            "app.services.mail_lookup_worker.worker.fetch_netflix_code_from_url",
+            _fake_fetch_netflix_code_from_url,
+        )
+
+        old_active = active_provider
+        try:
+            pmod.active_provider = provider
+            await process_job(db_session, job)
+            await db_session.commit()
+        finally:
+            pmod.active_provider = old_active
+
+        assert job.status == "completed"
+        assert job.result_type == "not_found"
+        assert get_ephemeral_result(job.id) is None
 
     async def test_process_job_duplicate_suppressed(self, db_session):
         """Same code already delivered -> duplicate_suppressed."""
