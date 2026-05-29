@@ -224,6 +224,29 @@ Unique constraints/indexes:
 - Partial unique index when `message_id IS NOT NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `message_id`, `fingerprint`)
 - Partial unique index when `message_id IS NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `fingerprint`)
 
+### `CodeServiceGlobalStatus` -- `code_service_global_status`
+
+Global governance table for code-extraction services.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| service_key | VARCHAR(64) | PK, canonical service key |
+| is_active | BOOLEAN | Global enable/disable toggle |
+| created_at | TIMESTAMPTZ | Server default now() |
+| updated_at | TIMESTAMPTZ | Server default now(), onupdate now() |
+
+### `TenantCodeServiceSelection` -- `tenant_code_service_selections`
+
+Per-tenant code-service selection list (separate from tenant commercial catalog).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| tenant_id | UUID | FK -> tenants.id CASCADE |
+| service_key | VARCHAR(64) | FK -> code_service_global_status.service_key CASCADE |
+| created_at | TIMESTAMPTZ | Server default now() |
+
+Primary key: (`tenant_id`, `service_key`).
+
 ## RLS
 
 Postgres RLS is enabled and forced on `tenants`, `services`, and `plans`. Policies use transaction-local custom settings set by the API before tenant-scoped queries:
@@ -249,6 +272,8 @@ Alembic migrations:
 10. `cdaefe74caa4` — Add `whatsapp_lid` columns + indexes to `master_profiles`, `tenants`, and `clients` for LID fallback identity resolution
 11. `cdbfefe74caa5` — Add `tenant_mailboxes`, `mail_lookup_jobs`, and `mail_code_delivery_log` for tenant mailbox ingestion
 12. `cdbfefe74caa6` — Add `mail_lookup_jobs.target_email` and replace dedupe uniqueness with partial indexes for nullable `message_id`
+13. `cdbfefe74caa7` — Enable/force RLS on core auth and mailbox tables (`users`, `refresh_sessions`, `master_profiles`, `mail_lookup_jobs`, `mail_code_delivery_log`, `alembic_version`)
+14. `cdc0fe74caa8` — Add `code_service_global_status` and `tenant_code_service_selections` with RLS policies and seeded default service keys
 
 ## Key Constraints
 

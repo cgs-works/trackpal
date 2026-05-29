@@ -12,7 +12,7 @@
 ## Client Lifecycle
 
 1. A client is created by a Tenant and linked to that tenant
-2. A client has a `local_username` (e.g. `pepe`) which is combined with the tenant's `client_prefix` (e.g. `t1_`) to form the technical login `t1_pepe`
+2. A client has a tenant-local username segment (e.g. `pepe`) combined with tenant `client_prefix` (e.g. `t1_`) to form canonical login `t1_pepe`
 3. Clients can be deactivated/reactivated; deactivation revokes active sessions
 4. Clients can only be managed by their owner Tenant or a Master (via tenant context)
 
@@ -25,7 +25,7 @@
 5. Successful login resets the failure counter
 
 ## WhatsApp Consoles
-**Note: Client users have NO WhatsApp console access. Master and Tenant consoles are separate.**
+**Note: System exposes Master, Tenant, and Client WhatsApp consoles through same n8n integration endpoint.**
 
 ### Master Console
 1. Available only via the n8n webhook integration (not directly)
@@ -36,11 +36,16 @@
 6. Master phone number is identified via the `POST /api/v1/integrations/n8n/console` endpoint
 
 ### Tenant Console
-1. Available only to users with `role = "tenant"`
-2. Phone-based auto-auth via `POST /api/v1/integrations/n8n/identify`
-3. Uses same Evolution -> n8n -> Backend relay
-4. Conversation state is ephemeral in Redis under `session:admin:{phone}`
-5. `0` at top level exits; `0` inside a flow cancels the active operation
+1. Available to tenant identities resolved by instance-first routing (`POST /api/v1/integrations/n8n/console`)
+2. Uses same Evolution -> n8n -> Backend relay
+3. Conversation state is ephemeral in Redis under `session:admin:{phone}`
+4. Navigation contract: `9` = back in interactive flows, `0` = global exit only
+
+### Client Console
+1. Read-only console for active clients resolved inside tenant instance scope
+2. Client identities are resolved by `(tenant_id, phone)` and optional `whatsapp_lid` fallback
+3. Navigation contract matches tenant/master: `9` back, `0` global exit
+4. Exit responses include `status="closed"` so n8n can close Evolution session
 
 ## Phone Number Handling
 
@@ -71,7 +76,7 @@
 2. Usernames: max 20 chars, lowercase + digits + underscores, must start with a letter
 3. Full names: Unicode letters, digits, and spaces only (no punctuation)
 4. Emails: validated via `email_validator` (syntax only, no deliverability check)
-5. Client Local Usernames: Must be unique within the tenant; used to build technical login
+5. Client username local segment: unique within tenant; used to build canonical login username
 6. Phones: validated as international E.164 format via `phonenumbers` library
 
 ## Deployment Constraints
