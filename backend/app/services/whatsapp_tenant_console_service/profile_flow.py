@@ -20,13 +20,17 @@ async def _start_profile_flow(self, phone, session_service, user_id, db):
     return self._t(self.KEY_PROFILE_MENU)
 
 
-async def _handle_profile_action(self, phone, msg, session, session_service, user_id, db):
+async def _handle_profile_action(
+    self, phone, msg, session, session_service, user_id, db
+):
     if msg == "1":
         return await self._show_profile(phone, session_service, user_id, db)
     elif msg == "2":
         return await self._start_profile_edit(phone, session, session_service)
     elif msg == "3":
-        return await self._start_profile_change_password(phone, session, session_service)
+        return await self._start_profile_change_password(
+            phone, session, session_service
+        )
     elif msg == "4":
         return await self._start_profile_change_locale(phone, session, session_service)
     elif msg == "0":
@@ -38,6 +42,7 @@ async def _show_profile(self, phone, session_service, user_id, db):
     if user_id is None or db is None or self._profile_service is None:
         return self._t("wa.tenant.errors.profile_load_failed")
     from app.repositories import users_repository
+
     user = await users_repository.get(db, user_id)
     if user is None:
         return self._t("wa.tenant.errors.user_not_found")
@@ -70,16 +75,20 @@ async def _handle_profile_edit_field(self, phone, msg, session, session_service)
     return self.PROFILE_EDIT_PROMPTS[field]
 
 
-async def _handle_profile_edit_value(self, phone, msg, session, session_service, user_id, db):
+async def _handle_profile_edit_value(
+    self, phone, msg, session, session_service, user_id, db
+):
     field = session.temp_data.get("field", "")
     new_value = msg.strip()
     if user_id is None or db is None or self._profile_service is None:
         return self._t("wa.tenant.errors.profile_update_failed")
     from app.repositories import users_repository
+
     user = await users_repository.get(db, user_id)
     if user is None:
         return self._t("wa.tenant.errors.user_not_found")
     from app.schemas.me import ProfileUpdate
+
     payload = ProfileUpdate(**{field: new_value})
     try:
         profile = await self._profile_service.update_profile(db, user, payload)
@@ -91,7 +100,10 @@ async def _handle_profile_edit_value(self, phone, msg, session, session_service,
         return self._t("wa.tenant.errors.profile_update_failed")
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return self._with_main_menu(self._t(self.KEY_PROFILE_EDIT_SUCCESS))
+    return (
+        self._with_main_menu(self._t(self.KEY_PROFILE_EDIT_SUCCESS))
+        + self._post_action_prompt()
+    )
 
 
 async def _start_profile_change_password(self, phone, session, session_service):
@@ -103,7 +115,9 @@ async def _start_profile_change_password(self, phone, session, session_service):
     return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_OLD)
 
 
-async def _handle_profile_change_password_old(self, phone, msg, session, session_service, user_id, db):
+async def _handle_profile_change_password_old(
+    self, phone, msg, session, session_service, user_id, db
+):
     old_password = msg.strip()
     if not old_password:
         return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_OLD)
@@ -114,23 +128,35 @@ async def _handle_profile_change_password_old(self, phone, msg, session, session
     return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_NEW)
 
 
-async def _handle_profile_change_password_new(self, phone, msg, session, session_service, user_id, db):
+async def _handle_profile_change_password_new(
+    self, phone, msg, session, session_service, user_id, db
+):
     new_password = msg.strip()
     old_password = session.temp_data.get("old_password", "")
     if len(new_password) < 6:
-        return self._t("wa.tenant.errors.password_short") + "\n\n" + self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_NEW)
+        return (
+            self._t("wa.tenant.errors.password_short")
+            + "\n\n"
+            + self._t(self.KEY_PROFILE_CHANGE_PASSWORD_PROMPT_NEW)
+        )
     if user_id is None or db is None or self._profile_service is None:
         return self._t("wa.tenant.errors.password_change_failed")
     from app.repositories import users_repository
+
     user = await users_repository.get(db, user_id)
     if user is None:
         return self._t("wa.tenant.errors.user_not_found")
-    success = await self._profile_service.change_password(db, user, old_password, new_password)
+    success = await self._profile_service.change_password(
+        db, user, old_password, new_password
+    )
     if not success:
         return self._t(self.KEY_PROFILE_CHANGE_PASSWORD_ERROR_OLD)
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return self._with_main_menu(self._t(self.KEY_PROFILE_CHANGE_PASSWORD_SUCCESS))
+    return (
+        self._with_main_menu(self._t(self.KEY_PROFILE_CHANGE_PASSWORD_SUCCESS))
+        + self._post_action_prompt()
+    )
 
 
 async def _start_profile_change_locale(self, phone, session, session_service):
@@ -143,7 +169,9 @@ async def _start_profile_change_locale(self, phone, session, session_service):
     return self._t(self.KEY_PROFILE_LOCALE_SELECT, current_locale=current_locale_name)
 
 
-async def _handle_profile_change_locale_select(self, phone, msg, session, session_service, user_id, db):
+async def _handle_profile_change_locale_select(
+    self, phone, msg, session, session_service, user_id, db
+):
     if msg == "0":
         return self._with_main_menu("")
     if msg not in ("1", "2"):
@@ -154,8 +182,11 @@ async def _handle_profile_change_locale_select(self, phone, msg, session, sessio
     if user_id is not None and db is not None:
         from app.models import Tenant
         from sqlalchemy import update as sa_update
+
         await db.execute(
-            sa_update(Tenant).where(Tenant.owner_user_id == user_id).values(locale=new_locale)
+            sa_update(Tenant)
+            .where(Tenant.owner_user_id == user_id)
+            .values(locale=new_locale)
         )
         await db.commit()
 
@@ -165,6 +196,15 @@ async def _handle_profile_change_locale_select(self, phone, msg, session, sessio
     token = ctx.set_locale(new_locale)
     try:
         human_name = LOCALE_NAMES.get(new_locale, new_locale)
-        return self._with_main_menu(_i18n_t(new_locale, "wa.tenant.profile.locale_changed", locale_name=human_name))
+        return (
+            self._with_main_menu(
+                _i18n_t(
+                    new_locale,
+                    "wa.tenant.profile.locale_changed",
+                    locale_name=human_name,
+                )
+            )
+            + self._post_action_prompt()
+        )
     finally:
         ctx.reset_locale(token)

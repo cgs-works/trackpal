@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import lifecycle_messages as lc_msg
+from app.services.whatsapp_master_console_facade.constants import POST_ACTION_PROMPT
 
 
 async def _handle_deactivate_confirm(
@@ -34,12 +35,20 @@ async def _handle_deactivate_confirm(
         if result.get("success"):
             if session_service is not None:
                 await session_service.clear_session(phone)
-            return self._with_main_menu(
-                lc_msg.DEACTIVATE_SUCCESS_MESSAGE.format(name=tenant_name)
+            return (
+                self._with_main_menu(
+                    lc_msg.DEACTIVATE_SUCCESS_MESSAGE.format(name=tenant_name)
+                )
+                + POST_ACTION_PROMPT
             )
         else:
             error = result.get("error", "Error desconocido al desactivar.")
-            return "❌ " + error + "\n\n" + lc_msg.DEACTIVATE_CONFIRM_PROMPT.format(name=tenant_name)
+            return (
+                "❌ "
+                + error
+                + "\n\n"
+                + lc_msg.DEACTIVATE_CONFIRM_PROMPT.format(name=tenant_name)
+            )
 
     return self.EDIT_DETAIL_FALLBACK
 
@@ -73,8 +82,11 @@ async def _handle_delete_confirm(
         if result.get("success"):
             if session_service is not None:
                 await session_service.clear_session(phone)
-            return self._with_main_menu(
-                lc_msg.DELETE_SUCCESS_MESSAGE.format(name=tenant_name)
+            return (
+                self._with_main_menu(
+                    lc_msg.DELETE_SUCCESS_MESSAGE.format(name=tenant_name)
+                )
+                + POST_ACTION_PROMPT
             )
         else:
             error = result.get("error", "Error desconocido al eliminar.")

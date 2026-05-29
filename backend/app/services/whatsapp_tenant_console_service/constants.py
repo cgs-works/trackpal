@@ -9,7 +9,7 @@ KEY_HELP_TEXT = "wa.tenant.help"
 KEY_FALLBACK_NO_FLOW = "wa.tenant.fallback.no_flow"
 KEY_FALLBACK_ACTIVE_FLOW = "wa.tenant.fallback.active_flow"
 
-RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
+RESET_COMMANDS = {"0", "9", "menu", "menú", "/menu", "cancelar"}
 HELP_COMMANDS = {"5", "ayuda"}
 
 # -- Flow identifiers ----------------------------------------------------
@@ -201,13 +201,16 @@ KEY_CODIGO_ERROR = "wa.tenant.codigo.error"
 KEY_CODIGO_TIMEOUT = "wa.tenant.codigo.timeout"
 KEY_CODIGO_INVALID_SERVICE = "wa.tenant.codigo.invalid_service"
 KEY_CODIGO_NO_MAILBOX = "wa.tenant.codigo.no_mailbox"
+KEY_CODIGO_NO_CODE_SERVICES_TENANT = "wa.tenant.codigo.no_code_services_tenant"
+KEY_CODIGO_NO_CODE_SERVICES_CLIENT = "wa.tenant.codigo.no_code_services_client"
 
 # Global service keys available for code lookup
+# Alphabetical order by visible label (Disney+, HBO Max, Netflix, Prime Video, Spotify, Universal+)
 STREAMING_SERVICE_KEYS: list[str] = [
-    "netflix",
-    "disney",
-    "hbo_max",
-    "prime_video",
-    "spotify",
-    "universal_plus",
+    "disney",         # 1️⃣ Disney+
+    "hbo_max",        # 2️⃣ HBO Max
+    "netflix",        # 3️⃣ Netflix
+    "prime_video",    # 4️⃣ Prime Video
+    "spotify",        # 5️⃣ Spotify
+    "universal_plus", # 6️⃣ Universal+
 ]

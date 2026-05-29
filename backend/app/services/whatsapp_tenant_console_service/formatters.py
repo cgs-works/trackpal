@@ -19,8 +19,14 @@ def _t(key: str, /, **params: Any) -> str:
 def _with_main_menu(message: str, locale: str | None = None) -> str:
     """Append the main menu to *message*, translated to *locale*."""
     from . import constants as c
+
     loc = locale if locale is not None else ctx.get_locale()
     return message.rstrip() + "\n\n" + _i18n_t(loc, c.KEY_MAIN_MENU)
+
+
+def _post_action_prompt() -> str:
+    """Return the standardized post-action decision prompt."""
+    return _i18n_t(ctx.get_locale(), "wa.tenant.post_action_prompt")
 
 
 def _format_client_list(clients: list[Any]) -> tuple[str, dict[str, str]]:
@@ -30,29 +36,42 @@ def _format_client_list(clients: list[Any]) -> tuple[str, dict[str, str]]:
     loc = ctx.get_locale()
     for i, c in enumerate(clients, start=1):
         num = str(i)
-        status = _i18n_t(loc, "wa.tenant.status.active") if c.is_active else _i18n_t(loc, "wa.tenant.status.inactive")
+        status = (
+            _i18n_t(loc, "wa.tenant.status.active")
+            if c.is_active
+            else _i18n_t(loc, "wa.tenant.status.inactive")
+        )
         entries.append(f"{num}️⃣ {c.full_name} ({status})")
         selection_map[num] = str(c.id)
         if c.is_active:
             active_count += 1
     inactive_count = len(clients) - active_count
-    header = _i18n_t(loc, "wa.tenant.clients.list.header", active_count=active_count, inactive_count=inactive_count)
+    header = _i18n_t(
+        loc,
+        "wa.tenant.clients.list.header",
+        active_count=active_count,
+        inactive_count=inactive_count,
+    )
     return header + "\n".join(entries), selection_map
 
 
 def _format_client_detail(client: Any) -> str:
     loc = ctx.get_locale()
     from . import constants as c
-    status_emoji = _i18n_t(loc, "wa.tenant.clients.detail.status_active") if client.is_active else _i18n_t(loc, "wa.tenant.clients.detail.status_inactive")
+
+    status_emoji = (
+        _i18n_t(loc, "wa.tenant.clients.detail.status_active")
+        if client.is_active
+        else _i18n_t(loc, "wa.tenant.clients.detail.status_inactive")
+    )
     actions = (
         _i18n_t(loc, c.KEY_CLIENT_DETAIL_ACTIVE_ACTIONS)
         if client.is_active
         else _i18n_t(loc, c.KEY_CLIENT_DETAIL_INACTIVE_ACTIONS)
     )
     phone = client.phone or "—"
-    username = (
-        getattr(client, "username", None)
-        or getattr(client.user, "username", "—")
+    username = getattr(client, "username", None) or getattr(
+        client.user, "username", "—"
     )
     created = ""
     if client.created_at:
@@ -83,9 +102,7 @@ def _format_service_list(services: list[Any]) -> tuple[str, dict[str, str]]:
 
 def _format_service_detail(service: Any) -> str:
     return (
-        f"📦 *Servicio*\n\n"
-        f"*Nombre:* {service.name}\n"
-        f"*ID:* {str(service.id)[:8]}...\n"
+        f"📦 *Servicio*\n\n*Nombre:* {service.name}\n*ID:* {str(service.id)[:8]}...\n"
     )
 
 
@@ -100,10 +117,7 @@ def _format_plan_list(plans: list[Any]) -> tuple[str, dict[str, str]]:
 
 
 def _format_plan_detail(plan: Any) -> str:
-    return (
-        f"📄 *Plan*\n\n"
-        f"*Nombre:* {plan.name}\n"
-    )
+    return f"📄 *Plan*\n\n*Nombre:* {plan.name}\n"
 
 
 def _format_profile_detail(profile: Any, username: str) -> str:
@@ -117,7 +131,10 @@ def _format_profile_detail(profile: Any, username: str) -> str:
 
 
 def _format_subscription_list(
-    subscriptions: list[Any], show_status: bool = True, page: int = 1, total_pages: int = 1
+    subscriptions: list[Any],
+    show_status: bool = True,
+    page: int = 1,
+    total_pages: int = 1,
 ) -> tuple[str, dict[str, str]]:
     loc = ctx.get_locale()
     entries: list[str] = []
@@ -134,7 +151,9 @@ def _format_subscription_list(
         if show_status:
             status_name = _i18n_t(loc, f"wa.tenant.subscriptions.status.{sub.status}")
             label += f" ({status_name})"
-        client_name = getattr(sub, "client_name", None) or getattr(sub, "client_full_name", "")
+        client_name = getattr(sub, "client_name", None) or getattr(
+            sub, "client_full_name", ""
+        )
         if client_name:
             label += f" — {client_name}"
         entries.append(f"{num}️⃣ {label}")
@@ -153,7 +172,9 @@ def _format_subscription_list(
 
     page_line = ""
     if total_pages > 1:
-        page_line = _i18n_t(loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages)
+        page_line = _i18n_t(
+            loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages
+        )
 
     reply = header + body
     if page_line:
@@ -178,7 +199,9 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
         if pin_val:
             pin_display = pin_val
 
-    client_name = getattr(sub, "client_name", None) or getattr(sub, "client_full_name", "—")
+    client_name = getattr(sub, "client_name", None) or getattr(
+        sub, "client_full_name", "—"
+    )
     service_name = getattr(sub, "service_name", None) or "—"
     plan_name = getattr(sub, "plan_name", None) or "—"
     profile_name = sub.profile_name or "—"
@@ -221,9 +244,3 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
         f"*Inicio:* {starts_at}\n"
         f"*Expira:* {expires_at}\n"
     )
-
-
-
-
-
-

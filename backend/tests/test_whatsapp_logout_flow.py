@@ -216,29 +216,20 @@ class TestLogoutFromMainMenu:
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Evolution close_chat_session is called on logout with correct params."""
+        """Logout returns goodbye message. Evolution close handled by n8n."""
         await _setup_auth_session(auth_session_service)
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session"
-        ) as mock_close:
-            await facade.process_message(
-                phone="+12015550001",
-                message="0",
-                instance="inst-test",
-                db=None,
-            )
+        reply = await facade.process_message(
+            phone="+12015550001",
+            message="0",
+            instance="inst-test",
+            db=None,
+        )
 
-            mock_close.assert_called_once()
-            call_kwargs = mock_close.call_args.kwargs
-            assert call_kwargs.get("instance") == "inst-test"
-            # remote_jid should be derived from phone: digits-only + @s.whatsapp.net
-            remote_jid = call_kwargs.get("remote_jid", "")
-            assert remote_jid.endswith("@s.whatsapp.net")
-            # Phone is normalized: +12015550001 → 12015550001
-            assert "12015550001" in remote_jid
+        # Should contain goodbye/confirmation keywords for n8n detection
+        assert "goodbye" in reply.lower() or "sesión cerrada" in reply.lower()
 
     async def test_logout_returns_confirmation(
         self,
@@ -832,26 +823,19 @@ class TestLogoutInvalidPhone:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
-        caplog: Any,
     ) -> None:
-        """Warning is logged when phone has no digits."""
+        """Logout with invalid phone still returns goodbye (Evolution close handled by n8n)."""
         await _setup_auth_session(auth_session_service, phone="abc")
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        import logging
+        reply = await facade._perform_logout(
+            phone="abc",
+            instance="inst-test",
+        )
 
-        with caplog.at_level(logging.WARNING):
-            await facade._perform_logout(
-                phone="abc",
-                instance="inst-test",
-            )
-
-        # Warning should mention the phone and the skip
-        assert any(
-            "normalize_phone returned no digits" in rec.message
-            for rec in caplog.records
-        ), "Warning about no digits should be logged"
+        # Should still return a goodbye message
+        assert reply.strip()  # non-empty
 
 
 # ===========================================================================
@@ -867,33 +851,20 @@ class TestLogoutHttpErrorLogging:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
-        caplog: Any,
     ) -> None:
-        """HTTPError caught during _perform_logout includes exc_info in log record."""
+        """Logout still works when Evolution close is not called (handled by n8n)."""
         await _setup_auth_session(auth_session_service, phone="+12015550001")
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session",
-            side_effect=httpx.HTTPError("Connection refused"),
-        ):
-            import logging
-
-            with caplog.at_level(logging.WARNING):
-                await facade._perform_logout(
-                    phone="+12015550001",
-                    instance="inst-test",
-                )
-
-        # Find the relevant log record
-        matching = [
-            rec
-            for rec in caplog.records
-            if "Evolution API call failed during logout" in rec.message
-        ]
-        assert len(matching) >= 1, "Warning about Evolution failure should be logged"
-        record = matching[0]
-        assert record.exc_info is not None and record.exc_info[0] is not None, (
-            "exc_info should be set on the log record"
+        reply = await facade._perform_logout(
+            phone="+12015550001",
+            instance="inst-test",
         )
+
+        # Session is cleared
+        auth = await auth_session_service.get_auth_session("+12015550001")
+        assert auth is None
+
+        # Reply is still logout confirmation
+        assert "sesión" in reply.lower() or "goodbye" in reply.lower()

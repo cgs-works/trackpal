@@ -39,6 +39,7 @@ class WhatsAppTenantConsoleService(
     # fmt: off
     _t = _._t
     _with_main_menu = _._with_main_menu
+    _post_action_prompt = _._post_action_prompt
     _format_client_list = _._format_client_list
     _format_client_detail = _._format_client_detail
     _format_service_list = _._format_service_list
@@ -177,13 +178,43 @@ class WhatsAppTenantConsoleService(
                 session = await session_service.get_session(f"admin:{phone}")
             has_active_flow = session is not None and bool(session.flow)
 
-            if msg.lower() in self.RESET_COMMANDS:
-                if session_service is not None:
-                    await session_service.clear_session(f"admin:{phone}")
-                if has_active_flow:
+            # ── Active flow routing (before reset check) ──────────────
+            # Route active flows first so that flow-specific handlers
+            # can process "9" (back / pagination) before the global
+            # RESET_COMMANDS check intercepts it.
+            if has_active_flow:
+                # Global exit: "0" or "menu" clears session + returns
+                if msg in ("0",) or msg.lower() in (
+                    "menu",
+                    "menú",
+                    "/menu",
+                    "cancelar",
+                ):
+                    if session_service is not None:
+                        await session_service.clear_session(f"admin:{phone}")
+                    if msg == "0":
+                        return self._with_main_menu(
+                            _i18n_t(ctx.get_locale(), "wa.tenant.goodbye")
+                        )
                     return self._with_main_menu(
                         _i18n_t(ctx.get_locale(), "wa.tenant.cancelled")
                     )
+                if msg.lower() in self.HELP_COMMANDS:
+                    return self._t(self.KEY_HELP_TEXT)
+                return await self._route_active_flow(
+                    phone,
+                    msg,
+                    session,
+                    session_service,
+                    tenant_id,
+                    user_id,
+                    db,
+                )
+
+            # ── No active flow ───────────────────────────────────────
+            if msg.lower() in self.RESET_COMMANDS:
+                if session_service is not None:
+                    await session_service.clear_session(f"admin:{phone}")
                 if msg == "0":
                     return self._with_main_menu(
                         _i18n_t(ctx.get_locale(), "wa.tenant.goodbye")
@@ -201,17 +232,6 @@ class WhatsAppTenantConsoleService(
 
             if msg.lower() in self.HELP_COMMANDS:
                 return self._t(self.KEY_HELP_TEXT)
-
-            if has_active_flow:
-                return await self._route_active_flow(
-                    phone,
-                    msg,
-                    session,
-                    session_service,
-                    tenant_id,
-                    user_id,
-                    db,
-                )
 
             if not msg:
                 return self._t(self.KEY_MAIN_MENU)
@@ -241,6 +261,7 @@ class WhatsAppTenantConsoleService(
                     tenant_id,
                     db,
                     started_from_menu=True,
+                    role="tenant",
                 )
             elif msg.lower() in ("codigo", "código", "code"):
                 return await self._start_codigo_flow(
@@ -249,6 +270,7 @@ class WhatsAppTenantConsoleService(
                     tenant_id,
                     db,
                     started_from_menu=False,
+                    role="tenant",
                 )
             return self._t(self.KEY_FALLBACK_NO_FLOW)
 

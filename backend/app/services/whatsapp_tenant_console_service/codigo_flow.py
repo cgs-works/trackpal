@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 
 from app.core.i18n import t as _i18n_t
-from app.repositories import mailbox_config_repository
+from app.repositories import code_services_repository, mailbox_config_repository
 
 from . import _context as ctx
 
@@ -36,6 +36,7 @@ async def _start_codigo_flow(
     db,
     *,
     started_from_menu: bool = False,
+    role: str = "tenant",
 ):
     """Entry point — show list of available services for code lookup."""
     loc = ctx.get_locale()
@@ -48,9 +49,21 @@ async def _start_codigo_flow(
         if mailbox.status not in ("connected", "error"):
             return self._t(self.KEY_CODIGO_NO_MAILBOX)
 
-    # Build service list
+    # Get effective service list (tenant_selected ∩ global_active)
+    effective_keys: list[str] = []
+    if tenant_id is not None and db is not None:
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant_id
+        )
+
+    if not effective_keys:
+        if role == "client":
+            return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_CLIENT)
+        return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
+
+    # Build service list from effective keys
     lines = []
-    for i, key in enumerate(self.STREAMING_SERVICE_KEYS, start=1):
+    for i, key in enumerate(effective_keys, start=1):
         label = _CODIGO_SERVICE_LABELS.get(key, key.capitalize())
         lines.append(f"{i}️⃣ {label}")
     cancel_key = (
@@ -70,7 +83,8 @@ async def _start_codigo_flow(
     session.flow = self.CODIGO_FLOW
     session.step = self.CODIGO_STEP_SERVICE
     session.temp_data = {
-        "codigo_started_from_menu": "true" if started_from_menu else "false"
+        "codigo_started_from_menu": "true" if started_from_menu else "false",
+        "codigo_effective_keys": effective_keys,
     }
     await session_service.save_session(session)
 
@@ -83,13 +97,19 @@ async def _handle_codigo_service(
     """Handle service selection — store service_key, ask for email."""
     loc = ctx.get_locale()
 
+    # Use effective keys from session (set during _start_codigo_flow)
+    effective_keys = session.temp_data.get("codigo_effective_keys", [])
+    if not effective_keys:
+        # Fallback to global list if session is stale
+        effective_keys = list(self.STREAMING_SERVICE_KEYS)
+
     # Parse selection
     try:
         idx = int(msg.strip())
     except ValueError:
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
-    if idx < 1 or idx > len(self.STREAMING_SERVICE_KEYS):
+    if idx < 1 or idx > len(effective_keys):
         if idx == 0:
             started_from_menu = (
                 session.temp_data.get("codigo_started_from_menu") == "true"
@@ -102,7 +122,7 @@ async def _handle_codigo_service(
             return _i18n_t(loc, "wa.tenant.cancelled")
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
-    service_key = self.STREAMING_SERVICE_KEYS[idx - 1]
+    service_key = effective_keys[idx - 1]
     label = _CODIGO_SERVICE_LABELS.get(service_key, service_key.capitalize())
 
     # Store selection and advance step

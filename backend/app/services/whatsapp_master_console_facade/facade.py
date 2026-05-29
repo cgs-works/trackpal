@@ -10,11 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.phone import normalize_phone
-from app.services.evolution_client import evolution_client
 
 from . import constants as c
 from . import login_flow as lf
@@ -127,30 +123,7 @@ class WhatsAppMasterConsoleFacade:
     # ------------------------------------------------------------------
 
     async def _perform_logout(self, phone: str, instance: str | None) -> str:
-        """Perform a full logout: clear Redis keys and optionally close Evolution session."""
+        """Perform a full logout: clear Redis keys. Evolution close handled by n8n."""
         await self._auth_session_service.clear_auth_session(phone)
         await self._session_service.clear_session(phone)
-
-        if instance is not None:
-            digits = normalize_phone(phone)
-            if digits:
-                remote_jid = f"{digits}@s.whatsapp.net"
-                try:
-                    await evolution_client.close_chat_session(
-                        instance=instance,
-                        remote_jid=remote_jid,
-                    )
-                except httpx.HTTPError:
-                    logger.warning(
-                        "Evolution API call failed during logout for phone=%s instance=%s",
-                        phone,
-                        instance,
-                        exc_info=True,
-                    )
-            else:
-                logger.warning(
-                    "Cannot close Evolution session: normalize_phone returned no digits for phone=%s",
-                    phone,
-                )
-
         return c.LOGOUT_CONFIRMATION

@@ -34,7 +34,15 @@ ROLE_NOT_ALLOWED = (
 LOGOUT_CONFIRMATION = (
     "🔒 *Sesión cerrada*\n\n"
     "Has cerrado sesión en la consola Master.\n\n"
-    "Escribe */menu* para iniciar sesión de nuevo."
+    "Escribe */menu* para iniciar sesión de nuevo. Goodbye!"
+)
+
+POST_ACTION_PROMPT = (
+    "\n¿Qué deseas hacer?\n\n"
+    "1️⃣ Realizar otra operación\n"
+    "2️⃣ Volver al menú principal\n"
+    "0️⃣ Cerrar sesión\n\n"
+    "Responde con el número de la opción."
 )
 
 LOCKOUT_TEMPLATE = (

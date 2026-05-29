@@ -34,6 +34,7 @@ async def _handle_client_create_phone(self, phone, msg, session, session_service
         session.temp_data["phone"] = None
     else:
         from app.core.input_validation import validate_phone
+
         try:
             normalized = validate_phone(stripped, required=False)
             session.temp_data["phone"] = normalized
@@ -65,20 +66,25 @@ async def _handle_client_create_password(self, phone, msg, session, session_serv
     if session_service is not None:
         await session_service.save_session(session)
     data = session.temp_data
-    return self._t(self.KEY_CLIENT_CREATE_CONFIRM_TEMPLATE,
+    return self._t(
+        self.KEY_CLIENT_CREATE_CONFIRM_TEMPLATE,
         name=data.get("full_name", ""),
         username=data.get("local_username", ""),
         phone=data.get("phone") or "—",
     )
 
 
-async def _handle_client_create_confirm(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_create_confirm(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     stripped = msg.strip()
     if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
         data = session.temp_data
         return (
-            self._t(self.KEY_CLIENT_CONFIRM_REPROMPT) + "\n\n"
-            + self._t(self.KEY_CLIENT_CREATE_CONFIRM_TEMPLATE,
+            self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)
+            + "\n\n"
+            + self._t(
+                self.KEY_CLIENT_CREATE_CONFIRM_TEMPLATE,
                 name=data.get("full_name", ""),
                 username=data.get("local_username", ""),
                 phone=data.get("phone") or "—",
@@ -100,16 +106,27 @@ async def _handle_client_create_confirm(self, phone, msg, session, session_servi
         client = await self._client_service.create_client(db, tenant_id, payload)
     except UserFacingError as exc:
         error = translate_error(ctx.get_locale(), exc)
-        if exc.code in {"phone_already_registered", "client_local_username_exists", "username_already_registered"}:
+        if exc.code in {
+            "phone_already_registered",
+            "client_local_username_exists",
+            "username_already_registered",
+        }:
             if exc.code == "phone_already_registered":
                 session.step = self.CLIENTS_STEP_CREATE_PHONE
                 if session_service is not None:
                     await session_service.save_session(session)
-                return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_PHONE)
+                return (
+                    "❌ "
+                    + error
+                    + "\n\n"
+                    + self._t(self.KEY_CLIENT_CREATE_PROMPT_PHONE)
+                )
             session.step = self.CLIENTS_STEP_CREATE_USERNAME
             if session_service is not None:
                 await session_service.save_session(session)
-            return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
+            return (
+                "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
+            )
         return "❌ " + error
     except ValueError as exc:
         error = str(exc)
@@ -122,7 +139,9 @@ async def _handle_client_create_confirm(self, phone, msg, session, session_servi
             session.step = self.CLIENTS_STEP_CREATE_USERNAME
             if session_service is not None:
                 await session_service.save_session(session)
-            return "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
+            return (
+                "❌ " + error + "\n\n" + self._t(self.KEY_CLIENT_CREATE_PROMPT_USERNAME)
+            )
         return "❌ " + error
 
     if client is None:
@@ -132,12 +151,16 @@ async def _handle_client_create_confirm(self, phone, msg, session, session_servi
         await session_service.clear_session(f"admin:{phone}")
 
     full_username = getattr(client, "username", data.get("local_username", ""))
-    return self._with_main_menu(
-        self._t(self.KEY_CLIENT_CREATE_SUCCESS,
-            name=client.full_name,
-            username_full=full_username,
-            phone=client.phone or "—",
+    return (
+        self._with_main_menu(
+            self._t(
+                self.KEY_CLIENT_CREATE_SUCCESS,
+                name=client.full_name,
+                username_full=full_username,
+                phone=client.phone or "—",
+            )
         )
+        + self._post_action_prompt()
     )
 
 
@@ -165,7 +188,9 @@ async def _handle_client_edit_field(self, phone, msg, session, session_service):
     return self.CLIENT_EDIT_PROMPTS[field]
 
 
-async def _handle_client_edit_value(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_edit_value(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     field = session.temp_data.get("field", "")
     new_value = msg.strip()
     client_id = session.selected_tenant_id
@@ -176,9 +201,12 @@ async def _handle_client_edit_value(self, phone, msg, session, session_service, 
         return self._t("wa.tenant.errors.client_update_failed")
 
     from app.schemas.client import ClientUpdate
+
     payload = ClientUpdate(**{field: new_value})
     try:
-        client = await self._client_service.update_client(db, tenant_id, parsed_id, payload)
+        client = await self._client_service.update_client(
+            db, tenant_id, parsed_id, payload
+        )
     except UserFacingError as exc:
         return "❌ " + translate_error(ctx.get_locale(), exc)
     except ValueError as exc:
@@ -191,12 +219,17 @@ async def _handle_client_edit_value(self, phone, msg, session, session_service, 
 
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return self._with_main_menu(
-        self._t(self.KEY_CLIENT_EDIT_SUCCESS, name=client.full_name)
+    return (
+        self._with_main_menu(
+            self._t(self.KEY_CLIENT_EDIT_SUCCESS, name=client.full_name)
+        )
+        + self._post_action_prompt()
     )
 
 
-async def _handle_client_deactivate_confirm(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_deactivate_confirm(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     stripped = msg.strip()
     if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
         return self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)
@@ -211,12 +244,17 @@ async def _handle_client_deactivate_confirm(self, phone, msg, session, session_s
         return self._t("wa.tenant.errors.client_not_found")
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return self._with_main_menu(
-        self._t(self.KEY_CLIENT_DEACTIVATE_SUCCESS, name=client.full_name)
+    return (
+        self._with_main_menu(
+            self._t(self.KEY_CLIENT_DEACTIVATE_SUCCESS, name=client.full_name)
+        )
+        + self._post_action_prompt()
     )
 
 
-async def _handle_client_delete_confirm(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_delete_confirm(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     stripped = msg.strip()
     if stripped.upper() not in ("CONFIRMAR", "CONFIRM"):
         return self._t(self.KEY_CLIENT_CONFIRM_REPROMPT)
@@ -235,6 +273,7 @@ async def _handle_client_delete_confirm(self, phone, msg, session, session_servi
         return self._t("wa.tenant.errors.client_delete_failed")
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
-    return self._with_main_menu(
-        self._t(self.KEY_CLIENT_DELETE_SUCCESS, name=client_name)
+    return (
+        self._with_main_menu(self._t(self.KEY_CLIENT_DELETE_SUCCESS, name=client_name))
+        + self._post_action_prompt()
     )

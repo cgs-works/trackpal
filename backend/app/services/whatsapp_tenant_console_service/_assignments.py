@@ -21,6 +21,7 @@ from . import _routers as rt
 # -- Formatter assignments
 _t = staticmethod(fmt._t)
 _with_main_menu = staticmethod(fmt._with_main_menu)
+_post_action_prompt = staticmethod(fmt._post_action_prompt)
 _format_client_list = staticmethod(fmt._format_client_list)
 _format_client_detail = staticmethod(fmt._format_client_detail)
 _format_service_list = staticmethod(fmt._format_service_list)

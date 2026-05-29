@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from . import messages as msg
 from . import formatters as fmt
+from app.services.whatsapp_master_console_facade.constants import POST_ACTION_PROMPT
 
 
 async def _handle_create_confirm(
@@ -60,7 +61,7 @@ async def _handle_create_confirm(
             else:
                 reply += "\n🔑 Contraseña configurada manualmente.\n"
 
-            return self._with_main_menu(reply)
+            return self._with_main_menu(reply) + POST_ACTION_PROMPT
         else:
             error = result.get("error", "Error desconocido al crear el tenant.")
             error_lower = error.lower()
@@ -74,9 +75,6 @@ async def _handle_create_confirm(
                 if session_service is not None:
                     await session_service.save_session(session)
                 return "❌ " + error + "\n\n" + msg.CREATE_PROMPT_USERNAME
-            return (
-                "❌ " + error + "\n\n"
-                + await self._build_create_summary(session)
-            )
+            return "❌ " + error + "\n\n" + await self._build_create_summary(session)
 
     return "❌ No se pudo crear el tenant. Servicio no disponible."

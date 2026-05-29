@@ -585,62 +585,33 @@ async def test_unknown_phone_returns_no_access_when_redis_healthy(
 # ---------------------------------------------------------------------------
 
 
-async def test_instance_value_does_not_affect_auth_session_lookup(client, master_user):
-    """Different instance values → same phone gets same auth session."""
+async def test_unknown_instance_denies_master_phone(client, master_user):
+    """Unknown instance with master phone → access denied (strict isolation)."""
     fake_mgr = _FakeManager(used_backup=False)
-
-    auth_session = WhatsAppAuthSession(
-        phone="12015550001",
-        user_id=master_user.id,
-        username=master_user.username,
-        role="master",
-        authenticated_at=datetime.now(timezone.utc),
-    )
-    auth_key = "wa:auth:12015550001"
-
-    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        # Request with instance A
-        resp_a = await client.post(
+        resp = await client.post(
             ENDPOINT,
             json={
                 "phone": "+12015550001",
                 "message": "menu",
-                "instance": "evolution-instance-a",
+                "instance": "unknown-instance-z",
             },
             headers={"X-API-Key": settings.n8n_api_key},
         )
-        assert resp_a.status_code == 200
-        reply_a = resp_a.json()["reply"]
-
-        # Request with instance B
-        resp_b = await client.post(
-            ENDPOINT,
-            json={
-                "phone": "+12015550001",
-                "message": "menu",
-                "instance": "evolution-instance-b",
-            },
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        assert resp_b.status_code == 200
-        reply_b = resp_b.json()["reply"]
-
-    # Both replies must be the same (menu from auth session, not login prompt)
-    assert reply_a == reply_b
-    assert "Master Console" in reply_a or "Trackpal" in reply_a
-    assert "usuario" not in reply_a.lower()
+        assert resp.status_code == 200
+        reply = resp.json()["reply"].lower()
+        # Strict instance isolation: unknown instance → deny, no phone fallback
+        assert "no tienes acceso" in reply or "no está registrado" in reply
 
 
-async def test_instance_value_does_not_affect_lockout_lookup(client, master_user):
-    """Different instance values → same phone shares the same lockout state."""
+async def test_unknown_instance_denies_even_with_lockout(client, master_user):
+    """Unknown instance with lockout state → access denied (isolation takes precedence)."""
     fake_mgr = _FakeManager(used_backup=False)
 
-    # Create lock state using the same serialisation as the service
     lock_key = "wa:auth:lock:12015550001"
     lock_state = WhatsAppAuthLockState(
         locked_until=datetime.now(timezone.utc) + timedelta(minutes=5),
@@ -651,27 +622,19 @@ async def test_instance_value_does_not_affect_lockout_lookup(client, master_user
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        # Request with instance A
-        resp_a = await client.post(
+        resp = await client.post(
             ENDPOINT,
-            json={"phone": "+12015550001", "message": "hola", "instance": "instance-x"},
+            json={
+                "phone": "+12015550001",
+                "message": "hola",
+                "instance": "unknown-instance-z",
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
-        assert resp_a.status_code == 200
-        reply_a = resp_a.json()["reply"]
-
-        # Request with instance B
-        resp_b = await client.post(
-            ENDPOINT,
-            json={"phone": "+12015550001", "message": "hola", "instance": "instance-y"},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        assert resp_b.status_code == 200
-        reply_b = resp_b.json()["reply"]
-
-    # Both replies must be the same (lockout message)
-    assert reply_a == reply_b
-    assert "demasiados intentos" in reply_a.lower() or "espera" in reply_a.lower()
+        assert resp.status_code == 200
+        reply = resp.json()["reply"].lower()
+        # Strict instance isolation: unknown instance → deny, not lockout
+        assert "no tienes acceso" in reply or "no está registrado" in reply
 
 
 # ---------------------------------------------------------------------------
