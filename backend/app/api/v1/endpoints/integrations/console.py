@@ -124,35 +124,7 @@ async def _route_by_instance(
     await set_internal_rls_context(db)
     tenant = await tenants_repository.get_by_instance(db, instance)
     if tenant is None:
-        # Unknown instance — fall back to legacy phone/LID identification
-        identity = None
-        if phone:
-            identity = await auth_service.identify_by_phone(db, phone)
-        if identity is None and sender_lid:
-            identity = await auth_service.identify_by_lid(db, sender_lid)
-        if identity is None:
-            return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
-        role = identity["role"]
-        if role == "master":
-            if phone and sender_lid:
-                await users_repository.update_master_lid(
-                    db, identity["user_id"], sender_lid
-                )
-            return await _handle_master_console(
-                phone=phone,
-                message=message,
-                instance=instance,
-                manager=manager,
-                db=db,
-            )
-        if role == "tenant":
-            return await _handle_tenant_console(
-                phone=phone,
-                message=message,
-                instance=instance,
-                manager=manager,
-                db=db,
-            )
+        # Unknown instance — deny access (no fallback by phone/LID)
         return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
     if not tenant.is_active:

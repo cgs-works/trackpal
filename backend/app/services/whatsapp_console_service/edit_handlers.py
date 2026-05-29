@@ -12,6 +12,7 @@ from . import messages as msg
 from . import lifecycle_messages as lc_msg
 from . import edit_messages as edit_msg
 from . import formatters as fmt
+from app.services.whatsapp_master_console_facade.constants import POST_ACTION_PROMPT
 
 
 async def _start_edit_flow(
@@ -60,7 +61,7 @@ def _get_edit_field_selection_prompt() -> str:
         "2️⃣ Email\n"
         "3️⃣ Teléfono\n"
         "4️⃣ Instancia Evolution\n"
-        "0️⃣ Volver al menú"
+        "9️⃣ Volver al menú"
     )
 
 
@@ -147,16 +148,23 @@ async def _handle_edit_new_value(
             updated_tenant = result.get("tenant")
             tenant_name = (
                 getattr(updated_tenant, "full_name", None)
-                or (isinstance(updated_tenant, dict) and updated_tenant.get("full_name"))
+                or (
+                    isinstance(updated_tenant, dict) and updated_tenant.get("full_name")
+                )
                 or tenant_id
             )
-            return self._with_main_menu(
-                lc_msg.EDIT_SUCCESS_MESSAGE.format(name=tenant_name)
+            return (
+                self._with_main_menu(
+                    lc_msg.EDIT_SUCCESS_MESSAGE.format(name=tenant_name)
+                )
+                + POST_ACTION_PROMPT
             )
 
         error = result.get("error", "Error desconocido al actualizar.")
         return (
-            "❌ " + error + "\n\n"
+            "❌ "
+            + error
+            + "\n\n"
             + self.EDIT_FIELD_PROMPTS.get(field, self.EDIT_ERROR_UPDATE_FAILED)
         )
 

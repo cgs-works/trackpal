@@ -216,29 +216,20 @@ class TestLogoutFromMainMenu:
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Evolution close_chat_session is called on logout with correct params."""
+        """Logout returns goodbye message. Evolution close handled by n8n."""
         await _setup_auth_session(auth_session_service)
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session"
-        ) as mock_close:
-            await facade.process_message(
-                phone="+12015550001",
-                message="0",
-                instance="inst-test",
-                db=None,
-            )
+        reply = await facade.process_message(
+            phone="+12015550001",
+            message="0",
+            instance="inst-test",
+            db=None,
+        )
 
-            mock_close.assert_called_once()
-            call_kwargs = mock_close.call_args.kwargs
-            assert call_kwargs.get("instance") == "inst-test"
-            # remote_jid should be derived from phone: digits-only + @s.whatsapp.net
-            remote_jid = call_kwargs.get("remote_jid", "")
-            assert remote_jid.endswith("@s.whatsapp.net")
-            # Phone is normalized: +12015550001 → 12015550001
-            assert "12015550001" in remote_jid
+        # Should contain goodbye/confirmation keywords for n8n detection
+        assert "goodbye" in reply.lower() or "sesión cerrada" in reply.lower()
 
     async def test_logout_returns_confirmation(
         self,
@@ -419,13 +410,13 @@ class TestCancelInsideActiveFlow:
 
             mock_close.assert_not_called()
 
-    async def test_auth_session_preserved(
+    async def test_auth_session_cleared(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Auth session is NOT cleared when 0 is sent inside an active flow."""
+        """Auth session is cleared when 0 is sent inside an active flow (global exit)."""
         await _setup_auth_session(auth_session_service)
 
         session = await session_service.create_session("+12015550001")
@@ -444,7 +435,7 @@ class TestCancelInsideActiveFlow:
             )
 
         auth = await auth_session_service.get_auth_session("+12015550001")
-        assert auth is not None, "Auth session must remain after cancel (not logout)"
+        assert auth is None, "Auth session must clear on global exit"
 
     async def test_conversation_session_cleared(
         self,
@@ -473,13 +464,13 @@ class TestCancelInsideActiveFlow:
         conv = await session_service.get_session("+12015550001")
         assert conv is None, "Conversation session should be cleared on cancel"
 
-    async def test_cancel_touches_auth_session(
+    async def test_zero_does_not_touch_auth_session(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Cancel inside active flow MUST refresh auth session TTL."""
+        """Global exit does not touch auth session; it clears auth session."""
         await _setup_auth_session(auth_session_service)
 
         session = await session_service.create_session("+12015550001")
@@ -500,15 +491,15 @@ class TestCancelInsideActiveFlow:
                     db=None,
                 )
 
-            mock_touch.assert_awaited_once_with("+12015550001")
+            mock_touch.assert_not_awaited()
 
-    async def test_cancel_returns_main_menu(
+    async def test_zero_returns_logout_confirmation(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Cancel inside active flow returns MAIN_MENU (Phase 3 adds cancel msg)."""
+        """Global exit inside active flow returns logout confirmation."""
         await _setup_auth_session(auth_session_service)
 
         session = await session_service.create_session("+12015550001")
@@ -526,8 +517,9 @@ class TestCancelInsideActiveFlow:
                 db=None,
             )
 
-        # Must contain main menu (Phase 3 will refine to cancellation + menu)
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert (
+            "sesión cerrada" in reply.lower() or "has cerrado sesión" in reply.lower()
+        )
 
 
 # ===========================================================================
@@ -676,14 +668,14 @@ class TestLoginReset:
 
 
 class TestFailoverBackupNoSession:
-    """Authenticated + ``0`` + ``used_backup=True`` + no conv session → cancel/menu path, not logout."""
+    """Authenticated + ``0`` + ``used_backup=True`` + no conv session → global logout path."""
 
-    async def test_auth_session_preserved_on_failover(
+    async def test_auth_session_cleared_on_failover(
         self,
         console_service: WhatsAppConsoleService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Auth session is NOT cleared when on backup and conv session is missing."""
+        """Auth session is cleared even when on backup and conv session is missing."""
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
@@ -712,23 +704,23 @@ class TestFailoverBackupNoSession:
                 db=None,
             )
 
-        # Auth session must remain
+        # Auth session must clear
         auth = await auth_service.get_auth_session("+12015550001")
-        assert auth is not None, "Auth session must survive failover 0"
+        assert auth is None, "Auth session must clear on failover 0"
 
-        # Evolution close should NOT be called (not a real logout)
+        # Evolution close should NOT be called (handled by n8n)
         mock_close.assert_not_called()
 
-        # Reply should preserve cancel + menu single-reply shape.
-        assert "Operación cancelada" in reply
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert (
+            "sesión cerrada" in reply.lower() or "has cerrado sesión" in reply.lower()
+        )
 
-    async def test_session_touched_on_failover(
+    async def test_session_not_touched_on_failover(
         self,
         console_service: WhatsAppConsoleService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Auth session TTL is refreshed on failover path."""
+        """Auth session is not touched on failover because it is cleared."""
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
@@ -758,14 +750,14 @@ class TestFailoverBackupNoSession:
                     db=None,
                 )
 
-            mock_touch.assert_awaited_once_with("+12015550001")
+            mock_touch.assert_not_awaited()
 
-    async def test_failover_returns_cancel_plus_menu_shape(
+    async def test_failover_returns_logout_confirmation(
         self,
         console_service: WhatsAppConsoleService,
         auth_session_service: WhatsAppAuthSessionService,
     ) -> None:
-        """Failover path returns cancel message and main menu in one reply."""
+        """Failover path returns logout confirmation reply."""
         fake_redis = FakeRedis()
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
@@ -791,7 +783,9 @@ class TestFailoverBackupNoSession:
             db=None,
         )
 
-        assert reply == console_service._with_main_menu("🚫 Operación cancelada.")
+        assert (
+            "sesión cerrada" in reply.lower() or "has cerrado sesión" in reply.lower()
+        )
 
 
 # ===========================================================================
@@ -832,26 +826,19 @@ class TestLogoutInvalidPhone:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
-        caplog: Any,
     ) -> None:
-        """Warning is logged when phone has no digits."""
+        """Logout with invalid phone still returns goodbye (Evolution close handled by n8n)."""
         await _setup_auth_session(auth_session_service, phone="abc")
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        import logging
+        reply = await facade._perform_logout(
+            phone="abc",
+            instance="inst-test",
+        )
 
-        with caplog.at_level(logging.WARNING):
-            await facade._perform_logout(
-                phone="abc",
-                instance="inst-test",
-            )
-
-        # Warning should mention the phone and the skip
-        assert any(
-            "normalize_phone returned no digits" in rec.message
-            for rec in caplog.records
-        ), "Warning about no digits should be logged"
+        # Should still return a goodbye message
+        assert reply.strip()  # non-empty
 
 
 # ===========================================================================
@@ -867,33 +854,20 @@ class TestLogoutHttpErrorLogging:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         auth_session_service: WhatsAppAuthSessionService,
-        caplog: Any,
     ) -> None:
-        """HTTPError caught during _perform_logout includes exc_info in log record."""
+        """Logout still works when Evolution close is not called (handled by n8n)."""
         await _setup_auth_session(auth_session_service, phone="+12015550001")
 
         facade = _make_facade(console_service, session_service, auth_session_service)
 
-        with patch(
-            "app.services.evolution_client.evolution_client.close_chat_session",
-            side_effect=httpx.HTTPError("Connection refused"),
-        ):
-            import logging
-
-            with caplog.at_level(logging.WARNING):
-                await facade._perform_logout(
-                    phone="+12015550001",
-                    instance="inst-test",
-                )
-
-        # Find the relevant log record
-        matching = [
-            rec
-            for rec in caplog.records
-            if "Evolution API call failed during logout" in rec.message
-        ]
-        assert len(matching) >= 1, "Warning about Evolution failure should be logged"
-        record = matching[0]
-        assert record.exc_info is not None and record.exc_info[0] is not None, (
-            "exc_info should be set on the log record"
+        reply = await facade._perform_logout(
+            phone="+12015550001",
+            instance="inst-test",
         )
+
+        # Session is cleared
+        auth = await auth_session_service.get_auth_session("+12015550001")
+        assert auth is None
+
+        # Reply is still logout confirmation
+        assert "sesión" in reply.lower() or "goodbye" in reply.lower()

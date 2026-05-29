@@ -17,13 +17,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.i18n import t as _t
-from app.core.phone import normalize_phone
 from app.services.auth_service import AuthService
-from app.services.evolution_client import evolution_client
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
@@ -106,7 +103,10 @@ class WhatsAppTenantConsoleFacade:
             if tenant is None:
                 return _t("es", "wa.tenant.facade.tenant_not_found")
             if not tenant.is_active:
-                return _t(getattr(tenant, "locale", "es") or "es", "wa.tenant.facade.inactive_tenant")
+                return _t(
+                    getattr(tenant, "locale", "es") or "es",
+                    "wa.tenant.facade.inactive_tenant",
+                )
             tenant_id = tenant.id
             locale = getattr(tenant, "locale", "es") or "es"
 
@@ -128,10 +128,14 @@ class WhatsAppTenantConsoleFacade:
                 )
             elif self._session_service.used_backup:
                 # Failover: session may be missing on backup
-                return self._console_service._with_main_menu(_t(locale, "wa.tenant.cancelled"), locale=locale)
+                return await self._perform_exit(
+                    phone=phone, instance=instance, locale=locale
+                )
             else:
                 # Top-level → clear session, close Evolution chat, and goodbye
-                return await self._perform_exit(phone=phone, instance=instance, locale=locale)
+                return await self._perform_exit(
+                    phone=phone, instance=instance, locale=locale
+                )
 
         # 4. Delegate to the tenant console service
         return await self._console_service.process_message(
@@ -148,32 +152,11 @@ class WhatsAppTenantConsoleFacade:
     # Exit
     # ------------------------------------------------------------------
 
-    async def _perform_exit(self, phone: str, instance: str | None, locale: str = "es") -> str:
-        """Perform a top-level exit and close Evolution chat when possible."""
+    async def _perform_exit(
+        self, phone: str, instance: str | None, locale: str = "es"
+    ) -> str:
+        """Perform a top-level exit. Evolution close is handled by n8n."""
         await self._session_service.clear_session(self._admin_phone_key(phone))
-
-        if instance is not None:
-            digits = normalize_phone(phone)
-            if digits:
-                remote_jid = f"{digits}@s.whatsapp.net"
-                try:
-                    await evolution_client.close_chat_session(
-                        instance=instance,
-                        remote_jid=remote_jid,
-                    )
-                except httpx.HTTPError:
-                    logger.warning(
-                        "Evolution API call failed during tenant exit for phone=%s instance=%s",
-                        phone,
-                        instance,
-                        exc_info=True,
-                    )
-            else:
-                logger.warning(
-                    "Cannot close Evolution session: normalize_phone returned no digits for phone=%s",
-                    phone,
-                )
-
         return _t(locale, "wa.tenant.facade.goodbye")
 
     # ------------------------------------------------------------------

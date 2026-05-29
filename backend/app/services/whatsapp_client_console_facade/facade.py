@@ -14,13 +14,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.i18n import t as _t
-from app.core.phone import normalize_phone
 from app.repositories import clients_repository
-from app.services.evolution_client import evolution_client
 from app.services.subscription_service.queries import list_subscriptions
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
@@ -213,27 +210,6 @@ class WhatsAppClientConsoleFacade:
         tenant_id: UUID,
         client_id: UUID,
     ) -> str:
-        """Exit — clear session and close Evolution chat."""
+        """Exit — clear session. Evolution close handled by n8n."""
         await self._session_service.clear_session(f"client:{phone}")
-        if instance is not None:
-            digits = normalize_phone(phone)
-            if digits:
-                remote_jid = f"{digits}@s.whatsapp.net"
-                try:
-                    await evolution_client.close_chat_session(
-                        instance=instance,
-                        remote_jid=remote_jid,
-                    )
-                except httpx.HTTPError:
-                    logger.warning(
-                        "Evolution close failed phone=%s instance=%s",
-                        phone,
-                        instance,
-                        exc_info=True,
-                    )
-            else:
-                logger.warning(
-                    "Cannot close Evolution session: normalize_phone empty for %s",
-                    phone,
-                )
         return _t(self._locale, "wa.client.goodbye")

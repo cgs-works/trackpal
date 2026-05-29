@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "WhatsApp console contracts, i18n, layering, test expectations"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "DB migration/repository patterns for upcoming catalog tables"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Dashboard UI integration and API contract consistency"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Feature spans backend, frontend, n8n boundaries"}

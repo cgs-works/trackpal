@@ -14,15 +14,13 @@ from uuid import uuid4
 import pytest
 
 from app.services.whatsapp_console_service import WhatsAppConsoleService
-from app.services.whatsapp_session_service import (
-    ConversationSession,
-    WhatsAppSessionService,
-)
+from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 # ---------------------------------------------------------------------------
 # Fake tenant data object
 # ---------------------------------------------------------------------------
+
 
 class FakeTenant:
     """Minimal tenant data object for testing lifecycle actions."""
@@ -54,6 +52,7 @@ class FakeTenant:
 # ---------------------------------------------------------------------------
 # Fake tenant service with lifecycle support
 # ---------------------------------------------------------------------------
+
 
 class FakeTenantService:
     """In-memory fake for the tenant data provider.
@@ -117,6 +116,7 @@ class FakeTenantService:
 # ---------------------------------------------------------------------------
 # Fake Redis — dict-based async double
 # ---------------------------------------------------------------------------
+
 
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
@@ -211,6 +211,7 @@ def tenant_service(sample_tenants: list[FakeTenant]) -> FakeTenantService:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _select_tenant(
     console_service: WhatsAppConsoleService,
     session_service: WhatsAppSessionService,
@@ -240,6 +241,7 @@ async def _select_tenant(
 # Tests — Deactivation flow
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestDeactivateFlow:
     """Deactivation from detail screen requires CONFIRMAR."""
@@ -251,7 +253,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Pressing 2 on an active tenant shows the deactivation confirmation."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -271,7 +275,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Sending CONFIRMAR after deactivation prompt deactivates the tenant."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -302,7 +308,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """CONFIRMAR is case-insensitive."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -331,7 +339,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Non-CONFIRMAR text during deactivation confirm shows reprompt."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -361,7 +371,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Cancel during deactivation confirm clears session."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -390,7 +402,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Reset command during deactivation confirm clears session."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -419,7 +433,9 @@ class TestDeactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Session is cleared after successful deactivation."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -443,6 +459,7 @@ class TestDeactivateFlow:
 # Tests — Reactivation flow
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestReactivateFlow:
     """Reactivation from detail screen is immediate (no CONFIRMAR)."""
@@ -454,7 +471,9 @@ class TestReactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Pressing 2 on an inactive tenant immediately reactivates."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -478,7 +497,9 @@ class TestReactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Reactivation is immediate without CONFIRMAR."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -498,7 +519,9 @@ class TestReactivateFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Session is cleared after successful reactivation."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="2",
@@ -515,6 +538,7 @@ class TestReactivateFlow:
 # Tests — Delete flow
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestDeleteFlow:
     """Deletion from detail screen requires inactive tenant and CONFIRMAR."""
@@ -526,7 +550,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Pressing 3 on an active tenant shows a blocked message."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -546,7 +572,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Blocked deletion does not modify the tenant."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="3",
@@ -566,7 +594,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Pressing 3 on an inactive tenant shows the deletion confirmation."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -586,7 +616,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Sending CONFIRMAR after delete prompt deletes the tenant."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="3",
@@ -616,7 +648,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Non-CONFIRMAR text during delete confirm shows reprompt."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="3",
@@ -645,7 +679,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Cancel during delete confirm clears session."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="3",
@@ -673,7 +709,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Reset command during delete confirm clears session."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="3",
@@ -684,7 +722,7 @@ class TestDeleteFlow:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="0",
+            message="menu",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -701,7 +739,9 @@ class TestDeleteFlow:
         tenant_service: FakeTenantService,
     ) -> None:
         """Session is cleared after successful deletion."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="2")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="2"
+        )
         await console_service.process_message(
             phone="+10000000000",
             message="3",
@@ -724,6 +764,7 @@ class TestDeleteFlow:
 # ===========================================================================
 # Tests — Main menu options 3 and 4
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestMainMenuLifecycleShortcuts:
@@ -794,6 +835,7 @@ class TestMainMenuLifecycleShortcuts:
 # Tests — End-to-end lifecycle scenarios
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestFullLifecycleScenario:
     """End-to-end lifecycle: deactivate then reactivate then delete."""
@@ -806,7 +848,9 @@ class TestFullLifecycleScenario:
     ) -> None:
         """Deactivate an active tenant, then reactivate it."""
         # Select active tenant (Alpha Corp)
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         # Deactivate
         await console_service.process_message(
@@ -830,7 +874,9 @@ class TestFullLifecycleScenario:
         assert tenant.is_active is False
 
         # List again and select the now-inactive tenant
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         # Reactivate (option 2 for inactive)
         reply = await console_service.process_message(
@@ -855,7 +901,9 @@ class TestFullLifecycleScenario:
     ) -> None:
         """Deactivate an active tenant, then delete it."""
         # Select active tenant (Alpha Corp)
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         # Deactivate
         await console_service.process_message(
@@ -874,7 +922,9 @@ class TestFullLifecycleScenario:
         )
 
         # List again and select the now-inactive tenant
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         # Delete (option 3 for inactive)
         await console_service.process_message(
@@ -902,6 +952,7 @@ class TestFullLifecycleScenario:
 # Tests — Detail screen unknown actions
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 class TestDetailScreenUnknownActions:
     """Unrecognised options from detail screen."""
@@ -913,7 +964,9 @@ class TestDetailScreenUnknownActions:
         tenant_service: FakeTenantService,
     ) -> None:
         """Unrecognised option from detail screen shows fallback."""
-        await _select_tenant(console_service, session_service, tenant_service, selection="1")
+        await _select_tenant(
+            console_service, session_service, tenant_service, selection="1"
+        )
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -922,4 +975,8 @@ class TestDetailScreenUnknownActions:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "inválida" in reply.lower() or "inválido" in reply.lower() or "No entendí" in reply
+        assert (
+            "inválida" in reply.lower()
+            or "inválido" in reply.lower()
+            or "No entendí" in reply
+        )

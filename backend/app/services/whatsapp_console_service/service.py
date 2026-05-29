@@ -152,17 +152,60 @@ class WhatsAppConsoleService:
             if session_service is not None:
                 session = await session_service.get_session(phone)
 
-            has_active_flow = (
-                session is not None
-                and bool(session.flow)
-            )
+            has_active_flow = session is not None and bool(session.flow)
 
-            # Contextual reset — flow-aware
+            # ── Active flow routing (before reset check) ──────────────
+            # Route active flows first so that flow-specific handlers
+            # can process "9" (back) before the global RESET_COMMANDS
+            # check intercepts it.
+            if has_active_flow:
+                assert session is not None
+                if msg_text.lower() in ("menu", "menú", "/menu", "cancelar"):
+                    if session_service is not None:
+                        await session_service.clear_session(phone)
+                    return self._with_main_menu("🚫 Operación cancelada.")
+                if msg_text.lower() in self.HELP_COMMANDS:
+                    return self.HELP_TEXT
+                if session.flow == self.LIST_FLOW and session.step == self.SELECT_STEP:
+                    return await self._handle_list_selection(
+                        phone, msg_text, session, session_service, tenant_service
+                    )
+                elif session.flow == self.CREATE_FLOW:
+                    return await self._handle_create_step(
+                        phone, msg_text, session, session_service, tenant_service
+                    )
+                elif (
+                    session.flow == self.DETAIL_FLOW
+                    and session.step == self.ACTIONS_STEP
+                ):
+                    return await self._handle_detail_action(
+                        phone, msg_text, session, session_service, tenant_service
+                    )
+                elif session.flow == self.EDIT_FLOW:
+                    return await self._handle_edit_step(
+                        phone, msg_text, session, session_service, tenant_service
+                    )
+                elif (
+                    session.flow == self.DEACTIVATE_FLOW
+                    and session.step == self.CONFIRM_DEACTIVATE_STEP
+                ):
+                    return await self._handle_deactivate_confirm(
+                        phone, msg_text, session, session_service, tenant_service
+                    )
+                elif (
+                    session.flow == self.DELETE_FLOW
+                    and session.step == self.CONFIRM_DELETE_STEP
+                ):
+                    return await self._handle_delete_confirm(
+                        phone, msg_text, session, session_service, tenant_service
+                    )
+                return self.FALLBACK_ACTIVE_FLOW
+
+            # ── No active flow ───────────────────────────────────────
+            # Contextual reset — no active flow
             if msg_text.lower() in self.RESET_COMMANDS:
                 if session_service is not None:
                     await session_service.clear_session(phone)
-                if has_active_flow:
-                    return self._with_main_menu("🚫 Operación cancelada.")
                 return self.MAIN_MENU
 
             # Contingency reset — failover active, session missing on backup
@@ -179,34 +222,6 @@ class WhatsAppConsoleService:
             if msg_text.lower() in self.HELP_COMMANDS:
                 return self.HELP_TEXT
 
-            # Active flow routing
-            if has_active_flow:
-                if session.flow == self.LIST_FLOW and session.step == self.SELECT_STEP:
-                    return await self._handle_list_selection(
-                        phone, msg_text, session, session_service, tenant_service
-                    )
-                elif session.flow == self.CREATE_FLOW:
-                    return await self._handle_create_step(
-                        phone, msg_text, session, session_service, tenant_service
-                    )
-                elif session.flow == self.DETAIL_FLOW and session.step == self.ACTIONS_STEP:
-                    return await self._handle_detail_action(
-                        phone, msg_text, session, session_service, tenant_service
-                    )
-                elif session.flow == self.EDIT_FLOW:
-                    return await self._handle_edit_step(
-                        phone, msg_text, session, session_service, tenant_service
-                    )
-                elif session.flow == self.DEACTIVATE_FLOW and session.step == self.CONFIRM_DEACTIVATE_STEP:
-                    return await self._handle_deactivate_confirm(
-                        phone, msg_text, session, session_service, tenant_service
-                    )
-                elif session.flow == self.DELETE_FLOW and session.step == self.CONFIRM_DELETE_STEP:
-                    return await self._handle_delete_confirm(
-                        phone, msg_text, session, session_service, tenant_service
-                    )
-                return self.FALLBACK_ACTIVE_FLOW
-
             # No active flow
             if not msg_text:
                 return self.MAIN_MENU
@@ -217,9 +232,7 @@ class WhatsAppConsoleService:
                         phone, session_service, tenant_service
                     )
                 if msg_text == "2":
-                    return await self._start_create_flow(
-                        phone, session_service
-                    )
+                    return await self._start_create_flow(phone, session_service)
                 return self.MAIN_MENU
 
             return self.FALLBACK_NO_FLOW

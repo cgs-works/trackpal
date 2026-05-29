@@ -8,7 +8,7 @@ DEACTIVATE_CONFIRM_PROMPT = (
     "• No podrá iniciar sesión ni ser identificado después "
     "de la desactivación.\n\n"
     "Escribe *CONFIRMAR* para desactivar el tenant.\n"
-    "Escribe *0* para cancelar."
+    "Escribe *9* para cancelar."
 )
 
 DELETE_CONFIRM_PROMPT = (
@@ -20,7 +20,7 @@ DELETE_CONFIRM_PROMPT = (
     "• Esta acción no se puede deshacer.\n\n"
     "Escribe *CONFIRMAR* para eliminar el tenant "
     "permanentemente.\n"
-    "Escribe *0* para cancelar."
+    "Escribe *9* para cancelar."
 )
 
 CANT_DELETE_ACTIVE_MESSAGE = (
@@ -35,18 +35,15 @@ ALREADY_INACTIVE_MESSAGE = (
 )
 
 REACTIVATE_SUCCESS_MESSAGE = (
-    "✅ *Tenant Reactivado*\n\n"
-    "El tenant *{name}* ha sido reactivado exitosamente."
+    "✅ *Tenant Reactivado*\n\nEl tenant *{name}* ha sido reactivado exitosamente."
 )
 
 DEACTIVATE_SUCCESS_MESSAGE = (
-    "✅ *Tenant Desactivado*\n\n"
-    "El tenant *{name}* ha sido desactivado exitosamente."
+    "✅ *Tenant Desactivado*\n\nEl tenant *{name}* ha sido desactivado exitosamente."
 )
 
 DELETE_SUCCESS_MESSAGE = (
-    "✅ *Tenant Eliminado*\n\n"
-    "El tenant *{name}* ha sido eliminado permanentemente."
+    "✅ *Tenant Eliminado*\n\nEl tenant *{name}* ha sido eliminado permanentemente."
 )
 
 EDIT_SUCCESS_MESSAGE = (
@@ -55,6 +52,5 @@ EDIT_SUCCESS_MESSAGE = (
 )
 
 CONFIRM_REPROMPT = (
-    "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas "
-    "o minúsculas)."
+    "❌ Para confirmar, escribe *CONFIRMAR* (en mayúsculas o minúsculas)."
 )

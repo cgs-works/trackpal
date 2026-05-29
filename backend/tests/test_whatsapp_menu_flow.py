@@ -11,15 +11,13 @@ from typing import Any
 import pytest
 
 from app.services.whatsapp_console_service import WhatsAppConsoleService
-from app.services.whatsapp_session_service import (
-    ConversationSession,
-    WhatsAppSessionService,
-)
+from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 # ---------------------------------------------------------------------------
 # Fake Redis — dict-based async double (same as session service tests)
 # ---------------------------------------------------------------------------
+
 
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
@@ -65,6 +63,7 @@ class FakeManager:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()
@@ -86,6 +85,7 @@ def console_service() -> WhatsAppConsoleService:
 # ---------------------------------------------------------------------------
 # Access control
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestAccessControl:
@@ -116,6 +116,7 @@ class TestAccessControl:
 # ---------------------------------------------------------------------------
 # Main menu
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestMainMenu:
@@ -166,6 +167,7 @@ class TestMainMenu:
 # Help
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestHelp:
     async def test_option_5_returns_help(
@@ -207,6 +209,7 @@ class TestHelp:
 # Global reset commands
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestResetCommands:
     @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "/menu", "cancelar"])
@@ -222,7 +225,7 @@ class TestResetCommands:
         )
         assert "Trackpal Master Console" in reply
 
-    @pytest.mark.parametrize("cmd", ["0", "menu", "menú", "/menu", "cancelar"])
+    @pytest.mark.parametrize("cmd", ["menu", "menú", "/menu", "cancelar"])
     async def test_reset_clears_session(
         self,
         console_service: WhatsAppConsoleService,
@@ -283,6 +286,7 @@ class TestResetCommands:
 # ---------------------------------------------------------------------------
 # Fallback messages
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestFallbackNoFlow:
@@ -402,6 +406,7 @@ class TestFallbackActiveFlow:
 # Menu option placeholders (2-4) — recognised but not implemented
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestMenuOptionsNotImplemented:
     @pytest.mark.parametrize("opt", ["3", "4"])
@@ -437,6 +442,7 @@ class TestMenuOptionsNotImplemented:
 # ---------------------------------------------------------------------------
 # Session-aware routing without session service
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestNoSessionService:
@@ -476,6 +482,7 @@ class TestNoSessionService:
 # TTL noise guards — invalid input must not refresh session TTL
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestTTLNotRefreshedOnNoise:
     """Invalid/noise messages must not extend session TTL."""
@@ -488,8 +495,6 @@ class TestTTLNotRefreshedOnNoise:
     ) -> None:
         """Gibberish without an active session just returns fallback."""
         # First create a session so there's something to measure
-        key = session_service._session_key("+10000000000")
-
         reply = await console_service.process_message(
             phone="+10000000000",
             message="asdf1234",

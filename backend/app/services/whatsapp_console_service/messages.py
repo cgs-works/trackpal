@@ -29,7 +29,7 @@ HELP_TEXT = (
     "5️⃣ *Ayuda* — Muestra este mensaje de ayuda.\n"
     "0️⃣ *Cerrar sesión* — Cierra tu sesión en la consola Master.\n\n"
     "En el menú principal, escribe *0* para cerrar sesión.\n"
-    "Dentro de un flujo, *0* o *cancelar* cancelan la operación.\n"
+    "Dentro de un flujo, *9* o *cancelar* cancelan la operación.\n"
     "Escribe */menu* para volver al menú principal."
 )
 
@@ -39,13 +39,14 @@ FALLBACK_NO_FLOW = (
     "• Un número del *1* al *5* para elegir una opción del menú\n"
     "• *menu* o */menu* para volver al menú principal\n"
     "• *0* para cerrar sesión\n"
+    "• *9* para volver atrás\n"
     "• *ayuda* para ver los comandos disponibles"
 )
 
 FALLBACK_ACTIVE_FLOW = (
     "❌ No entendí tu mensaje.\n\n"
     "Estás en medio de un flujo. Responde con la información "
-    "solicitada o escribe *0* para cancelar y volver al menú "
+    "solicitada o escribe *9* para cancelar y volver al menú "
     "principal."
 )
 
@@ -53,7 +54,7 @@ FALLBACK_ACTIVE_FLOW = (
 # Flow identifiers
 # ------------------------------------------------------------------
 
-RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
+RESET_COMMANDS = {"0", "9", "menu", "menú", "/menu", "cancelar"}
 HELP_COMMANDS = {"5", "ayuda"}
 
 LIST_FLOW = "list_tenants"
@@ -84,7 +85,7 @@ TENANT_DETAIL_ACTIVE_ACTIONS = (
     "1️⃣ Editar\n"
     "2️⃣ Desactivar\n"
     "3️⃣ Eliminar (solo inactivos)\n"
-    "0️⃣ Volver al menú"
+    "9️⃣ Volver al menú"
 )
 
 TENANT_DETAIL_INACTIVE_ACTIONS = (
@@ -92,12 +93,12 @@ TENANT_DETAIL_INACTIVE_ACTIONS = (
     "1️⃣ Editar\n"
     "2️⃣ Reactivar\n"
     "3️⃣ Eliminar\n"
-    "0️⃣ Volver al menú"
+    "9️⃣ Volver al menú"
 )
 
 INVALID_SELECTION = (
     "❌ Número inválido. Responde con un número de la lista "
-    "o escribe *0* para volver al menú principal."
+    "o escribe *9* para volver al menú principal."
 )
 
 NO_TENANTS = "📭 No hay tenants registrados."

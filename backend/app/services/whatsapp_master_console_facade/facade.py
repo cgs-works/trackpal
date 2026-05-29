@@ -10,11 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.phone import normalize_phone
-from app.services.evolution_client import evolution_client
 
 from . import constants as c
 from . import login_flow as lf
@@ -84,30 +80,12 @@ class WhatsAppMasterConsoleFacade:
         if auth_session is not None and auth_session.role == "master":
             msg_stripped = message.strip()
 
-            # 2a. Contextual "0" handling
+            # 2a. Global "0" handling
             if msg_stripped == "0":
-                conv_session = await self._session_service.get_session(phone)
-                has_active_flow = conv_session is not None and bool(conv_session.flow)
-
-                if has_active_flow:
-                    await self._auth_session_service.touch_auth_session(phone)
-                    return await self._console_service.process_message(
-                        phone=phone,
-                        message=message,
-                        is_master=True,
-                        session_service=self._session_service,
-                        tenant_service=self._tenant_service,
-                    )
-                elif self._session_service.used_backup:
-                    await self._auth_session_service.touch_auth_session(phone)
-                    return self._console_service._with_main_menu(
-                        "🚫 Operación cancelada."
-                    )
-                else:
-                    return await self._perform_logout(
-                        phone=phone,
-                        instance=instance,
-                    )
+                return await self._perform_logout(
+                    phone=phone,
+                    instance=instance,
+                )
 
             # 2b. Normal authenticated message
             await self._auth_session_service.touch_auth_session(phone)
@@ -127,30 +105,7 @@ class WhatsAppMasterConsoleFacade:
     # ------------------------------------------------------------------
 
     async def _perform_logout(self, phone: str, instance: str | None) -> str:
-        """Perform a full logout: clear Redis keys and optionally close Evolution session."""
+        """Perform a full logout: clear Redis keys. Evolution close handled by n8n."""
         await self._auth_session_service.clear_auth_session(phone)
         await self._session_service.clear_session(phone)
-
-        if instance is not None:
-            digits = normalize_phone(phone)
-            if digits:
-                remote_jid = f"{digits}@s.whatsapp.net"
-                try:
-                    await evolution_client.close_chat_session(
-                        instance=instance,
-                        remote_jid=remote_jid,
-                    )
-                except httpx.HTTPError:
-                    logger.warning(
-                        "Evolution API call failed during logout for phone=%s instance=%s",
-                        phone,
-                        instance,
-                        exc_info=True,
-                    )
-            else:
-                logger.warning(
-                    "Cannot close Evolution session: normalize_phone returned no digits for phone=%s",
-                    phone,
-                )
-
         return c.LOGOUT_CONFIRMATION

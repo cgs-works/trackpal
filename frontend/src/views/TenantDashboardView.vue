@@ -7,6 +7,7 @@ import { useI18nStore } from '../stores/i18n'
 import MailboxConfigPanel from '../components/MailboxConfigPanel.vue'
 import CatalogPanel from '../components/CatalogPanel.vue'
 import ClientManagementPanel from '../components/ClientManagementPanel.vue'
+import CodeServicesTenantPanel from '../components/CodeServicesTenantPanel.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -221,6 +222,7 @@ onMounted(async () => {
 
       <CatalogPanel v-if="!isMasterSupport" />
       <ClientManagementPanel v-if="!isMasterSupport" />
+      <CodeServicesTenantPanel v-if="!isMasterSupport" />
 
       <section v-if="!isMasterSupport" class="content-card profile-card">
         <div class="section-header">

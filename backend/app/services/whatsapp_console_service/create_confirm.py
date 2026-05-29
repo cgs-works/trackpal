@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from . import messages as msg
-from . import formatters as fmt
 
 
 async def _handle_create_confirm(
@@ -74,9 +73,6 @@ async def _handle_create_confirm(
                 if session_service is not None:
                     await session_service.save_session(session)
                 return "❌ " + error + "\n\n" + msg.CREATE_PROMPT_USERNAME
-            return (
-                "❌ " + error + "\n\n"
-                + await self._build_create_summary(session)
-            )
+            return "❌ " + error + "\n\n" + await self._build_create_summary(session)
 
     return "❌ No se pudo crear el tenant. Servicio no disponible."

@@ -14,15 +14,13 @@ from uuid import uuid4
 import pytest
 
 from app.services.whatsapp_console_service import WhatsAppConsoleService
-from app.services.whatsapp_session_service import (
-    ConversationSession,
-    WhatsAppSessionService,
-)
+from app.services.whatsapp_session_service import WhatsAppSessionService
 
 
 # ---------------------------------------------------------------------------
 # Fake tenant data object
 # ---------------------------------------------------------------------------
+
 
 class FakeTenant:
     """Minimal tenant data object for testing WhatsApp formatting."""
@@ -55,6 +53,7 @@ class FakeTenant:
 # Fake tenant service with update support
 # ---------------------------------------------------------------------------
 
+
 class FakeTenantService:
     """In-memory fake for the tenant data provider used by the console.
 
@@ -70,6 +69,7 @@ class FakeTenantService:
                 if t.phone:
                     # Store canonical digits-only for duplicate tracking
                     import re
+
                     canonical = re.sub(r"\D", "", t.phone)
                     self._phones_in_use.add(canonical)
 
@@ -100,6 +100,7 @@ class FakeTenantService:
         # Validate phone uniqueness (canonical digits-only for matching)
         if "phone" in payload and payload["phone"] is not None:
             import re
+
             new_phone = re.sub(r"\D", "", payload["phone"])
             old_phone_canonical = re.sub(r"\D", "", tenant.phone or "")
             if new_phone != old_phone_canonical and new_phone in self._phones_in_use:
@@ -125,6 +126,7 @@ class FakeTenantService:
 # ---------------------------------------------------------------------------
 # Fake Redis — dict-based async double
 # ---------------------------------------------------------------------------
+
 
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
@@ -219,6 +221,7 @@ def tenant_service(sample_tenants: list[FakeTenant]) -> FakeTenantService:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _select_tenant(
     console_service: WhatsAppConsoleService,
     session_service: WhatsAppSessionService,
@@ -249,6 +252,7 @@ async def _select_tenant(
 # ===========================================================================
 # Tests
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 class TestEditFlowStart:
@@ -317,9 +321,13 @@ class TestEditFlowStart:
             tenant_service=tenant_service,
         )
 
-        assert "No entendí" in reply or "inválida" in reply.lower() or "inválido" in reply.lower()
+        assert (
+            "No entendí" in reply
+            or "inválida" in reply.lower()
+            or "inválido" in reply.lower()
+        )
 
-    async def test_option_0_from_detail_returns_menu(
+    async def test_option_menu_from_detail_returns_menu(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
@@ -329,7 +337,7 @@ class TestEditFlowStart:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="0",
+            message="menu",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -374,7 +382,9 @@ class TestEditFieldSelection:
             tenant_service=tenant_service,
         )
 
-        assert "nuevo nombre completo" in reply.lower() or "nuevo nombre" in reply.lower()
+        assert (
+            "nuevo nombre completo" in reply.lower() or "nuevo nombre" in reply.lower()
+        )
 
         session = await session_service.get_session("+10000000000")
         assert session is not None
@@ -474,7 +484,7 @@ class TestEditFieldSelection:
         assert session is not None
         assert session.step == "select_field"  # Not advanced
 
-    async def test_cancel_from_field_selection(
+    async def test_menu_from_field_selection(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
@@ -484,7 +494,7 @@ class TestEditFieldSelection:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="0",
+            message="menu",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -863,7 +873,11 @@ class TestEditNewValue:
         )
 
         # Should show error about duplicate phone
-        assert "registrado" in reply.lower() or "already" in reply.lower() or "duplicate" in reply.lower()
+        assert (
+            "registrado" in reply.lower()
+            or "already" in reply.lower()
+            or "duplicate" in reply.lower()
+        )
 
         # Should stay in edit flow
         session = await session_service.get_session("+10000000000")

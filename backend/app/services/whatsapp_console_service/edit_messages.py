@@ -13,7 +13,7 @@ EDIT_PROMPT_SELECT_FIELD = (
     "2️⃣ Email",
     "3️⃣ Teléfono",
     "4️⃣ Instancia Evolution",
-    "0️⃣ Volver al menú",
+    "9️⃣ Volver al menú",
 )
 
 EDIT_FIELD_MAP = {
@@ -24,35 +24,24 @@ EDIT_FIELD_MAP = {
 }
 
 EDIT_FIELD_PROMPTS = {
-    "full_name": (
-        "✏️ *Editar Tenant*\n\n"
-        "¿Cuál es el *nuevo nombre completo*?"
-    ),
-    "email": (
-        "✏️ *Editar Tenant*\n\n"
-        "¿Cuál es el *nuevo email*?"
-    ),
-    "phone": (
-        "✏️ *Editar Tenant*\n\n"
-        "¿Cuál es el *nuevo teléfono*?"
-    ),
+    "full_name": ("✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo nombre completo*?"),
+    "email": ("✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo email*?"),
+    "phone": ("✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo teléfono*?"),
     "evolution_instance_name": (
-        "✏️ *Editar Tenant*\n\n"
-        "¿Cuál es el *nuevo nombre de instancia Evolution*?"
+        "✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo nombre de instancia Evolution*?"
     ),
 }
 
 EDIT_ERROR_INVALID_FIELD = (
     "❌ Opción inválida. Responde con un número del *1* al *4* "
-    "para elegir el campo a editar, o *0* para volver al menú."
+    "para elegir el campo a editar, o *9* para volver al menú."
 )
 
 EDIT_ERROR_UPDATE_FAILED = (
-    "❌ No se pudo actualizar el campo. Intenta de nuevo o "
-    "escribe *0* para cancelar."
+    "❌ No se pudo actualizar el campo. Intenta de nuevo o escribe *9* para cancelar."
 )
 
 EDIT_DETAIL_FALLBACK = (
     "❌ Opción inválida. Responde con un número de las "
-    "acciones disponibles o *0* para volver al menú."
+    "acciones disponibles o *9* para volver al menú."
 )

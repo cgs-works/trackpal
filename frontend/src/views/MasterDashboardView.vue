@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import CodeServicesGlobalPanel from '../components/CodeServicesGlobalPanel.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -320,6 +321,8 @@ onMounted(loadTenants)
         </table>
       </div>
     </section>
+
+    <CodeServicesGlobalPanel />
 
     <div v-if="isModalOpen" class="modal-backdrop" @click.self="closeModal">
       <form class="modal" @submit.prevent="handleSubmit">

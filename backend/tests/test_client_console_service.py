@@ -369,26 +369,13 @@ class TestInstanceFirstRouting:
         reply = response.json()["reply"]
         assert "Consola de Administración" in reply or "Trackpal" in reply
 
-    async def test_unknown_instance_falls_back_to_legacy(
+    async def test_unknown_instance_denies_access(
         self,
         client: AsyncClient,
         master_user: Any,
     ) -> None:
-        """Unknown instance with no tenant match → legacy phone identification."""
-        from datetime import datetime, timezone
-        from app.services.whatsapp_auth_session_service import WhatsAppAuthSession
-
+        """Unknown instance with no tenant match → access denied (no fallback)."""
         fake_mgr = FakeManager()
-        auth_session = WhatsAppAuthSession(
-            phone="12015550001",
-            user_id=str(master_user.id),
-            username=master_user.username,
-            role="master",
-            authenticated_at=datetime.now(timezone.utc),
-        )
-        await fake_mgr._redis.set(
-            "wa:auth:12015550001", auth_session.model_dump_json(), ex=900
-        )
 
         with patch(
             "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -404,9 +391,9 @@ class TestInstanceFirstRouting:
                 headers={"X-API-Key": settings.n8n_api_key},
             )
         assert response.status_code == 200
-        reply = response.json()["reply"]
-        # Should fall back to legacy master flow
-        assert "Master Console" in reply or "Trackpal" in reply
+        reply = response.json()["reply"].lower()
+        # Must deny access — no fallback by phone for unknown instance
+        assert "no tienes acceso" in reply or "no está registrado" in reply
 
 
 # ===================================================================
@@ -1279,12 +1266,12 @@ class TestDuplicatePhone:
 class TestLegacyFlowWithInstance:
     """Existing master/tenant console works when instance doesn't match."""
 
-    async def test_tenant_phone_unknown_instance_falls_back_to_tenant_console(
+    async def test_tenant_phone_unknown_instance_denies_access(
         self,
         client: AsyncClient,
         active_tenant_user: Any,
     ) -> None:
-        """Tenant phone + unknown instance → legacy tenant console."""
+        """Tenant phone + unknown instance → access denied (no fallback)."""
         fake_mgr = FakeManager()
         with patch(
             "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -1300,6 +1287,6 @@ class TestLegacyFlowWithInstance:
                 headers={"X-API-Key": settings.n8n_api_key},
             )
         assert response.status_code == 200
-        reply = response.json()["reply"]
-        # Tenant should get routed to tenant console via legacy fallback
-        assert "didn't understand" in reply or "Consola de Administración" in reply
+        reply = response.json()["reply"].lower()
+        # Must deny access — no fallback by phone for unknown instance
+        assert "no tienes acceso" in reply or "no está registrado" in reply

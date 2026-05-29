@@ -648,19 +648,8 @@ class TestFacade:
     async def test_facade_top_level_zero_closes_evolution_session(
         self,
         facade: WhatsAppTenantConsoleFacade,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Top-level '0' closes the Evolution chat session when instance is present."""
-        calls: list[dict[str, str]] = []
-
-        async def fake_close_chat_session(instance: str, remote_jid: str) -> None:
-            calls.append({"instance": instance, "remote_jid": remote_jid})
-
-        monkeypatch.setattr(
-            "app.services.whatsapp_tenant_console_facade.facade.evolution_client.close_chat_session",
-            fake_close_chat_session,
-        )
-
+        """Top-level '0' returns goodbye. Evolution close is handled by n8n."""
         identity = _tenant_identity(role="tenant")
         reply = await facade.process_message(
             phone="+10000000000",
@@ -671,12 +660,6 @@ class TestFacade:
         )
 
         assert "Sesión cerrada" in reply and "consola de administración" in reply
-        assert calls == [
-            {
-                "instance": "tenant-instance",
-                "remote_jid": "10000000000@s.whatsapp.net",
-            }
-        ]
 
     async def test_facade_zero_with_active_flow_cancels(
         self,
@@ -699,6 +682,21 @@ class TestFacade:
         )
         # Should cancel (not goodbye), returning main menu
         assert "Operación cancelada" in reply or "Consola de Administración" in reply
+
+    async def test_facade_top_level_zero_returns_goodbye_message(
+        self,
+        facade: WhatsAppTenantConsoleFacade,
+    ) -> None:
+        """Top-level '0' returns closed-session goodbye message."""
+        identity = _tenant_identity(role="tenant")
+        reply = await facade.process_message(
+            phone="+10000000000",
+            message="0",
+            identity=identity,
+            db=cast(AsyncSession, object()),
+        )
+        lowered = reply.lower()
+        assert "sesión cerrada" in lowered or "sesion cerrada" in lowered
 
 
 # ===================================================================
@@ -826,14 +824,14 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="4",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         reply_filter = await console_service.process_message(
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Filtrar por estado" in reply_filter
@@ -842,7 +840,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Lista" in reply_list or "Suscripciones" in reply_list
@@ -851,7 +849,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Detalle de Suscripción" in reply_detail
@@ -881,7 +879,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
 
@@ -889,7 +887,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         session = await session_service.get_session("admin:+10000000000")
@@ -898,15 +896,15 @@ class TestServiceMainMenu:
         assert session.selection_map["7"] == str(subscriptions[6].id)
         assert "cliente-page-7@test.com" in reply_page_1
         assert "cliente-page-8@test.com" not in reply_page_1
-        assert "0️⃣ Volver al menú principal" in reply_page_1
+        assert "9️⃣ Volver al menú principal" in reply_page_1
         assert "9️⃣ Siguiente" in reply_page_1
         assert "8️⃣ ← Anterior" not in reply_page_1
 
         reply_page_2 = await console_service.process_message(
             phone="+10000000000",
-            message="9",
+            message="8",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         session = await session_service.get_session("admin:+10000000000")
@@ -921,7 +919,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="1",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         assert "Detalle de Suscripción" in reply_detail
@@ -938,7 +936,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="4",
             tenant_id=tenant_id,
-            db=object(),
+            db=AsyncMock(),
             session_service=session_service,
         )
         steps = [
@@ -962,7 +960,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción creada exitosamente" in reply
@@ -980,7 +978,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción actualizada exitosamente" in reply
@@ -1001,7 +999,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción cancelada exitosamente" in reply
@@ -1019,7 +1017,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción renovada exitosamente" in reply
@@ -1030,7 +1028,7 @@ class TestServiceMainMenu:
                 phone="+10000000000",
                 message=step,
                 tenant_id=tenant_id,
-                db=object(),
+                db=AsyncMock(),
                 session_service=session_service,
             )
         assert "Suscripción reactivada exitosamente" in reply
@@ -1066,7 +1064,7 @@ class TestServiceMainMenu:
             message="0",
             session_service=session_service,
         )
-        assert "cancelada" in reply.lower()
+        assert "salido" in reply.lower() or "goodbye" in reply.lower()
 
     async def test_service_fallback_no_flow(
         self, console_service: WhatsAppTenantConsoleService
@@ -1233,7 +1231,7 @@ class TestClientSelect:
             message="1",
             session_service=session_service,
             tenant_id=tenant_id,
-            db="fake",  # db needed for list_clients
+            db=AsyncMock(),  # db needed for list_clients
         )
         assert "Test Client" in reply
 
@@ -1248,7 +1246,7 @@ class TestClientSelect:
             message="1",
             session_service=session_service,
             tenant_id=tenant_id,
-            db="fake",
+            db=AsyncMock(),
         )
         assert "Detalle" in reply or "Test Client" in reply
         # Session should advance to detail_action
@@ -1305,7 +1303,7 @@ class TestClientSelect:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El teléfono ya está registrado" in reply
@@ -1332,11 +1330,87 @@ class TestClientSelect:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El nombre de usuario ya existe" in reply
         assert "username_already_registered" not in reply
+
+
+# ===================================================================
+# Post-action prompt tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestPostActionPrompt:
+    """Post-action decision prompt appears after terminal CRUD operations."""
+
+    async def test_client_create_success_includes_post_action_prompt(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Successful client creation includes post-action prompt."""
+        session = SimpleNamespace(
+            temp_data={
+                "full_name": "Cliente Test",
+                "local_username": "clientetest",
+                "phone": "+12015550099",
+                "password": "secret123",
+            },
+            step=console_service.CLIENTS_STEP_CREATE_CONFIRM,
+        )
+
+        created_client = SimpleNamespace(
+            full_name="Cliente Test",
+            username="eq3wn_clientetest",
+            phone="+12015550099",
+        )
+
+        async def _create(*args: Any, **kwargs: Any) -> SimpleNamespace:
+            return created_client
+
+        console_service._client_service.create_client = _create  # type: ignore[assignment]
+
+        reply = await console_service._handle_client_create_confirm(
+            phone="+10000000000",
+            msg="CONFIRMAR",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        assert "Cliente Test" in reply
+        assert "Cerrar sesión" in reply or "0️⃣" in reply
+        assert "Realizar otra operación" in reply or "menú principal" in reply
+
+    async def test_subscription_cancel_success_includes_post_action_prompt(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Successful subscription cancel includes post-action prompt."""
+        session = SimpleNamespace(
+            selected_tenant_id=str(uuid4()),
+            temp_data={},
+        )
+
+        async def _cancel(*args: Any, **kwargs: Any) -> bool:
+            return True
+
+        console_service._subscription_service.cancel_subscription = _cancel  # type: ignore[assignment]
+
+        reply = await console_service._handle_subscriptions_cancel_confirm(
+            phone="+10000000000",
+            msg="CONFIRMAR",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        assert "cancelada" in reply.lower() or "cancelled" in reply.lower()
+        assert "Cerrar sesión" in reply or "0️⃣" in reply
 
 
 # ===================================================================
@@ -1376,7 +1450,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             user_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El teléfono ya está registrado" in reply
@@ -1402,7 +1476,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El nombre del servicio ya existe" in reply
@@ -1429,7 +1503,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "El nombre del plan ya existe" in reply
@@ -1467,7 +1541,7 @@ class TestUserFacingErrorTranslation:
             session=session,
             session_service=None,
             tenant_id=uuid4(),
-            db=object(),
+            db=AsyncMock(),
         )
 
         assert "Cliente no encontrado" in reply
@@ -1488,9 +1562,7 @@ class TestCodigoFlow:
         console_service: WhatsAppTenantConsoleService,
     ) -> None:
         """Starting codigo flow shows list of available services."""
-        # We can't test full session flow without FakeRedis/db,
-        # but we can verify the method exists and returns a prompt.
-        from unittest.mock import AsyncMock
+        from unittest.mock import AsyncMock, patch
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
@@ -1500,14 +1572,36 @@ class TestCodigoFlow:
         mock_session_service.get_session.return_value = None
         mock_session_service.create_session.return_value = mock_session
 
-        # By calling _start_codigo_flow we verify no import errors
-        result = await console_service._start_codigo_flow(
-            phone="+10000000000",
-            session_service=mock_session_service,
-            tenant_id=None,
-            db=None,
-            started_from_menu=False,
-        )
+        # Mock the effective keys repository to return all supported services
+        with (
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow"
+                ".code_services_repository.get_effective_service_keys",
+                new_callable=AsyncMock,
+                return_value=[
+                    "disney",
+                    "hbo_max",
+                    "netflix",
+                    "prime_video",
+                    "spotify",
+                    "universal_plus",
+                ],
+            ),
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow"
+                ".mailbox_config_repository.get_by_tenant",
+                new_callable=AsyncMock,
+                return_value=AsyncMock(status="connected"),
+            ),
+        ):
+            result = await console_service._start_codigo_flow(
+                phone="+10000000000",
+                session_service=mock_session_service,
+                tenant_id="00000000-0000-0000-0000-000000000001",
+                db=AsyncMock(),
+                started_from_menu=False,
+                role="tenant",
+            )
         assert result is not None
         assert "Netflix" in result or "netflix" in result.lower()
         assert "Cancelar" in result
@@ -1547,7 +1641,17 @@ class TestCodigoFlow:
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {"codigo_started_from_menu": "false"}
+        mock_session.temp_data = {
+            "codigo_started_from_menu": "false",
+            "codigo_effective_keys": [
+                "disney",
+                "hbo_max",
+                "netflix",
+                "prime_video",
+                "spotify",
+                "universal_plus",
+            ],
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_SERVICE
 
@@ -1567,12 +1671,21 @@ class TestCodigoFlow:
         self,
         console_service: WhatsAppTenantConsoleService,
     ) -> None:
-        """Selecting service 1 asks for email."""
+        """Selecting service 1 asks for email (Disney+ is index 1 after alphabetical reorder)."""
         from unittest.mock import AsyncMock
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {}
+        mock_session.temp_data = {
+            "codigo_effective_keys": [
+                "disney",
+                "hbo_max",
+                "netflix",
+                "prime_video",
+                "spotify",
+                "universal_plus",
+            ]
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_SERVICE
         mock_session_service.get_session.return_value = mock_session
@@ -1586,7 +1699,7 @@ class TestCodigoFlow:
             db=None,
         )
         assert reply is not None
-        assert "Netflix" in reply or "email" in reply.lower()
+        assert "Disney" in reply or "email" in reply.lower()
 
     async def test_codigo_flow_invalid_service(
         self,
@@ -1597,7 +1710,16 @@ class TestCodigoFlow:
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {}
+        mock_session.temp_data = {
+            "codigo_effective_keys": [
+                "disney",
+                "hbo_max",
+                "netflix",
+                "prime_video",
+                "spotify",
+                "universal_plus",
+            ]
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_SERVICE
 
@@ -1661,6 +1783,59 @@ class TestCodigoFlow:
             db=None,
         )
         assert "inválido" in reply.lower() or "invalid" in reply.lower()
+
+    async def test_codigo_service_keys_alphabetical_order(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """STREAMING_SERVICE_KEYS must be alphabetical by visible label."""
+        from app.services.whatsapp_tenant_console_service.codigo_flow import (
+            _CODIGO_SERVICE_LABELS,
+        )
+
+        keys = console_service.STREAMING_SERVICE_KEYS
+        labels = [_CODIGO_SERVICE_LABELS.get(k, k) for k in keys]
+        assert labels == sorted(labels), f"Service labels not alphabetical: {labels}"
+
+    async def test_codigo_index_to_service_key_mapping(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Index 1..N maps to correct service_key (alphabetical)."""
+        from unittest.mock import AsyncMock
+
+        expected_keys = [
+            "disney",  # 1
+            "hbo_max",  # 2
+            "netflix",  # 3
+            "prime_video",  # 4
+            "spotify",  # 5
+            "universal_plus",  # 6
+        ]
+        keys = console_service.STREAMING_SERVICE_KEYS
+        assert keys == expected_keys
+
+        # Verify selection for each index resolves correct service_key
+        for i, expected_key in enumerate(expected_keys, start=1):
+            mock_session_service = AsyncMock()
+            mock_session = AsyncMock()
+            mock_session.temp_data = {"codigo_effective_keys": expected_keys}
+            mock_session.flow = console_service.CODIGO_FLOW
+            mock_session.step = console_service.CODIGO_STEP_SERVICE
+            mock_session_service.get_session.return_value = mock_session
+
+            await console_service._handle_codigo_service(
+                phone="+10000000000",
+                msg=str(i),
+                session=mock_session,
+                session_service=mock_session_service,
+                tenant_id=None,
+                db=None,
+            )
+            assert mock_session.temp_data["service_key"] == expected_key, (
+                f"Index {i} mapped to {mock_session.temp_data['service_key']}, "
+                f"expected {expected_key}"
+            )
 
 
 @pytest.mark.asyncio
@@ -2001,3 +2176,106 @@ class TestConsoleHandlersCodigoScope:
         assert mock_session.temp_data.get("service_key") == "netflix"
         assert mock_session.temp_data.get("target_email") == "user@example.com"
         assert "pending_job_id" not in mock_session.temp_data
+
+
+# ===================================================================
+# Bug 02 — Navigation contract: 9=back, 0=exit
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestNavigationContract:
+    """Verify that 9=back and 0=exit semantics hold across consoles."""
+
+    async def test_eight_goes_to_next_page_in_subscription_list(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        """'8' in subscription list triggers next-page, not global exit."""
+        tenant_id = subscription_service.tenant_id
+        subscription_service._subscriptions = {}
+        subs = [
+            FakeSubscriptionObj(
+                tenant_id=tenant_id,
+                streaming_email=f"nav-test-{i}@test.com",
+            )
+            for i in range(1, 9)
+        ]
+        for s in subs:
+            subscription_service._subscriptions[str(s.id)] = s
+
+        # Navigate to subscription list
+        for step in ["4", "1", "1"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+                session_service=session_service,
+            )
+
+        # Send 8 → should go to page 2, NOT exit
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="8",
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+        # Page 2 shows sub 8 only
+        assert "nav-test-8@test.com" in reply
+        assert "nav-test-7@test.com" not in reply
+        # Session should still exist (not cleared by exit)
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+
+    async def test_zero_exits_from_active_flow(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """'0' with active flow exits the console."""
+        session = await session_service.create_session("admin:+10000000000")
+        session.flow = "clients"
+        session.step = "list"
+        await session_service.save_session(session)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="0",
+            session_service=session_service,
+        )
+        # Should show goodbye, not just cancel
+        assert "salido" in reply.lower() or "goodbye" in reply.lower()
+        # Session should be cleared
+        fetched = await session_service.get_session("admin:+10000000000")
+        assert fetched is None
+
+    async def test_zero_exits_from_main_menu(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """'0' from main menu exits."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="0",
+            session_service=session_service,
+        )
+        assert "salido" in reply.lower() or "goodbye" in reply.lower()
+
+    async def test_nine_from_main_menu_shows_main_menu(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """'9' from main menu (no active flow) shows main menu."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="9",
+            session_service=session_service,
+        )
+        # Should show main menu
+        assert "Clientes" in reply or "Trackpal" in reply
