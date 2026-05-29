@@ -474,6 +474,104 @@ return WhatsAppConsoleResponse(
 )
 ```
 
+## Scenario: WhatsApp console global-exit contract inside active flows
+
+### 1. Scope / Trigger
+- Trigger: legacy master/tenant/client sub-flows treated `0` as local cancel or invalid input, causing inconsistent exit behavior and broken close-session detection.
+
+### 2. Signatures
+- Entry points:
+  - `WhatsAppMasterConsoleFacade.process_message(...)`
+  - `WhatsAppTenantConsoleFacade.process_message(...)`
+  - `WhatsAppClientConsoleFacade.process_message(...)`
+- Response contract:
+  - `WhatsAppConsoleResponse(reply: str, status: str | None = None)`
+
+### 3. Contracts
+- `0` is reserved for global exit only.
+- `9` is local back action in interactive flows.
+- Global exit must clear auth/conversation state and return goodbye reply compatible with i18n.
+- n8n close-session detection depends on backend `status="closed"` in merge payload when exiting.
+
+### 4. Validation & Error Matrix
+- `0` during active flow -> logout path (not local cancel/menu).
+- `9` in steps with back support -> previous step/menu.
+- Unknown action in step -> localized invalid-option prompt; no implicit exit.
+- Merge payload missing `status` -> n8n cannot close session reliably.
+
+### 5. Good/Base/Bad Cases
+- Good: user in edit/create/detail step sends `0` -> session cleared + logout confirmation.
+- Base: user sends `menu` or `/menu` -> reset/menu contract preserved.
+- Bad: `0` treated as field value or local cancel in CRUD step.
+
+### 6. Tests Required
+- `tests/test_whatsapp_logout_flow.py`: assert auth session cleared and no touch on `0`.
+- Master legacy flow tests: use `menu` for reset behavior where contract is reset-not-exit.
+- Endpoint integration tests: assert exit responses include closure-compatible semantics.
+
+### 7. Wrong vs Correct
+#### Wrong
+```python
+if msg == "0":
+    return self._with_main_menu("🚫 Operación cancelada.")
+```
+#### Correct
+```python
+if msg == "0":
+    await auth_session_service.clear_auth_session(phone)
+    return self._goodbye_reply(locale)
+```
+
+## Scenario: Code-services governance contract (global catalog + tenant selection)
+
+### 1. Scope / Trigger
+- Trigger: Bug 05 introduced separate code-service governance and required strict API/DB contracts across backend + UI + WhatsApp.
+
+### 2. Signatures
+- Models/migration:
+  - `code_service_global_status(service_key PK, is_active, updated_at)`
+  - `tenant_code_service_selections(tenant_id, service_key FK -> code_service_global_status.service_key)`
+- APIs:
+  - `PUT /api/v1/code-services/global`
+  - `PUT /api/v1/code-services/tenants/me`
+  - `PUT /api/v1/code-services/tenants/{tenant_id}`
+
+### 3. Contracts
+- Source of truth for allowed keys is backend catalog.
+- Tenant selection persisted by full replacement (last-write-wins transaction).
+- Effective WhatsApp list = `tenant_selected ∩ global_active`, sorted by visible label.
+- Invalid `service_key` must return HTTP 400 (not 422).
+- Globally disabled but tenant-selected services remain persisted and must be represented as disabled in UI.
+
+### 4. Validation & Error Matrix
+- Unknown key in payload -> `400 invalid_service_key`.
+- Missing FK consistency in DB -> migration/model bug; prevent by FK on `service_key`.
+- Empty tenant selection -> no fallback list; role-specific no-config messaging.
+
+### 5. Good/Base/Bad Cases
+- Good: tenant sends valid subset; backend replaces selection atomically.
+- Base: master toggles service inactive; tenant selection remains stored but unavailable in effective list.
+- Bad: endpoint relies only on Pydantic enum and returns 422, violating product contract.
+
+### 6. Tests Required
+- `tests/test_code_services.py`: strict 400 on invalid keys, permission matrix, replacement semantics.
+- `tests/test_tenant_console_service.py`: code flow reflects effective list and no-config behavior.
+- Migration/ORM checks: FK from tenant selection to global table enforced.
+
+### 7. Wrong vs Correct
+#### Wrong
+```python
+class TenantCodeServiceUpdateRequest(BaseModel):
+    service_keys: list[Literal[...]]
+# invalid payload returns 422
+```
+#### Correct
+```python
+payload.validate_keys()  # manual contract validation
+if error:
+    raise HTTPException(status_code=400, detail="invalid_service_key")
+```
+
 ## Testing Requirements
 
 - Run backend suite before completion: `cd backend && uv run pytest -v`.
