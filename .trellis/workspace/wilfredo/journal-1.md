@@ -315,3 +315,39 @@ Root-caused poll 404 with MCP evidence, implemented central durable codigo looku
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: Close WhatsApp bugs 01-05
+
+**Date**: 2026-05-29
+**Task**: Close WhatsApp bugs 01-05
+**Branch**: `feat/whatsapp-console-bugs-01-05`
+
+### Summary
+
+Implemented and stabilized WhatsApp console bugs 01-05 end-to-end: instance isolation, global navigation contract, session-close/status propagation, code-service governance, docs/spec sync, and CodeRabbit follow-ups with full regression pass.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4b49a24` | (see git log) |
+| `7deedb9` | (see git log) |
+| `f5505ef` | (see git log) |
+| `1cdbefa` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
