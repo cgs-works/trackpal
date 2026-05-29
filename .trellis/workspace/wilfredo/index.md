@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 9
-- **Last Active**: 2026-05-28
+- **Total Sessions**: 10
+- **Last Active**: 2026-05-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~317 | Active |
+| `journal-1.md` | ~353 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-05-29 | Close WhatsApp bugs 01-05 | `4b49a24`, `7deedb9`, `f5505ef`, `1cdbefa` | `feat/whatsapp-console-bugs-01-05` |
 | 9 | 2026-05-28 | Fix n8n mail lookup 404 durability | `4ebf7c5`, `c9eaa8d`, `19504b7`, `8af72f0` | `main` |
 | 8 | 2026-05-28 | n8n workflow reconnection and validation | `e237fae` | `main` |
 | 7 | 2026-05-28 | Mailbox oauth/imap hardening and wrap-up | `d87750b`, `c946e07` | `feat/tenant-mailbox-oauth-imap` |

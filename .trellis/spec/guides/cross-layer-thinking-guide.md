@@ -142,6 +142,7 @@ After implementation:
       (`seq`, `id`, `version`) instead of inventing a second cursor
 - [ ] For async polling contracts, verified required scope fields travel end-to-end
       (example: `lookup_job_id` + `tenant_id` in n8n mail lookup polling)
+- [ ] For transport/merge nodes (n8n, queues, adapters), verified control fields (`status`, `lookup_job_id`) are preserved and not dropped by merge mappings
 
 ---
 

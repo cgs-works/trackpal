@@ -37,6 +37,7 @@ These guides help you **ask the right questions before coding**.
 - [ ] You are adding an event kind, JSONL record, RPC payload, or config field
 - [ ] UI / command code starts casting raw payload fields directly
 - [ ] **Integrating with an external HTTP API** — probe deployed server before coding
+- [ ] Workflow uses transport/merge steps (n8n/queue adapters) where control fields like `status` or `lookup_job_id` can be silently dropped
 
 → Read [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md)
 

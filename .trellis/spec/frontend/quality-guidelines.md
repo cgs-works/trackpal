@@ -80,6 +80,54 @@ const pollUrl = `/api/v1/integrations/n8n/mail/lookups/${jobId}`;
 const pollUrl = `/api/v1/integrations/n8n/mail/lookups/${jobId}?tenant_id=${tenantId}`;
 ```
 
+## Scenario: Code-services panels must reflect backend governance state deterministically
+
+### 1. Scope / Trigger
+- Trigger: Bug 05 introduced master global toggles + tenant per-tenant selection. UI drift caused stale success alerts and missing empty states.
+
+### 2. Signatures
+- Components:
+  - `frontend/src/components/CodeServicesGlobalPanel.vue`
+  - `frontend/src/components/CodeServicesTenantPanel.vue`
+- i18n keys:
+  - `frontend.code_services.none`
+
+### 3. Contracts
+- Global panel must render explicit empty-state message when catalog list is empty.
+- Tenant panel must reload latest state before showing success confirmation.
+- Reload helpers must not clear success message after a successful save.
+- Disabled global services selected by tenant must be shown disabled, not silently removed.
+
+### 4. Validation & Error Matrix
+- Save success + reload failure -> show error, no stale success.
+- Empty global catalog -> show `frontend.code_services.none`.
+- API 400 invalid service keys -> show backend detail, keep selection form visible.
+
+### 5. Good/Base/Bad Cases
+- Good: save tenant selection -> reload -> then success toast/message.
+- Base: load with existing disabled service -> visible with disabled affordance.
+- Bad: set success message before reload and lose it on later load reset.
+
+### 6. Tests Required
+- Build check: `cd frontend && npm run build`.
+- Manual checks:
+  - global empty-state text visible when no services.
+  - tenant save shows success only after refreshed data.
+  - disabled items visible and not selectable.
+- Backend-coupled regression: `cd backend && uv run pytest -q tests/test_code_services.py`.
+
+### 7. Wrong vs Correct
+#### Wrong
+```js
+successMessage.value = t('saved')
+await loadServices() // load clears successMessage
+```
+#### Correct
+```js
+await loadServices()
+successMessage.value = t('saved')
+```
+
 ## Testing Requirements
 
 - No automated frontend test suite currently.

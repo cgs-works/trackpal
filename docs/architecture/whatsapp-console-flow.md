@@ -56,7 +56,7 @@ Package: `backend/app/services/whatsapp_master_console_facade/`. Submodules: `fa
 | 3 | Desactivar Tenant | Deactivate tenant |
 | 4 | Eliminar Tenant | Delete inactive tenant |
 | 5 | Ayuda | Show help |
-| 0 | Cerrar sesión / Cancelar | Contextual exit or cancel |
+| 0 | Cerrar sesión | Global exit |
 
 ## Client Console
 
@@ -85,7 +85,7 @@ When Evolution sends `@lid` identifiers:
 If the same phone matches both `tenant.whatsapp_phone` and a `client` record within the same tenant:
 - System **prompts** the user to choose mode: `1) Tenant` or `2) Cliente`.
 - Selection is persisted in Redis at key `wa:mode:{phone}` for the current session.
-- Special shortcut: messages `codigo|código|code|6` skip ambiguity prompt and route directly to tenant `codigo` flow.
+- Special shortcut: messages `codigo|código|code` skip ambiguity prompt and route directly to tenant `codigo` flow.
 - When user exits (`0` or `salir`), the mode key is cleared from Redis.
 
 ### Exit contract (`status="closed"`)
@@ -139,7 +139,7 @@ To keep endpoint modules maintainable and within team size policy, the console e
 
 Tenant console now supports a dedicated code-retrieval dialog:
 1. Trigger by exact message `codigo`, `código`, or `code`.
-2. Backend asks for service (`disney`, `hbo_max`, `netflix`, `prime_video`, `spotify`, `universal`), prioritizing tenant catalog when available.
+2. Backend asks for service from effective code-services config (`tenant_selected ∩ global_active`), sorted alphabetically by visible label.
 3. Backend asks for target email.
 4. Backend stores lookup intent in session (`service_key`, `target_email`) and keeps dialog response immediate.
 5. Integration handler performs lookup orchestration: create job, commit durable row, enqueue Redis.
@@ -188,7 +188,7 @@ Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so
 | 3 | Mi Perfil | View/edit profile and password |
 | 4 | Suscripciones | List and manage subscriptions |
 | 5 | Ayuda | Show help |
-| 0 | Salir / Cancelar | Contextual exit or cancel |
+| 0 | Salir | Global exit |
 
 ### Subscription flows
 
@@ -196,9 +196,9 @@ The subscription list flow supports interactive pagination with 7 items per page
 
 1. **Filter by status**: Tenant selects a status (Active / Expired / Cancelled / All)
 2. **Paginated list**: Results shown in pages of 7, with per-command:
-   - `0` — Cancel and return to tenant main menu
-   - `8` — Previous page (hidden if page ≤ 1)
-   - `9` — Next page (hidden if page ≥ total_pages)
+   - `0` — Global exit
+   - `8` — Next page (hidden if page ≥ total_pages)
+   - `9` — Previous page/back (hidden if page ≤ 1)
 3. **Subscription selection**: Tenant picks a subscription by number (1–7) to view details and available actions (edit, cancel, renew, reactivate)
 
 Page state (`page`, `status_filter`) is stored in session `temp_data` and the per-page `selection_map` maps keys `1..7` to subscription IDs. Invalid page navigation returns a localized error without changing the current page.
@@ -221,7 +221,7 @@ Defines `ClientServiceProtocol`, `CatalogServiceProtocol`, and `SubscriptionServ
 - Master conversation state key: `session:{phone}`
 - Tenant conversation state key: `session:admin:{phone}`
 - TTL: 15 minutes
-- `0` at top level exits; `0` inside active flow cancels
+- `0` is global exit across top-level and active flows
 - Invalid input does not refresh TTL
 
 ## Contingency behavior

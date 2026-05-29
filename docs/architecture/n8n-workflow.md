@@ -17,7 +17,7 @@ Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJ
     ↓
 Console Call (HTTP Request Node) — POST /api/v1/integrations/n8n/console
     ↓
-Merge Reply (Code Node) — merges reply with original input
+Merge & lookup data (Code Node) — merges reply + control fields with original input
     ↓
 IF has lookup_job_id?
    ├─ No  → Evolution Go Send → Check Close Session → Close Session(if logout)
@@ -97,13 +97,13 @@ Calls the backend WhatsApp Master Console endpoint.
 | Body | `{"phone": "...", "message": "...", "instance": "...", "sender_lid": "..."}` |
 | Never Error | `true` (backend errors return safe replies, never 5xx) |
 
-### 5. Merge Reply (Code Node)
+### 5. Merge & lookup data (Code Node)
 
-Small JavaScript that takes the backend response and merges it with the parsed input.
+Small JavaScript that takes backend response from `Console call` and merges it with parsed input.
 
-**Logic**: If `$json.reply` is a non-empty string, use it; otherwise return the fallback Spanish message `"Servicio temporalmente no disponible. Intenta nuevamente."`
+**Logic**: If response `reply` is empty, use fallback Spanish message. Preserve control fields: `status`, `lookup_job_id`, and `tenant_id`.
 
-**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply }`.
+**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id }`.
 
 ### 6. Evolution Go Send (HTTP Request Node)
 
@@ -123,7 +123,11 @@ Uses the per-message instance `apiKey` from the Evolution Go trusted webhook pay
 
 JavaScript that conditionally triggers session close.
 
-**Logic**: If the original message is `"0"` (top-level logout/exit) and the reply text indicates session close (contains "Sesión cerrada", "goodbye", or "cerrado"), passes the item to the Close Session node.
+**Logic**: Close-session trigger is true when either:
+1. `status === "closed"` from backend response, or
+2. message is logout command (`0`/`salir`) and reply text matches close semantic.
+
+Guard: if `lookup_job_id` exists, do not close session in this branch (poll/result flow owns close behavior).
 
 ### 8. Close Session (HTTP Request Node)
 
@@ -153,25 +157,25 @@ Parse Input:
   const remoteJid = body.remoteJid || ''
   const apiKey = body.apiKey || ''
   ↓
-{ phone: "1234567890", sender_lid: "1234567890123@lid", message: "1", instance: "Sublify", remoteJid: "1234567890@s.whatsapp.net", apiKey: "evo-instance-token" }
+{ phone: "1234567890", sender_lid: "1234567890123@lid", message: "1", instance: "Sublify", remoteJid: "1234567890@s.whatsapp.net", apiKey: "<instance-api-key>" }
   ↓
 Config node adds: { trackpal_backend_url, trackpal_n8n_api_key, evolution_api_url, default_instance }
   ↓
 Console Call → POST /api/v1/integrations/n8n/console
   → Backend processes, returns { reply: "📋 *Lista de Tenants*\n..." }
   ↓
-Merge Reply:
-  { phone, message, instance, remoteJid, apiKey, reply: "📋 *Lista de Tenants*\n..." }
+Merge & lookup data:
+  { phone, message, instance, remoteJid, apiKey, reply: "📋 *Lista de Tenants*\n...", status: null, lookup_job_id: null, tenant_id: null }
   ↓
 Evolution Go Send → POST /send/text
-  → Headers: { apikey: "evo-instance-token" }
+  → Headers: { apikey: "<instance-api-key>" }
   → Body: { number: "1234567890", text: "📋 *Lista de Tenants*\n..." }
   → User receives the WhatsApp message
   ↓
 Check Close Session (only if message === "0" and reply matches logout)
   ↓
 Close Session → POST /webhook/change-status
-  → Headers: { apikey: "evo-instance-token" }
+  → Headers: { apikey: "<instance-api-key>" }
   → Body: { remoteJid: "1234567890@s.whatsapp.net", status: "closed" }
 ```
 

@@ -59,3 +59,5 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Tenant Catalog Brainstorm](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Catalog RLS brainstorm summary |
 | [Client Entity Brainstorm](brainstorms/260517-1930-client-entity-dashboard/SUMMARY.md) | Client entity brainstorm summary |
 | [Tenant Admin WhatsApp Console Brainstorm](brainstorms/260518-2146-tenant-admin-whatsapp-console/SUMMARY.md) | Tenant WhatsApp console brainstorm summary |
+| [Python i18n Brainstorm](brainstorms/260522-2330-python-i18n-system/SUMMARY.md) | Backend + frontend i18n migration brainstorm summary |
+| [Python i18n Plan](plans/260523-0041-python-i18n-system/SUMMARY.md) | Python i18n implementation phase plan |

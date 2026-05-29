@@ -33,7 +33,7 @@ on-demand when n8n requests a code lookup.
 - Status machine: `pending -> processing -> completed/failed | pending -> timeout`.
 - `result_value` is **not persisted** in DB (ephemeral in-memory cache, 60s TTL).
 - Stores required `target_email` for content-bound filtering.
-- TTL default 72h via `settings.mailbox_lookup_job_ttl_hours`.
+- TTL default 5 minutes via `settings.mailbox_lookup_job_ttl_minutes`.
 
 ### `mail_code_delivery_log`
 
@@ -41,7 +41,7 @@ on-demand when n8n requests a code lookup.
   - `message_id IS NOT NULL`: unique `(tenant_id, mailbox_id, service_key, message_id, fingerprint)`
   - `message_id IS NULL`: unique `(tenant_id, mailbox_id, service_key, fingerprint)`
 - Fingerprint: SHA-256 of `service_key + message_id + payload` (primary) or fallback `service_key + sender + received_at + subject + payload`.
-- Retention default 90 days via `settings.mailbox_delivery_log_retention_days`.
+- Retention default 7 days via `settings.mailbox_delivery_log_retention_days`.
 
 ## Worker Design
 
@@ -144,8 +144,8 @@ A periodic background task (`mailbox_cleanup.cleanup_loop`) runs hourly:
 3. **Hard-delete delivery log** → removes entries older than retention window.
 
 Configurable via:
-- `settings.mailbox_lookup_job_ttl_hours` (default 72h)
-- `settings.mailbox_delivery_log_retention_days` (default 90d)
+- `settings.mailbox_lookup_job_ttl_minutes` (default 5m)
+- `settings.mailbox_delivery_log_retention_days` (default 7d)
 
 ## Security
 
