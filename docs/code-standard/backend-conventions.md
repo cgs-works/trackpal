@@ -48,6 +48,10 @@ FastAPI dependencies live in `app/api/dependencies.py`:
 - API key: `X-API-Key` header validated against `settings.n8n_api_key`
 - No passwords stored in Redis or logs
 
+For detailed conventions on error handling and logging, see:
+- [Error Handling](error-handling.md)
+- [Logging Guidelines](logging-guidelines.md)
+
 ## Validation
 
 All field validation goes through `app/core/input_validation/`. This is the single source of truth used by:

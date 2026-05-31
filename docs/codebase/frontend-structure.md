@@ -25,7 +25,23 @@ frontend/
 │   │   └── api.js                # Axios instance: base URL, JWT interceptor, 401 handler
 │   │
 │   ├── stores/
-│   │   └── auth.js               # Pinia store: token, user, activeTenantId, login, switch, logout
+│   │   ├── auth.js               # Pinia store: token, user, activeTenantId, login, switch, logout
+│   │   └── i18n.js               # Pinia store: locale, catalog, t(), loadCatalog()
+│   │
+│   ├── i18n/
+│   │   ├── public.json           # Pre-auth translation strings (en/es for login page)
+│   │   └── usePublicI18n.js      # Composable: locale, setLocale, t() — persists localStorage
+│   │
+│   ├── components/               # Reusable UI panels extracted from views
+│   │   ├── CatalogPanel.vue              # Service + plan CRUD panel
+│   │   ├── ClientManagementPanel.vue     # Client CRUD panel with forms
+│   │   ├── CodeServicesGlobalPanel.vue   # Master global code-service toggles
+│   │   ├── CodeServicesTenantPanel.vue   # Tenant code-service selection panel
+│   │   └── MailboxConfigPanel.vue        # Mailbox config (IMAP/OAuth) panel
+│   │
+│   ├── styles/
+│   │   ├── client-dashboard.css           # Client dashboard specific styles
+│   │   └── client-dashboard-responsive.css # Responsive breakpoints for client dashboard
 │   │
 │   └── views/
 │       ├── LoginView.vue         # Login form (Spanish UI)
@@ -52,6 +68,9 @@ frontend/
 | Router | `router/index.js` | Route definitions, lazy loading, navigation guard for auth + role; /admin/subscriptions route for subscriptions |
 | API Service | `services/api.js` | Axios singleton, JWT injection on requests, 401 auto-logout |
 | Auth Store | `stores/auth.js` | Login/logout/switch actions, token/user/active tenant persistence in localStorage |
+| I18n Store | `stores/i18n.js` | Fetches catalog from backend, locale state, `t(key, params)` resolver |
+| Public I18n | `i18n/usePublicI18n.js` | Pre-auth i18n composable with local JSON catalog, persists locale to localStorage |
+| Components | `components/*.vue` | Reusable panels: Catalog, ClientManagement, CodeServices (global + tenant), MailboxConfig |
 | Views | `views/*.vue` | Page-level components: login, master dashboard, tenant dashboard, subscriptions page, client dashboard |
 
 ## Dependencies (from package.json)

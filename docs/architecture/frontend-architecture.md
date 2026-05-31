@@ -56,7 +56,7 @@ No lazy loading is used for `LoginView` (eager import). `MasterDashboardView` an
 
 ## State Management (Pinia)
 
-Two stores in `src/stores/`:
+Three stores in `src/stores/`:
 
 ### `auth.js`
 
@@ -169,3 +169,28 @@ Full subscription management page at `/admin/subscriptions` accessible only to `
 - Reveal credential eye icon per row -- decrypts password and PIN on demand
 
 Dashboard data is loaded from `GET /api/v1/dashboard` and `GET /api/v1/me` on mount.
+
+## Reusable Components
+
+Five panel components in `src/components/` extracted from views for maintainability:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `CatalogPanel.vue` | Master & Tenant dashboards | Service + plan CRUD operations |
+| `ClientManagementPanel.vue` | Tenant dashboard | Client CRUD with forms, activation toggle |
+| `CodeServicesGlobalPanel.vue` | Master dashboard | Global code-service activation toggles |
+| `CodeServicesTenantPanel.vue` | Tenant dashboard | Per-tenant code-service selection |
+| `MailboxConfigPanel.vue` | Tenant dashboard | Mailbox config (IMAP, OAuth), connect, test, disconnect |
+
+## Public I18n (pre-auth)
+
+System for translating the login page and any unauthenticated views without backend access.
+
+**Files**: `src/i18n/public.json` + `src/i18n/usePublicI18n.js`
+
+- Local JSON catalog with `en` / `es` entries for `login.*` keys.
+- `usePublicI18n()` composable returns reactive `locale`, `setLocale()`, and `t(key, params?)`.
+- Selected locale persisted to `localStorage` under key `publicLocale`.
+- First visit defaults to `en`. Missing keys return the key itself (no crash).
+- Imported in `LoginView.vue` for all login-form text.
+- After successful login, switches to backend-sourced `i18nStore`.

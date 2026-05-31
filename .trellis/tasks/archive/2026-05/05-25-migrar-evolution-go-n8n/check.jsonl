@@ -1,6 +1,0 @@
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Checklist de verificación final en backend."}
-{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Evitar duplicación en cliente Evolution y servicios."}
-{"file":"docs/architecture/evolution-integration.md","reason":"Confirmar docs actualizadas contra implementación final."}
-{"file":"docs/architecture/n8n-workflow.md","reason":"Validar contrato n8n final documentado."}
-{"file":"E:/Documentos/GitHub/evolution-go/docs/wiki/guias-api/api-webhooks.md","reason":"Verificar endpoints/auth/payload usados en cambios."}
-{"file":"E:/Documentos/GitHub/evolution-go/docs/wiki/guias-api/api-messages.md","reason":"Verificar envío `/send/text` y shape request."}

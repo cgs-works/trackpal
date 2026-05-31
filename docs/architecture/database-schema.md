@@ -267,13 +267,14 @@ Alembic migrations:
 5. `cd5efe74cae8` — Drop obsolete `tenant_profiles` table after data migration to `tenants`
 6. `cd6efe74cae9` — Add tenant `client_prefix`, create `clients`, and enable client RLS policies
 7. `cd7efe74caa0` — Add `subscriptions`, `subscription_events`, `subscription_reminder_logs`, and `subscription_reminder_settings` tables with RLS policies
-8. `cd9efe74caa2` — Rename `clients.local_username` to `clients.username`, rename related tenant+lower index, and backfill canonical values from `users.username`
-9. `cdaefe74caa3` — Add `evolution_instance_token` column to tenants for encrypted instance token storage
-10. `cdaefe74caa4` — Add `whatsapp_lid` columns + indexes to `master_profiles`, `tenants`, and `clients` for LID fallback identity resolution
-11. `cdbfefe74caa5` — Add `tenant_mailboxes`, `mail_lookup_jobs`, and `mail_code_delivery_log` for tenant mailbox ingestion
-12. `cdbfefe74caa6` — Add `mail_lookup_jobs.target_email` and replace dedupe uniqueness with partial indexes for nullable `message_id`
-13. `cdbfefe74caa7` — Enable/force RLS on core auth and mailbox tables (`users`, `refresh_sessions`, `master_profiles`, `mail_lookup_jobs`, `mail_code_delivery_log`, `alembic_version`)
-14. `cdc0fe74caa8` — Add `code_service_global_status` and `tenant_code_service_selections` with RLS policies and seeded default service keys
+8. `cd8efe74caa1` — Add `locale` column to `tenants` for per-tenant language preference (en/es)
+9. `cd9efe74caa2` — Rename `clients.local_username` to `clients.username`, rename related tenant+lower index, and backfill canonical values from `users.username`
+10. `cdaefe74caa3` — Add `evolution_instance_token` column to tenants for encrypted instance token storage
+11. `cdaefe74caa4` — Add `whatsapp_lid` columns + indexes to `master_profiles`, `tenants`, and `clients` for LID fallback identity resolution
+12. `cdbfefe74caa5` — Add `tenant_mailboxes`, `mail_lookup_jobs`, and `mail_code_delivery_log` for tenant mailbox ingestion
+13. `cdbfefe74caa6` — Add `mail_lookup_jobs.target_email` and replace dedupe uniqueness with partial indexes for nullable `message_id`
+14. `cdbfefe74caa7` — Enable/force RLS on core auth and mailbox tables (`users`, `refresh_sessions`, `master_profiles`, `mail_lookup_jobs`, `mail_code_delivery_log`, `alembic_version`)
+15. `cdc0fe74caa8` — Add `code_service_global_status` and `tenant_code_service_selections` with RLS policies and seeded default service keys
 
 ## Key Constraints
 

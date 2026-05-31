@@ -28,6 +28,23 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
 | `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
+| `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
+
+### Code-Services Endpoints (master + tenant)
+
+Auth for master endpoints: JWT + master role. Auth for tenant endpoints: JWT + active tenant context.
+
+- `GET /api/v1/code-services/global` — List all globally supported services with active status
+- `PUT /api/v1/code-services/global` — Bulk-set global active status
+- `PUT /api/v1/code-services/global/{service_key}` — Toggle single service globally
+- `GET /api/v1/code-services/tenants/current` — Get current tenant's selection
+- `PUT /api/v1/code-services/tenants/current` — Replace current tenant's selection
+- `GET /api/v1/code-services/tenants/current/effective` — Effective services (selected &cap; active)
+- `GET /api/v1/code-services/tenants/{tenant_id}` — Master: get tenant selection
+- `PUT /api/v1/code-services/tenants/{tenant_id}` — Master: replace tenant selection
+- `GET /api/v1/code-services/tenants/{tenant_id}/effective` — Master: effective services
+
+Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`).
 
 ### I18n Endpoints
 

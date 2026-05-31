@@ -1,5 +1,0 @@
-{"file": ".trellis/spec/backend/index.md", "reason": "Base backend checklist and conventions for implementation."}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Add whatsapp_lid columns, indexes, and migration safety rules."}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "Deterministic fallback behavior for unresolved identities."}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend quality and verification expectations."}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Changes span n8n workflow + API contract + persistence."}

@@ -16,6 +16,7 @@ backend/
 │   │           ├── auth.py
 │   │           ├── catalog.py
 │   │           ├── clients.py
+│   │           ├── code_services.py   # Code-services governance (global + tenant)
 │   │           ├── dashboard.py
 │   │           ├── i18n.py       # GET /i18n/catalog
 │   │           ├── me.py
@@ -28,7 +29,8 @@ backend/
 │   │           │   ├── console_modes.py    # Ambiguity mode selection
 │   │           │   ├── identify.py
 │   │           │   └── mail_lookups.py     # n8n create/poll mailbox lookup jobs
-│   │           ├── mailbox.py              # Tenant mailbox CRUD/test/OAuth endpoints
+│   │           ├── _mailbox_helpers.py      # Shared mailbox response helpers
+│   │           ├── mailbox.py               # Tenant mailbox CRUD/test/OAuth endpoints
 │   │           └── subscriptions/ # Package: crud, lifecycle, jobs, settings, router
 │   │               ├── __init__.py
 │   │               ├── _common.py
@@ -67,7 +69,9 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── client.py
+│   │   ├── code_service_global_status.py    # Global code-service activation
 │   │   ├── tenant_mailbox.py
+│   │   ├── tenant_code_service_selection.py # Per-tenant code-service selection
 │   │   ├── mail_lookup_job.py
 │   │   ├── mail_code_delivery_log.py
 │   │   ├── master_profile.py
@@ -79,22 +83,24 @@ backend/
 │   │   └── user.py
 │   ├── repositories/              # Data access layer (migrated from crud/)
 │   │   ├── __init__.py
-│   │   ├── mailbox_config_repository.py
-│   │   ├── mailbox_lookup_repository.py
-│   │   ├── mailbox_dedupe_repository.py
 │   │   ├── catalog_repository.py
 │   │   ├── clients_repository.py
+│   │   ├── code_services_repository.py      # Code-service global + tenant data
+│   │   ├── mailbox_config_repository.py
+│   │   ├── mailbox_dedupe_repository.py
+│   │   ├── mailbox_lookup_repository.py
 │   │   ├── profiles_repository.py
 │   │   ├── sessions_repository.py
 │   │   ├── tenants_repository.py
 │   │   └── users_repository.py
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   ├── mailbox.py
 │   │   ├── auth.py
 │   │   ├── catalog.py
 │   │   ├── client.py
+│   │   ├── code_services.py                # Code-service governance schemas
 │   │   ├── dashboard.py
+│   │   ├── mailbox.py
 │   │   ├── me.py
 │   │   ├── tenant.py
 │   │   ├── whatsapp.py
@@ -105,16 +111,16 @@ backend/
 │   └── services/                  # All services organized as packages
 │       ├── __init__.py            # Re-exports for stable public API
 │       ├── auth_service/
-│       ├── oauth_service/         # Google/Microsoft OAuth start/callback/refresh
-│       ├── imap_service.py        # IMAP connection test helper
-│       ├── mail_code_extractor/   # Regex catalog v1 + pure extractor
-│       ├── mail_lookup_worker/    # Queue, providers, worker pipeline
-│       ├── mailbox_cleanup.py     # Retention/cleanup loop
 │       ├── catalog_service/
 │       ├── client_service/
 │       ├── contingency_reply_policy/
 │       ├── dashboard_service/     # Dashboard response assembly (package)
 │       ├── evolution_client/
+│       ├── imap_service.py        # IMAP connection test helper
+│       ├── mail_code_extractor/   # Regex catalog v1 + pure extractor + per-service catalogs
+│       ├── mail_lookup_worker/    # Queue, providers (google/microsoft/imap), worker pipeline
+│       ├── mailbox_cleanup.py     # Retention/cleanup loop
+│       ├── oauth_service/         # Google/Microsoft OAuth start/callback/refresh + revocation
 │       ├── profile_service/
 │       ├── subscription_job_service/
 │       ├── subscription_service/
@@ -138,10 +144,14 @@ backend/
 │       ├── cd5efe74cae8_drop_tenant_profiles.py
 │       ├── cd6efe74cae9_add_client_prefix_and_clients.py
 │       ├── cd7efe74caa0_add_subscriptions.py
+│       ├── cd8efe74caa1_add_tenant_locale.py  # Add locale column to tenants
+│       ├── cd9efe74caa2_rename_clients_local_username_to_username.py  # Canonical client username
 │       ├── cdaefe74caa3_add_tenant_evolution_instance_token.py
 │       ├── cdaefe74caa4_add_whatsapp_lid_columns.py
 │       ├── cdbfefe74caa5_add_tenant_mailbox_tables.py
-│       └── cdbfefe74caa6_add_target_email_and_fix_dedupe_unique.py
+│       ├── cdbfefe74caa6_add_target_email_and_fix_dedupe_unique.py
+│       ├── cdbfefe74caa7_add_rls_to_core_and_mail_tables.py  # RLS on core + mailbox tables
+│       └── cdc0fe74caa8_add_code_service_tables.py  # Code-service governance tables
 ├── scripts/
 │   └── seed.py
 ├── tests/
@@ -172,7 +182,9 @@ backend/
 │   ├── test_whatsapp_list_select_flow.py
 │   ├── test_whatsapp_logout_flow.py
 │   ├── test_whatsapp_menu_flow.py
+│   ├── test_whatsapp_instance_alias.py
 │   ├── test_whatsapp_session_service.py
+│   ├── test_code_services.py    # Code-services governance tests
 │   ├── test_mailbox_persistence.py
 │   ├── test_mailbox_oauth_imap.py
 │   ├── test_mail_code_extractor.py
@@ -203,12 +215,17 @@ backend/
 | `app/api/v1/endpoints/subscriptions/` | Subscription CRUD, lifecycle, reminder endpoints (package) |
 | `app/core/encryption.py` | Fernet encryption for subscription secrets |
 | `app/core/errors.py` | UserFacingError and translate_error |
-| `app/services/whatsapp_tenant_console_service/` | Tenant WhatsApp menu routing (package) |
+| `app/api/v1/endpoints/code_services.py` | Code-services global + tenant selection endpoints |
+| `app/core/input_validation/` | Shared validation package: contact, phone, general validators |
+| `app/services/whatsapp_tenant_console_service/` | Tenant WhatsApp menu routing (package, 18 modules) |
 | `app/services/whatsapp_tenant_console_facade/` | Tenant console phone-based orchestration (package) |
 | `app/services/whatsapp_client_console_facade/` | Client WhatsApp read-only console (package) |
 | `app/services/dashboard_service/` | Dashboard response assembly per role (package) |
 | `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
 | `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
-| `app/services/mail_lookup_worker/` | Async mailbox lookup worker, provider fetchers, retries, dedupe pipeline |
+| `app/services/mail_lookup_worker/` | Async mailbox lookup worker, provider fetchers (google/microsoft/imap), retries, dedupe pipeline, Redis queue |
 | `app/services/oauth_service/` | Google/Microsoft OAuth start/callback/refresh and revocation handling |
+| `app/services/mail_code_extractor/` | Regex-based code extraction: catalog_v1 (multi-service) + per-service catalog files (netflix, disney, spotify, etc.) + pure extractor |
 | `app/services/tenant_console_protocols/` | Protocols for tenant console DI (package) |
+| `app/services/imap_service.py` | IMAP connection test helper |
+| `app/services/mailbox_cleanup.py` | Periodic retention/cleanup loop for stale jobs and delivery logs |

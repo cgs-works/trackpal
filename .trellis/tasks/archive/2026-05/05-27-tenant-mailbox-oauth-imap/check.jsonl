@@ -1,5 +1,0 @@
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Checklist verificación: tests unitarios/integración y casos borde lookup."}
-{"file":".trellis/spec/backend/error-handling.md","reason":"Validar manejo de fallas OAuth refresh, IMAP timeout, provider rate limit."}
-{"file":".trellis/spec/backend/logging-guidelines.md","reason":"Confirmar redacción de PII/secretos y auditoría sin código en claro."}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Validar flujo UI de conexión/desconexión y estados de mailbox."}
-{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Verificar contrato extremo a extremo tenant dashboard ↔ backend ↔ n8n."}

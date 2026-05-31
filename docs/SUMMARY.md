@@ -26,6 +26,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract) and subscription reminders workflows |
 | [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Multi-OAuth + IMAP mailbox ingestion, lookup worker, metrics, cleanup |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
+| [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
 
 ## Codebase
@@ -34,12 +35,15 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Backend Structure](codebase/backend-structure.md) | Backend directory tree, entry points, and key modules |
 | [Frontend Structure](codebase/frontend-structure.md) | Frontend directory tree, entry points, and key modules |
+| [Frontend Components](codebase/frontend-components.md) | Reusable Vue panels and their responsibilities |
 
 ## Code Standard
 
 | File | Description |
 |------|-------------|
 | [Backend Conventions](code-standard/backend-conventions.md) | Python conventions, testing, security, Redis, and n8n patterns |
+| [Error Handling](code-standard/error-handling.md) | Error types, propagation, i18n-aware exception mapping |
+| [Logging Guidelines](code-standard/logging-guidelines.md) | Log levels, structured context, secrets policy |
 | [Frontend Conventions](code-standard/frontend-conventions.md) | Vue 3, Pinia, routing, API, i18n store, and styling conventions |
 
 ## Project PDR

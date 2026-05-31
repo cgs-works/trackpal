@@ -1,6 +1,0 @@
-{"file":".trellis/spec/backend/index.md","reason":"Backend conventions and checklist"}
-{"file":".trellis/spec/backend/directory-structure.md","reason":"Endpoint modular organization"}
-{"file":".trellis/spec/backend/error-handling.md","reason":"HTTP error mapping consistency"}
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Refactor quality gates"}
-{"file":".trellis/spec/guides/index.md","reason":"Shared guides"}
-{"file":".pi/skills/fastapi-templates/references/details.md","reason":"Endpoint layering best practices"}

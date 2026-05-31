@@ -1,4 +1,0 @@
-{"file": ".trellis/spec/backend/index.md", "reason": "Checklist for final compliance review."}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verification standards for lint/tests and code quality."}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "Validate deterministic fallback/error paths."}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Verify contract consistency across evolution-go/n8n/backend."}
