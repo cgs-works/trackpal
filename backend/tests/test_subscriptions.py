@@ -501,6 +501,51 @@ async def test_subscription_api_settings_defaults(client, active_tenant_user):
     assert body["reminder_time"] == "09:00"
     assert body["recipient_mode"] == "tenant_only"
 
+@pytest.mark.asyncio
+async def test_subscription_api_settings_defaults_include_toggle(client, active_tenant_user):
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/subscription-settings", headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "UTC"
+    assert body["warning_days"] == [7, 3, 1]
+    assert body["reminder_time"] == "09:00"
+    assert body["recipient_mode"] == "tenant_only"
+    assert body["reminders_enabled"] is False
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_update_persists_toggle_and_timezone(client, active_tenant_user):
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Update all fields including reminders_enabled
+    update_payload = {
+        "timezone": "America/Argentina/Buenos_Aires",
+        "warning_days": [5, 2, 1],
+        "reminder_time": "10:30",
+        "reminders_enabled": True,
+    }
+    response = await client.put("/api/v1/subscription-settings", json=update_payload, headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "America/Argentina/Buenos_Aires"
+    assert body["warning_days"] == [5, 2, 1]
+    assert body["reminder_time"] == "10:30"
+    assert body["reminders_enabled"] is True
+
+    # Verify persistence via GET
+    get_response = await client.get("/api/v1/subscription-settings", headers=headers)
+    assert get_response.status_code == 200, get_response.text
+    get_body = get_response.json()
+    assert get_body["timezone"] == "America/Argentina/Buenos_Aires"
+    assert get_body["warning_days"] == [5, 2, 1]
+    assert get_body["reminder_time"] == "10:30"
+    assert get_body["reminders_enabled"] is True
+
+
 
 @pytest.mark.asyncio
 async def test_subscription_api_reveal_credentials(

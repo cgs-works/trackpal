@@ -80,6 +80,7 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
     warning_days: Optional[list[int]] = None
     reminder_time: Optional[str] = None
     recipient_mode: Optional[str] = None
+    reminders_enabled: Optional[bool] = None
 
     @field_validator("reminder_time")
     @classmethod

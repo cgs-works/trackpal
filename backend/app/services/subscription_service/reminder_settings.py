@@ -27,6 +27,7 @@ async def get_reminder_settings(
             warning_days=[7, 3, 1],
             reminder_time="09:00",
             recipient_mode="tenant_only",
+            reminders_enabled=False,
         )
         db.add(settings)
         await commit_change(db, "subscription_reminder_settings_failed")
@@ -51,6 +52,8 @@ async def update_reminder_settings(
         settings.reminder_time = update_data["reminder_time"]
     if "recipient_mode" in update_data:
         settings.recipient_mode = update_data["recipient_mode"]
+    if "reminders_enabled" in update_data:
+        settings.reminders_enabled = update_data["reminders_enabled"]
 
     await commit_change(db, "subscription_reminder_settings_failed")
     await restore_rls_context(db)
