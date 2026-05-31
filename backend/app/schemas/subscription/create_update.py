@@ -8,6 +8,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from app.services.subscription_service.timezone_catalog import validate_timezone
+
 
 class SubscriptionCreate(BaseModel):
     model_config = ConfigDict()
@@ -81,6 +83,17 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
     reminder_time: Optional[str] = None
     recipient_mode: Optional[str] = None
     reminders_enabled: Optional[bool] = None
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone_field(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not validate_timezone(v):
+            raise ValueError(
+                f"'{v}' is not a valid IANA timezone identifier"
+            )
+        return v
 
     @field_validator("reminder_time")
     @classmethod

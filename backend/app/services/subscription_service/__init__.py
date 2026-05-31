@@ -1,4 +1,4 @@
-"""Subscription management — CRUD, lifecycle, reminders."""
+"""Subscription management — CRUD, lifecycle, reminders, timezone."""
 
 from app.services.subscription_service.constants import DURATION_MAP
 from app.services.subscription_service.helpers import (
@@ -24,6 +24,10 @@ from app.services.subscription_service.reminder_settings import (
     get_reminder_settings,
     update_reminder_settings,
 )
+from app.services.subscription_service.timezone_catalog import (
+    list_timezones,
+    validate_timezone,
+)
 
 
 class SubscriptionService:
@@ -46,4 +50,4 @@ class SubscriptionService:
     update_reminder_settings = staticmethod(update_reminder_settings)
 
 
-__all__ = ["SubscriptionService", "DURATION_MAP"]
+__all__ = ["SubscriptionService", "DURATION_MAP", "list_timezones", "validate_timezone"]

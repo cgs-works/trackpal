@@ -7,6 +7,7 @@ from app.schemas.subscription import (
     SubscriptionReminderSettingsUpdate,
 )
 from app.services.subscription_service import SubscriptionService
+from app.services.subscription_service.timezone_catalog import list_timezones
 from app.api.v1.endpoints.subscriptions._common import require_tenant_or_master
 from app.api.v1.endpoints.subscriptions.router import settings_router
 
@@ -44,3 +45,12 @@ async def update_reminder_settings(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+
+
+@settings_router.get("/timezones")
+async def list_supported_timezones(
+    current_user: CurrentUser,
+):
+    """Return a list of supported IANA timezones with labels."""
+    require_tenant_or_master(current_user)
+    return await list_timezones()
