@@ -288,7 +288,7 @@ Mark Sent    Mark Failed
 | 3 | Fetch Pending Reminders | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/pending for one configured page per poll |
 | 4 | Transform Items | n8n-nodes-base.code | Extract the `items` array from the backend response |
 | 5 | SplitInBatches | n8n-nodes-base.splitInBatches | Loop over reminders one at a time |
-| 6 | Wait | n8n-nodes-base.wait | 2-second delay between sends |
+| 6 | Wait | n8n-nodes-base.wait | Configurable delay between sends (default 2s) |
 | 7 | Evolution Go Send | n8n-nodes-base.httpRequest | POST /send/text with per-tenant evolution_instance_token for auth |
 | 8 | Evaluate Result | n8n-nodes-base.code | Treat only explicit success-like Evolution responses as sent; route all other shapes to failure |
 | 9 | Route by Success? | n8n-nodes-base.if | Split by success/failure |

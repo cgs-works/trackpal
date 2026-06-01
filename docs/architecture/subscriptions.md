@@ -143,7 +143,7 @@ Submodules: `cleanup.py`, `reminder_log.py`, `reminder_payloads.py`, `reminder_s
 
 **Cleanup**: expire -> auto-cancel (7d) -> delete (30d). Uses tenant timezone.
 
-**Reminders**: timezone-gated (tenant-local reminder_time threshold), Spanish message rendered, unique constraint dedup, cursor pagination, reminders_enabled check per tenant.
+**Reminders**: timezone-gated (tenant-local reminder_time threshold), Spanish message rendered, unique constraint dedup, batched pending lookup, reminders_enabled check per tenant.
 
 **mark-sent**: status=sent, sent_at=now. **mark-failed**: increments attempt, fails permanently after 3.
 
