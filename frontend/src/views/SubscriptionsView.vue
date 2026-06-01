@@ -30,13 +30,6 @@ const isSaving = ref(false)
 const showPassword = ref(false)
 const showProfile = ref(false)
 const showReminderSettings = ref(false)
-const reminderSettings = ref({
-  reminders_enabled: false,
-  timezone: 'UTC',
-  warning_days: [7, 3, 1],
-  reminder_time: '09:00',
-  recipient_mode: 'tenant_only',
-})
 const availablePlans = ref([])
 
 // Form data
@@ -230,6 +223,9 @@ async function goBack() {
 }
 
 async function init() {
+  // Silent preload: warm tenant settings cache without blocking the view
+  authStore.loadTenantSettings().catch(() => {})
+
   await Promise.all([loadClients(), loadServices()])
   await buildPlanMap()
 
@@ -803,7 +799,6 @@ onMounted(init)
 
     <ReminderSettingsModal
       :show="showReminderSettings"
-      :initial-settings="reminderSettings"
       @close="closeModals"
       @saved="loadSubscriptions"
     />
