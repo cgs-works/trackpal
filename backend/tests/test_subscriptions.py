@@ -1205,7 +1205,7 @@ async def test_subscription_reminder_pending_endpoint(
     # Set reminder_time to 00:00 so it passes regardless of current time
     await client.put(
         "/api/v1/subscription-settings",
-        json={"reminder_time": "00:00"},
+        json={"reminder_time": "00:00", "reminders_enabled": True},
         headers=headers,
     )
 
@@ -1277,7 +1277,7 @@ async def test_subscription_reminder_mark_sent(client, db_session, active_tenant
     # Set reminder_time to 00:00 so pending endpoint returns reminders
     await client.put(
         "/api/v1/subscription-settings",
-        json={"reminder_time": "00:00"},
+        json={"reminder_time": "00:00", "reminders_enabled": True},
         headers=headers,
     )
 
@@ -1339,7 +1339,7 @@ async def test_subscription_reminder_mark_failed(
     # Set reminder_time to 00:00 so pending endpoint returns reminders
     await client.put(
         "/api/v1/subscription-settings",
-        json={"reminder_time": "00:00"},
+        json={"reminder_time": "00:00", "reminders_enabled": True},
         headers=headers,
     )
 
@@ -1489,3 +1489,442 @@ async def test_subscription_reactivate_userfacing_error_translated(
     detail = response.json()["detail"]
     assert "subscription_reactivate_failed" not in detail
     assert detail == "Failed to reactivate subscription"
+@pytest.mark.asyncio
+async def test_reminder_pagination_stable_with_duplicate_expires_at(
+    client, db_session, active_tenant_user
+):
+    """Pagination handles multiple subscriptions with identical expires_at."""
+    from sqlalchemy import select
+    from datetime import datetime, timezone, timedelta
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+
+    # Create 3 subscriptions all expiring at the same time
+    now = datetime.now(timezone.utc)
+    same_expiry = now + timedelta(days=7)
+
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    sub_ids = []
+    for i in range(3):
+        suffix = ['x', 'xx', 'xxx'][i]
+        sub_client, service, plan = await _create_subscription_dependencies(
+            db_session, tenant, suffix
+        )
+        resp = await client.post(
+            "/api/v1/subscriptions",
+            json=_subscription_payload(
+                sub_client,
+                service,
+                plan,
+                streaming_password="pwd",
+                profile_pin=None,
+                profile_name=None,
+                duration_type="custom",
+                starts_at=now.isoformat(),
+                expires_at=same_expiry.isoformat(),
+            ),
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        sub_ids.append(resp.json()["id"])
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Fetch with page_size=2 to force pagination
+    seen_ids = set()
+    cursor = None
+    while True:
+        resp = await client.post(
+            "/api/v1/subscriptions/reminders/pending",
+            params={"cursor": cursor, "page_size": 2},
+            headers={"X-API-Key": api_key},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        for item in data["items"]:
+            seen_ids.add(item["subscription_id"])
+        cursor = data.get("next_cursor")
+        if not cursor:
+            break
+
+    # All 3 subscriptions must have been returned
+    assert seen_ids == set(sub_ids), (
+        f"Missing subscriptions after pagination. "
+        f"Expected {set(sub_ids)}, got {seen_ids}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_payload_not_persisted_when_render_fails(
+    client, db_session, active_tenant_user, monkeypatch
+):
+    """When message rendering fails, no log is persisted and no item is returned."""
+    from sqlalchemy import select
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "renderfail"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Monkeypatch _render_reminder_message to raise
+    def _raising_render(*args, **kwargs):
+        raise ValueError("Render failure")
+
+    monkeypatch.setattr(
+        "app.services.subscription_job_service.reminder_payloads._render_reminder_message",
+        _raising_render,
+    )
+
+    # Call pending endpoint — should return empty items since render failed
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when message rendering fails"
+    )
+
+    # Verify no log was persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when render fails, got {len(rows)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_payload_not_persisted_when_decrypt_fails(
+    client, db_session, active_tenant_user, monkeypatch
+):
+    """When decrypt_value fails, no log is persisted and no item is returned."""
+    from sqlalchemy import select
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "decryptfail"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Monkeypatch decrypt_value on the module where it's imported
+    monkeypatch.setattr(
+        "app.services.subscription_job_service.reminder_payloads.decrypt_value",
+        lambda x: (_ for _ in ()).throw(ValueError("Decrypt failure")),
+    )
+
+    # Call pending endpoint — should return empty items since decrypt failed
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when decrypt fails"
+    )
+
+    # Verify no log was persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when decrypt fails, got {len(rows)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_duplicate_log_skipped_gracefully(
+    client, db_session, active_tenant_user, monkeypatch
+):
+    """When a unique constraint violation occurs on flush, the recipient is skipped but the batch continues."""
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "dupskip"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Patch flush to raise IntegrityError (simulating duplicate key violation)
+    import sqlalchemy.ext.asyncio
+
+    async def _failing_flush(self, *args, **kwargs):
+        raise IntegrityError(
+            "UNIQUE constraint failed: subscription_reminder_log.subscription_id",
+            "INSERT INTO subscription_reminder_log ...",
+            "orig",
+        )
+
+    monkeypatch.setattr(
+        sqlalchemy.ext.asyncio.AsyncSession,
+        "flush",
+        _failing_flush,
+    )
+
+    # Call pending endpoint — IntegrityError should be caught gracefully, batch continues
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when flush raises IntegrityError"
+    )
+
+    # Verify no logs were persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when flush raises IntegrityError, got {len(rows)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_unexpected_flush_error_logged(
+    client, db_session, active_tenant_user, monkeypatch, caplog
+):
+    """When flush raises an unexpected (non-IntegrityError) exception, it is logged and the batch continues."""
+    from sqlalchemy import select
+    import logging
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "unexp"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Patch flush to raise a generic RuntimeError (not IntegrityError)
+    import sqlalchemy.ext.asyncio
+
+    async def _unexpected_flush(self, *args, **kwargs):
+        raise RuntimeError("Database connection lost")
+
+    monkeypatch.setattr(
+        sqlalchemy.ext.asyncio.AsyncSession,
+        "flush",
+        _unexpected_flush,
+    )
+
+    caplog.set_level(logging.WARNING)
+    logger_name = "app.services.subscription_job_service.reminder_payloads"
+
+    # Call pending endpoint — unexpected error should be logged but batch continues
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when unexpected flush error occurs"
+    )
+
+    # Verify no logs were persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when unexpected flush error, got {len(rows)}"
+    )
+
+    # Verify the unexpected error was logged
+    assert any(
+        record.name == logger_name and record.levelno == logging.WARNING
+        for record in caplog.records
+    ), "Expected a warning log from reminder_payloads for unexpected flush error"
+
+
+@pytest.mark.asyncio
+async def test_reminder_pending_malformed_cursor_returns_200(
+    client, db_session, active_tenant_user
+):
+    """Malformed composite cursor passed as query param falls back safely to first page (200, not 500)."""
+    from datetime import datetime, timezone, timedelta
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "malcursor"
+    )
+
+    now = datetime.now(timezone.utc)
+
+    # Create an active subscription that expires in 7 days (within default warning_days)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd-mal",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    sub_id = resp.json()["id"]
+
+    # Enable reminders and set reminder_time to 00:00 so it passes regardless of current time
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # 1) Call with malformed cursor first (no previous logs) — safe first-page fallback
+    resp = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        params={"cursor": "not-a-valid-cursor"},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert len(data["items"]) >= 1, (
+        f"Expected items for malformed cursor, got empty: {data}"
+    )
+    payload = data["items"][0]
+    assert payload["subscription_id"] == sub_id
+    assert payload["days_before_expiry"] == 7
+
+    # 2) Call with malformed composite cursor (valid date, invalid UUID suffix)
+    resp2 = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        params={"cursor": "2026-01-01T00:00:00+00:00|not-a-uuid"},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp2.status_code == 200, resp2.text
+    # Second call may be empty due to dedup — but no 500 is the key contract
+
+    # 3) Call with empty cursor string
+    resp3 = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        params={"cursor": ""},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp3.status_code == 200, resp3.text
+    # Empty string is falsy, so treated as no cursor — dedup may return empty

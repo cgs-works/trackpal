@@ -1,40 +1,37 @@
 """Reminder payload generation for subscription expiry notifications.
 
-Debt: 213 LoC (target <=200, max 240). Refactor generate_reminder_payloads loop.
+Debt: 224 LoC (target <=200, max 240). Refactor generate_reminder_payloads loop.
 """
 
+import logging
 from datetime import datetime, timezone
+import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from zoneinfo import ZoneInfo
 
 from app.core.encryption import decrypt_value
-from sqlalchemy.orm import selectinload
-
 from app.core.database import restore_rls_context
 from app.core.i18n import t as i18n_t
 from app.models.subscription import (
     Subscription,
     SubscriptionReminderLog,
-    SubscriptionReminderSettings,
 )
-from app.models.tenant import Tenant
+from app.services.subscription_job_service.reminder_schedule import (
+    compute_days_until_expiry,
+    is_reminder_time_ok,
+    is_valid_timezone,
+    load_batched_reminder_data,
+)
 
 
-def _is_reminder_time_ok(now: datetime, reminder_time: str) -> bool:
-    """Check if current time is at or after configured reminder time.
+logger = logging.getLogger(__name__)
 
-    For v1 all times are treated as UTC.
-    """
-    try:
-        hour, minute = reminder_time.split(":")
-        reminder = now.replace(
-            hour=int(hour), minute=int(minute), second=0, microsecond=0
-        )
-        return now >= reminder
-    except (ValueError, AttributeError):
-        return True
+CURSOR_SEP = "|"
 
 
 def _resolve_recipients(
@@ -74,6 +71,30 @@ def _render_reminder_message(
     )
 
 
+def _parse_cursor(
+    cursor: str,
+) -> tuple[datetime, uuid.UUID] | None:
+    """Parse composite cursor ``expires_at_iso|id``.
+
+    Returns ``(cursor_dt, cursor_id)`` or ``None`` when the format is
+    unparseable (caller falls back to first page).
+    """
+    try:
+        if CURSOR_SEP in cursor:
+            dt_str, id_str = cursor.rsplit(CURSOR_SEP, 1)
+            cursor_dt = datetime.fromisoformat(dt_str)
+            cursor_id = uuid.UUID(id_str)
+        else:
+            cursor_dt = datetime.fromisoformat(cursor)
+            cursor_id = None
+    except (ValueError, TypeError):
+        return None
+
+    if cursor_dt.tzinfo is None:
+        cursor_dt = cursor_dt.replace(tzinfo=timezone.utc)
+    return cursor_dt, cursor_id
+
+
 async def generate_reminder_payloads(
     db: AsyncSession, cursor: str | None = None, page_size: int = 100
 ) -> dict[str, Any]:
@@ -87,7 +108,6 @@ async def generate_reminder_payloads(
     (subscription_id, days_before_expiry, sent_for_date, recipient_type).
     """
     now = datetime.now(timezone.utc)
-    today = now.date()
 
     stmt = (
         select(Subscription)
@@ -100,17 +120,25 @@ async def generate_reminder_payloads(
             Subscription.status == "active",
             Subscription.expires_at > now,
         )
-        .order_by(Subscription.expires_at.asc())
+        .order_by(Subscription.expires_at.asc(), Subscription.id.asc())
     )
 
     if cursor:
-        try:
-            cursor_dt = datetime.fromisoformat(cursor)
-            if cursor_dt.tzinfo is None:
-                cursor_dt = cursor_dt.replace(tzinfo=timezone.utc)
-            stmt = stmt.where(Subscription.expires_at > cursor_dt)
-        except (ValueError, TypeError):
-            pass
+        parsed = _parse_cursor(cursor)
+        if parsed is not None:
+            cursor_dt, cursor_id = parsed
+            if cursor_id is not None:
+                stmt = stmt.where(
+                    or_(
+                        Subscription.expires_at > cursor_dt,
+                        (
+                            (Subscription.expires_at == cursor_dt)
+                            & (Subscription.id > cursor_id)
+                        ),
+                    )
+                )
+            else:
+                stmt = stmt.where(Subscription.expires_at > cursor_dt)
 
     res = await db.execute(stmt.limit(page_size + 1))
     subs = list(res.unique().scalars().all())
@@ -119,29 +147,35 @@ async def generate_reminder_payloads(
     if has_more:
         subs = subs[:page_size]
 
+    if not subs:
+        return {"items": [], "next_cursor": None}
+
+    # Batch-load settings and tenants — eliminates N+1 queries
+    settings_map, tenants_map = await load_batched_reminder_data(db, subs)
+
     items: list[dict[str, Any]] = []
 
     for sub in subs:
         try:
-            settings_res = await db.execute(
-                select(SubscriptionReminderSettings).where(
-                    SubscriptionReminderSettings.tenant_id == sub.tenant_id
-                )
-            )
-            settings = settings_res.scalar_one_or_none()
+            settings = settings_map.get(sub.tenant_id)
+            tenant = tenants_map.get(sub.tenant_id)
 
-            reminder_time = settings.reminder_time if settings else "09:00"
-            warning_days = settings.warning_days if settings else [7, 3, 1]
-            recipient_mode = settings.recipient_mode if settings else "tenant_only"
-
-            if not _is_reminder_time_ok(now, reminder_time):
+            # Skip if tenant or settings are missing
+            if not tenant or not settings:
                 continue
 
-            tenant_res = await db.execute(
-                select(Tenant).where(Tenant.id == sub.tenant_id)
-            )
-            tenant = tenant_res.scalar_one_or_none()
-            if not tenant:
+            # Skip entire tenant if reminders are disabled
+            if not settings.reminders_enabled:
+                continue
+
+            # Resolve timezone for this tenant
+            tz_name = settings.timezone or "UTC"
+            if not is_valid_timezone(tz_name):
+                # Skip the invalid-timezone tenant, not the whole batch
+                continue
+
+            # Check if it's time to send in the tenant's local timezone
+            if not is_reminder_time_ok(now, settings.reminder_time, tz_name):
                 continue
 
             client = sub.client
@@ -152,36 +186,31 @@ async def generate_reminder_payloads(
             client_name = client.full_name or client.username or "Cliente"
             streaming_email = sub.streaming_email or ""
 
-            days_until_expiry = (sub.expires_at.date() - today).days
+            # Compute tenant-local days-until-expiry
+            days_until_expiry = compute_days_until_expiry(
+                sub.expires_at, tz_name, now
+            )
 
+            # Compute tenant-local today for sent_for_date
+            tz = ZoneInfo(tz_name)
+            local_today = now.astimezone(tz).date()
+
+            warning_days = settings.warning_days or [7, 3, 1]
             for warning_day in warning_days:
                 if days_until_expiry != warning_day:
                     continue
 
-                sent_for_date = today
-                recipients = _resolve_recipients(recipient_mode, tenant, client)
+                recipients = _resolve_recipients(
+                    settings.recipient_mode, tenant, client
+                )
 
                 for recipient_type, recipient_phone in recipients:
                     if not recipient_phone:
                         continue
 
-                    log = SubscriptionReminderLog(
-                        tenant_id=sub.tenant_id,
-                        subscription_id=sub.id,
-                        recipient_type=recipient_type,
-                        recipient_phone=recipient_phone,
-                        days_before_expiry=warning_day,
-                        sent_for_date=sent_for_date,
-                        status="pending",
-                    )
-                    db.add(log)
-                    try:
-                        await db.flush()
-                    except Exception:
-                        await db.rollback()
-                        await restore_rls_context(db)
-                        continue
-
+                    # Render message and decrypt token BEFORE persisting
+                    # the log — if render/decrypt/payload fails, no log
+                    # is created.
                     locale = getattr(tenant, "locale", "en") or "en"
                     message = _render_reminder_message(
                         service_name=service_name,
@@ -190,6 +219,33 @@ async def generate_reminder_payloads(
                         streaming_email=streaming_email,
                         locale=locale,
                     )
+
+                    evolution_token = (
+                        decrypt_value(tenant.evolution_instance_token) or ""
+                    )
+
+                    # All render/decrypt succeeded — now persist the log.
+                    log = SubscriptionReminderLog(
+                        tenant_id=sub.tenant_id,
+                        subscription_id=sub.id,
+                        recipient_type=recipient_type,
+                        recipient_phone=recipient_phone,
+                        days_before_expiry=warning_day,
+                        sent_for_date=local_today,
+                        status="pending",
+                    )
+                    db.add(log)
+
+                    # Use a savepoint so a duplicate (unique constraint
+                    # violation) rolls back only this log, not the whole
+                    # batch.
+                    try:
+                        async with db.begin_nested():
+                            await db.flush()
+                    except IntegrityError:
+                        # Expected uniqueness conflict — savepoint is
+                        # auto-rolled-back; skip this recipient.
+                        continue
 
                     items.append(
                         {
@@ -201,14 +257,18 @@ async def generate_reminder_payloads(
                             "message": message,
                             "evolution_instance_name": tenant.evolution_instance_name
                             or "",
-                            "evolution_instance_token": decrypt_value(
-                                tenant.evolution_instance_token
-                            )
-                            or "",
+                            "evolution_instance_token": evolution_token,
                             "days_before_expiry": warning_day,
                         }
                     )
         except Exception:
+            # Isolate per-subscription failures so a single problematic
+            # subscription doesn't abort the entire batch.
+            logger.warning(
+                "Unexpected error processing subscription %s for reminders; skipping",
+                sub.id,
+                exc_info=True,
+            )
             continue
 
     if items:
@@ -217,6 +277,6 @@ async def generate_reminder_payloads(
 
     next_cursor: str | None = None
     if has_more and subs:
-        next_cursor = subs[-1].expires_at.isoformat()
+        next_cursor = f"{subs[-1].expires_at.isoformat()}{CURSOR_SEP}{subs[-1].id}"
 
     return {"items": items, "next_cursor": next_cursor}
