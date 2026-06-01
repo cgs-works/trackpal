@@ -23,9 +23,10 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/dashboard` | `app.api.v1.endpoints.dashboard` | dashboard | JWT bearer |
 | `/api/v1/i18n/*` | `app.api.v1.endpoints.i18n` | i18n | JWT bearer |
 | `/api/v1/subscriptions/*` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
-| `/api/v1/subscription-settings` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
-| `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
-| `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions | X-API-Key header |
+| `/api/v1/subscription-settings` | `app.api.v1.endpoints.subscriptions` | subscription-settings | JWT + active tenant context |
+| `/api/v1/subscription-settings/timezones` | `app.api.v1.endpoints.subscriptions` | subscription-settings | JWT bearer (tenant or master) |
+| `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions-jobs | X-API-Key header |
+| `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions-reminders | X-API-Key header |
 | `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
 | `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
@@ -122,6 +123,12 @@ All catalog endpoints require tenant context. Tenant users derive it from their 
 - `DELETE /api/v1/catalog/services/{service_id}/plans/{plan_id}`
 
 Duplicate service/plan names return 409. Cross-tenant resources return 404.
+
+### Subscription Reminder Settings Endpoints
+
+- `GET /api/v1/subscription-settings` — Get current tenant's reminder settings (timezone, warning_days, reminder_time, recipient_mode, reminders_enabled). Auth: JWT + tenant or master.
+- `PUT /api/v1/subscription-settings` — Update reminder settings. Auth: JWT + tenant or master.
+- `GET /api/v1/subscription-settings/timezones` — Return a list of supported IANA timezones with labels. The backend serves this catalog using a three-tier strategy: external provider → system zoneinfo data → bundled fallback. Auth: JWT bearer (tenant or master).
 
 ## Dependency Injection
 

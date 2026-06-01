@@ -1,6 +1,6 @@
 # n8n Workflow Architecture
 
-Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles daily expiry reminder dispatch. The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution Go.
+Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles expiry reminder dispatch (polling every 30 minutes, pure transport). The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution Go.
 
 ## WhatsApp Bot Workflow
 
@@ -234,15 +234,24 @@ The workflow communicates with backend services:
 **Total nodes**: 11
 **Execution order**: v1 (sequential)
 
-A scheduled workflow that runs daily at 09:00 (server time) to fetch pending subscription reminders and send them via Evolution Go.
+A scheduled workflow that polls every 30 minutes to fetch pending subscription reminders and send them via Evolution Go. n8n is **pure transport** — the backend owns all timezone eligibility, dedupe logic, reminder_time threshold checks, and message rendering.
+
+### Polling Design Rationale
+
+The 30-minute polling interval is intentionally shorter than the daily-at-09:00 legacy schedule. This works in concert with the backend's tenant-local timezone logic:
+
+1. **Backend evaluates timezone eligibility**: Each tenant's `reminder_time` is checked against their local timezone. A tenant with `timezone=America/Bogota` and `reminder_time=09:00` will only get reminders when Bogota time is at or past 09:00, regardless of when n8n polls.
+2. **Dedupe is backend-owned**: The unique constraint on `(subscription_id, days_before_expiry, sent_for_date, recipient_type)` prevents duplicate reminder logs, so frequent polling is safe.
+3. **reminders_enabled toggle**: Tenants with `reminders_enabled=false` are skipped entirely by the backend — n8n never sees their data.
+4. **n8n only transports**: The workflow fetches what the backend gives it, sends the message via Evolution Go, and reports the result. It makes no scheduling, deduplication, or rendering decisions.
 
 ### Workflow Overview
 
 ```
-Schedule Trigger (09:00 daily)
+Schedule Trigger (every 30 minutes)
     |
     v
-Config (Set Node) -- backend URL, API keys, page limit 100, delay 2s
+Config (Set Node) -- backend URL, API keys, page limit 100, configurable delay (default 2s)
     |
     v
 Fetch Pending Reminders (HTTP Request) -- POST /api/v1/subscriptions/reminders/pending
@@ -254,7 +263,7 @@ Transform Items (Code Node) -- extract items array from response
 SplitInBatches (loop, batch size 1)
     |  (loop back arrow from end)
     v
-Wait (2s delay)
+Wait (configurable delay, default 2s)
     |
     v
 Evolution Go Send (HTTP Request) -- POST /send/text (uses per-tenant instance_token)
@@ -274,20 +283,22 @@ Mark Sent    Mark Failed
 
 | # | Node | Type | Purpose |
 |---|------|------|---------|
-| 1 | Schedule Trigger | n8n-nodes-base.scheduleTrigger | Daily trigger at 09:00 |
+| 1 | Schedule Trigger | n8n-nodes-base.scheduleTrigger | Poll every 30 minutes |
 | 2 | Config | n8n-nodes-base.set | Config vars: backend URL, API keys, evolution URL, page limit, delay |
-| 3 | Fetch Pending Reminders | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/pending with cursor pagination |
-| 4 | Transform Items | n8n-nodes-base.code | Extract items array, add instance field |
+| 3 | Fetch Pending Reminders | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/pending for one configured page per poll |
+| 4 | Transform Items | n8n-nodes-base.code | Extract the `items` array from the backend response |
 | 5 | SplitInBatches | n8n-nodes-base.splitInBatches | Loop over reminders one at a time |
 | 6 | Wait | n8n-nodes-base.wait | 2-second delay between sends |
 | 7 | Evolution Go Send | n8n-nodes-base.httpRequest | POST /send/text with per-tenant evolution_instance_token for auth |
-| 8 | Evaluate Result | n8n-nodes-base.code | Check response status, prepare metadata |
+| 8 | Evaluate Result | n8n-nodes-base.code | Treat only explicit success-like Evolution responses as sent; route all other shapes to failure |
 | 9 | Route by Success? | n8n-nodes-base.if | Split by success/failure |
 | 10 | Mark Sent | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/{log_id}/mark-sent |
 | 11 | Mark Failed | n8n-nodes-base.httpRequest | POST /api/v1/subscriptions/reminders/{log_id}/mark-failed |
 
 ### Key Changes from Legacy
 
+- **Schedule**: Changed from daily at 09:00 to every 30 minutes. The backend's tenant-local timezone threshold (`reminder_time`) gates actual delivery, so each tenant respects their own local sending window regardless of the polling interval.
+- **Backend-owned logic**: Timezone eligibility (`is_reminder_time_ok`), deduplication (unique constraint), message rendering, and the `reminders_enabled` toggle all live in the backend. n8n makes no scheduling decisions.
 - **Send endpoint**: `POST /send/text` instead of legacy `POST /message/sendText/{instance}`.
 - **Authentication**: Uses `evolution_instance_token` (decrypted per-tenant token from the backend) instead of the global `evolution_api_key`. This ensures multi-tenant isolation — each tenant's reminders are sent with their own instance token.
 - **Config**: `evolution_api_key` removed from Config node; replaced by per-item `$json.evolution_instance_token` from the backend pending reminders payload.
@@ -296,7 +307,7 @@ Mark Sent    Mark Failed
 
 | Endpoint | Method | Auth |
 |----------|--------|------|
-| POST /api/v1/subscriptions/reminders/pending | X-API-Key | Cursor-paginated, max 100 per request |
+| POST /api/v1/subscriptions/reminders/pending | X-API-Key | Fetches one configured page per execution cycle (max 100 by default); remaining pending logs are picked up by later polls |
 | POST /api/v1/subscriptions/reminders/{log_id}/mark-sent | X-API-Key | Sets status=sent, sent_at=now |
 | POST /api/v1/subscriptions/reminders/{log_id}/mark-failed | X-API-Key | Increments attempt, permanent fail after 3 |
 | POST /api/v1/subscriptions/jobs | X-API-Key | Manual trigger: cleanup, reminders, or all |

@@ -6,7 +6,8 @@
         "rule": {
           "interval": [
             {
-              "triggerAtHour": 9
+              "field": "minutes",
+              "minutesInterval": 30
             }
           ]
         }
@@ -139,7 +140,7 @@
     },
     {
       "parameters": {
-        "amount": 2
+        "amount": "={{ $('Config').first().json.message_delay_seconds }}"
       },
       "id": "d6e7f8a9-0b1c-2d3e-4f5a-6b7c8d9e0f1a",
       "name": "Wait",
@@ -187,7 +188,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const sendResponse = $input.first().json;\nconst original = $('SplitInBatches').item.json;\nconst hasError = sendResponse.error !== undefined && sendResponse.error !== null;\nconst statusIsError = sendResponse.status && String(sendResponse.status).toLowerCase() === 'error';\nconst evolutionSuccess = !hasError && !statusIsError;\nreturn [{ json: { ...original, _evolutionSuccess: evolutionSuccess, _evolutionResponse: sendResponse } }];"
+        "jsCode": "const sendResponse = $input.first()?.json || {};\nconst original = $('SplitInBatches').item.json;\nconst hasError = sendResponse.error !== undefined && sendResponse.error !== null;\nconst statusValue = sendResponse.status ? String(sendResponse.status).toLowerCase() : '';\nconst statusCode = Number(sendResponse.statusCode ?? sendResponse.code ?? 0);\nconst hasKey = Boolean(sendResponse.key || sendResponse.messageId || sendResponse.id || sendResponse?.message?.key?.id);\nconst successStatus = ['success', 'sent', 'pending', 'ok'];\nconst evolutionSuccess = !hasError && (hasKey || successStatus.includes(statusValue) || (Number.isFinite(statusCode) && statusCode >= 200 && statusCode < 300));\nreturn [{ json: { ...original, _evolutionSuccess: evolutionSuccess, _evolutionResponse: sendResponse } }];"
       },
       "id": "f8a9b0c1-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
       "name": "Evaluate Result",
