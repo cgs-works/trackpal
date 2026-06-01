@@ -116,6 +116,7 @@ class ReminderPayload(BaseModel):
     recipient_phone: str
     message: str
     evolution_instance_name: Optional[str] = None
+    evolution_instance_token: str = ""
     days_before_expiry: int
 
 

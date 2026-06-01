@@ -549,6 +549,28 @@ async def test_subscription_api_settings_update_persists_toggle_and_timezone(cli
 
 
 
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_accepts_both_recipient_mode(client, active_tenant_user):
+    """PUT with recipient_mode='both' is accepted (frontend sends this value)."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Update with 'both' mode
+    response = await client.put(
+        "/api/v1/subscription-settings",
+        json={"recipient_mode": "both", "reminders_enabled": True, "reminder_time": "09:00"},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["recipient_mode"] == "both"
+
+    # Verify persistence
+    get_response = await client.get("/api/v1/subscription-settings", headers=headers)
+    assert get_response.status_code == 200, get_response.text
+    assert get_response.json()["recipient_mode"] == "both"
+
+
 # ===================================================================
 # Timezone validation & catalog endpoint tests
 # ===================================================================
@@ -1230,6 +1252,7 @@ async def test_subscription_reminder_pending_endpoint(
     assert service.name in payload["message"]
     assert payload["recipient_type"] == "tenant"
     assert payload.get("evolution_instance_name") is not None
+    assert payload.get("evolution_instance_token") is not None
 
     # Same call again should not duplicate (deduped by unique constraint)
     resp_pending2 = await client.post(

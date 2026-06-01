@@ -116,7 +116,7 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
     def validate_recipient_mode(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        valid_modes = {"tenant_only", "client_only", "tenant_client", "tenant_and_client"}
+        valid_modes = {"tenant_only", "client_only", "tenant_client", "tenant_and_client", "both"}
         if v not in valid_modes:
             raise ValueError(f"recipient_mode must be one of {valid_modes}")
         return v
