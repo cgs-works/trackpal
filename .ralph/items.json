@@ -51,8 +51,8 @@
         "Ensure the preload is silent (does not block or show page-level errors if it fails).",
         "Remove redundant local Reminder Settings state from the Subscriptions view."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Build passes. Store tests 16/16 pass. Silent preload fires on init without blocking."
     },
     {
       "category": "functional",

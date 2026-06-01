@@ -28,5 +28,18 @@
 - `npm run test` — 16/16 passed, 1 file
 - `npm run build` — production build succeeds, no warnings
 
-**Next:** Item 3 — Integrate silent preload in Subscriptions view.
+## Iteration 3 — 2026-06-01 17:36
+
+**Item:** Integrate silent preload in Subscriptions view
+
+**Rationale:** Third in the plan — wires the store cache preload to warm data before the user opens the modal, and removes redundant local state.
+
+**Changes:**
+- `frontend/src/views/SubscriptionsView.vue` — removed local `reminderSettings` ref; added `authStore.loadTenantSettings().catch(() => {})` at the start of `init()` as silent preload; removed `:initial-settings` prop from `<ReminderSettingsModal>`
+
+**Verification:**
+- `npm run test` — 16/16 passed
+- `npm run build` — production build succeeds
+
+**Next:** Item 4 — Refactor Reminder Settings modal to use store cache.
 
