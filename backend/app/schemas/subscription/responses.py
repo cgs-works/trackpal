@@ -94,6 +94,7 @@ class SubscriptionReminderSettingsResponse(BaseModel):
     warning_days: list[int]
     reminder_time: str
     recipient_mode: str
+    reminders_enabled: bool
     created_at: datetime
     updated_at: datetime
 
@@ -115,6 +116,7 @@ class ReminderPayload(BaseModel):
     recipient_phone: str
     message: str
     evolution_instance_name: Optional[str] = None
+    evolution_instance_token: str = ""
     days_before_expiry: int
 
 

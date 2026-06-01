@@ -501,6 +501,310 @@ async def test_subscription_api_settings_defaults(client, active_tenant_user):
     assert body["reminder_time"] == "09:00"
     assert body["recipient_mode"] == "tenant_only"
 
+@pytest.mark.asyncio
+async def test_subscription_api_settings_defaults_include_toggle(client, active_tenant_user):
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/subscription-settings", headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "UTC"
+    assert body["warning_days"] == [7, 3, 1]
+    assert body["reminder_time"] == "09:00"
+    assert body["recipient_mode"] == "tenant_only"
+    assert body["reminders_enabled"] is False
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_update_persists_toggle_and_timezone(client, active_tenant_user):
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Update all fields including reminders_enabled
+    update_payload = {
+        "timezone": "America/Argentina/Buenos_Aires",
+        "warning_days": [5, 2, 1],
+        "reminder_time": "10:30",
+        "reminders_enabled": True,
+    }
+    response = await client.put("/api/v1/subscription-settings", json=update_payload, headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "America/Argentina/Buenos_Aires"
+    assert body["warning_days"] == [5, 2, 1]
+    assert body["reminder_time"] == "10:30"
+    assert body["reminders_enabled"] is True
+
+    # Verify persistence via GET
+    get_response = await client.get("/api/v1/subscription-settings", headers=headers)
+    assert get_response.status_code == 200, get_response.text
+    get_body = get_response.json()
+    assert get_body["timezone"] == "America/Argentina/Buenos_Aires"
+    assert get_body["warning_days"] == [5, 2, 1]
+    assert get_body["reminder_time"] == "10:30"
+    assert get_body["reminders_enabled"] is True
+
+
+
+
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_accepts_both_recipient_mode(client, active_tenant_user):
+    """PUT with recipient_mode='both' is accepted (frontend sends this value)."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Update with 'both' mode
+    response = await client.put(
+        "/api/v1/subscription-settings",
+        json={"recipient_mode": "both", "reminders_enabled": True, "reminder_time": "09:00"},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["recipient_mode"] == "both"
+
+    # Verify persistence
+    get_response = await client.get("/api/v1/subscription-settings", headers=headers)
+    assert get_response.status_code == 200, get_response.text
+    assert get_response.json()["recipient_mode"] == "both"
+
+
+# ===================================================================
+# Timezone validation & catalog endpoint tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_rejects_invalid_timezone(client, active_tenant_user):
+    """PUT with invalid IANA timezone returns 422."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.put(
+        "/api/v1/subscription-settings",
+        json={"timezone": "Invalid/Timezone"},
+        headers=headers,
+    )
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    # Should mention timezone validation error
+    assert any("timezone" in str(err).lower() for err in detail)
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_settings_rejects_empty_timezone(client, active_tenant_user):
+    """PUT with empty string timezone returns 422."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.put(
+        "/api/v1/subscription-settings",
+        json={"timezone": ""},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_timezones_endpoint_returns_list(client, active_tenant_user):
+    """GET /subscription-settings/timezones returns a list of timezone objects with value and label."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+    # Each item must have value and label
+    for item in data:
+        assert "value" in item
+        assert "label" in item
+
+    # Must include common timezones
+    values = {item["value"] for item in data}
+    assert "UTC" in values
+    assert "America/Bogota" in values
+    assert "Europe/Madrid" in values
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_timezones_endpoint_fallback(client, active_tenant_user, monkeypatch):
+    """When primary timezone provider raises, fallback is served transparently."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Simulate failure of the external timezone provider
+    async def _raising(*args, **kwargs):
+        raise RuntimeError("Provider unavailable")
+
+    monkeypatch.setattr(
+        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
+        _raising,
+    )
+
+    # Also simulate backend cache unavailable to force bundled fallback
+    monkeypatch.setattr(
+        "app.services.subscription_service.timezone_catalog._load_backend_timezones",
+        lambda: None,
+    )
+
+    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+    # Must still include common timezones via fallback
+    values = {item["value"] for item in data}
+    assert "UTC" in values
+    assert "America/Bogota" in values
+    assert "Europe/Madrid" in values
+
+@pytest.mark.asyncio
+async def test_subscription_api_timezones_endpoint_uses_provider_data(client, active_tenant_user, monkeypatch):
+    """When external provider returns data, that data is served to the client."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    provider_data = [
+        {"value": "America/New_York", "label": "America/New_York (UTC-05:00)"},
+        {"value": "Europe/London", "label": "Europe/London (UTC+00:00)"},
+        {"value": "Asia/Tokyo", "label": "Asia/Tokyo (UTC+09:00)"},
+    ]
+
+    async def _mock_provider(*args, **kwargs):
+        return provider_data
+
+    monkeypatch.setattr(
+        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
+        _mock_provider,
+    )
+
+    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    # All provider values are valid IANA, so all should be present
+    returned_values = {item["value"] for item in data}
+    assert "America/New_York" in returned_values
+    assert "Europe/London" in returned_values
+    assert "Asia/Tokyo" in returned_values
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_timezones_endpoint_uses_backend_cache(client, active_tenant_user, monkeypatch):
+    """When provider returns None, backend zoneinfo cache is used instead of bundled fallback."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Ensure provider returns None
+    async def _no_provider(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(
+        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
+        _no_provider,
+    )
+
+    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+    # Must include timezones from zoneinfo that are NOT in the curated fallback list
+    values = {item["value"] for item in data}
+
+    # America/Adak is in zoneinfo but not in bundled fallback — proves cache path was used
+    assert "America/Adak" in values, "Expected backend cache data, got fallback (missing America/Adak)"
+
+    # Must still include the common ones
+    assert "UTC" in values
+    assert "America/Bogota" in values
+    assert "Europe/Madrid" in values
+
+
+@pytest.mark.asyncio
+async def test_subscription_api_timezones_endpoint_filters_non_iana_provider_data(client, active_tenant_user, monkeypatch):
+    """Provider data with non-IANA timezone values is filtered; only valid IANA values remain."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    async def _mock_provider(*args, **kwargs):
+        return [
+            {"value": "America/New_York", "label": "America/New_York (UTC-05:00)"},
+            {"value": "Not/A-Timezone", "label": "Not/A-Timezone (UTC+00:00)"},
+            {"value": "Europe/Madrid", "label": "Europe/Madrid (UTC+01:00)"},
+            {"value": "Invalid", "label": "Invalid (UTC+00:00)"},
+        ]
+
+    monkeypatch.setattr(
+        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
+        _mock_provider,
+    )
+
+    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+
+    values = {item["value"] for item in data}
+    assert "America/New_York" in values
+    assert "Europe/Madrid" in values
+    assert "Not/A-Timezone" not in values
+    assert "Invalid" not in values
+
+@pytest.mark.asyncio
+async def test_subscription_api_timezones_all_invalid_provider_falls_through(client, active_tenant_user, monkeypatch):
+    """When provider returns data but all values are non-IANA, data from lower tiers is served."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    async def _all_invalid_provider(*args, **kwargs):
+        return [
+            {"value": "Not/A-Timezone", "label": "Not/A-Timezone (UTC+00:00)"},
+            {"value": "Invalid", "label": "Invalid (UTC+00:00)"},
+            {"value": "Foo/Bar", "label": "Foo/Bar (UTC+00:00)"},
+        ]
+
+    monkeypatch.setattr(
+        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
+        _all_invalid_provider,
+    )
+
+    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0, "Should not return empty when normalization yields [] — must fall through to cache/fallback"
+
+    # Must still include common timezones from backend cache or fallback
+    values = {item["value"] for item in data}
+    assert "UTC" in values
+    assert "America/Bogota" in values
+    assert "Europe/Madrid" in values
+
+    # The invalid provider values must be filtered out
+    assert "Not/A-Timezone" not in values
+    assert "Invalid" not in values
+    assert "Foo/Bar" not in values
+
+
+@pytest.mark.asyncio
+async def test_fallback_timezones_labels_are_dynamically_computed():
+    """Fallback timezone labels must be dynamically computed, not hardcoded DST-sensitive offsets."""
+    from app.services.subscription_service.timezone_catalog_fallback import get_fallback_timezones
+    from app.services.subscription_service.timezone_catalog import compute_utc_offset
+
+    fallback = get_fallback_timezones()
+    assert len(fallback) > 0
+
+    for entry in fallback:
+        assert "value" in entry
+        assert "label" in entry
+        # Label must be dynamically computed (not matching a hardcoded DST-sensitive value)
+        expected_offset = compute_utc_offset(entry["value"])
+        expected_label = f"{entry['value']} ({expected_offset})" if expected_offset else entry['value']
+        assert entry["label"] == expected_label, (
+            f"Fallback label for {entry['value']} is '{entry['label']}' but expected '{expected_label}'. "
+            f"Hardcoded DST-sensitive offset in fallback."
+        )
+
 
 @pytest.mark.asyncio
 async def test_subscription_api_reveal_credentials(
@@ -923,7 +1227,7 @@ async def test_subscription_reminder_pending_endpoint(
     # Set reminder_time to 00:00 so it passes regardless of current time
     await client.put(
         "/api/v1/subscription-settings",
-        json={"reminder_time": "00:00"},
+        json={"reminder_time": "00:00", "reminders_enabled": True},
         headers=headers,
     )
 
@@ -948,6 +1252,7 @@ async def test_subscription_reminder_pending_endpoint(
     assert service.name in payload["message"]
     assert payload["recipient_type"] == "tenant"
     assert payload.get("evolution_instance_name") is not None
+    assert payload.get("evolution_instance_token") is not None
 
     # Same call again should not duplicate (deduped by unique constraint)
     resp_pending2 = await client.post(
@@ -995,7 +1300,7 @@ async def test_subscription_reminder_mark_sent(client, db_session, active_tenant
     # Set reminder_time to 00:00 so pending endpoint returns reminders
     await client.put(
         "/api/v1/subscription-settings",
-        json={"reminder_time": "00:00"},
+        json={"reminder_time": "00:00", "reminders_enabled": True},
         headers=headers,
     )
 
@@ -1057,7 +1362,7 @@ async def test_subscription_reminder_mark_failed(
     # Set reminder_time to 00:00 so pending endpoint returns reminders
     await client.put(
         "/api/v1/subscription-settings",
-        json={"reminder_time": "00:00"},
+        json={"reminder_time": "00:00", "reminders_enabled": True},
         headers=headers,
     )
 
@@ -1207,3 +1512,442 @@ async def test_subscription_reactivate_userfacing_error_translated(
     detail = response.json()["detail"]
     assert "subscription_reactivate_failed" not in detail
     assert detail == "Failed to reactivate subscription"
+@pytest.mark.asyncio
+async def test_reminder_pagination_stable_with_duplicate_expires_at(
+    client, db_session, active_tenant_user
+):
+    """Pagination handles multiple subscriptions with identical expires_at."""
+    from sqlalchemy import select
+    from datetime import datetime, timezone, timedelta
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+
+    # Create 3 subscriptions all expiring at the same time
+    now = datetime.now(timezone.utc)
+    same_expiry = now + timedelta(days=7)
+
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    sub_ids = []
+    for i in range(3):
+        suffix = ['x', 'xx', 'xxx'][i]
+        sub_client, service, plan = await _create_subscription_dependencies(
+            db_session, tenant, suffix
+        )
+        resp = await client.post(
+            "/api/v1/subscriptions",
+            json=_subscription_payload(
+                sub_client,
+                service,
+                plan,
+                streaming_password="pwd",
+                profile_pin=None,
+                profile_name=None,
+                duration_type="custom",
+                starts_at=now.isoformat(),
+                expires_at=same_expiry.isoformat(),
+            ),
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        sub_ids.append(resp.json()["id"])
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Fetch with page_size=2 to force pagination
+    seen_ids = set()
+    cursor = None
+    while True:
+        resp = await client.post(
+            "/api/v1/subscriptions/reminders/pending",
+            params={"cursor": cursor, "page_size": 2},
+            headers={"X-API-Key": api_key},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        for item in data["items"]:
+            seen_ids.add(item["subscription_id"])
+        cursor = data.get("next_cursor")
+        if not cursor:
+            break
+
+    # All 3 subscriptions must have been returned
+    assert seen_ids == set(sub_ids), (
+        f"Missing subscriptions after pagination. "
+        f"Expected {set(sub_ids)}, got {seen_ids}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_payload_not_persisted_when_render_fails(
+    client, db_session, active_tenant_user, monkeypatch
+):
+    """When message rendering fails, no log is persisted and no item is returned."""
+    from sqlalchemy import select
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "renderfail"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Monkeypatch _render_reminder_message to raise
+    def _raising_render(*args, **kwargs):
+        raise ValueError("Render failure")
+
+    monkeypatch.setattr(
+        "app.services.subscription_job_service.reminder_payloads._render_reminder_message",
+        _raising_render,
+    )
+
+    # Call pending endpoint — should return empty items since render failed
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when message rendering fails"
+    )
+
+    # Verify no log was persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when render fails, got {len(rows)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_payload_not_persisted_when_decrypt_fails(
+    client, db_session, active_tenant_user, monkeypatch
+):
+    """When decrypt_value fails, no log is persisted and no item is returned."""
+    from sqlalchemy import select
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "decryptfail"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Monkeypatch decrypt_value on the module where it's imported
+    monkeypatch.setattr(
+        "app.services.subscription_job_service.reminder_payloads.decrypt_value",
+        lambda x: (_ for _ in ()).throw(ValueError("Decrypt failure")),
+    )
+
+    # Call pending endpoint — should return empty items since decrypt failed
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when decrypt fails"
+    )
+
+    # Verify no log was persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when decrypt fails, got {len(rows)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_duplicate_log_skipped_gracefully(
+    client, db_session, active_tenant_user, monkeypatch
+):
+    """When a unique constraint violation occurs on flush, the recipient is skipped but the batch continues."""
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "dupskip"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Patch flush to raise IntegrityError (simulating duplicate key violation)
+    import sqlalchemy.ext.asyncio
+
+    async def _failing_flush(self, *args, **kwargs):
+        raise IntegrityError(
+            "UNIQUE constraint failed: subscription_reminder_log.subscription_id",
+            "INSERT INTO subscription_reminder_log ...",
+            "orig",
+        )
+
+    monkeypatch.setattr(
+        sqlalchemy.ext.asyncio.AsyncSession,
+        "flush",
+        _failing_flush,
+    )
+
+    # Call pending endpoint — IntegrityError should be caught gracefully, batch continues
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when flush raises IntegrityError"
+    )
+
+    # Verify no logs were persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when flush raises IntegrityError, got {len(rows)}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reminder_unexpected_flush_error_logged(
+    client, db_session, active_tenant_user, monkeypatch, caplog
+):
+    """When flush raises an unexpected (non-IntegrityError) exception, it is logged and the batch continues."""
+    from sqlalchemy import select
+    import logging
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "unexp"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Patch flush to raise a generic RuntimeError (not IntegrityError)
+    import sqlalchemy.ext.asyncio
+
+    async def _unexpected_flush(self, *args, **kwargs):
+        raise RuntimeError("Database connection lost")
+
+    monkeypatch.setattr(
+        sqlalchemy.ext.asyncio.AsyncSession,
+        "flush",
+        _unexpected_flush,
+    )
+
+    caplog.set_level(logging.WARNING)
+    logger_name = "app.services.subscription_job_service.reminder_payloads"
+
+    # Call pending endpoint — unexpected error should be logged but batch continues
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], (
+        "Expected no items when unexpected flush error occurs"
+    )
+
+    # Verify no logs were persisted
+    stmt = select(SubscriptionReminderLog).where(
+        SubscriptionReminderLog.tenant_id == tenant.id
+    )
+    rows = (await db_session.execute(stmt)).scalars().all()
+    assert len(rows) == 0, (
+        f"Expected 0 logs when unexpected flush error, got {len(rows)}"
+    )
+
+    # Verify the unexpected error was logged
+    assert any(
+        record.name == logger_name and record.levelno == logging.WARNING
+        for record in caplog.records
+    ), "Expected a warning log from reminder_payloads for unexpected flush error"
+
+
+@pytest.mark.asyncio
+async def test_reminder_pending_malformed_cursor_returns_200(
+    client, db_session, active_tenant_user
+):
+    """Malformed composite cursor passed as query param falls back safely to first page (200, not 500)."""
+    from datetime import datetime, timezone, timedelta
+
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "malcursor"
+    )
+
+    now = datetime.now(timezone.utc)
+
+    # Create an active subscription that expires in 7 days (within default warning_days)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd-mal",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    sub_id = resp.json()["id"]
+
+    # Enable reminders and set reminder_time to 00:00 so it passes regardless of current time
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # 1) Call with malformed cursor first (no previous logs) — safe first-page fallback
+    resp = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        params={"cursor": "not-a-valid-cursor"},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert len(data["items"]) >= 1, (
+        f"Expected items for malformed cursor, got empty: {data}"
+    )
+    payload = data["items"][0]
+    assert payload["subscription_id"] == sub_id
+    assert payload["days_before_expiry"] == 7
+
+    # 2) Call with malformed composite cursor (valid date, invalid UUID suffix)
+    resp2 = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        params={"cursor": "2026-01-01T00:00:00+00:00|not-a-uuid"},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp2.status_code == 200, resp2.text
+    # Second call may be empty due to dedup — but no 500 is the key contract
+
+    # 3) Call with empty cursor string
+    resp3 = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        params={"cursor": ""},
+        headers={"X-API-Key": api_key},
+    )
+    assert resp3.status_code == 200, resp3.text
+    # Empty string is falsy, so treated as no cursor — dedup may return empty

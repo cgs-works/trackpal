@@ -1,7 +1,8 @@
 import uuid
 from datetime import date, datetime
 from typing import Any, Optional
-from sqlalchemy import ForeignKey, String, DateTime, Date, JSON
+from sqlalchemy import Boolean, ForeignKey, String, DateTime, Date, JSON
+import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import UniqueConstraint
@@ -154,6 +155,9 @@ class SubscriptionReminderSettings(Base, TimestampMixin):
     )
     recipient_mode: Mapped[str] = mapped_column(
         String(50), default="tenant_only", server_default="tenant_only", nullable=False
+    )
+    reminders_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=sa.text("false"), nullable=False
     )
 
     tenant = relationship("Tenant")

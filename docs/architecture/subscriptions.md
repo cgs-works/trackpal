@@ -62,10 +62,15 @@ Unique: (subscription_id, recipient_type, days_before_expiry, sent_for_date).
 |--------|------|-------|
 | id | UUID | PK |
 | tenant_id | UUID | Unique FK -> tenants.id CASCADE |
-| timezone | VARCHAR(50) | Default UTC |
+| timezone | VARCHAR(50) | IANA timezone identifier, default UTC |
 | warning_days | JSON | Default [7, 3, 1] |
-| reminder_time | VARCHAR(5) | Default 09:00 |
+| reminder_time | VARCHAR(5) | Tenant-local time threshold ("starting at"), default 09:00 |
 | recipient_mode | VARCHAR(20) | Default tenant_only |
+| reminders_enabled | Boolean | Default false; master toggle to opt in/out of automated reminders |
+
+The `reminder_time` field is a tenant-local threshold. The backend checks if the current time in the tenant's configured timezone is at or past the threshold before generating reminders for that tenant. This means a tenant with timezone `America/Bogota` and `reminder_time=09:00` will have reminders generated starting at 09:00 Bogota time, regardless of the workflow's polling time.
+
+The `reminders_enabled` field serves as a global opt-in toggle per tenant. When false (the default), no reminders are generated for that tenant regardless of other settings.
 
 ## Encryption
 
@@ -100,7 +105,13 @@ Auth: tenant or master + ActiveTenantId.
 
 ### Settings (/api/v1/subscription-settings)
 
-GET/PUT for reminder settings (timezone, warning_days, reminder_time, recipient_mode).
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /subscription-settings | Get reminder settings (includes reminders_enabled) |
+| PUT | /subscription-settings | Update reminder settings (all fields including reminders_enabled) |
+| GET | /subscription-settings/timezones | Return supported IANA timezone catalog with UTC offset labels |
+
+Auth for GET/PUT: tenant or master + ActiveTenantId. Auth for /timezones: JWT bearer (tenant or master).
 
 ### Jobs (/api/v1/subscriptions/jobs)
 
@@ -108,13 +119,13 @@ POST with task=cleanup|reminders|all. Auth: N8N_API_KEY.
 
 ### Reminders (/api/v1/subscriptions/reminders)
 
-POST /pending (cursor-paginated, max 100), POST /{log_id}/mark-sent, POST /{log_id}/mark-failed. Auth: N8N_API_KEY.
+POST /pending (one configured page per execution cycle, max 100 by default), POST /{log_id}/mark-sent, POST /{log_id}/mark-failed. Auth: N8N_API_KEY.
 
 ## Services
 
 ### subscription_service/ (package)
 
-Submodules: `queries.py`, `mutations.py`, `updater.py`, `validation.py`, `helpers.py`, `constants.py`, `reminder_settings.py`.
+Submodules: `queries.py`, `mutations.py`, `updater.py`, `validation.py`, `helpers.py`, `constants.py`, `reminder_settings.py`, `timezone_catalog.py`.
 
 - Duration map: 1_month=30, 3_months=90, 6_months=180, 9_months=270, 1_year=365.
 - Validates IDs belong to tenant, plan belongs to service.
@@ -123,32 +134,38 @@ Submodules: `queries.py`, `mutations.py`, `updater.py`, `validation.py`, `helper
 - Reactivate recalculates from new starts_at.
 - Renew extends from current expires_at.
 - Reveal decrypts, creates no event.
+- Reminder settings CRUD with defaults (timezone=UTC, warning_days=[7,3,1], reminder_time=09:00, recipient_mode=tenant_only, reminders_enabled=false).
+- Timezone catalog sourced from three-tier strategy: external provider → system zoneinfo → bundled fallback.
 
 ### subscription_job_service/ (package)
 
-Submodules: `cleanup.py`, `reminder_log.py`, `reminder_payloads.py`.
+Submodules: `cleanup.py`, `reminder_log.py`, `reminder_payloads.py`, `reminder_schedule.py`.
 
 **Cleanup**: expire -> auto-cancel (7d) -> delete (30d). Uses tenant timezone.
 
-**Reminders**: time-gated, Spanish message rendered, unique constraint dedup, cursor pagination.
+**Reminders**: timezone-gated (tenant-local reminder_time threshold), Spanish message rendered, unique constraint dedup, cursor pagination, reminders_enabled check per tenant.
 
 **mark-sent**: status=sent, sent_at=now. **mark-failed**: increments attempt, fails permanently after 3.
+
+**Timezone scheduling**: `reminder_schedule.py` provides `is_reminder_time_ok()`, `compute_days_until_expiry()`, and `load_batched_reminder_data()` for timezone-aware scheduling logic. The backend evaluates tenant-local time eligibility for each tenant independently within the same batch.
 
 ## n8n Workflow
 
 File: `n8n/Trackpal Subscription Reminders.json`. 11 nodes, separate from main bot.
 
-1. Schedule Trigger (09:00 daily)
-2. Config (URLs, keys, page limit 100, delay 2s)
+1. Schedule Trigger (every 30 minutes)
+2. Config (URLs, keys, page limit 100, configurable delay)
 3. Fetch Pending Reminders (POST /pending)
-4. Transform Items (extract items array)
+4. Transform Items (extract items array from backend response)
 5. SplitInBatches (loop, batch 1)
 6. Wait (2s delay)
 7. Evolution Send
-8. Evaluate Result
+8. Evaluate Result (explicit success-shape check before mark-sent)
 9. Route by Success? (IF)
 10. Mark Sent (on success)
 11. Mark Failed (on failure)
+
+n8n is pure transport: the backend owns all timezone eligibility, dedupe logic (unique constraint), reminder_time threshold checks, and message rendering. n8n simply polls every 30 minutes, transports the payload to Evolution Go, and reports success/failure back to the backend.
 
 Loop: SplitInBatches[loop] -> Wait -> Evolution -> Evaluate -> IF -> Sent/Failed -> back to SplitInBatches
 
@@ -162,11 +179,15 @@ File: `frontend/src/views/SubscriptionsView.vue` (1,440 LOC). Route: `/admin/sub
 - Cancel with confirmation dialog
 - Reveal with eye icon per row; empty password shows "Sin contraseña"
 - Linked from dashboard and client detail rows
+- Reminder settings panel: timezone dropdown (from GET /subscription-settings/timezones), warning days, reminder time, recipient mode, reminders_enabled toggle
 
 ## Migration
 
-`backend/alembic/versions/cd7efe74caa0_add_subscriptions.py` - creates 4 tables with RLS policies.
+`backend/alembic/versions/`:
+- `cd7efe74caa0_add_subscriptions.py` - creates 4 tables with RLS policies.
+- `ce10fe74caa9_subscription_reminders_timezone_toggle.py` - adds `reminders_enabled` column to `subscription_reminder_settings`.
 
 ## Config
 
-New env var: `DATA_ENCRYPTION_KEY` - base64 Fernet key, required.
+New env vars:
+- `DATA_ENCRYPTION_KEY` - base64 Fernet key, required.
