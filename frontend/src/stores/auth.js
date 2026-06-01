@@ -10,11 +10,38 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
   const activeTenantId = ref(localStorage.getItem('activeTenantId'))
 
+  // --- Reminder Settings Cache (runtime-only, Tenant Context bundle) ---
+  const reminderSettings = ref(null)
+  const timezoneOptions = ref([])
+  const settingsLoaded = ref(false)
+  const timezonesLoaded = ref(false)
+  const settingsInFlight = ref(null)
+  const tenantContextKey = ref(null)
+  const settingsLoadError = ref(null)
+
+  function _clearTenantSettingsCache() {
+    reminderSettings.value = null
+    timezoneOptions.value = []
+    settingsLoaded.value = false
+    timezonesLoaded.value = false
+    settingsInFlight.value = null
+    tenantContextKey.value = null
+    settingsLoadError.value = null
+  }
+
+  function _deriveTenantContextKey() {
+    // Master in support mode -> tenant id; otherwise -> current user id
+    return activeTenantId.value || user.value?.id || null
+  }
+
+  // --- end cache ---
+
   const isAuthenticated = computed(() => !!token.value)
   const role = computed(() => user.value?.role || null)
   const username = computed(() => user.value?.username || '')
 
   async function login(username, password) {
+    _clearTenantSettingsCache()
     const response = await axios.post(`${API_URL}/auth/login`, { username, password })
     const data = response.data
     token.value = data.access_token
@@ -42,6 +69,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function switchTenant(tenantId) {
+    _clearTenantSettingsCache()
     const response = await axios.post(`${API_URL}/auth/switch-tenant`, { tenant_id: tenantId }, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
@@ -50,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function exitTenantContext() {
+    _clearTenantSettingsCache()
     const response = await axios.post(`${API_URL}/auth/switch-tenant`, { tenant_id: null }, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
@@ -58,6 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    _clearTenantSettingsCache()
     try {
       await axios.post(`${API_URL}/auth/logout`, { refresh_token: refreshToken.value }, {
         headers: { Authorization: `Bearer ${token.value}` }
@@ -75,5 +105,16 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('activeTenantId')
   }
 
-  return { token, refreshToken, user, activeTenantId, isAuthenticated, role, username, login, logout, switchTenant, exitTenantContext }
+  return {
+    token, refreshToken, user, activeTenantId,
+    isAuthenticated, role, username,
+    // Cache state
+    reminderSettings, timezoneOptions,
+    settingsLoaded, timezonesLoaded,
+    settingsInFlight, tenantContextKey, settingsLoadError,
+    // Auth actions
+    login, logout, switchTenant, exitTenantContext,
+    // Cache helpers (internal, exposed for testing)
+    _clearTenantSettingsCache, _deriveTenantContextKey,
+  }
 })

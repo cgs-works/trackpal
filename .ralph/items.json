@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "runtime_contract": {
+    "source_docs": [],
+    "verification_gates": [
+      {
+        "name": "Frontend tests",
+        "command": "cd frontend && npm run test"
+      },
+      {
+        "name": "Frontend build",
+        "command": "cd frontend && npm run build"
+      }
+    ],
+    "require_progress_append": true,
+    "require_one_item_per_iteration": true,
+    "require_commit": true
+  },
+  "items": [
+    {
+      "category": "functional",
+      "description": "Install Vitest and setup initial auth store cache state",
+      "steps": [
+        "Install Vitest as a dev dependency in the frontend.",
+        "Add a 'test' script to frontend/package.json.",
+        "Update the Pinia auth store to include state for Reminder Settings, timezone options, loaded flags, and in-flight promise tracker.",
+        "Update the auth store reset logic to clear the new cache state on login, logout, tenant switch, and support-context exit.",
+        "Write initial Vitest tests to verify cache reset behavior."
+      ],
+      "passes": true,
+      "regression_notes": "All 9 Vitest store tests pass. Build passes without warnings."
+    },
+    {
+      "category": "functional",
+      "description": "Implement store actions for loading and saving settings with context isolation",
+      "steps": [
+        "Implement a load action in the auth store that fetches both Reminder Settings and timezone options.",
+        "Deduplicate concurrent load requests using the in-flight promise tracker.",
+        "Ensure late network responses do not populate the cache if the Tenant Context has changed.",
+        "Implement a save action that updates the cache only from the successful PUT response.",
+        "Write Vitest tests for deduplication, Tenant Context isolation, and save behavior."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Integrate silent preload in Subscriptions view",
+      "steps": [
+        "Update the Subscriptions view to dispatch the store load action on initialization.",
+        "Ensure the preload is silent (does not block or show page-level errors if it fails).",
+        "Remove redundant local Reminder Settings state from the Subscriptions view."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Refactor Reminder Settings modal to use store cache",
+      "steps": [
+        "Remove the modal's initial settings prop and direct self-fetching behavior.",
+        "Make the modal deep-clone cached Reminder Settings into a local draft when opened.",
+        "Show inline loading and disable the Save button if opened before settings are available.",
+        "Show a contextual error if the fallback load fails.",
+        "Read timezone options from the store cache.",
+        "Wire the Save button to the store update action, discarding draft changes on cancel."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    }
+  ]
+}
