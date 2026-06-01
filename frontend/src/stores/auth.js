@@ -56,9 +56,16 @@ export const useAuthStore = defineStore("auth", () => {
 
 		const loadPromise = (async () => {
 			try {
+				// Fire both requests concurrently, but timezone failure is non-fatal
 				const [settingsRes, tzRes] = await Promise.all([
 					api.get("/subscription-settings"),
-					api.get("/subscription-settings/timezones"),
+					api.get("/subscription-settings/timezones").catch((tzError) => {
+						console.warn(
+							"[auth] Failed to load timezone options:",
+							_getApiError(tzError, ""),
+						);
+						return null;
+					}),
 				]);
 
 				// Late response guard: discard if tenant context changed
@@ -74,16 +81,23 @@ export const useAuthStore = defineStore("auth", () => {
 					reminder_time: data.reminder_time || "09:00",
 					recipient_mode: data.recipient_mode || "tenant_only",
 				};
-				timezoneOptions.value = tzRes.data || [];
 				settingsLoaded.value = true;
-				timezonesLoaded.value = true;
 				settingsLoadError.value = null;
+
+				if (tzRes) {
+					timezoneOptions.value = tzRes.data || [];
+					timezonesLoaded.value = true;
+				} else {
+					timezoneOptions.value = [];
+					timezonesLoaded.value = false;
+				}
 
 				return {
 					reminderSettings: reminderSettings.value,
 					timezoneOptions: timezoneOptions.value,
 				};
 			} catch (error) {
+				// Only reached when settings request itself fails
 				settingsLoadError.value = _getApiError(
 					error,
 					"Failed to load settings",

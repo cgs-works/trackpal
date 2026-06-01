@@ -301,7 +301,7 @@ describe("auth store — reminder settings cache", () => {
 			expect(store.settingsInFlight).toBeNull();
 		});
 
-		it("does not mark cache as loaded when the request fails", async () => {
+		it("does not mark cache as loaded when settings request fails", async () => {
 			const store = useAuthStore();
 			store.user = { id: "user-1", role: "tenant" };
 
@@ -334,6 +334,39 @@ describe("auth store — reminder settings cache", () => {
 
 			// First attempt: 2 GETs + second attempt: 2 GETs = 4 total
 			expect(axios.default.get).toHaveBeenCalledTimes(4);
+		});
+
+		it("populates settings cache when timezone request fails (non-fatal)", async () => {
+			const store = useAuthStore();
+			store.user = { id: "user-1", role: "tenant" };
+
+			const axios = await import("axios");
+			// Settings succeeds
+			axios.default.get.mockResolvedValueOnce(makeSettingsResponse());
+			// Timezones fail
+			const tzError = new Error("timezone error");
+			tzError.response = {
+				data: { message: "timezone service unavailable" },
+			};
+			axios.default.get.mockRejectedValueOnce(tzError);
+
+			const result = await store.loadTenantSettings();
+
+			// Settings should be cached, timezones should be empty
+			expect(store.reminderSettings).toEqual(
+				expect.objectContaining({
+					reminders_enabled: true,
+					timezone: "America/New_York",
+				}),
+			);
+			expect(store.settingsLoaded).toBe(true);
+			expect(store.timezonesLoaded).toBe(false);
+			expect(store.timezoneOptions).toEqual([]);
+			expect(store.settingsLoadError).toBeNull();
+
+			expect(result).toBeTruthy();
+			expect(result.reminderSettings).toBeTruthy();
+			expect(result.timezoneOptions).toEqual([]);
 		});
 
 		it("discards late response when tenant context changes during load", async () => {
