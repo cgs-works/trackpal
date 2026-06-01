@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { useI18nStore } from '../stores/i18n'
+import ReminderSettingsModal from '../components/subscriptions/ReminderSettingsModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,6 +29,14 @@ const confirmCancelId = ref(null)
 const isSaving = ref(false)
 const showPassword = ref(false)
 const showProfile = ref(false)
+const showReminderSettings = ref(false)
+const reminderSettings = ref({
+  reminders_enabled: false,
+  timezone: 'UTC',
+  warning_days: [7, 3, 1],
+  reminder_time: '09:00',
+  recipient_mode: 'tenant_only',
+})
 const availablePlans = ref([])
 
 // Form data
@@ -57,16 +66,14 @@ const reactivateForm = ref({
 
 const cancelNotes = ref('')
 
-const durationOptions = [
-  { value: '1_month', label: '1 mes' },
-  { value: '3_months', label: '3 meses' },
-  { value: '6_months', label: '6 meses' },
-  { value: '9_months', label: '9 meses' },
-  { value: '1_year', label: '1 año' },
-  { value: 'custom', label: 'Personalizado' },
-]
-
-// Duration labels are not translated (business data terms)
+const durationOptions = computed(() => [
+  { value: '1_month', label: i18nStore.t('frontend.subscriptions.duration_1_month') },
+  { value: '3_months', label: i18nStore.t('frontend.subscriptions.duration_3_months') },
+  { value: '6_months', label: i18nStore.t('frontend.subscriptions.duration_6_months') },
+  { value: '9_months', label: i18nStore.t('frontend.subscriptions.duration_9_months') },
+  { value: '1_year', label: i18nStore.t('frontend.subscriptions.duration_1_year') },
+  { value: 'custom', label: i18nStore.t('frontend.subscriptions.duration_custom') },
+])
 
 const isCustomDuration = computed(() => formData.value.duration_type === 'custom')
 const isRenewCustomDuration = computed(() => renewForm.value.duration_type === 'custom')
@@ -457,98 +464,7 @@ function hideRevealed() {
   }
 }
 
-// --- Reminder settings ---
-const showReminderSettings = ref(false)
-const reminderSettings = ref({
-  timezone: 'UTC',
-  warning_days: [7, 3, 1],
-  reminder_time: '09:00',
-  recipient_mode: 'tenant_only',
-})
-const reminderCustomDay = ref('')
 
-const recipientModeOptions = [
-  { value: 'tenant_only', label: i18nStore.t('frontend.subscriptions.recipient_mode_tenant_only') },
-  { value: 'client_only', label: i18nStore.t('frontend.subscriptions.recipient_mode_client_only') },
-  { value: 'both', label: i18nStore.t('frontend.subscriptions.recipient_mode_both') },
-]
-
-const timezoneOptions = [
-  { value: 'UTC', label: 'UTC' },
-  { value: 'America/Mexico_City', label: 'America/Mexico_City' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'America/Argentina/Buenos_Aires' },
-  { value: 'America/Santiago', label: 'America/Santiago' },
-  { value: 'America/Bogota', label: 'America/Bogota' },
-  { value: 'America/Lima', label: 'America/Lima' },
-  { value: 'America/Sao_Paulo', label: 'America/Sao_Paulo' },
-  { value: 'America/New_York', label: 'America/New_York' },
-  { value: 'America/Chicago', label: 'America/Chicago' },
-  { value: 'America/Denver', label: 'America/Denver' },
-  { value: 'America/Los_Angeles', label: 'America/Los_Angeles' },
-  { value: 'Europe/Madrid', label: 'Europe/Madrid' },
-  { value: 'Europe/London', label: 'Europe/London' },
-  { value: 'Europe/Paris', label: 'Europe/Paris' },
-  { value: 'Europe/Berlin', label: 'Europe/Berlin' },
-]
-
-async function loadReminderSettings() {
-  try {
-    const response = await api.get('/subscription-settings')
-    if (response.data) {
-      reminderSettings.value = {
-        timezone: response.data.timezone || 'UTC',
-        warning_days: response.data.warning_days || [7, 3, 1],
-        reminder_time: response.data.reminder_time || '09:00',
-        recipient_mode: response.data.recipient_mode || 'tenant_only',
-      }
-    }
-  } catch (error) {
-    // Use defaults
-  }
-}
-
-async function saveReminderSettings() {
-  isSaving.value = true
-  try {
-    await api.put('/subscription-settings', reminderSettings.value)
-    showReminderSettings.value = false
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.subscriptions.error_reminder_settings'))
-  } finally {
-    isSaving.value = false
-  }
-}
-
-function openReminderSettings() {
-  loadReminderSettings()
-  showReminderSettings.value = true
-}
-
-function toggleWarningDay(day) {
-  const idx = reminderSettings.value.warning_days.indexOf(day)
-  if (idx >= 0) {
-    reminderSettings.value.warning_days.splice(idx, 1)
-  } else {
-    reminderSettings.value.warning_days.push(day)
-    reminderSettings.value.warning_days.sort((a, b) => a - b)
-  }
-}
-
-function addCustomWarningDay() {
-  const day = parseInt(reminderCustomDay.value, 10)
-  if (!isNaN(day) && day > 0 && !reminderSettings.value.warning_days.includes(day)) {
-    reminderSettings.value.warning_days.push(day)
-    reminderSettings.value.warning_days.sort((a, b) => a - b)
-    reminderCustomDay.value = ''
-  }
-}
-
-function removeWarningDay(day) {
-  const idx = reminderSettings.value.warning_days.indexOf(day)
-  if (idx >= 0) {
-    reminderSettings.value.warning_days.splice(idx, 1)
-  }
-}
 
 onMounted(init)
 </script>
@@ -564,7 +480,7 @@ onMounted(init)
       <div class="user-actions">
         <span class="username">{{ username }}</span>
         <button class="button button-primary" type="button" @click="openCreateModal">{{ i18nStore.t('frontend.subscriptions.new') }}</button>
-        <button class="button button-secondary" type="button" @click="openReminderSettings">{{ i18nStore.t('frontend.subscriptions.reminder_settings') }}</button>
+        <button class="button button-secondary" type="button" @click="showReminderSettings = true">{{ i18nStore.t('frontend.subscriptions.reminder_settings') }}</button>
         <button class="button button-secondary" type="button" @click="goBack">{{ i18nStore.t('frontend.subscriptions.back') }}</button>
         <button class="button button-secondary" type="button" @click="authStore.logout(); router.push('/login')">{{ i18nStore.t('frontend.subscriptions.logout') }}</button>
       </div>
@@ -885,61 +801,12 @@ onMounted(init)
       </div>
     </div>
 
-    <!-- Reminder Settings Modal -->
-    <div v-if="showReminderSettings" class="modal-overlay" @click.self="closeModals">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>{{ i18nStore.t('frontend.subscriptions.reminder_settings_title') }}</h2>
-          <button class="modal-close" type="button" @click="closeModals">✕</button>
-        </div>
-        <div class="modal-body">
-          <label>
-            {{ i18nStore.t('frontend.subscriptions.timezone') }}
-            <select v-model="reminderSettings.timezone">
-              <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">{{ tz.label }}</option>
-            </select>
-          </label>
-
-          <label>
-            {{ i18nStore.t('frontend.subscriptions.warning_days') }}
-            <div class="warning-days-container">
-              <label class="day-check" v-for="day in [7, 3, 1]" :key="day">
-                <input type="checkbox" :checked="reminderSettings.warning_days.includes(day)" @change="toggleWarningDay(day)" />
-                {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
-              </label>
-              <div class="custom-day-input">
-                <input v-model="reminderCustomDay" type="number" min="1" :placeholder="i18nStore.t('frontend.subscriptions.placeholder_custom_day')" @keyup.enter="addCustomWarningDay" />
-                <button class="button button-sm" type="button" @click="addCustomWarningDay" :disabled="!reminderCustomDay">+</button>
-              </div>
-            </div>
-            <div v-if="reminderSettings.warning_days.length" class="warning-days-tags">
-              <span class="tag" v-for="day in reminderSettings.warning_days" :key="day">
-                {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
-                <button class="tag-remove" type="button" @click="removeWarningDay(day)">✕</button>
-              </span>
-            </div>
-          </label>
-
-          <label>
-            {{ i18nStore.t('frontend.subscriptions.reminder_time') }}
-            <input v-model="reminderSettings.reminder_time" type="time" />
-          </label>
-
-          <label>
-            {{ i18nStore.t('frontend.subscriptions.recipient') }}
-            <select v-model="reminderSettings.recipient_mode">
-              <option v-for="opt in recipientModeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
-          </label>
-        </div>
-        <div class="modal-footer">
-          <button class="button button-secondary" type="button" @click="closeModals">{{ i18nStore.t('frontend.subscriptions.cancel_action') }}</button>
-          <button class="button button-primary" type="button" @click="saveReminderSettings" :disabled="isSaving">
-            {{ isSaving ? i18nStore.t('frontend.subscriptions.saving') : i18nStore.t('frontend.subscriptions.save') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ReminderSettingsModal
+      :show="showReminderSettings"
+      :initial-settings="reminderSettings"
+      @close="closeModals"
+      @saved="loadSubscriptions"
+    />
   </main>
 </template>
 
@@ -1349,76 +1216,6 @@ tbody tr:hover {
 
 .reveal-btn:hover {
   background: #f1f5f9;
-}
-
-/* Reminder settings – warning days */
-.warning-days-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.day-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 400;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.day-check input[type="checkbox"] {
-  width: auto;
-  cursor: pointer;
-}
-
-.custom-day-input {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.custom-day-input input {
-  width: 120px;
-  padding: 6px 8px;
-}
-
-.custom-day-input .button-sm {
-  padding: 6px 10px;
-}
-
-.warning-days-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: var(--primary);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.tag-remove {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.75rem;
-  color: var(--primary);
-  padding: 0 2px;
-  line-height: 1;
-}
-
-.tag-remove:hover {
-  color: var(--danger);
 }
 
 @media (max-width: 720px) {
