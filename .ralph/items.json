@@ -65,8 +65,8 @@
         "Read timezone options from the store cache.",
         "Wire the Save button to the store update action, discarding draft changes on cancel."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Build passes. Store tests 16/16 pass. Modal refactored to read from auth store cache with inline loading fallback."
     }
   ]
 }

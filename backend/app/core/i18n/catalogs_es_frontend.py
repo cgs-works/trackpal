@@ -83,6 +83,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.subscriptions.clear_filters": "Limpiar filtros",
     "frontend.subscriptions.apply": "Aplicar filtros",
     "frontend.subscriptions.loading": "Cargando suscripciones...",
+    "frontend.subscriptions.loading_settings": "Cargando configuración de recordatorios...",
     "frontend.subscriptions.no_results": "No hay suscripciones que coincidan con los filtros.",
     "frontend.subscriptions.client": "Cliente",
     "frontend.subscriptions.service": "Servicio",

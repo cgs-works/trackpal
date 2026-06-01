@@ -41,5 +41,20 @@
 - `npm run test` — 16/16 passed
 - `npm run build` — production build succeeds
 
-**Next:** Item 4 — Refactor Reminder Settings modal to use store cache.
+## Iteration 4 — 2026-06-01 17:39
+
+**Item:** Refactor Reminder Settings modal to use store cache
+
+**Rationale:** Final item — wires the modal to consume the store cache, eliminating redundant network requests on every open.
+
+**Changes:**
+- `frontend/src/components/subscriptions/ReminderSettingsModal.vue` — removed `initialSettings` prop, `api` import, and direct `loadTimezones`/`loadSettings` self-fetching; imports `useAuthStore`; reads `timezoneOptions` from store via computed; on open deep-clones cached settings into local draft (discarded on cancel); shows inline spinner + disabled Save when cache not ready; shows contextual error on fallback load failure; Save wired to `authStore.updateReminderSettings()`
+- `backend/app/core/i18n/catalogs_en_frontend.py` — added `frontend.subscriptions.loading_settings` ("Loading reminder settings...")
+- `backend/app/core/i18n/catalogs_es_frontend.py` — added `frontend.subscriptions.loading_settings` ("Cargando configuración de recordatorios...")
+
+**Verification:**
+- `npm run test` — 16/16 passed
+- `npm run build` — production build succeeds
+
+**All 4 items complete. Full feature implemented.**
 
