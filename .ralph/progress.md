@@ -14,4 +14,19 @@
 - `npm run test` — 9/9 passed, 1 file
 - `npm run build` — production build succeeds, 112 modules, no warnings
 
-**Next:** Item 2 — Implement store actions for loading and saving settings with context isolation.
+## Iteration 2 — 2026-06-01 17:35
+
+**Item:** Implement store actions for loading and saving settings with context isolation
+
+**Rationale:** Second in the plan — the load/dedup/save actions are the core of the caching feature, needed before wiring UI components.
+
+**Changes:**
+- `frontend/src/stores/auth.js` — added `_getApiError` helper, `loadTenantSettings()` action (fetches both settings and timezones, deduplicates via `settingsInFlight` promise tracker, guards late responses with tenant context key), and `updateReminderSettings()` action (PUTs then updates cache from response only)
+- `frontend/src/stores/__tests__/auth.spec.js` — added 7 tests for load/save: first load fetches both endpoints, cache returns without network, concurrent dedup, retry after failure, late response discard after context switch, save updates cache from PUT response, save error does not mutate cache
+
+**Verification:**
+- `npm run test` — 16/16 passed, 1 file
+- `npm run build` — production build succeeds, no warnings
+
+**Next:** Item 3 — Integrate silent preload in Subscriptions view.
+
