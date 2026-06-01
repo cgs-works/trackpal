@@ -8,6 +8,9 @@
 
 **Tech Stack:** Python 3.12, FastAPI, SQLAlchemy async, PostgreSQL/Alembic, httpx, Vue 3 + Vite, n8n JSON workflow.
 
+**GitHub Issue:** #32 — https://github.com/wilfredocamacho/trackpal/issues/32
+**GitHub PR:** #33 — https://github.com/wilfredocamacho/trackpal/pull/33
+
 ---
 
 ## File map
@@ -434,7 +437,7 @@ git commit -m "feat(subscriptions): add timezone catalog and validation"
 - Modify: `backend/app/services/subscription_job_service/__init__.py`
 - Modify: `backend/tests/test_subscriptions.py`
 
-- [ ] **Step 1: Write the failing tenant-local scheduling tests**
+- [x] **Step 1: Write the failing tenant-local scheduling tests**
 
 ```python
 @pytest.mark.asyncio
@@ -612,7 +615,7 @@ async def test_subscription_reminders_do_not_send_before_local_threshold(
     assert pending_response.json()["items"] == []
 ```
 
-- [ ] **Step 2: Run the targeted scheduling tests to see them fail**
+- [x] **Step 2: Run the targeted scheduling tests to see them fail**
 
 Run:
 
@@ -623,7 +626,7 @@ uv run pytest tests/test_subscriptions.py -k "toggle_disabled or honor_tenant_lo
 
 Expected: FAIL because current logic ignores the toggle and tenant-local timezone threshold.
 
-- [ ] **Step 3: Extract timezone-aware scheduling helpers into a focused module**
+- [x] **Step 3: Extract timezone-aware scheduling helpers into a focused module**
 
 ```python
 # backend/app/services/subscription_job_service/reminder_schedule.py
@@ -653,7 +656,7 @@ def get_days_until_expiry(now_utc: datetime, expires_at: datetime, timezone_name
     return (tenant_expiry - tenant_today).days
 ```
 
-- [ ] **Step 4: Replace N+1 reminder generation with batched loading and the new local-time helpers**
+- [x] **Step 4: Replace N+1 reminder generation with batched loading and the new local-time helpers**
 
 ```python
 # backend/app/services/subscription_job_service/reminder_payloads.py
@@ -682,7 +685,7 @@ for sub in subs:
     # create logs and payloads exactly once per recipient
 ```
 
-- [ ] **Step 5: Add a regression test that invalid tenant timezone skips only one tenant, not the whole batch**
+- [x] **Step 5: Add a regression test that invalid tenant timezone skips only one tenant, not the whole batch**
 
 ```python
 @pytest.mark.asyncio
@@ -783,7 +786,7 @@ async def test_subscription_reminders_skip_invalid_timezone_without_breaking_bat
     assert body["items"][0]["tenant_id"] == str(valid_tenant.id)
 ```
 
-- [ ] **Step 6: Run the reminder test block again**
+- [x] **Step 6: Run the reminder test block again**
 
 Run:
 
@@ -794,7 +797,7 @@ uv run pytest tests/test_subscriptions.py -k "subscription_reminders_" -v
 
 Expected: PASS for the new scheduling cases and existing reminder cases.
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```bash
 git add \
@@ -816,7 +819,7 @@ git commit -m "feat(reminders): honor tenant local time windows"
 - Modify: `backend/app/core/i18n/catalogs_es_frontend.py`
 - Modify: `backend/app/core/i18n/catalogs_en_frontend.py`
 
-- [ ] **Step 1: Add the new frontend copy keys before wiring the component**
+- [x] **Step 1: Add the new frontend copy keys before wiring the component**
 
 ```python
 # backend/app/core/i18n/catalogs_es_frontend.py
@@ -834,7 +837,7 @@ git commit -m "feat(reminders): honor tenant local time windows"
 "frontend.subscriptions.timezone_loading_error": "Could not load time zone options.",
 ```
 
-- [ ] **Step 2: Extract the reminder settings modal out of the oversized `SubscriptionsView.vue` file**
+- [x] **Step 2: Extract the reminder settings modal out of the oversized `SubscriptionsView.vue` file**
 
 ```vue
 <!-- frontend/src/components/subscriptions/ReminderSettingsModal.vue -->
@@ -869,7 +872,7 @@ watch(() => props.modelValue, (open) => {
 </script>
 ```
 
-- [ ] **Step 3: Render the toggle-first UX with hidden configuration when disabled**
+- [x] **Step 3: Render the toggle-first UX with hidden configuration when disabled**
 
 ```vue
 <template>
@@ -901,7 +904,7 @@ watch(() => props.modelValue, (open) => {
 </template>
 ```
 
-- [ ] **Step 4: Replace the inline modal logic in `SubscriptionsView.vue` with the new component contract**
+- [x] **Step 4: Replace the inline modal logic in `SubscriptionsView.vue` with the new component contract**
 
 ```vue
 <script setup>
@@ -927,7 +930,7 @@ const reminderSettings = ref({
 </template>
 ```
 
-- [ ] **Step 5: Run the frontend build as the verification gate**
+- [x] **Step 5: Run the frontend build as the verification gate**
 
 Run:
 
@@ -938,7 +941,7 @@ npm run build
 
 Expected: successful production build with no Vue compile errors.
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 ```bash
 git add \
@@ -960,7 +963,7 @@ git commit -m "feat(frontend): add reminder toggle-first settings UX"
 - Modify: `docs/architecture/n8n-workflow.md`
 - Modify: `docs/architecture/api-layer.md`
 
-- [ ] **Step 1: Re-read the current workflow file and inspect the local diff before editing**
+- [x] **Step 1: Re-read the current workflow file and inspect the local diff before editing**
 
 Run:
 
@@ -971,7 +974,7 @@ python -m json.tool "n8n/Trackpal Subscription Reminders.json" > NUL
 
 Expected: you see any unrelated local edits first, and the JSON parses cleanly before modification.
 
-- [ ] **Step 2: Change the n8n schedule trigger from daily-at-09:00 to every 30 minutes**
+- [x] **Step 2: Change the n8n schedule trigger from daily-at-09:00 to every 30 minutes**
 
 ```json
 {
@@ -991,7 +994,7 @@ Expected: you see any unrelated local edits first, and the JSON parses cleanly b
 
 If the target n8n schema requires a slightly different shape, keep the behavioral contract identical: run every 30 minutes, not daily.
 
-- [ ] **Step 3: Update docs to reflect the new runtime contract**
+- [x] **Step 3: Update docs to reflect the new runtime contract**
 
 ```md
 # docs/architecture/subscriptions.md
@@ -1013,7 +1016,7 @@ If the target n8n schema requires a slightly different shape, keep the behaviora
 - `GET/PUT /api/v1/subscription-settings` include `reminders_enabled`
 ```
 
-- [ ] **Step 4: Validate the workflow JSON and run the focused backend reminder suite one last time**
+- [x] **Step 4: Validate the workflow JSON and run the focused backend reminder suite one last time**
 
 Run:
 
@@ -1025,7 +1028,7 @@ uv run pytest tests/test_subscriptions.py -k "subscription_reminder or subscript
 
 Expected: JSON parses cleanly and backend reminder/settings tests pass.
 
-- [ ] **Step 5: Commit Task 5**
+- [x] **Step 5: Commit Task 5**
 
 ```bash
 git add \
@@ -1041,7 +1044,7 @@ git commit -m "chore(reminders): switch workflow to 30 minute polling"
 
 ## Final verification checklist
 
-- [ ] Run backend subscription tests:
+- [x] Run backend subscription tests:
 
 ```bash
 cd backend
@@ -1050,7 +1053,7 @@ uv run pytest tests/test_subscriptions.py -v
 
 Expected: PASS.
 
-- [ ] Run frontend build:
+- [x] Run frontend build:
 
 ```bash
 cd frontend
@@ -1059,7 +1062,7 @@ npm run build
 
 Expected: PASS.
 
-- [ ] Validate the reminder workflow JSON:
+- [x] Validate the reminder workflow JSON:
 
 ```bash
 python -m json.tool "n8n/Trackpal Subscription Reminders.json" > NUL
@@ -1067,7 +1070,7 @@ python -m json.tool "n8n/Trackpal Subscription Reminders.json" > NUL
 
 Expected: no output, exit code 0.
 
-- [ ] Inspect final diff before handoff:
+- [x] Inspect final diff before handoff:
 
 ```bash
 git status --short
