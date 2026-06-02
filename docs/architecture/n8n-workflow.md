@@ -68,15 +68,17 @@ JavaScript code that normalises the raw Evolution Go payload into a consistent s
 **Input**: Raw webhook payload from Evolution Go.
 
 **Normalisation logic**:
-- Extracts `body.chatInput`, `body.remoteJid`, `body.instanceName`, `body.apiKey`
-- Extracts `body.senderPn` and `body.senderLid` (from Evolution Go payload enrichment)
-- Falls back to `data.message.from`, `data.message.key.remoteJid`, `data.message.body`, `data.message.conversation`
-- Derives `phone` from `senderPn` first
-- If no `senderPn` and inbound JID is `@lid`, keeps `phone` empty and forwards `sender_lid`
-- Never derives canonical phone from `@lid` digits
-- Defaults `instance` to `'default'` if not present
-- Preserves original `remoteJid` and `apiKey` for downstream send/close nodes
-- **Extracts contextual fields**: `body.fromMe` (boolean), `body.adminJid`, `body.targetJid`, `body.targetPhone`, `body.targetLid` for outgoing trigger routing
+- Extracts `chatInput`, `remoteJid`, `instanceName`, and `apiKey` from trusted webhook body fields.
+- Extracts `senderPn` and `senderLid` from top-level body, nested `body.data`, nested `data`, and key-level Evolution payload variants.
+- Falls back across Evolution payload shapes: `body.key`, `body.data.key`, `data.key`, `message.key`, `message.body`, and `message.conversation`.
+- Derives `phone` from `senderPn` first.
+- If no `senderPn` and inbound JID is `@lid`, keeps `phone` empty and forwards `sender_lid`.
+- Never derives canonical phone from `@lid` digits.
+- Defaults `instance` to `'default'` if not present.
+- Preserves original `remoteJid` and `apiKey` for downstream send/close nodes.
+- **Extracts contextual fields** from multiple Evolution shapes: `fromMe`, `adminJid`, `targetJid`, `targetPhone`, `targetLid`.
+- For outgoing `fromMe=true` messages, treats `remoteJid` as the target chat and derives `targetPhone` or `targetLid` from it when explicit target fields are missing.
+- Suppresses known Trackpal-generated access-denied/fallback replies when they re-enter the webhook as bot echoes, preventing recursive “access denied” loops.
 - **Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid, raw }`
 ### 3. Config (Set Node)
 
@@ -185,13 +187,13 @@ Parse Input:
   const sender_lid = senderLid || (remoteJid?.includes('@lid') ? remoteJid : '')
   const message = chatInput || msg.body || conversation
   const instance = instanceName || data.instance || 'default'
-  const remoteJid = body.remoteJid || ''
-  const apiKey = body.apiKey || ''
-  const fromMe = body.fromMe || false
-  const adminJid = body.adminJid || ''
-  const targetJid = body.targetJid || ''
-  const targetPhone = body.targetPhone || ''
-  const targetLid = body.targetLid || ''
+  const remoteJid = firstTruthy(body.remoteJid, body.key?.remoteJid, body.data?.key?.remoteJid, data.key?.remoteJid)
+  const apiKey = firstTruthy(body.apiKey, payload.apiKey)
+  const fromMe = asBool(firstTruthy(body.fromMe, body.data?.fromMe, data.fromMe, body.key?.fromMe, body.data?.key?.fromMe, data.key?.fromMe))
+  const adminJid = firstTruthy(body.adminJid, body.data?.adminJid, data.adminJid)
+  const targetJid = firstTruthy(body.targetJid, body.data?.targetJid, data.targetJid) || (fromMe ? remoteJid : '')
+  const targetPhone = firstTruthy(body.targetPhone, body.data?.targetPhone, data.targetPhone)
+  const targetLid = firstTruthy(body.targetLid, body.data?.targetLid, data.targetLid)
   ↓
 { phone: "1234567890", sender_lid: "", message: "1", instance: "Sublify",
   remoteJid: "1234567890@s.whatsapp.net", apiKey: "<instance-api-key>",
