@@ -312,3 +312,64 @@ async def test_context_close_cleans_redis_session(
     # After close, the Redis key must be gone
     remaining = await fake_mgr._redis.get(ctx_key)
     assert remaining is None, "Redis session key should be deleted on close"
+
+
+async def test_active_context_invalid_input_uses_i18n(
+    client, db_session, active_tenant_user
+):
+    """Invalid input in context menu must use i18n key."""
+    from app.core.config import settings
+    from app.models import Tenant
+    from sqlalchemy import select
+    from unittest.mock import patch
+
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+    tenant.evolution_instance_name = "test-tenant-instance"
+    tenant.locale = "es"
+    await db_session.commit()
+
+    admin_phone = tenant.whatsapp_phone
+    admin_jid = f"{admin_phone}@s.whatsapp.net"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={
+                "phone": admin_phone,
+                "message": "/menu",
+                "instance": "test-tenant-instance",
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": admin_jid,
+                "target_phone": "+34999999999",
+                "target_jid": "34999999999@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+        # Now send invalid input via normal console path
+        resp = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={
+                "phone": admin_phone,
+                "message": "texto invalido",
+                "instance": "test-tenant-instance",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data.get("reply_to") == admin_jid
+    # Must NOT route to Tenant console (no "Trackpal" in reply)
+    assert "Trackpal" not in data.get("reply", "")
+    # Must use the i18n invalid_option text
+    assert "Opción inválida" in data.get("reply", "")

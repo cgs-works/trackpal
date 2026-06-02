@@ -1005,12 +1005,10 @@ async def _handle_ctx_unblocked_menu(
         )
 
     # Invalid input — do NOT refresh TTL
+    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
-        "1\ufe0f\u20e3 Crear cliente\n"
-        "2\ufe0f\u20e3 Bloquear mensajes\n"
-        "0\ufe0f\u20e3 Cancelar",
+        reply=_i18n_t(locale, "wa.tenant.client_context.invalid_option"),
         reply_to=admin_jid,
     )
 
@@ -1060,10 +1058,9 @@ async def _handle_ctx_blocked_menu(
         )
 
     # Invalid input — do NOT refresh TTL
+    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
-        "1\ufe0f\u20e3 Desbloquear mensajes\n"
-        "0\ufe0f\u20e3 Cancelar",
+        reply=_i18n_t(locale, "wa.tenant.client_context.invalid_option"),
         reply_to=admin_jid,
     )
