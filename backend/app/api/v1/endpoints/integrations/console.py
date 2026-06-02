@@ -39,6 +39,19 @@ def _tl(tenant: object) -> str:
     return getattr(tenant, "locale", "es") or "es"
 
 
+def _jid_phone(jid: str | None) -> str | None:
+    """Extract a normalized phone from a WhatsApp phone JID.
+
+    Evolution may include device suffixes such as
+    ``12015550002:12@s.whatsapp.net``. Treat those as same phone when
+    deciding whether a from_me target is the tenant admin's own chat.
+    """
+    if not jid or "@s.whatsapp.net" not in jid:
+        return None
+    local = jid.split("@", 1)[0].split(":", 1)[0]
+    return normalize_phone(local)
+
+
 console_router = APIRouter(tags=["integrations"])
 auth_service = AuthService()
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
@@ -341,21 +354,20 @@ async def _handle_from_me_routing(
 
     # ── Step 2: Determine target identity ─────────────────────────
     target_phone_norm = normalize_phone(target_phone) if target_phone else None
+    target_jid_phone = _jid_phone(target_jid)
+    admin_jid_phone = _jid_phone(admin_jid)
 
     # ── Step 3: Check if target == admin (self-target) ────────────
-    is_self_target = (
-        (
-            resolved_admin_phone
-            and target_phone_norm
-            and resolved_admin_phone == target_phone_norm
-        )
-        or (admin_jid and target_jid and admin_jid == target_jid)
-        or (
-            resolved_admin_phone
-            and target_jid
-            and target_jid.startswith(f"{resolved_admin_phone}@")
-        )
-    )
+    # Compare normalized phone identities from explicit target_phone
+    # and from JIDs. Exact JID equality alone is too brittle because
+    # Evolution can include device suffixes in from_me events.
+    target_candidates = (target_phone_norm, target_jid_phone)
+    admin_candidates = (resolved_admin_phone, admin_jid_phone)
+    is_self_target = any(
+        target and admin and target == admin
+        for target in target_candidates
+        for admin in admin_candidates
+    ) or (admin_jid and target_jid and admin_jid == target_jid)
 
     if is_self_target:
         # Route to standard Tenant console
