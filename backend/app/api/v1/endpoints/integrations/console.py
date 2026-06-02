@@ -381,7 +381,41 @@ async def _handle_from_me_routing(
     )
 
     if is_self_target:
-        # Route to standard Tenant console
+        # Route self-chat through the same ambiguity gate as normal
+        # inbound messages. A tenant admin can also be a client in the
+        # same tenant; /menu must show the pre-menu instead of forcing
+        # the admin console.
+        client = None
+        try:
+            client = await clients_repository.get_active_client_by_tenant_phone(
+                db, tenant.id, resolved_admin_phone
+            )
+        except Exception:
+            logger.exception(
+                "Duplicate client phone detected for tenant=%s phone=%s",
+                tenant.id,
+                resolved_admin_phone,
+            )
+            return WhatsAppConsoleResponse(
+                reply=t(_tl(tenant), "wa.client.multiple_matches")
+            )
+
+        if client is None and tenant_lid:
+            client = await clients_repository.get_active_client_by_tenant_lid(
+                db, tenant.id, tenant_lid
+            )
+
+        if client is not None:
+            return await _handle_ambiguity(
+                phone=resolved_admin_phone,
+                message=message,
+                instance=instance,
+                manager=manager,
+                db=db,
+                tenant=tenant,
+                client=client,
+            )
+
         return await _handle_tenant_console(
             phone=resolved_admin_phone,
             message=message,
