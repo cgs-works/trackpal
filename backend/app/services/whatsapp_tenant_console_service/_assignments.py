@@ -53,6 +53,8 @@ _handle_client_edit_field = cc._handle_client_edit_field
 _handle_client_edit_value = cc._handle_client_edit_value
 _handle_client_deactivate_confirm = cc._handle_client_deactivate_confirm
 _handle_client_delete_confirm = cc._handle_client_delete_confirm
+_handle_clients_block_list = cf._handle_clients_block_list
+_handle_clients_block_unblock = cf._handle_clients_block_unblock
 
 # -- Catalog flow handlers
 _start_catalog_flow = caf._start_catalog_flow

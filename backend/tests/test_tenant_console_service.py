@@ -29,6 +29,7 @@ from app.services.whatsapp_tenant_console_facade import (
     WhatsAppTenantConsoleFacade,
 )
 from app.core.errors import UserFacingError
+from app.core.redis_client import RedisConnectionManager
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_tenant_console_service import (
@@ -1883,7 +1884,7 @@ class TestConsoleHandlersCodigoScope:
 
         # Seed session with intent
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
@@ -1960,7 +1961,7 @@ class TestConsoleHandlersCodigoScope:
 
         mock_db = AsyncMock()
         fake_redis = FakeRedis()
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         with (
             patch(
@@ -2013,7 +2014,7 @@ class TestConsoleHandlersCodigoScope:
         tenant_uuid = uuid4()
 
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
@@ -2092,7 +2093,7 @@ class TestConsoleHandlersCodigoScope:
         tenant_uuid = uuid4()
 
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="disconnected")
@@ -2279,3 +2280,306 @@ class TestNavigationContract:
         )
         # Should show main menu
         assert "Clientes" in reply or "Trackpal" in reply
+
+
+# ===================================================================
+# Client Messaging Blocks — Tenant Console
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestClientMessagingBlocks:
+    """Block list/unblock from the Tenant console clients menu (option 3)."""
+
+    async def test_clients_menu_shows_blocks_option(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Clients menu includes option 3 for blocks."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+        )
+        assert "Bloqueos de mensajes" in reply or "Message blocks" in reply
+        assert "3" in reply
+
+    async def test_block_list_empty(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Option 3 with no active blocks shows empty message."""
+        tenant_id = uuid4()
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+            mock_repo.list_active = AsyncMock(return_value=[])
+
+            # Start clients flow
+            reply = await console_service.process_message(
+                phone="+10000000001",
+                message="1",
+                session_service=session_service,
+                tenant_id=tenant_id,
+            )
+            assert "Clientes" in reply or "Clients" in reply
+
+            # Press 3 (blocks)
+            reply = await console_service.process_message(
+                phone="+10000000001",
+                message="3",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+            assert "No hay bloqueos" in reply or "No active message blocks" in reply
+
+    async def test_block_list_shows_blocks(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Option 3 with active blocks shows numbered list."""
+        tenant_id = uuid4()
+        block_id = uuid4()
+
+        fake_block = SimpleNamespace(
+            id=block_id,
+            tenant_id=tenant_id,
+            phone="12015559999",
+            whatsapp_lid=None,
+            is_active=True,
+        )
+
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+            mock_repo.list_active = AsyncMock(return_value=[fake_block])
+
+            # Start clients flow
+            reply = await console_service.process_message(
+                phone="+10000000002",
+                message="1",
+                session_service=session_service,
+                tenant_id=tenant_id,
+            )
+            assert "Clientes" in reply or "Clients" in reply
+
+            # Press 3 (blocks)
+            reply = await console_service.process_message(
+                phone="+10000000002",
+                message="3",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+            assert "12015559999" in reply
+            assert "Bloqueos" in reply or "blocks" in reply.lower()
+            assert "1" in reply
+
+            # Session should advance to block_list step
+            session = await session_service.get_session("admin:+10000000002")
+            assert session is not None
+            assert session.step == "block_list"
+            assert session.selection_map.get("1") == str(block_id)
+
+    async def test_block_unblock_success(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Selecting a block from the list unblocks the identity."""
+        tenant_id = uuid4()
+        block_id = uuid4()
+
+        fake_block = SimpleNamespace(
+            id=block_id,
+            tenant_id=tenant_id,
+            phone="12015559999",
+            whatsapp_lid=None,
+            is_active=True,
+        )
+
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+            mock_repo.list_active = AsyncMock(return_value=[fake_block])
+            mock_repo.unblock = AsyncMock(return_value=fake_block)
+
+            # Start clients flow & show blocks
+            await console_service.process_message(
+                phone="+10000000003",
+                message="1",
+                session_service=session_service,
+                tenant_id=tenant_id,
+            )
+            await console_service.process_message(
+                phone="+10000000003",
+                message="3",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+            # Press 1 to unblock the first identity
+            mock_db = AsyncMock()
+            reply = await console_service.process_message(
+                phone="+10000000003",
+                message="1",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=mock_db,
+            )
+            assert "12015559999" in reply
+            assert "eliminado" in reply or "removed" in reply.lower()
+
+            # Session should be cleared
+            session = await session_service.get_session("admin:+10000000003")
+            assert session is None
+
+            # Verify unblock was called with correct args
+            mock_repo.unblock.assert_called_once()
+            call_args = mock_repo.unblock.call_args[0]
+            assert call_args[1] == tenant_id  # db, tenant_id, block_id
+            assert call_args[2] == block_id
+
+            # Regression: the unblock path must commit the session so the
+            # block deactivation is not rolled back at request end.
+            mock_db.commit.assert_awaited()
+
+    async def test_block_list_invalid_selection(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Invalid selection in block list shows error."""
+        tenant_id = uuid4()
+        block_id = uuid4()
+
+        fake_block = SimpleNamespace(
+            id=block_id,
+            tenant_id=tenant_id,
+            phone="12015559999",
+            whatsapp_lid=None,
+            is_active=True,
+        )
+
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+            mock_repo.list_active = AsyncMock(return_value=[fake_block])
+
+            # Start clients flow & show blocks
+            await console_service.process_message(
+                phone="+10000000004",
+                message="1",
+                session_service=session_service,
+                tenant_id=tenant_id,
+            )
+            await console_service.process_message(
+                phone="+10000000004",
+                message="3",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+            # Press 99 (invalid number)
+            reply = await console_service.process_message(
+                phone="+10000000004",
+                message="99",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+            assert "inválido" in reply.lower() or "invalid" in reply.lower()
+
+    async def test_block_list_zero_goes_back(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Pressing 0 from block list goes back to clients menu."""
+        tenant_id = uuid4()
+        block_id = uuid4()
+
+        fake_block = SimpleNamespace(
+            id=block_id,
+            tenant_id=tenant_id,
+            phone="12015559999",
+            whatsapp_lid=None,
+            is_active=True,
+        )
+
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+            mock_repo.list_active = AsyncMock(return_value=[fake_block])
+
+            # Start clients flow & show blocks
+            await console_service.process_message(
+                phone="+10000000005",
+                message="1",
+                session_service=session_service,
+                tenant_id=tenant_id,
+            )
+            await console_service.process_message(
+                phone="+10000000005",
+                message="3",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+            # Press 0 to go back to clients menu
+            reply = await console_service.process_message(
+                phone="+10000000005",
+                message="0",
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+            # 0 from within a flow exits (global handler)
+            assert "salido" in reply.lower() or "goodbye" in reply.lower()
+
+    async def test_clients_menu_nine_goes_back(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Pressing 9 from clients menu goes back to main menu."""
+        # Start clients flow
+        reply = await console_service.process_message(
+            phone="+10000000006",
+            message="1",
+            session_service=session_service,
+        )
+        assert "Clientes" in reply or "Clients" in reply
+
+        # Press 9 to go back to main menu
+        reply = await console_service.process_message(
+            phone="+10000000006",
+            message="9",
+            session_service=session_service,
+        )
+        # Should show main menu
+        assert "Consola de Administración" in reply or "Admin Console" in reply
+
+        # Session should be cleared
+        session = await session_service.get_session("admin:+10000000006")
+        assert session is None
+
+    async def test_clients_menu_zero_from_list_is_not_back(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """0 from clients menu exits (not back)."""
+        # Start clients flow
+        await console_service.process_message(
+            phone="+10000000007",
+            message="1",
+            session_service=session_service,
+        )
+
+        # Press 0 - should exit, not go back
+        reply = await console_service.process_message(
+            phone="+10000000007",
+            message="0",
+            session_service=session_service,
+        )
+        assert "salido" in reply.lower() or "goodbye" in reply.lower()
+
+        # Session should be cleared
+        session = await session_service.get_session("admin:+10000000007")
+        assert session is None

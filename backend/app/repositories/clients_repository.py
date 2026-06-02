@@ -121,6 +121,42 @@ async def get_active_client_by_tenant_phone(
     return result.scalar_one_or_none()
 
 
+async def get_client_by_tenant_phone(
+    db: AsyncSession, tenant_id: UUID, phone: str
+) -> Client | None:
+    """Get a client by tenant_id and phone regardless of active status."""
+    from app.core.phone import normalize_phone
+
+    canonical = normalize_phone(phone)
+    if canonical is None:
+        canonical = phone
+    variants = [canonical, f"+{canonical}"]
+    result = await db.execute(
+        select(Client)
+        .options(selectinload(Client.user), selectinload(Client.tenant))
+        .where(
+            Client.tenant_id == tenant_id,
+            Client.phone.in_(variants),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_client_by_tenant_lid(
+    db: AsyncSession, tenant_id: UUID, lid: str
+) -> Client | None:
+    """Get a client by tenant_id and whatsapp_lid regardless of active status."""
+    result = await db.execute(
+        select(Client)
+        .options(selectinload(Client.user), selectinload(Client.tenant))
+        .where(
+            Client.tenant_id == tenant_id,
+            Client.whatsapp_lid == lid,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_active_client_by_tenant_lid(
     db: AsyncSession, tenant_id: UUID, lid: str
 ) -> Client | None:
@@ -168,6 +204,8 @@ async def get_clients_with_user(db: AsyncSession, tenant_id: UUID) -> list[Clien
 
 
 __all__ = [
+    "get_client_by_tenant_phone",
+    "get_client_by_tenant_lid",
     "get_active_client_by_tenant_phone",
     "get_active_client_by_tenant_lid",
     "get_client_by_lid",

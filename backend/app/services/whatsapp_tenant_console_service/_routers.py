@@ -54,6 +54,10 @@ async def _route_clients_flow(
         return await self._handle_client_delete_confirm(
             phone, msg, session, session_service, tenant_id, db
         )
+    elif step == self.CLIENTS_STEP_BLOCK_LIST:
+        return await self._handle_clients_block_unblock(
+            phone, msg, session, session_service, tenant_id, db
+        )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)
 
 

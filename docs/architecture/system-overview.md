@@ -20,7 +20,8 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
 - **Redis**: Active-passive HA with circuit-breaker failover for ephemeral WhatsApp session state (Master + Tenant consoles)
 - **Evolution**: External WhatsApp Business API proxy for instance management, webhook registration, and message relay. The deployed server may run Evolution API v2.x (Node/Express) or Evolution Go (Go/Gin); both expose compatible REST contracts.
 - **n8n**: Dual workflow automation - WhatsApp bot webhook bridge + subscription reminder scheduler
-- **WhatsApp Tenant Console**: Phone-based conversational interface for tenant admins (clients, catalog, profile, subscriptions)
+- **WhatsApp Tenant Console**: Phone-based conversational interface for tenant admins (clients, catalog, profile, subscriptions, Client Context Shortcut for remote management)
+- **Client Messaging Blocks**: Tenant-scoped blocks preventing unregistered WhatsApp identities from using the console or code lookup
 - **I18n System**: Python-centered localization with in-memory catalogs (`en`/`es`), English default and fallback, tenant locale persisted in DB, frontend catalog served via REST API
 - **Deployment**: `render.yaml` defines the web service with build/start commands
 

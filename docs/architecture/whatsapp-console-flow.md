@@ -70,8 +70,10 @@ The console endpoint now routes by **WhatsApp instance** before resolving identi
 2. If `instance == MASTER_WHATSAPP_INSTANCE` → master flow only.
 3. If instance belongs to a tenant → resolve tenant by `evolution_instance_name`.
 4. Within tenant context:
-   - Match `tenant.whatsapp_phone` (or `tenant.whatsapp_lid`) → tenant admin flow.
+   - If ``from_me=true`` → route via ``_handle_from_me_routing`` (see below).
+   - Match `tenant.whatsapp_phone` (or `tenant.whatsapp_lid`) → tenant admin flow (after checking active Client Context Shortcut).
    - Match `(tenant_id, phone)` or `(tenant_id, whatsapp_lid)` in `clients` → client flow.
+   - Unregistered identity → check for active unauthenticated code lookup session, check Client Messaging Blocks, route to code lookup for ``codigo``/``código``/``code``, or return ``access_denied``.
 
 ### LID-aware identity path
 
@@ -126,12 +128,165 @@ wa.client.mode_exit
 wa.client.mode_reset
 ```
 
-### Split routing architecture
+## Request/Response Contract
+
+### `WhatsAppConsoleRequest` — Inbound payload
+
+The request schema has been extended to support contextual routing and private administrative responses.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `phone` | string | yes | Normalised phone number of the WhatsApp user |
+| `message` | string | yes | Text of the WhatsApp message |
+| `instance` | string | no | Evolution API instance name for tenant resolution |
+| `sender_lid` | string | no | LID JID string when ``remoteJid`` uses ``@lid`` and no phone JID is resolvable |
+| `from_me` | boolean | no | ``true`` when the message was sent by the admin from their own chat (outgoing trigger) |
+| `admin_phone` | string | no | Phone number of the admin who sent the outgoing trigger |
+| `admin_jid` | string | no | JID of the admin who sent the outgoing trigger; used as ``reply_to`` for contextual replies |
+| `target_jid` | string | no | JID the admin selected as the shortcut target (the client or unregistered contact) |
+| `target_phone` | string | no | Phone number of the shortcut target (never derived from a ``@lid`` value) |
+| `target_lid` | string | no | LID JID of the shortcut target, when only identified via ``@lid`` |
+
+### `WhatsAppConsoleResponse` — Outbound payload
+
+The response schema now includes fields for private routing and silent replies.
+
+| Field | Type | Always present | Description |
+|-------|------|----------------|-------------|
+| `reply` | string | yes | Plain text reply that n8n relays to the user |
+| `status` | string | no | Optional status signal (e.g. ``"closed"`` on exit). Only serialised when non-``None`` |
+| `lookup_job_id` | string | no | Job id for code lookup polling. When present, n8n sends ``reply``, then polls |
+| `tenant_id` | string | no | Tenant UUID for scoped poll requests |
+| `reply_to` | string | no | JID used as the message destination. When present, n8n sends to this JID instead of ``phone`` |
+| `no_reply` | boolean | no | ``true`` means n8n must not send any Evolution API message. Used for silent admin replies or blocked attempts |
+
+When ``no_reply=true``, n8n must skip all Evolution sends entirely (no call to ``/send/text``). When ``reply_to`` is present, n8n sends to that JID rather than the original sender's phone.
+
+## Split routing architecture
 
 To keep endpoint modules maintainable and within team size policy, the console endpoint package was split:
-- `console.py` — entry point, routing, dependency injection (~214 LoC)
-- `console_handlers.py` — individual handler functions (~300 LoC)
+- `console.py` — entry point, routing, dependency injection, and ``_route_by_instance`` logic (~280 LoC)
+- `console_handlers.py` — individual handler functions for master/tenant/client flow, unauthenticated code lookup, and Client Context Shortcut orchestration (~900 LoC)
 - `console_modes.py` — ambiguity mode selection logic
+- `console_context_shortcut.py` — Client Context Shortcut creation flow and active/inactive client menu handlers (~550 LoC)
+
+## From-me Contextual Routing
+
+When ``from_me=true`` in the request, the message was sent by an admin from their own WhatsApp chat (outgoing ``/menu`` trigger). The backend routes these through ``_handle_from_me_routing()`` before the regular identity checks:
+
+1. **Resolve admin identity**: Use ``admin_phone`` if provided, otherwise fall back to ``tenant.whatsapp_phone`` (instance owner).
+2. **Determine target identity**: Normalise ``target_phone`` if available.
+3. **Self-target check**: If the target (phone or JID) matches the admin's own identity, route to the standard Tenant console.
+4. **Active context collision**: If a context session already exists at ``wa:client_ctx:{admin_phone}``, reject with ``no_reply=true`` and ``reply_to=<admin_jid>`` (keeps the rejection private).
+5. **Create context session**: Store a ``ConversationSession`` under ``wa:client_ctx:{admin_phone}`` with 5-minute TTL, setting step to ``menu`` and persisting ``target_phone``, ``target_lid``, ``target_jid``, and ``admin_jid`` in ``temp_data``.
+6. **Return contextual response**: Reply with the context initiation message and ``reply_to=admin_jid`` so n8n sends the reply privately to the admin chat.
+
+## Unauthenticated Code Lookup
+
+Unregistered WhatsApp identities in a known tenant instance can access a limited code-retrieval dialog without authenticating:
+
+1. Messages ``codigo``, ``código``, or ``code`` trigger the flow.
+2. Backend checks for Client Messaging Blocks first — blocked identities receive ``no_reply=true``.
+3. Redis lookup is guarded: if the context/session cache is unavailable, the handler falls back safely instead of failing the webhook.
+4. Session stored under ``session:unreg:{phone}`` or ``session:unreg:{lid}`` for multi-step dialog.
+5. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``.
+5. n8n polls the job and sends the final result.
+6. Non-codigo messages from unregistered identities return ``access_denied``.
+
+## Client Context Shortcut
+
+The Client Context Shortcut is a private admin flow triggered via ``from_me=true`` when an admin selects a non-self target from their WhatsApp chat. It provides contextual management without leaving the chat.
+
+### Session lifecycle
+
+- Session key: ``wa:client_ctx:{admin_phone}``
+- TTL: 5 minutes (only refreshed on valid input)
+- Invalid input does not refresh TTL
+- ``0`` closes the context at any depth
+- Context is checked before routing to Tenant console when the admin is the active sender
+
+### Target resolution
+
+When an admin enters the shortcut, the backend resolves the target identity:
+
+| Target type | Behaviour |
+|-------------|-----------|
+| Unregistered, unblocked | Shows menu: ``1 Crear cliente``, ``2 Bloquear mensajes``, ``0 Cancelar`` |
+| Unregistered, blocked | Shows menu: ``1 Desbloquear mensajes``, ``0 Cancelar`` |
+| Existing active Client | Shows active client menu with subscription shortcut; later messages preserve detail/edit/deactivate steps |
+| Existing inactive Client | Shows inactive client management menu; later messages preserve edit/delete steps |
+
+### Creating flow (unregistered targets)
+
+Multi-step client creation with phone skip or LID-only phone prompt:
+1. ``target_phone`` exists → prefill phone, prompt for name → username → password → confirm.
+2. Only ``target_lid`` exists → prompt for phone first → then proceed as above.
+3. ``0`` at any step cancels creation and clears context.
+4. On successful creation, matching Client Messaging Blocks are cleared automatically.
+
+### Active client menu
+
+| Option | Action |
+|--------|--------|
+| 1 | View client detail (name, username, phone, status). Submenu: 1 Edit data, 2 Deactivate, 0 Back |
+| 2 | Create subscription with client pre-selected (skips client selection in Tenant console) |
+| 0 | Close context |
+
+Phone editing is disabled from the shortcut. Edit supports ``full_name`` and ``local_username`` only.
+
+### Inactive client menu
+
+| Option | Action |
+|--------|--------|
+| 1 | Reactivate client |
+| 2 | Edit data (same fields as active, no phone) |
+| 3 | Delete client permanently (with CONFIRMAR prompt) |
+| 0 | Close context |
+
+Inactive clients cannot be duplicated by contextual creation (they count as existing identities). The subscription shortcut is hidden until reactivation.
+
+## Client Messaging Blocks
+
+Client Messaging Blocks prevent unregistered WhatsApp identities from using the console or code lookup. They are stored in a dedicated tenant-scoped table (``client_messaging_blocks``) rather than on the ``Client`` model because blocks apply only to identities that are not registered as clients.
+
+### Storage
+
+- Table: ``client_messaging_blocks``
+- At least one identity field required (``phone`` or ``whatsapp_lid``)
+- ``is_active`` boolean for soft-delete
+- Tenant-scoped indexes on ``(tenant_id, phone)`` and ``(tenant_id, whatsapp_lid)``
+- Created in migration ``ce10fe74caa10``
+
+### Repository operations
+
+| Operation | Description |
+|-----------|-------------|
+| ``create(db, tenant_id, phone=, whatsapp_lid=)`` | Create an active block |
+| ``list_active(db, tenant_id)`` | List active blocks, newest first |
+| ``find_active(db, tenant_id, phone=, whatsapp_lid=)`` | Find an active block by identity; matches by either identifier when both are provided |
+| ``unblock(db, tenant_id, block_id)`` | Soft-delete a specific block (sets ``is_active=False``) |
+| ``clear_identity(db, tenant_id, phone=, whatsapp_lid=)`` | Deactivate all blocks for an identity; matches by either identifier when both are provided |
+
+### Block enforcement
+
+- Blocked unregistered identities receive ``no_reply=true`` for all messages (``codigo``, ``/menu``, or any other attempt).
+- n8n must not send any message when ``no_reply=true``, keeping the block silent from the user's perspective.
+- Blocks are created immediately without confirmation (from the Context Shortcut).
+- Blocked targets can be unblocked from the Context Shortcut or from the Tenant console Clients menu.
+- When a Client is successfully created for a blocked identity, blocks are cleared automatically.
+
+### Tenant console management
+
+The Clients menu in the Tenant console has been updated:
+
+| Option | Action |
+|--------|--------|
+| 1 | Ver clientes (list clients) |
+| 2 | Crear cliente (create client) |
+| 3 | Bloqueos de mensajes (list and unblock identities) |
+| 9 | Volver al menú principal (back to main menu) |
+
+Option ``3`` lists active Client Messaging Blocks. Selecting a block offers to unblock it. ``9`` returns to the main tenant menu. ``0`` is global exit, not submenu back.
 
 ## Tenant Console
 
@@ -220,9 +375,12 @@ Defines `ClientServiceProtocol`, `CatalogServiceProtocol`, and `SubscriptionServ
 
 - Master conversation state key: `session:{phone}`
 - Tenant conversation state key: `session:admin:{phone}`
-- TTL: 15 minutes
+- Client Context Shortcut key: `wa:client_ctx:{admin_phone}` (5-minute TTL)
+- Unauthenticated code lookup key: `session:unreg:{phone}` or `session:unreg:{lid}` (standard session TTL)
+- TTL: 15 minutes (standard); 5 minutes (context shortcut)
 - `0` is global exit across top-level and active flows
 - Invalid input does not refresh TTL
+- Only valid contextual messages refresh contextual TTL
 
 ## Contingency behavior
 

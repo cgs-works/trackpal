@@ -8,9 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import ApiKeyDbDep
 from app.api.v1.endpoints.integrations.adapter import UNKNOWN_PHONE_REPLY
 from app.api.v1.endpoints.integrations.console_handlers import (
+    _handle_active_client_context,
     _handle_client_console,
     _handle_master_console,
     _handle_tenant_console,
+    _handle_unauthenticated_codigo,
 )
 from app.api.v1.endpoints.integrations.console_modes import _handle_ambiguity
 from app.core.config import settings
@@ -18,10 +20,17 @@ from app.core.database import set_internal_rls_context
 from app.core.i18n import t
 from app.core.phone import normalize_phone
 from app.core.redis_client import RedisConnectionManager, get_redis_manager
-from app.repositories import clients_repository, tenants_repository, users_repository
+from app.models import Tenant
+from app.repositories import (
+    client_messaging_block_repository,
+    clients_repository,
+    tenants_repository,
+    users_repository,
+)
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
+from app.services.whatsapp_session_service import WhatsAppSessionService
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +65,12 @@ async def whatsapp_console(
             sender_lid=sender_lid,
             manager=manager,
             db=db,
+            from_me=bool(request.from_me),
+            admin_phone=request.admin_phone,
+            admin_jid=request.admin_jid,
+            target_jid=request.target_jid,
+            target_phone=request.target_phone,
+            target_lid=request.target_lid,
         )
 
     # Legacy phone-only identification (no instance provided)
@@ -98,6 +113,12 @@ async def _route_by_instance(
     sender_lid: str | None,
     manager: RedisConnectionManager,
     db: AsyncSession,
+    from_me: bool = False,
+    admin_phone: str | None = None,
+    admin_jid: str | None = None,
+    target_jid: str | None = None,
+    target_phone: str | None = None,
+    target_lid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     master_instance = settings.master_whatsapp_instance
 
@@ -129,6 +150,21 @@ async def _route_by_instance(
 
     if not tenant.is_active:
         return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))
+
+    # ── from_me contextual routing ────────────────────────────────
+    if from_me:
+        return await _handle_from_me_routing(
+            message=message,
+            instance=instance,
+            admin_phone=admin_phone,
+            admin_jid=admin_jid,
+            target_jid=target_jid,
+            target_phone=target_phone,
+            target_lid=target_lid,
+            manager=manager,
+            tenant=tenant,
+            db=db,
+        )
 
     phone_digits = normalize_phone(phone) or phone
 
@@ -182,6 +218,17 @@ async def _route_by_instance(
         )
 
     if has_tenant_admin:
+        # Check for active Client Context Shortcut
+        ctx_response = await _handle_active_client_context(
+            phone=phone_digits,
+            message=message,
+            manager=manager,
+            tenant=tenant,
+            db=db,
+            instance=instance,
+        )
+        if ctx_response is not None:
+            return ctx_response
         return await _handle_tenant_console(
             phone=phone,
             message=message,
@@ -209,4 +256,152 @@ async def _route_by_instance(
             locale=client_locale,
         )
 
+    # ── Unregistered identity in a known tenant instance ────────────
+    # Route to code lookup for ``codigo`` keywords, or
+    # return silent ``no_reply`` when the sender is blocked.
+
+    from app.api.v1.endpoints.integrations.console_handlers import (
+        _unauth_session_key,
+    )
+
+    msg_lower = message.strip().lower()
+
+    # Block check first — blocked senders always get silent treatment,
+    # even when they already have an active ``codigo`` session. The block
+    # check must run before any session-resume path so a block applied
+    # mid-flow can no longer be bypassed by continuing the dialog.
+    blocked = await client_messaging_block_repository.find_active(
+        db,
+        tenant.id,
+        phone=phone_digits if phone_digits else None,
+        whatsapp_lid=sender_lid,
+    )
+    if blocked:
+        return WhatsAppConsoleResponse(reply="", no_reply=True)
+
+    # Resume any existing unauthenticated codigo session first so the
+    # multi-step dialog can continue across messages.
+    if msg_lower not in ("codigo", "código", "code"):
+        unauth_key = _unauth_session_key(phone_digits, sender_lid)
+        session_service = WhatsAppSessionService(
+            connection_manager=manager,
+            ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+        )
+        existing = await session_service.get_session(unauth_key)
+        if existing and existing.flow == "codigo":
+            return await _handle_unauthenticated_codigo(
+                phone_digits, message, sender_lid, manager, tenant, db
+            )
+
+    # Only "codigo"/"código"/"code" triggers unauthenticated code lookup
+    if msg_lower in ("codigo", "código", "code"):
+        return await _handle_unauthenticated_codigo(
+            phone_digits, message, sender_lid, manager, tenant, db
+        )
+
     return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))
+
+
+async def _handle_from_me_routing(
+    message: str,
+    instance: str,
+    admin_phone: str | None,
+    admin_jid: str | None,
+    target_jid: str | None,
+    target_phone: str | None,
+    target_lid: str | None,
+    manager: RedisConnectionManager,
+    tenant: Tenant,
+    db: AsyncSession,
+) -> WhatsAppConsoleResponse:
+    """Route a ``from_me=true`` outgoing trigger.
+
+    Called by ``_route_by_instance`` after resolving the tenant but
+    before the regular admin/client identity checks.
+
+    When the target equals the admin's own chat, the message is treated
+    as a normal admin message and routed to the standard Tenant console.
+
+    When the target differs from the admin's chat, a client context
+    shortcut is started with a 5-minute TTL session.  If a context
+    session already exists for this admin, the new trigger is rejected
+    silently via ``no_reply=true`` and ``reply_to=<admin_jid>``.
+    """
+    # ── Step 1: Resolve admin identity ────────────────────────────
+    resolved_admin_phone = normalize_phone(admin_phone) if admin_phone else None
+    if not resolved_admin_phone:
+        # Fall back to tenant's whatsapp_phone
+        if tenant.whatsapp_phone:
+            resolved_admin_phone = normalize_phone(tenant.whatsapp_phone)
+        else:
+            # Cannot identify admin — no further routing possible
+            return WhatsAppConsoleResponse(reply="", no_reply=True)
+
+    assert resolved_admin_phone is not None  # guaranteed by fallback check above
+
+    # ── Step 2: Determine target identity ─────────────────────────
+    target_phone_norm = normalize_phone(target_phone) if target_phone else None
+
+    # ── Step 3: Check if target == admin (self-target) ────────────
+    is_self_target = (
+        (
+            resolved_admin_phone
+            and target_phone_norm
+            and resolved_admin_phone == target_phone_norm
+        )
+        or (admin_jid and target_jid and admin_jid == target_jid)
+        or (
+            resolved_admin_phone
+            and target_jid
+            and target_jid.startswith(f"{resolved_admin_phone}@")
+        )
+    )
+
+    if is_self_target:
+        # Route to standard Tenant console
+        return await _handle_tenant_console(
+            phone=resolved_admin_phone,
+            message=message,
+            instance=instance,
+            manager=manager,
+            db=db,
+        )
+
+    # ── Step 4: Check for existing active context ─────────────────
+    ctx_key = f"wa:client_ctx:{resolved_admin_phone}"
+
+    async def _get_ctx(client):
+        return await client.get(ctx_key)
+
+    existing_raw = await manager.execute("get_context", _get_ctx)
+    if existing_raw:
+        # Active context collision — reject silently
+        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
+
+    # ── Step 5: Create context session ────────────────────────────
+    from app.services.whatsapp_session_service import ConversationSession
+
+    session = ConversationSession(
+        phone=resolved_admin_phone,
+        flow="client_shortcut",
+        step="menu",
+        temp_data={
+            "target_phone": target_phone_norm or target_phone,
+            "target_lid": target_lid,
+            "target_jid": target_jid,
+            "admin_jid": admin_jid,
+        },
+    )
+
+    async def _set_ctx(client):
+        await client.set(ctx_key, session.model_dump_json(), ex=300)
+
+    await manager.execute("set_context", _set_ctx)
+
+    # ── Step 6: Return contextual response with reply_to ─────────
+    return WhatsAppConsoleResponse(
+        reply="✅ Contexto de cliente iniciado.\n\n"
+        "Use las opciones del menú para gestionar este contacto.\n\n"
+        "0️⃣ Cerrar contexto",
+        reply_to=admin_jid,
+    )
