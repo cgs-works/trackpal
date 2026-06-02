@@ -137,3 +137,30 @@ Per prioritization strategy: facades after routing/session behavior. Items 1-5 (
 
 ### Next-iteration notes
 Item 7 (Tenant console Client Messaging Blocks management and 9 back behavior) is the next dependency. Items 2 and 6 add the blocks persistence and context-shortcut block/unblock, but Item 7 exposes block management in the regular Tenant console and fixes the Clients submenu 9 back behavior.
+
+## Iteration 7 — 2026-06-01
+
+### Selected Item
+Item 7: Add regular Tenant console management for Client Messaging Blocks and correct Clients submenu back behavior.
+
+### Why this item was chosen
+Per prioritization strategy: facades after routing/session behavior (Items 5, 6) and before n8n/docs (Items 8, 9). Items 2 and 6 added block persistence and context-shortcut block/unblock, but Item 7 is needed to expose block management in the regular Tenant console and fix the 9-back navigation contract.
+
+### Changed files
+- `backend/app/services/whatsapp_tenant_console_service/constants.py` — Added `CLIENTS_STEP_BLOCK_LIST`, `CLIENTS_STEP_BLOCK_UNBLOCK` step constants and block-related i18n key constants.
+- `backend/app/services/whatsapp_tenant_console_service/_const_mixin.py` — Exported new block step and key constants.
+- `backend/app/services/whatsapp_tenant_console_service/clients_flow.py` — Added `_handle_clients_block_list()` (list active blocks), `_handle_clients_block_unblock()` (unblock by selection). Updated `_handle_client_list_selection()` to handle option 3 (blocks) and 9 (back to main menu). Removed unreachable `msg == "0"` branch.
+- `backend/app/services/whatsapp_tenant_console_service/_routers.py` — Added `CLIENTS_STEP_BLOCK_LIST` routing to block unblock handler.
+- `backend/app/services/whatsapp_tenant_console_service/_assignments.py` — Wired up `_handle_clients_block_list` and `_handle_clients_block_unblock`.
+- `backend/app/services/whatsapp_tenant_console_service/service.py` — Added new block handler assignments to class body.
+- `backend/app/core/i18n/catalogs_es_wa.py` — Updated clients menu with `3️⃣ Bloqueos de mensajes`. Added block i18n keys.
+- `backend/app/core/i18n/catalogs_en_wa.py` — Updated clients menu with `3️⃣ Message blocks`. Added block i18n keys.
+- `backend/tests/test_tenant_console_service.py` — Added 8 tests in `TestClientMessagingBlocks` class: menu shows blocks option, empty block list, block list displays, unblock success, invalid selection, 0 exits (not back), 9 goes back from clients menu, 0 is not back.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1168 passed, 1 skipped in ~27s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+### Next-iteration notes
+Item 8 (n8n workflow updates) is the next dependency. The Tenant console now supports block management and the 9-back contract. Item 8 needs to update the n8n workflow for contextual payloads, reply_to routing, and no_reply silence.

@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from uuid import UUID
 
-from app.core.errors import UserFacingError, translate_error
 
-from . import _context as ctx
-from . import formatters as fmt
 
 
 async def _start_clients_flow(self, phone, session_service, tenant_id, db):
@@ -39,7 +35,13 @@ async def _handle_client_list_selection(self, phone, msg, session, session_servi
         return reply
     elif msg == "2":
         return await self._start_client_create(phone, session_service)
-    elif msg == "0":
+    elif msg == "3":
+        return await self._handle_clients_block_list(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif msg == "9":
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu("")
     else:
         client_id = session.selection_map.get(msg)
@@ -127,3 +129,65 @@ async def _handle_client_detail_action(self, phone, msg, session, session_servic
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
     return ""
+
+
+async def _handle_clients_block_list(
+    self, phone, msg, session, session_service, tenant_id, db
+):
+    from app.repositories import client_messaging_block_repository
+
+    if db is None:
+        return self._t(self.KEY_CLIENT_BLOCK_LIST_EMPTY)
+    blocks = await client_messaging_block_repository.list_active(db, tenant_id)
+    if not blocks:
+        return self._t(self.KEY_CLIENT_BLOCK_LIST_EMPTY)
+
+    lines: list[str] = []
+    selection_map: dict[str, str] = {}
+    for i, block in enumerate(blocks, start=1):
+        identity = block.phone or block.whatsapp_lid or "—"
+        lines.append(f"{i}️⃣ {identity}")
+        selection_map[str(i)] = str(block.id)
+
+    reply = self._t(self.KEY_CLIENT_BLOCK_LIST_HEADER) + "\n".join(lines)
+    reply += "\n\n" + self._t(self.KEY_CLIENT_BLOCK_UNBLOCK_PROMPT)
+
+    if session_service is not None:
+        session.flow = self.CLIENTS_FLOW
+        session.step = self.CLIENTS_STEP_BLOCK_LIST
+        session.selection_map = selection_map
+        await session_service.save_session(session)
+
+    return reply
+
+
+async def _handle_clients_block_unblock(
+    self, phone, msg, session, session_service, tenant_id, db,
+):
+    from app.repositories import client_messaging_block_repository
+
+    if msg == "0":
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._t(self.KEY_CLIENTS_MENU)
+
+    block_id = session.selection_map.get(msg)
+    if not block_id or db is None:
+        return self._t(self.KEY_CLIENT_BLOCK_INVALID_SELECTION)
+
+    parsed_id = self._safe_uuid(block_id)
+    if parsed_id is None:
+        return self._t(self.KEY_CLIENT_BLOCK_INVALID_SELECTION)
+
+    block = await client_messaging_block_repository.unblock(db, tenant_id, parsed_id)
+    if block is None:
+        return self._t(self.KEY_CLIENT_BLOCK_INVALID_SELECTION)
+
+    identity = block.phone or block.whatsapp_lid or "—"
+
+    if session_service is not None:
+        await session_service.clear_session(f"admin:{phone}")
+
+    return self._with_main_menu(
+        self._t(self.KEY_CLIENT_BLOCK_UNBLOCK_SUCCESS, identity=identity)
+    )

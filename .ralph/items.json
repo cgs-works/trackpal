@@ -103,8 +103,8 @@
         "Align Clients flow handlers so 9 is the submenu back command where the UI says 9 and 0 is not treated as the Clients-menu back command.",
         "Add Tenant console service tests for block list, unblock, empty list, and 9 back behavior."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Clients menu shows 1 Ver clientes, 2 Crear cliente, 3 Bloqueos de mensajes, 9 Volver al menú principal. Block list, unblock, and 9-back behavior implemented in clients_flow.py. 9 from clients menu returns to main menu (0 exits globally). 8 new service tests pass. 1168/1168 full test suite passes. Frontend builds clean. n8n workflow JSON valid."
     },
     {
       "category": "functional",

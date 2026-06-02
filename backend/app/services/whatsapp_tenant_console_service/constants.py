@@ -28,6 +28,8 @@ CLIENTS_STEP_EDIT_FIELD = "edit_field"
 CLIENTS_STEP_EDIT_VALUE = "edit_value"
 CLIENTS_STEP_DEACTIVATE_CONFIRM = "deactivate_confirm"
 CLIENTS_STEP_DELETE_CONFIRM = "delete_confirm"
+CLIENTS_STEP_BLOCK_LIST = "block_list"
+CLIENTS_STEP_BLOCK_UNBLOCK = "block_unblock"
 
 CATALOG_FLOW = "catalog"
 CATALOG_STEP_LIST = "list"
@@ -130,6 +132,11 @@ KEY_CLIENT_INVALID_SELECTION = "wa.tenant.clients.invalid_selection"
 KEY_CLIENT_NAME_REQUIRED = "wa.tenant.clients.name_required"
 KEY_CLIENT_USERNAME_REQUIRED = "wa.tenant.clients.username_required"
 KEY_CLIENT_SHORT_PASSWORD = "wa.tenant.clients.short_password"
+KEY_CLIENT_BLOCK_LIST_EMPTY = "wa.tenant.clients.blocks.list_empty"
+KEY_CLIENT_BLOCK_LIST_HEADER = "wa.tenant.clients.blocks.list_header"
+KEY_CLIENT_BLOCK_UNBLOCK_PROMPT = "wa.tenant.clients.blocks.unblock_prompt"
+KEY_CLIENT_BLOCK_UNBLOCK_SUCCESS = "wa.tenant.clients.blocks.unblock_success"
+KEY_CLIENT_BLOCK_INVALID_SELECTION = "wa.tenant.clients.blocks.invalid_selection"
 CLIENT_SKIP_WORDS = {"—", "skip", "ninguno", "none", "-"}
 
 # -- Catalog constants ---------------------------------------------------
