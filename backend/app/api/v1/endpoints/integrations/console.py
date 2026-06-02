@@ -373,9 +373,22 @@ async def _handle_from_me_routing(
     async def _get_ctx(client):
         return await client.get(ctx_key)
 
+    async def _del_ctx(client):
+        await client.delete(ctx_key)
+
     existing_raw = await manager.execute("get_context", _get_ctx)
     if existing_raw:
-        # Active context collision — reject silently
+        # Existing context. If the admin's own message is "0"/"salir"/"cerrar"
+        # from their private chat, close the context cleanly so future
+        # /menu triggers don't collide.
+        if message.strip().lower() in ("0", "salir", "cerrar"):
+            await manager.execute("clear_context", _del_ctx)
+            return WhatsAppConsoleResponse(
+                reply="❌ Contexto cerrado.",
+                reply_to=admin_jid,
+                close_jid=admin_jid,
+            )
+        # Otherwise, reject silently (collision)
         return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
 
     # ── Step 5: Render real contextual menu ───────────────────────
@@ -411,5 +424,9 @@ async def _handle_from_me_routing(
 
     await manager.execute("set_context", _set_ctx)
 
-    # ── Step 6: Return contextual response with reply_to ─────────
-    return WhatsAppConsoleResponse(reply=reply, reply_to=admin_jid)
+    # ── Step 6: Return contextual response with reply_to and close_jid ─
+    # close_jid tells n8n which chat to close when the admin sends
+    # "0"/"salir"/"cerrar" in the client-shortcut flow.
+    return WhatsAppConsoleResponse(
+        reply=reply, reply_to=admin_jid, close_jid=admin_jid
+    )

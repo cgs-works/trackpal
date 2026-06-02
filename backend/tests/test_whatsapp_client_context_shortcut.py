@@ -256,3 +256,59 @@ async def test_from_me_self_menu_routes_to_tenant_console(
     body = response.json()
     # Must NOT show the client context menu
     assert "Gestión del cliente" not in body.get("reply", "")
+
+
+async def test_context_close_cleans_redis_session(
+    client, db_session, active_tenant_user
+):
+    """Closing a client context via option 0 must delete the Redis
+    session key so future /menu triggers don't collide."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_jid = f"{admin_phone}@s.whatsapp.net"
+    target_external_phone = "+12015559999"
+    ctx_key = f"wa:client_ctx:{admin_phone}"
+
+    fake_mgr = _FakeManager(used_backup=False)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # First /menu creates the context
+        resp1 = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={
+                "phone": admin_phone,
+                "message": "/menu",
+                "instance": "test-tenant-instance",
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": admin_jid,
+                "target_phone": target_external_phone,
+                "target_jid": f"{target_external_phone}@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "close_jid" in resp1.json()
+        close_jid = resp1.json()["close_jid"]
+
+        # Send option 0 to close (simulating admin response in private chat)
+        resp2 = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={
+                "phone": admin_phone,
+                "message": "0",
+                "instance": "test-tenant-instance",
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": close_jid,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+
+    # After close, the Redis key must be gone
+    remaining = await fake_mgr._redis.get(ctx_key)
+    assert remaining is None, "Redis session key should be deleted on close"
