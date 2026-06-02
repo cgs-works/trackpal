@@ -15,7 +15,7 @@ Per prioritization strategy: public schemas first as they unblock later routing,
 ### Verification commands and results
 1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1101 passed, 1 skipped in 29s ✓
 2. `cd frontend && npm run build` — Build successful ✓
-3. `python -m json.tool "n8n/Trackpal WhatsApp Bot.json"` — Valid JSON ✓
+3. `python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
 
 ### Fix applied
 Sequential pytest took ~165s, exceeding the harness timeout. Installed `pytest-xdist` and switched to
@@ -23,6 +23,10 @@ parallel execution with `-n auto --dist loadscope` (keeps per-file tests on same
 SQLite shared-state races), reducing runtime to ~33s. The verification gate command was updated
 in `.ralph/items.json` accordingly. Further refined to `-n 8 --no-header -q` to minimize
 output piping overhead, achieving ~29s runtime.
+
+Also replaced `python -m json.tool` (which pretty-prints the entire 21K file to stdout,
+overflowing the harness pipe buffer) with a silent Python one-liner that just validates
+and prints "valid".
 
 ### Next-iteration notes
 Item 2 (Client Messaging Block persistence) is the next dependency. The request/response contract is now ready for routing and block enforcement.

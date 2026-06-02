@@ -13,7 +13,7 @@
       },
       {
         "name": "n8n workflow json validity",
-        "command": "python -m json.tool \"n8n/Trackpal WhatsApp Bot.json\""
+        "command": "cd backend && python -c \"import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')\""
       }
     ],
     "require_progress_append": true,
@@ -47,7 +47,7 @@
       "category": "functional",
       "description": "Implement unauthenticated client-side code lookup for unregistered identities with Client Messaging Block enforcement.",
       "steps": [
-        "Route unregistered identities in a known tenant instance to code lookup only when they send codigo, código, or code.",
+        "Route unregistered identities in a known tenant instance to code lookup only when they send codigo, codigo, or code.",
         "Return no_reply=true for blocked unregistered identities on codigo, /menu, or any other client-side console attempt.",
         "Preserve existing registered Client profile/subscription behavior and ensure inactive Clients do not fall back to unauthenticated code lookup.",
         "Add tests proving unregistered code lookup asks for service then email, sends lookup replies to the requester, and blocked attempts stay silent."
@@ -98,7 +98,7 @@
       "category": "functional",
       "description": "Add regular Tenant console management for Client Messaging Blocks and correct Clients submenu back behavior.",
       "steps": [
-        "Update the Clients menu to show 1 Ver clientes, 2 Crear cliente, 3 Bloqueos de mensajes, and 9 Volver al menú principal.",
+        "Update the Clients menu to show 1 Ver clientes, 2 Crear cliente, 3 Bloqueos de mensajes, and 9 Volver al menu principal.",
         "Add a Clients-section flow to list active Client Messaging Blocks and unblock a selected identity.",
         "Align Clients flow handlers so 9 is the submenu back command where the UI says 9 and 0 is not treated as the Clients-menu back command.",
         "Add Tenant console service tests for block list, unblock, empty list, and 9 back behavior."
