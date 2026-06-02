@@ -17,6 +17,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import t
 from app.core.errors import UserFacingError, translate_error
 from app.core.input_validation import (
     validate_client_local_username,
@@ -25,7 +26,7 @@ from app.core.input_validation import (
 )
 from app.models import Client as _ClientModel
 from app.models import Tenant as _TenantModel
-from app.repositories import client_messaging_block_repository, clients_repository
+from app.repositories import blocked_clients_repository, clients_repository
 from app.schemas.client import ClientCreate
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.client_service import ClientService
@@ -285,7 +286,7 @@ async def handle_ctx_creating_confirm(
 
     # Clear any matching blocks for the identity
     try:
-        await client_messaging_block_repository.clear_identity(
+        await blocked_clients_repository.clear_identity(
             db,
             tenant_id=tenant.id,
             phone=target_phone_norm,
@@ -902,6 +903,106 @@ async def _start_context_subscription(
     )
 
 
+# ====================================================================
+# Menu renderer helpers
+# ====================================================================
+
+
+def _phone_label(phone: str | None) -> str:
+    """Strip leading ``+`` from phone for display."""
+    return (phone or "").lstrip("+")
+
+
+async def render_initial_context_menu(
+    *,
+    db: AsyncSession,
+    tenant: _TenantModel,
+    target_phone: str | None,
+    target_lid: str | None,
+    target_jid: str | None,
+) -> tuple[str, dict[str, str]]:
+    """Render the initial contextual menu based on target state.
+
+    Queries the target identity state (existing client, blocked, unregistered)
+    and returns the appropriate i18n-backed menu with metadata for the
+    context payload.
+
+    Returns ``(rendered_text, metadata_dict)``.
+    """
+    locale = getattr(tenant, "locale", None) or "es"
+    identity = _phone_label(target_phone)
+
+    # ── Check if target is an existing client ────────────────────────
+    client = None
+    if target_phone:
+        client = await clients_repository.get_client_by_tenant_phone(
+            db, tenant.id, target_phone
+        )
+    if client is None and target_lid:
+        client = await clients_repository.get_client_by_tenant_lid(
+            db, tenant.id, target_lid
+        )
+
+    if client is not None:
+        status_key = (
+            "wa.tenant.clients.detail.status_active"
+            if client.is_active
+            else "wa.tenant.clients.detail.status_inactive"
+        )
+        key = (
+            "wa.tenant.client_context.menu.active"
+            if client.is_active
+            else "wa.tenant.client_context.menu.inactive"
+        )
+        variant = "existing_active" if client.is_active else "existing_inactive"
+        return t(
+            locale,
+            key,
+            identity=identity,
+            client_name=client.full_name,
+            status=t(locale, status_key),
+        ), {
+            "target_state": variant,
+            "menu_variant": variant,
+            "client_id": str(client.id),
+            "identity": identity,
+            "locale": locale,
+        }
+
+    # ── Check if target is a blocked identity ────────────────────────
+    block = await blocked_clients_repository.find_active(
+        db,
+        tenant.id,
+        phone=target_phone,
+        whatsapp_lid=target_lid,
+    )
+    if block is not None:
+        key = (
+            "wa.tenant.client_context.menu.blocked_with_phone"
+            if target_phone
+            else "wa.tenant.client_context.menu.blocked_lid_only"
+        )
+        return t(locale, key, identity=identity, client_name="", status=""), {
+            "target_state": "unregistered_blocked",
+            "menu_variant": "blocked",
+            "identity": identity,
+            "locale": locale,
+        }
+
+    # ── Unregistered unblocked target ────────────────────────────────
+    key = (
+        "wa.tenant.client_context.menu.unregistered_with_phone"
+        if target_phone
+        else "wa.tenant.client_context.menu.unregistered_lid_only"
+    )
+    return t(locale, key, identity=identity, client_name="", status=""), {
+        "target_state": "unregistered_unblocked",
+        "menu_variant": "unregistered",
+        "identity": identity,
+        "locale": locale,
+    }
+
+
 __all__ = [
     "handle_ctx_creating_first",
     "handle_ctx_creating_phone",
@@ -918,4 +1019,5 @@ __all__ = [
     "handle_ctx_inactive_edit_field",
     "handle_ctx_inactive_edit_value",
     "handle_ctx_inactive_delete_confirm",
+    "render_initial_context_menu",
 ]

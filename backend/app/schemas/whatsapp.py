@@ -64,6 +64,9 @@ class WhatsAppConsoleResponse(BaseModel):
             message at all.  Used for silent administrative replies
             or blocked attempts where no user-facing message should
             be sent.
+        close_jid: Optional JID n8n must close in Evolution when
+            ``status`` requests session close. This disambiguates
+            admin private chat from target/client chat.
     """
 
     reply: str
@@ -72,6 +75,7 @@ class WhatsAppConsoleResponse(BaseModel):
     tenant_id: str | None = None
     reply_to: str | None = None
     no_reply: bool | None = None
+    close_jid: str | None = None
 
     @model_serializer
     def ser_model(self) -> dict:
@@ -86,4 +90,6 @@ class WhatsAppConsoleResponse(BaseModel):
             d["reply_to"] = self.reply_to
         if self.no_reply is not None:
             d["no_reply"] = self.no_reply
+        if self.close_jid is not None:
+            d["close_jid"] = self.close_jid
         return d

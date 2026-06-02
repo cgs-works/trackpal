@@ -31,7 +31,7 @@
 - Modify: `backend/app/schemas/whatsapp.py`
 - Test: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Write failing serializer test**
+- [x] **Step 1: Write failing serializer test**
 
 Append test:
 
@@ -55,7 +55,7 @@ def test_whatsapp_console_response_serializes_close_jid():
     }
 ```
 
-- [ ] **Step 2: Run failing test**
+- [x] **Step 2: Run failing test**
 
 ```bash
 cd backend
@@ -64,7 +64,7 @@ uv run pytest tests/test_whatsapp_endpoint.py::test_whatsapp_console_response_se
 
 Expected: fail because `close_jid` is unexpected/missing.
 
-- [ ] **Step 3: Implement schema field**
+- [x] **Step 3: Implement schema field**
 
 In `WhatsAppConsoleResponse`, add field and serializer branch:
 
@@ -85,7 +85,7 @@ Update docstring with:
             admin private chat from target/client chat.
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 cd backend
@@ -94,7 +94,7 @@ uv run pytest tests/test_whatsapp_endpoint.py::test_whatsapp_console_response_se
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/schemas/whatsapp.py backend/tests/test_whatsapp_endpoint.py
@@ -110,70 +110,12 @@ git commit -m "feat: add WhatsApp close_jid response contract"
 - Modify: model/repository files that currently define `client_messaging_blocks`
 - Test: `backend/tests/test_whatsapp_client_context_shortcut.py`
 
-- [ ] **Step 1: Locate current model/repository names**
-
-```bash
-rg "client_messaging_blocks|ClientMessagingBlock|client_messaging_block" backend/app backend/alembic backend/tests -n
-```
-
-Expected: returns model, repository, migration, and imports to rename.
-
-- [ ] **Step 2: Write failing terminology/import test**
-
-Add a focused test that imports the renamed repository and verifies the table name:
-
-```python
-def test_blocked_clients_repository_uses_new_table_name():
-    from app.models.blocked_client import BlockedClient
-
-    assert BlockedClient.__tablename__ == "blocked_clients"
-```
-
-- [ ] **Step 3: Create migration**
-
-Migration body must preserve data:
-
-```python
-def upgrade() -> None:
-    op.rename_table("client_messaging_blocks", "blocked_clients")
-    op.execute("ALTER INDEX IF EXISTS ix_client_messaging_blocks_tenant_phone RENAME TO ix_blocked_clients_tenant_phone")
-    op.execute("ALTER INDEX IF EXISTS ix_client_messaging_blocks_tenant_lid RENAME TO ix_blocked_clients_tenant_lid")
-
-
-def downgrade() -> None:
-    op.rename_table("blocked_clients", "client_messaging_blocks")
-    op.execute("ALTER INDEX IF EXISTS ix_blocked_clients_tenant_phone RENAME TO ix_client_messaging_blocks_tenant_phone")
-    op.execute("ALTER INDEX IF EXISTS ix_blocked_clients_tenant_lid RENAME TO ix_client_messaging_blocks_tenant_lid")
-```
-
-Adjust exact index names after reading current migration/model.
-
-- [ ] **Step 4: Rename code symbols**
-
-Use these domain names:
-
-```python
-class BlockedClient(Base):
-    __tablename__ = "blocked_clients"
-```
-
-Repository module should be named `blocked_clients_repository.py` or exported as `blocked_clients_repository` from `app.repositories`.
-
-- [ ] **Step 5: Verify**
-
-```bash
-cd backend
-uv run pytest tests/test_whatsapp_client_context_shortcut.py::test_blocked_clients_repository_uses_new_table_name -v
-```
-
-Expected: pass.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add backend/app backend/alembic backend/tests/test_whatsapp_client_context_shortcut.py
-git commit -m "refactor: rename client access blocks to blocked clients"
-```
+- [x] **Step 1: Locate current model/repository names**
+- [x] **Step 2: Write failing terminology/import test**
+- [x] **Step 3: Create migration**
+- [x] **Step 4: Rename code symbols**
+- [x] **Step 5: Verify**
+- [x] **Step 6: Commit** (09f5d98)
 
 ---
 
@@ -184,7 +126,7 @@ git commit -m "refactor: rename client access blocks to blocked clients"
 - Modify: `backend/app/core/i18n/catalogs_es_wa.py`
 - Test: `backend/tests/test_whatsapp_client_context_shortcut.py`
 
-- [ ] **Step 1: Write failing i18n key test**
+- [x] **Step 1: Write failing i18n key test**
 
 Create/append:
 
@@ -216,7 +158,7 @@ def test_client_context_i18n_keys_exist_in_en_and_es():
             assert "Gestión del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled"))
 ```
 
-- [ ] **Step 2: Run failing test**
+- [x] **Step 2: Run failing test**
 
 ```bash
 cd backend
@@ -225,7 +167,7 @@ uv run pytest tests/test_whatsapp_client_context_shortcut.py::test_client_contex
 
 Expected: fail because keys missing.
 
-- [ ] **Step 3: Add EN keys**
+- [x] **Step 3: Add EN keys**
 
 Insert in `_CATALOG_EN_WA` near tenant client keys:
 
@@ -245,7 +187,7 @@ Insert in `_CATALOG_EN_WA` near tenant client keys:
     "wa.tenant.client_context.unblock_access.success": "✅ Access unblocked for *{identity}*.",
 ```
 
-- [ ] **Step 4: Add ES keys**
+- [x] **Step 4: Add ES keys**
 
 Insert equivalent in `_CATALOG_ES_WA`:
 
@@ -265,7 +207,7 @@ Insert equivalent in `_CATALOG_ES_WA`:
     "wa.tenant.client_context.unblock_access.success": "✅ Acceso desbloqueado para *{identity}*.",
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```bash
 cd backend
@@ -274,12 +216,10 @@ uv run pytest tests/test_whatsapp_client_context_shortcut.py::test_client_contex
 
 Expected: pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit** (8461cf9)
 
-```bash
-git add backend/app/core/i18n/catalogs_en_wa.py backend/app/core/i18n/catalogs_es_wa.py backend/tests/test_whatsapp_client_context_shortcut.py
-git commit -m "feat: localize client context shortcut messages"
 ```
+
 
 ---
 
@@ -290,7 +230,7 @@ git commit -m "feat: localize client context shortcut messages"
 - Modify: `backend/app/api/v1/endpoints/integrations/console_context_shortcut.py`
 - Test: `backend/tests/test_whatsapp_client_context_shortcut.py`
 
-- [ ] **Step 1: Write failing unregistered menu test**
+- [x] **Step 1: Write failing unregistered menu test**
 
 Add test using existing async client fixtures/patterns from `test_whatsapp_endpoint.py`:
 
@@ -323,7 +263,7 @@ async def test_from_me_external_menu_returns_private_unregistered_context_menu(a
 
 If fixture names differ, mirror existing endpoint fixtures exactly.
 
-- [ ] **Step 2: Run failing test**
+- [x] **Step 2: Run failing test**
 
 ```bash
 cd backend
@@ -332,7 +272,7 @@ uv run pytest tests/test_whatsapp_client_context_shortcut.py::test_from_me_exter
 
 Expected: fail because backend returns generic context-started text.
 
-- [ ] **Step 3: Add menu renderer helper**
+- [x] **Step 3: Add menu renderer helper**
 
 In `console_context_shortcut.py`, add:
 
@@ -406,7 +346,7 @@ async def render_initial_context_menu(
 
 If repository function names differ, use existing exact functions from `clients_repository.py`.
 
-- [ ] **Step 4: Call renderer when creating context**
+- [x] **Step 4: Call renderer when creating context**
 
 In `_handle_from_me_routing`, replace generic reply with:
 
@@ -442,7 +382,7 @@ Return:
     return WhatsAppConsoleResponse(reply=reply, reply_to=admin_jid)
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```bash
 cd backend
@@ -451,11 +391,8 @@ uv run pytest tests/test_whatsapp_client_context_shortcut.py::test_from_me_exter
 
 Expected: pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit** (d8f601f)
 
-```bash
-git add backend/app/api/v1/endpoints/integrations/console.py backend/app/api/v1/endpoints/integrations/console_context_shortcut.py backend/tests/test_whatsapp_client_context_shortcut.py
-git commit -m "fix: show private client-management menu on shortcut start"
 ```
 
 ---
@@ -533,25 +470,13 @@ Replace self-target block with:
     )
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify** (test passes without code changes per user decision)
 
-```bash
-cd backend
-uv run pytest tests/test_whatsapp_client_context_shortcut.py::test_from_me_self_menu_routes_to_tenant_console -v
-```
-
-Expected: pass.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add backend/app/api/v1/endpoints/integrations/console.py backend/tests/test_whatsapp_client_context_shortcut.py
-git commit -m "fix: route tenant self menu away from client shortcut"
-```
+- [x] **Step 5: Commit** (db31a42 — test only)
 
 ---
 
-### Task 6: Close context + Tenant session + correct Evolution JID
+### Task 6: Close context + Tenant session + correct Evolution JID (✅ f8c4cab)
 
 **Files:**
 - Modify: `backend/app/api/v1/endpoints/integrations/console_handlers.py`
@@ -648,7 +573,7 @@ git commit -m "fix: close client context and tenant session together"
 
 ---
 
-### Task 7: Redis read optimization in active context path
+### Task 7: Redis read optimization in active context path (✅ 46dba46)
 
 **Files:**
 - Modify: `backend/app/api/v1/endpoints/integrations/console_handlers.py`
@@ -730,7 +655,7 @@ git commit -m "perf: reduce Redis reads in client context routing"
 
 ---
 
-### Task 8: n8n preserves `close_jid` and closes correct chat
+### Task 8: n8n preserves `close_jid` and closes correct chat (✅ efe7041)
 
 **Files:**
 - Modify: `n8n/Trackpal WhatsApp Bot.json`
@@ -786,7 +711,7 @@ git commit -m "fix: close contextual WhatsApp session by explicit JID"
 
 ---
 
-### Task 9: Sync PRD and architecture docs
+### Task 9: Sync PRD and architecture docs (✅)
 
 **Files:**
 - Modify: `docs/superpowers/prds/client-context-shortcut.md`
@@ -837,12 +762,12 @@ git commit -m "docs: clarify client context shortcut repair contract"
 
 ---
 
-### Task 10: Full verification
+### Task 10: Full verification (✅ 368 passed)
 
 **Files:**
 - All modified files
 
-- [ ] **Step 1: Run focused backend tests**
+- [x] **Step 1: Run focused backend tests (72 passed)**
 
 ```bash
 cd backend
@@ -851,32 +776,13 @@ uv run pytest tests/test_whatsapp_client_context_shortcut.py tests/test_whatsapp
 
 Expected: all pass.
 
-- [ ] **Step 2: Run broader WhatsApp tests**
+- [x] **Step 2: Run broader WhatsApp tests (368 passed)**
 
-```bash
-cd backend
-uv run pytest tests/test_whatsapp_*.py -v
-```
+- [x] **Step 3: Validate workflow JSON (valid)**
 
-Expected: all pass.
+- [x] **Step 4: Inspect final diff (19 files, 796 insertions)**
 
-- [ ] **Step 3: Validate workflow JSON**
-
-```bash
-python -m json.tool "n8n/Trackpal WhatsApp Bot.json" > /tmp/trackpal-workflow.json
-```
-
-Expected: exit 0.
-
-- [ ] **Step 4: Inspect final diff**
-
-```bash
-git diff --stat
-```
-
-Expected: only planned files changed.
-
-- [ ] **Step 5: Final commit if any verification-only fixes occurred**
+- [x] **Step 5: Final commit (0e5efb3)**
 
 ```bash
 git status --short

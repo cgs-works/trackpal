@@ -70,7 +70,7 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── client.py
-│   │   ├── client_messaging_block.py        # Tenant-scoped Client Messaging Blocks for unregistered identities
+│   │   ├── blocked_client.py               # Tenant-scoped blocked clients for unregistered identities (renamed from client_messaging_block)
 │   │   ├── code_service_global_status.py    # Global code-service activation
 │   │   ├── tenant_mailbox.py
 │   │   ├── tenant_code_service_selection.py # Per-tenant code-service selection
@@ -86,7 +86,7 @@ backend/
 │   ├── repositories/              # Data access layer (migrated from crud/)
 │   │   ├── __init__.py
 │   │   ├── catalog_repository.py
-│   │   ├── client_messaging_block_repository.py  # Client Messaging Block CRUD + block enforcement
+│   │   ├── blocked_clients_repository.py   # Blocked client CRUD + block enforcement (renamed from client_messaging_block_repository)
 │   │   ├── clients_repository.py
 │   │   ├── code_services_repository.py      # Code-service global + tenant data
 │   │   ├── mailbox_config_repository.py
@@ -155,7 +155,8 @@ backend/
 │       ├── cdbfefe74caa6_add_target_email_and_fix_dedupe_unique.py
 │       ├── cdbfefe74caa7_add_rls_to_core_and_mail_tables.py  # RLS on core + mailbox tables
 │       ├── cdc0fe74caa8_add_code_service_tables.py  # Code-service governance tables
-│       └── ce10fe74caa10_add_client_messaging_blocks_table.py  # Client Messaging Blocks table
+│       ├── ce10fe74caa10_add_client_messaging_blocks_table.py  # Client Messaging Blocks table (renamed to blocked_clients in ce10fe74caa11)
+│       └── ce10fe74caa11_rename_client_messaging_blocks_to_blocked_clients.py  # Rename to blocked_clients
 ├── scripts/
 │   └── seed.py
 ├── tests/

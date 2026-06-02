@@ -22,7 +22,7 @@ from app.core.phone import normalize_phone
 from app.core.redis_client import RedisConnectionManager, get_redis_manager
 from app.models import Tenant
 from app.repositories import (
-    client_messaging_block_repository,
+    blocked_clients_repository,
     clients_repository,
     tenants_repository,
     users_repository,
@@ -270,7 +270,7 @@ async def _route_by_instance(
     # even when they already have an active ``codigo`` session. The block
     # check must run before any session-resume path so a block applied
     # mid-flow can no longer be bypassed by continuing the dialog.
-    blocked = await client_messaging_block_repository.find_active(
+    blocked = await blocked_clients_repository.find_active(
         db,
         tenant.id,
         phone=phone_digits if phone_digits else None,
@@ -373,23 +373,52 @@ async def _handle_from_me_routing(
     async def _get_ctx(client):
         return await client.get(ctx_key)
 
+    async def _del_ctx(client):
+        await client.delete(ctx_key)
+        await client.delete(f"session:admin:{resolved_admin_phone}")
+
     existing_raw = await manager.execute("get_context", _get_ctx)
     if existing_raw:
-        # Active context collision — reject silently
+        # Existing context. If the admin's own message is "0"/"salir"/"cerrar"
+        # from their private chat, close the context cleanly so future
+        # /menu triggers don't collide.
+        if message.strip().lower() in ("0", "salir", "cerrar"):
+            await manager.execute("clear_context", _del_ctx)
+            locale = getattr(tenant, "locale", "es") or "es"
+            return WhatsAppConsoleResponse(
+                reply=t(locale, "wa.tenant.client_context.closed"),
+                status="closed",
+                reply_to=admin_jid,
+                close_jid=admin_jid,
+            )
+        # Otherwise, reject silently (collision)
         return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
 
-    # ── Step 5: Create context session ────────────────────────────
+    # ── Step 5: Render real contextual menu ───────────────────────
+    from app.api.v1.endpoints.integrations.console_context_shortcut import (
+        render_initial_context_menu,
+    )
     from app.services.whatsapp_session_service import ConversationSession
+
+    reply, context_meta = await render_initial_context_menu(
+        db=db,
+        tenant=tenant,
+        target_phone=target_phone_norm or target_phone,
+        target_lid=target_lid,
+        target_jid=target_jid,
+    )
 
     session = ConversationSession(
         phone=resolved_admin_phone,
         flow="client_shortcut",
         step="menu",
         temp_data={
+            "tenant_id": str(tenant.id),
             "target_phone": target_phone_norm or target_phone,
             "target_lid": target_lid,
             "target_jid": target_jid,
             "admin_jid": admin_jid,
+            **context_meta,
         },
     )
 
@@ -398,10 +427,9 @@ async def _handle_from_me_routing(
 
     await manager.execute("set_context", _set_ctx)
 
-    # ── Step 6: Return contextual response with reply_to ─────────
+    # ── Step 6: Return contextual response with reply_to and close_jid ─
+    # close_jid tells n8n which chat to close when the admin sends
+    # "0"/"salir"/"cerrar" in the client-shortcut flow.
     return WhatsAppConsoleResponse(
-        reply="✅ Contexto de cliente iniciado.\n\n"
-        "Use las opciones del menú para gestionar este contacto.\n\n"
-        "0️⃣ Cerrar contexto",
-        reply_to=admin_jid,
+        reply=reply, reply_to=admin_jid, close_jid=admin_jid
     )

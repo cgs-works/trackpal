@@ -224,9 +224,9 @@ Unique constraints/indexes:
 - Partial unique index when `message_id IS NOT NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `message_id`, `fingerprint`)
 - Partial unique index when `message_id IS NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `fingerprint`)
 
-### `ClientMessagingBlock` — `client_messaging_blocks` table
+### `BlockedClient` — `blocked_clients` table
 
-Tenant-scoped block for unregistered WhatsApp identities that should not receive console replies.
+Tenant-scoped block for unregistered WhatsApp identities that should not receive console replies. Renamed from `client_messaging_blocks` to clarify it blocks system access (console, codes, profile, subscriptions), not only messages.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -292,6 +292,7 @@ Alembic migrations:
 14. `cdbfefe74caa7` — Enable/force RLS on core auth and mailbox tables (`users`, `refresh_sessions`, `master_profiles`, `mail_lookup_jobs`, `mail_code_delivery_log`, `alembic_version`)
 15. `cdc0fe74caa8` — Add `code_service_global_status` and `tenant_code_service_selections` with RLS policies and seeded default service keys
 16. `ce10fe74caa10` — Add `client_messaging_blocks` table with tenant-scoped indexes
+17. `ce10fe74caa11` — Rename `client_messaging_blocks` to `blocked_clients`, update indexes and constraints
 
 ## Key Constraints
 

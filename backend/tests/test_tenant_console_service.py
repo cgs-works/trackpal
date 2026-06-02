@@ -2283,12 +2283,12 @@ class TestNavigationContract:
 
 
 # ===================================================================
-# Client Messaging Blocks — Tenant Console
+# Blocked Clients — Tenant Console
 # ===================================================================
 
 
 @pytest.mark.asyncio
-class TestClientMessagingBlocks:
+class TestBlockedClients:
     """Block list/unblock from the Tenant console clients menu (option 3)."""
 
     async def test_clients_menu_shows_blocks_option(
@@ -2310,7 +2310,7 @@ class TestClientMessagingBlocks:
     ) -> None:
         """Option 3 with no active blocks shows empty message."""
         tenant_id = uuid4()
-        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+        with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[])
 
             # Start clients flow
@@ -2349,7 +2349,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+        with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
             # Start clients flow
@@ -2396,7 +2396,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+        with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
             mock_repo.unblock = AsyncMock(return_value=fake_block)
 
@@ -2458,7 +2458,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+        with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
             # Start clients flow & show blocks
@@ -2503,7 +2503,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
+        with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
             # Start clients flow & show blocks

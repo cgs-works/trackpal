@@ -112,7 +112,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply } }];"
+        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid } }];"
       },
       "id": "d51d43de-ca7e-4066-acee-7db288c7b9a9",
       "name": "Merge & lookup data",
@@ -217,7 +217,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ remoteJid: String($json.remoteJid), status: \"closed\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ remoteJid: String($json.close_jid || $json.reply_to || $json.remoteJid), status: \"closed\" }) }}",
         "options": {
           "response": {
             "response": {

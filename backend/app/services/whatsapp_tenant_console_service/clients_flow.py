@@ -143,11 +143,11 @@ async def _handle_client_detail_action(
 async def _handle_clients_block_list(
     self, phone, msg, session, session_service, tenant_id, db
 ):
-    from app.repositories import client_messaging_block_repository
+    from app.repositories import blocked_clients_repository
 
     if db is None:
         return self._t(self.KEY_CLIENT_BLOCK_LIST_EMPTY)
-    blocks = await client_messaging_block_repository.list_active(db, tenant_id)
+    blocks = await blocked_clients_repository.list_active(db, tenant_id)
     if not blocks:
         return self._t(self.KEY_CLIENT_BLOCK_LIST_EMPTY)
 
@@ -179,7 +179,7 @@ async def _handle_clients_block_unblock(
     tenant_id,
     db,
 ):
-    from app.repositories import client_messaging_block_repository
+    from app.repositories import blocked_clients_repository
 
     if msg == "0":
         if session_service is not None:
@@ -194,7 +194,7 @@ async def _handle_clients_block_unblock(
     if parsed_id is None:
         return self._t(self.KEY_CLIENT_BLOCK_INVALID_SELECTION)
 
-    block = await client_messaging_block_repository.unblock(db, tenant_id, parsed_id)
+    block = await blocked_clients_repository.unblock(db, tenant_id, parsed_id)
     if block is None:
         return self._t(self.KEY_CLIENT_BLOCK_INVALID_SELECTION)
 
