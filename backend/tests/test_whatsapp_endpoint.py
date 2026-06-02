@@ -14,7 +14,7 @@ from app.api.v1.endpoints.integrations import _TenantConsoleAdapter
 from app.core.config import settings
 from app.models import (
     Client,
-    ClientMessagingBlock,
+    BlockedClient,
     CodeServiceGlobalStatus,
     MasterProfile,
     Tenant,
@@ -1060,7 +1060,7 @@ async def test_unregistered_identity_blocked_returns_no_reply(
     tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     # Create active block for the identity
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1096,7 +1096,7 @@ async def test_unregistered_identity_blocked_any_message_no_reply(
     """Blocked unregistered identity receives no_reply=true for /menu too."""
     tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1171,7 +1171,7 @@ async def test_blocked_unregistered_with_existing_codigo_session_returns_no_repl
     _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     # Pre-existing active block for the identity
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=_tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1664,7 +1664,7 @@ async def test_context_shortcut_blocked_menu_shows_unblock(
     admin_phone_digits = "12015550002"
 
     # Create an active block for the target
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1767,10 +1767,10 @@ async def test_context_shortcut_bloquear_creates_block(
 
     # Verify block was created in DB
     result = await db_session.execute(
-        select(ClientMessagingBlock).where(
-            ClientMessagingBlock.tenant_id == tenant.id,
-            ClientMessagingBlock.phone == "12015559999",
-            ClientMessagingBlock.is_active,
+        select(BlockedClient).where(
+            BlockedClient.tenant_id == tenant.id,
+            BlockedClient.phone == "12015559999",
+            BlockedClient.is_active,
         )
     )
     db_block = result.scalar_one_or_none()
@@ -1791,7 +1791,7 @@ async def test_context_shortcut_desbloquear_unblocks(
     admin_phone_digits = "12015550002"
 
     # Create an active block for the target
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1825,7 +1825,7 @@ async def test_context_shortcut_desbloquear_unblocks(
     # Expire cached object so identity map reloads from DB
     db_session.expire(block)
     result = await db_session.execute(
-        select(ClientMessagingBlock).where(ClientMessagingBlock.id == block_id)
+        select(BlockedClient).where(BlockedClient.id == block_id)
     )
     db_block = result.scalar_one_or_none()
     assert db_block is not None

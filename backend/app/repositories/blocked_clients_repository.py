@@ -1,11 +1,11 @@
-"""Client Messaging Block repository — client_messaging_blocks table queries."""
+"""Blocked Client repository — blocked_clients table queries."""
 
 from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.client_messaging_block import ClientMessagingBlock
+from app.models.blocked_client import BlockedClient
 
 
 async def create(
@@ -14,7 +14,7 @@ async def create(
     *,
     phone: str | None = None,
     whatsapp_lid: str | None = None,
-) -> ClientMessagingBlock:
+) -> BlockedClient:
     """Create an active block for a tenant-scoped identity.
 
     At least one of *phone* or *whatsapp_lid* must be provided.
@@ -24,7 +24,7 @@ async def create(
             "At least one identity field (phone or whatsapp_lid) is required"
         )
 
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant_id,
         phone=phone,
         whatsapp_lid=whatsapp_lid,
@@ -35,15 +35,15 @@ async def create(
     return block
 
 
-async def list_active(db: AsyncSession, tenant_id: UUID) -> list[ClientMessagingBlock]:
+async def list_active(db: AsyncSession, tenant_id: UUID) -> list[BlockedClient]:
     """List all active blocks for a tenant, newest first."""
     result = await db.execute(
-        select(ClientMessagingBlock)
+        select(BlockedClient)
         .where(
-            ClientMessagingBlock.tenant_id == tenant_id,
-            ClientMessagingBlock.is_active,
+            BlockedClient.tenant_id == tenant_id,
+            BlockedClient.is_active,
         )
-        .order_by(ClientMessagingBlock.created_at.desc())
+        .order_by(BlockedClient.created_at.desc())
     )
     return list(result.scalars().all())
 
@@ -54,25 +54,25 @@ async def find_active(
     *,
     phone: str | None = None,
     whatsapp_lid: str | None = None,
-) -> ClientMessagingBlock | None:
+) -> BlockedClient | None:
     """Find an active block by phone or LID within a tenant."""
     if not phone and not whatsapp_lid:
         return None
-    stmt = select(ClientMessagingBlock).where(
-        ClientMessagingBlock.tenant_id == tenant_id,
-        ClientMessagingBlock.is_active,
+    stmt = select(BlockedClient).where(
+        BlockedClient.tenant_id == tenant_id,
+        BlockedClient.is_active,
     )
     if phone and whatsapp_lid:
         stmt = stmt.where(
             or_(
-                ClientMessagingBlock.phone == phone,
-                ClientMessagingBlock.whatsapp_lid == whatsapp_lid,
+                BlockedClient.phone == phone,
+                BlockedClient.whatsapp_lid == whatsapp_lid,
             )
         )
     elif phone:
-        stmt = stmt.where(ClientMessagingBlock.phone == phone)
+        stmt = stmt.where(BlockedClient.phone == phone)
     else:
-        stmt = stmt.where(ClientMessagingBlock.whatsapp_lid == whatsapp_lid)
+        stmt = stmt.where(BlockedClient.whatsapp_lid == whatsapp_lid)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -81,13 +81,13 @@ async def unblock(
     db: AsyncSession,
     tenant_id: UUID,
     block_id: UUID,
-) -> ClientMessagingBlock | None:
+) -> BlockedClient | None:
     """Deactivate (soft-delete) a specific block. Returns the updated row or None."""
     result = await db.execute(
-        select(ClientMessagingBlock).where(
-            ClientMessagingBlock.id == block_id,
-            ClientMessagingBlock.tenant_id == tenant_id,
-            ClientMessagingBlock.is_active,
+        select(BlockedClient).where(
+            BlockedClient.id == block_id,
+            BlockedClient.tenant_id == tenant_id,
+            BlockedClient.is_active,
         )
     )
     block = result.scalar_one_or_none()
@@ -110,21 +110,21 @@ async def clear_identity(
     """
     if not phone and not whatsapp_lid:
         return 0
-    stmt = select(ClientMessagingBlock).where(
-        ClientMessagingBlock.tenant_id == tenant_id,
-        ClientMessagingBlock.is_active,
+    stmt = select(BlockedClient).where(
+        BlockedClient.tenant_id == tenant_id,
+        BlockedClient.is_active,
     )
     if phone and whatsapp_lid:
         stmt = stmt.where(
             or_(
-                ClientMessagingBlock.phone == phone,
-                ClientMessagingBlock.whatsapp_lid == whatsapp_lid,
+                BlockedClient.phone == phone,
+                BlockedClient.whatsapp_lid == whatsapp_lid,
             )
         )
     elif phone:
-        stmt = stmt.where(ClientMessagingBlock.phone == phone)
+        stmt = stmt.where(BlockedClient.phone == phone)
     else:
-        stmt = stmt.where(ClientMessagingBlock.whatsapp_lid == whatsapp_lid)
+        stmt = stmt.where(BlockedClient.whatsapp_lid == whatsapp_lid)
     result = await db.execute(stmt)
     blocks = list(result.scalars().all())
     for block in blocks:

@@ -23,7 +23,7 @@ from app.core.redis_client import (
 )
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.repositories import (
-    client_messaging_block_repository,
+    blocked_clients_repository,
     clients_repository,
     code_services_repository,
     mailbox_config_repository,
@@ -746,7 +746,7 @@ async def _handle_active_client_context(
 
     # ── Handle by step ────────────────────────────────────────────
     if step == "menu":
-        blocked = await client_messaging_block_repository.find_active(
+        blocked = await blocked_clients_repository.find_active(
             db,
             tenant.id,
             phone=target_phone_norm if target_phone_norm else None,
@@ -977,7 +977,7 @@ async def _handle_ctx_unblocked_menu(
 
     if msg_lower == "2":
         # Bloquear mensajes — create block immediately without confirmation
-        await client_messaging_block_repository.create(
+        await blocked_clients_repository.create(
             db,
             tenant_id=tenant.id,
             phone=target_phone,
@@ -1023,14 +1023,14 @@ async def _handle_ctx_blocked_menu(
 
     if msg_lower == "1":
         # Desbloquear mensajes — find active block and unblock
-        blocked = await client_messaging_block_repository.find_active(
+        blocked = await blocked_clients_repository.find_active(
             db,
             tenant.id,
             phone=target_phone,
             whatsapp_lid=target_lid,
         )
         if blocked is not None:
-            await client_messaging_block_repository.unblock(
+            await blocked_clients_repository.unblock(
                 db,
                 tenant_id=tenant.id,
                 block_id=blocked.id,

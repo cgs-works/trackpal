@@ -1,6 +1,6 @@
 from app.models.base import Base
+from app.models.blocked_client import BlockedClient
 from app.models.client import Client
-from app.models.client_messaging_block import ClientMessagingBlock
 from app.models.code_service_global_status import CodeServiceGlobalStatus
 from app.models.mail_code_delivery_log import MailCodeDeliveryLog
 from app.models.mail_lookup_job import MailLookupJob
@@ -21,8 +21,8 @@ from app.models.user import User
 
 __all__ = [
     "Base",
+    "BlockedClient",
     "Client",
-    "ClientMessagingBlock",
     "CodeServiceGlobalStatus",
     "MailCodeDeliveryLog",
     "MailLookupJob",

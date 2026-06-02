@@ -22,7 +22,7 @@ from app.core.phone import normalize_phone
 from app.core.redis_client import RedisConnectionManager, get_redis_manager
 from app.models import Tenant
 from app.repositories import (
-    client_messaging_block_repository,
+    blocked_clients_repository,
     clients_repository,
     tenants_repository,
     users_repository,
@@ -270,7 +270,7 @@ async def _route_by_instance(
     # even when they already have an active ``codigo`` session. The block
     # check must run before any session-resume path so a block applied
     # mid-flow can no longer be bypassed by continuing the dialog.
-    blocked = await client_messaging_block_repository.find_active(
+    blocked = await blocked_clients_repository.find_active(
         db,
         tenant.id,
         phone=phone_digits if phone_digits else None,

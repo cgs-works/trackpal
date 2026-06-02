@@ -25,7 +25,7 @@ from app.core.input_validation import (
 )
 from app.models import Client as _ClientModel
 from app.models import Tenant as _TenantModel
-from app.repositories import client_messaging_block_repository, clients_repository
+from app.repositories import blocked_clients_repository, clients_repository
 from app.schemas.client import ClientCreate
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.client_service import ClientService
@@ -285,7 +285,7 @@ async def handle_ctx_creating_confirm(
 
     # Clear any matching blocks for the identity
     try:
-        await client_messaging_block_repository.clear_identity(
+        await blocked_clients_repository.clear_identity(
             db,
             tenant_id=tenant.id,
             phone=target_phone_norm,
