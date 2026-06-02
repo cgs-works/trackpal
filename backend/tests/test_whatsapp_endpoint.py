@@ -2432,3 +2432,29 @@ async def test_context_creating_lid_only_backfills_whatsapp_lid(
     created_client = result.scalar_one_or_none()
     assert created_client is not None
     assert created_client.whatsapp_lid == target_lid
+
+
+# ---------------------------------------------------------------------------
+# close_jid response contract — disambiguates admin private chat from
+# target/client chat when n8n must close a session in Evolution.
+# ---------------------------------------------------------------------------
+
+
+async def test_whatsapp_console_response_serializes_close_jid():
+    """WhatsAppConsoleResponse serializes close_jid when present,
+    omits it when absent."""
+    from app.schemas.whatsapp import WhatsAppConsoleResponse
+
+    response = WhatsAppConsoleResponse(
+        reply="cerrado",
+        status="closed",
+        reply_to="34111111111@s.whatsapp.net",
+        close_jid="34111111111@s.whatsapp.net",
+    )
+
+    assert response.model_dump() == {
+        "reply": "cerrado",
+        "status": "closed",
+        "reply_to": "34111111111@s.whatsapp.net",
+        "close_jid": "34111111111@s.whatsapp.net",
+    }
