@@ -164,3 +164,22 @@ Per prioritization strategy: facades after routing/session behavior (Items 5, 6)
 
 ### Next-iteration notes
 Item 8 (n8n workflow updates) is the next dependency. The Tenant console now supports block management and the 9-back contract. Item 8 needs to update the n8n workflow for contextual payloads, reply_to routing, and no_reply silence.
+
+## Iteration 8 — 2026-06-01
+
+### Selected Item
+Item 8: Update the n8n WhatsApp Bot workflow for contextual payloads, reply_to routing, and no_reply silence.
+
+### Why this item was chosen
+Per prioritization strategy: n8n before docs (Item 9). Items 1-7 are complete. Item 8 is the transport layer that connects all the contextual routing, reply_to, and no_reply backend work to Evolution Go. Item 9 (docs refresh) depends on the workflow being updated first.
+
+### Changed files
+- `n8n/Trackpal WhatsApp Bot.json` — Parse input node extracts fromMe, adminJid, targetJid, targetPhone, targetLid from Evolution Go payload. Console call JSON body includes all new request fields (from_me, admin_phone, admin_jid, target_jid, target_phone, target_lid). Merge & lookup data preserves reply_to and no_reply, skips fallback reply when no_reply=true. New IF no reply node routes no_reply=true directly to Check close session, skipping all Evolution sends. Evolution API Send uses reply_to as the target JID when present.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1168 passed, 1 skipped in ~28s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+### Next-iteration notes
+Item 9 (docs refresh) is the last remaining item. Documentation for contextual routing, Client Messaging Blocks, unauthenticated code lookup, reply_to/no_reply, and n8n workflow updates needs to be added to docs/.

@@ -115,8 +115,8 @@
         "Update merge/routing nodes so reply_to and no_reply are preserved, send nodes use reply_to when present, and no Evolution send occurs when no_reply=true.",
         "Validate the workflow JSON and add any available bounded workflow contract tests or documented manual validation evidence."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Parse input node extracts fromMe, adminJid, targetJid, targetPhone, targetLid. Console call body includes all new request fields. Merge & lookup data preserves reply_to and no_reply, no longer applies fallback reply when no_reply=true. IF no reply node routes no_reply=true to skip all Evolution sends. Evolution API Send uses reply_to when present. 1168/1168 backend tests pass. Frontend builds clean. n8n workflow JSON valid."
     },
     {
       "category": "functional",
