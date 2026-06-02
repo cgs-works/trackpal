@@ -1349,6 +1349,43 @@ async def test_from_me_self_target_by_device_jid_routes_to_tenant_console(
     assert "reply_to" not in body
 
 
+async def test_from_me_self_target_by_lid_routes_to_tenant_console(
+    client, db_session, active_tenant_user
+):
+    """from_me=true self-target with LID-only target routes to Tenant console."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    tenant.whatsapp_lid = "77988435632309@lid"
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "584243106642",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "sender_lid": "77988435632309@lid",
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "584243106642:81@s.whatsapp.net",
+                "target_jid": "77988435632309@lid",
+                "target_lid": "77988435632309@lid",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    reply = body["reply"]
+    assert "Client management" not in reply
+    assert "Gestión del cliente" not in reply
+    assert "reply_to" not in body
+
+
 async def test_from_me_non_self_target_routes_to_shortcut(
     client, db_session, active_tenant_user
 ):

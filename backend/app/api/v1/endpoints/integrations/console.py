@@ -356,18 +356,29 @@ async def _handle_from_me_routing(
     target_phone_norm = normalize_phone(target_phone) if target_phone else None
     target_jid_phone = _jid_phone(target_jid)
     admin_jid_phone = _jid_phone(admin_jid)
+    tenant_lid = getattr(tenant, "whatsapp_lid", None)
 
     # ── Step 3: Check if target == admin (self-target) ────────────
     # Compare normalized phone identities from explicit target_phone
     # and from JIDs. Exact JID equality alone is too brittle because
     # Evolution can include device suffixes in from_me events.
+    # Real Evolution payloads may also identify the admin's own chat by
+    # LID-only targetJid/targetLid; compare that to tenant.whatsapp_lid.
     target_candidates = (target_phone_norm, target_jid_phone)
     admin_candidates = (resolved_admin_phone, admin_jid_phone)
-    is_self_target = any(
+    phone_self_target = any(
         target and admin and target == admin
         for target in target_candidates
         for admin in admin_candidates
-    ) or (admin_jid and target_jid and admin_jid == target_jid)
+    )
+    lid_self_target = bool(
+        tenant_lid and (target_lid == tenant_lid or target_jid == tenant_lid)
+    )
+    is_self_target = (
+        phone_self_target
+        or lid_self_target
+        or (admin_jid and target_jid and admin_jid == target_jid)
+    )
 
     if is_self_target:
         # Route to standard Tenant console
