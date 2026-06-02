@@ -65,8 +65,8 @@
         "Reject a new contextual trigger privately via reply_to when another context is already active.",
         "Add endpoint tests for target-equals-admin, target-differs, owner fallback, reply_to, and active-context collision."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "from_me routing implemented with self-target (phone/JID match), non-self-target routing to shortcut with reply_to=admin_jid, owner fallback when admin_phone absent via tenant.whatsapp_phone, active context collision returns no_reply=true with reply_to. 7 new endpoint tests pass. 1145/1145 full test suite passes. Frontend builds clean. n8n workflow JSON valid."
     },
     {
       "category": "functional",

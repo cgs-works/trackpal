@@ -1148,3 +1148,308 @@ async def test_unregistered_identity_non_codigo_returns_access_denied(
     assert "no tienes acceso" in reply or "no está registrado" in reply or "acceso denegado" in reply
     assert "Netflix" not in body["reply"]
     assert "no_reply" not in body or body.get("no_reply") is not True
+
+
+# ---------------------------------------------------------------------------
+# from_me contextual routing tests
+# ---------------------------------------------------------------------------
+
+
+async def _setup_tenant_with_instance(db_session, active_tenant_user):
+    """Set up a tenant with an instance name and return the tenant."""
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+    tenant.evolution_instance_name = TEST_INSTANCE
+    tenant.locale = "es"
+    await db_session.commit()
+    return tenant
+
+
+async def test_from_me_self_target_routes_to_tenant_console(
+    client, db_session, active_tenant_user
+):
+    """from_me=true with target matching admin phone routes to Tenant console."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone  # "+12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_phone": admin_phone,
+                "target_jid": "12015550002@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Self-target routes to Tenant console, not shortcut
+    assert "Contexto de cliente" not in reply
+    # Should be a standard Tenant console reply
+    assert (
+        "Consola de Administración" in reply
+        or "No entendí" in reply
+        or "opción del menú" in reply
+        or "Admin Console" in reply
+        or "didn't understand" in reply
+        or "nombre de usuario" in reply
+        or "login" in reply
+    )
+    # Context fields should not be present
+    assert "reply_to" not in body or body.get("no_reply") is not True
+
+
+async def test_from_me_self_target_by_jid_routes_to_tenant_console(
+    client, db_session, active_tenant_user
+):
+    """from_me=true with target_jid matching admin_jid routes to Tenant console."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015550002@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    assert "Contexto de cliente" not in reply
+    assert "reply_to" not in body
+
+
+async def test_from_me_non_self_target_routes_to_shortcut(
+    client, db_session, active_tenant_user
+):
+    """from_me=true with target different from admin routes to shortcut with reply_to."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone  # "+12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_phone": "+12015559999",
+                "target_jid": "12015559999@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    # Must have reply_to set
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+    # Must have a reply message (shortcut started)
+    assert "reply" in body
+    assert body["reply"]
+    # Should mention context
+    assert "Contexto" in body["reply"]
+
+
+async def test_from_me_owner_fallback_routes_to_console(
+    client, db_session, active_tenant_user
+):
+    """from_me=true without admin_phone falls back to tenant's whatsapp_phone."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    # No admin_phone in request, self-target via tenant whatsapp_phone as fallback
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                # No admin_phone — fall back to tenant owner
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_phone": tenant.whatsapp_phone,
+                "target_jid": "12015550002@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Must route to Tenant console via owner fallback
+    assert "Contexto de cliente" not in reply
+    assert (
+        "Consola de Administración" in reply
+        or "No entendí" in reply
+        or "opción del menú" in reply
+        or "Admin Console" in reply
+    )
+
+
+async def test_from_me_context_collision_rejected(
+    client, db_session, active_tenant_user
+):
+    """Second from_me trigger for same admin is rejected when context is active."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # First call: non-self-target → creates context
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_phone": "+12015559999",
+                "target_jid": "12015559999@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        body1 = resp1.json()
+        assert body1.get("reply_to") == "12015550002@s.whatsapp.net"
+
+        # Second call: different target → context collision, rejected
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_phone": "+12015558888",
+                "target_jid": "12015558888@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+        body2 = resp2.json()
+        # Must be rejected with no_reply=true and reply_to set
+        assert body2.get("no_reply") is True
+        assert body2.get("reply_to") == "12015550002@s.whatsapp.net"
+        assert not body2.get("reply") or body2.get("reply") == ""
+
+
+async def test_from_me_without_admin_phone_no_fallback_returns_no_reply(
+    client, db_session, active_tenant_user
+):
+    """from_me=true without admin_phone and tenant without whatsapp_phone returns no_reply."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    # Clear tenant's whatsapp_phone so fallback fails
+    tenant.whatsapp_phone = None
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                # No admin_phone and tenant has no whatsapp_phone
+                "target_phone": "+12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    # Cannot identify admin — silent no_reply
+    assert body.get("no_reply") is True
+    assert not body.get("reply") or body.get("reply") == ""
+
+
+async def test_from_me_non_self_target_sets_context_in_redis(
+    client, db_session, active_tenant_user
+):
+    """from_me=true non-self-target stores context in Redis."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_phone": "+12015559999",
+                "target_jid": "12015559999@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+
+    # Verify context was stored in Redis
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is not None, "Context session should be stored in Redis"
+
+    import json
+
+    data = json.loads(raw)
+    assert data["flow"] == "client_shortcut"
+    assert data["phone"] == admin_phone_digits
+    # Target info should be in temp_data
+    assert data["temp_data"]["target_phone"] == "12015559999"
+    assert data["temp_data"]["admin_jid"] == "12015550002@s.whatsapp.net"

@@ -74,3 +74,23 @@ Per prioritization strategy: the persistence layer (Item 2) is complete; Item 3 
 1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1138 passed, 1 skipped in ~29s ✓
 2. `cd frontend && npm run build` — Build successful ✓
 3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+## Iteration 4 — 2026-06-01
+
+### Selected Item
+Item 4: Implement instance-first contextual routing for outgoing from_me=true /menu triggers.
+
+### Why this item was chosen
+Per prioritization strategy: public schemas (Item 1), persistence (Item 2), and code lookup (Item 3) are complete. Item 4 adds the from_me routing layer that routes self-target triggers to Tenant console and non-self-target triggers to the Client Context Shortcut with reply_to and context collision detection. This unblocks Items 5 (shortcut session lifecycle) and 6 (management flows).
+
+### Changed files
+- `backend/app/api/v1/endpoints/integrations/console.py` — Added `Tenant` import, `WhatsAppSessionService` import. Added `from_me`, `admin_phone`, `admin_jid`, `target_jid`, `target_phone`, `target_lid` parameters to `_route_by_instance`. Added `_handle_from_me_routing()` function that resolves admin identity (from admin_phone or tenant.whatsapp_phone fallback), checks self-target by phone/JID match, routes to Tenant console for self-target or Client Context Shortcut with context collision detection. Context sessions stored under `wa:client_ctx:{admin_phone}` with 5-minute TTL.
+- `backend/tests/test_whatsapp_endpoint.py` — Added `_setup_tenant_with_instance()` helper. Added 7 tests: self-target by phone routes to Tenant console, self-target by JID routes to Tenant console, non-self-target routes to shortcut with reply_to, owner fallback without admin_phone, context collision rejection with no_reply=true, no-admin-phone without fallback returns no_reply, context stored in Redis.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1145 passed, 1 skipped in ~28s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+### Next-iteration notes
+Item 5 (Client Context Shortcut session lifecycle and unregistered target menus) is the next dependency. The from_me routing infrastructure now detects self-target vs non-self-target, creates a basic context session, and rejects collisions. Item 5 needs to add the menu facades, TTL behavior, input handling, and proper shortcuts for unregistered, blocked, and client targets.
