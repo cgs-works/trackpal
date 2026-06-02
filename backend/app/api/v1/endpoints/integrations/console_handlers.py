@@ -667,10 +667,6 @@ async def _handle_active_client_context(
         active_client = await clients_repository.get_active_client_by_tenant_phone(
             db, tenant.id, target_phone_norm
         )
-    if active_client is None and target_lid:
-        active_client = await clients_repository.get_active_client_by_tenant_lid(
-            db, tenant.id, target_lid
-        )
 
     if active_client is not None:
         data["temp_data"]["client_id"] = str(active_client.id)
@@ -705,10 +701,6 @@ async def _handle_active_client_context(
         if target_phone_norm:
             inactive_client = await clients_repository.get_client_by_tenant_phone(
                 db, tenant.id, target_phone_norm
-            )
-        if inactive_client is None and target_lid:
-            inactive_client = await clients_repository.get_client_by_tenant_lid(
-                db, tenant.id, target_lid
             )
 
         if inactive_client is not None:
@@ -754,7 +746,7 @@ async def _handle_active_client_context(
             db,
             tenant.id,
             phone=target_phone_norm if target_phone_norm else None,
-            whatsapp_lid=target_lid,
+            whatsapp_lid=None,
         )
 
         if blocked:

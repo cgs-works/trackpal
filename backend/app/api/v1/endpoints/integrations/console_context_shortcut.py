@@ -56,7 +56,6 @@ async def handle_ctx_creating_first(
     """
     temp_data = data["temp_data"]
     target_phone = temp_data.get("target_phone", "")
-    target_lid = temp_data.get("target_lid", "")
 
     if target_phone:
         temp_data["phone"] = target_phone
@@ -69,11 +68,8 @@ async def handle_ctx_creating_first(
         )
     else:
         data["step"] = "creating_phone"
-        info = f"(LID: {target_lid})" if target_lid else ""
         reply = (
-            "No se recibio telefono del contacto "
-            + info
-            + ".\n\n"
+            "No se recibio telefono del contacto.\n\n"
             + "*Telefono* del cliente (o *0* para cancelar):"
         )
 
@@ -290,21 +286,11 @@ async def handle_ctx_creating_confirm(
             db,
             tenant_id=tenant.id,
             phone=target_phone_norm,
-            whatsapp_lid=target_lid,
+            whatsapp_lid=None,
         )
         await db.commit()
     except Exception:
         logger.exception("Failed to clear blocks after context shortcut creation")
-
-    # Backfill the new client's whatsapp_lid when the shortcut was started
-    # from a LID-only target so subsequent LID-only inbound messages still
-    # resolve this client via get_active_client_by_tenant_lid.
-    if target_lid and not client.whatsapp_lid:
-        try:
-            await clients_repository.update_client_lid(db, client.id, target_lid)
-            await db.commit()
-        except Exception:
-            logger.exception("Failed to backfill whatsapp_lid on client %s", client.id)
 
     await clear_ctx()
     return WhatsAppConsoleResponse(
@@ -938,11 +924,6 @@ async def render_initial_context_menu(
         client = await clients_repository.get_client_by_tenant_phone(
             db, tenant.id, target_phone
         )
-    if client is None and target_lid:
-        client = await clients_repository.get_client_by_tenant_lid(
-            db, tenant.id, target_lid
-        )
-
     if client is not None:
         status_key = (
             "wa.tenant.clients.detail.status_active"
@@ -974,7 +955,7 @@ async def render_initial_context_menu(
         db,
         tenant.id,
         phone=target_phone,
-        whatsapp_lid=target_lid,
+        whatsapp_lid=None,
     )
     if block is not None:
         key = (

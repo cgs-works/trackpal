@@ -381,6 +381,20 @@ async def _handle_from_me_routing(
     )
 
     if is_self_target:
+        # Admin replies to the private context menu arrive as self-target
+        # from_me messages. Process active Client Context Shortcut before
+        # falling through to tenant console / ambiguity routing.
+        ctx_response = await _handle_active_client_context(
+            phone=resolved_admin_phone,
+            message=message,
+            manager=manager,
+            tenant=tenant,
+            db=db,
+            instance=instance,
+        )
+        if ctx_response is not None:
+            return ctx_response
+
         # Route self-chat through the same ambiguity gate as normal
         # inbound messages. A tenant admin can also be a client in the
         # same tenant; /menu must show the pre-menu instead of forcing
@@ -398,11 +412,6 @@ async def _handle_from_me_routing(
             )
             return WhatsAppConsoleResponse(
                 reply=t(_tl(tenant), "wa.client.multiple_matches")
-            )
-
-        if client is None and tenant_lid:
-            client = await clients_repository.get_active_client_by_tenant_lid(
-                db, tenant.id, tenant_lid
             )
 
         if client is not None:

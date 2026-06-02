@@ -42,6 +42,35 @@ Upsert flow:
 
 `close_chat_session` is deprecated and logs a warning. Session closing is managed entirely from the n8n Bot workflow when the user sends a top-level `0` (logout/exit).
 
+### Chatbot Session Dispatch (Evolution Go)
+
+Evolution Go manages per-webhook, per-`remoteJid` chatbot sessions in memory (`SessionManager`). These sessions are independent from the backend Redis or Evolution WS session.
+
+**Standard dispatch flow:**
+1. `chatbot identity extracted` → JID/LID resolution done.
+2. Lookup `SessionManager.Get(webhookID, remoteJid)`.
+3. If session opened and matches trigger → dispatch to webhook.
+4. If no session → evaluate trigger. If content matches trigger regex → open session + dispatch.
+5. If no session and content does NOT match trigger → **silently discarded** (prevents random chat text from hitting n8n).
+
+**`from_me_bypass` (outgoing-message dispatch):**
+When `fromMe=true` and the webhook has `ListeningFromMe=true`, step 5 is overridden: even if no session exists and content does not match the trigger, the message is dispatched anyway with `reason=from_me_bypass`. This is required so the backend can resolve active console/context state by actor identity rather than an Evolution-local session key that may reference a different `remoteJid`.
+
+Relevant fields in the webhook payload:
+- `adminJid` — `instance.Jid` (the device owner, e.g. `5551234567:81@s.whatsapp.net`)
+- `targetJid` — the `remoteJid` the user is acting on (e.g. `55500000001@lid`)
+- `senderPn`, `senderLid` — sender identity resolution
+
+**Diagnostic log tags (evolution-go):**
+
+| Tag | Meaning |
+|-----|---------|
+| `[CHATBOT_SESSION_LOOKUP]` | Session lookup result (status, sessionId) |
+| `[CHATBOT_SESSION_OPENED]` | New session created (reason: `trigger_match` or `from_me_bypass`) |
+| `[CHATBOT_DISPATCH]` | Payload about to be POSTed to webhook URL |
+| `[CHATBOT_DISPATCH_SKIPPED]` | Message discarded, with `reason=` (e.g. `trigger_mismatch`, `no_sender_pn`, `all_webhooks_filtered`, `listening_from_me_disabled`) |
+| `[CHATBOT_WEBHOOK_SKIPPED]` | Webhook not evaluated for this message (reason: `disabled`, `ignored_jid`, `listening_from_me_disabled`) |
+
 ### Message Sending
 
 Outbound messages use `POST /send/text` (Evolution Go endpoint), not the legacy `/message/sendText/{instance}`. Authentication uses the **instance token** (`apiKey` from the trusted webhook payload or stored encrypted token), not the global `EVOLUTION_API_KEY`.

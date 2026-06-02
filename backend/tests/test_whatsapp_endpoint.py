@@ -1386,11 +1386,12 @@ async def test_from_me_self_target_by_lid_routes_to_tenant_console(
     assert "reply_to" not in body
 
 
-async def test_from_me_self_target_by_lid_with_client_routes_to_pre_menu(
+async def test_from_me_self_target_by_phone_with_client_routes_to_pre_menu(
     client, db_session, active_tenant_user
 ):
-    """from_me=true self LID target with tenant+client identity shows ambiguity pre-menu."""
+    """from_me=true self target uses phone identity to show ambiguity pre-menu."""
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    tenant.whatsapp_phone = "+584243106642"
     admin_phone = tenant.whatsapp_phone
     tenant.whatsapp_lid = "77988435632309@lid"
 
@@ -1426,6 +1427,7 @@ async def test_from_me_self_target_by_lid_with_client_routes_to_pre_menu(
                 "admin_phone": admin_phone,
                 "admin_jid": "584243106642:81@s.whatsapp.net",
                 "target_jid": "77988435632309@lid",
+                "target_phone": "584243106642",
                 "target_lid": "77988435632309@lid",
             },
             headers={"X-API-Key": settings.n8n_api_key},
@@ -1847,6 +1849,57 @@ async def test_context_shortcut_crear_cliente_advances_step(
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
     # Verify context step advanced in Redis
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is not None
+    import json
+
+    data = json.loads(raw)
+    assert data["step"] == "creating"
+
+
+async def test_from_me_self_target_uses_active_client_context(
+    client, db_session, active_tenant_user
+):
+    """from_me option replies in admin private chat continue Client Context flow."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone="12015559999",
+        target_lid="dead-lid@lid",
+        admin_jid="12015550002:81@s.whatsapp.net",
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002:81@s.whatsapp.net",
+                "target_jid": "12015550002@lid",
+                "target_phone": "12015550002",
+                "target_lid": "12015550002@lid",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "creacion de cliente" in body["reply"].lower()
+    assert body.get("reply_to") == "12015550002:81@s.whatsapp.net"
+
     ctx_key = f"wa:client_ctx:{admin_phone_digits}"
     raw = await fake_mgr._redis.get(ctx_key)
     assert raw is not None
@@ -2485,10 +2538,10 @@ async def test_context_inactive_client_prevents_duplicate_creation(
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
 
-async def test_context_creating_lid_only_backfills_whatsapp_lid(
+async def test_context_creating_lid_only_does_not_backfill_whatsapp_lid(
     client, db_session, active_tenant_user
 ):
-    """A shortcut created from a LID-only target stores the LID on the new client."""
+    """Shortcut creation ignores LID and stores only phone identity."""
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     admin_phone = tenant.whatsapp_phone
     admin_phone_digits = "12015550002"
@@ -2540,7 +2593,7 @@ async def test_context_creating_lid_only_backfills_whatsapp_lid(
     reply = response.json()["reply"].lower()
     assert "creado exitosamente" in reply
 
-    # Verify the created client has the LID backfilled
+    # Verify the created client did not persist LID identity
     from sqlalchemy import select as _select
 
     result = await db_session.execute(
@@ -2551,7 +2604,7 @@ async def test_context_creating_lid_only_backfills_whatsapp_lid(
     )
     created_client = result.scalar_one_or_none()
     assert created_client is not None
-    assert created_client.whatsapp_lid == target_lid
+    assert created_client.whatsapp_lid is None
 
 
 # ---------------------------------------------------------------------------
