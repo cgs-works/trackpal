@@ -5,7 +5,7 @@
     "verification_gates": [
       {
         "name": "backend pytest",
-        "command": "cd backend && uv run pytest -v"
+        "command": "cd backend && uv run pytest -v -n auto --dist loadscope"
       },
       {
         "name": "frontend build",
