@@ -246,19 +246,19 @@ Phone editing is disabled from the shortcut. Edit supports ``full_name`` and ``l
 
 Inactive clients cannot be duplicated by contextual creation (they count as existing identities). The subscription shortcut is hidden until reactivation.
 
-## Client Messaging Blocks
+## Blocked Clients
 
-Client Messaging Blocks prevent unregistered WhatsApp identities from using the console or code lookup. They are stored in a dedicated tenant-scoped table (``client_messaging_blocks``) rather than on the ``Client`` model because blocks apply only to identities that are not registered as clients.
+Blocked Clients prevent unregistered WhatsApp identities from using the console, codes, profile, or subscriptions. They are stored in a dedicated tenant-scoped table (``blocked_clients``, renamed from ``client_messaging_blocks``) rather than on the ``Client`` model because blocks apply only to identities that are not registered as clients.
 
 ### Storage
 
-- Table: ``client_messaging_blocks``
+- Table: ``blocked_clients``
 - At least one identity field required (``phone`` or ``whatsapp_lid``)
 - ``is_active`` boolean for soft-delete
 - Tenant-scoped indexes on ``(tenant_id, phone)`` and ``(tenant_id, whatsapp_lid)``
-- Created in migration ``ce10fe74caa10``
+- Created in migration ``ce10fe74caa10``, renamed in ``ce10fe74caa11``
 
-### Repository operations
+### Repository operations (``blocked_clients_repository.py``)
 
 | Operation | Description |
 |-----------|-------------|

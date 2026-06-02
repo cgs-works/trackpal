@@ -72,10 +72,11 @@ Organized by prefix:
 | `errors.*` | Business logic errors | `errors.client_not_found` |
 | `reminder.*` | Subscription reminders | `reminder.subscription.expiring` |
 | `wa.tenant.*` | WhatsApp tenant console — general | `wa.tenant.main_menu` |
+| `wa.tenant.client_context.*` | WhatsApp tenant console — client context shortcut | `wa.tenant.client_context.menu.unregistered_unblocked`, `wa.tenant.client_context.closed` |
 | `wa.tenant.subscriptions.*` | WhatsApp tenant console — subscriptions | `wa.tenant.subscriptions.list.header`, `wa.tenant.subscriptions.status.active`, `wa.tenant.subscriptions.list.page_prev` |
 | `frontend.*` | Vue SPA web UI | `frontend.login.title`, `frontend.clients.password` |
 
-Total: ~838 string entries across both catalogs.
+Total: ~851 string entries across both catalogs.
 
 ### Merged Catalog
 
@@ -250,7 +251,8 @@ Boundary:
 
 n8n workflows do not own or generate translation strings. All user-facing messages are rendered by the backend before returning to n8n. n8n acts as pure transport:
 
-- **WhatsApp Bot**: Backend `WhatsappTenantConsoleFacade` returns fully localized reply text
+- **WhatsApp Bot**: Backend `WhatsappTenantConsoleFacade` returns fully localized reply text. The Client Context Shortcut renders all menus server-side through `wa.tenant.client_context.*` keys, including contextual menus for unregistered, blocked, active, and inactive client targets.
+- **Context Shortcut close flow**: Option `0` inside a context session returns `status="closed"` and `close_jid`; the close message uses `wa.tenant.client_context.closed`.
 - **Reminders**: `SubscriptionJobService._render_reminder_message()` uses `t()` with tenant locale
 - n8n never calls `t()`, never resolves locale, never manipulates message content beyond phone normalization
 
