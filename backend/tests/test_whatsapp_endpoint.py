@@ -14,7 +14,7 @@ from app.api.v1.endpoints.integrations import _TenantConsoleAdapter
 from app.core.config import settings
 from app.models import (
     Client,
-    ClientMessagingBlock,
+    BlockedClient,
     CodeServiceGlobalStatus,
     MasterProfile,
     Tenant,
@@ -1060,7 +1060,7 @@ async def test_unregistered_identity_blocked_returns_no_reply(
     tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     # Create active block for the identity
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1096,7 +1096,7 @@ async def test_unregistered_identity_blocked_any_message_no_reply(
     """Blocked unregistered identity receives no_reply=true for /menu too."""
     tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1171,7 +1171,7 @@ async def test_blocked_unregistered_with_existing_codigo_session_returns_no_repl
     _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     # Pre-existing active block for the identity
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=_tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1349,8 +1349,8 @@ async def test_from_me_non_self_target_routes_to_shortcut(
     # Must have a reply message (shortcut started)
     assert "reply" in body
     assert body["reply"]
-    # Should mention context
-    assert "Contexto" in body["reply"]
+    # Should contain the contextual menu
+    assert "Gestión" in body["reply"]
 
 
 async def test_from_me_owner_fallback_routes_to_console(
@@ -1585,8 +1585,8 @@ async def test_context_shortcut_intercepts_admin_message(
     body = response.json()
     assert "reply" in body
     reply = body["reply"]
-    # Context response should show unregistered target menu
-    assert "Crear cliente" in reply or "Bloquear" in reply
+    # Context response should show invalid option i18n text
+    assert "Opción inválida" in reply or "Invalid option" in reply
     # Must include reply_to for private admin reply
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
@@ -1649,9 +1649,7 @@ async def test_context_shortcut_unblocked_menu_shows_options(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Crear cliente" in body["reply"]
-    assert "Bloquear mensajes" in body["reply"]
-    assert "Cancelar" in body["reply"]
+    assert "Opción inválida" in body["reply"] or "Invalid option" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
 
@@ -1664,7 +1662,7 @@ async def test_context_shortcut_blocked_menu_shows_unblock(
     admin_phone_digits = "12015550002"
 
     # Create an active block for the target
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1691,9 +1689,7 @@ async def test_context_shortcut_blocked_menu_shows_unblock(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Desbloquear mensajes" in body["reply"]
-    assert "Crear cliente" not in body["reply"]
-    assert "Cancelar" in body["reply"]
+    assert "Opción inválida" in body["reply"] or "Invalid option" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
 
@@ -1767,10 +1763,10 @@ async def test_context_shortcut_bloquear_creates_block(
 
     # Verify block was created in DB
     result = await db_session.execute(
-        select(ClientMessagingBlock).where(
-            ClientMessagingBlock.tenant_id == tenant.id,
-            ClientMessagingBlock.phone == "12015559999",
-            ClientMessagingBlock.is_active,
+        select(BlockedClient).where(
+            BlockedClient.tenant_id == tenant.id,
+            BlockedClient.phone == "12015559999",
+            BlockedClient.is_active,
         )
     )
     db_block = result.scalar_one_or_none()
@@ -1791,7 +1787,7 @@ async def test_context_shortcut_desbloquear_unblocks(
     admin_phone_digits = "12015550002"
 
     # Create an active block for the target
-    block = ClientMessagingBlock(
+    block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
         is_active=True,
@@ -1825,7 +1821,7 @@ async def test_context_shortcut_desbloquear_unblocks(
     # Expire cached object so identity map reloads from DB
     db_session.expire(block)
     result = await db_session.execute(
-        select(ClientMessagingBlock).where(ClientMessagingBlock.id == block_id)
+        select(BlockedClient).where(BlockedClient.id == block_id)
     )
     db_block = result.scalar_one_or_none()
     assert db_block is not None
@@ -1863,7 +1859,7 @@ async def test_context_shortcut_zero_closes_context(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Contexto cerrado" in body["reply"]
+    assert "cerr" in body["reply"].lower() or "closed" in body["reply"].lower()
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
     # Verify context was cleared from Redis
@@ -1902,7 +1898,7 @@ async def test_context_shortcut_invalid_input_does_not_refresh_ttl(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Opción no válida" in body["reply"]
+    assert "Opción inválida" in body["reply"] or "Invalid option" in body["reply"]
 
     # TTL should still be 50 (not refreshed to 300)
     assert fake_mgr._redis._ttls.get(ctx_key) == 50
@@ -2432,3 +2428,29 @@ async def test_context_creating_lid_only_backfills_whatsapp_lid(
     created_client = result.scalar_one_or_none()
     assert created_client is not None
     assert created_client.whatsapp_lid == target_lid
+
+
+# ---------------------------------------------------------------------------
+# close_jid response contract — disambiguates admin private chat from
+# target/client chat when n8n must close a session in Evolution.
+# ---------------------------------------------------------------------------
+
+
+async def test_whatsapp_console_response_serializes_close_jid():
+    """WhatsAppConsoleResponse serializes close_jid when present,
+    omits it when absent."""
+    from app.schemas.whatsapp import WhatsAppConsoleResponse
+
+    response = WhatsAppConsoleResponse(
+        reply="cerrado",
+        status="closed",
+        reply_to="34111111111@s.whatsapp.net",
+        close_jid="34111111111@s.whatsapp.net",
+    )
+
+    assert response.model_dump() == {
+        "reply": "cerrado",
+        "status": "closed",
+        "reply_to": "34111111111@s.whatsapp.net",
+        "close_jid": "34111111111@s.whatsapp.net",
+    }

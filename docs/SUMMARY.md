@@ -19,7 +19,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [API Layer](architecture/api-layer.md) | REST routes, auth, dependencies, and integrations |
 | [Database Schema](architecture/database-schema.md) | ORM models, relationships, constraints, and migrations |
 | [Redis HA](architecture/redis-ha.md) | Redis failover, session state, and contingency replies |
-| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master/Tenant/Client WhatsApp console orchestration, instance-first routing, LID fallback, from_me contextual routing, Client Context Shortcut, and Client Messaging Blocks |
+| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master/Tenant/Client WhatsApp console orchestration, instance-first routing, LID fallback, from_me contextual routing, Client Context Shortcut, and Blocked Clients |
 | [Input Validation Policy](architecture/input-validation-policy.md) | Validation and normalization rules |
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
@@ -28,12 +28,6 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
-
-## Architecture Decisions
-
-| File | Description |
-|------|-------------|
-| [Client Messaging Blocks Table](adr/0001-client-messaging-blocks-table.md) | Why Client Messaging Blocks use a dedicated table instead of the Client model |
 
 ## Codebase
 
@@ -59,15 +53,4 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
 | [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone/LID handling, validation, and deployment constraints |
 
-## Other
 
-| File | Description |
-|------|-------------|
-| [Tenant Catalog Plan](plans/260517-1537-tenant-catalog-rls/SUMMARY.md) | Tenant catalog and RLS plan |
-| [Client Entity Plan](plans/260517-1938-client-entity-dashboard/SUMMARY.md) | Client entity and dashboard plan |
-| [Tenant Admin WhatsApp Console Plan](plans/260518-2146-tenant-admin-whatsapp-console/SUMMARY.md) | Tenant WhatsApp console implementation plan |
-| [Tenant Catalog Brainstorm](brainstorms/260517-1543-tenant-catalog-rls/SUMMARY.md) | Catalog RLS brainstorm summary |
-| [Client Entity Brainstorm](brainstorms/260517-1930-client-entity-dashboard/SUMMARY.md) | Client entity brainstorm summary |
-| [Tenant Admin WhatsApp Console Brainstorm](brainstorms/260518-2146-tenant-admin-whatsapp-console/SUMMARY.md) | Tenant WhatsApp console brainstorm summary |
-| [Python i18n Brainstorm](brainstorms/260522-2330-python-i18n-system/SUMMARY.md) | Backend + frontend i18n migration brainstorm summary |
-| [Python i18n Plan](plans/260523-0041-python-i18n-system/SUMMARY.md) | Python i18n implementation phase plan |

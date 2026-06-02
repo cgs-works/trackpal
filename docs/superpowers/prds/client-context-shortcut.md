@@ -12,31 +12,31 @@ Tenant instances also need to support unauthenticated client-side code lookup fo
 2. Ensure all administrative shortcut messages are sent only to the administrator's private bot chat, never to the client chat.
 3. Preserve the administrator's existing Tenant console session while a temporary contextual session is active.
 4. Support unregistered WhatsApp identities that can request access codes, unless blocked by a Tenant administrator.
-5. Add persistent, reversible Client Messaging Blocks for unregistered WhatsApp identities.
+5. Add persistent, reversible `blocked_clients` access blocks for unregistered WhatsApp identities.
 
 ## Non-Goals
 
 - Displaying administrative menu content inside a client chat.
-- Applying Client Messaging Blocks to registered Clients. Registered Clients continue to use the existing activation/deactivation model.
+- Applying `blocked_clients` to registered Clients. Registered Clients continue to use the existing activation/deactivation model.
 - Implementing Evolution Go changes inside this repository; those changes are an external subtask.
 
 ## Domain Terms
 
 - **Client Context Shortcut**: Temporary administrative access initiated from a conversation with a client identity, with all administrative interaction moved to the Tenant administrator's private bot chat.
-- **Client Messaging Block**: Persistent tenant-scoped block for an unregistered WhatsApp identity that prevents client-side console/code-lookup interaction.
+- **Blocked Client**: Persistent tenant-scoped access block for an unregistered WhatsApp identity that prevents any WhatsApp console interaction for that tenant.
 
 ## User Stories
 
 1. As a Tenant administrator, I want to send `/menu` in a client's chat so I can manage that specific identity without navigating the full Tenant console.
 2. As a Tenant administrator, I want the contextual menu to appear in my private bot chat so the client never sees administrative options.
-3. As a Tenant administrator, I want an unregistered target identity to offer `Create client`, `Block client messaging`, and `0 Cancel`.
+3. As a Tenant administrator, I want an unregistered target identity to offer `Create client for this number`, `Block access`, and `0 Cancel`.
 4. As a Tenant administrator, I want `Create client` to skip phone entry when the target phone is available, while preserving the existing required fields: full name, local username, password, and confirmation.
 5. As a Tenant administrator, I want a target with only `@lid` and no phone to ask for phone during Client creation instead of deriving a phone from LID.
 6. As a Tenant administrator, I want inactive Clients to count as existing Clients, not as unregistered identities, so Trackpal prevents duplicate client records.
 7. As a Tenant administrator, I want inactive Clients to expose reactivation before subscription creation.
 8. As a Tenant administrator, I want the contextual menu for an existing Client to expose the Tenant console's client detail actions, except phone editing.
 9. As a Tenant administrator, I want active existing Clients to support `Create subscription` while skipping client selection.
-10. As a Tenant administrator, I want Client Messaging Blocks to be reversible from both the shortcut for that identity and the Clients section of the Tenant console.
+10. As a Tenant administrator, I want Blocked Clients to be reversible from both the shortcut for that identity and the Clients section of the Tenant console.
 11. As a Tenant administrator, I want `0` to close any active contextual session from any depth.
 12. As a Tenant administrator, I want a new contextual `/menu` trigger to be rejected while another Client Context Shortcut is active.
 13. As a Tenant administrator, I want contextual sessions to expire after 5 minutes of inactivity.
@@ -83,7 +83,7 @@ Existing fields remain:
 5. If a contextual session is already active and the admin sends `/menu` in another client chat, backend rejects the new context privately via `reply_to=<admin_jid>`.
 6. If a contextual session is already active and the admin sends `/menu` in the private bot chat, backend returns a blocking message explaining that `0` must be sent before opening the regular Tenant console.
 7. Registered inactive Clients do not fall back to unauthenticated code lookup.
-8. Deleted Clients become unregistered identities and may use unauthenticated code lookup unless a Client Messaging Block exists.
+8. Deleted Clients become unregistered identities and may use unauthenticated code lookup unless a Blocked Client exists.
 
 ## Contextual Session Rules
 
@@ -102,36 +102,38 @@ Existing fields remain:
 
 Menu:
 
-1. Crear cliente
-2. Bloquear mensajes
+1. Crear cliente para este número
+2. Bloquear acceso
 0. Cancelar
 
 Behavior:
 
-- `Crear cliente` starts the current client creation flow, skipping phone only if `target_phone` exists.
+- `Crear cliente para este número` starts client creation with `target_phone` prefilled and must not ask for phone when target phone exists.
 - If only `target_lid` exists, creation asks for phone.
-- `Bloquear mensajes` creates a Client Messaging Block immediately, without confirmation and without asking for a reason.
+- `Bloquear acceso` creates a `blocked_clients` row immediately, without confirmation and without asking for a reason.
 - Any completed action closes the context.
 
 ### Unregistered, blocked target
 
 Menu:
 
-1. Desbloquear mensajes
+1. Desbloquear acceso
 0. Cancelar
 
 Behavior:
 
-- `Desbloquear mensajes` clears the Client Messaging Block and closes the context.
+- `Desbloquear acceso` clears the `blocked_clients` row and closes the context.
 
 ### Existing active Client
 
-Menu includes:
+Menu includes full contextual Client CRUD for this target client:
 
-- Client detail actions from the Tenant console.
+- View detail.
+- Edit allowed fields except phone.
 - Create subscription shortcut with client selection skipped.
 - Deactivate Client.
 - Delete only when the same eligibility rules as the Tenant console allow it.
+- The flow must not ask for client selection or phone.
 
 Constraint:
 
@@ -139,19 +141,21 @@ Constraint:
 
 ### Existing inactive Client
 
-Menu includes:
+Menu includes full contextual Client CRUD for this target client:
 
+- View detail.
+- Edit allowed fields except phone.
 - Reactivate Client.
 - Delete Client when eligible.
-- Edit allowed fields except phone.
+- The flow must not ask for client selection or phone.
 
 Constraint:
 
 - Create subscription is not available until the Client is reactivated.
 
-## Client Messaging Blocks
+## Blocked Clients
 
-Create a dedicated tenant-scoped database table for unregistered WhatsApp identity blocks.
+Use a dedicated tenant-scoped database table named `blocked_clients` for unregistered WhatsApp identity access blocks. Existing `client_messaging_blocks` must be renamed to `blocked_clients`.
 
 Required properties:
 
@@ -164,7 +168,7 @@ Required properties:
 Rules:
 
 - At least one of phone or LID is required.
-- Blocks apply only to identities with no Client row in that tenant.
+- Blocks apply only to identities with no Client row in that tenant. If the identity is present and active in `blocked_clients`, it cannot use code lookup, `/menu`, profile, subscriptions, or any WhatsApp console surface for that tenant.
 - If an admin creates a Client for a blocked identity, the block is automatically cleared as part of successful Client creation.
 - Blocks are persistent until explicitly unblocked.
 - Blocks can be unblocked from the shortcut and from the Tenant console Clients section.
@@ -175,7 +179,7 @@ The regular Tenant console Clients menu becomes:
 
 1. Ver clientes
 2. Crear cliente
-3. Bloqueos de mensajes
+3. Bloqueos de acceso
 9. Volver al menú principal
 
 Implementation must align handlers with the displayed `9` back command. Current Clients flow code paths that treat `0` as the Clients-menu back command should be corrected as part of this work.
@@ -185,7 +189,7 @@ Implementation must align handlers with the displayed `9` back command. Current 
 Unregistered WhatsApp identities in a tenant instance may use only code lookup:
 
 1. They trigger with `codigo`, `código`, or `code`.
-2. Backend checks Client Messaging Block first.
+2. Backend checks Blocked Client first.
 3. If blocked, backend returns `no_reply=true`.
 4. If unblocked, backend starts the existing code lookup flow: service selection, then target email.
 5. Replies and final lookup results are sent to the requesting WhatsApp identity's chat, not to the tenant admin.
@@ -223,7 +227,7 @@ Create `test_whatsapp_client_context.py` using existing async fixtures to cover:
 - unregistered target menu;
 - create client with target phone skipped;
 - create client with LID-only target asking for phone;
-- immediate Client Messaging Block creation;
+- immediate Blocked Client creation;
 - unblock flow;
 - active and inactive Client menus;
 - inactive Client cannot create subscription;
@@ -239,9 +243,19 @@ Update workflow tests/manual validation to cover:
 
 - parser extracts `fromMe`, `admin_jid`, `target_jid`, `target_phone`, and `target_lid`;
 - Console Call sends the new fields;
-- Merge node preserves `reply_to` and `no_reply`;
+- Merge node preserves `reply_to`, `no_reply`, and `close_jid`;
 - send node uses `reply_to` when present;
-- workflow sends nothing when `no_reply=true`.
+- workflow sends nothing when `no_reply=true`;
+- Close session node uses `close_jid || reply_to || remoteJid` to target the correct chat.
+
+## Implementation Notes
+
+- Initial contextual response is the actionable i18n-backed menu (not a generic "context started" message).
+- Option `0` inside a contextual session performs a tenant-side total close: clears the Redis context key, clears the tenant console session, returns `status="closed"` and `close_jid=<admin_jid>`.
+- All contextual shortcut messages are backend-rendered through `wa.tenant.client_context.*` i18n keys.
+- `client_messaging_blocks` was renamed to `blocked_clients`.
+- Registered clients show contextual CRUD menus with no phone prompt; active clients include "Desactivar cliente".
+- Active context consumes messages before the normal Tenant console route, reducing duplicate Redis reads.
 
 ## Open Risks
 

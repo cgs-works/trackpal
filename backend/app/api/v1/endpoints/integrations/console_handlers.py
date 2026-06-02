@@ -23,7 +23,7 @@ from app.core.redis_client import (
 )
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.repositories import (
-    client_messaging_block_repository,
+    blocked_clients_repository,
     clients_repository,
     code_services_repository,
     mailbox_config_repository,
@@ -651,10 +651,11 @@ async def _handle_active_client_context(
 
         await manager.execute("set_context", _set)
 
-    # ── Helper: clear context ─────────────────────────────────────
+    # ── Helper: clear context and tenant session ────────────────
     async def _clear_ctx() -> None:
         async def _del(client):
             await client.delete(ctx_key)
+            await client.delete(f"session:admin:{phone}")
 
         await manager.execute("clear_context", _del)
 
@@ -738,15 +739,18 @@ async def _handle_active_client_context(
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
     if msg_lower in ("0", "salir", "cerrar"):
+        locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
         await _clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u274c Contexto cerrado.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
         )
 
     # ── Handle by step ────────────────────────────────────────────
     if step == "menu":
-        blocked = await client_messaging_block_repository.find_active(
+        blocked = await blocked_clients_repository.find_active(
             db,
             tenant.id,
             phone=target_phone_norm if target_phone_norm else None,
@@ -977,7 +981,7 @@ async def _handle_ctx_unblocked_menu(
 
     if msg_lower == "2":
         # Bloquear mensajes — create block immediately without confirmation
-        await client_messaging_block_repository.create(
+        await blocked_clients_repository.create(
             db,
             tenant_id=tenant.id,
             phone=target_phone,
@@ -991,19 +995,20 @@ async def _handle_ctx_unblocked_menu(
         )
 
     if msg_lower in ("0", "salir", "cerrar"):
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u274c Contexto cerrado.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
         )
 
     # Invalid input — do NOT refresh TTL
+    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
-        "1\ufe0f\u20e3 Crear cliente\n"
-        "2\ufe0f\u20e3 Bloquear mensajes\n"
-        "0\ufe0f\u20e3 Cancelar",
+        reply=_i18n_t(locale, "wa.tenant.client_context.invalid_option"),
         reply_to=admin_jid,
     )
 
@@ -1023,14 +1028,14 @@ async def _handle_ctx_blocked_menu(
 
     if msg_lower == "1":
         # Desbloquear mensajes — find active block and unblock
-        blocked = await client_messaging_block_repository.find_active(
+        blocked = await blocked_clients_repository.find_active(
             db,
             tenant.id,
             phone=target_phone,
             whatsapp_lid=target_lid,
         )
         if blocked is not None:
-            await client_messaging_block_repository.unblock(
+            await blocked_clients_repository.unblock(
                 db,
                 tenant_id=tenant.id,
                 block_id=blocked.id,
@@ -1043,17 +1048,19 @@ async def _handle_ctx_blocked_menu(
         )
 
     if msg_lower in ("0", "salir", "cerrar"):
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u274c Contexto cerrado.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
         )
 
     # Invalid input — do NOT refresh TTL
+    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
-        "1\ufe0f\u20e3 Desbloquear mensajes\n"
-        "0\ufe0f\u20e3 Cancelar",
+        reply=_i18n_t(locale, "wa.tenant.client_context.invalid_option"),
         reply_to=admin_jid,
     )

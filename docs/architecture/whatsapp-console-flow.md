@@ -158,6 +158,7 @@ The response schema now includes fields for private routing and silent replies.
 | `lookup_job_id` | string | no | Job id for code lookup polling. When present, n8n sends ``reply``, then polls |
 | `tenant_id` | string | no | Tenant UUID for scoped poll requests |
 | `reply_to` | string | no | JID used as the message destination. When present, n8n sends to this JID instead of ``phone`` |
+| `close_jid` | string | no | Exact JID n8n must close when ``status="closed"``. Context shortcut close uses the Tenant admin private JID to avoid closing the target/client chat |
 | `no_reply` | boolean | no | ``true`` means n8n must not send any Evolution API message. Used for silent admin replies or blocked attempts |
 
 When ``no_reply=true``, n8n must skip all Evolution sends entirely (no call to ``/send/text``). When ``reply_to`` is present, n8n sends to that JID rather than the original sender's phone.
@@ -245,19 +246,19 @@ Phone editing is disabled from the shortcut. Edit supports ``full_name`` and ``l
 
 Inactive clients cannot be duplicated by contextual creation (they count as existing identities). The subscription shortcut is hidden until reactivation.
 
-## Client Messaging Blocks
+## Blocked Clients
 
-Client Messaging Blocks prevent unregistered WhatsApp identities from using the console or code lookup. They are stored in a dedicated tenant-scoped table (``client_messaging_blocks``) rather than on the ``Client`` model because blocks apply only to identities that are not registered as clients.
+Blocked Clients prevent unregistered WhatsApp identities from using the console, codes, profile, or subscriptions. They are stored in a dedicated tenant-scoped table (``blocked_clients``, renamed from ``client_messaging_blocks``) rather than on the ``Client`` model because blocks apply only to identities that are not registered as clients.
 
 ### Storage
 
-- Table: ``client_messaging_blocks``
+- Table: ``blocked_clients``
 - At least one identity field required (``phone`` or ``whatsapp_lid``)
 - ``is_active`` boolean for soft-delete
 - Tenant-scoped indexes on ``(tenant_id, phone)`` and ``(tenant_id, whatsapp_lid)``
-- Created in migration ``ce10fe74caa10``
+- Created in migration ``ce10fe74caa10``, renamed in ``ce10fe74caa11``
 
-### Repository operations
+### Repository operations (``blocked_clients_repository.py``)
 
 | Operation | Description |
 |-----------|-------------|

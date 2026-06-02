@@ -7,14 +7,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
 
 
-class ClientMessagingBlock(Base, TimestampMixin):
+class BlockedClient(Base, TimestampMixin):
     """Tenant-scoped block for unregistered WhatsApp identities.
 
     At least one identity field (phone or whatsapp_lid) must be
     provided at creation — enforced by the repository layer.
     """
 
-    __tablename__ = "client_messaging_blocks"
+    __tablename__ = "blocked_clients"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -27,6 +27,6 @@ class ClientMessagingBlock(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     __table_args__ = (
-        Index("ix_cmb_tenant_phone", "tenant_id", "phone"),
-        Index("ix_cmb_tenant_lid", "tenant_id", "whatsapp_lid"),
+        Index("ix_blocked_clients_tenant_phone", "tenant_id", "phone"),
+        Index("ix_blocked_clients_tenant_lid", "tenant_id", "whatsapp_lid"),
     )

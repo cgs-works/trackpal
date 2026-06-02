@@ -170,7 +170,8 @@ Closes the Evolution Go webhook for the specific chat, preventing further messag
 | Method | POST |
 | URL | `{{ $('Config').first().json.evolution_api_url }}/webhook/change-status` |
 | Headers | `apikey: {{ $json.apiKey }}` |
-| Body | `{"remoteJid": "phone@s.whatsapp.net", "status": "closed"}` |
+| Body (initial) | `{"remoteJid": "phone@s.whatsapp.net", "status": "closed"}` |
+| Body (actual) | `{{ JSON.stringify({ remoteJid: String($json.close_jid || $json.reply_to || $json.remoteJid), status: "closed" }) }}` uses ``close_jid`` when present (contextual shortcut close), falling back to ``reply_to`` then ``remoteJid`` |
 | Never Error | `true` |
 
 This replaces the deprecated `EvolutionClient.close_chat_session()` which was previously called directly from the backend facades.
