@@ -378,18 +378,31 @@ async def _handle_from_me_routing(
         # Active context collision — reject silently
         return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
 
-    # ── Step 5: Create context session ────────────────────────────
+    # ── Step 5: Render real contextual menu ───────────────────────
+    from app.api.v1.endpoints.integrations.console_context_shortcut import (
+        render_initial_context_menu,
+    )
     from app.services.whatsapp_session_service import ConversationSession
+
+    reply, context_meta = await render_initial_context_menu(
+        db=db,
+        tenant=tenant,
+        target_phone=target_phone_norm or target_phone,
+        target_lid=target_lid,
+        target_jid=target_jid,
+    )
 
     session = ConversationSession(
         phone=resolved_admin_phone,
         flow="client_shortcut",
         step="menu",
         temp_data={
+            "tenant_id": str(tenant.id),
             "target_phone": target_phone_norm or target_phone,
             "target_lid": target_lid,
             "target_jid": target_jid,
             "admin_jid": admin_jid,
+            **context_meta,
         },
     )
 
@@ -399,9 +412,4 @@ async def _handle_from_me_routing(
     await manager.execute("set_context", _set_ctx)
 
     # ── Step 6: Return contextual response with reply_to ─────────
-    return WhatsAppConsoleResponse(
-        reply="✅ Contexto de cliente iniciado.\n\n"
-        "Use las opciones del menú para gestionar este contacto.\n\n"
-        "0️⃣ Cerrar contexto",
-        reply_to=admin_jid,
-    )
+    return WhatsAppConsoleResponse(reply=reply, reply_to=admin_jid)
