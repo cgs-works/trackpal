@@ -211,3 +211,48 @@ async def test_from_me_shortcut_renders_contextual_menu_for_unregistered(
     assert "Crear cliente para este número" in reply
     # reply_to must point at the admin's private JID.
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_from_me_self_menu_routes_to_tenant_console(
+    client, db_session, active_tenant_user
+):
+    """from_me /menu in admin's own chat must route to Tenant console."""
+    from app.core.config import settings
+    from app.models import Tenant
+    from sqlalchemy import select
+
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+    tenant.evolution_instance_name = "test-tenant-instance"
+    tenant.locale = "es"
+    await db_session.commit()
+
+    admin_phone = tenant.whatsapp_phone
+    admin_jid = f"{admin_phone}@s.whatsapp.net"
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=_FakeManager(used_backup=False),
+    ):
+        response = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={
+                "phone": "",
+                "message": "/menu",
+                "instance": "test-tenant-instance",
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": admin_jid,
+                "target_jid": admin_jid,  # self-target
+                "target_phone": admin_phone,  # self-target
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    # Must NOT show the client context menu
+    assert "Gestión del cliente" not in body.get("reply", "")
