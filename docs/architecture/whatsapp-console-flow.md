@@ -158,6 +158,7 @@ The response schema now includes fields for private routing and silent replies.
 | `lookup_job_id` | string | no | Job id for code lookup polling. When present, n8n sends ``reply``, then polls |
 | `tenant_id` | string | no | Tenant UUID for scoped poll requests |
 | `reply_to` | string | no | JID used as the message destination. When present, n8n sends to this JID instead of ``phone`` |
+| `close_jid` | string | no | Exact JID n8n must close when ``status="closed"``. Context shortcut close uses the Tenant admin private JID to avoid closing the target/client chat |
 | `no_reply` | boolean | no | ``true`` means n8n must not send any Evolution API message. Used for silent admin replies or blocked attempts |
 
 When ``no_reply=true``, n8n must skip all Evolution sends entirely (no call to ``/send/text``). When ``reply_to`` is present, n8n sends to that JID rather than the original sender's phone.

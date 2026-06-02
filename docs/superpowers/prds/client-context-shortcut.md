@@ -243,9 +243,19 @@ Update workflow tests/manual validation to cover:
 
 - parser extracts `fromMe`, `admin_jid`, `target_jid`, `target_phone`, and `target_lid`;
 - Console Call sends the new fields;
-- Merge node preserves `reply_to` and `no_reply`;
+- Merge node preserves `reply_to`, `no_reply`, and `close_jid`;
 - send node uses `reply_to` when present;
-- workflow sends nothing when `no_reply=true`.
+- workflow sends nothing when `no_reply=true`;
+- Close session node uses `close_jid || reply_to || remoteJid` to target the correct chat.
+
+## Implementation Notes
+
+- Initial contextual response is the actionable i18n-backed menu (not a generic "context started" message).
+- Option `0` inside a contextual session performs a tenant-side total close: clears the Redis context key, clears the tenant console session, returns `status="closed"` and `close_jid=<admin_jid>`.
+- All contextual shortcut messages are backend-rendered through `wa.tenant.client_context.*` i18n keys.
+- `client_messaging_blocks` was renamed to `blocked_clients`.
+- Registered clients show contextual CRUD menus with no phone prompt; active clients include "Desactivar cliente".
+- Active context consumes messages before the normal Tenant console route, reducing duplicate Redis reads.
 
 ## Open Risks
 
