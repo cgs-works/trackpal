@@ -12,7 +12,14 @@ from sqlalchemy import select
 
 from app.api.v1.endpoints.integrations import _TenantConsoleAdapter
 from app.core.config import settings
-from app.models import MasterProfile, Tenant
+from app.models import (
+    ClientMessagingBlock,
+    CodeServiceGlobalStatus,
+    MasterProfile,
+    Tenant,
+    TenantCodeServiceSelection,
+    TenantMailbox,
+)
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_auth_session_service import (
     WhatsAppAuthLockState,
@@ -58,6 +65,10 @@ class _FakeRedis:
     async def delete(self, key: str) -> int:
         self._ttls.pop(key, None)
         return 1 if self._store.pop(key, None) is not None else 0
+
+    async def lpush(self, key: str, value: str) -> int:
+        self._store[key] = value
+        return 1
 
 
 class _FakeManager:
@@ -904,3 +915,236 @@ async def test_response_model_serializes_no_reply(client):
     r3 = WhatsAppConsoleResponse(reply="test", no_reply=False)
     d3 = r3.model_dump(mode="json")
     assert d3["no_reply"] is False
+
+
+# ---------------------------------------------------------------------------
+# Unauthenticated code lookup for unregistered identities
+# ---------------------------------------------------------------------------
+
+TEST_INSTANCE = "test-tenant-instance"
+
+
+async def _setup_tenant_for_codigo(
+    db_session, active_tenant_user
+) -> Tenant:
+    """Set up a tenant with instance, mailbox, and code services for codigo flow."""
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+    tenant.evolution_instance_name = TEST_INSTANCE
+    tenant.locale = "es"
+    await db_session.flush()
+
+    # Create connected mailbox
+    mailbox = TenantMailbox(
+        tenant_id=tenant.id,
+        mailbox_email="tech@example.com",
+        provider="imap",
+        auth_method="password",
+        status="connected",
+    )
+    db_session.add(mailbox)
+
+    # Activate global code service and select for tenant
+    global_svc = CodeServiceGlobalStatus(service_key="netflix", is_active=True)
+    db_session.add(global_svc)
+    tenant_sel = TenantCodeServiceSelection(
+        tenant_id=tenant.id, service_key="netflix"
+    )
+    db_session.add(tenant_sel)
+
+    await db_session.commit()
+    return tenant
+
+
+async def test_unregistered_identity_codigo_starts_flow(
+    client, db_session, active_tenant_user
+):
+    """Unregistered identity sending 'codigo' in a known tenant instance
+    receives the service list prompt."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Should show service prompt (not access_denied)
+    assert "Buscar Código" in reply or "servicio" in reply
+    assert "Netflix" in reply
+    assert "reply_to" not in body
+    assert "no_reply" not in body or body.get("no_reply") is not True
+
+
+async def test_unregistered_identity_codigo_multistep(
+    client, db_session, active_tenant_user
+):
+    """Unregistered identity goes through full codigo flow:
+    service selection then email, receiving lookup_job_id."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Step 1: send "codigo" → service prompt
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        body1 = resp1.json()
+        assert "Netflix" in body1["reply"]
+
+        # Step 2: send "1" (select Netflix) → email prompt
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+        body2 = resp2.json()
+        assert "email" in body2["reply"].lower() or "correo" in body2["reply"].lower()
+
+        # Step 3: send valid email → lookup job created
+        resp3 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "user@example.com",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp3.status_code == 200
+        body3 = resp3.json()
+        assert "buscando" in body3["reply"].lower() or "searching" in body3["reply"].lower()
+        assert "lookup_job_id" in body3
+        assert body3["lookup_job_id"] is not None
+        assert "tenant_id" in body3
+        assert body3["tenant_id"] is not None
+
+
+async def test_unregistered_identity_blocked_returns_no_reply(
+    client, db_session, active_tenant_user
+):
+    """Blocked unregistered identity receives no_reply=true for codigo."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    # Create active block for the identity
+    block = ClientMessagingBlock(
+        tenant_id=tenant.id,
+        phone="12015559999",
+        is_active=True,
+    )
+    db_session.add(block)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    # Blocked identity gets silent treatment
+    assert body.get("no_reply") is True
+    # No reply text should be sent
+    assert not body.get("reply") or body.get("reply") == ""
+
+
+async def test_unregistered_identity_blocked_any_message_no_reply(
+    client, db_session, active_tenant_user
+):
+    """Blocked unregistered identity receives no_reply=true for /menu too."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    block = ClientMessagingBlock(
+        tenant_id=tenant.id,
+        phone="12015559999",
+        is_active=True,
+    )
+    db_session.add(block)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("no_reply") is True
+    assert not body.get("reply") or body.get("reply") == ""
+
+
+async def test_unregistered_identity_non_codigo_returns_access_denied(
+    client, db_session, active_tenant_user
+):
+    """Unregistered identity sending non-codigo message receives access_denied."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "hola",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    reply = body["reply"].lower()
+    # Must be access denied, not code lookup or anything else
+    assert "no tienes acceso" in reply or "no está registrado" in reply or "acceso denegado" in reply
+    assert "Netflix" not in body["reply"]
+    assert "no_reply" not in body or body.get("no_reply") is not True

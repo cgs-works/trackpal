@@ -11,6 +11,7 @@ from app.api.v1.endpoints.integrations.console_handlers import (
     _handle_client_console,
     _handle_master_console,
     _handle_tenant_console,
+    _handle_unauthenticated_codigo,
 )
 from app.api.v1.endpoints.integrations.console_modes import _handle_ambiguity
 from app.core.config import settings
@@ -18,7 +19,12 @@ from app.core.database import set_internal_rls_context
 from app.core.i18n import t
 from app.core.phone import normalize_phone
 from app.core.redis_client import RedisConnectionManager, get_redis_manager
-from app.repositories import clients_repository, tenants_repository, users_repository
+from app.repositories import (
+    client_messaging_block_repository,
+    clients_repository,
+    tenants_repository,
+    users_repository,
+)
 from app.schemas.whatsapp import WhatsAppConsoleRequest, WhatsAppConsoleResponse
 from app.services.auth_service import AuthService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
@@ -207,6 +213,47 @@ async def _route_by_instance(
             db=db,
             identity=client_identity,
             locale=client_locale,
+        )
+
+    # ── Unregistered identity in a known tenant instance ────────────
+    # Route to code lookup for ``codigo`` keywords, or
+    # return silent ``no_reply`` when the sender is blocked.
+
+    from app.api.v1.endpoints.integrations.console_handlers import (
+        _unauth_session_key,
+    )
+    from app.services.whatsapp_session_service import WhatsAppSessionService
+
+    msg_lower = message.strip().lower()
+
+    # Check for existing unauthenticated codigo session first
+    # so the multi-step dialog can continue.
+    if msg_lower not in ("codigo", "código", "code"):
+        unauth_key = _unauth_session_key(phone_digits, sender_lid)
+        session_service = WhatsAppSessionService(
+            connection_manager=manager,
+            ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+        )
+        existing = await session_service.get_session(unauth_key)
+        if existing and existing.flow == "codigo":
+            return await _handle_unauthenticated_codigo(
+                phone_digits, message, sender_lid, manager, tenant, db
+            )
+
+    # Block check — blocked senders always get silent treatment
+    blocked = await client_messaging_block_repository.find_active(
+        db,
+        tenant.id,
+        phone=phone_digits if phone_digits else None,
+        whatsapp_lid=sender_lid,
+    )
+    if blocked:
+        return WhatsAppConsoleResponse(reply="", no_reply=True)
+
+    # Only "codigo"/"código"/"code" triggers unauthenticated code lookup
+    if msg_lower in ("codigo", "código", "code"):
+        return await _handle_unauthenticated_codigo(
+            phone_digits, message, sender_lid, manager, tenant, db
         )
 
     return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))

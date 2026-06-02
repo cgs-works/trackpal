@@ -56,3 +56,21 @@ Per prioritization strategy: persistence before routing/session/facade. Item 1 (
 
 ### Next-iteration notes
 Item 3 (unauthenticated code lookup with block enforcement) is the next dependency. The persistence layer now supports is-blocked checks and clear-on-Client-creation, which Item 3 needs for blocked codigo/código/code detection and silent replies.
+
+## Iteration 3 — 2026-06-01 23:41
+
+### Selected Item
+Item 3: Implement unauthenticated client-side code lookup for unregistered identities with Client Messaging Block enforcement.
+
+### Why this item was chosen
+Per prioritization strategy: the persistence layer (Item 2) is complete; Item 3 is the next dependency that uses it — it enables code lookup for unregistered identities and enforces blocks. This unblocks Items 4 (contextual routing), 5 (shortcut session lifecycle), and 9 (documentation).
+
+### Changed files
+- `backend/app/api/v1/endpoints/integrations/console.py` — Added `_handle_unauthenticated_codigo` import, `client_messaging_block_repository` import. Replaced final `access_denied` in `_route_by_instance` with unregistered identity handling: existing codigo session continuation, block check, codigo keyword routing, and fallback access_denied.
+- `backend/app/api/v1/endpoints/integrations/console_handlers.py` — Added `_i18n_t` import, `code_services_repository` import. Added unauthenticated codigo constants, `_unauth_session_key()` helper. Added `_handle_unauthenticated_codigo()` entry point (starts or continues multi-step dialog under `session:unreg:...`). Added `_handle_unauth_codigo_service()` for service selection step. Added `_handle_unauth_codigo_email()` for email input step that creates a lookup job and returns `lookup_job_id`/`tenant_id`.
+- `backend/tests/test_whatsapp_endpoint.py` — Added `_FakeRedis.lpush()`. Added `_setup_tenant_for_codigo()` helper. Added 5 tests: codigo flow start, multistep full flow (service→email→job_id), blocked identity no_reply=true, blocked identity /menu no_reply=true, non-codigo access_denied.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1138 passed, 1 skipped in ~29s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓

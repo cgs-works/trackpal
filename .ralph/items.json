@@ -52,8 +52,8 @@
         "Preserve existing registered Client profile/subscription behavior and ensure inactive Clients do not fall back to unauthenticated code lookup.",
         "Add tests proving unregistered code lookup asks for service then email, sends lookup replies to the requester, and blocked attempts stay silent."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Unregistered identities routed to code lookup on codigo/código/code in known tenant instances. Blocked identities receive no_reply=true. Existing registered Client behavior preserved. Session-managed multi-step flow: service selection → email → lookup job creation. 5 new endpoint tests pass. 1138/1138 full test suite passes. Frontend builds clean. n8n workflow JSON valid."
     },
     {
       "category": "functional",

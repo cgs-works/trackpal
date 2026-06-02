@@ -11,13 +11,15 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.i18n import t as _i18n_t
 from app.core.redis_client import RedisUnavailableError, get_redis_manager
+from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.repositories import (
+    code_services_repository,
     mailbox_config_repository,
     mailbox_lookup_repository,
     tenants_repository,
 )
-from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.mail_lookup_worker import enqueue_job
 from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService
@@ -40,6 +42,30 @@ from app.api.v1.endpoints.integrations.adapter import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ── Unauthenticated code lookup constants ──────────────────────────
+_UNAUTH_CODIGO_FLOW = "codigo"
+_UNAUTH_CODIGO_STEP_SERVICE = "service"
+_UNAUTH_CODIGO_STEP_EMAIL = "email"
+
+_UNAUTH_CODIGO_SERVICE_LABELS: dict[str, str] = {
+    "netflix": "Netflix",
+    "disney": "Disney+",
+    "hbo_max": "HBO Max",
+    "prime_video": "Prime Video",
+    "spotify": "Spotify",
+    "universal_plus": "Universal+",
+}
+
+
+def _unauth_session_key(phone_digits: str, sender_lid: str | None) -> str:
+    """Session key for unregistered identity code lookup."""
+    if phone_digits:
+        return f"unreg:{phone_digits}"
+    if sender_lid:
+        return f"unreg:{sender_lid}"
+    return "unreg:unknown"
+
 
 auth_service = AuthService()
 console_service = WhatsAppConsoleService()
@@ -300,3 +326,241 @@ async def _handle_client_console(
     if exit_cmd:
         resp.status = "closed"
     return resp
+
+
+# ====================================================================
+# Unauthenticated code lookup handler
+# ====================================================================
+
+
+async def _handle_unauthenticated_codigo(
+    phone_digits: str,
+    message: str,
+    sender_lid: str | None,
+    manager: object,
+    tenant: object,
+    db: AsyncSession,
+) -> WhatsAppConsoleResponse:
+    """Start or continue code lookup for an unregistered WhatsApp identity.
+
+    Called by ``_route_by_instance`` when a sender in a known tenant
+    instance is neither a tenant admin nor a registered client.
+
+    The function manages its own multi-step session under
+    ``session:unreg:...`` so that subsequent messages continue the
+    dialog rather than being treated as fresh requests.
+    """
+    locale = getattr(tenant, "locale", "es") or "es"
+    msg = message.strip()
+    session_key = _unauth_session_key(phone_digits, sender_lid)
+
+    session_service = WhatsAppSessionService(
+        connection_manager=manager,
+        ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+    )
+
+    session = await session_service.get_session(session_key)
+
+    # ── No active session → only start on codigo keywords ────────
+    if session is None:
+        if msg.lower() not in ("codigo", "código", "code"):
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.client.access_denied")
+            )
+
+        # Check mailbox is configured
+        mailbox = await mailbox_config_repository.get_by_tenant(db, tenant.id)
+        if mailbox is None or mailbox.status not in ("connected", "error"):
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.no_mailbox")
+            )
+
+        # Get effective service list
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant.id
+        )
+        if not effective_keys:
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+            )
+
+        # Build service list display
+        lines: list[str] = []
+        for i, key in enumerate(effective_keys, start=1):
+            label = _UNAUTH_CODIGO_SERVICE_LABELS.get(key, key.capitalize())
+            lines.append(f"{i}\U0001f53b {label}")
+        lines.append("0\U0001f53b " + _i18n_t(locale, "wa.tenant.codigo.cancel_direct"))
+        service_list = "\n".join(lines)
+
+        # Create session with flow state
+        session = await session_service.create_session(session_key)
+        session.flow = _UNAUTH_CODIGO_FLOW
+        session.step = _UNAUTH_CODIGO_STEP_SERVICE
+        session.temp_data = {"codigo_effective_keys": effective_keys}
+        await session_service.save_session(session)
+
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale, "wa.tenant.codigo.service_prompt", service_list=service_list
+            )
+        )
+
+    # ── Existing session --- route by step ────────────────────────
+    if session.flow != _UNAUTH_CODIGO_FLOW:
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.client.access_denied"))
+
+    if session.step == _UNAUTH_CODIGO_STEP_SERVICE:
+        return await _handle_unauth_codigo_service(
+            msg, session, session_service, session_key, tenant, db, locale
+        )
+
+    if session.step == _UNAUTH_CODIGO_STEP_EMAIL:
+        return await _handle_unauth_codigo_email(
+            msg, session, session_service, session_key, tenant, db, locale, manager
+        )
+
+    await session_service.clear_session(session_key)
+    return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.client.access_denied"))
+
+
+async def _handle_unauth_codigo_service(
+    msg: str,
+    session: object,
+    session_service: WhatsAppSessionService,
+    session_key: str,
+    tenant: object,
+    db: AsyncSession,
+    locale: str,
+) -> WhatsAppConsoleResponse:
+    """Handle service selection in unauthenticated code lookup."""
+    effective_keys = session.temp_data.get("codigo_effective_keys", [])
+    if not effective_keys:
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+        )
+
+    try:
+        idx = int(msg.strip())
+    except ValueError:
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
+        )
+
+    if idx < 1 or idx > len(effective_keys):
+        if idx == 0:
+            await session_service.clear_session(session_key)
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.cancelled")
+            )
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
+        )
+
+    service_key = effective_keys[idx - 1]
+    label = _UNAUTH_CODIGO_SERVICE_LABELS.get(service_key, service_key.capitalize())
+
+    session.temp_data["service_key"] = service_key
+    session.temp_data["service_label"] = label
+    session.step = _UNAUTH_CODIGO_STEP_EMAIL
+    await session_service.save_session(session)
+
+    return WhatsAppConsoleResponse(
+        reply=_i18n_t(locale, "wa.tenant.codigo.email_prompt", service_label=label)
+    )
+
+
+async def _handle_unauth_codigo_email(
+    msg: str,
+    session: object,
+    session_service: WhatsAppSessionService,
+    session_key: str,
+    tenant: object,
+    db: AsyncSession,
+    locale: str,
+    manager: object,
+) -> WhatsAppConsoleResponse:
+    """Handle email input, create lookup job, and return response with job_id."""
+    target_email = msg.strip()
+    if (
+        not target_email
+        or len(target_email) < 3
+        or "@" not in target_email
+        or "." not in target_email.split("@", 1)[1]
+    ):
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.invalid_email")
+        )
+
+    service_key = session.temp_data.get("service_key")
+    if not service_key:
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.cancelled")
+        )
+
+    # Create lookup job
+    mailbox = await mailbox_config_repository.get_by_tenant(db, tenant.id)
+    if mailbox is None or mailbox.status != "connected":
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.no_mailbox")
+        )
+
+    lookup_job_id: str | None = None
+    tenant_id_out: str | None = None
+
+    try:
+        job = await mailbox_lookup_repository.create_job(
+            db,
+            tenant_id=tenant.id,
+            mailbox_id=mailbox.id,
+            service_key=service_key,
+            target_email=target_email,
+        )
+        await db.flush()
+        await db.commit()
+
+        enqueued = False
+        try:
+            enqueued = (
+                await enqueue_job(manager, job.id)
+                if manager is not None
+                else False
+            )
+        except Exception:
+            logger.exception(
+                "Failed to enqueue lookup job %s for tenant %s", job.id, tenant.id
+            )
+
+        if enqueued:
+            lookup_job_id = str(job.id)
+            tenant_id_out = str(tenant.id)
+        else:
+            try:
+                await db.delete(job)
+                await db.commit()
+            except Exception:
+                logger.critical(
+                    "Failed to delete job %s after enqueue failure", job.id
+                )
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.error")
+            )
+    except Exception:
+        logger.exception("Failed to create lookup job for tenant %s", tenant.id)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.error")
+        )
+
+    # Clear session on success
+    try:
+        await session_service.clear_session(session_key)
+    except Exception:
+        pass
+
+    return WhatsAppConsoleResponse(
+        reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
+        lookup_job_id=lookup_job_id,
+        tenant_id=tenant_id_out,
+    )
