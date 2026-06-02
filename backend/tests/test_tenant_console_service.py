@@ -29,6 +29,7 @@ from app.services.whatsapp_tenant_console_facade import (
     WhatsAppTenantConsoleFacade,
 )
 from app.core.errors import UserFacingError
+from app.core.redis_client import RedisConnectionManager
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_tenant_console_service import (
@@ -1883,7 +1884,7 @@ class TestConsoleHandlersCodigoScope:
 
         # Seed session with intent
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
@@ -1960,7 +1961,7 @@ class TestConsoleHandlersCodigoScope:
 
         mock_db = AsyncMock()
         fake_redis = FakeRedis()
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         with (
             patch(
@@ -2013,7 +2014,7 @@ class TestConsoleHandlersCodigoScope:
         tenant_uuid = uuid4()
 
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
@@ -2092,7 +2093,7 @@ class TestConsoleHandlersCodigoScope:
         tenant_uuid = uuid4()
 
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
-        manager = FakeManager(fake_redis=fake_redis)
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
 
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="disconnected")
@@ -2415,12 +2416,13 @@ class TestClientMessagingBlocks:
             )
 
             # Press 1 to unblock the first identity
+            mock_db = AsyncMock()
             reply = await console_service.process_message(
                 phone="+10000000003",
                 message="1",
                 session_service=session_service,
                 tenant_id=tenant_id,
-                db=AsyncMock(),
+                db=mock_db,
             )
             assert "12015559999" in reply
             assert "eliminado" in reply or "removed" in reply.lower()
@@ -2434,6 +2436,10 @@ class TestClientMessagingBlocks:
             call_args = mock_repo.unblock.call_args[0]
             assert call_args[1] == tenant_id  # db, tenant_id, block_id
             assert call_args[2] == block_id
+
+            # Regression: the unblock path must commit the session so the
+            # block deactivation is not rolled back at request end.
+            mock_db.commit.assert_awaited()
 
     async def test_block_list_invalid_selection(
         self,

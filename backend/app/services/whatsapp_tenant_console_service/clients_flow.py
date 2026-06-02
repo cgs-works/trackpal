@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 async def _start_clients_flow(self, phone, session_service, tenant_id, db):
     if session_service is not None:
@@ -193,6 +197,14 @@ async def _handle_clients_block_unblock(
     block = await client_messaging_block_repository.unblock(db, tenant_id, parsed_id)
     if block is None:
         return self._t(self.KEY_CLIENT_BLOCK_INVALID_SELECTION)
+
+    # Repository only flushes; the FastAPI session does not auto-commit
+    # so we must persist the deactivation explicitly, otherwise the
+    # rollback at request end leaves the block active.
+    try:
+        await db.commit()
+    except Exception:
+        logger.exception("Failed to commit block unblock for %s", parsed_id)
 
     identity = block.phone or block.whatsapp_lid or "—"
 

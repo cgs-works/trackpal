@@ -266,8 +266,21 @@ async def _route_by_instance(
 
     msg_lower = message.strip().lower()
 
-    # Check for existing unauthenticated codigo session first
-    # so the multi-step dialog can continue.
+    # Block check first — blocked senders always get silent treatment,
+    # even when they already have an active ``codigo`` session. The block
+    # check must run before any session-resume path so a block applied
+    # mid-flow can no longer be bypassed by continuing the dialog.
+    blocked = await client_messaging_block_repository.find_active(
+        db,
+        tenant.id,
+        phone=phone_digits if phone_digits else None,
+        whatsapp_lid=sender_lid,
+    )
+    if blocked:
+        return WhatsAppConsoleResponse(reply="", no_reply=True)
+
+    # Resume any existing unauthenticated codigo session first so the
+    # multi-step dialog can continue across messages.
     if msg_lower not in ("codigo", "código", "code"):
         unauth_key = _unauth_session_key(phone_digits, sender_lid)
         session_service = WhatsAppSessionService(
@@ -279,16 +292,6 @@ async def _route_by_instance(
             return await _handle_unauthenticated_codigo(
                 phone_digits, message, sender_lid, manager, tenant, db
             )
-
-    # Block check — blocked senders always get silent treatment
-    blocked = await client_messaging_block_repository.find_active(
-        db,
-        tenant.id,
-        phone=phone_digits if phone_digits else None,
-        whatsapp_lid=sender_lid,
-    )
-    if blocked:
-        return WhatsAppConsoleResponse(reply="", no_reply=True)
 
     # Only "codigo"/"código"/"code" triggers unauthenticated code lookup
     if msg_lower in ("codigo", "código", "code"):

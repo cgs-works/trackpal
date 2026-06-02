@@ -1157,6 +1157,68 @@ async def test_unregistered_identity_non_codigo_returns_access_denied(
     assert "no_reply" not in body or body.get("no_reply") is not True
 
 
+async def test_blocked_unregistered_with_existing_codigo_session_returns_no_reply(
+    client, db_session, active_tenant_user
+):
+    """Block check runs BEFORE the unauth session resume.
+
+    A tenant can apply a Client Messaging Block while a sender is in the
+    middle of the codigo flow. The next inbound message must be silenced,
+    not allowed to continue the dialog.
+    """
+    import json
+
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    # Pre-existing active block for the identity
+    block = ClientMessagingBlock(
+        tenant_id=_tenant.id,
+        phone="12015559999",
+        is_active=True,
+    )
+    db_session.add(block)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    # Pre-populate an unauthenticated codigo session in fake Redis
+    unauth_session = {
+        "phone": "12015559999",
+        "flow": "codigo",
+        "step": "email",
+        "selected_tenant_id": None,
+        "temp_data": {
+            "service_key": "netflix",
+            "service_label": "Netflix",
+        },
+        "selection_map": {},
+    }
+    await fake_mgr._redis.set(
+        "session:unreg:12015559999",
+        json.dumps(unauth_session),
+        ex=900,
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "user@example.com",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    # Block short-circuits the resume path
+    assert body.get("no_reply") is True
+    assert not body.get("reply") or body.get("reply") == ""
+    assert "lookup_job_id" not in body
+
+
 # ---------------------------------------------------------------------------
 # from_me contextual routing tests
 # ---------------------------------------------------------------------------
@@ -2301,3 +2363,72 @@ async def test_context_inactive_client_prevents_duplicate_creation(
     assert "Existing Inactive" in reply
     assert "creacion" not in reply.lower() or "cread" not in reply.lower()
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_creating_lid_only_backfills_whatsapp_lid(
+    client, db_session, active_tenant_user
+):
+    """A shortcut created from a LID-only target stores the LID on the new client."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+    target_lid = "998877665544332211@lid"
+    target_phone_value = "12015558888"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone=None,
+        target_lid=target_lid,
+        step="creating_confirm",
+    )
+    # Manually fill the creating temp_data so CONFIRMAR can commit the
+    # full payload (phone prefilled, name/username/password set).
+    import json
+
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is not None
+    data = json.loads(raw)
+    data["temp_data"] = {
+        "phone": target_phone_value,
+        "full_name": "LID Shortcut Client",
+        "local_username": "liduser",
+        "password": "lidpass1",
+        "target_phone": None,
+        "target_lid": target_lid,
+        "target_jid": f"{target_lid}@lid",
+        "admin_jid": "12015550002@s.whatsapp.net",
+    }
+    await fake_mgr._redis.set(ctx_key, json.dumps(data), ex=300)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "CONFIRMAR",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "creado exitosamente" in reply
+
+    # Verify the created client has the LID backfilled
+    from sqlalchemy import select as _select
+
+    result = await db_session.execute(
+        _select(Client).where(
+            Client.tenant_id == tenant.id,
+            Client.phone == target_phone_value,
+        )
+    )
+    created_client = result.scalar_one_or_none()
+    assert created_client is not None
+    assert created_client.whatsapp_lid == target_lid

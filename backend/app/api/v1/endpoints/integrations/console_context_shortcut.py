@@ -25,7 +25,7 @@ from app.core.input_validation import (
 )
 from app.models import Client as _ClientModel
 from app.models import Tenant as _TenantModel
-from app.repositories import client_messaging_block_repository
+from app.repositories import client_messaging_block_repository, clients_repository
 from app.schemas.client import ClientCreate
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.client_service import ClientService
@@ -294,6 +294,18 @@ async def handle_ctx_creating_confirm(
         await db.commit()
     except Exception:
         logger.exception("Failed to clear blocks after context shortcut creation")
+
+    # Backfill the new client's whatsapp_lid when the shortcut was started
+    # from a LID-only target so subsequent LID-only inbound messages still
+    # resolve this client via get_active_client_by_tenant_lid.
+    if target_lid and not client.whatsapp_lid:
+        try:
+            await clients_repository.update_client_lid(db, client.id, target_lid)
+            await db.commit()
+        except Exception:
+            logger.exception(
+                "Failed to backfill whatsapp_lid on client %s", client.id
+            )
 
     await clear_ctx()
     return WhatsAppConsoleResponse(
