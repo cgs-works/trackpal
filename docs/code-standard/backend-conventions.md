@@ -102,13 +102,17 @@ Tenant WhatsApp console uses i18n key constants stored as class-level attributes
 | `wa:auth:fail:{phone}` | Consecutive failure counter | 15 min window |
 | `wa:auth:lock:{phone}` | Lockout marker after threshold | 5 min (configurable) |
 | `session:admin:{phone}` | Tenant conversation state | 15 min (configurable) |
+| `wa:client_ctx:{admin_phone}` | Client Context Shortcut session state | 5 min |
+| `session:unreg:{phone}` or `session:unreg:{lid}` | Unauthenticated code lookup session state (unregistered identity) | 15 min (configurable) |
 
 ## n8n Integration Conventions
 
 1. **Config Set node pattern**: All environment-specific values (backend URL, n8n API key, Evolution base URL) live in a single n8n Set node named `Config`. This works around the missing Variables UI in n8n community edition. Values are referenced via `$('Config').first().json.<field_name>`.
 2. **neverError**: Both HTTP Request nodes (Console Call and Evolution Send) set `neverError: true`. This prevents workflow failure when backend or Evolution returns non-2xx responses.
 3. **Input normalisation**: The `Parse Input` Code node derives `phone` from `senderPn` first. If inbound id is `@lid` and no PN exists, send empty `phone` plus `sender_lid`; never derive phone digits from LID.
-4. **Reply fallback**: The `Merge Reply` Code node provides a static Spanish fallback message when backend returns no reply.
+4. **Reply fallback**: The `Merge Reply` Code node provides a static Spanish fallback message when backend returns no reply, except when `no_reply=true` in the response (the fallback is skipped to keep the response silent).
+5. **``reply_to`` routing**: When the backend returns `reply_to`, the Evolution Go Send node uses that JID as the send target instead of the original sender's phone. This keeps contextual administrative replies private to the admin chat.
+6. **``no_reply`` silence**: When the backend returns `no_reply=true`, a new IF node routes the data directly to Check Close Session, bypassing all Evolution API send calls. This prevents blocked identities and context collisions from generating user-facing messages.
 5. **Workflow files**: Exported as `n8n/Trackpal WhatsApp Bot.json` and `n8n/Trackpal Subscription Reminders.json`. Config values are visible in plaintext in the JSON export; treat both files as secrets-bearing.
 
 ## Migration Guidelines

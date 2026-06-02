@@ -127,8 +127,8 @@
         "Ensure docs/SUMMARY.md links any new or changed durable docs needed by maintainers.",
         "Run all verification gates after documentation changes."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "WhatsApp console flow, n8n workflow, database schema, backend structure, backend conventions, and SUMMARY.md updated. ADR linked. 1168/1168 full test suite passes. Frontend builds clean. n8n workflow JSON valid."
     }
   ]
 }

@@ -181,5 +181,31 @@ Per prioritization strategy: n8n before docs (Item 9). Items 1-7 are complete. I
 2. `cd frontend && npm run build` — Build successful ✓
 3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
 
+## Iteration 9 — 2026-06-01
+
+### Selected Item
+Item 9: Refresh project documentation for the implemented WhatsApp shortcut, blocks, contracts, and workflow behavior.
+
+### Why this item was chosen
+Per prioritization strategy: docs last after all functional items (Items 1-8) are complete. This is the final item — all implementation is done, only documentation remains.
+
+### Changed files
+- `docs/architecture/whatsapp-console-flow.md` — Added Request/Response Contract section (WhatsAppConsoleRequest/Response fields), from_me contextual routing, Client Context Shortcut lifecycle, target resolution, creating flow, active/inactive client menus, Client Messaging Block storage/enforcement, and Tenant console block management. Updated split routing architecture section with `console_context_shortcut.py`. Updated Shared session behavior with new Redis keys and TTLs.
+- `docs/architecture/n8n-workflow.md` — Updated workflow overview diagram with IF no_reply node. Added contextual field extraction in Parse Input. Updated Console Call body with new request fields. Updated Merge & lookup data to preserve reply_to/no_reply and skip fallback for no_reply=true. Added IF no reply node section. Updated Evolution Go Send with reply_to routing. Added data flow detail for standard, from_me, and silent reply scenarios.
+- `docs/architecture/database-schema.md` — Added ClientMessagingBlock table docs and migration ce10fe74caa10.
+- `docs/architecture/system-overview.md` — Added Client Context Shortcut and Client Messaging Blocks to feature list.
+- `docs/codebase/backend-structure.md` — Added console_context_shortcut.py, client_messaging_block_repository.py, client_messaging_block.py model, and ce10fe74caa10 migration to directory tree.
+- `docs/code-standard/backend-conventions.md` — Added wa:client_ctx:{admin_phone} and session:unreg Redis keys. Added n8n conventions for reply_to routing and no_reply silence.
+- `docs/SUMMARY.md` — Updated WhatsApp Console Flow and n8n Workflow descriptions. Added Architecture Decisions section linking ADR 0001.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1168 passed, 1 skipped in 27.84s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
 ### Next-iteration notes
-Item 9 (docs refresh) is the last remaining item. Documentation for contextual routing, Client Messaging Blocks, unauthenticated code lookup, reply_to/no_reply, and n8n workflow updates needs to be added to docs/.
+All nine items complete. All backend tests pass (1168/1168). Frontend builds clean. n8n workflow JSON valid. The implementation covers the full Client Context Shortcut feature: schema contract, persistence, routing, session lifecycle, client management flows, Tenant console block management, n8n transport updates, and documentation. Only final commit remaining.
+
+---
+
+All items have passes: true. Bundle complete.

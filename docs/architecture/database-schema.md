@@ -224,6 +224,22 @@ Unique constraints/indexes:
 - Partial unique index when `message_id IS NOT NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `message_id`, `fingerprint`)
 - Partial unique index when `message_id IS NULL`: (`tenant_id`, `mailbox_id`, `service_key`, `fingerprint`)
 
+### `ClientMessagingBlock` — `client_messaging_blocks` table
+
+Tenant-scoped block for unregistered WhatsApp identities that should not receive console replies.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK, auto-generated |
+| tenant_id | UUID | FK → tenants.id CASCADE, not null |
+| phone | VARCHAR(50) | Nullable, canonical digits-only |
+| whatsapp_lid | VARCHAR(100) | Nullable, `@lid` identity |
+| is_active | BOOLEAN | Default true, soft-delete |
+| created_at | TIMESTAMPTZ | From TimestampMixin |
+| updated_at | TIMESTAMPTZ | From TimestampMixin |
+
+Constraints: at least one identity field required (phone or whatsapp_lid) enforced at the repository layer. Indexes: `(tenant_id, phone)` and `(tenant_id, whatsapp_lid)`.
+
 ### `CodeServiceGlobalStatus` -- `code_service_global_status`
 
 Global governance table for code-extraction services.
@@ -275,6 +291,7 @@ Alembic migrations:
 13. `cdbfefe74caa6` — Add `mail_lookup_jobs.target_email` and replace dedupe uniqueness with partial indexes for nullable `message_id`
 14. `cdbfefe74caa7` — Enable/force RLS on core auth and mailbox tables (`users`, `refresh_sessions`, `master_profiles`, `mail_lookup_jobs`, `mail_code_delivery_log`, `alembic_version`)
 15. `cdc0fe74caa8` — Add `code_service_global_status` and `tenant_code_service_selections` with RLS policies and seeded default service keys
+16. `ce10fe74caa10` — Add `client_messaging_blocks` table with tenant-scoped indexes
 
 ## Key Constraints
 

@@ -24,11 +24,12 @@ backend/
 │   │           ├── integrations/ # Package: adapter, console (split), identify, mail lookups
 │   │           │   ├── __init__.py
 │   │           │   ├── adapter.py
-│   │           │   ├── console.py          # Entrypoint + routing
-│   │           │   ├── console_handlers.py # Flow handlers + lookup scope handoff
-│   │           │   ├── console_modes.py    # Ambiguity mode selection
+│   │           │   ├── console.py               # Entrypoint + routing + from_me routing
+│   │           │   ├── console_handlers.py      # Flow handlers + unauthenticated codigo + context shortcut orchestration
+│   │           │   ├── console_context_shortcut.py # Client Context Shortcut: creating, active, inactive, subscription flows
+│   │           │   ├── console_modes.py         # Ambiguity mode selection
 │   │           │   ├── identify.py
-│   │           │   └── mail_lookups.py     # n8n create/poll mailbox lookup jobs
+│   │           │   └── mail_lookups.py          # n8n create/poll mailbox lookup jobs
 │   │           ├── _mailbox_helpers.py      # Shared mailbox response helpers
 │   │           ├── mailbox.py               # Tenant mailbox CRUD/test/OAuth endpoints
 │   │           └── subscriptions/ # Package: crud, lifecycle, jobs, settings, router
@@ -69,6 +70,7 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── client.py
+│   │   ├── client_messaging_block.py        # Tenant-scoped Client Messaging Blocks for unregistered identities
 │   │   ├── code_service_global_status.py    # Global code-service activation
 │   │   ├── tenant_mailbox.py
 │   │   ├── tenant_code_service_selection.py # Per-tenant code-service selection
@@ -84,6 +86,7 @@ backend/
 │   ├── repositories/              # Data access layer (migrated from crud/)
 │   │   ├── __init__.py
 │   │   ├── catalog_repository.py
+│   │   ├── client_messaging_block_repository.py  # Client Messaging Block CRUD + block enforcement
 │   │   ├── clients_repository.py
 │   │   ├── code_services_repository.py      # Code-service global + tenant data
 │   │   ├── mailbox_config_repository.py
@@ -151,7 +154,8 @@ backend/
 │       ├── cdbfefe74caa5_add_tenant_mailbox_tables.py
 │       ├── cdbfefe74caa6_add_target_email_and_fix_dedupe_unique.py
 │       ├── cdbfefe74caa7_add_rls_to_core_and_mail_tables.py  # RLS on core + mailbox tables
-│       └── cdc0fe74caa8_add_code_service_tables.py  # Code-service governance tables
+│       ├── cdc0fe74caa8_add_code_service_tables.py  # Code-service governance tables
+│       └── ce10fe74caa10_add_client_messaging_blocks_table.py  # Client Messaging Blocks table
 ├── scripts/
 │   └── seed.py
 ├── tests/
