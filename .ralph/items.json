@@ -40,8 +40,8 @@
         "Add repository/service functions to create, list, find active, unblock, and clear blocks for a tenant identity without creating Client rows.",
         "Add backend tests proving blocks are tenant-scoped, require phone or LID, are persistent until unblocked, and are cleared when a Client is successfully created for the blocked identity."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Model + migration added. Repository: create, list_active, find_active, unblock, clear_identity. 32/32 repository tests pass. Blocks are tenant-scoped, require phone or LID, persist until unblocked, cleared on Client creation. 1133/1133 full test suite passes."
     },
     {
       "category": "functional",

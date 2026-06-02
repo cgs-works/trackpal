@@ -33,3 +33,26 @@ that were lost during a full-file JSON rewrite.
 
 ### Next-iteration notes
 Item 2 (Client Messaging Block persistence) is the next dependency. The request/response contract is now ready for routing and block enforcement.
+
+## Iteration 2 — 2026-06-01 22:46
+
+### Selected Item
+Item 2: Add persistent Client Messaging Block storage and service behavior for unregistered WhatsApp identities.
+
+### Why this item was chosen
+Per prioritization strategy: persistence before routing/session/facade. Item 1 (schemas) completed the public contract. Item 2 adds the storage layer that blocks — and the downstream clear-on-creation hook — unblocks Items 3 (code lookup enforcement), 5 (shortcut block/unblock), 7 (console block management), and 9 (documentation).
+
+### Changed files
+- `backend/app/models/client_messaging_block.py` — New model: `ClientMessagingBlock` with tenant_id, phone, whatsapp_lid, is_active, timestamps. Tenant-scoped indexes on (tenant_id, phone) and (tenant_id, whatsapp_lid).
+- `backend/app/models/__init__.py` — Registered `ClientMessagingBlock` export.
+- `backend/alembic/versions/ce10fe74caa10_add_client_messaging_blocks_table.py` — Alembic migration creating the `client_messaging_blocks` table with indexes.
+- `backend/app/repositories/client_messaging_block_repository.py` — Repository with `create`, `list_active`, `find_active`, `unblock`, `clear_identity` functions. Enforces at-least-one-identity-field invariant via ValueError.
+- `backend/tests/test_client_messaging_block_repository.py` — 32 tests covering create (phone/LID/both/identity-required), find_active (by phone/LID/none/unblocked), tenant isolation (4 cross-tenant scenarios), list_active (empty/only-active/ordering), unblock (active/already/nonexistent), clear_identity (phone/LID/all-matching/no-args/no-match/idempotent), persistence (across sessions/until-unblocked/in-list/recreate-after-clear), and Client-creation clear integration.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1133 passed, 1 skipped in ~28s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+### Next-iteration notes
+Item 3 (unauthenticated code lookup with block enforcement) is the next dependency. The persistence layer now supports is-blocked checks and clear-on-Client-creation, which Item 3 needs for blocked codigo/código/code detection and silent replies.
