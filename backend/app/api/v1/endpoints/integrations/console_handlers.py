@@ -7,13 +7,20 @@ has resolved the caller's identity/role.
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Tenant
 
 from app.core.config import settings
 from app.core.i18n import t as _i18n_t
 from app.core.phone import normalize_phone
-from app.core.redis_client import RedisUnavailableError, get_redis_manager
+from app.core.redis_client import (
+    RedisConnectionManager,
+    RedisUnavailableError,
+    get_redis_manager,
+)
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.repositories import (
     client_messaging_block_repository,
@@ -36,7 +43,10 @@ from app.services.whatsapp_auth_session_service import WhatsAppAuthSessionServic
 from app.services.whatsapp_client_console_facade import WhatsAppClientConsoleFacade
 from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_master_console_facade import WhatsAppMasterConsoleFacade
-from app.services.whatsapp_session_service import WhatsAppSessionService
+from app.services.whatsapp_session_service import (
+    ConversationSession,
+    WhatsAppSessionService,
+)
 from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
 from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
 from app.api.v1.endpoints.integrations.adapter import (
@@ -85,7 +95,7 @@ async def _handle_master_console(
     phone: str,
     message: str,
     instance: str | None,
-    manager: object,
+    manager: RedisConnectionManager,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle message from identified Master user."""
@@ -131,7 +141,7 @@ async def _handle_tenant_console(
     phone: str,
     message: str,
     instance: str | None,
-    manager: object,
+    manager: RedisConnectionManager,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle message from identified Tenant Admin user."""
@@ -296,7 +306,7 @@ async def _handle_client_console(
     phone: str,
     message: str,
     instance: str | None,
-    manager: object,
+    manager: RedisConnectionManager,
     db: AsyncSession,
     identity: dict,
     locale: str = "es",
@@ -340,8 +350,8 @@ async def _handle_unauthenticated_codigo(
     phone_digits: str,
     message: str,
     sender_lid: str | None,
-    manager: object,
-    tenant: object,
+    manager: RedisConnectionManager,
+    tenant: Tenant,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Start or continue code lookup for an unregistered WhatsApp identity.
@@ -429,10 +439,10 @@ async def _handle_unauthenticated_codigo(
 
 async def _handle_unauth_codigo_service(
     msg: str,
-    session: object,
+    session: ConversationSession,
     session_service: WhatsAppSessionService,
     session_key: str,
-    tenant: object,
+    tenant: Tenant,
     db: AsyncSession,
     locale: str,
 ) -> WhatsAppConsoleResponse:
@@ -474,13 +484,13 @@ async def _handle_unauth_codigo_service(
 
 async def _handle_unauth_codigo_email(
     msg: str,
-    session: object,
+    session: ConversationSession,
     session_service: WhatsAppSessionService,
     session_key: str,
-    tenant: object,
+    tenant: Tenant,
     db: AsyncSession,
     locale: str,
-    manager: object,
+    manager: RedisConnectionManager,
 ) -> WhatsAppConsoleResponse:
     """Handle email input, create lookup job, and return response with job_id."""
     target_email = msg.strip()
@@ -547,10 +557,8 @@ async def _handle_unauth_codigo_email(
         return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
 
     # Clear session on success
-    try:
+    with suppress(Exception):
         await session_service.clear_session(session_key)
-    except Exception:
-        pass
 
     return WhatsAppConsoleResponse(
         reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
@@ -567,8 +575,8 @@ async def _handle_unauth_codigo_email(
 async def _handle_active_client_context(
     phone: str,
     message: str,
-    manager: object,
-    tenant: object,
+    manager: RedisConnectionManager,
+    tenant: Tenant,
     db: AsyncSession,
     instance: str | None,
 ) -> WhatsAppConsoleResponse | None:
@@ -610,7 +618,10 @@ async def _handle_active_client_context(
     async def _get_ctx(client):
         return await client.get(ctx_key)
 
-    raw = await manager.execute("get_context", _get_ctx)
+    try:
+        raw = await manager.execute("get_context", _get_ctx)
+    except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
+        return None
     if raw is None:
         return None
 
@@ -661,49 +672,69 @@ async def _handle_active_client_context(
         )
 
     if active_client is not None:
-        # Active client — show active client menu within context
-        data["step"] = "active_menu"
         data["temp_data"]["client_id"] = str(active_client.id)
-        await _save_ctx(refresh_ttl=True)
-        return await handle_ctx_active_client_menu(
-            msg_lower,
-            message,
-            data,
-            admin_jid,
-            active_client,
-            tenant,
-            db,
-            _save_ctx,
-            _clear_ctx,
-        )
+        active_steps = {
+            "active_menu",
+            "active_detail",
+            "active_edit_field",
+            "active_edit_value",
+            "active_deactivate_confirm",
+        }
+        if step not in active_steps:
+            # Active client discovered from a non-active context step:
+            # reset to active menu once, then continue normal dispatcher.
+            data["step"] = "active_menu"
+            step = "active_menu"
+            await _save_ctx(refresh_ttl=True)
+            return await handle_ctx_active_client_menu(
+                msg_lower,
+                message,
+                data,
+                admin_jid,
+                active_client,
+                tenant,
+                db,
+                _save_ctx,
+                _clear_ctx,
+            )
 
     # ── Check for inactive client ────────────────────────────────
     inactive_client = None
-    if target_phone_norm:
-        inactive_client = await clients_repository.get_client_by_tenant_phone(
-            db, tenant.id, target_phone_norm
-        )
-    if inactive_client is None and target_lid:
-        inactive_client = await clients_repository.get_client_by_tenant_lid(
-            db, tenant.id, target_lid
-        )
+    if active_client is None:
+        if target_phone_norm:
+            inactive_client = await clients_repository.get_client_by_tenant_phone(
+                db, tenant.id, target_phone_norm
+            )
+        if inactive_client is None and target_lid:
+            inactive_client = await clients_repository.get_client_by_tenant_lid(
+                db, tenant.id, target_lid
+            )
 
-    if inactive_client is not None:
-        # Inactive client — show inactive client menu within context
-        data["step"] = "inactive_menu"
-        data["temp_data"]["client_id"] = str(inactive_client.id)
-        await _save_ctx(refresh_ttl=True)
-        return await handle_ctx_inactive_client_menu(
-            msg_lower,
-            message,
-            data,
-            admin_jid,
-            inactive_client,
-            tenant,
-            db,
-            _save_ctx,
-            _clear_ctx,
-        )
+        if inactive_client is not None:
+            data["temp_data"]["client_id"] = str(inactive_client.id)
+            inactive_steps = {
+                "inactive_menu",
+                "inactive_edit_field",
+                "inactive_edit_value",
+                "inactive_delete_confirm",
+            }
+            if step not in inactive_steps:
+                # Inactive client discovered from a non-inactive context step:
+                # reset to inactive menu once, then continue normal dispatcher.
+                data["step"] = "inactive_menu"
+                step = "inactive_menu"
+                await _save_ctx(refresh_ttl=True)
+                return await handle_ctx_inactive_client_menu(
+                    msg_lower,
+                    message,
+                    data,
+                    admin_jid,
+                    inactive_client,
+                    tenant,
+                    db,
+                    _save_ctx,
+                    _clear_ctx,
+                )
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
     if msg_lower in ("0", "salir", "cerrar"):
@@ -810,7 +841,21 @@ async def _handle_active_client_context(
         )
 
     # ── Active client menu steps ──────────────────────────────────
-    if step == "active_menu":
+    if (
+        step
+        in {
+            "active_menu",
+            "active_detail",
+            "active_edit_field",
+            "active_edit_value",
+            "active_deactivate_confirm",
+        }
+        and active_client is None
+    ):
+        await _clear_ctx()
+        return None
+
+    if step == "active_menu" and active_client is not None:
         return await handle_ctx_active_client_menu(
             msg_lower,
             message,
@@ -823,7 +868,7 @@ async def _handle_active_client_context(
             _clear_ctx,
         )
 
-    if step == "active_detail":
+    if step == "active_detail" and active_client is not None:
         return await handle_ctx_active_detail(
             msg_lower,
             message,
@@ -857,7 +902,20 @@ async def _handle_active_client_context(
         )
 
     # ── Inactive client menu steps ────────────────────────────────
-    if step == "inactive_menu":
+    if (
+        step
+        in {
+            "inactive_menu",
+            "inactive_edit_field",
+            "inactive_edit_value",
+            "inactive_delete_confirm",
+        }
+        and inactive_client is None
+    ):
+        await _clear_ctx()
+        return None
+
+    if step == "inactive_menu" and inactive_client is not None:
         return await handle_ctx_inactive_client_menu(
             msg_lower,
             message,
@@ -903,7 +961,7 @@ async def _handle_ctx_unblocked_menu(
     admin_jid: str | None,
     target_phone: str | None,
     target_lid: str | None,
-    tenant: object,
+    tenant: Tenant,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle a message in the unblocked unregistered target menu."""
@@ -958,7 +1016,7 @@ async def _handle_ctx_blocked_menu(
     admin_jid: str | None,
     target_phone: str | None,
     target_lid: str | None,
-    tenant: object,
+    tenant: Tenant,
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle a message in the blocked target menu."""

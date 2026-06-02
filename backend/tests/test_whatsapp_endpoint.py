@@ -3,7 +3,7 @@
 Verifies API-key auth, Master/non-Master handling, and response shape.
 """
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import patch
 
@@ -964,7 +964,7 @@ async def test_unregistered_identity_codigo_starts_flow(
 ):
     """Unregistered identity sending 'codigo' in a known tenant instance
     receives the service list prompt."""
-    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     fake_mgr = _FakeManager(used_backup=False)
     with patch(
@@ -996,7 +996,7 @@ async def test_unregistered_identity_codigo_multistep(
 ):
     """Unregistered identity goes through full codigo flow:
     service selection then email, receiving lookup_job_id."""
-    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     fake_mgr = _FakeManager(used_backup=False)
     with patch(
@@ -1128,7 +1128,7 @@ async def test_unregistered_identity_non_codigo_returns_access_denied(
     client, db_session, active_tenant_user
 ):
     """Unregistered identity sending non-codigo message receives access_denied."""
-    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     fake_mgr = _FakeManager(used_backup=False)
     with patch(
@@ -2108,6 +2108,86 @@ async def test_context_active_client_shows_menu(client, db_session, active_tenan
     assert "Crear suscripcion" in reply
     assert "Ver detalle" in reply
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_active_client_detail_step_is_preserved(
+    client, db_session, active_tenant_user
+):
+    """An active-client shortcut already in detail mode stays in detail mode."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    ctx_client_user = User(
+        username="ctx_active_detail_user",
+        password_hash="x",
+        role="client",
+    )
+    db_session.add(ctx_client_user)
+    await db_session.flush()
+
+    ctx_client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=ctx_client_user.id,
+        full_name="Context Active Detail Client",
+        username="tna01_ctx_detail",
+        phone="12015559998",
+        is_active=True,
+    )
+    db_session.add(ctx_client)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone="12015559998",
+        step="active_detail",
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Que campo desea editar" in body["reply"]
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_lookup_redis_unavailable_still_returns_contingency(
+    client, db_session, active_tenant_user
+):
+    """Redis failure during shortcut lookup falls back to the tenant contingency reply."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+
+    fake_mgr = _FakeManager(fail_on_execute=True)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "hola",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    assert "temporalmente no disponible" in response.json()["reply"].lower()
 
 
 async def test_context_inactive_client_shows_menu(

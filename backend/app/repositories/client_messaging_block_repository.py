@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.client_messaging_block import ClientMessagingBlock
@@ -20,7 +20,9 @@ async def create(
     At least one of *phone* or *whatsapp_lid* must be provided.
     """
     if not phone and not whatsapp_lid:
-        raise ValueError("At least one identity field (phone or whatsapp_lid) is required")
+        raise ValueError(
+            "At least one identity field (phone or whatsapp_lid) is required"
+        )
 
     block = ClientMessagingBlock(
         tenant_id=tenant_id,
@@ -60,9 +62,16 @@ async def find_active(
         ClientMessagingBlock.tenant_id == tenant_id,
         ClientMessagingBlock.is_active,
     )
-    if phone:
+    if phone and whatsapp_lid:
+        stmt = stmt.where(
+            or_(
+                ClientMessagingBlock.phone == phone,
+                ClientMessagingBlock.whatsapp_lid == whatsapp_lid,
+            )
+        )
+    elif phone:
         stmt = stmt.where(ClientMessagingBlock.phone == phone)
-    if whatsapp_lid:
+    else:
         stmt = stmt.where(ClientMessagingBlock.whatsapp_lid == whatsapp_lid)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
@@ -105,9 +114,16 @@ async def clear_identity(
         ClientMessagingBlock.tenant_id == tenant_id,
         ClientMessagingBlock.is_active,
     )
-    if phone:
+    if phone and whatsapp_lid:
+        stmt = stmt.where(
+            or_(
+                ClientMessagingBlock.phone == phone,
+                ClientMessagingBlock.whatsapp_lid == whatsapp_lid,
+            )
+        )
+    elif phone:
         stmt = stmt.where(ClientMessagingBlock.phone == phone)
-    if whatsapp_lid:
+    else:
         stmt = stmt.where(ClientMessagingBlock.whatsapp_lid == whatsapp_lid)
     result = await db.execute(stmt)
     blocks = list(result.scalars().all())

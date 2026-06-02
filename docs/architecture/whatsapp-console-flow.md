@@ -187,8 +187,9 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 
 1. Messages ``codigo``, ``código``, or ``code`` trigger the flow.
 2. Backend checks for Client Messaging Blocks first — blocked identities receive ``no_reply=true``.
-3. Session stored under ``session:unreg:{phone}`` or ``session:unreg:{lid}`` for multi-step dialog.
-4. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``.
+3. Redis lookup is guarded: if the context/session cache is unavailable, the handler falls back safely instead of failing the webhook.
+4. Session stored under ``session:unreg:{phone}`` or ``session:unreg:{lid}`` for multi-step dialog.
+5. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``.
 5. n8n polls the job and sends the final result.
 6. Non-codigo messages from unregistered identities return ``access_denied``.
 
@@ -212,8 +213,8 @@ When an admin enters the shortcut, the backend resolves the target identity:
 |-------------|-----------|
 | Unregistered, unblocked | Shows menu: ``1 Crear cliente``, ``2 Bloquear mensajes``, ``0 Cancelar`` |
 | Unregistered, blocked | Shows menu: ``1 Desbloquear mensajes``, ``0 Cancelar`` |
-| Existing active Client | Shows active client menu with subscription shortcut |
-| Existing inactive Client | Shows inactive client management menu |
+| Existing active Client | Shows active client menu with subscription shortcut; later messages preserve detail/edit/deactivate steps |
+| Existing inactive Client | Shows inactive client management menu; later messages preserve edit/delete steps |
 
 ### Creating flow (unregistered targets)
 
@@ -262,9 +263,9 @@ Client Messaging Blocks prevent unregistered WhatsApp identities from using the 
 |-----------|-------------|
 | ``create(db, tenant_id, phone=, whatsapp_lid=)`` | Create an active block |
 | ``list_active(db, tenant_id)`` | List active blocks, newest first |
-| ``find_active(db, tenant_id, phone=, whatsapp_lid=)`` | Find an active block by identity |
+| ``find_active(db, tenant_id, phone=, whatsapp_lid=)`` | Find an active block by identity; matches by either identifier when both are provided |
 | ``unblock(db, tenant_id, block_id)`` | Soft-delete a specific block (sets ``is_active=False``) |
-| ``clear_identity(db, tenant_id, phone=, whatsapp_lid=)`` | Deactivate all blocks for an identity (used when a Client is created) |
+| ``clear_identity(db, tenant_id, phone=, whatsapp_lid=)`` | Deactivate all blocks for an identity; matches by either identifier when both are provided |
 
 ### Block enforcement
 
