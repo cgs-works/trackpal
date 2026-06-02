@@ -1349,8 +1349,8 @@ async def test_from_me_non_self_target_routes_to_shortcut(
     # Must have a reply message (shortcut started)
     assert "reply" in body
     assert body["reply"]
-    # Should mention context
-    assert "Contexto" in body["reply"]
+    # Should contain the contextual menu
+    assert "Gestión" in body["reply"]
 
 
 async def test_from_me_owner_fallback_routes_to_console(
