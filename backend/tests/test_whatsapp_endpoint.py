@@ -1819,10 +1819,10 @@ async def test_context_shortcut_blocked_menu_shows_unblock(
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
 
-async def test_context_shortcut_crear_cliente_advances_step(
+async def test_context_shortcut_crear_cliente_prompts_name_immediately(
     client, db_session, active_tenant_user
 ):
-    """Selecting 1 on unblocked menu advances step to 'creating'."""
+    """Selecting 1 on unblocked menu immediately prompts for client name."""
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     admin_phone = tenant.whatsapp_phone
     admin_phone_digits = "12015550002"
@@ -1845,7 +1845,9 @@ async def test_context_shortcut_crear_cliente_advances_step(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "creacion de cliente" in body["reply"].lower()
+    reply = body["reply"].lower()
+    assert "telefono prefijado" in reply
+    assert "nombre completo" in reply
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
     # Verify context step advanced in Redis
@@ -1855,7 +1857,7 @@ async def test_context_shortcut_crear_cliente_advances_step(
     import json
 
     data = json.loads(raw)
-    assert data["step"] == "creating"
+    assert data["step"] == "creating_name"
 
 
 async def test_from_me_self_target_uses_active_client_context(
@@ -1897,7 +1899,9 @@ async def test_from_me_self_target_uses_active_client_context(
 
     assert response.status_code == 200
     body = response.json()
-    assert "creacion de cliente" in body["reply"].lower()
+    reply = body["reply"].lower()
+    assert "telefono prefijado" in reply
+    assert "nombre completo" in reply
     assert body.get("reply_to") == "12015550002:81@s.whatsapp.net"
 
     ctx_key = f"wa:client_ctx:{admin_phone_digits}"
@@ -1906,7 +1910,7 @@ async def test_from_me_self_target_uses_active_client_context(
     import json
 
     data = json.loads(raw)
-    assert data["step"] == "creating"
+    assert data["step"] == "creating_name"
 
 
 async def test_context_shortcut_bloquear_creates_block(
@@ -2038,6 +2042,11 @@ async def test_context_shortcut_zero_closes_context(
     body = response.json()
     assert "cerr" in body["reply"].lower() or "closed" in body["reply"].lower()
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+    assert body.get("close_jid") == "12015550002@s.whatsapp.net"
+    assert body.get("close_jids") == [
+        "12015550002@s.whatsapp.net",
+        "12015559999@s.whatsapp.net",
+    ]
 
     # Verify context was cleared from Redis
     ctx_key = f"wa:client_ctx:{admin_phone_digits}"
@@ -2133,7 +2142,7 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        # Step 1: "1" from menu → step becomes "creating", returns placeholder
+        # Step 1: "1" from menu → phone prefilled and name prompt shown immediately
         resp1 = await client.post(
             ENDPOINT,
             json={
@@ -2144,25 +2153,12 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
             headers={"X-API-Key": settings.n8n_api_key},
         )
         assert resp1.status_code == 200
-        assert "creacion" in resp1.json()["reply"].lower()
+        reply1 = resp1.json()["reply"].lower()
+        assert "telefono prefijado" in reply1
+        assert "nombre completo" in reply1
+        assert resp1.json().get("reply_to") == "12015550002@s.whatsapp.net"
 
-        # Step 2: next message → handle_ctx_creating_first → phone prefilled
-        resp2 = await client.post(
-            ENDPOINT,
-            json={
-                "phone": admin_phone,
-                "message": "x",
-                "instance": TEST_INSTANCE,
-            },
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        assert resp2.status_code == 200
-        reply2 = resp2.json()["reply"].lower()
-        assert "telefono prefijado" in reply2
-        assert "nombre completo" in reply2
-        assert resp2.json().get("reply_to") == "12015550002@s.whatsapp.net"
-
-        # Step 3: send name → creating_username
+        # Step 2: send name → creating_username
         resp3 = await client.post(
             ENDPOINT,
             json={
@@ -2177,7 +2173,7 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert "nombre registrado" in reply3
         assert "nombre de usuario" in reply3
 
-        # Step 4: send username → creating_password
+        # Step 3: send username → creating_password
         resp4 = await client.post(
             ENDPOINT,
             json={
@@ -2192,7 +2188,7 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert "usuario registrado" in reply4
         assert "contrasena" in reply4
 
-        # Step 5: send password → creating_confirm
+        # Step 4: send password → creating_confirm
         resp5 = await client.post(
             ENDPOINT,
             json={
@@ -2207,7 +2203,7 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert "confirmar" in reply5
         assert "resumen de creacion" in reply5
 
-        # Step 6: CONFIRMAR → client created, blocks cleared, context cleared
+        # Step 5: CONFIRMAR → client created, blocks cleared, context cleared
         resp6 = await client.post(
             ENDPOINT,
             json={
@@ -2247,24 +2243,12 @@ async def test_context_creating_lid_only_prompts_phone(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        # Step 1: "1" from menu → step becomes "creating"
-        resp1 = await client.post(
-            ENDPOINT,
-            json={
-                "phone": admin_phone,
-                "message": "1",
-                "instance": TEST_INSTANCE,
-            },
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        assert resp1.status_code == 200
-
-        # Step 2: next message → handle_ctx_creating_first → no target_phone → asks phone
+        # Step 1: "1" from menu → no target_phone → asks phone immediately
         resp2 = await client.post(
             ENDPOINT,
             json={
                 "phone": admin_phone,
-                "message": "x",
+                "message": "1",
                 "instance": TEST_INSTANCE,
             },
             headers={"X-API-Key": settings.n8n_api_key},
@@ -2274,7 +2258,7 @@ async def test_context_creating_lid_only_prompts_phone(
         assert "telefono" in reply2
         assert "no se recibio telefono" in reply2
 
-        # Step 3: send phone → creating_name
+        # Step 2: send phone → creating_name
         resp3 = await client.post(
             ENDPOINT,
             json={
@@ -2608,14 +2592,13 @@ async def test_context_creating_lid_only_does_not_backfill_whatsapp_lid(
 
 
 # ---------------------------------------------------------------------------
-# close_jid response contract — disambiguates admin private chat from
-# target/client chat when n8n must close a session in Evolution.
+# close_jid/close_jids response contract — disambiguates admin private
+# chat from target/client chat when n8n must close Evolution sessions.
 # ---------------------------------------------------------------------------
 
 
-async def test_whatsapp_console_response_serializes_close_jid():
-    """WhatsAppConsoleResponse serializes close_jid when present,
-    omits it when absent."""
+async def test_whatsapp_console_response_serializes_close_jids():
+    """WhatsAppConsoleResponse serializes single and multi close contracts."""
     from app.schemas.whatsapp import WhatsAppConsoleResponse
 
     response = WhatsAppConsoleResponse(
@@ -2623,6 +2606,10 @@ async def test_whatsapp_console_response_serializes_close_jid():
         status="closed",
         reply_to="34111111111@s.whatsapp.net",
         close_jid="34111111111@s.whatsapp.net",
+        close_jids=[
+            "34111111111@s.whatsapp.net",
+            "34222222222@s.whatsapp.net",
+        ],
     )
 
     assert response.model_dump() == {
@@ -2630,4 +2617,8 @@ async def test_whatsapp_console_response_serializes_close_jid():
         "status": "closed",
         "reply_to": "34111111111@s.whatsapp.net",
         "close_jid": "34111111111@s.whatsapp.net",
+        "close_jids": [
+            "34111111111@s.whatsapp.net",
+            "34222222222@s.whatsapp.net",
+        ],
     }

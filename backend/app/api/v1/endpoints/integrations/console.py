@@ -1,5 +1,6 @@
 """WhatsApp console entrypoint for n8n transport with instance-first routing."""
 
+import json
 import logging
 
 from fastapi import APIRouter
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import ApiKeyDbDep
 from app.api.v1.endpoints.integrations.adapter import UNKNOWN_PHONE_REPLY
 from app.api.v1.endpoints.integrations.console_handlers import (
+    _client_context_close_jids,
     _handle_active_client_context,
     _handle_client_console,
     _handle_master_console,
@@ -449,6 +451,10 @@ async def _handle_from_me_routing(
         # from their private chat, close the context cleanly so future
         # /menu triggers don't collide.
         if message.strip().lower() in ("0", "salir", "cerrar"):
+            context_data = json.loads(existing_raw)
+            close_jids = _client_context_close_jids(
+                context_data.get("temp_data", {}), admin_jid
+            )
             await manager.execute("clear_context", _del_ctx)
             locale = getattr(tenant, "locale", "es") or "es"
             return WhatsAppConsoleResponse(
@@ -456,6 +462,7 @@ async def _handle_from_me_routing(
                 status="closed",
                 reply_to=admin_jid,
                 close_jid=admin_jid,
+                close_jids=close_jids,
             )
         # Otherwise, reject silently (collision)
         return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)

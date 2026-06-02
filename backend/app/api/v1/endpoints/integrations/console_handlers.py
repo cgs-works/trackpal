@@ -86,6 +86,26 @@ tenant_service = TenantService()
 
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
+
+def _client_context_close_jids(temp_data: dict, admin_jid: str | None) -> list[str]:
+    """Evolution sessions to close for Client Context Shortcut."""
+    values = [
+        admin_jid,
+        temp_data.get("target_jid"),
+    ]
+    target_phone = normalize_phone(temp_data.get("target_phone"))
+    if target_phone:
+        values.append(f"{target_phone}@s.whatsapp.net")
+
+    seen: set[str] = set()
+    close_jids: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            close_jids.append(value)
+    return close_jids
+
+
 # ====================================================================
 # Master console handler
 # ====================================================================
@@ -733,11 +753,13 @@ async def _handle_active_client_context(
     if msg_lower in ("0", "salir", "cerrar"):
         locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
         await _clear_ctx()
+        close_jids = _client_context_close_jids(temp_data, admin_jid)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
             status="closed",
             reply_to=admin_jid,
             close_jid=admin_jid,
+            close_jids=close_jids,
         )
 
     # ── Handle by step ────────────────────────────────────────────
@@ -963,13 +985,15 @@ async def _handle_ctx_unblocked_menu(
     """Handle a message in the unblocked unregistered target menu."""
 
     if msg_lower == "1":
-        # Crear cliente — advance to creating step (multi-step flow)
-        data["step"] = "creating"
-        await save_ctx(refresh_ttl=True)
-        return WhatsAppConsoleResponse(
-            reply="Iniciando creacion de cliente...",
-            reply_to=admin_jid,
+        # Crear cliente — enter flow and render first prompt immediately.
+        from app.api.v1.endpoints.integrations.console_context_shortcut import (
+            handle_ctx_creating_first,
         )
+
+        data["step"] = "creating"
+        resp = await handle_ctx_creating_first(data, tenant, db, admin_jid)
+        await save_ctx(refresh_ttl=True)
+        return resp
 
     if msg_lower == "2":
         # Bloquear mensajes — create block immediately without confirmation
@@ -989,11 +1013,13 @@ async def _handle_ctx_unblocked_menu(
     if msg_lower in ("0", "salir", "cerrar"):
         locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
+        close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
             status="closed",
             reply_to=admin_jid,
             close_jid=admin_jid,
+            close_jids=close_jids,
         )
 
     # Invalid input — do NOT refresh TTL
@@ -1042,11 +1068,13 @@ async def _handle_ctx_blocked_menu(
     if msg_lower in ("0", "salir", "cerrar"):
         locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
+        close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
             status="closed",
             reply_to=admin_jid,
             close_jid=admin_jid,
+            close_jids=close_jids,
         )
 
     # Invalid input — do NOT refresh TTL
