@@ -115,3 +115,25 @@ Per prioritization strategy: routing/session behavior after schemas, persistence
 
 ### Next-iteration notes
 Item 6 (contextual Client creation and existing Client management flows) is the next dependency. The context shortcut lifecycle and menu infrastructure (Item 5) now intercepts admin messages, shows unregistered-target menus, handles block/unblock, and manages TTL. Item 6 needs to implement the multi-step client creation flow, active/inactive client menus, subscription shortcut, and all management actions.
+
+## Iteration 6 — 2026-06-01
+
+### Selected Item
+Item 6: Implement contextual Client creation and existing Client management flows.
+
+### Why this item was chosen
+Per prioritization strategy: facades after routing/session behavior. Items 1-5 (schemas, persistence, code lookup, from_me routing, shortcut lifecycle) are complete. Item 6 adds the contextual client creation flow (phone skip, LID-only prompt), active client menu (detail/edit/deactivate/subscription), and inactive client menu (reactivate/edit/delete). This unblocks Items 7 (console block management), 8 (n8n workflow), and 9 (documentation).
+
+### Changed files
+- `backend/app/repositories/clients_repository.py` — Added `get_client_by_tenant_phone()` and `get_client_by_tenant_lid()` (no active filter) for inactive client detection.
+- `backend/app/api/v1/endpoints/integrations/console_context_shortcut.py` — New file: context shortcut creating flow (multi-step: phone→name→username→password→confirm), active client menu (detail, edit except phone, deactivate, subscription shortcut), inactive client menu (reactivate, edit except phone, delete), subscription shortcut with client pre-selected.
+- `backend/app/api/v1/endpoints/integrations/console_handlers.py` — Integrated new context shortcut handlers. Replaced active client fall-through with active/inactive client menu routing. Added step routing for creating*, active_*, inactive_* steps. Modified unblocked menu "1" to delegate to creating flow.
+- `backend/tests/test_whatsapp_endpoint.py` — Added `Client` and `User` model imports. Added 5 tests: creating phone skip, LID-only phone prompt, active client menu, inactive client menu, inactive client prevents duplicate creation.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1160 passed, 1 skipped in ~28s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+### Next-iteration notes
+Item 7 (Tenant console Client Messaging Blocks management and 9 back behavior) is the next dependency. Items 2 and 6 add the blocks persistence and context-shortcut block/unblock, but Item 7 exposes block management in the regular Tenant console and fixes the Clients submenu 9 back behavior.

@@ -13,12 +13,14 @@ from sqlalchemy import select
 from app.api.v1.endpoints.integrations import _TenantConsoleAdapter
 from app.core.config import settings
 from app.models import (
+    Client,
     ClientMessagingBlock,
     CodeServiceGlobalStatus,
     MasterProfile,
     Tenant,
     TenantCodeServiceSelection,
     TenantMailbox,
+    User,
 )
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_auth_session_service import (
@@ -1659,7 +1661,7 @@ async def test_context_shortcut_crear_cliente_advances_step(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "creación de cliente" in body["reply"].lower()
+    assert "creacion de cliente" in body["reply"].lower()
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
     # Verify context step advanced in Redis
@@ -1876,3 +1878,348 @@ async def test_context_shortcut_valid_input_refreshes_ttl(
 
     # TTL should now be 300 after valid input refresh
     assert fake_mgr._redis._ttls.get(ctx_key) == 300
+
+
+# ---------------------------------------------------------------------------
+# Client Context Shortcut — Client creation and management flows (Item 6)
+# ---------------------------------------------------------------------------
+
+
+async def test_context_creating_phone_skip(
+    client, db_session, active_tenant_user
+):
+    """Creating flow with target_phone prefilled skips phone prompt."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits, target_phone="12015559999")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Step 1: "1" from menu → step becomes "creating", returns placeholder
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "creacion" in resp1.json()["reply"].lower()
+
+        # Step 2: next message → handle_ctx_creating_first → phone prefilled
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "x",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+        reply2 = resp2.json()["reply"].lower()
+        assert "telefono prefijado" in reply2
+        assert "nombre completo" in reply2
+        assert resp2.json().get("reply_to") == "12015550002@s.whatsapp.net"
+
+        # Step 3: send name → creating_username
+        resp3 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "Test Client",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp3.status_code == 200
+        reply3 = resp3.json()["reply"].lower()
+        assert "nombre registrado" in reply3
+        assert "nombre de usuario" in reply3
+
+        # Step 4: send username → creating_password
+        resp4 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "testuser",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp4.status_code == 200
+        reply4 = resp4.json()["reply"].lower()
+        assert "usuario registrado" in reply4
+        assert "contrasena" in reply4
+
+        # Step 5: send password → creating_confirm
+        resp5 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "testpass123",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp5.status_code == 200
+        reply5 = resp5.json()["reply"].lower()
+        assert "confirmar" in reply5
+        assert "resumen de creacion" in reply5
+
+        # Step 6: CONFIRMAR → client created, blocks cleared, context cleared
+        resp6 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "CONFIRMAR",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp6.status_code == 200
+        reply6 = resp6.json()["reply"].lower()
+        assert "creado exitosamente" in reply6
+
+        # Verify context was cleared
+        ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+        raw = await fake_mgr._redis.get(ctx_key)
+        assert raw is None
+
+
+async def test_context_creating_lid_only_prompts_phone(
+    client, db_session, active_tenant_user
+):
+    """Creating flow with only target_lid asks for phone first."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone=None,
+        target_lid="998877665544332211@lid",
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Step 1: "1" from menu → step becomes "creating"
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+
+        # Step 2: next message → handle_ctx_creating_first → no target_phone → asks phone
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "x",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+        reply2 = resp2.json()["reply"].lower()
+        assert "telefono" in reply2
+        assert "no se recibio telefono" in reply2
+
+        # Step 3: send phone → creating_name
+        resp3 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "+12015558888",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp3.status_code == 200
+        reply3 = resp3.json()["reply"].lower()
+        assert "telefono registrado" in reply3
+        assert "nombre completo" in reply3
+
+    # Clean up created user/client if needed (test will verify success path in other tests)
+
+
+async def test_context_active_client_shows_menu(
+    client, db_session, active_tenant_user
+):
+    """Active client target shows the active client menu."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    # Create an active client for the target phone
+    ctx_client_user = User(
+        username="ctx_active_user",
+        password_hash="x",
+        role="client",
+    )
+    db_session.add(ctx_client_user)
+    await db_session.flush()
+
+    ctx_client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=ctx_client_user.id,
+        full_name="Context Active Client",
+        username="tna01_ctx_active",
+        phone="12015559999",
+        is_active=True,
+    )
+    db_session.add(ctx_client)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits, target_phone="12015559999")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "menu",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Should show active client menu, not context creation menu
+    assert "Context Active Client" in reply
+    assert "Crear suscripcion" in reply
+    assert "Ver detalle" in reply
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_inactive_client_shows_menu(
+    client, db_session, active_tenant_user
+):
+    """Inactive client target shows the inactive client menu."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    # Create an inactive client for the target phone
+    ctx_client_user = User(
+        username="ctx_inactive_user",
+        password_hash="x",
+        role="client",
+    )
+    db_session.add(ctx_client_user)
+    await db_session.flush()
+
+    ctx_client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=ctx_client_user.id,
+        full_name="Context Inactive Client",
+        username="tna01_ctx_inactive",
+        phone="12015559999",
+        is_active=False,
+    )
+    db_session.add(ctx_client)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits, target_phone="12015559999")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "menu",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Should show inactive client menu
+    assert "Context Inactive Client" in reply
+    assert "Reactivar" in reply
+    assert "Editar" in reply
+    assert "Eliminar" in reply
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_inactive_client_prevents_duplicate_creation(
+    client, db_session, active_tenant_user
+):
+    """Inactive client with the target phone prevents creating a duplicate."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    # Create an inactive client for the target phone
+    ctx_client_user = User(
+        username="ctx_dup_user",
+        password_hash="x",
+        role="client",
+    )
+    db_session.add(ctx_client_user)
+    await db_session.flush()
+
+    ctx_client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=ctx_client_user.id,
+        full_name="Existing Inactive",
+        username="tna01_ctx_dup",
+        phone="12015559999",
+        is_active=False,
+    )
+    db_session.add(ctx_client)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits, target_phone="12015559999", step="menu")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Admin tries to create a client (option 1 from the menu)
+        # but the inactive client detection happens first
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    reply = body["reply"]
+    # Should show inactive client menu, NOT creation flow
+    assert "Existing Inactive" in reply
+    assert "creacion" not in reply.lower() or "cread" not in reply.lower()
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"

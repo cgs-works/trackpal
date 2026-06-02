@@ -454,9 +454,7 @@ async def _handle_unauth_codigo_service(
     if idx < 1 or idx > len(effective_keys):
         if idx == 0:
             await session_service.clear_session(session_key)
-            return WhatsAppConsoleResponse(
-                reply=_i18n_t(locale, "wa.tenant.cancelled")
-            )
+            return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
         )
@@ -499,9 +497,7 @@ async def _handle_unauth_codigo_email(
     service_key = session.temp_data.get("service_key")
     if not service_key:
         await session_service.clear_session(session_key)
-        return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.cancelled")
-        )
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
 
     # Create lookup job
     mailbox = await mailbox_config_repository.get_by_tenant(db, tenant.id)
@@ -527,9 +523,7 @@ async def _handle_unauth_codigo_email(
         enqueued = False
         try:
             enqueued = (
-                await enqueue_job(manager, job.id)
-                if manager is not None
-                else False
+                await enqueue_job(manager, job.id) if manager is not None else False
             )
         except Exception:
             logger.exception(
@@ -544,17 +538,13 @@ async def _handle_unauth_codigo_email(
                 await db.delete(job)
                 await db.commit()
             except Exception:
-                logger.critical(
-                    "Failed to delete job %s after enqueue failure", job.id
-                )
+                logger.critical("Failed to delete job %s after enqueue failure", job.id)
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(locale, "wa.tenant.codigo.error")
             )
     except Exception:
         logger.exception("Failed to create lookup job for tenant %s", tenant.id)
-        return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.codigo.error")
-        )
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
 
     # Clear session on success
     try:
@@ -593,6 +583,24 @@ async def _handle_active_client_context(
     a 5-minute TTL.
     """
     import json
+
+    from app.api.v1.endpoints.integrations.console_context_shortcut import (  # noqa: F811
+        handle_ctx_active_client_menu,
+        handle_ctx_active_deactivate_confirm,
+        handle_ctx_active_detail,
+        handle_ctx_active_edit_field,
+        handle_ctx_active_edit_value,
+        handle_ctx_creating_confirm,
+        handle_ctx_creating_first,
+        handle_ctx_creating_name,
+        handle_ctx_creating_password,
+        handle_ctx_creating_phone,
+        handle_ctx_creating_username,
+        handle_ctx_inactive_client_menu,
+        handle_ctx_inactive_delete_confirm,
+        handle_ctx_inactive_edit_field,
+        handle_ctx_inactive_edit_value,
+    )
 
     if not phone:
         return None
@@ -642,21 +650,60 @@ async def _handle_active_client_context(
     # ── Check if target is a registered client ────────────────────
     target_phone_norm = normalize_phone(target_phone) if target_phone else None
 
-    client = None
+    active_client = None
     if target_phone_norm:
-        client = await clients_repository.get_active_client_by_tenant_phone(
+        active_client = await clients_repository.get_active_client_by_tenant_phone(
             db, tenant.id, target_phone_norm
         )
-    if client is None and target_lid:
-        client = await clients_repository.get_active_client_by_tenant_lid(
+    if active_client is None and target_lid:
+        active_client = await clients_repository.get_active_client_by_tenant_lid(
             db, tenant.id, target_lid
         )
 
-    # If the target is already a registered client, clear context
-    # and fall through (Item 6 handles client management flows).
-    if client is not None:
-        await _clear_ctx()
-        return None
+    if active_client is not None:
+        # Active client — show active client menu within context
+        data["step"] = "active_menu"
+        data["temp_data"]["client_id"] = str(active_client.id)
+        await _save_ctx(refresh_ttl=True)
+        return await handle_ctx_active_client_menu(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            active_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    # ── Check for inactive client ────────────────────────────────
+    inactive_client = None
+    if target_phone_norm:
+        inactive_client = await clients_repository.get_client_by_tenant_phone(
+            db, tenant.id, target_phone_norm
+        )
+    if inactive_client is None and target_lid:
+        inactive_client = await clients_repository.get_client_by_tenant_lid(
+            db, tenant.id, target_lid
+        )
+
+    if inactive_client is not None:
+        # Inactive client — show inactive client menu within context
+        data["step"] = "inactive_menu"
+        data["temp_data"]["client_id"] = str(inactive_client.id)
+        await _save_ctx(refresh_ttl=True)
+        return await handle_ctx_inactive_client_menu(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            inactive_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
     if msg_lower in ("0", "salir", "cerrar"):
@@ -677,12 +724,184 @@ async def _handle_active_client_context(
 
         if blocked:
             return await _handle_ctx_blocked_menu(
-                msg_lower, data, _save_ctx, _clear_ctx,
-                admin_jid, target_phone_norm, target_lid, tenant, db,
+                msg_lower,
+                data,
+                _save_ctx,
+                _clear_ctx,
+                admin_jid,
+                target_phone_norm,
+                target_lid,
+                tenant,
+                db,
             )
         return await _handle_ctx_unblocked_menu(
-            msg_lower, data, _save_ctx, _clear_ctx,
-            admin_jid, target_phone_norm, target_lid, tenant, db,
+            msg_lower,
+            data,
+            _save_ctx,
+            _clear_ctx,
+            admin_jid,
+            target_phone_norm,
+            target_lid,
+            tenant,
+            db,
+        )
+
+    # ── Creating flow steps ───────────────────────────────────────
+    if step == "creating":
+        resp = await handle_ctx_creating_first(
+            data, tenant, db, admin_jid
+        )
+        await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "creating_phone":
+        resp = await handle_ctx_creating_phone(
+            msg_lower, message, data, admin_jid
+        )
+        if resp is None:
+            await _clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply="\u274c Creaci\u00f3n cancelada.",
+                reply_to=admin_jid,
+            )
+        await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "creating_name":
+        resp = await handle_ctx_creating_name(
+            msg_lower, message, data, admin_jid
+        )
+        if resp is None:
+            await _clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply="\u274c Creaci\u00f3n cancelada.",
+                reply_to=admin_jid,
+            )
+        await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "creating_username":
+        resp = await handle_ctx_creating_username(
+            msg_lower, message, data, admin_jid
+        )
+        if resp is None:
+            await _clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply="\u274c Creaci\u00f3n cancelada.",
+                reply_to=admin_jid,
+            )
+        await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "creating_password":
+        resp = await handle_ctx_creating_password(
+            msg_lower, message, data, admin_jid
+        )
+        if resp is None:
+            await _clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply="\u274c Creaci\u00f3n cancelada.",
+                reply_to=admin_jid,
+            )
+        await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "creating_confirm":
+        return await handle_ctx_creating_confirm(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            tenant,
+            db,
+            target_phone_norm,
+            target_lid,
+            _clear_ctx,
+        )
+
+    # ── Active client menu steps ──────────────────────────────────
+    if step == "active_menu":
+        return await handle_ctx_active_client_menu(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            active_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    if step == "active_detail":
+        return await handle_ctx_active_detail(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            active_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    if step == "active_edit_field":
+        resp = await handle_ctx_active_edit_field(
+            msg_lower, message, data, admin_jid
+        )
+        if resp is not None:
+            await _save_ctx(refresh_ttl=True)
+            return resp
+        return WhatsAppConsoleResponse(
+            reply="\u274c Acci\u00f3n cancelada.",
+            reply_to=admin_jid,
+        )
+
+    if step == "active_edit_value":
+        return await handle_ctx_active_edit_value(
+            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+        )
+
+    if step == "active_deactivate_confirm":
+        return await handle_ctx_active_deactivate_confirm(
+            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+        )
+
+    # ── Inactive client menu steps ────────────────────────────────
+    if step == "inactive_menu":
+        return await handle_ctx_inactive_client_menu(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            inactive_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    if step == "inactive_edit_field":
+        resp = await handle_ctx_inactive_edit_field(
+            msg_lower, message, data, admin_jid
+        )
+        if resp is not None:
+            await _save_ctx(refresh_ttl=True)
+            return resp
+        return WhatsAppConsoleResponse(
+            reply="\u274c Acci\u00f3n cancelada.",
+            reply_to=admin_jid,
+        )
+
+    if step == "inactive_edit_value":
+        return await handle_ctx_inactive_edit_value(
+            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+        )
+
+    if step == "inactive_delete_confirm":
+        return await handle_ctx_inactive_delete_confirm(
+            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
         )
 
     # Unknown step — clear context and fall through
@@ -704,13 +923,11 @@ async def _handle_ctx_unblocked_menu(
     """Handle a message in the unblocked unregistered target menu."""
 
     if msg_lower == "1":
-        # Crear cliente — advance step (Item 6 implements the form)
+        # Crear cliente — advance to creating step (multi-step flow)
         data["step"] = "creating"
         await save_ctx(refresh_ttl=True)
-        phone_display = target_phone or "(solo LID)"
         return WhatsAppConsoleResponse(
-            reply=f"\u2705 Iniciando creaci\u00f3n de cliente para {phone_display}.\n\n"
-                  "Complete los datos solicitados.",
+            reply="Iniciando creacion de cliente...",
             reply_to=admin_jid,
         )
 
@@ -740,9 +957,9 @@ async def _handle_ctx_unblocked_menu(
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
         reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
-              "1\ufe0f\u20e3 Crear cliente\n"
-              "2\ufe0f\u20e3 Bloquear mensajes\n"
-              "0\ufe0f\u20e3 Cancelar",
+        "1\ufe0f\u20e3 Crear cliente\n"
+        "2\ufe0f\u20e3 Bloquear mensajes\n"
+        "0\ufe0f\u20e3 Cancelar",
         reply_to=admin_jid,
     )
 
@@ -770,7 +987,9 @@ async def _handle_ctx_blocked_menu(
         )
         if blocked is not None:
             await client_messaging_block_repository.unblock(
-                db, tenant_id=tenant.id, block_id=blocked.id,
+                db,
+                tenant_id=tenant.id,
+                block_id=blocked.id,
             )
             await db.commit()
         await clear_ctx()
@@ -790,7 +1009,7 @@ async def _handle_ctx_blocked_menu(
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
         reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
-              "1\ufe0f\u20e3 Desbloquear mensajes\n"
-              "0\ufe0f\u20e3 Cancelar",
+        "1\ufe0f\u20e3 Desbloquear mensajes\n"
+        "0\ufe0f\u20e3 Cancelar",
         reply_to=admin_jid,
     )
