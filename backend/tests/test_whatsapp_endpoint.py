@@ -1885,9 +1885,7 @@ async def test_context_shortcut_valid_input_refreshes_ttl(
 # ---------------------------------------------------------------------------
 
 
-async def test_context_creating_phone_skip(
-    client, db_session, active_tenant_user
-):
+async def test_context_creating_phone_skip(client, db_session, active_tenant_user):
     """Creating flow with target_phone prefilled skips phone prompt."""
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     admin_phone = tenant.whatsapp_phone
@@ -2059,9 +2057,7 @@ async def test_context_creating_lid_only_prompts_phone(
     # Clean up created user/client if needed (test will verify success path in other tests)
 
 
-async def test_context_active_client_shows_menu(
-    client, db_session, active_tenant_user
-):
+async def test_context_active_client_shows_menu(client, db_session, active_tenant_user):
     """Active client target shows the active client menu."""
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     admin_phone = tenant.whatsapp_phone
@@ -2199,7 +2195,9 @@ async def test_context_inactive_client_prevents_duplicate_creation(
     await db_session.commit()
 
     fake_mgr = _FakeManager(used_backup=False)
-    await _setup_context(fake_mgr, admin_phone_digits, target_phone="12015559999", step="menu")
+    await _setup_context(
+        fake_mgr, admin_phone_digits, target_phone="12015559999", step="menu"
+    )
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",

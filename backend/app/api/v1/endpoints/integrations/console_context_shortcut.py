@@ -106,8 +106,7 @@ async def handle_ctx_creating_phone(
 
     data["step"] = "creating_name"
     return WhatsAppConsoleResponse(
-        reply="Telefono registrado.\n\n"
-        "*Nombre completo* del cliente:",
+        reply="Telefono registrado.\n\n*Nombre completo* del cliente:",
         reply_to=admin_jid,
     )
 
@@ -140,8 +139,7 @@ async def handle_ctx_creating_name(
     data["temp_data"]["full_name"] = name
     data["step"] = "creating_username"
     return WhatsAppConsoleResponse(
-        reply="Nombre registrado.\n\n"
-        "*Nombre de usuario* local para el cliente:",
+        reply="Nombre registrado.\n\n*Nombre de usuario* local para el cliente:",
         reply_to=admin_jid,
     )
 
@@ -344,10 +342,7 @@ async def handle_ctx_active_client_menu(
         data["temp_data"]["client_id"] = str(client.id)
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=detail
-            + "\n\n1 Editar datos\n"
-            + "2 Desactivar\n"
-            + "0 Volver",
+            reply=detail + "\n\n1 Editar datos\n" + "2 Desactivar\n" + "0 Volver",
             reply_to=admin_jid,
         )
 
@@ -412,10 +407,7 @@ async def handle_ctx_active_detail(
 
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n"
-        "1 Editar datos\n"
-        "2 Desactivar\n"
-        "0 Volver",
+        reply="Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n0 Volver",
         reply_to=admin_jid,
     )
 
@@ -451,10 +443,7 @@ async def handle_ctx_active_edit_field(
         )
 
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n"
-        "1 Nombre completo\n"
-        "2 Nombre de usuario\n"
-        "0 Volver",
+        reply="Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n0 Volver",
         reply_to=admin_jid,
     )
 
@@ -684,10 +673,7 @@ async def handle_ctx_inactive_edit_field(
         )
 
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n"
-        "1 Nombre completo\n"
-        "2 Nombre de usuario\n"
-        "0 Volver",
+        reply="Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n0 Volver",
         reply_to=admin_jid,
     )
 
@@ -901,9 +887,7 @@ async def _start_context_subscription(
     await clear_ctx()
     return WhatsAppConsoleResponse(
         reply=f"Creando suscripcion para *{client.full_name}*\n\n"
-        "Seleccione un *servicio*:\n\n"
-        + "\n".join(service_lines)
-        + "\n\n0 Cancelar",
+        "Seleccione un *servicio*:\n\n" + "\n".join(service_lines) + "\n\n0 Cancelar",
         reply_to=admin_jid,
     )
 

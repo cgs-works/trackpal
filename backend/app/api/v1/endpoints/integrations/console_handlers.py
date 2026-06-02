@@ -748,16 +748,12 @@ async def _handle_active_client_context(
 
     # ── Creating flow steps ───────────────────────────────────────
     if step == "creating":
-        resp = await handle_ctx_creating_first(
-            data, tenant, db, admin_jid
-        )
+        resp = await handle_ctx_creating_first(data, tenant, db, admin_jid)
         await _save_ctx(refresh_ttl=True)
         return resp
 
     if step == "creating_phone":
-        resp = await handle_ctx_creating_phone(
-            msg_lower, message, data, admin_jid
-        )
+        resp = await handle_ctx_creating_phone(msg_lower, message, data, admin_jid)
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
@@ -768,9 +764,7 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_name":
-        resp = await handle_ctx_creating_name(
-            msg_lower, message, data, admin_jid
-        )
+        resp = await handle_ctx_creating_name(msg_lower, message, data, admin_jid)
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
@@ -781,9 +775,7 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_username":
-        resp = await handle_ctx_creating_username(
-            msg_lower, message, data, admin_jid
-        )
+        resp = await handle_ctx_creating_username(msg_lower, message, data, admin_jid)
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
@@ -794,9 +786,7 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_password":
-        resp = await handle_ctx_creating_password(
-            msg_lower, message, data, admin_jid
-        )
+        resp = await handle_ctx_creating_password(msg_lower, message, data, admin_jid)
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
@@ -847,9 +837,7 @@ async def _handle_active_client_context(
         )
 
     if step == "active_edit_field":
-        resp = await handle_ctx_active_edit_field(
-            msg_lower, message, data, admin_jid
-        )
+        resp = await handle_ctx_active_edit_field(msg_lower, message, data, admin_jid)
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp
@@ -883,9 +871,7 @@ async def _handle_active_client_context(
         )
 
     if step == "inactive_edit_field":
-        resp = await handle_ctx_inactive_edit_field(
-            msg_lower, message, data, admin_jid
-        )
+        resp = await handle_ctx_inactive_edit_field(msg_lower, message, data, admin_jid)
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp

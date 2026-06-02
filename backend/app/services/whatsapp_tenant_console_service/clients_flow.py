@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 
-
-
-
 async def _start_clients_flow(self, phone, session_service, tenant_id, db):
     if session_service is not None:
         session = await session_service.get_session(f"admin:{phone}")
@@ -18,7 +15,9 @@ async def _start_clients_flow(self, phone, session_service, tenant_id, db):
     return self._t(self.KEY_CLIENTS_MENU)
 
 
-async def _handle_client_list_selection(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_list_selection(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     if msg == "1":
         if tenant_id is None or db is None or self._client_service is None:
             return self._t(self.KEY_CLIENT_NO_CLIENTS)
@@ -62,7 +61,9 @@ async def _handle_client_list_selection(self, phone, msg, session, session_servi
         return self._t(self.KEY_CLIENT_INVALID_SELECTION)
 
 
-async def _handle_client_select(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_select(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     client_id = session.selection_map.get(msg)
     if client_id:
         if db is None or self._client_service is None:
@@ -81,7 +82,9 @@ async def _handle_client_select(self, phone, msg, session, session_service, tena
     return self._t(self.KEY_CLIENT_INVALID_SELECTION)
 
 
-async def _handle_client_detail_action(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_client_detail_action(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     client_id = session.selected_tenant_id
     if not client_id:
         return self._t(self.KEY_CLIENT_INVALID_SELECTION)
@@ -103,7 +106,9 @@ async def _handle_client_detail_action(self, phone, msg, session, session_servic
             session.step = self.CLIENTS_STEP_DEACTIVATE_CONFIRM
             if session_service is not None:
                 await session_service.save_session(session)
-            return self._t(self.KEY_CLIENT_DEACTIVATE_CONFIRM_TEMPLATE, name=client.full_name)
+            return self._t(
+                self.KEY_CLIENT_DEACTIVATE_CONFIRM_TEMPLATE, name=client.full_name
+            )
         else:
             await self._client_service.activate_client(db, tenant_id, parsed_id)
             if session_service is not None:
@@ -162,7 +167,13 @@ async def _handle_clients_block_list(
 
 
 async def _handle_clients_block_unblock(
-    self, phone, msg, session, session_service, tenant_id, db,
+    self,
+    phone,
+    msg,
+    session,
+    session_service,
+    tenant_id,
+    db,
 ):
     from app.repositories import client_messaging_block_repository
 

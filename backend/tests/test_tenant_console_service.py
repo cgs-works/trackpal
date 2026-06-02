@@ -2309,9 +2309,7 @@ class TestClientMessagingBlocks:
     ) -> None:
         """Option 3 with no active blocks shows empty message."""
         tenant_id = uuid4()
-        with patch(
-            "app.repositories.client_messaging_block_repository"
-        ) as mock_repo:
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[])
 
             # Start clients flow
@@ -2350,9 +2348,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch(
-            "app.repositories.client_messaging_block_repository"
-        ) as mock_repo:
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
             # Start clients flow
@@ -2399,9 +2395,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch(
-            "app.repositories.client_messaging_block_repository"
-        ) as mock_repo:
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
             mock_repo.unblock = AsyncMock(return_value=fake_block)
 
@@ -2458,9 +2452,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch(
-            "app.repositories.client_messaging_block_repository"
-        ) as mock_repo:
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
             # Start clients flow & show blocks
@@ -2505,9 +2497,7 @@ class TestClientMessagingBlocks:
             is_active=True,
         )
 
-        with patch(
-            "app.repositories.client_messaging_block_repository"
-        ) as mock_repo:
+        with patch("app.repositories.client_messaging_block_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
             # Start clients flow & show blocks
