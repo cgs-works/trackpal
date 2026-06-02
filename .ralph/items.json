@@ -4,12 +4,16 @@
     "source_docs": [],
     "verification_gates": [
       {
-        "name": "Frontend tests",
-        "command": "cd frontend && npm run test"
+        "name": "backend pytest",
+        "command": "cd backend && uv run pytest -v"
       },
       {
-        "name": "Frontend build",
+        "name": "frontend build",
         "command": "cd frontend && npm run build"
+      },
+      {
+        "name": "n8n workflow json validity",
+        "command": "python -m json.tool \"n8n/Trackpal WhatsApp Bot.json\""
       }
     ],
     "require_progress_append": true,
@@ -19,54 +23,112 @@
   "items": [
     {
       "category": "functional",
-      "description": "Install Vitest and setup initial auth store cache state",
+      "description": "Extend the backend WhatsApp console API contract for contextual routing and silent responses.",
       "steps": [
-        "Install Vitest as a dev dependency in the frontend.",
-        "Add a 'test' script to frontend/package.json.",
-        "Update the Pinia auth store to include state for Reminder Settings, timezone options, loaded flags, and in-flight promise tracker.",
-        "Update the auth store reset logic to clear the new cache state on login, logout, tenant switch, and support-context exit.",
-        "Write initial Vitest tests to verify cache reset behavior."
+        "Add request fields for from_me, admin_phone, admin_jid, target_jid, target_phone, and target_lid while preserving existing phone, message, instance, and sender_lid behavior.",
+        "Add response fields reply_to and no_reply while preserving existing serialization behavior for reply, status, lookup_job_id, and tenant_id.",
+        "Add or update endpoint tests proving new fields are accepted and serialized without breaking existing legacy requests."
       ],
       "passes": true,
-      "regression_notes": "All 9 Vitest store tests pass. Build passes without warnings."
+      "regression_notes": "New request fields from_me, admin_phone, admin_jid, target_jid, target_phone, target_lid accepted without breaking legacy. New response fields reply_to, no_reply serialized conditionally. 32/32 endpoint tests pass."
     },
     {
       "category": "functional",
-      "description": "Implement store actions for loading and saving settings with context isolation",
+      "description": "Add persistent Client Messaging Block storage and service behavior for unregistered WhatsApp identities.",
       "steps": [
-        "Implement a load action in the auth store that fetches both Reminder Settings and timezone options.",
-        "Deduplicate concurrent load requests using the in-flight promise tracker.",
-        "Ensure late network responses do not populate the cache if the Tenant Context has changed.",
-        "Implement a save action that updates the cache only from the successful PUT response.",
-        "Write Vitest tests for deduplication, Tenant Context isolation, and save behavior."
+        "Add a tenant-scoped database model and Alembic migration for Client Messaging Blocks with phone, LID, active state, and timestamps, requiring at least one identity field.",
+        "Add repository/service functions to create, list, find active, unblock, and clear blocks for a tenant identity without creating Client rows.",
+        "Add backend tests proving blocks are tenant-scoped, require phone or LID, are persistent until unblocked, and are cleared when a Client is successfully created for the blocked identity."
       ],
-      "passes": true,
-      "regression_notes": "16/16 store tests pass. Build passes without warnings."
+      "passes": false,
+      "regression_notes": ""
     },
     {
       "category": "functional",
-      "description": "Integrate silent preload in Subscriptions view",
+      "description": "Implement unauthenticated client-side code lookup for unregistered identities with Client Messaging Block enforcement.",
       "steps": [
-        "Update the Subscriptions view to dispatch the store load action on initialization.",
-        "Ensure the preload is silent (does not block or show page-level errors if it fails).",
-        "Remove redundant local Reminder Settings state from the Subscriptions view."
+        "Route unregistered identities in a known tenant instance to code lookup only when they send codigo, código, or code.",
+        "Return no_reply=true for blocked unregistered identities on codigo, /menu, or any other client-side console attempt.",
+        "Preserve existing registered Client profile/subscription behavior and ensure inactive Clients do not fall back to unauthenticated code lookup.",
+        "Add tests proving unregistered code lookup asks for service then email, sends lookup replies to the requester, and blocked attempts stay silent."
       ],
-      "passes": true,
-      "regression_notes": "Build passes. Store tests 16/16 pass. Silent preload fires on init without blocking."
+      "passes": false,
+      "regression_notes": ""
     },
     {
       "category": "functional",
-      "description": "Refactor Reminder Settings modal to use store cache",
+      "description": "Implement instance-first contextual routing for outgoing from_me=true /menu triggers.",
       "steps": [
-        "Remove the modal's initial settings prop and direct self-fetching behavior.",
-        "Make the modal deep-clone cached Reminder Settings into a local draft when opened.",
-        "Show inline loading and disable the Save button if opened before settings are available.",
-        "Show a contextual error if the fallback load fails.",
-        "Read timezone options from the store cache.",
-        "Wire the Save button to the store update action, discarding draft changes on cancel."
+        "When from_me=true and target equals the admin chat, route to the standard Tenant console.",
+        "When from_me=true and target differs from the admin chat, route to the Client Context Shortcut and include reply_to as admin_jid.",
+        "Use admin_phone when present and fall back to the tenant owner resolved by instance when admin_phone is missing.",
+        "Reject a new contextual trigger privately via reply_to when another context is already active.",
+        "Add endpoint tests for target-equals-admin, target-differs, owner fallback, reply_to, and active-context collision."
       ],
-      "passes": true,
-      "regression_notes": "Build passes. Store tests 16/16 pass. Modal refactored to read from auth store cache with inline loading fallback."
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Implement Client Context Shortcut session lifecycle and unregistered target menus.",
+      "steps": [
+        "Store contextual state under wa:client_ctx:{admin_phone} with a 5-minute TTL independent of session:admin:{phone}.",
+        "Route private bot-chat messages to the contextual facade before the regular Tenant console while contextual state exists.",
+        "Show unregistered unblocked targets Crear cliente, Bloquear mensajes, and 0 Cancelar; show blocked targets Desbloquear mensajes and 0 Cancelar.",
+        "Create blocks immediately without confirmation or reason, unblock from the shortcut, close context after completed actions, and abort at any depth on 0.",
+        "Add service tests for menus, TTL behavior, invalid input not refreshing TTL, completed action cleanup, and 0 cleanup."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Implement contextual Client creation and existing Client management flows.",
+      "steps": [
+        "For unregistered targets, start Client creation with phone prefilled when target_phone exists and ask for phone when only target_lid exists.",
+        "For existing active Clients, expose Tenant console client detail actions except phone editing, plus Create subscription with client selection skipped.",
+        "For existing inactive Clients, expose reactivate, delete when eligible, and edit allowed fields except phone; hide Create subscription until reactivated.",
+        "Ensure inactive Clients count as existing identities and cannot be duplicated by contextual creation.",
+        "Add service tests for phone skip, LID-only phone prompt, active menu/actions, inactive menu/actions, blocked phone edit, and subscription shortcut."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Add regular Tenant console management for Client Messaging Blocks and correct Clients submenu back behavior.",
+      "steps": [
+        "Update the Clients menu to show 1 Ver clientes, 2 Crear cliente, 3 Bloqueos de mensajes, and 9 Volver al menú principal.",
+        "Add a Clients-section flow to list active Client Messaging Blocks and unblock a selected identity.",
+        "Align Clients flow handlers so 9 is the submenu back command where the UI says 9 and 0 is not treated as the Clients-menu back command.",
+        "Add Tenant console service tests for block list, unblock, empty list, and 9 back behavior."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Update the n8n WhatsApp Bot workflow for contextual payloads, reply_to routing, and no_reply silence.",
+      "steps": [
+        "Update the Parse input node to extract fromMe, admin_jid, target_jid, target_phone, and target_lid without deriving phones from @lid values.",
+        "Update the Console Call node JSON body to send the new backend request fields.",
+        "Update merge/routing nodes so reply_to and no_reply are preserved, send nodes use reply_to when present, and no Evolution send occurs when no_reply=true.",
+        "Validate the workflow JSON and add any available bounded workflow contract tests or documented manual validation evidence."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Refresh project documentation for the implemented WhatsApp shortcut, blocks, contracts, and workflow behavior.",
+      "steps": [
+        "Update relevant architecture and codebase docs under docs/ to describe Client Context Shortcut routing, Client Messaging Blocks, unauthenticated code lookup, reply_to, and no_reply.",
+        "Update backend and n8n contract docs so future maintainers can reproduce the payload and response behavior.",
+        "Ensure docs/SUMMARY.md links any new or changed durable docs needed by maintainers.",
+        "Run all verification gates after documentation changes."
+      ],
+      "passes": false,
+      "regression_notes": ""
     }
   ]
 }

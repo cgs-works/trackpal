@@ -12,12 +12,34 @@ class WhatsAppConsoleRequest(BaseModel):
         instance: Optional Evolution API instance name for context.
         sender_lid: Optional LID JID string when ``remoteJid`` uses ``@lid``
             and no phone JID is resolvable (LID fallback identity).
+        from_me:  When ``true``, the message was sent by the admin from
+            their own chat (outgoing trigger). Only the tenant instance
+            owning the admin processes ``from_me`` triggers.
+        admin_phone: Phone number of the admin who sent the outgoing
+            trigger (``from_me=true``). Used to identify which tenant
+            admin originated the message.
+        admin_jid: JID of the admin who sent the outgoing trigger.
+            Used as ``reply_to`` target for contextual administrative
+            replies so they remain private to the admin chat.
+        target_jid: The JID that the admin selected as the shortcut
+            target (the client or unregistered contact).
+        target_phone: Phone number of the shortcut target, when
+            available as a phone JID.  Never derived from a ``@lid``
+            value.
+        target_lid: LID JID of the shortcut target, when the target
+            was only identified via ``@lid``.
     """
 
     phone: str
     message: str
     instance: str | None = None
     sender_lid: str | None = None
+    from_me: bool | None = None
+    admin_phone: str | None = None
+    admin_jid: str | None = None
+    target_jid: str | None = None
+    target_phone: str | None = None
+    target_lid: str | None = None
 
 
 class WhatsAppConsoleResponse(BaseModel):
@@ -35,12 +57,21 @@ class WhatsAppConsoleResponse(BaseModel):
         tenant_id: Optional tenant UUID for scoped poll requests.
             Included alongside ``lookup_job_id`` so n8n can pass
             ``tenant_id`` as a query parameter when polling.
+        reply_to: Optional JID the n8n workflow should use as the
+            destination when sending the reply.  When present, n8n
+            sends to this JID instead of the ``phone`` field.
+        no_reply: When ``true``, n8n must not send any Evolution API
+            message at all.  Used for silent administrative replies
+            or blocked attempts where no user-facing message should
+            be sent.
     """
 
     reply: str
     status: str | None = None
     lookup_job_id: str | None = None
     tenant_id: str | None = None
+    reply_to: str | None = None
+    no_reply: bool | None = None
 
     @model_serializer
     def ser_model(self) -> dict:
@@ -51,4 +82,8 @@ class WhatsAppConsoleResponse(BaseModel):
             d["lookup_job_id"] = self.lookup_job_id
         if self.tenant_id is not None:
             d["tenant_id"] = self.tenant_id
+        if self.reply_to is not None:
+            d["reply_to"] = self.reply_to
+        if self.no_reply is not None:
+            d["no_reply"] = self.no_reply
         return d

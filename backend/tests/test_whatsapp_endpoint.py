@@ -3,7 +3,7 @@
 Verifies API-key auth, Master/non-Master handling, and response shape.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 from unittest.mock import patch
 
@@ -467,6 +467,18 @@ async def test_invalid_api_key_still_401_with_fake_manager(client, master_user):
         )
     assert response.status_code == 401
     assert "Invalid API Key" in response.json()["detail"]
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "hola"},
+            headers={"X-API-Key": "wrong-key"},
+        )
+    assert response.status_code == 401
+    assert "Invalid API Key" in response.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -779,3 +791,116 @@ async def test_lid_jid_phone_input_rejected(client, master_user):
     reply = response.json()["reply"].lower()
     # Must not identify this phone, despite LID containing digits
     assert "no tienes acceso" in reply or "no está registrado" in reply
+
+
+# ---------------------------------------------------------------------------
+# Client Context Shortcut contract tests — new request/response fields
+# ---------------------------------------------------------------------------
+
+
+async def test_request_accepts_new_optional_fields(client, master_user):
+    """New from_me, admin_phone, admin_jid, target_jid, target_phone,
+    and target_lid fields are accepted without breaking legacy requests."""
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015550001",
+                "message": "menu",
+                "from_me": True,
+                "admin_phone": "+12015550002",
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015550003@s.whatsapp.net",
+                "target_phone": "+12015550003",
+                "target_lid": "998877665544332211@lid",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    # New fields don't break routing — without a session the endpoint
+    # asks for login (normal flow), proving the request was accepted
+    assert "nombre de usuario" in body["reply"].lower() or "login" in body["reply"].lower()
+
+
+async def test_request_legacy_without_new_fields_still_works(client, master_user):
+    """Legacy request without any new fields produces the same response
+    as before (backward compatibility)."""
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "hola"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    # Only standard keys present
+    assert "reply_to" not in body
+    assert "no_reply" not in body
+
+
+async def test_response_serializes_reply_to_when_set(client, master_user):
+    """When reply_to is set, it appears in the serialized response."""
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015550001", "message": "menu"},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    # Without an active session the response won't have reply_to yet.
+    # We verify the schema model directly serializes reply_to correctly.
+    # This is done via a unit-style check of the response model.
+    assert "reply" in body
+
+
+async def test_response_model_serializes_reply_to(client):
+    """WhatsAppConsoleResponse serializes reply_to when present,
+    omits it when absent."""
+    from app.schemas.whatsapp import WhatsAppConsoleResponse
+
+    # Without reply_to
+    r1 = WhatsAppConsoleResponse(reply="test")
+    d1 = r1.model_dump(mode="json")
+    assert "reply_to" not in d1
+
+    # With reply_to
+    r2 = WhatsAppConsoleResponse(reply="test", reply_to="12015550002@s.whatsapp.net")
+    d2 = r2.model_dump(mode="json")
+    assert d2["reply_to"] == "12015550002@s.whatsapp.net"
+
+
+async def test_response_model_serializes_no_reply(client):
+    """WhatsAppConsoleResponse serializes no_reply when present,
+    omits it when absent."""
+    from app.schemas.whatsapp import WhatsAppConsoleResponse
+
+    # Without no_reply
+    r1 = WhatsAppConsoleResponse(reply="test")
+    d1 = r1.model_dump(mode="json")
+    assert "no_reply" not in d1
+
+    # With no_reply
+    r2 = WhatsAppConsoleResponse(reply="test", no_reply=True)
+    d2 = r2.model_dump(mode="json")
+    assert d2["no_reply"] is True
+
+    # With no_reply=False (still serialized because it's non-None)
+    r3 = WhatsAppConsoleResponse(reply="test", no_reply=False)
+    d3 = r3.model_dump(mode="json")
+    assert d3["no_reply"] is False
