@@ -651,10 +651,11 @@ async def _handle_active_client_context(
 
         await manager.execute("set_context", _set)
 
-    # ── Helper: clear context ─────────────────────────────────────
+    # ── Helper: clear context and tenant session ────────────────
     async def _clear_ctx() -> None:
         async def _del(client):
             await client.delete(ctx_key)
+            await client.delete(f"session:admin:{phone}")
 
         await manager.execute("clear_context", _del)
 
@@ -738,10 +739,13 @@ async def _handle_active_client_context(
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
     if msg_lower in ("0", "salir", "cerrar"):
+        locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
         await _clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u274c Contexto cerrado.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
         )
 
     # ── Handle by step ────────────────────────────────────────────
@@ -991,10 +995,13 @@ async def _handle_ctx_unblocked_menu(
         )
 
     if msg_lower in ("0", "salir", "cerrar"):
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u274c Contexto cerrado.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
         )
 
     # Invalid input — do NOT refresh TTL
@@ -1043,10 +1050,13 @@ async def _handle_ctx_blocked_menu(
         )
 
     if msg_lower in ("0", "salir", "cerrar"):
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u274c Contexto cerrado.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
         )
 
     # Invalid input — do NOT refresh TTL

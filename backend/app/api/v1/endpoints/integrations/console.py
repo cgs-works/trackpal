@@ -375,6 +375,7 @@ async def _handle_from_me_routing(
 
     async def _del_ctx(client):
         await client.delete(ctx_key)
+        await client.delete(f"session:admin:{resolved_admin_phone}")
 
     existing_raw = await manager.execute("get_context", _get_ctx)
     if existing_raw:
@@ -383,8 +384,10 @@ async def _handle_from_me_routing(
         # /menu triggers don't collide.
         if message.strip().lower() in ("0", "salir", "cerrar"):
             await manager.execute("clear_context", _del_ctx)
+            locale = getattr(tenant, "locale", "es") or "es"
             return WhatsAppConsoleResponse(
-                reply="❌ Contexto cerrado.",
+                reply=t(locale, "wa.tenant.client_context.closed"),
+                status="closed",
                 reply_to=admin_jid,
                 close_jid=admin_jid,
             )
