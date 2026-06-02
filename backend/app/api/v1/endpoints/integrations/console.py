@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import ApiKeyDbDep
 from app.api.v1.endpoints.integrations.adapter import UNKNOWN_PHONE_REPLY
 from app.api.v1.endpoints.integrations.console_handlers import (
+    _handle_active_client_context,
     _handle_client_console,
     _handle_master_console,
     _handle_tenant_console,
@@ -217,6 +218,17 @@ async def _route_by_instance(
         )
 
     if has_tenant_admin:
+        # Check for active Client Context Shortcut
+        ctx_response = await _handle_active_client_context(
+            phone=phone_digits,
+            message=message,
+            manager=manager,
+            tenant=tenant,
+            db=db,
+            instance=instance,
+        )
+        if ctx_response is not None:
+            return ctx_response
         return await _handle_tenant_console(
             phone=phone,
             message=message,
@@ -329,9 +341,17 @@ async def _handle_from_me_routing(
 
     # ── Step 3: Check if target == admin (self-target) ────────────
     is_self_target = (
-        (resolved_admin_phone and target_phone_norm and resolved_admin_phone == target_phone_norm)
+        (
+            resolved_admin_phone
+            and target_phone_norm
+            and resolved_admin_phone == target_phone_norm
+        )
         or (admin_jid and target_jid and admin_jid == target_jid)
-        or (resolved_admin_phone and target_jid and target_jid.startswith(f"{resolved_admin_phone}@"))
+        or (
+            resolved_admin_phone
+            and target_jid
+            and target_jid.startswith(f"{resolved_admin_phone}@")
+        )
     )
 
     if is_self_target:
@@ -353,9 +373,7 @@ async def _handle_from_me_routing(
     existing_raw = await manager.execute("get_context", _get_ctx)
     if existing_raw:
         # Active context collision — reject silently
-        return WhatsAppConsoleResponse(
-            reply="", no_reply=True, reply_to=admin_jid
-        )
+        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
 
     # ── Step 5: Create context session ────────────────────────────
     from app.services.whatsapp_session_service import ConversationSession

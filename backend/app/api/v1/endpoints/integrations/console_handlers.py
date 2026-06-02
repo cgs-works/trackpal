@@ -12,9 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.i18n import t as _i18n_t
+from app.core.phone import normalize_phone
 from app.core.redis_client import RedisUnavailableError, get_redis_manager
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.repositories import (
+    client_messaging_block_repository,
+    clients_repository,
     code_services_repository,
     mailbox_config_repository,
     mailbox_lookup_repository,
@@ -563,4 +566,231 @@ async def _handle_unauth_codigo_email(
         reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
         lookup_job_id=lookup_job_id,
         tenant_id=tenant_id_out,
+    )
+
+
+# ====================================================================
+# Client Context Shortcut handler
+# ====================================================================
+
+
+async def _handle_active_client_context(
+    phone: str,
+    message: str,
+    manager: object,
+    tenant: object,
+    db: AsyncSession,
+    instance: str | None,
+) -> WhatsAppConsoleResponse | None:
+    """Check for active Client Context Shortcut and handle the message.
+
+    Called from ``_route_by_instance`` before routing to the Tenant
+    console.  Returns a response when a context session exists and
+    the message was handled; returns ``None`` to fall through to
+    the regular Tenant console.
+
+    Context sessions are stored under ``wa:client_ctx:{phone}`` with
+    a 5-minute TTL.
+    """
+    import json
+
+    if not phone:
+        return None
+
+    ctx_key = f"wa:client_ctx:{phone}"
+
+    async def _get_ctx(client):
+        return await client.get(ctx_key)
+
+    raw = await manager.execute("get_context", _get_ctx)
+    if raw is None:
+        return None
+
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    if data.get("flow") != "client_shortcut":
+        return None
+
+    step = data.get("step", "")
+    temp_data = data.get("temp_data", {})
+    target_phone = temp_data.get("target_phone", "")
+    target_lid = temp_data.get("target_lid", "")
+    admin_jid = temp_data.get("admin_jid", "")
+
+    msg_lower = message.strip().lower()
+
+    # ── Helper: save context with optional TTL refresh ────────────
+    async def _save_ctx(*, refresh_ttl: bool = True) -> None:
+        async def _set(client):
+            if refresh_ttl:
+                await client.set(ctx_key, json.dumps(data), ex=300)
+            else:
+                await client.set(ctx_key, json.dumps(data), keepttl=True)
+
+        await manager.execute("set_context", _set)
+
+    # ── Helper: clear context ─────────────────────────────────────
+    async def _clear_ctx() -> None:
+        async def _del(client):
+            await client.delete(ctx_key)
+
+        await manager.execute("clear_context", _del)
+
+    # ── Check if target is a registered client ────────────────────
+    target_phone_norm = normalize_phone(target_phone) if target_phone else None
+
+    client = None
+    if target_phone_norm:
+        client = await clients_repository.get_active_client_by_tenant_phone(
+            db, tenant.id, target_phone_norm
+        )
+    if client is None and target_lid:
+        client = await clients_repository.get_active_client_by_tenant_lid(
+            db, tenant.id, target_lid
+        )
+
+    # If the target is already a registered client, clear context
+    # and fall through (Item 6 handles client management flows).
+    if client is not None:
+        await _clear_ctx()
+        return None
+
+    # ── Handle 0 / cerrar at any step (close context) ─────────────
+    if msg_lower in ("0", "salir", "cerrar"):
+        await _clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply="\u274c Contexto cerrado.",
+            reply_to=admin_jid,
+        )
+
+    # ── Handle by step ────────────────────────────────────────────
+    if step == "menu":
+        blocked = await client_messaging_block_repository.find_active(
+            db,
+            tenant.id,
+            phone=target_phone_norm if target_phone_norm else None,
+            whatsapp_lid=target_lid,
+        )
+
+        if blocked:
+            return await _handle_ctx_blocked_menu(
+                msg_lower, data, _save_ctx, _clear_ctx,
+                admin_jid, target_phone_norm, target_lid, tenant, db,
+            )
+        return await _handle_ctx_unblocked_menu(
+            msg_lower, data, _save_ctx, _clear_ctx,
+            admin_jid, target_phone_norm, target_lid, tenant, db,
+        )
+
+    # Unknown step — clear context and fall through
+    await _clear_ctx()
+    return None
+
+
+async def _handle_ctx_unblocked_menu(
+    msg_lower: str,
+    data: dict,
+    save_ctx,
+    clear_ctx,
+    admin_jid: str | None,
+    target_phone: str | None,
+    target_lid: str | None,
+    tenant: object,
+    db: AsyncSession,
+) -> WhatsAppConsoleResponse:
+    """Handle a message in the unblocked unregistered target menu."""
+
+    if msg_lower == "1":
+        # Crear cliente — advance step (Item 6 implements the form)
+        data["step"] = "creating"
+        await save_ctx(refresh_ttl=True)
+        phone_display = target_phone or "(solo LID)"
+        return WhatsAppConsoleResponse(
+            reply=f"\u2705 Iniciando creaci\u00f3n de cliente para {phone_display}.\n\n"
+                  "Complete los datos solicitados.",
+            reply_to=admin_jid,
+        )
+
+    if msg_lower == "2":
+        # Bloquear mensajes — create block immediately without confirmation
+        await client_messaging_block_repository.create(
+            db,
+            tenant_id=tenant.id,
+            phone=target_phone,
+            whatsapp_lid=target_lid,
+        )
+        await db.commit()
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply="\u2705 Mensajes bloqueados para este contacto.",
+            reply_to=admin_jid,
+        )
+
+    if msg_lower in ("0", "salir", "cerrar"):
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply="\u274c Contexto cerrado.",
+            reply_to=admin_jid,
+        )
+
+    # Invalid input — do NOT refresh TTL
+    await save_ctx(refresh_ttl=False)
+    return WhatsAppConsoleResponse(
+        reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
+              "1\ufe0f\u20e3 Crear cliente\n"
+              "2\ufe0f\u20e3 Bloquear mensajes\n"
+              "0\ufe0f\u20e3 Cancelar",
+        reply_to=admin_jid,
+    )
+
+
+async def _handle_ctx_blocked_menu(
+    msg_lower: str,
+    data: dict,
+    save_ctx,
+    clear_ctx,
+    admin_jid: str | None,
+    target_phone: str | None,
+    target_lid: str | None,
+    tenant: object,
+    db: AsyncSession,
+) -> WhatsAppConsoleResponse:
+    """Handle a message in the blocked target menu."""
+
+    if msg_lower == "1":
+        # Desbloquear mensajes — find active block and unblock
+        blocked = await client_messaging_block_repository.find_active(
+            db,
+            tenant.id,
+            phone=target_phone,
+            whatsapp_lid=target_lid,
+        )
+        if blocked is not None:
+            await client_messaging_block_repository.unblock(
+                db, tenant_id=tenant.id, block_id=blocked.id,
+            )
+            await db.commit()
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply="\u2705 Mensajes desbloqueados para este contacto.",
+            reply_to=admin_jid,
+        )
+
+    if msg_lower in ("0", "salir", "cerrar"):
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply="\u274c Contexto cerrado.",
+            reply_to=admin_jid,
+        )
+
+    # Invalid input — do NOT refresh TTL
+    await save_ctx(refresh_ttl=False)
+    return WhatsAppConsoleResponse(
+        reply="\u26a0\ufe0f Opci\u00f3n no v\u00e1lida.\n\n"
+              "1\ufe0f\u20e3 Desbloquear mensajes\n"
+              "0\ufe0f\u20e3 Cancelar",
+        reply_to=admin_jid,
     )

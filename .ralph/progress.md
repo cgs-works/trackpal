@@ -94,3 +94,24 @@ Per prioritization strategy: public schemas (Item 1), persistence (Item 2), and 
 
 ### Next-iteration notes
 Item 5 (Client Context Shortcut session lifecycle and unregistered target menus) is the next dependency. The from_me routing infrastructure now detects self-target vs non-self-target, creates a basic context session, and rejects collisions. Item 5 needs to add the menu facades, TTL behavior, input handling, and proper shortcuts for unregistered, blocked, and client targets.
+
+## Iteration 5 — 2026-06-01
+
+### Selected Item
+Item 5: Implement Client Context Shortcut session lifecycle and unregistered target menus.
+
+### Why this item was chosen
+Per prioritization strategy: routing/session behavior after schemas, persistence, code lookup, and from_me routing. Item 4 (from_me routing) created the context session but didn't implement menu facades, block/unblock actions, TTL management, or input handling. Item 5 adds the full session lifecycle: intercepting admin replies, showing context-appropriate menus, handling block creation/unblock, cleanup on 0, and proper TTL refresh/no-refresh behavior. This unblocks Item 6 (contextual client creation/management flows).
+
+### Changed files
+- `backend/app/api/v1/endpoints/integrations/console.py` — Added `_handle_active_client_context` import. Added context session check in `_route_by_instance` before routing to Tenant console.
+- `backend/app/api/v1/endpoints/integrations/console_handlers.py` — Added `normalize_phone`, `client_messaging_block_repository`, `clients_repository` imports. Added `_handle_active_client_context()` entry point that checks for active context, handles registered client fall-through, and routes by step. Added `_handle_ctx_unblocked_menu()` for unregistered unblocked targets (Crear cliente, Bloquear mensajes, 0 Cancelar). Added `_handle_ctx_blocked_menu()` for blocked targets (Desbloquear mensajes, 0 Cancelar). All menu functions enforce TTL refresh on valid input and no refresh on invalid input.
+- `backend/tests/test_whatsapp_endpoint.py` — Added `_setup_context()` helper. Added 10 tests: context intercepts admin message, no context falls through, unblocked menu shows options, blocked menu shows unblock, Crear cliente advances step, Bloquear creates block, Desbloquear unblocks, 0 closes context, invalid input does not refresh TTL, valid input refreshes TTL.
+
+### Verification commands and results
+1. `cd backend && uv run pytest -n 8 --dist loadscope --no-header -q --tb=short -p no:cacheprovider` — 1155 passed, 1 skipped in ~28s ✓
+2. `cd frontend && npm run build` — Build successful ✓
+3. `cd backend && python -c "import json; json.load(open('../n8n/Trackpal WhatsApp Bot.json', encoding='utf-8')); print('valid')"` — Valid JSON ✓
+
+### Next-iteration notes
+Item 6 (contextual Client creation and existing Client management flows) is the next dependency. The context shortcut lifecycle and menu infrastructure (Item 5) now intercepts admin messages, shows unregistered-target menus, handles block/unblock, and manages TTL. Item 6 needs to implement the multi-step client creation flow, active/inactive client menus, subscription shortcut, and all management actions.

@@ -836,7 +836,9 @@ async def test_request_accepts_new_optional_fields(client, master_user):
     assert "reply" in body
     # New fields don't break routing — without a session the endpoint
     # asks for login (normal flow), proving the request was accepted
-    assert "nombre de usuario" in body["reply"].lower() or "login" in body["reply"].lower()
+    assert (
+        "nombre de usuario" in body["reply"].lower() or "login" in body["reply"].lower()
+    )
 
 
 async def test_request_legacy_without_new_fields_still_works(client, master_user):
@@ -924,9 +926,7 @@ async def test_response_model_serializes_no_reply(client):
 TEST_INSTANCE = "test-tenant-instance"
 
 
-async def _setup_tenant_for_codigo(
-    db_session, active_tenant_user
-) -> Tenant:
+async def _setup_tenant_for_codigo(db_session, active_tenant_user) -> Tenant:
     """Set up a tenant with instance, mailbox, and code services for codigo flow."""
     result = await db_session.execute(
         select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
@@ -950,9 +950,7 @@ async def _setup_tenant_for_codigo(
     # Activate global code service and select for tenant
     global_svc = CodeServiceGlobalStatus(service_key="netflix", is_active=True)
     db_session.add(global_svc)
-    tenant_sel = TenantCodeServiceSelection(
-        tenant_id=tenant.id, service_key="netflix"
-    )
+    tenant_sel = TenantCodeServiceSelection(tenant_id=tenant.id, service_key="netflix")
     db_session.add(tenant_sel)
 
     await db_session.commit()
@@ -1043,7 +1041,10 @@ async def test_unregistered_identity_codigo_multistep(
         )
         assert resp3.status_code == 200
         body3 = resp3.json()
-        assert "buscando" in body3["reply"].lower() or "searching" in body3["reply"].lower()
+        assert (
+            "buscando" in body3["reply"].lower()
+            or "searching" in body3["reply"].lower()
+        )
         assert "lookup_job_id" in body3
         assert body3["lookup_job_id"] is not None
         assert "tenant_id" in body3
@@ -1145,7 +1146,11 @@ async def test_unregistered_identity_non_codigo_returns_access_denied(
     body = response.json()
     reply = body["reply"].lower()
     # Must be access denied, not code lookup or anything else
-    assert "no tienes acceso" in reply or "no está registrado" in reply or "acceso denegado" in reply
+    assert (
+        "no tienes acceso" in reply
+        or "no está registrado" in reply
+        or "acceso denegado" in reply
+    )
     assert "Netflix" not in body["reply"]
     assert "no_reply" not in body or body.get("no_reply") is not True
 
@@ -1453,3 +1458,421 @@ async def test_from_me_non_self_target_sets_context_in_redis(
     # Target info should be in temp_data
     assert data["temp_data"]["target_phone"] == "12015559999"
     assert data["temp_data"]["admin_jid"] == "12015550002@s.whatsapp.net"
+
+
+# ---------------------------------------------------------------------------
+# Client Context Shortcut lifecycle and unregistered target menus (Item 5)
+# ---------------------------------------------------------------------------
+
+
+async def _setup_context(
+    fake_mgr: _FakeManager,
+    admin_phone_digits: str,
+    target_phone: str | None = "12015559999",
+    target_lid: str | None = None,
+    admin_jid: str = "12015550002@s.whatsapp.net",
+    step: str = "menu",
+) -> None:
+    """Pre-populate a client context shortcut session in fake Redis."""
+    import json
+
+    session = {
+        "phone": admin_phone_digits,
+        "flow": "client_shortcut",
+        "step": step,
+        "selected_tenant_id": None,
+        "temp_data": {
+            "target_phone": target_phone,
+            "target_lid": target_lid,
+            "target_jid": f"{target_phone or 'unknown'}@s.whatsapp.net",
+            "admin_jid": admin_jid,
+        },
+        "selection_map": {},
+    }
+    key = f"wa:client_ctx:{admin_phone_digits}"
+    await fake_mgr._redis.set(key, json.dumps(session), ex=300)
+
+
+async def test_context_shortcut_intercepts_admin_message(
+    client, db_session, active_tenant_user
+):
+    """Client Context Shortcut intercepts admin messages when context session exists."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone  # "+12015550002"
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "menu",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    reply = body["reply"]
+    # Context response should show unregistered target menu
+    assert "Crear cliente" in reply or "Bloquear" in reply
+    # Must include reply_to for private admin reply
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_shortcut_no_context_falls_through(
+    client, db_session, active_tenant_user
+):
+    """Without a context session, admin messages route to the Tenant console."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+
+    # No context set up — should fall through to Tenant console
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "reply" in body
+    # Should be Tenant console reply, not context shortcut
+    assert "Consola de Administración" in body["reply"] or "No entendí" in body["reply"]
+    # No context fields
+    assert "reply_to" not in body or body.get("no_reply") is not True
+
+
+async def test_context_shortcut_unblocked_menu_shows_options(
+    client, db_session, active_tenant_user
+):
+    """Unblocked unregistered target shows Crear cliente and Bloquear mensajes options."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Send an invalid option to see the full menu
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "x",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Crear cliente" in body["reply"]
+    assert "Bloquear mensajes" in body["reply"]
+    assert "Cancelar" in body["reply"]
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_shortcut_blocked_menu_shows_unblock(
+    client, db_session, active_tenant_user
+):
+    """Blocked unregistered target shows Desbloquear mensajes instead."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    # Create an active block for the target
+    block = ClientMessagingBlock(
+        tenant_id=tenant.id,
+        phone="12015559999",
+        is_active=True,
+    )
+    db_session.add(block)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Send an invalid option to see the full menu
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "x",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Desbloquear mensajes" in body["reply"]
+    assert "Crear cliente" not in body["reply"]
+    assert "Cancelar" in body["reply"]
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+
+async def test_context_shortcut_crear_cliente_advances_step(
+    client, db_session, active_tenant_user
+):
+    """Selecting 1 on unblocked menu advances step to 'creating'."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "creación de cliente" in body["reply"].lower()
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+    # Verify context step advanced in Redis
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is not None
+    import json
+
+    data = json.loads(raw)
+    assert data["step"] == "creating"
+
+
+async def test_context_shortcut_bloquear_creates_block(
+    client, db_session, active_tenant_user
+):
+    """Selecting 2 on unblocked menu creates a block and clears context."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Mensajes bloqueados" in body["reply"]
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+    # Verify block was created in DB
+    result = await db_session.execute(
+        select(ClientMessagingBlock).where(
+            ClientMessagingBlock.tenant_id == tenant.id,
+            ClientMessagingBlock.phone == "12015559999",
+            ClientMessagingBlock.is_active,
+        )
+    )
+    db_block = result.scalar_one_or_none()
+    assert db_block is not None
+
+    # Verify context was cleared from Redis
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is None
+
+
+async def test_context_shortcut_desbloquear_unblocks(
+    client, db_session, active_tenant_user
+):
+    """Selecting 1 on blocked menu unblocks and clears context."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    # Create an active block for the target
+    block = ClientMessagingBlock(
+        tenant_id=tenant.id,
+        phone="12015559999",
+        is_active=True,
+    )
+    db_session.add(block)
+    await db_session.commit()
+    block_id = block.id
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Mensajes desbloqueados" in body["reply"]
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+    # Verify block was deactivated
+    # Expire cached object so identity map reloads from DB
+    db_session.expire(block)
+    result = await db_session.execute(
+        select(ClientMessagingBlock).where(ClientMessagingBlock.id == block_id)
+    )
+    db_block = result.scalar_one_or_none()
+    assert db_block is not None
+    assert db_block.is_active is False
+
+    # Verify context was cleared from Redis
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is None
+
+
+async def test_context_shortcut_zero_closes_context(
+    client, db_session, active_tenant_user
+):
+    """Sending 0 closes the context and clears the session."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Contexto cerrado" in body["reply"]
+    assert body.get("reply_to") == "12015550002@s.whatsapp.net"
+
+    # Verify context was cleared from Redis
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    raw = await fake_mgr._redis.get(ctx_key)
+    assert raw is None
+
+
+async def test_context_shortcut_invalid_input_does_not_refresh_ttl(
+    client, db_session, active_tenant_user
+):
+    """Invalid input preserves the existing context TTL (no refresh)."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+
+    # Set a known short TTL (50s) to detect refresh
+    fake_mgr._redis._ttls[ctx_key] = 50
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "xyz",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "Opción no válida" in body["reply"]
+
+    # TTL should still be 50 (not refreshed to 300)
+    assert fake_mgr._redis._ttls.get(ctx_key) == 50
+
+
+async def test_context_shortcut_valid_input_refreshes_ttl(
+    client, db_session, active_tenant_user
+):
+    """Valid input (Crear cliente) refreshes the context TTL to 300s."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, admin_phone_digits)
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+
+    # Set a known short TTL to detect refresh
+    fake_mgr._redis._ttls[ctx_key] = 50
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+
+    # TTL should now be 300 after valid input refresh
+    assert fake_mgr._redis._ttls.get(ctx_key) == 300

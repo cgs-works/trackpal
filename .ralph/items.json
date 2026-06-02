@@ -78,8 +78,8 @@
         "Create blocks immediately without confirmation or reason, unblock from the shortcut, close context after completed actions, and abort at any depth on 0.",
         "Add service tests for menus, TTL behavior, invalid input not refreshing TTL, completed action cleanup, and 0 cleanup."
       ],
-      "passes": false,
-      "regression_notes": ""
+      "passes": true,
+      "regression_notes": "Context sessions stored under wa:client_ctx:{admin_phone} with 5-minute TTL. Admin messages routed to context facade before Tenant console when context active. Unblocked unregistered targets show Crear cliente, Bloquear mensajes, 0 Cancelar. Blocked targets show Desbloquear mensajes, 0 Cancelar. Block creation immediate without confirmation. Unblock from shortcut with find_active then unblock. 0 closes context at any depth. Invalid input does not refresh TTL. 10 new endpoint tests pass. 1155/1155 full test suite passes. Frontend builds clean. n8n workflow JSON valid."
     },
     {
       "category": "functional",
