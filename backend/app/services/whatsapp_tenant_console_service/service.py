@@ -69,6 +69,8 @@ class WhatsAppTenantConsoleService(
     _handle_client_edit_value = _._handle_client_edit_value
     _handle_client_deactivate_confirm = _._handle_client_deactivate_confirm
     _handle_client_delete_confirm = _._handle_client_delete_confirm
+    _handle_clients_block_list = _._handle_clients_block_list
+    _handle_clients_block_unblock = _._handle_clients_block_unblock
     _start_catalog_flow = _._start_catalog_flow
     _fetch_service_list = _._fetch_service_list
     _handle_catalog_service_select = _._handle_catalog_service_select

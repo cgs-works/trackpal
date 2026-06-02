@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst isLidJid = (value) => String(value || '').includes('@lid');\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\nconst apiKey = body.apiKey || '';\n\n// LID/JID resolution fields from evolution-go\nconst senderPn = body.senderPn || '';\nconst senderLid = body.senderLid || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\n// Derive phone from senderPn first (phone JID), never from @lid\nlet phone;\nlet senderLidOut = senderLid;\n\nif (senderPn) {\n  phone = normalizePhone(senderPn);\n} else {\n  const rawJid = remoteJid || from;\n  if (rawJid && isLidJid(rawJid)) {\n    phone = '';\n    senderLidOut = senderLid || rawJid;\n  } else {\n    phone = normalizePhone(rawJid);\n  }\n}\n\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\nreturn [{ json: { phone, message, instance, remoteJid, apiKey, sender_lid: senderLidOut, raw: payload } }];"
+        "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw;\n};\n\nconst isLidJid = (value) => String(value || '').includes('@lid');\n\nconst body = payload.body || {};\nconst chatInput = body.chatInput || '';\nconst remoteJid = body.remoteJid || '';\nconst instanceName = body.instanceName || '';\nconst apiKey = body.apiKey || '';\n\n// LID/JID resolution fields from evolution-go\nconst senderPn = body.senderPn || '';\nconst senderLid = body.senderLid || '';\n\nconst data = payload.data || {};\nconst msg = data.message || {};\nconst from = msg.from || msg.key?.remoteJid || '';\n\n// Derive phone from senderPn first (phone JID), never from @lid\nlet phone;\nlet senderLidOut = senderLid;\n\nif (senderPn) {\n  phone = normalizePhone(senderPn);\n} else {\n  const rawJid = remoteJid || from;\n  if (rawJid && isLidJid(rawJid)) {\n    phone = '';\n    senderLidOut = senderLid || rawJid;\n  } else {\n    phone = normalizePhone(rawJid);\n  }\n}\n\nconst message = chatInput || String(msg.body || msg.message?.conversation || '').trim();\nconst instance = instanceName || data.instance || payload.instance || 'default';\n\n// Contextual routing fields from Evolution Go\nconst fromMe = body.fromMe || false;\nconst adminJid = body.adminJid || '';\nconst targetJid = body.targetJid || '';\nconst targetPhone = body.targetPhone || '';\nconst targetLid = body.targetLid || '';\n\nreturn [{ json: { phone, message, instance, remoteJid, apiKey, sender_lid: senderLidOut,\n  fromMe, adminJid, targetJid, targetPhone, targetLid, raw: payload } }];"
       },
       "id": "f26d682c-3768-467e-82b0-c3e801c59f0e",
       "name": "Parse input",
@@ -50,7 +50,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ phone: $json.phone, message: $json.message, instance: $json.instance, sender_lid: $json.sender_lid }) }}",
+        "jsonBody": "={{ JSON.stringify({ phone: $json.phone, message: $json.message, instance: $json.instance, sender_lid: $json.sender_lid, from_me: $json.fromMe, admin_phone: $json.phone, admin_jid: $json.adminJid, target_jid: $json.targetJid, target_phone: $json.targetPhone, target_lid: $json.targetLid }) }}",
         "options": {
           "response": {
             "response": {
@@ -112,7 +112,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst reply = (typeof responseData.reply === 'string' && responseData.reply.trim())\n  ? responseData.reply\n  : 'Servicio temporalmente no disponible. Intenta nuevamente.';\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId } }];"
+        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply } }];"
       },
       "id": "d51d43de-ca7e-4066-acee-7db288c7b9a9",
       "name": "Merge & lookup data",
@@ -171,7 +171,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: String($json.phone || $json.remoteJid || '').replace('+', ''), text: String($json.reply || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: String($json.reply_to || $json.phone || $json.remoteJid || '').replace('+', ''), text: String($json.reply || '') }) }}",
         "options": {
           "response": {
             "response": {
@@ -438,21 +438,43 @@
         1936,
         -464
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.no_reply }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "condition-ifnoreply-001"
+            }
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          }
+        },
+        "options": {}
+      },
+      "id": "68d5cf87-6e68-4e63-ba0e-7a68ce159662",
+      "name": "IF no reply",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        -224
+      ]
     }
   ],
   "pinData": {},
   "connections": {
-    "Merge & lookup data": {
-      "main": [
-        [
-          {
-            "node": "IF has lookup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Webhook": {
       "main": [
         [
@@ -622,6 +644,35 @@
         [
           {
             "node": "IF retry needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge & lookup data": {
+      "main": [
+        [
+          {
+            "node": "IF no reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF no reply": {
+      "main": [
+        [
+          {
+            "node": "Check close session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF has lookup",
             "type": "main",
             "index": 0
           }

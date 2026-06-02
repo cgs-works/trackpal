@@ -19,15 +19,21 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [API Layer](architecture/api-layer.md) | REST routes, auth, dependencies, and integrations |
 | [Database Schema](architecture/database-schema.md) | ORM models, relationships, constraints, and migrations |
 | [Redis HA](architecture/redis-ha.md) | Redis failover, session state, and contingency replies |
-| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master/Tenant/Client WhatsApp console orchestration, instance-first routing, and LID fallback |
+| [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master/Tenant/Client WhatsApp console orchestration, instance-first routing, LID fallback, from_me contextual routing, Client Context Shortcut, and Client Messaging Blocks |
 | [Input Validation Policy](architecture/input-validation-policy.md) | Validation and normalization rules |
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
-| [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract) and subscription reminders workflows |
+| [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract), contextual payload routing, reply_to / no_reply handling, and subscription reminders workflows |
 | [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Multi-OAuth + IMAP mailbox ingestion, lookup worker, metrics, cleanup |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
+
+## Architecture Decisions
+
+| File | Description |
+|------|-------------|
+| [Client Messaging Blocks Table](adr/0001-client-messaging-blocks-table.md) | Why Client Messaging Blocks use a dedicated table instead of the Client model |
 
 ## Codebase
 

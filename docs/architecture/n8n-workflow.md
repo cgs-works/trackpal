@@ -7,23 +7,32 @@ Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webho
 ### Workflow Overview
 
 ```
-Evolution Go (inbound message)
+Evolution Go (inbound or outgoing trigger)
     |  webhook POST
 n8n Webhook Node
     ↓
-Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJid, sender_lid
+Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJid,
+    sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid
     ↓
 [Config (Set Node)] — supplies config vars from node fields
     ↓
 Console Call (HTTP Request Node) — POST /api/v1/integrations/n8n/console
+    (includes from_me, admin_phone, admin_jid, target_*, reply_to, no_reply fields)
     ↓
-Merge & lookup data (Code Node) — merges reply + control fields with original input
+Merge & lookup data (Code Node) — merges reply + control fields (reply_to, no_reply)
+    with original input; skips fallback reply when no_reply=true
     ↓
-IF has lookup_job_id?
-   ├─ No  → Evolution Go Send → Check Close Session → Close Session(if logout)
-   └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
-              (`GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`)
-              → Build result message → Send final result
+IF no_reply=true?
+   ├─ Yes → Check Close Session (skip all Evolution sends)
+   └─ No  → ─┐
+              ↓
+         IF has lookup_job_id?
+            ├─ No  → Evolution Go Send (uses reply_to when present) → Check Close Session
+            └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
+                       (`GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`)
+                       → Build result message → Send final result
+         ↓
+    Check Close Session → Close Session(if logout)
 ```
 
 ## Workflow File
@@ -55,7 +64,7 @@ This URL is configured in `EvolutionClient.register_webhook()` in the backend, w
 
 ### 2. Parse Input (Code Node)
 
-JavaScript code that normalises the raw Evolution Go payload into a consistent `{ phone, message, instance, remoteJid, apiKey, sender_lid }` structure.
+JavaScript code that normalises the raw Evolution Go payload into a consistent structure.
 **Input**: Raw webhook payload from Evolution Go.
 
 **Normalisation logic**:
@@ -67,8 +76,8 @@ JavaScript code that normalises the raw Evolution Go payload into a consistent `
 - Never derives canonical phone from `@lid` digits
 - Defaults `instance` to `'default'` if not present
 - Preserves original `remoteJid` and `apiKey` for downstream send/close nodes
-
-**Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, raw }`
+- **Extracts contextual fields**: `body.fromMe` (boolean), `body.adminJid`, `body.targetJid`, `body.targetPhone`, `body.targetLid` for outgoing trigger routing
+- **Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid, raw }`
 ### 3. Config (Set Node)
 
 A **Set** node (typeVersion 3.4) that injects configuration values into the workflow as named fields.
@@ -94,16 +103,35 @@ Calls the backend WhatsApp Master Console endpoint.
 | Method | POST |
 | URL | `{{ $('Config').first().json.trackpal_backend_url }}/api/v1/integrations/n8n/console` |
 | Headers | `X-API-Key: {{ $('Config').first().json.trackpal_n8n_api_key }}` |
-| Body | `{"phone": "...", "message": "...", "instance": "...", "sender_lid": "..."}` |
+| Body | `{"phone": "...", "message": "...", "instance": "...", "sender_lid": "...", "from_me": true, "admin_phone": "...", "admin_jid": "...", "target_jid": "...", "target_phone": "...", "target_lid": "..."}` |
 | Never Error | `true` (backend errors return safe replies, never 5xx) |
+
+All new contextual fields are sent conditionally (only when present in the parsed input).
 
 ### 5. Merge & lookup data (Code Node)
 
-Small JavaScript that takes backend response from `Console call` and merges it with parsed input.
+JavaScript that takes backend response from `Console call` and merges it with parsed input.
 
-**Logic**: If response `reply` is empty, use fallback Spanish message. Preserve control fields: `status`, `lookup_job_id`, and `tenant_id`.
+**Logic**: Preserve `reply_to` and `no_reply` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`.
 
-**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id }`.
+**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id, reply_to, no_reply }`.
+
+### 5a. IF no reply (IF Node)
+
+Routes incoming data based on the ``no_reply`` flag from the backend response. Prevents unnecessary Evolution API calls for silent administrative replies.
+
+| Property | Value |
+|----------|-------|
+| Type | `n8n-nodes-base.if` (v3) |
+| Operation | ``Boolean`` |
+| Value 1 | ``{{ $json.no_reply }}`` |
+| Condition | ``Equal`` |
+| Output | ``true`` branch → skip all Evolution sends, go directly to Check Close Session |
+
+When ``no_reply=true``, the workflow bypasses the ``Evolution Go Send`` and ``lookup_job_id`` poll branches entirely. This is used for:
+- Blocked unregistered identities (silent treatment)
+- Context collision rejection (private to admin chat via ``reply_to``)
+- Internal administrative responses that need no user-facing message
 
 ### 6. Evolution Go Send (HTTP Request Node)
 
@@ -115,10 +143,11 @@ Sends the reply text back to the user via Evolution Go.
 | Method | POST |
 | URL | `{{ $('Config').first().json.evolution_api_url }}/send/text` |
 | Headers | `apikey: {{ $json.apiKey }}` |
-| Body | `{"number": "phone_without_plus", "text": "reply_text"}` |
+| Body (no reply_to) | `{"number": "phone_without_plus", "text": "reply_text"}` |
+| Body (with reply_to) | `{"number": "{{$json.reply_to}}", "text": "reply_text"}` |
 | Never Error | `true` |
 
-Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. Reply target uses preserved `remoteJid` (can be `@lid` or phone JID depending on Evolution session state).
+Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. When ``reply_to`` is present in the response, the send target uses the ``reply_to`` JID instead of the original sender's phone JID. This ensures administrative replies are sent privately to the admin chat rather than to the target contact. When ``reply_to`` is absent, reply target uses preserved `remoteJid` (can be `@lid` or phone JID depending on Evolution session state).
 ### 7. Check Close Session (Code Node)
 
 JavaScript that conditionally triggers session close.
@@ -146,6 +175,8 @@ This replaces the deprecated `EvolutionClient.close_chat_session()` which was pr
 
 ## Data Flow Detail
 
+### Standard inbound message (user → bot)
+
 ```
 Evolution Go webhook payload (isTrusted=true)
   ↓
@@ -156,8 +187,15 @@ Parse Input:
   const instance = instanceName || data.instance || 'default'
   const remoteJid = body.remoteJid || ''
   const apiKey = body.apiKey || ''
+  const fromMe = body.fromMe || false
+  const adminJid = body.adminJid || ''
+  const targetJid = body.targetJid || ''
+  const targetPhone = body.targetPhone || ''
+  const targetLid = body.targetLid || ''
   ↓
-{ phone: "1234567890", sender_lid: "1234567890123@lid", message: "1", instance: "Sublify", remoteJid: "1234567890@s.whatsapp.net", apiKey: "<instance-api-key>" }
+{ phone: "1234567890", sender_lid: "", message: "1", instance: "Sublify",
+  remoteJid: "1234567890@s.whatsapp.net", apiKey: "<instance-api-key>",
+  fromMe: false, adminJid: "", targetJid: "", targetPhone: "", targetLid: "" }
   ↓
 Config node adds: { trackpal_backend_url, trackpal_n8n_api_key, evolution_api_url, default_instance }
   ↓
@@ -165,7 +203,13 @@ Console Call → POST /api/v1/integrations/n8n/console
   → Backend processes, returns { reply: "📋 *Lista de Tenants*\n..." }
   ↓
 Merge & lookup data:
-  { phone, message, instance, remoteJid, apiKey, reply: "📋 *Lista de Tenants*\n...", status: null, lookup_job_id: null, tenant_id: null }
+  { phone, message, instance, remoteJid, apiKey, fromMe, adminJid,
+    reply: "📋 *Lista de Tenants*\n...", status: null,
+    lookup_job_id: null, tenant_id: null, reply_to: null, no_reply: null }
+  ↓
+IF has no_reply? → No
+  ↓
+IF has lookup_job_id? → No
   ↓
 Evolution Go Send → POST /send/text
   → Headers: { apikey: "<instance-api-key>" }
@@ -177,6 +221,57 @@ Check Close Session (only if message === "0" and reply matches logout)
 Close Session → POST /webhook/change-status
   → Headers: { apikey: "<instance-api-key>" }
   → Body: { remoteJid: "1234567890@s.whatsapp.net", status: "closed" }
+```
+
+### Outgoing trigger (admin → bot, from_me=true)
+
+```
+Evolution Go webhook payload (isTrusted=true, fromMe=true)
+  ↓
+Parse Input:
+  const phone = senderPn ? normalizePhone(senderPn) : ''
+  const message = chatInput || msg.body || conversation
+  const instance = instanceName || data.instance || 'default'
+  const fromMe = body.fromMe || false
+  const adminJid = body.adminJid || ''
+  const targetJid = body.targetJid || ''
+  const targetPhone = body.targetPhone || ''
+  const targetLid = body.targetLid || ''
+  ↓
+{ phone: "", message: "/menu", instance: "tenant-acme",
+  fromMe: true, adminJid: "12025551234@s.whatsapp.net",
+  targetJid: "12025559999@s.whatsapp.net", targetPhone: "12025559999", targetLid: "" }
+  ↓
+Console Call → POST /api/v1/integrations/n8n/console
+  Body: { "phone": "", "message": "/menu", "instance": "tenant-acme",
+          "from_me": true, "admin_jid": "12025551234@s.whatsapp.net",
+          "target_jid": "12025559999@s.whatsapp.net", "target_phone": "12025559999" }
+  → Backend creates context session, returns:
+    { reply: "✅ Contexto de cliente iniciado.\n...", reply_to: "12025551234@s.whatsapp.net" }
+  ↓
+Merge & lookup data:
+  { ... , reply: "✅ Contexto...", reply_to: "12025551234@s.whatsapp.net", no_reply: null }
+  ↓
+IF has no_reply? → No (null)
+  ↓
+IF has lookup_job_id? → No
+  ↓
+Evolution Go Send → POST /send/text
+  Body: { number: "12025551234@s.whatsapp.net", text: "✅ Contexto..." }
+  → Reply sent privately to admin chat, not to the target contact
+```
+
+### Silent reply (blocked identity or context collision)
+
+```
+Backend returns: { reply: "", reply_to: "admin@jid", no_reply: true }
+  ↓
+Merge & lookup data preserves no_reply: true, skips fallback
+  ↓
+IF has no_reply? → Yes (true)
+  ↓
+Check Close Session (no Evolution send occurs)
+  → User receives nothing (silent block)
 ```
 
 ## Configuration Pattern (n8n Community Edition)
@@ -199,8 +294,8 @@ The workflow communicates with backend services:
 
 1. **Trackpal Backend Console** (`POST /api/v1/integrations/n8n/console`):
    - Authenticated via `X-API-Key` header matching `settings.n8n_api_key`
-   - Request body: `WhatsAppConsoleRequest` schema (phone, message, optional instance, optional sender_lid)
-   - Response body: `WhatsAppConsoleResponse` schema (reply text, optional `lookup_job_id`, optional `tenant_id`)
+   - Request body: `WhatsAppConsoleRequest` schema (phone, message, optional instance, optional sender_lid, optional from_me, optional admin_phone, optional admin_jid, optional target_jid, optional target_phone, optional target_lid)
+   - Response body: `WhatsAppConsoleResponse` schema (reply text, optional `lookup_job_id`, optional `tenant_id`, optional `reply_to`, optional `no_reply`)
 
 2. **Trackpal Backend Mail Lookup**:
    - `POST /api/v1/integrations/n8n/mail/lookups`
