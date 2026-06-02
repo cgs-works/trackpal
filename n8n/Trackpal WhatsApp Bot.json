@@ -678,6 +678,17 @@
           }
         ]
       ]
+    },
+    "Evolution API Send": {
+      "main": [
+        [
+          {
+            "node": "Check close session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
