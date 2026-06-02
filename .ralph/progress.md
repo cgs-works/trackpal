@@ -28,5 +28,8 @@ Also replaced `python -m json.tool` (which pretty-prints the entire 21K file to 
 overflowing the harness pipe buffer) with a silent Python one-liner that just validates
 and prints "valid".
 
+Restored original Spanish accents (`código`, `menú`) in item 3 and 7 descriptions
+that were lost during a full-file JSON rewrite.
+
 ### Next-iteration notes
 Item 2 (Client Messaging Block persistence) is the next dependency. The request/response contract is now ready for routing and block enforcement.
