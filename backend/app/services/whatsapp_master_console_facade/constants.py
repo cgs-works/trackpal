@@ -65,5 +65,5 @@ AUTH_FLOW = "auth"
 AUTH_STEP_USERNAME = "username"
 AUTH_STEP_PASSWORD = "password"
 
-RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
+RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar", "salir", "cerrar"}
 HELP_COMMANDS = {"5", "ayuda"}
