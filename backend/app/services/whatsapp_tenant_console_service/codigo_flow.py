@@ -57,17 +57,19 @@ def _build_service_page(
         lines.append(f"[{rel}] {label}")
 
     if total_pages > 1:
+        lines.append("")
         if page > 0:
-            lines.append("8   " + _i18n_t(loc, "wa.tenant.codigo.prev_page"))
+            lines.append("8️⃣ " + _i18n_t(loc, "wa.tenant.codigo.prev_page"))
         if page < total_pages - 1:
-            lines.append("9   " + _i18n_t(loc, "wa.tenant.codigo.next_page"))
+            lines.append("9️⃣ " + _i18n_t(loc, "wa.tenant.codigo.next_page"))
 
     cancel_key = (
         "wa.tenant.codigo.cancel"
         if started_from_menu
         else "wa.tenant.codigo.cancel_direct"
     )
-    lines.append("0   " + _i18n_t(loc, cancel_key))
+    lines.append("")
+    lines.append("0️⃣ " + _i18n_t(loc, cancel_key))
 
     return "\n".join(lines)
 
