@@ -217,7 +217,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.menu.blocked_lid_only": "📌 *Gestion del cliente*\n\nEste contacto tiene bloqueado el acceso al sistema.\nNo puede pedir codigos, ver perfil ni consultar suscripciones.\n\nElige una opcion:\n1️⃣ Desbloquear acceso\n0️⃣ Cancelar",
     "wa.tenant.client_context.menu.active": "📌 *Gestion del cliente*\n\nEstas administrando este cliente desde tu panel privado.\nEl cliente no ve este menu.\n\nCliente: {client_name}\nNumero de telefono: {identity}\nEstado: {status}\n\nElige una opcion:\n1️⃣ Ver detalle\n2️⃣ Editar cliente\n3️⃣ Crear suscripcion\n4️⃣ Desactivar cliente\n5️⃣ Eliminar cliente\n0️⃣ Cancelar",
     "wa.tenant.client_context.menu.inactive": "📌 *Gestion del cliente*\n\nEstas administrando este cliente desde tu panel privado.\nEl cliente no ve este menu.\n\nCliente: {client_name}\nNumero de telefono: {identity}\nEstado: {status}\n\nElige una opcion:\n1️⃣ Ver detalle\n2️⃣ Editar cliente\n3️⃣ Reactivar cliente\n4️⃣ Eliminar cliente\n0️⃣ Cancelar",
-    "wa.tenant.client_context.closed": "✅ Gestion del cliente cancelada. Tambien se cerro la sesion de consola del tenant.",
+    "wa.tenant.client_context.closed": "✅ Gestion del cliente cancelada.",
     "wa.tenant.client_context.collision": "⚠️ Ya tienes una gestion del cliente abierta. Envia *0* en tu chat privado de Tenant antes de abrir otra.",
     "wa.tenant.client_context.invalid_option": "❌ Opcion invalida. Responde con un numero del menu o *0* para cancelar.",
     "wa.tenant.client_context.create.phone_prefilled": "Telefono prefijado: {identity}\n\nEscribe el *nombre completo* del cliente o *0* para cancelar:",

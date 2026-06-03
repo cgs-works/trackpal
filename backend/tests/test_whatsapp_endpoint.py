@@ -2175,7 +2175,7 @@ async def test_context_shortcut_zero_closes_context(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "cerr" in body["reply"].lower() or "closed" in body["reply"].lower()
+    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "closed" in body["reply"].lower()
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
     assert body.get("close_jid") == "12015550002@s.whatsapp.net"
     assert body.get("close_jids") == [

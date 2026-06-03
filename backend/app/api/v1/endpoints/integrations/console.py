@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import ApiKeyDbDep
 from app.api.v1.endpoints.integrations.adapter import UNKNOWN_PHONE_REPLY
 from app.api.v1.endpoints.integrations.console_handlers import (
+    _canonical_jid,
     _client_context_close_jids,
     _handle_active_client_context,
     _handle_client_console,
@@ -461,7 +462,7 @@ async def _handle_from_me_routing(
                 reply=t(locale, "wa.tenant.client_context.closed"),
                 status="closed",
                 reply_to=admin_jid,
-                close_jid=admin_jid,
+                close_jid=_canonical_jid(admin_jid) or admin_jid,
                 close_jids=close_jids,
             )
         # Otherwise, reject silently (collision)
@@ -490,7 +491,7 @@ async def _handle_from_me_routing(
             "target_phone": target_phone_norm or target_phone,
             "target_lid": target_lid,
             "target_jid": target_jid,
-            "admin_jid": admin_jid,
+            "admin_jid": _canonical_jid(admin_jid) or admin_jid,
             **context_meta,
         },
     )
@@ -504,5 +505,5 @@ async def _handle_from_me_routing(
     # close_jid tells n8n which chat to close when the admin sends
     # "0"/"salir"/"cerrar" in the client-shortcut flow.
     return WhatsAppConsoleResponse(
-        reply=reply, reply_to=admin_jid, close_jid=admin_jid
+        reply=reply, reply_to=admin_jid, close_jid=_canonical_jid(admin_jid) or admin_jid
     )

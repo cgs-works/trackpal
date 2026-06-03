@@ -96,11 +96,30 @@ tenant_service = TenantService()
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
 
+def _canonical_jid(jid: str | None) -> str | None:
+    """Strip device suffix (``:N``) from a JID.
+
+    Evolution Go stores chatbot sessions with the device suffix
+    stripped (e.g. ``5551234567@s.whatsapp.net`` not
+    ``5551234567:81@s.whatsapp.net``).  Close requests must use the
+    same canonical form to match the session key.
+    """
+    if not jid:
+        return None
+    for suffix in ("@s.whatsapp.net", "@c.us"):
+        if jid.endswith(suffix):
+            local = jid[: -len(suffix)]
+            if ":" in local:
+                local = local.split(":", 1)[0]
+            return local + suffix
+    return jid
+
+
 def _client_context_close_jids(temp_data: dict, admin_jid: str | None) -> list[str]:
     """Evolution sessions to close for Client Context Shortcut."""
     values = [
-        admin_jid,
-        temp_data.get("target_jid"),
+        _canonical_jid(admin_jid),
+        _canonical_jid(temp_data.get("target_jid")),
     ]
     target_phone = normalize_phone(temp_data.get("target_phone"))
     if target_phone:
