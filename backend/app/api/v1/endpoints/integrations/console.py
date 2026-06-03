@@ -60,22 +60,6 @@ auth_service = AuthService()
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
 
 
-def _inject_reply_to_message_id(
-    response: WhatsAppConsoleResponse,
-    request: WhatsAppConsoleRequest,
-) -> WhatsAppConsoleResponse:
-    """Echo ``message_id`` from the request as ``reply_to_message_id``.
-
-    n8n uses ``reply_to_message_id`` to set ``quoted.messageId`` on the
-    Evolution API ``/send/text`` call, making the bot reply appear as
-    a quoted response ("Responder" in WhatsApp) to the original user
-    message.
-    """
-    if request.message_id and response.reply and not response.no_reply:
-        response.reply_to_message_id = request.message_id
-    return response
-
-
 @console_router.post("/n8n/console", response_model=WhatsAppConsoleResponse)
 async def whatsapp_console(
     request: WhatsAppConsoleRequest,
@@ -86,12 +70,11 @@ async def whatsapp_console(
 
     manager = get_redis_manager()
     if manager is None:
-        resp = WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
-        return _inject_reply_to_message_id(resp, request)
+        return WhatsAppConsoleResponse(reply=CONSOLE_STATE_UNAVAILABLE_REPLY)
 
     instance = request.instance
     if instance:
-        resp = await _route_by_instance(
+        return await _route_by_instance(
             phone=phone,
             message=request.message,
             instance=instance,
@@ -105,7 +88,6 @@ async def whatsapp_console(
             target_phone=request.target_phone,
             target_lid=request.target_lid,
         )
-        return _inject_reply_to_message_id(resp, request)
 
     # Legacy phone-only identification (no instance provided)
     # Fall back to LID when phone is empty
@@ -116,32 +98,28 @@ async def whatsapp_console(
         identity = await auth_service.identify_by_lid(db, sender_lid)
 
     if identity is None:
-        resp = WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
-        return _inject_reply_to_message_id(resp, request)
+        return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
     role = identity["role"]
     if phone and sender_lid and role == "master":
         await users_repository.update_master_lid(db, identity["user_id"], sender_lid)
     if role == "master":
-        resp = await _handle_master_console(
+        return await _handle_master_console(
             phone=phone,
             message=request.message,
             instance=instance,
             manager=manager,
             db=db,
         )
-        return _inject_reply_to_message_id(resp, request)
     if role == "tenant":
-        resp = await _handle_tenant_console(
+        return await _handle_tenant_console(
             phone=phone,
             message=request.message,
             instance=instance,
             manager=manager,
             db=db,
         )
-        return _inject_reply_to_message_id(resp, request)
-    resp = WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
-    return _inject_reply_to_message_id(resp, request)
+    return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
 
 async def _route_by_instance(

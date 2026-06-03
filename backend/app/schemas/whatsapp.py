@@ -28,11 +28,6 @@ class WhatsAppConsoleRequest(BaseModel):
             value.
         target_lid: LID JID of the shortcut target, when the target
             was only identified via ``@lid``.
-        message_id: Optional WhatsApp message ID (``key.id`` from the
-            Evolution webhook payload).  Used to enable quoted replies
-            ("Responder" in WhatsApp).  n8n reads this from the webhook
-            and echoes it to the backend; the backend returns it as
-            ``reply_to_message_id`` when the reply targets the same chat.
     """
 
     phone: str
@@ -45,7 +40,6 @@ class WhatsAppConsoleRequest(BaseModel):
     target_jid: str | None = None
     target_phone: str | None = None
     target_lid: str | None = None
-    message_id: str | None = None
 
 
 class WhatsAppConsoleResponse(BaseModel):
@@ -74,11 +68,6 @@ class WhatsAppConsoleResponse(BaseModel):
         close_jids: Optional list of all Evolution sessions to close when
             ``status`` requests session close. Client Context Shortcut uses
             this to close both admin private chat and original target chat.
-        reply_to_message_id: Optional WhatsApp message ID for quoted
-            replies.  When present and the reply goes to the same chat,
-            n8n sets ``quoted.messageId`` in the Evolution ``/send/text``
-            call so the bot response appears as a reply to the original
-            user message ("Responder" in WhatsApp).
     """
 
     reply: str
@@ -89,7 +78,6 @@ class WhatsAppConsoleResponse(BaseModel):
     no_reply: bool | None = None
     close_jid: str | None = None
     close_jids: list[str] | None = None
-    reply_to_message_id: str | None = None
 
     @model_serializer
     def ser_model(self) -> dict:
@@ -108,6 +96,4 @@ class WhatsAppConsoleResponse(BaseModel):
             d["close_jid"] = self.close_jid
         if self.close_jids is not None:
             d["close_jids"] = self.close_jids
-        if self.reply_to_message_id is not None:
-            d["reply_to_message_id"] = self.reply_to_message_id
         return d
