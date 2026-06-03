@@ -3,7 +3,7 @@
 Provides a minimal menu for client-side users within a tenant:
 - View profile info
 - View active subscriptions
-- Exit / close session
+- Cancel / close session
 
 All user-facing text goes through i18n (``wa.client.*`` keys).
 """
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.i18n import t as _t
 from app.repositories import clients_repository
 from app.services.subscription_service.queries import list_subscriptions
+from app.services.whatsapp_navigation import is_cancel, is_back
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class WhatsAppClientConsoleFacade:
     a minimal read-only menu:
       1. Ver perfil
       2. Ver suscripciones activas
-      0. Salir (returns status=closed to n8n)
+      0. Cancelar (returns status=closed to n8n)
     """
 
     def __init__(
@@ -63,13 +64,16 @@ class WhatsAppClientConsoleFacade:
         msg = message.strip()
         msg_lower = msg.lower()
 
-        if msg in ("0", "salir"):
+        if is_cancel(msg):
             return await self._perform_exit(
                 phone=phone,
                 instance=instance,
                 tenant_id=UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id,
                 client_id=UUID(client_id) if isinstance(client_id, str) else client_id,
             )
+
+        if is_back(msg):
+            return self._main_menu()
 
         if msg_lower in ("menu", "/menu"):
             return self._main_menu()

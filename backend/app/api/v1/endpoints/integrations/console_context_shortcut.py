@@ -32,6 +32,7 @@ from app.repositories import blocked_clients_repository, clients_repository
 from app.schemas.client import ClientCreate
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.client_service import ClientService
+from app.services.whatsapp_navigation import is_back, is_cancel, is_next
 from app.services.whatsapp_session_service import (
     WhatsAppSessionService,
 )
@@ -437,7 +438,7 @@ async def handle_ctx_active_detail(
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle actions from active client detail view."""
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_back(msg_lower):
         data["step"] = "active_menu"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
@@ -483,13 +484,6 @@ async def handle_ctx_active_edit_field(
             reply_to=admin_jid,
         )
 
-    if msg_lower in ("0", "salir", "cerrar"):
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.closed"),
-            reply_to=admin_jid,
-        )
-
     if msg_lower == "1":
         data["temp_data"]["edit_field"] = "full_name"
         data["step"] = "active_edit_value"
@@ -519,13 +513,22 @@ async def handle_ctx_active_edit_value(
     admin_jid: str | None,
     tenant: _TenantModel,
     db: AsyncSession,
+    save_ctx,
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle new value input for active client edit."""
+    if is_back(msg_lower):
+        data["step"] = "active_edit_field"
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_prompt"),
+            reply_to=admin_jid,
+        )
+
     if msg_lower in ("0", "salir", "cerrar"):
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Edicion cancelada.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.cancelled"),
             reply_to=admin_jid,
         )
 
@@ -577,16 +580,17 @@ async def handle_ctx_active_deactivate_confirm(
 ) -> WhatsAppConsoleResponse:
     """Handle deactivation confirmation for active client."""
     if msg_lower in ("0", "salir", "cerrar"):
+        reply = _ctx_t(tenant, data, "wa.tenant.client_context.deactivate.cancelled")
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Desactivacion cancelada.",
+            reply=reply,
             reply_to=admin_jid,
         )
 
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
-            reply="Escriba *CONFIRMAR* para desactivar o *0* para cancelar.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.prompt_again"),
             reply_to=admin_jid,
         )
 
@@ -597,20 +601,20 @@ async def handle_ctx_active_deactivate_confirm(
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"Error al desactivar: {exc}",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.error", exc=str(exc)),
             reply_to=admin_jid,
         )
 
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Cliente no encontrado.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
             reply_to=admin_jid,
         )
 
     await clear_ctx()
     return WhatsAppConsoleResponse(
-        reply=f"*{client.full_name}* desactivado.",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.success", client_name=client.full_name),
         reply_to=admin_jid,
     )
 
@@ -703,7 +707,7 @@ async def handle_ctx_inactive_edit_field(
     client: _ClientModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle field selection for inactive client edit."""
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_back(msg_lower):
         data["step"] = "inactive_menu"
         return WhatsAppConsoleResponse(
             reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.menu_text", client_name=client.full_name),

@@ -135,6 +135,7 @@ backend/
 │       ├── whatsapp_master_console_facade/
 │       ├── whatsapp_session_service/
 │       ├── whatsapp_tenant_console_facade/
+│       ├── whatsapp_navigation.py       # Shared navigation helpers (is_cancel, is_back, is_next, screen stack)
 │       └── whatsapp_tenant_console_service/ # Includes codigo_flow.py for mailbox lookup dialog
 ├── alembic/
 │   ├── env.py
@@ -163,7 +164,9 @@ backend/
 │   ├── conftest.py
 │   ├── test_auth.py
 │   ├── test_catalog.py
-│   ├── test_client_console_service.py  # 22 tests
+│   ├── test_client_console_service.py  # 26 tests
+│   ├── test_whatsapp_navigation.py     # 7 tests — shared navigation primitives
+│   ├── test_whatsapp_console_navigation_contract.py  # 3 tests — 8/9/0 convention enforcement
 │   ├── test_clients.py
 │   ├── test_contingency_reply_policy.py
 │   ├── test_evolution_client.py

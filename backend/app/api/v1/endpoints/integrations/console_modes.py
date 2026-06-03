@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.i18n import t
 from app.core.redis_client import RedisConnectionManager
 from app.schemas.whatsapp import WhatsAppConsoleResponse
+from app.services.whatsapp_navigation import is_cancel, is_back
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
 MODE_KEY_PREFIX = "wa:mode:"
@@ -66,7 +67,11 @@ async def _handle_ambiguity(
     msg = message.strip()
     msg_lower = msg.lower()
 
-    if msg_lower in ("0", "salir"):
+    if is_back(msg):
+        prompt = t(locale, "wa.client.mode_prompt")
+        return WhatsAppConsoleResponse(reply=prompt)
+
+    if is_cancel(msg):
         await _clear_mode(manager, phone)
         cleanup_svc = WhatsAppSessionService(
             connection_manager=manager,

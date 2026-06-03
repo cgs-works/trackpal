@@ -1,7 +1,6 @@
 """Subscription cancel/reactivate/renew lifecycle handlers."""
 
 from __future__ import annotations
-
 from datetime import datetime, timezone
 
 

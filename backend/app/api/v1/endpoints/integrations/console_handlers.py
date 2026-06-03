@@ -49,6 +49,8 @@ from app.services.whatsapp_session_service import (
 )
 from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
 from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
+from app.services.whatsapp_navigation import is_back, is_cancel
+
 from app.api.v1.endpoints.integrations.adapter import (
     _TenantConsoleAdapter,
     UNKNOWN_PHONE_REPLY,
@@ -71,13 +73,20 @@ _UNAUTH_CODIGO_SERVICE_LABELS: dict[str, str] = {
 }
 
 
-def _unauth_session_key(phone_digits: str, sender_lid: str | None) -> str:
-    """Session key for unregistered identity code lookup."""
+def _unauth_session_key(phone_digits: str, sender_lid: str | None, tenant_id: str | None = None) -> str:
+    """Session key for unregistered identity code lookup.
+
+    Includes tenant_id when available to prevent collision when the same
+    phone reaches two different tenant instances.
+    """
+    prefix = "unreg"
+    if tenant_id:
+        prefix += f":{tenant_id[:8]}"
     if phone_digits:
-        return f"unreg:{phone_digits}"
+        return f"{prefix}:{phone_digits}"
     if sender_lid:
-        return f"unreg:{sender_lid}"
-    return "unreg:unknown"
+        return f"{prefix}:{sender_lid}"
+    return f"{prefix}:unknown"
 
 
 auth_service = AuthService()
@@ -385,7 +394,7 @@ async def _handle_unauthenticated_codigo(
     """
     locale = getattr(tenant, "locale", "es") or "es"
     msg = message.strip()
-    session_key = _unauth_session_key(phone_digits, sender_lid)
+    session_key = _unauth_session_key(phone_digits, sender_lid, str(tenant.id))
 
     session_service = WhatsAppSessionService(
         connection_manager=manager,
@@ -474,6 +483,11 @@ async def _handle_unauth_codigo_service(
             reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
         )
 
+    # Check cancel first
+    if is_cancel(msg):
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+
     try:
         idx = int(msg.strip())
     except ValueError:
@@ -482,9 +496,6 @@ async def _handle_unauth_codigo_service(
         )
 
     if idx < 1 or idx > len(effective_keys):
-        if idx == 0:
-            await session_service.clear_session(session_key)
-            return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
         )
@@ -513,6 +524,11 @@ async def _handle_unauth_codigo_email(
     manager: RedisConnectionManager,
 ) -> WhatsAppConsoleResponse:
     """Handle email input, create lookup job, and return response with job_id."""
+    # Check cancel
+    if is_cancel(msg):
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+
     target_email = msg.strip()
     if (
         not target_email
@@ -752,7 +768,7 @@ async def _handle_active_client_context(
                 )
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_cancel(msg_lower):
         locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
         await _clear_ctx()
         close_jids = _client_context_close_jids(temp_data, admin_jid)
@@ -893,19 +909,20 @@ async def _handle_active_client_context(
             )
             if created_client is not None:
                 data["step"] = "active_menu"
+                menu_text, metadata = await render_initial_context_menu(
+                    db=db,
+                    tenant=tenant,
+                    target_phone=data.get("temp_data", {}).get("phone"),
+                    target_lid=data.get("target_lid"),
+                    target_jid=data.get("target_jid"),
+                )
+                data["temp_data"].update(metadata)
                 await _save_ctx(refresh_ttl=True)
                 return WhatsAppConsoleResponse(
-                    reply=render_initial_context_menu(
-                        tenant=tenant,
-                        target_phone=data.get("temp_data", {}).get("phone"),
-                        active_client=created_client,
-                        inactive_client=None,
-                        blocked=None,
-                        locale=locale,
-                    ),
+                    reply=menu_text,
                     reply_to=admin_jid,
                 )
-        if msg_lower in ("0", "salir", "cerrar"):
+        if is_cancel(msg_lower):
             await _clear_ctx()
             close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
             return WhatsAppConsoleResponse(
@@ -975,7 +992,7 @@ async def _handle_active_client_context(
 
     if step == "active_edit_value":
         return await handle_ctx_active_edit_value(
-            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+            msg_lower, message, data, admin_jid, tenant, db, _save_ctx, _clear_ctx
         )
 
     if step == "active_deactivate_confirm":
@@ -1076,7 +1093,7 @@ async def _handle_ctx_unblocked_menu(
             reply_to=admin_jid,
         )
 
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_cancel(msg_lower):
         locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
@@ -1132,7 +1149,7 @@ async def _handle_ctx_blocked_menu(
             reply_to=admin_jid,
         )
 
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_cancel(msg_lower):
         locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)

@@ -62,7 +62,7 @@ Modify:
 - Create: `backend/app/services/whatsapp_navigation.py`
 - Create: `backend/tests/test_whatsapp_navigation.py`
 
-- [ ] **Step 1: Write failing unit tests**
+- [x] **Step 1: Write failing unit tests**
 
 Create `backend/tests/test_whatsapp_navigation.py`:
 
@@ -140,7 +140,7 @@ def test_clear_navigation_removes_private_temp_data_key() -> None:
     assert current_screen(session) is None
 ```
 
-- [ ] **Step 2: Run tests and verify they fail**
+- [x] **Step 2: Run tests and verify they fail**
 
 Run:
 
@@ -151,7 +151,7 @@ uv run pytest tests/test_whatsapp_navigation.py -q
 
 Expected: import failure for `app.services.whatsapp_navigation`.
 
-- [ ] **Step 3: Implement navigation module**
+- [x] **Step 3: Implement navigation module**
 
 Create `backend/app/services/whatsapp_navigation.py`:
 
@@ -306,7 +306,7 @@ def clear_navigation(session: Any) -> None:
         session.temp_data.pop(_NAV_TEMP_KEY, None)
 ```
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run:
 
@@ -317,7 +317,7 @@ uv run pytest tests/test_whatsapp_navigation.py -q
 
 Expected: `4 passed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/whatsapp_navigation.py backend/tests/test_whatsapp_navigation.py
@@ -333,7 +333,7 @@ git commit -m "feat(whatsapp): add shared console navigation helpers"
 - Modify: `backend/app/core/i18n/catalogs_es_wa.py`
 - Modify: `backend/app/core/i18n/catalogs_en_wa.py`
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 Create `backend/tests/test_whatsapp_console_navigation_contract.py`:
 
@@ -356,9 +356,9 @@ SOURCE_GLOBS = [
 ]
 
 FORBIDDEN_PATTERNS = [
-    re.compile(r"0(?:\\ufe0f)?(?:⃣|️⃣)?\s*(?:Volver|Regresar|Back|Return)", re.IGNORECASE),
-    re.compile(r"9(?:\\ufe0f)?(?:⃣|️⃣)?\s*(?:Siguiente|Next)", re.IGNORECASE),
-    re.compile(r"8(?:\\ufe0f)?(?:⃣|️⃣)?\s*(?:Anterior|Previous|Regresar|Back)", re.IGNORECASE),
+    re.compile(r"0(?:\ufe0f)?(?:⃣|️⃣)?\s*(?:Volver|Regresar|Back|Return)", re.IGNORECASE),
+    re.compile(r"9(?:\ufe0f)?(?:⃣|️⃣)?\s*(?:Siguiente|Next)", re.IGNORECASE),
+    re.compile(r"8(?:\ufe0f)?(?:⃣|️⃣)?\s*(?:Anterior|Previous|Regresar|Back)", re.IGNORECASE),
     re.compile(r"(?:escribe|write|type|respond(?:e)?)\s+\*?9\*?\s+(?:para\s+)?(?:cancelar|cancel)", re.IGNORECASE),
 ]
 
@@ -401,7 +401,7 @@ def test_shared_navigation_labels_exist_in_catalogs() -> None:
         assert label in en_text
 ```
 
-- [ ] **Step 2: Run tests and verify failures identify current conflicts**
+- [x] **Step 2: Run tests and verify failures identify current conflicts**
 
 Run:
 
@@ -412,7 +412,7 @@ uv run pytest tests/test_whatsapp_console_navigation_contract.py -q
 
 Expected: failures showing current conflicts such as `0️⃣ Volver`, `9️⃣ Siguiente`, `8️⃣ ← Anterior`, and `9 para cancelar`.
 
-- [ ] **Step 3: Add shared i18n labels**
+- [x] **Step 3: Add shared i18n labels**
 
 Add these keys near other WhatsApp shared keys in `backend/app/core/i18n/catalogs_es_wa.py`:
 
@@ -432,7 +432,7 @@ Add these keys in `backend/app/core/i18n/catalogs_en_wa.py`:
     "wa.nav.invalid_option": "❌ Invalid option. Use *8* for next, *9* to go back, or *0* to cancel when those options are available.",
 ```
 
-- [ ] **Step 4: Keep conflict tests failing for remaining old labels**
+- [x] **Step 4: Keep conflict tests failing for remaining old labels**
 
 Run:
 
@@ -443,7 +443,7 @@ uv run pytest tests/test_whatsapp_console_navigation_contract.py -q
 
 Expected: shared label test passes; conflict tests still fail until later migration tasks remove old semantics.
 
-- [ ] **Step 5: Commit contract tests and labels**
+- [x] **Step 5: Commit contract tests and labels**
 
 ```bash
 git add backend/tests/test_whatsapp_console_navigation_contract.py backend/app/core/i18n/catalogs_es_wa.py backend/app/core/i18n/catalogs_en_wa.py
@@ -461,7 +461,7 @@ git commit -m "test(whatsapp): enforce console navigation contract"
 - Modify: `backend/app/core/i18n/catalogs_en_wa.py`
 - Test: `backend/tests/test_whatsapp_menu_flow.py`
 
-- [ ] **Step 1: Add failing tests for `0` cancel and `9` not global cancel**
+- [x] **Step 1: Add failing tests for `0` cancel and `9` not global cancel**
 
 Add to `backend/tests/test_whatsapp_menu_flow.py`:
 
@@ -499,7 +499,7 @@ async def test_tenant_active_flow_zero_cancels_but_nine_does_not_global_cancel(
     assert await session_service.get_session("admin:12015550001") is None
 ```
 
-- [ ] **Step 2: Run targeted test and verify failure**
+- [x] **Step 2: Run targeted test and verify failure**
 
 Run:
 
@@ -510,7 +510,7 @@ uv run pytest tests/test_whatsapp_menu_flow.py::test_tenant_active_flow_zero_can
 
 Expected: failure because old constants include `9` in reset commands or flow handling treats `9` as cancel in some paths.
 
-- [ ] **Step 3: Update Tenant Admin reset constants**
+- [x] **Step 3: Update Tenant Admin reset constants**
 
 In `backend/app/services/whatsapp_tenant_console_service/constants.py`, change:
 
@@ -524,7 +524,7 @@ to:
 RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar", "salir", "cerrar"}
 ```
 
-- [ ] **Step 4: Route cancel through shared helper in service.py**
+- [x] **Step 4: Route cancel through shared helper in service.py**
 
 In `backend/app/services/whatsapp_tenant_console_service/service.py`, import:
 
@@ -551,7 +551,7 @@ if is_cancel(msg) or msg.lower() in ("menu", "menú", "/menu"):
 
 Keep existing behavior: `0`/cancel aliases clear active flow; `menu` clears and returns main menu.
 
-- [ ] **Step 5: Update help and fallback catalog text**
+- [x] **Step 5: Update help and fallback catalog text**
 
 In Spanish catalog, replace help/fallback language so it states:
 
@@ -565,7 +565,7 @@ In English catalog, use:
 "Inside a flow, *0* cancels, *9* goes back, and *8* advances when available."
 ```
 
-- [ ] **Step 6: Run targeted and contract tests**
+- [x] **Step 6: Run targeted and contract tests**
 
 Run:
 
@@ -576,7 +576,7 @@ uv run pytest tests/test_whatsapp_menu_flow.py::test_tenant_active_flow_zero_can
 
 Expected: targeted test passes; contract test may still fail for known flow-specific strings.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/services/whatsapp_tenant_console_service/constants.py backend/app/services/whatsapp_tenant_console_service/service.py backend/app/core/i18n/catalogs_es_wa.py backend/app/core/i18n/catalogs_en_wa.py backend/tests/test_whatsapp_menu_flow.py
@@ -598,7 +598,7 @@ git commit -m "fix(whatsapp): align tenant global navigation semantics"
 - Test: `backend/tests/test_whatsapp_create_flow.py`
 - Test: `backend/tests/test_whatsapp_edit_flow.py`
 
-- [ ] **Step 1: Add failing tests for clients block back/cancel**
+- [x] **Step 1: Add failing tests for clients block back/cancel**
 
 Add to `backend/tests/test_whatsapp_menu_flow.py`:
 
@@ -637,7 +637,7 @@ async def test_clients_block_menu_uses_nine_back_and_zero_cancel(
     assert "cancelada" in cancel_reply.lower() or "sesion cerrada" in cancel_reply.lower()
 ```
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 Run:
 
@@ -648,7 +648,7 @@ uv run pytest tests/test_whatsapp_menu_flow.py::test_clients_block_menu_uses_nin
 
 Expected: failure because blocks currently say/use `0` for volver.
 
-- [ ] **Step 3: Update clients block i18n labels**
+- [x] **Step 3: Update clients block i18n labels**
 
 Spanish:
 
@@ -664,7 +664,7 @@ English:
 "wa.tenant.clients.blocks.invalid_selection": "❌ Invalid number. Reply with a number from the list, *9* to go back, or *0* to cancel.",
 ```
 
-- [ ] **Step 4: Update flow handlers to use shared helpers**
+- [x] **Step 4: Update flow handlers to use shared helpers**
 
 In each modified flow file, import helpers:
 
@@ -687,7 +687,7 @@ if is_back(msg):
 
 If `_render_screen` does not exist yet in tenant service, add a local minimal branch in the handler: for clients blocks return `self._t(self.KEY_CLIENTS_MENU)` or `self._t(self.KEY_MAIN_MENU)` according to the parent screen being migrated.
 
-- [ ] **Step 5: Update prompt text where `9` says cancel**
+- [x] **Step 5: Update prompt text where `9` says cancel**
 
 In EN/ES catalogs, update clients/catalog/profile prompts:
 
@@ -697,7 +697,7 @@ In EN/ES catalogs, update clients/catalog/profile prompts:
 - `wa.tenant.profile.change_password_error_old`: replace `9` cancel with `0` cancel.
 - Catalog invalid-selection strings keep `9` back and add `0` cancel where cancellation is available.
 
-- [ ] **Step 6: Run affected tests**
+- [x] **Step 6: Run affected tests**
 
 Run:
 
@@ -708,7 +708,7 @@ uv run pytest tests/test_whatsapp_menu_flow.py tests/test_whatsapp_create_flow.p
 
 Expected: menu/create/edit tests pass; contract test has fewer conflicts and may still fail for subscriptions/master/context.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/services/whatsapp_tenant_console_service/clients_flow.py backend/app/services/whatsapp_tenant_console_service/clients_crud.py backend/app/services/whatsapp_tenant_console_service/catalog_flow.py backend/app/services/whatsapp_tenant_console_service/profile_flow.py backend/app/core/i18n/catalogs_es_wa.py backend/app/core/i18n/catalogs_en_wa.py backend/tests/test_whatsapp_menu_flow.py backend/tests/test_whatsapp_create_flow.py backend/tests/test_whatsapp_edit_flow.py
@@ -730,7 +730,7 @@ git commit -m "fix(whatsapp): normalize tenant clients catalog and profile navig
 - Modify: `backend/app/core/i18n/catalogs_en_wa.py`
 - Test: existing subscription tests or `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Add failing test for subscription pagination**
+- [x] **Step 1: Add failing test for subscription pagination**
 
 Add to the most relevant existing subscription WhatsApp test file. If no dedicated file exists, add to `backend/tests/test_whatsapp_endpoint.py`:
 
@@ -745,7 +745,7 @@ def test_subscription_pagination_labels_follow_navigation_contract() -> None:
     assert t("en", "wa.tenant.subscriptions.list.page_prev") == "9️⃣ Back"
 ```
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 Run:
 
@@ -756,7 +756,7 @@ uv run pytest tests/test_whatsapp_endpoint.py::test_subscription_pagination_labe
 
 Expected: failure because current labels are `8 previous` and `9 next`.
 
-- [ ] **Step 3: Update subscription pagination labels**
+- [x] **Step 3: Update subscription pagination labels**
 
 Spanish:
 
@@ -774,7 +774,7 @@ English:
 "wa.tenant.subscriptions.list.cancel": "0️⃣ Cancel",
 ```
 
-- [ ] **Step 4: Update pagination handler semantics**
+- [x] **Step 4: Update pagination handler semantics**
 
 In `backend/app/services/whatsapp_tenant_console_service/subscriptions_flow.py`, locate list pagination handling. Ensure:
 
@@ -788,7 +788,7 @@ if is_cancel(msg):
     return self._with_main_menu(self._t("wa.tenant.cancelled"))
 ```
 
-- [ ] **Step 5: Update subscription prompt strings from `9 cancel` to `0 cancel`**
+- [x] **Step 5: Update subscription prompt strings from `9 cancel` to `0 cancel`**
 
 In EN/ES catalogs, update these keys to use `0` for cancellation:
 
@@ -798,7 +798,7 @@ In EN/ES catalogs, update these keys to use `0` for cancellation:
 - `wa.tenant.subscriptions.renew.confirm`
 - `wa.tenant.subscriptions.invalid_selection` must say `9` back and `0` cancel where both are available.
 
-- [ ] **Step 6: Run subscription and contract tests**
+- [x] **Step 6: Run subscription and contract tests**
 
 Run:
 
@@ -809,7 +809,7 @@ uv run pytest tests/test_whatsapp_endpoint.py tests/test_whatsapp_console_naviga
 
 Expected: endpoint tests pass; contract conflicts reduced to master/client/context/unauthenticated if not migrated yet.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/services/whatsapp_tenant_console_service/subscriptions_flow.py backend/app/services/whatsapp_tenant_console_service/subscriptions_create.py backend/app/services/whatsapp_tenant_console_service/subscriptions_create_confirm.py backend/app/services/whatsapp_tenant_console_service/subscriptions_edit.py backend/app/services/whatsapp_tenant_console_service/subscriptions_lifecycle.py backend/app/services/whatsapp_tenant_console_service/formatters.py backend/app/core/i18n/catalogs_es_wa.py backend/app/core/i18n/catalogs_en_wa.py backend/tests/test_whatsapp_endpoint.py

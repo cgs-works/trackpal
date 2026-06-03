@@ -9,6 +9,7 @@ from sqlalchemy import update as sa_update
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import LOCALE_NAMES, t as _i18n_t
 from app.models import Tenant
+from app.services.whatsapp_navigation import is_back, is_cancel, is_next
 
 from . import _context as ctx
 
@@ -46,7 +47,7 @@ async def _handle_profile_action(
         )
     elif msg == "4":
         return await self._start_profile_change_locale(phone, session, session_service)
-    elif msg == "9":
+    elif is_back(msg):
         return self._with_main_menu("")
     return self._t(self.KEY_FALLBACK_NO_FLOW)
 
@@ -79,7 +80,7 @@ async def _start_profile_edit(
 async def _handle_profile_edit_field(
     self, phone: str, msg: str, session: Any, session_service: Any
 ) -> str:
-    if msg == "9":
+    if is_back(msg):
         await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
     field = self.PROFILE_EDIT_FIELD_MAP.get(msg)
@@ -217,7 +218,7 @@ async def _handle_profile_change_locale_select(
     user_id: Any,
     db: Any,
 ) -> str:
-    if msg == "9":
+    if is_back(msg):
         return self._with_main_menu("")
     if msg not in ("1", "2"):
         return self._t(self.KEY_FALLBACK_NO_FLOW)

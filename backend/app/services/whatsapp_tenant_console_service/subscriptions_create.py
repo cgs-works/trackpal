@@ -1,8 +1,6 @@
 """Subscription create-flow step handlers (client → plan selection)."""
 
 from __future__ import annotations
-
-from uuid import UUID
 from datetime import datetime, timezone
 
 from app.core.errors import UserFacingError, translate_error

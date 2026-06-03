@@ -1,6 +1,7 @@
 """Client create/edit/lifecycle handlers."""
 
 from app.core.errors import UserFacingError, translate_error
+from app.services.whatsapp_navigation import is_back, is_cancel, is_next
 
 from . import _context as ctx
 
@@ -174,7 +175,7 @@ async def _start_client_edit(self, phone, session, session_service):
 
 
 async def _handle_client_edit_field(self, phone, msg, session, session_service):
-    if msg == "0":
+    if is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)

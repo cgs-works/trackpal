@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+from app.services.whatsapp_navigation import is_back, is_cancel, is_next
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ async def _handle_client_list_selection(
         return await self._handle_clients_block_list(
             phone, msg, session, session_service, tenant_id, db
         )
-    elif msg == "9":
+    elif is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu("")
@@ -133,7 +135,7 @@ async def _handle_client_detail_action(
         if session_service is not None:
             await session_service.save_session(session)
         return self._t(self.KEY_CLIENT_DELETE_CONFIRM_TEMPLATE, name=client.full_name)
-    elif msg == "0":
+    elif is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
@@ -181,7 +183,7 @@ async def _handle_clients_block_unblock(
 ):
     from app.repositories import blocked_clients_repository
 
-    if msg == "0":
+    if is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_CLIENTS_MENU)

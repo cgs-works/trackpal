@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.i18n import t as _i18n_t
 from app.core.redis_client import RedisUnavailableError
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
+from app.services.whatsapp_navigation import is_cancel
 from app.services.whatsapp_session_service import WhatsAppSessionService
 from app.services.tenant_console_protocols import (
     CatalogServiceProtocol,
@@ -187,11 +188,10 @@ class WhatsAppTenantConsoleService(
             if has_active_flow:
                 assert session is not None
                 # Global exit: "0" or "menu" clears session + returns
-                if msg in ("0",) or msg.lower() in (
+                if is_cancel(msg) or msg.lower() in (
                     "menu",
                     "menú",
                     "/menu",
-                    "cancelar",
                 ):
                     if session_service is not None:
                         await session_service.clear_session(f"admin:{phone}")

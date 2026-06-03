@@ -9,6 +9,7 @@ from app.core.input_validation import InputValidationError
 from app.core.redis_client import RedisUnavailableError
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
 
+from app.services.whatsapp_navigation import is_cancel
 from . import messages as msg
 from . import lifecycle_messages as lc_msg
 from . import edit_messages as edit_msg
@@ -160,7 +161,7 @@ class WhatsAppConsoleService:
             # check intercepts it.
             if has_active_flow:
                 assert session is not None
-                if msg_text.lower() in ("menu", "menú", "/menu", "cancelar"):
+                if is_cancel(msg_text) or msg_text.lower() in ("menu", "menú", "/menu"):
                     if session_service is not None:
                         await session_service.clear_session(phone)
                     return self._with_main_menu("🚫 Operación cancelada.")

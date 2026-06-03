@@ -1,7 +1,6 @@
 """Subscription create-flow duration/confirm handlers."""
 
 from __future__ import annotations
-
 from datetime import datetime
 from uuid import UUID
 

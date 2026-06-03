@@ -12,6 +12,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.whatsapp_navigation import is_cancel
+
 from . import constants as c
 from . import login_flow as lf
 
@@ -80,8 +82,8 @@ class WhatsAppMasterConsoleFacade:
         if auth_session is not None and auth_session.role == "master":
             msg_stripped = message.strip()
 
-            # 2a. Global "0" handling
-            if msg_stripped == "0":
+            # 2a. Global cancel handling
+            if is_cancel(msg_stripped):
                 return await self._perform_logout(
                     phone=phone,
                     instance=instance,

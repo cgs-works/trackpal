@@ -38,7 +38,7 @@ EDIT_ERROR_INVALID_FIELD = (
 )
 
 EDIT_ERROR_UPDATE_FAILED = (
-    "❌ No se pudo actualizar el campo. Intenta de nuevo o escribe *9* para cancelar."
+    "❌ No se pudo actualizar el campo. Intenta de nuevo o escribe *0* para cancelar."
 )
 
 EDIT_DETAIL_FALLBACK = (

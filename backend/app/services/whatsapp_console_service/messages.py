@@ -29,7 +29,7 @@ HELP_TEXT = (
     "5️⃣ *Ayuda* — Muestra este mensaje de ayuda.\n"
     "0️⃣ *Cerrar sesión* — Cierra tu sesión en la consola Master.\n\n"
     "En el menú principal, escribe *0* para cerrar sesión.\n"
-    "Dentro de un flujo, *9* o *cancelar* cancelan la operación.\n"
+    "Dentro de un flujo, *0* cancela la operacion, *9* regresa y *8* avanza.\n"
     "Escribe */menu* para volver al menú principal."
 )
 
@@ -46,7 +46,7 @@ FALLBACK_NO_FLOW = (
 FALLBACK_ACTIVE_FLOW = (
     "❌ No entendí tu mensaje.\n\n"
     "Estás en medio de un flujo. Responde con la información "
-    "solicitada o escribe *9* para cancelar y volver al menú "
+    "solicitada o escribe *0* para cancelar y volver al menú "
     "principal."
 )
 
@@ -54,7 +54,7 @@ FALLBACK_ACTIVE_FLOW = (
 # Flow identifiers
 # ------------------------------------------------------------------
 
-RESET_COMMANDS = {"0", "9", "menu", "menú", "/menu", "cancelar"}
+RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar"}
 HELP_COMMANDS = {"5", "ayuda"}
 
 LIST_FLOW = "list_tenants"

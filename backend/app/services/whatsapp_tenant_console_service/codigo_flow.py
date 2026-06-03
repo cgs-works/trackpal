@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from app.core.i18n import t as _i18n_t
+from app.services.whatsapp_navigation import is_back, is_cancel
 from app.repositories import code_services_repository, mailbox_config_repository
 
 from . import _context as ctx
@@ -122,6 +123,22 @@ async def _handle_codigo_service(
         session.temp_data["codigo_effective_keys"] = effective_keys
         await session_service.save_session(session)
 
+    # Check cancel first
+    if is_cancel(msg):
+        started_from_menu = (
+            session.temp_data.get("codigo_started_from_menu") == "true"
+        )
+        await session_service.clear_session(f"admin:{phone}")
+        if started_from_menu:
+            return self._with_main_menu(
+                _i18n_t(loc, "wa.tenant.cancelled"), locale=loc
+            )
+        return _i18n_t(loc, "wa.tenant.cancelled")
+
+    if is_back(msg):
+        await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
+
     # Parse selection
     try:
         idx = int(msg.strip())
@@ -129,16 +146,6 @@ async def _handle_codigo_service(
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
     if idx < 1 or idx > len(effective_keys):
-        if idx == 0:
-            started_from_menu = (
-                session.temp_data.get("codigo_started_from_menu") == "true"
-            )
-            await session_service.clear_session(f"admin:{phone}")
-            if started_from_menu:
-                return self._with_main_menu(
-                    _i18n_t(loc, "wa.tenant.cancelled"), locale=loc
-                )
-            return _i18n_t(loc, "wa.tenant.cancelled")
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
     service_key = effective_keys[idx - 1]
@@ -169,6 +176,11 @@ async def _handle_codigo_email(
     can create the job durably after this flow returns.
     """
     loc = ctx.get_locale()
+
+    # Check cancel
+    if is_cancel(msg):
+        await session_service.clear_session(f"admin:{phone}")
+        return _i18n_t(loc, "wa.tenant.cancelled")
 
     target_email = msg.strip()
     if (

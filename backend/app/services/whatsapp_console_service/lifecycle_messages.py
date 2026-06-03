@@ -8,7 +8,7 @@ DEACTIVATE_CONFIRM_PROMPT = (
     "• No podrá iniciar sesión ni ser identificado después "
     "de la desactivación.\n\n"
     "Escribe *CONFIRMAR* para desactivar el tenant.\n"
-    "Escribe *9* para cancelar."
+    "Escribe *0* para cancelar."
 )
 
 DELETE_CONFIRM_PROMPT = (
@@ -20,7 +20,7 @@ DELETE_CONFIRM_PROMPT = (
     "• Esta acción no se puede deshacer.\n\n"
     "Escribe *CONFIRMAR* para eliminar el tenant "
     "permanentemente.\n"
-    "Escribe *9* para cancelar."
+    "Escribe *0* para cancelar."
 )
 
 CANT_DELETE_ACTIVE_MESSAGE = (

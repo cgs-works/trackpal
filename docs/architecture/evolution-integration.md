@@ -53,13 +53,16 @@ Evolution Go manages per-webhook, per-`remoteJid` chatbot sessions in memory (`S
 4. If no session → evaluate trigger. If content matches trigger regex → open session + dispatch.
 5. If no session and content does NOT match trigger → **silently discarded** (prevents random chat text from hitting n8n).
 
-**`from_me_bypass` (outgoing-message dispatch):**
-When `fromMe=true` and the webhook has `ListeningFromMe=true`, step 5 is overridden: even if no session exists and content does not match the trigger, the message is dispatched anyway with `reason=from_me_bypass`. This is required so the backend can resolve active console/context state by actor identity rather than an Evolution-local session key that may reference a different `remoteJid`.
+**`from_me` trigger dispatch (outgoing-message dispatch):**
+When `fromMe=true` and the webhook has `ListeningFromMe=true`, all messages (including those without an active session) must first match the trigger regex before they are dispatched. If a `fromMe` trigger matches and the sender JID (`remoteJid`) differs from the admin JID (`senderPn`), an admin alias session is opened keyed by `instance.Jid` so subsequent tenant replies in the admin chat flow through the existing session. This replaces the earlier unconditional `from_me_bypass` that dispatched every outgoing message.
 
 Relevant fields in the webhook payload:
 - `adminJid` — `instance.Jid` (the device owner, e.g. `5551234567:81@s.whatsapp.net`)
 - `targetJid` — the `remoteJid` the user is acting on (e.g. `55500000001@lid`)
 - `senderPn`, `senderLid` — sender identity resolution
+
+**Canonical session JID resolution:**
+When the `remoteJid` contains `@lid` and `senderPn` is resolved, the system uses the phone number as the canonical session key instead of the LID. Device suffixes (e.g. `:81`) are stripped from all JIDs before session key lookups. This ensures `fromMe` messages from the tenant's device JID (with suffix) and subsequent replies from the admin (without suffix) share the same Evolution chatbot session.
 
 **Diagnostic log tags (evolution-go):**
 

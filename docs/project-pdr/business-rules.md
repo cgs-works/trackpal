@@ -46,11 +46,14 @@
 
 ## WhatsApp Console Navigation
 
-1. Global navigation pattern across all consoles: `0` = exit/reset to main menu, `9` = back in interactive flows
+1. Global navigation pattern across all consoles: `0` = Cancelar (cancel flow/close console), `9` = Regresar (back to previous screen), `8` = Siguiente (next page/screen)
 2. Error input shows error message and re-prompts current step (does not reset conversation)
 3. Inactivity timeout clears session from Redis; next message starts fresh from main menu
-4. Master menu: 1=Ver Tenants, 2=Crear Tenant, 3=Desactivar Tenant, 4=Eliminar Tenant, 5=Ayuda, 0=Salir
-5. Tenant access code retrieval: select service → enter email → system creates lookup job → polling loop until code extracted, or error, or user exits
+4. Master menu: 1=Ver Tenants, 2=Crear Tenant, 3=Desactivar Tenant, 4=Eliminar Tenant, 5=Ayuda, 0=Cancelar/Cerrar sesion
+5. Tenant console: 1=Clientes, 2=Catalogo, 3=Mi Perfil, 4=Suscripciones, 5=Ayuda, 0=Cancelar, 9=Volver (in subflows), 8=Siguiente (pagination)
+6. Client console: 1=Ver perfil, 2=Ver suscripciones, 3=Buscar codigo de acceso, 0=Cancelar
+7. Tenant access code retrieval: select service → enter email → system creates lookup job → polling loop until code extracted, or error, or user exits
+8. Shared module `app/services/whatsapp_navigation.py` implements the contract with `is_cancel()`, `is_back()`, `is_next()` and screen-stack helpers
 
 ## Contingency Reply Policy (Redis Degradation)
 
