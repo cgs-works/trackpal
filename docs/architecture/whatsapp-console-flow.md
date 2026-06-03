@@ -109,7 +109,7 @@ Package: `backend/app/services/whatsapp_client_console_facade/`. Submodules: `fa
 |---|--------|-------------|
 | 1 | Mi Perfil | View client profile (name, tenant, phone, status) |
 | 2 | Mis Suscripciones | View active subscriptions |
-| 0 | Salir | Exit, returns `status="closed"` |
+| 0 | Cancelar | Exit, returns `status="closed"` |
 
 ### i18n namespace
 
@@ -159,6 +159,7 @@ The response schema now includes fields for private routing and silent replies.
 | `tenant_id` | string | no | Tenant UUID for scoped poll requests |
 | `reply_to` | string | no | JID used as the message destination. When present, n8n sends to this JID instead of ``phone`` |
 | `close_jid` | string | no | Exact JID n8n must close when ``status="closed"``. Context shortcut close uses the Tenant admin private JID to avoid closing the target/client chat |
+| `close_jids` | list[str] | no | When present, list of ALL Evolution sessions to close (admin JID + target JID + target phone JID). Supersedes ``close_jid`` for multi-session closure |
 | `no_reply` | boolean | no | ``true`` means n8n must not send any Evolution API message. Used for silent admin replies or blocked attempts |
 
 When ``no_reply=true``, n8n must skip all Evolution sends entirely (no call to ``/send/text``). When ``reply_to`` is present, n8n sends to that JID rather than the original sender's phone.
@@ -344,7 +345,9 @@ Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so
 | 3 | Mi Perfil | View/edit profile and password |
 | 4 | Suscripciones | List and manage subscriptions |
 | 5 | Ayuda | Show help |
-| 0 | Salir | Global exit |
+| 0 | Cancelar | Sale de la consola y cierra sesion |
+| 9 | Volver | Regresa al menu anterior en flujos interactivos |
+| 8 | Siguiente | Avanza a la siguiente pagina cuando hay paginacion |
 
 ### Subscription flows
 

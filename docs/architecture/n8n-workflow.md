@@ -114,7 +114,7 @@ All new contextual fields are sent conditionally (only when present in the parse
 
 JavaScript that takes backend response from `Console call` and merges it with parsed input.
 
-**Logic**: Preserve `reply_to` and `no_reply` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`.
+**Logic**: Preserve `reply_to` and `no_reply` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`, `close_jids`.
 
 **Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id, reply_to, no_reply }`.
 
@@ -158,6 +158,8 @@ JavaScript that conditionally triggers session close.
 1. `status === "closed"` from backend response, or
 2. message is logout command (`0`/`salir`) and reply text matches close semantic.
 
+When `close_jids` is present in the response, node emits one item per JID in the array so Close Session processes each one (multi-session closure for Client Context Shortcut).
+
 Guard: if `lookup_job_id` exists, do not close session in this branch (poll/result flow owns close behavior).
 
 ### 8. Close Session (HTTP Request Node)
@@ -173,6 +175,8 @@ Closes the Evolution Go webhook for the specific chat, preventing further messag
 | Body (initial) | `{"remoteJid": "phone@s.whatsapp.net", "status": "closed"}` |
 | Body (actual) | `{{ JSON.stringify({ remoteJid: String($json.close_jid || $json.reply_to || $json.remoteJid), status: "closed" }) }}` uses ``close_jid`` when present (contextual shortcut close), falling back to ``reply_to`` then ``remoteJid`` |
 | Never Error | `true` |
+
+When `close_jids` is provided in the response from Merge & lookup data, the node iterates over each JID in the array and calls change-status for each one. This ensures all sessions (admin + target + target phone) are closed on Client Context Shortcut exit.
 
 This replaces the deprecated `EvolutionClient.close_chat_session()` which was previously called directly from the backend facades.
 

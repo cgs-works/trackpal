@@ -93,6 +93,22 @@ Key functions:
 
 Tenant WhatsApp console uses i18n key constants stored as class-level attributes (`KEY_MAIN_MENU`, `KEY_HELP_TEXT`, etc.) and resolved via `self._t()`. Master console continues with hardcoded Spanish class constants.
 
+## WhatsApp Console Navigation Convention
+
+All WhatsApp consoles follow the strict numeric navigation contract:
+- `8` — Siguiente / Next (advance to next page/screen)
+- `9` — Regresar / Back (return to previous screen without cancelling session)
+- `0` — Cancelar / Cancel (cancel flow or close console)
+
+The shared module `app/services/whatsapp_navigation.py` provides helper predicates:
+- `is_cancel(msg)` — returns True for `0`, `cancelar`, `cancel`, `salir`, `cerrar`, `exit`, `close`
+- `is_back(msg)` — returns True for `9`
+- `is_next(msg)` — returns True for `8`
+
+A screen-stack API (`push_screen`, `pop_screen`, `replace_screen`, `clear_navigation`) is available for flows that require multi-screen navigation tracking, stored in session `temp_data["_nav"]`.
+
+Contract tests in `test_whatsapp_console_navigation_contract.py` scan all source and catalog files for conflicting navigation patterns.
+
 ## Redis Keys
 
 | Pattern | Purpose | TTL |

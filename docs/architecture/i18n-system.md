@@ -73,10 +73,11 @@ Organized by prefix:
 | `reminder.*` | Subscription reminders | `reminder.subscription.expiring` |
 | `wa.tenant.*` | WhatsApp tenant console — general | `wa.tenant.main_menu` |
 | `wa.tenant.client_context.*` | WhatsApp tenant console — client context shortcut | `wa.tenant.client_context.menu.unregistered_unblocked`, `wa.tenant.client_context.closed` |
+| `wa.nav.*` | Shared navigation labels across all WhatsApp consoles | `wa.nav.next`, `wa.nav.back`, `wa.nav.cancel`, `wa.nav.invalid_option` |
 | `wa.tenant.subscriptions.*` | WhatsApp tenant console — subscriptions | `wa.tenant.subscriptions.list.header`, `wa.tenant.subscriptions.status.active`, `wa.tenant.subscriptions.list.page_prev` |
 | `frontend.*` | Vue SPA web UI | `frontend.login.title`, `frontend.clients.password` |
 
-Total: ~851 string entries across both catalogs.
+Total: ~890 string entries across both catalogs.
 
 ### Merged Catalog
 
