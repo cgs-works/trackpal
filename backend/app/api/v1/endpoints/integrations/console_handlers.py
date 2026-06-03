@@ -325,8 +325,8 @@ async def _handle_tenant_console(
                             lookup_job_id = str(job.id)
                             tenant_id_out = str(tenant.id)
                             session.temp_data.pop("pending_lookup_intent", None)
-                            session.temp_data.pop("service_key", None)
-                            session.temp_data.pop("target_email", None)
+                            # Keep service_key & target_email for awaiting_result retry
+                            session.temp_data["lookup_job_id"] = lookup_job_id
                             await session_service.save_session(session, touch_ttl=False)
                         else:
                             reply = tenant_console_service._t(

@@ -136,6 +136,7 @@ class WhatsAppTenantConsoleService(
     _start_codigo_flow = _._start_codigo_flow
     _handle_codigo_service = _._handle_codigo_service
     _handle_codigo_email = _._handle_codigo_email
+    _handle_codigo_awaiting_result = _._handle_codigo_awaiting_result
     # fmt: on
 
     # ------------------------------------------------------------------

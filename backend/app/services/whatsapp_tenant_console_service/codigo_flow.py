@@ -12,8 +12,15 @@ import logging
 from typing import Any
 
 from app.core.i18n import t as _i18n_t
+
+from uuid import UUID
+
+from app.repositories import (
+    code_services_repository,
+    mailbox_config_repository,
+    mailbox_lookup_repository,
+)
 from app.services.whatsapp_navigation import is_back, is_cancel
-from app.repositories import code_services_repository, mailbox_config_repository
 
 from . import _context as ctx
 
@@ -270,9 +277,132 @@ async def _handle_codigo_email(
     session.temp_data["service_key"] = service_key
     session.temp_data["target_email"] = target_email
     session.temp_data["pending_lookup_intent"] = "true"
-    # Intent stored — clear flow state
-    session.flow = ""
-    session.step = ""
+    # Keep session alive in awaiting_result so user can retry/back/cancel
+    # after n8n delivers the result notification.
+    session.flow = self.CODIGO_FLOW
+    session.step = self.CODIGO_STEP_AWAITING_RESULT
     await session_service.save_session(session)
 
     return _i18n_t(loc, "wa.tenant.codigo.buscando")
+
+
+async def _handle_codigo_awaiting_result(
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    tenant_id: Any,
+    db: Any,
+) -> str:
+    """Handle user response after the lookup result notification.
+
+    The session is kept alive (step=awaiting_result) while n8n polls
+    the job and sends the result directly to the user.  When the user
+    replies to the result message the backend receives it through
+    the normal console endpoint and routes here.
+    """
+    loc = ctx.get_locale()
+
+    if is_cancel(msg):
+        await session_service.clear_session(f"admin:{phone}")
+        return _i18n_t(loc, "wa.tenant.cancelled")
+
+    # Check lookup job status from DB
+    job_done = False
+    lookup_job_id = session.temp_data.get("lookup_job_id")
+    if lookup_job_id:
+        try:
+            job = await mailbox_lookup_repository.get_job(
+                db,
+                UUID(lookup_job_id),
+                tenant_id=tenant_id,
+            )
+            job_done = job is not None and job.status in (
+                "completed", "failed", "timeout"
+            )
+        except Exception:
+            logger.exception(
+                "Failed to check lookup job %s", lookup_job_id,
+            )
+            job_done = True  # treat error as done so we don't loop
+
+    if msg.strip() == "1":
+        # Retry — only if job is done, otherwise say still checking
+        if not job_done:
+            return _i18n_t(loc, "wa.tenant.codigo.still_checking")
+
+        service_key = session.temp_data.get("service_key", "")
+        target_email = session.temp_data.get("target_email", "")
+        if service_key and target_email:
+            session.temp_data["pending_lookup_intent"] = "true"
+            await session_service.save_session(session)
+            return _i18n_t(loc, "wa.tenant.codigo.buscando")
+
+        # Fallback — restart from service list
+        effective_keys = (
+            await code_services_repository.get_effective_service_keys(
+                db, tenant_id
+            )
+        )
+        if not effective_keys:
+            await session_service.clear_session(f"admin:{phone}")
+            return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
+
+        await session_service.clear_session(f"admin:{phone}")
+        new_session = await session_service.create_session(
+            f"admin:{phone}"
+        )
+        new_session.flow = self.CODIGO_FLOW
+        new_session.step = self.CODIGO_STEP_SERVICE
+        new_session.temp_data = {
+            "codigo_effective_keys": effective_keys,
+            "codigo_current_page": 0,
+        }
+        await session_service.save_session(new_session)
+        service_list = _build_service_page(
+            effective_keys, 0, loc, started_from_menu=False,
+        )
+        return self._t(
+            self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list,
+        )
+
+    if msg.strip() == "2":
+        # Back to services — show service list
+        if not job_done:
+            return _i18n_t(loc, "wa.tenant.codigo.still_checking")
+
+        effective_keys = (
+            await code_services_repository.get_effective_service_keys(
+                db, tenant_id
+            )
+        )
+        if not effective_keys:
+            await session_service.clear_session(f"admin:{phone}")
+            return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
+
+        await session_service.clear_session(f"admin:{phone}")
+        new_session = await session_service.create_session(
+            f"admin:{phone}"
+        )
+        new_session.flow = self.CODIGO_FLOW
+        new_session.step = self.CODIGO_STEP_SERVICE
+        new_session.temp_data = {
+            "codigo_effective_keys": effective_keys,
+            "codigo_current_page": 0,
+        }
+        await session_service.save_session(new_session)
+        service_list = _build_service_page(
+            effective_keys, 0, loc, started_from_menu=False,
+        )
+        return self._t(
+            self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list,
+        )
+
+    if msg.strip() == "0":
+        # Cancel
+        await session_service.clear_session(f"admin:{phone}")
+        return _i18n_t(loc, "wa.tenant.cancelled")
+
+    # Unknown input — keep session alive
+    return _i18n_t(loc, "wa.tenant.codigo.still_checking")

@@ -317,4 +317,8 @@ async def _route_codigo_flow(
         return await self._handle_codigo_email(
             phone, msg, session, session_service, tenant_id, db
         )
+    elif step == self.CODIGO_STEP_AWAITING_RESULT:
+        return await self._handle_codigo_awaiting_result(
+            phone, msg, session, session_service, tenant_id, db
+        )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)

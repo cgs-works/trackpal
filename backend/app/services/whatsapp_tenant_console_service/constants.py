@@ -195,6 +195,7 @@ KEY_PROFILE_LOCALE_SELECT = "wa.tenant.profile.locale_select"
 CODIGO_FLOW = "codigo"
 CODIGO_STEP_SERVICE = "service"
 CODIGO_STEP_EMAIL = "email"
+CODIGO_STEP_AWAITING_RESULT = "awaiting_result"
 
 KEY_CODIGO_MENU = "wa.tenant.codigo.menu"
 KEY_CODIGO_SERVICE_PROMPT = "wa.tenant.codigo.service_prompt"
