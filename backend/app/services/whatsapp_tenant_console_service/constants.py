@@ -9,7 +9,7 @@ KEY_HELP_TEXT = "wa.tenant.help"
 KEY_FALLBACK_NO_FLOW = "wa.tenant.fallback.no_flow"
 KEY_FALLBACK_ACTIVE_FLOW = "wa.tenant.fallback.active_flow"
 
-RESET_COMMANDS = {"0", "9", "menu", "menú", "/menu", "cancelar"}
+RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar", "salir", "cerrar"}
 HELP_COMMANDS = {"5", "ayuda"}
 
 # -- Flow identifiers ----------------------------------------------------

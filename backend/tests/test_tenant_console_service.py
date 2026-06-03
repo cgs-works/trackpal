@@ -2267,19 +2267,20 @@ class TestNavigationContract:
         )
         assert "salido" in reply.lower() or "goodbye" in reply.lower()
 
-    async def test_nine_from_main_menu_shows_main_menu(
+    async def test_nine_from_main_menu_shows_fallback(
         self,
         console_service: WhatsAppTenantConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """'9' from main menu (no active flow) shows main menu."""
+        """'9' from main menu (no active flow) shows fallback, not menu."""
         reply = await console_service.process_message(
             phone="+10000000000",
             message="9",
             session_service=session_service,
         )
-        # Should show main menu
-        assert "Clientes" in reply or "Trackpal" in reply
+        # 9 no longer triggers global reset; should show fallback
+        assert "No entendi" in reply
+        assert "Clientes" not in reply
 
 
 # ===================================================================

@@ -12,6 +12,9 @@ import pytest
 
 from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_session_service import WhatsAppSessionService
+from app.services.whatsapp_tenant_console_service import (
+    WhatsAppTenantConsoleService,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -593,3 +596,46 @@ class TestTTLNotRefreshedOnNoise:
 
         # TTL unchanged
         assert fake_redis.get_ttl(key) == 500
+
+
+# ---------------------------------------------------------------------------
+# Tenant Admin Console navigation contract
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fake_redis_manager() -> FakeManager:
+    return FakeManager()
+
+
+@pytest.mark.asyncio
+async def test_tenant_active_flow_zero_cancels_but_nine_does_not_global_cancel(
+    fake_redis_manager: FakeManager,
+) -> None:
+    """When an active flow exists, 0 clears the session and 9 does not."""
+    session_service = WhatsAppSessionService(fake_redis_manager, ttl_seconds=900)
+    session = await session_service.create_session("admin:12015550001")
+    session.flow = "clients"
+    session.step = "list_select"
+    session.selection_map = {"1": "00000000-0000-0000-0000-000000000001"}
+    await session_service.save_session(session)
+
+    service = WhatsAppTenantConsoleService()
+
+    # 9 should NOT clear session during active flow
+    nine_reply = await service.process_message(
+        phone="12015550001",
+        message="9",
+        session_service=session_service,
+    )
+    assert "Operacion cancelada" not in nine_reply
+    assert await session_service.get_session("admin:12015550001") is not None
+
+    # 0 SHOULD clear session during active flow
+    zero_reply = await service.process_message(
+        phone="12015550001",
+        message="0",
+        session_service=session_service,
+    )
+    assert "salido de la consola" in zero_reply or "Operacion cancelada" in zero_reply
+    assert await session_service.get_session("admin:12015550001") is None
