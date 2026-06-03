@@ -49,6 +49,8 @@ from app.services.whatsapp_session_service import (
 )
 from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
 from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
+from app.services.whatsapp_navigation import is_back, is_cancel
+
 from app.api.v1.endpoints.integrations.adapter import (
     _TenantConsoleAdapter,
     UNKNOWN_PHONE_REPLY,
@@ -474,6 +476,11 @@ async def _handle_unauth_codigo_service(
             reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
         )
 
+    # Check cancel first
+    if is_cancel(msg):
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+
     try:
         idx = int(msg.strip())
     except ValueError:
@@ -482,9 +489,6 @@ async def _handle_unauth_codigo_service(
         )
 
     if idx < 1 or idx > len(effective_keys):
-        if idx == 0:
-            await session_service.clear_session(session_key)
-            return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
         )
@@ -513,6 +517,11 @@ async def _handle_unauth_codigo_email(
     manager: RedisConnectionManager,
 ) -> WhatsAppConsoleResponse:
     """Handle email input, create lookup job, and return response with job_id."""
+    # Check cancel
+    if is_cancel(msg):
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+
     target_email = msg.strip()
     if (
         not target_email

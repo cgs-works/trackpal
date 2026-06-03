@@ -1220,6 +1220,141 @@ async def test_blocked_unregistered_with_existing_codigo_session_returns_no_repl
 
 
 # ---------------------------------------------------------------------------
+# Codigo flow navigation contract - is_cancel / is_back
+# ---------------------------------------------------------------------------
+
+
+async def test_unregistered_codigo_service_cancel_returns_cancelled(
+    client, db_session, active_tenant_user
+):
+    """Sending 0 during unauth codigo service selection cancels the flow."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Start codigo flow
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "Netflix" in resp1.json()["reply"]
+
+        # Send "0" to cancel
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "0",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert resp2.status_code == 200
+    body = resp2.json()
+    assert "cancelada" in body["reply"].lower() or "cancelled" in body["reply"].lower()
+
+
+async def test_unregistered_codigo_service_cancel_with_alias_returns_cancelled(
+    client, db_session, active_tenant_user
+):
+    """Sending 'cancelar' during unauth codigo service selection cancels via is_cancel."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Start codigo flow
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "Netflix" in resp1.json()["reply"]
+
+        # Send "cancelar" to cancel (is_cancel alias)
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "cancelar",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert resp2.status_code == 200
+    body = resp2.json()
+    assert "cancelada" in body["reply"].lower() or "cancelled" in body["reply"].lower()
+
+
+async def test_unregistered_codigo_email_cancel_returns_cancelled(
+    client, db_session, active_tenant_user
+):
+    """Sending 0 during unauth codigo email step cancels the flow (was invalid email)."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Step 1: start codigo
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+
+        # Step 2: select service (Netflix = option 1)
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+        assert "email" in resp2.json()["reply"].lower()
+
+        # Step 3: send "0" to cancel instead of email
+        resp3 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "0",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert resp3.status_code == 200
+    body = resp3.json()
+    # Must be cancelled, not "email invalido"
+    assert "cancelada" in body["reply"].lower() or "cancelled" in body["reply"].lower()
+    assert "email" not in body["reply"].lower() or "invalido" not in body["reply"].lower()
+
+
 # from_me contextual routing tests
 # ---------------------------------------------------------------------------
 
