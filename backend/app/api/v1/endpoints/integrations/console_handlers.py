@@ -772,7 +772,7 @@ async def _handle_active_client_context(
                 )
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_cancel(msg_lower):
         locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
         await _clear_ctx()
         close_jids = _client_context_close_jids(temp_data, admin_jid)
@@ -913,19 +913,20 @@ async def _handle_active_client_context(
             )
             if created_client is not None:
                 data["step"] = "active_menu"
+                menu_text, metadata = await render_initial_context_menu(
+                    db=db,
+                    tenant=tenant,
+                    target_phone=data.get("temp_data", {}).get("phone"),
+                    target_lid=data.get("target_lid"),
+                    target_jid=data.get("target_jid"),
+                )
+                data["temp_data"].update(metadata)
                 await _save_ctx(refresh_ttl=True)
                 return WhatsAppConsoleResponse(
-                    reply=render_initial_context_menu(
-                        tenant=tenant,
-                        target_phone=data.get("temp_data", {}).get("phone"),
-                        active_client=created_client,
-                        inactive_client=None,
-                        blocked=None,
-                        locale=locale,
-                    ),
+                    reply=menu_text,
                     reply_to=admin_jid,
                 )
-        if msg_lower in ("0", "salir", "cerrar"):
+        if is_cancel(msg_lower):
             await _clear_ctx()
             close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
             return WhatsAppConsoleResponse(
@@ -1096,7 +1097,7 @@ async def _handle_ctx_unblocked_menu(
             reply_to=admin_jid,
         )
 
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_cancel(msg_lower):
         locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
@@ -1152,7 +1153,7 @@ async def _handle_ctx_blocked_menu(
             reply_to=admin_jid,
         )
 
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_cancel(msg_lower):
         locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         await clear_ctx()
         close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
