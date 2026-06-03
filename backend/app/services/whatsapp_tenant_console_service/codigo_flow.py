@@ -135,6 +135,10 @@ async def _handle_codigo_service(
             )
         return _i18n_t(loc, "wa.tenant.cancelled")
 
+    if is_back(msg):
+        await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
+
     # Parse selection
     try:
         idx = int(msg.strip())

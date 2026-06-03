@@ -16,9 +16,9 @@ SOURCE_GLOBS = [
 ]
 
 FORBIDDEN_PATTERNS = [
-    re.compile(r"0(?:️)?(?:⃣|️⃣)?\s*(?:Volver|Regresar|Back|Return)", re.IGNORECASE),
-    re.compile(r"9(?:️)?(?:⃣|️⃣)?\s*(?:Siguiente|Next)", re.IGNORECASE),
-    re.compile(r"8(?:️)?(?:⃣|️⃣)?\s*(?:Anterior|Previous|Regresar|Back)", re.IGNORECASE),
+    re.compile(r"(?<!\d)0(?:️)?(?:⃣|️⃣)?\s*(?:Volver|Regresar|Back|Return)", re.IGNORECASE),
+    re.compile(r"(?<!\d)9(?:️)?(?:⃣|️⃣)?\s*(?:Siguiente|Next)", re.IGNORECASE),
+    re.compile(r"(?<!\d)8(?:️)?(?:⃣|️⃣)?\s*(?:Anterior|Previous|Regresar|Back)", re.IGNORECASE),
     re.compile(r"(?:escribe|write|type|respond(?:e)?)\s+\*?9\*?\s+(?:para\s+)?(?:cancelar|cancel)", re.IGNORECASE),
 ]
 

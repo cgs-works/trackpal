@@ -513,11 +513,13 @@ async def handle_ctx_active_edit_value(
     admin_jid: str | None,
     tenant: _TenantModel,
     db: AsyncSession,
+    save_ctx,
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle new value input for active client edit."""
     if is_back(msg_lower):
         data["step"] = "active_edit_field"
+        await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
             reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_prompt"),
             reply_to=admin_jid,
@@ -606,7 +608,7 @@ async def handle_ctx_active_deactivate_confirm(
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.cancelled"),
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
             reply_to=admin_jid,
         )
 

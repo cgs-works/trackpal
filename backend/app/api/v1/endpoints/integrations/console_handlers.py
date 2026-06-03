@@ -536,10 +536,6 @@ async def _handle_unauth_codigo_email(
         or "@" not in target_email
         or "." not in target_email.split("@", 1)[1]
     ):
-        session.step = _UNAUTH_CODIGO_STEP_SERVICE
-        session.temp_data.pop("service_key", None)
-        session.temp_data.pop("service_label", None)
-        await session_service.save_session(session)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_email")
         )
@@ -996,7 +992,7 @@ async def _handle_active_client_context(
 
     if step == "active_edit_value":
         return await handle_ctx_active_edit_value(
-            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+            msg_lower, message, data, admin_jid, tenant, db, _save_ctx, _clear_ctx
         )
 
     if step == "active_deactivate_confirm":

@@ -28,7 +28,6 @@ backend/
 │   │           │   ├── console_handlers.py      # Flow handlers + unauthenticated codigo + context shortcut orchestration
 │   │           │   ├── console_context_shortcut.py # Client Context Shortcut: creating, active, inactive, subscription flows
 │   │           │   ├── console_modes.py         # Ambiguity mode selection
-│   │           │   ├── console_modes.py         # Ambiguity mode selection
 │   │           │   ├── identify.py
 │   │           │   └── mail_lookups.py          # n8n create/poll mailbox lookup jobs
 │   │           ├── _mailbox_helpers.py      # Shared mailbox response helpers

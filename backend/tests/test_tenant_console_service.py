@@ -1134,7 +1134,7 @@ class TestZeroHandling:
         assert fetched is None
 
     @pytest.mark.parametrize(
-        "cmd", ["menu", "menu", "/menu", "MENU", "/MENU", "/Menu", "cancelar"]
+        "cmd", ["menu", "/menu", "MENU", "/MENU", "/Menu", "cancelar"]
     )
     async def test_service_reset_commands_cancel_flow(
         self,
