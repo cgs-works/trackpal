@@ -1939,7 +1939,7 @@ async def test_context_shortcut_bloquear_creates_block(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Mensajes bloqueados" in body["reply"]
+    assert "Acceso bloqueado" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
     # Verify block was created in DB
@@ -1995,7 +1995,7 @@ async def test_context_shortcut_desbloquear_unblocks(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Mensajes desbloqueados" in body["reply"]
+    assert "Acceso desbloqueado" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
     # Verify block was deactivated

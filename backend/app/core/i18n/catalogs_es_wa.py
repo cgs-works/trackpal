@@ -230,4 +230,53 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.post_create.invalid_option": "❌ Opcion invalida.\n\nElige una opcion:\n1️⃣ Volver al menu de gestion del cliente\n0️⃣ Cerrar gestion",
     "wa.tenant.client_context.block_access.success": "✅ Acceso bloqueado para *{identity}*.",
     "wa.tenant.client_context.unblock_access.success": "✅ Acceso desbloqueado para *{identity}*.",
+
+    "wa.tenant.client_context.create.phone_invalid": "Telefono no valido. Ingrese un numero valido o *0* para cancelar:",
+    "wa.tenant.client_context.create.phone_registered": "Telefono registrado.\n\n*Nombre completo* del cliente:",
+    "wa.tenant.client_context.create.name_empty": "El nombre no puede estar vacio. Ingrese el *nombre completo* o *0* para cancelar:",
+    "wa.tenant.client_context.create.name_invalid": "{exc}\n\nIngrese el *nombre completo* o *0* para cancelar:",
+    "wa.tenant.client_context.create.name_registered": "Nombre registrado.\n\n*Nombre de usuario* local para el cliente:",
+    "wa.tenant.client_context.create.username_empty": "El nombre de usuario no puede estar vacio. Ingrese el *nombre de usuario* o *0* para cancelar:",
+    "wa.tenant.client_context.create.username_invalid": "{exc}\n\nIngrese el *nombre de usuario* o *0* para cancelar:",
+
+    "wa.tenant.client_context.active.menu_text": "*{client_name}* (activo)\n\n1 Ver detalle del cliente\n2 Crear suscripcion\n0 Cerrar contexto",
+    "wa.tenant.client_context.active.invalid_option": "Opcion no valida.\n\n*{client_name}* (activo)\n\n1 Ver detalle del cliente\n2 Crear suscripcion\n0 Cerrar contexto",
+
+    "wa.tenant.client_context.detail.header": "*Detalle del cliente*",
+    "wa.tenant.client_context.detail.body": "*{client_name}*\nUsuario: {username}\nTelefono: {phone}\nEstado: {status}\n",
+    "wa.tenant.client_context.detail.options": "1 Editar datos\n2 Desactivar\n0 Volver",
+    "wa.tenant.client_context.detail.invalid_option": "Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n0 Volver",
+
+    "wa.tenant.client_context.deactivate.confirm": "Desea desactivar a *{client_name}*?\n\nEscriba *CONFIRMAR* para desactivar.\nO *0* para cancelar.",
+    "wa.tenant.client_context.deactivate.cancelled": "Desactivacion cancelada.",
+    "wa.tenant.client_context.deactivate.prompt_again": "Escriba *CONFIRMAR* para desactivar o *0* para cancelar.",
+    "wa.tenant.client_context.deactivate.error": "Error al desactivar: {exc}",
+    "wa.tenant.client_context.deactivate.success": "*{client_name}* desactivado.",
+
+    "wa.tenant.client_context.inactive.menu_text": "*{client_name}* (inactivo)\n\n1 Reactivar\n2 Editar datos\n3 Eliminar\n0 Cerrar contexto",
+    "wa.tenant.client_context.inactive.invalid_option": "Opcion no valida.\n\n*{client_name}* (inactivo)\n\n1 Reactivar\n2 Editar datos\n3 Eliminar\n0 Cerrar contexto",
+    "wa.tenant.client_context.inactive.reactivate_error": "Error al reactivar: {exc}",
+    "wa.tenant.client_context.inactive.reactivate_success": "*{client_name}* reactivado.\n\nPuede gestionar suscripciones desde la Consola de Administracion.",
+    "wa.tenant.client_context.inactive.delete_confirm": "Desea eliminar permanentemente a *{client_name}*?\n\nEscriba *CONFIRMAR* para eliminar.\nO *0* para cancelar.",
+    "wa.tenant.client_context.inactive.delete_cancelled": "Eliminacion cancelada.",
+    "wa.tenant.client_context.inactive.delete_prompt_again": "Escriba *CONFIRMAR* para eliminar o *0* para cancelar.",
+    "wa.tenant.client_context.inactive.delete_error": "Error al eliminar: {exc}",
+    "wa.tenant.client_context.inactive.delete_success": "*{client_name}* eliminado permanentemente.",
+
+    "wa.tenant.client_context.edit.field_prompt": "Que campo desea editar?\n\n1 Nombre completo\n2 Nombre de usuario\n0 Volver\n\nEl telefono no se puede editar desde el acceso directo.",
+    "wa.tenant.client_context.edit.field_invalid": "Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n0 Volver",
+    "wa.tenant.client_context.edit.name_prompt": "Ingrese el *nuevo nombre completo*:",
+    "wa.tenant.client_context.edit.username_prompt": "Ingrese el *nuevo nombre de usuario*:",
+    "wa.tenant.client_context.edit.cancelled": "Edicion cancelada.",
+    "wa.tenant.client_context.edit.update_error": "Error al actualizar: {exc}",
+    "wa.tenant.client_context.edit.updated_success": "*{client_name}* actualizado correctamente.",
+
+    "wa.tenant.client_context.subscription.creating": "Creando suscripcion para *{client_name}*\n\n",
+    "wa.tenant.client_context.subscription.no_services": "No hay servicios disponibles para crear una suscripcion.",
+
+    "wa.tenant.client_context.action_cancelled": "❌ Accion cancelada.",
+
+    "wa.tenant.client_context.error.client_not_found": "Cliente no encontrado.",
+    "wa.tenant.client_context.error.service_unavailable": "Servicio no disponible en este momento.",
+    "wa.tenant.client_context.error.no_services": "No hay servicios disponibles para crear una suscripcion.",
 }

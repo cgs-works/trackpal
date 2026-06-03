@@ -804,22 +804,24 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_phone":
-        resp = await handle_ctx_creating_phone(msg_lower, message, data, admin_jid)
+        resp = await handle_ctx_creating_phone(msg_lower, message, data, admin_jid, tenant)
         if resp is None:
             await _clear_ctx()
+            locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
             return WhatsAppConsoleResponse(
-                reply="\u274c Creaci\u00f3n cancelada.",
+                reply=_i18n_t(locale, "wa.tenant.client_context.create.cancelled"),
                 reply_to=admin_jid,
             )
         await _save_ctx(refresh_ttl=True)
         return resp
 
     if step == "creating_name":
-        resp = await handle_ctx_creating_name(msg_lower, message, data, admin_jid)
+        resp = await handle_ctx_creating_name(msg_lower, message, data, admin_jid, tenant)
         if resp is None:
             await _clear_ctx()
+            locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
             return WhatsAppConsoleResponse(
-                reply="\u274c Creaci\u00f3n cancelada.",
+                reply=_i18n_t(locale, "wa.tenant.client_context.create.cancelled"),
                 reply_to=admin_jid,
             )
         await _save_ctx(refresh_ttl=True)
@@ -829,8 +831,9 @@ async def _handle_active_client_context(
         resp = await handle_ctx_creating_username(msg_lower, message, data, admin_jid, tenant)
         if resp is None:
             await _clear_ctx()
+            locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
             return WhatsAppConsoleResponse(
-                reply="\u274c Creaci\u00f3n cancelada.",
+                reply=_i18n_t(locale, "wa.tenant.client_context.create.cancelled"),
                 reply_to=admin_jid,
             )
         await _save_ctx(refresh_ttl=True)
@@ -960,12 +963,13 @@ async def _handle_active_client_context(
         )
 
     if step == "active_edit_field":
-        resp = await handle_ctx_active_edit_field(msg_lower, message, data, admin_jid)
+        resp = await handle_ctx_active_edit_field(msg_lower, message, data, admin_jid, tenant)
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         return WhatsAppConsoleResponse(
-            reply="\u274c Acci\u00f3n cancelada.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.action_cancelled"),
             reply_to=admin_jid,
         )
 
@@ -1007,12 +1011,13 @@ async def _handle_active_client_context(
         )
 
     if step == "inactive_edit_field":
-        resp = await handle_ctx_inactive_edit_field(msg_lower, message, data, admin_jid)
+        resp = await handle_ctx_inactive_edit_field(msg_lower, message, data, admin_jid, tenant, inactive_client)
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
         return WhatsAppConsoleResponse(
-            reply="\u274c Acci\u00f3n cancelada.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.action_cancelled"),
             reply_to=admin_jid,
         )
 
@@ -1043,6 +1048,7 @@ async def _handle_ctx_unblocked_menu(
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle a message in the unblocked unregistered target menu."""
+    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
 
     if msg_lower == "1":
         # Crear cliente — enter flow and render first prompt immediately.
@@ -1066,7 +1072,7 @@ async def _handle_ctx_unblocked_menu(
         await db.commit()
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u2705 Mensajes bloqueados para este contacto.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.block_access.success", identity=(target_phone or target_lid or "")),
             reply_to=admin_jid,
         )
 
@@ -1103,6 +1109,7 @@ async def _handle_ctx_blocked_menu(
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle a message in the blocked target menu."""
+    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
 
     if msg_lower == "1":
         # Desbloquear mensajes — find active block and unblock
@@ -1121,7 +1128,7 @@ async def _handle_ctx_blocked_menu(
             await db.commit()
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="\u2705 Mensajes desbloqueados para este contacto.",
+            reply=_i18n_t(locale, "wa.tenant.client_context.unblock_access.success", identity=(target_phone or target_lid or "")),
             reply_to=admin_jid,
         )
 

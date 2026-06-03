@@ -98,6 +98,7 @@ async def handle_ctx_creating_phone(
     message: str,
     data: dict,
     admin_jid: str | None,
+    tenant: _TenantModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle phone input in the creating flow.
 
@@ -114,13 +115,13 @@ async def handle_ctx_creating_phone(
         data["temp_data"]["phone"] = normalized
     except Exception:
         return WhatsAppConsoleResponse(
-            reply="Telefono no valido. Ingrese un numero valido o *0* para cancelar:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.phone_invalid"),
             reply_to=admin_jid,
         )
 
     data["step"] = "creating_name"
     return WhatsAppConsoleResponse(
-        reply="Telefono registrado.\n\n*Nombre completo* del cliente:",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.phone_registered"),
         reply_to=admin_jid,
     )
 
@@ -130,6 +131,7 @@ async def handle_ctx_creating_name(
     message: str,
     data: dict,
     admin_jid: str | None,
+    tenant: _TenantModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle full name input in the creating flow."""
     if msg_lower in ("0", "salir", "cerrar"):
@@ -138,7 +140,7 @@ async def handle_ctx_creating_name(
     stripped = message.strip()
     if not stripped:
         return WhatsAppConsoleResponse(
-            reply="El nombre no puede estar vacio. Ingrese el *nombre completo* o *0* para cancelar:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.name_empty"),
             reply_to=admin_jid,
         )
 
@@ -146,14 +148,14 @@ async def handle_ctx_creating_name(
         name = _validate_full_name(stripped)
     except Exception as exc:
         return WhatsAppConsoleResponse(
-            reply=f"{exc}\n\nIngrese el *nombre completo* o *0* para cancelar:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.name_invalid", exc=str(exc)),
             reply_to=admin_jid,
         )
 
     data["temp_data"]["full_name"] = name
     data["step"] = "creating_username"
     return WhatsAppConsoleResponse(
-        reply="Nombre registrado.\n\n*Nombre de usuario* local para el cliente:",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.name_registered"),
         reply_to=admin_jid,
     )
 
@@ -172,8 +174,7 @@ async def handle_ctx_creating_username(
     stripped = message.strip()
     if not stripped:
         return WhatsAppConsoleResponse(
-            reply="El nombre de usuario no puede estar vacio. "
-            "Ingrese el *nombre de usuario* o *0* para cancelar:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.username_empty"),
             reply_to=admin_jid,
         )
 
@@ -181,7 +182,7 @@ async def handle_ctx_creating_username(
         local_username = validate_client_local_username(stripped)
     except Exception as exc:
         return WhatsAppConsoleResponse(
-            reply=f"{exc}\n\nIngrese el *nombre de usuario* o *0* para cancelar:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.username_invalid", exc=str(exc)),
             reply_to=admin_jid,
         )
 
@@ -391,17 +392,23 @@ async def handle_ctx_active_client_menu(
     if msg_lower in ("0", "salir", "cerrar"):
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Contexto cerrado.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.closed"),
             reply_to=admin_jid,
         )
 
     if msg_lower == "1":
-        detail = _format_client_detail_short(client, is_active=True)
+        detail = _ctx_t(
+            tenant, data, "wa.tenant.client_context.detail.body",
+            client_name=client.full_name,
+            username=client.username,
+            phone=client.phone or "--",
+            status="Activo",
+        )
         data["step"] = "active_detail"
         data["temp_data"]["client_id"] = str(client.id)
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=detail + "\n\n1 Editar datos\n" + "2 Desactivar\n" + "0 Volver",
+            reply=detail + "\n\n" + _ctx_t(tenant, data, "wa.tenant.client_context.detail.options"),
             reply_to=admin_jid,
         )
 
@@ -413,11 +420,7 @@ async def handle_ctx_active_client_menu(
     # Invalid input — show menu
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n"
-        f"*{client.full_name}* (activo)\n\n"
-        "1 Ver detalle del cliente\n"
-        "2 Crear suscripcion\n"
-        "0 Cerrar contexto",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.active.invalid_option", client_name=client.full_name),
         reply_to=admin_jid,
     )
 
@@ -438,7 +441,7 @@ async def handle_ctx_active_detail(
         data["step"] = "active_menu"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=_active_client_menu_text(client),
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.active.menu_text", client_name=client.full_name),
             reply_to=admin_jid,
         )
 
@@ -446,11 +449,7 @@ async def handle_ctx_active_detail(
         data["step"] = "active_edit_field"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply="Que campo desea editar?\n\n"
-            "1 Nombre completo\n"
-            "2 Nombre de usuario\n"
-            "0 Volver\n\n"
-            "El telefono no se puede editar desde el acceso directo.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_prompt"),
             reply_to=admin_jid,
         )
 
@@ -458,15 +457,13 @@ async def handle_ctx_active_detail(
         data["step"] = "active_deactivate_confirm"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=f"Desea desactivar a *{client.full_name}*?\n\n"
-            "Escriba *CONFIRMAR* para desactivar.\n"
-            "O *0* para cancelar.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.confirm", client_name=client.full_name),
             reply_to=admin_jid,
         )
 
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n0 Volver",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.detail.invalid_option"),
         reply_to=admin_jid,
     )
 
@@ -476,12 +473,13 @@ async def handle_ctx_active_edit_field(
     message: str,
     data: dict,
     admin_jid: str | None,
+    tenant: _TenantModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle field selection for active client edit."""
     if msg_lower in ("0", "salir", "cerrar"):
         data["step"] = "active_detail"
         return WhatsAppConsoleResponse(
-            reply="*Detalle del cliente*",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.detail.header"),
             reply_to=admin_jid,
         )
 
@@ -537,26 +535,26 @@ async def handle_ctx_active_edit_value(
     except UserFacingError as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"{translate_error('es', exc)}",
+            reply=f"{translate_error(_ctx_locale(tenant, data), exc)}",
             reply_to=admin_jid,
         )
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"Error al actualizar: {exc}",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.update_error", exc=str(exc)),
             reply_to=admin_jid,
         )
 
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Cliente no encontrado.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
             reply_to=admin_jid,
         )
 
     await clear_ctx()
     return WhatsAppConsoleResponse(
-        reply=f"*{client.full_name}* actualizado correctamente.",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.updated_success", client_name=client.full_name),
         reply_to=admin_jid,
     )
 
@@ -637,7 +635,7 @@ async def handle_ctx_inactive_client_menu(
     if msg_lower in ("0", "salir", "cerrar"):
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Contexto cerrado.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.closed"),
             reply_to=admin_jid,
         )
 
@@ -649,19 +647,18 @@ async def handle_ctx_inactive_client_menu(
         except Exception as exc:
             await clear_ctx()
             return WhatsAppConsoleResponse(
-                reply=f"Error al reactivar: {exc}",
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.reactivate_error", exc=str(exc)),
                 reply_to=admin_jid,
             )
         if updated is None:
             await clear_ctx()
             return WhatsAppConsoleResponse(
-                reply="Cliente no encontrado.",
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
                 reply_to=admin_jid,
             )
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"*{updated.full_name}* reactivado.\n\n"
-            "Puede gestionar suscripciones desde la Consola de Administracion.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.reactivate_success", client_name=updated.full_name),
             reply_to=admin_jid,
         )
 
@@ -670,11 +667,7 @@ async def handle_ctx_inactive_client_menu(
         data["temp_data"]["client_id"] = str(client.id)
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply="Que campo desea editar?\n\n"
-            "1 Nombre completo\n"
-            "2 Nombre de usuario\n"
-            "0 Volver\n\n"
-            "El telefono no se puede editar desde el acceso directo.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_prompt"),
             reply_to=admin_jid,
         )
 
@@ -683,20 +676,13 @@ async def handle_ctx_inactive_client_menu(
         data["temp_data"]["client_id"] = str(client.id)
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=f"Desea eliminar permanentemente a *{client.full_name}*?\n\n"
-            "Escriba *CONFIRMAR* para eliminar.\n"
-            "O *0* para cancelar.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_confirm", client_name=client.full_name),
             reply_to=admin_jid,
         )
 
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n"
-        f"*{client.full_name}* (inactivo)\n\n"
-        "1 Reactivar\n"
-        "2 Editar datos\n"
-        "3 Eliminar\n"
-        "0 Cerrar contexto",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.invalid_option", client_name=client.full_name),
         reply_to=admin_jid,
     )
 
@@ -706,12 +692,14 @@ async def handle_ctx_inactive_edit_field(
     message: str,
     data: dict,
     admin_jid: str | None,
+    tenant: _TenantModel,
+    client: _ClientModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle field selection for inactive client edit."""
     if msg_lower in ("0", "salir", "cerrar"):
         data["step"] = "inactive_menu"
         return WhatsAppConsoleResponse(
-            reply="Menu de cliente inactivo",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.menu_text", client_name=client.full_name),
             reply_to=admin_jid,
         )
 
@@ -719,7 +707,7 @@ async def handle_ctx_inactive_edit_field(
         data["temp_data"]["edit_field"] = "full_name"
         data["step"] = "inactive_edit_value"
         return WhatsAppConsoleResponse(
-            reply="Ingrese el *nuevo nombre completo*:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.name_prompt"),
             reply_to=admin_jid,
         )
 
@@ -727,12 +715,12 @@ async def handle_ctx_inactive_edit_field(
         data["temp_data"]["edit_field"] = "local_username"
         data["step"] = "inactive_edit_value"
         return WhatsAppConsoleResponse(
-            reply="Ingrese el *nuevo nombre de usuario*:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.username_prompt"),
             reply_to=admin_jid,
         )
 
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n0 Volver",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_invalid"),
         reply_to=admin_jid,
     )
 
@@ -750,7 +738,7 @@ async def handle_ctx_inactive_edit_value(
     if msg_lower in ("0", "salir", "cerrar"):
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Edicion cancelada.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.cancelled"),
             reply_to=admin_jid,
         )
 
@@ -767,26 +755,26 @@ async def handle_ctx_inactive_edit_value(
     except UserFacingError as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"{translate_error('es', exc)}",
+            reply=f"{translate_error(_ctx_locale(tenant, data), exc)}",
             reply_to=admin_jid,
         )
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"Error al actualizar: {exc}",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.update_error", exc=str(exc)),
             reply_to=admin_jid,
         )
 
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Cliente no encontrado.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
             reply_to=admin_jid,
         )
 
     await clear_ctx()
     return WhatsAppConsoleResponse(
-        reply=f"*{client.full_name}* actualizado correctamente.",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.updated_success", client_name=client.full_name),
         reply_to=admin_jid,
     )
 
@@ -804,19 +792,19 @@ async def handle_ctx_inactive_delete_confirm(
     if msg_lower in ("0", "salir", "cerrar"):
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Eliminacion cancelada.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_cancelled"),
             reply_to=admin_jid,
         )
 
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
-            reply="Escriba *CONFIRMAR* para eliminar o *0* para cancelar.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_prompt_again"),
             reply_to=admin_jid,
         )
 
     client_id = UUID(data["temp_data"]["client_id"])
-    client_name = "Cliente"
+    client_name = ""
     client_service = ClientService()
 
     try:
@@ -831,26 +819,26 @@ async def handle_ctx_inactive_delete_confirm(
     except UserFacingError as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"{translate_error('es', exc)}",
+            reply=f"{translate_error(_ctx_locale(tenant, data), exc)}",
             reply_to=admin_jid,
         )
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"Error al eliminar: {exc}",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_error", exc=str(exc)),
             reply_to=admin_jid,
         )
 
     if not deleted:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="No se pudo eliminar el cliente.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_error", exc=""),
             reply_to=admin_jid,
         )
 
     await clear_ctx()
     return WhatsAppConsoleResponse(
-        reply=f"*{client_name}* eliminado permanentemente.",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_success", client_name=client_name),
         reply_to=admin_jid,
     )
 
@@ -858,27 +846,6 @@ async def handle_ctx_inactive_delete_confirm(
 # ====================================================================
 # Helpers
 # ====================================================================
-
-
-def _active_client_menu_text(client: _ClientModel) -> str:
-    """Return the active client menu text."""
-    return (
-        f"*{client.full_name}* (activo)\n\n"
-        "1 Ver detalle del cliente\n"
-        "2 Crear suscripcion\n"
-        "0 Cerrar contexto"
-    )
-
-
-def _format_client_detail_short(client: _ClientModel, is_active: bool) -> str:
-    """Format a short client detail block."""
-    status = "Activo" if is_active else "Inactivo"
-    return (
-        f"*{client.full_name}*\n"
-        f"Usuario: {client.username}\n"
-        f"Telefono: {client.phone or '--'}\n"
-        f"Estado: {status}\n"
-    )
 
 
 async def _start_context_subscription(
@@ -902,7 +869,7 @@ async def _start_context_subscription(
     manager = _get_redis()
     if manager is None:
         return WhatsAppConsoleResponse(
-            reply="Servicio no disponible en este momento.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
             reply_to=admin_jid,
         )
 
@@ -930,7 +897,7 @@ async def _start_context_subscription(
         await session_service.clear_session(f"admin:{phone}")
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="No hay servicios disponibles para crear una suscripcion.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.subscription.no_services"),
             reply_to=admin_jid,
         )
 
@@ -944,9 +911,13 @@ async def _start_context_subscription(
     await session_service.save_session(session)
 
     await clear_ctx()
+    locale = _ctx_locale(tenant, data)
     return WhatsAppConsoleResponse(
-        reply=f"Creando suscripcion para *{client.full_name}*\n\n"
-        "Seleccione un *servicio*:\n\n" + "\n".join(service_lines) + "\n\n0 Cancelar",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.subscription.creating", client_name=client.full_name)
+        + "Seleccione un *servicio*:\n\n"
+        + "\n".join(service_lines)
+        + "\n\n0 "
+        + t(locale, "wa.tenant.cancelled"),
         reply_to=admin_jid,
     )
 
