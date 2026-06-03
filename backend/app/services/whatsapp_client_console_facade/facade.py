@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.i18n import t as _t
 from app.repositories import clients_repository
 from app.services.subscription_service.queries import list_subscriptions
+from app.services.whatsapp_navigation import is_cancel, is_back
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ class WhatsAppClientConsoleFacade:
         msg = message.strip()
         msg_lower = msg.lower()
 
-        if msg in ("0", "salir"):
+        if is_cancel(msg):
             return await self._perform_exit(
                 phone=phone,
                 instance=instance,
