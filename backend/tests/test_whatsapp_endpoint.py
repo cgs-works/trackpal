@@ -1147,14 +1147,13 @@ async def test_unregistered_identity_non_codigo_returns_access_denied(
     assert response.status_code == 200
     body = response.json()
     reply = body["reply"].lower()
-    # Must be access denied, not code lookup or anything else
-    assert (
-        "no tienes acceso" in reply
-        or "no está registrado" in reply
-        or "acceso denegado" in reply
-    )
+    # Must say not registered and include hint about code keyword
+    assert "no tienes" in reply
+    assert "codigo" in reply or "código" in reply or "code" in reply
     assert "Netflix" not in body["reply"]
-    assert "no_reply" not in body or body.get("no_reply") is not True
+    # Must close session so Evolution Go cleans up
+    assert body.get("status") == "closed"
+    assert body.get("close_jid") is not None
 
 
 async def test_blocked_unregistered_with_existing_codigo_session_returns_no_reply(

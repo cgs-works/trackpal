@@ -339,7 +339,11 @@ async def _route_by_instance(
             phone_digits, message, sender_lid, manager, tenant, db, close_jid
         )
 
-    return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))
+    return WhatsAppConsoleResponse(
+        reply=t(_tl(tenant), "wa.client.not_registered"),
+        status="closed",
+        close_jid=close_jid,
+    )
 
 
 async def _handle_from_me_routing(

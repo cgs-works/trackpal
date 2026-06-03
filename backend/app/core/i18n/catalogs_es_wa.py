@@ -178,6 +178,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.client.internal_error": "❌ Error interno. Intenta de nuevo.",
     "wa.client.goodbye": "✅ Has salido de la consola de cliente.\n\nAdios!",
     "wa.client.access_denied": "❌ Acceso denegado, no tienes una cuenta activa.",
+    "wa.client.not_registered": "❌ No tienes una cuenta registrada.\n\nSi deseas consultar tus códigos de acceso, envía la palabra \"código\".",
     "wa.client.mode_prompt": "⚠️ Se detectaron dos perfiles para tu numero de telefono.\n\nComo quieres proceder?\n1️⃣ Panel de administracion\n2️⃣ Cliente\n\n0️⃣ Cancelar\n\nElige una opcion:",
     "wa.client.mode_exit": "✅ Has salido. Adios!",
     "wa.client.mode_reset": "🔄 Modo reiniciado. Envia un mensaje para comenzar.",

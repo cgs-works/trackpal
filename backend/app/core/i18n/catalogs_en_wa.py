@@ -178,6 +178,7 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.client.internal_error": "❌ Internal error. Try again.",
     "wa.client.goodbye": "✅ You have exited the client console.\n\nGoodbye!",
     "wa.client.access_denied": "❌ Access denied, you do not have an active account.",
+    "wa.client.not_registered": "❌ You do not have a registered account.\n\nIf you want to look up your access codes, send the word \"code\".",
     "wa.client.mode_prompt": "⚠️ Two profiles detected for your phone number.\n\nHow do you want to proceed?\n1️⃣ Admin panel\n2️⃣ Client\n\n0️⃣ Cancel\n\nChoose an option:",
     "wa.client.mode_exit": "✅ You have exited. Goodbye!",
     "wa.client.mode_reset": "🔄 Mode reset. Send a message to start.",

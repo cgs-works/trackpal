@@ -566,7 +566,8 @@ class TestClientWithinTenant:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "no tienes una cuenta activa" in reply
+        assert "No tienes una cuenta registrada" in reply
+        assert response.json().get("status") == "closed"
 
     async def test_inactive_client_in_tenant_instance(
         self,
@@ -605,7 +606,8 @@ class TestClientWithinTenant:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "no tienes una cuenta activa" in reply
+        assert "No tienes una cuenta registrada" in reply
+        assert response.json().get("status") == "closed"
 
     async def test_cross_tenant_client_isolated(
         self,
@@ -685,8 +687,9 @@ class TestClientWithinTenant:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        # Client from tenant A not found in tenant B → access denied
-        assert "no tienes una cuenta activa" in reply
+        # Client from tenant A not found in tenant B → not registered
+        assert "No tienes una cuenta registrada" in reply
+        assert response.json().get("status") == "closed"
 
 
 # ===================================================================
