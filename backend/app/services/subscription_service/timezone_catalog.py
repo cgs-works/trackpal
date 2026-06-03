@@ -60,6 +60,7 @@ def compute_utc_offset(tz_str: str) -> str:
         sign = "+" if total_seconds >= 0 else "-"
         hours = abs(total_seconds) // 3600
         minutes = (abs(total_seconds) % 3600) // 60
+        # noqa
         return f"UTC{sign}{hours:02d}:{minutes:02d}"
     except (KeyError, TypeError, ValueError):
         return ""

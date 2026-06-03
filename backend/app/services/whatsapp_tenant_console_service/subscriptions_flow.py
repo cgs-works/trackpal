@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.core.errors import UserFacingError, translate_error
+from app.services.whatsapp_navigation import is_cancel, is_back, is_next
 
 from . import _context as ctx
 
@@ -107,8 +108,13 @@ async def _handle_subscriptions_list(
     page = session.temp_data.get("page", 1)
     status_filter = session.temp_data.get("status_filter")
 
+    if is_cancel(msg):
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self._t('wa.tenant.main_menu'))
+
     # Handle page navigation
-    if msg == "9" and page > 1:
+    if is_back(msg) and page > 1:
         subscriptions = await self._query_subscriptions_by_filter(
             db, tenant_id, status_filter
         )
@@ -130,7 +136,7 @@ async def _handle_subscriptions_list(
             await session_service.save_session(session)
         return reply + "\n\n" + self._t(self.KEY_SUBSCRIPTIONS_SELECT_PROMPT)
 
-    if msg == "8":
+    if is_next(msg):
         subscriptions = await self._query_subscriptions_by_filter(
             db, tenant_id, status_filter
         )

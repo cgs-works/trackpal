@@ -46,7 +46,7 @@ FALLBACK_NO_FLOW = (
 FALLBACK_ACTIVE_FLOW = (
     "❌ No entendí tu mensaje.\n\n"
     "Estás en medio de un flujo. Responde con la información "
-    "solicitada o escribe *9* para cancelar y volver al menú "
+    "solicitada o escribe *0* para cancelar y volver al menú "
     "principal."
 )
 
