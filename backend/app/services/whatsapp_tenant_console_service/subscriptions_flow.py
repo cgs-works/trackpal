@@ -23,6 +23,10 @@ async def _start_subscriptions_flow(self, phone, session_service, tenant_id, db)
 async def _handle_subscriptions_menu(
     self, phone, msg, session, session_service, tenant_id, db
 ):
+    if is_back(msg):
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._with_main_menu(self._t('wa.tenant.main_menu'))
     if msg == "1":
         session.step = self.SUBSCRIPTIONS_STEP_FILTER
         if session_service is not None:
@@ -70,6 +74,11 @@ async def _handle_subscriptions_filter(
     if tenant_id is None or db is None or self._subscription_service is None:
         return self._t(self.KEY_SUBSCRIPTIONS_NO_RESULTS)
 
+    if is_back(msg):
+        session.step = self.SUBSCRIPTIONS_STEP_MENU
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t(self.KEY_SUBSCRIPTIONS_MENU)
     if msg not in ("1", "2", "3", "4"):
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
@@ -114,7 +123,12 @@ async def _handle_subscriptions_list(
         return self._with_main_menu(self._t('wa.tenant.main_menu'))
 
     # Handle page navigation
-    if is_back(msg) and page > 1:
+    if is_back(msg):
+        if page <= 1:
+            session.step = self.SUBSCRIPTIONS_STEP_FILTER
+            if session_service is not None:
+                await session_service.save_session(session)
+            return self._t(self.KEY_SUBSCRIPTIONS_FILTER_PROMPT)
         subscriptions = await self._query_subscriptions_by_filter(
             db, tenant_id, status_filter
         )

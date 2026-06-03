@@ -1,8 +1,6 @@
 """Subscription cancel/reactivate/renew lifecycle handlers."""
 
 from __future__ import annotations
-from app.services.whatsapp_navigation import is_cancel, is_back, is_next
-
 from datetime import datetime, timezone
 
 

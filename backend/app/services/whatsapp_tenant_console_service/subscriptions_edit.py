@@ -1,7 +1,6 @@
 """Subscription edit-flow handlers for the Tenant Console."""
 
 from __future__ import annotations
-from app.services.whatsapp_navigation import is_cancel, is_back, is_next
 
 
 async def _handle_subscriptions_edit_field(self, phone, msg, session, session_service, tenant_id, db):
