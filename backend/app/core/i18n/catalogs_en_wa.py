@@ -249,8 +249,8 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
 
     "wa.tenant.client_context.detail.header": "*Client details*",
     "wa.tenant.client_context.detail.body": "*{client_name}*\nUsername: {username}\nPhone: {phone}\nStatus: {status}\n",
-    "wa.tenant.client_context.detail.options": "1 Edit data\n2 Deactivate\n9 Back",
-    "wa.tenant.client_context.detail.invalid_option": "Invalid option.\n\n1 Edit data\n2 Deactivate\n9 Back",
+    "wa.tenant.client_context.detail.options": "1 Edit data\n2 Deactivate\n9 Back\n0 Cancel",
+    "wa.tenant.client_context.detail.invalid_option": "Invalid option.\n\n1 Edit data\n2 Deactivate\n9 Back\n0 Cancel",
 
     "wa.tenant.client_context.deactivate.confirm": "Do you want to deactivate *{client_name}*?\n\nType *CONFIRM* to deactivate.\nOr *0* to cancel.",
     "wa.tenant.client_context.deactivate.cancelled": "Deactivation cancelled.",
@@ -268,8 +268,8 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.inactive.delete_error": "Error deleting: {exc}",
     "wa.tenant.client_context.inactive.delete_success": "*{client_name}* permanently deleted.",
 
-    "wa.tenant.client_context.edit.field_prompt": "Which field do you want to edit?\n\n1 Full name\n2 Username\n9 Back\n\nPhone cannot be edited from the shortcut.",
-    "wa.tenant.client_context.edit.field_invalid": "Invalid option.\n\n1 Full name\n2 Username\n9 Back",
+    "wa.tenant.client_context.edit.field_prompt": "Which field do you want to edit?\n\n1 Full name\n2 Username\n9 Back\n0 Cancel\n\nPhone cannot be edited from the shortcut.",
+    "wa.tenant.client_context.edit.field_invalid": "Invalid option.\n\n1 Full name\n2 Username\n9 Back\n0 Cancel",
     "wa.tenant.client_context.edit.name_prompt": "Enter the *new full name*:",
     "wa.tenant.client_context.edit.username_prompt": "Enter the *new username*:",
     "wa.tenant.client_context.edit.cancelled": "Edit cancelled.",

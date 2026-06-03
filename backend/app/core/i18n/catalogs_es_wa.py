@@ -249,8 +249,8 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
 
     "wa.tenant.client_context.detail.header": "*Detalle del cliente*",
     "wa.tenant.client_context.detail.body": "*{client_name}*\nUsuario: {username}\nTelefono: {phone}\nEstado: {status}\n",
-    "wa.tenant.client_context.detail.options": "1 Editar datos\n2 Desactivar\n9 Volver",
-    "wa.tenant.client_context.detail.invalid_option": "Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n9 Volver",
+    "wa.tenant.client_context.detail.options": "1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
+    "wa.tenant.client_context.detail.invalid_option": "Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
 
     "wa.tenant.client_context.deactivate.confirm": "Desea desactivar a *{client_name}*?\n\nEscriba *CONFIRMAR* para desactivar.\nO *0* para cancelar.",
     "wa.tenant.client_context.deactivate.cancelled": "Desactivacion cancelada.",
@@ -268,8 +268,8 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.inactive.delete_error": "Error al eliminar: {exc}",
     "wa.tenant.client_context.inactive.delete_success": "*{client_name}* eliminado permanentemente.",
 
-    "wa.tenant.client_context.edit.field_prompt": "Que campo desea editar?\n\n1 Nombre completo\n2 Nombre de usuario\n9 Volver\n\nEl telefono no se puede editar desde el acceso directo.",
-    "wa.tenant.client_context.edit.field_invalid": "Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n9 Volver",
+    "wa.tenant.client_context.edit.field_prompt": "Que campo desea editar?\n\n1 Nombre completo\n2 Nombre de usuario\n9 Regresar\n0 Cancelar\n\nEl telefono no se puede editar desde el acceso directo.",
+    "wa.tenant.client_context.edit.field_invalid": "Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n9 Regresar\n0 Cancelar",
     "wa.tenant.client_context.edit.name_prompt": "Ingrese el *nuevo nombre completo*:",
     "wa.tenant.client_context.edit.username_prompt": "Ingrese el *nuevo nombre de usuario*:",
     "wa.tenant.client_context.edit.cancelled": "Edicion cancelada.",

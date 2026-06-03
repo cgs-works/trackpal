@@ -32,6 +32,7 @@ from app.repositories import blocked_clients_repository, clients_repository
 from app.schemas.client import ClientCreate
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.client_service import ClientService
+from app.services.whatsapp_navigation import is_back, is_cancel, is_next
 from app.services.whatsapp_session_service import (
     WhatsAppSessionService,
 )
@@ -437,7 +438,7 @@ async def handle_ctx_active_detail(
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle actions from active client detail view."""
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_back(msg_lower):
         data["step"] = "active_menu"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
@@ -703,7 +704,7 @@ async def handle_ctx_inactive_edit_field(
     client: _ClientModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle field selection for inactive client edit."""
-    if msg_lower in ("0", "salir", "cerrar"):
+    if is_back(msg_lower):
         data["step"] = "inactive_menu"
         return WhatsAppConsoleResponse(
             reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.menu_text", client_name=client.full_name),
