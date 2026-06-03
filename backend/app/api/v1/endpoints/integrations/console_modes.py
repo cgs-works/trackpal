@@ -67,6 +67,10 @@ async def _handle_ambiguity(
     msg = message.strip()
     msg_lower = msg.lower()
 
+    if is_back(msg):
+        prompt = t(locale, "wa.client.mode_prompt")
+        return WhatsAppConsoleResponse(reply=prompt)
+
     if is_cancel(msg):
         await _clear_mode(manager, phone)
         cleanup_svc = WhatsAppSessionService(

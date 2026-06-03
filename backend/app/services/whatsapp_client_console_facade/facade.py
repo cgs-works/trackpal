@@ -3,7 +3,7 @@
 Provides a minimal menu for client-side users within a tenant:
 - View profile info
 - View active subscriptions
-- Exit / close session
+- Cancel / close session
 
 All user-facing text goes through i18n (``wa.client.*`` keys).
 """
@@ -32,7 +32,7 @@ class WhatsAppClientConsoleFacade:
     a minimal read-only menu:
       1. Ver perfil
       2. Ver suscripciones activas
-      0. Salir (returns status=closed to n8n)
+      0. Cancelar (returns status=closed to n8n)
     """
 
     def __init__(
@@ -71,6 +71,9 @@ class WhatsAppClientConsoleFacade:
                 tenant_id=UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id,
                 client_id=UUID(client_id) if isinstance(client_id, str) else client_id,
             )
+
+        if is_back(msg):
+            return self._main_menu()
 
         if msg_lower in ("menu", "/menu"):
             return self._main_menu()

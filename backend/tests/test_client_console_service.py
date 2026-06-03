@@ -144,7 +144,7 @@ class TestClientConsoleMenu:
         assert "Consola de Cliente" in reply
         assert "Ver mi perfil" in reply
         assert "Ver suscripciones activas" in reply
-        assert "Salir" in reply
+        assert "Cancelar" in reply
 
     async def test_main_menu_menu_command(
         self, client_facade: WhatsAppClientConsoleFacade
