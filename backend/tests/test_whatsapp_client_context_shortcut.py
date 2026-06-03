@@ -158,7 +158,7 @@ def test_client_context_i18n_keys_exist_in_en_and_es():
         for key in keys:
             rendered = t(locale, key, **params)
             assert rendered != key
-            assert "Gestión del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled"))
+            assert "Gestion del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled"))
 
 
 # ---------------------------------------------------------------------------
@@ -207,8 +207,8 @@ async def test_from_me_shortcut_renders_contextual_menu_for_unregistered(
     reply = body["reply"]
     assert "Contexto de cliente iniciado" not in reply
     # Spanish (tenant.locale = "es") contextual menu markers.
-    assert "Gestión del cliente" in reply
-    assert "Crear cliente para este número" in reply
+    assert "Gestion del cliente" in reply
+    assert "Crear cliente para este numero" in reply
     # reply_to must point at the admin's private JID.
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
@@ -255,7 +255,7 @@ async def test_from_me_self_menu_routes_to_tenant_console(
     assert response.status_code == 200
     body = response.json()
     # Must NOT show the client context menu
-    assert "Gestión del cliente" not in body.get("reply", "")
+    assert "Gestion del cliente" not in body.get("reply", "")
 
 
 async def test_context_close_cleans_redis_session(
@@ -372,4 +372,4 @@ async def test_active_context_invalid_input_uses_i18n(
     # Must NOT route to Tenant console (no "Trackpal" in reply)
     assert "Trackpal" not in data.get("reply", "")
     # Must use the i18n invalid_option text
-    assert "Opción inválida" in data.get("reply", "")
+    assert "Opcion invalida" in data.get("reply", "")

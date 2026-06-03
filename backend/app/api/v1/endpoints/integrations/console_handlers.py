@@ -621,13 +621,15 @@ async def _handle_active_client_context(
         handle_ctx_creating_confirm,
         handle_ctx_creating_first,
         handle_ctx_creating_name,
-        handle_ctx_creating_password,
+        handle_ctx_creating_password_choice,
+        handle_ctx_creating_password_manual,
         handle_ctx_creating_phone,
         handle_ctx_creating_username,
         handle_ctx_inactive_client_menu,
         handle_ctx_inactive_delete_confirm,
         handle_ctx_inactive_edit_field,
         handle_ctx_inactive_edit_value,
+        render_initial_context_menu,
     )
 
     if not phone:
@@ -824,7 +826,7 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_username":
-        resp = await handle_ctx_creating_username(msg_lower, message, data, admin_jid)
+        resp = await handle_ctx_creating_username(msg_lower, message, data, admin_jid, tenant)
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
@@ -834,19 +836,36 @@ async def _handle_active_client_context(
         await _save_ctx(refresh_ttl=True)
         return resp
 
-    if step == "creating_password":
-        resp = await handle_ctx_creating_password(msg_lower, message, data, admin_jid)
+    if step == "creating_password_choice":
+        resp = await handle_ctx_creating_password_choice(msg_lower, data, admin_jid, tenant)
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
-                reply="\u274c Creaci\u00f3n cancelada.",
+                reply=_i18n_t(
+                    data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es",
+                    "wa.tenant.client_context.create.cancelled",
+                ),
+                reply_to=admin_jid,
+            )
+        await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "creating_password_manual":
+        resp = await handle_ctx_creating_password_manual(msg_lower, message, data, admin_jid, tenant)
+        if resp is None:
+            await _clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(
+                    data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es",
+                    "wa.tenant.client_context.create.cancelled",
+                ),
                 reply_to=admin_jid,
             )
         await _save_ctx(refresh_ttl=True)
         return resp
 
     if step == "creating_confirm":
-        return await handle_ctx_creating_confirm(
+        resp = await handle_ctx_creating_confirm(
             msg_lower,
             message,
             data,
@@ -856,6 +875,47 @@ async def _handle_active_client_context(
             target_phone_norm,
             target_lid,
             _clear_ctx,
+        )
+        if not data.get("temp_data", {}).get("_ctx_cleared"):
+            await _save_ctx(refresh_ttl=True)
+        return resp
+
+    if step == "post_create_menu":
+        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+        if msg_lower == "1":
+            created_client = await clients_repository.get_active_client_by_tenant_phone(
+                db,
+                tenant.id,
+                normalize_phone(data.get("temp_data", {}).get("phone")),
+            )
+            if created_client is not None:
+                data["step"] = "active_menu"
+                await _save_ctx(refresh_ttl=True)
+                return WhatsAppConsoleResponse(
+                    reply=render_initial_context_menu(
+                        tenant=tenant,
+                        target_phone=data.get("temp_data", {}).get("phone"),
+                        active_client=created_client,
+                        inactive_client=None,
+                        blocked=None,
+                        locale=locale,
+                    ),
+                    reply_to=admin_jid,
+                )
+        if msg_lower in ("0", "salir", "cerrar"):
+            await _clear_ctx()
+            close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
+                status="closed",
+                reply_to=admin_jid,
+                close_jid=admin_jid,
+                close_jids=close_jids,
+            )
+        await _save_ctx(refresh_ttl=False)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.client_context.post_create.invalid_option"),
+            reply_to=admin_jid,
         )
 
     # ── Active client menu steps ──────────────────────────────────

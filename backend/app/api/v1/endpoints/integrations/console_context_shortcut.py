@@ -12,6 +12,8 @@ Item 6 responsibilities:
 from __future__ import annotations
 
 import logging
+import secrets
+import string
 
 from uuid import UUID
 
@@ -35,6 +37,24 @@ from app.services.whatsapp_session_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _ctx_locale(tenant: _TenantModel, data: dict | None = None) -> str:
+    if data:
+        temp_data = data.get("temp_data", {})
+        if temp_data.get("locale"):
+            return temp_data["locale"]
+    return getattr(tenant, "locale", "es") or "es"
+
+
+def _ctx_t(tenant: _TenantModel, data: dict, key: str, **kwargs) -> str:
+    return t(_ctx_locale(tenant, data), key, **kwargs)
+
+
+def _generate_client_password(length: int = 14) -> str:
+    alphabet = string.ascii_letters + string.digits + "_-"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
 
 # ====================================================================
 # Context shortcut: Client creation flow (unregistered targets)
@@ -60,18 +80,15 @@ async def handle_ctx_creating_first(
     if target_phone:
         temp_data["phone"] = target_phone
         data["step"] = "creating_name"
-        reply = (
-            "Telefono prefijado: "
-            + (target_phone or "")
-            + "\n\n"
-            + "*Nombre completo* del cliente:"
+        reply = _ctx_t(
+            tenant,
+            data,
+            "wa.tenant.client_context.create.phone_prefilled",
+            identity=target_phone,
         )
     else:
         data["step"] = "creating_phone"
-        reply = (
-            "No se recibio telefono del contacto.\n\n"
-            + "*Telefono* del cliente (o *0* para cancelar):"
-        )
+        reply = _ctx_t(tenant, data, "wa.tenant.client_context.create.phone_prompt")
 
     return WhatsAppConsoleResponse(reply=reply, reply_to=admin_jid)
 
@@ -146,6 +163,7 @@ async def handle_ctx_creating_username(
     message: str,
     data: dict,
     admin_jid: str | None,
+    tenant: _TenantModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle local username input in the creating flow."""
     if msg_lower in ("0", "salir", "cerrar"):
@@ -168,45 +186,79 @@ async def handle_ctx_creating_username(
         )
 
     data["temp_data"]["local_username"] = local_username
-    data["step"] = "creating_password"
+    data["step"] = "creating_password_choice"
     return WhatsAppConsoleResponse(
-        reply="Usuario registrado.\n\n"
-        "*Contrasena* para el cliente (min. 6 caracteres):",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_choice"),
         reply_to=admin_jid,
     )
 
 
-async def handle_ctx_creating_password(
+async def handle_ctx_creating_password_choice(
+    msg_lower: str,
+    data: dict,
+    admin_jid: str | None,
+    tenant: _TenantModel,
+) -> WhatsAppConsoleResponse | None:
+    """Handle password mode selection in the creating flow."""
+    if msg_lower in ("0", "salir", "cerrar"):
+        return None
+
+    if msg_lower == "1":
+        data["temp_data"]["password"] = _generate_client_password()
+        data["temp_data"]["password_mode"] = "generated"
+        data["step"] = "creating_confirm"
+        return WhatsAppConsoleResponse(
+            reply=_creation_summary(tenant, data),
+            reply_to=admin_jid,
+        )
+
+    if msg_lower == "2":
+        data["step"] = "creating_password_manual"
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_manual_prompt"),
+            reply_to=admin_jid,
+        )
+
+    return WhatsAppConsoleResponse(
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_choice_invalid"),
+        reply_to=admin_jid,
+    )
+
+
+async def handle_ctx_creating_password_manual(
     msg_lower: str,
     message: str,
     data: dict,
     admin_jid: str | None,
+    tenant: _TenantModel,
 ) -> WhatsAppConsoleResponse | None:
-    """Handle password input in the creating flow."""
+    """Handle manual password input in the creating flow."""
     if msg_lower in ("0", "salir", "cerrar"):
         return None
 
     password = message.strip()
-    if len(password) < 6:
+    if len(password) < 8:
         return WhatsAppConsoleResponse(
-            reply="La contrasena debe tener al menos 6 caracteres. "
-            "Ingrese la *contrasena* o *0* para cancelar:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_too_short"),
             reply_to=admin_jid,
         )
 
     data["temp_data"]["password"] = password
+    data["temp_data"]["password_mode"] = "manual"
     data["step"] = "creating_confirm"
+    return WhatsAppConsoleResponse(reply=_creation_summary(tenant, data), reply_to=admin_jid)
 
+
+def _creation_summary(tenant: _TenantModel, data: dict) -> str:
     td = data["temp_data"]
-    summary = (
-        "*Resumen de creacion*\n\n"
-        f"Nombre: {td.get('full_name', '')}\n"
-        f"Usuario: {td.get('local_username', '')}\n"
-        f"Telefono: {td.get('phone', '--')}\n\n"
-        "Escriba *CONFIRMAR* para crear el cliente.\n"
-        "O *0* para cancelar."
+    return _ctx_t(
+        tenant,
+        data,
+        "wa.tenant.client_context.create.summary",
+        full_name=td.get("full_name", ""),
+        local_username=td.get("local_username", ""),
+        phone=td.get("phone", "--"),
     )
-    return WhatsAppConsoleResponse(reply=summary, reply_to=admin_jid)
 
 
 async def handle_ctx_creating_confirm(
@@ -226,25 +278,19 @@ async def handle_ctx_creating_confirm(
     context.  Returns the success (or failure) reply.
     """
     if msg_lower in ("0", "salir", "cerrar"):
+        data["temp_data"]["_ctx_cleared"] = True
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="Creacion cancelada.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.cancelled"),
             reply_to=admin_jid,
         )
 
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         td = data["temp_data"]
-        summary = (
-            "*Resumen de creacion*\n\n"
-            f"Nombre: {td.get('full_name', '')}\n"
-            f"Usuario: {td.get('local_username', '')}\n"
-            f"Telefono: {td.get('phone', '--')}\n\n"
-            "Escriba *CONFIRMAR* para crear el cliente.\n"
-            "O *0* para cancelar."
-        )
+        summary = _creation_summary(tenant, data)
         return WhatsAppConsoleResponse(
-            reply="Opcion no valida.\n\n" + summary,
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.confirm_invalid") + "\n\n" + summary,
             reply_to=admin_jid,
         )
 
@@ -260,23 +306,26 @@ async def handle_ctx_creating_confirm(
         client_service = ClientService()
         client = await client_service.create_client(db, tenant.id, payload)
     except UserFacingError as exc:
+        data["temp_data"]["_ctx_cleared"] = True
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"{translate_error('es', exc)}",
+            reply=f"{translate_error(_ctx_locale(tenant, data), exc)}",
             reply_to=admin_jid,
         )
-    except Exception as exc:
+    except Exception:
         logger.exception("Context shortcut client creation failed")
+        data["temp_data"]["_ctx_cleared"] = True
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=f"Error al crear cliente: {exc}",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.error"),
             reply_to=admin_jid,
         )
 
     if client is None:
+        data["temp_data"]["_ctx_cleared"] = True
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply="No se pudo crear el cliente.",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.error"),
             reply_to=admin_jid,
         )
 
@@ -292,13 +341,26 @@ async def handle_ctx_creating_confirm(
     except Exception:
         logger.exception("Failed to clear blocks after context shortcut creation")
 
-    await clear_ctx()
+    data["temp_data"]["client_id"] = str(client.id)
+    data["step"] = "post_create_menu"
+    password_line = ""
+    if td.get("password_mode") == "generated":
+        password_line = _ctx_t(
+            tenant,
+            data,
+            "wa.tenant.client_context.create.success.generated_password_line",
+            password=td.get("password", ""),
+        )
     return WhatsAppConsoleResponse(
-        reply=f"*Cliente creado exitosamente*\n\n"
-        f"Nombre: {client.full_name}\n"
-        f"Usuario: {client.username}\n"
-        f"Telefono: {client.phone or '--'}\n\n"
-        "Use la Consola de Administracion para gestionar suscripciones.",
+        reply=_ctx_t(
+            tenant,
+            data,
+            "wa.tenant.client_context.create.success",
+            full_name=client.full_name,
+            username=client.username,
+            phone=client.phone or "--",
+            password_line=password_line,
+        ),
         reply_to=admin_jid,
     )
 
@@ -989,7 +1051,8 @@ __all__ = [
     "handle_ctx_creating_phone",
     "handle_ctx_creating_name",
     "handle_ctx_creating_username",
-    "handle_ctx_creating_password",
+    "handle_ctx_creating_password_choice",
+    "handle_ctx_creating_password_manual",
     "handle_ctx_creating_confirm",
     "handle_ctx_active_client_menu",
     "handle_ctx_active_detail",

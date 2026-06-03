@@ -166,9 +166,9 @@ async def test_tenant_phone_returns_tenant_console(client, active_tenant_user):
     reply = body["reply"]
     # Must be the tenant console (main menu or fallback), not the login prompt
     assert (
-        "Consola de Administración" in reply
-        or "No entendí" in reply
-        or "opción del menú" in reply
+        "Consola de Administracion" in reply
+        or "No entendi" in reply
+        or "opcion del menu" in reply
         or "Admin Console" in reply
         or "didn't understand" in reply
     )
@@ -1271,9 +1271,9 @@ async def test_from_me_self_target_routes_to_tenant_console(
     assert "Contexto de cliente" not in reply
     # Should be a standard Tenant console reply
     assert (
-        "Consola de Administración" in reply
-        or "No entendí" in reply
-        or "opción del menú" in reply
+        "Consola de Administracion" in reply
+        or "No entendi" in reply
+        or "opcion del menu" in reply
         or "Admin Console" in reply
         or "didn't understand" in reply
         or "nombre de usuario" in reply
@@ -1345,7 +1345,7 @@ async def test_from_me_self_target_by_device_jid_routes_to_tenant_console(
     body = response.json()
     reply = body["reply"]
     assert "Contexto de cliente" not in reply
-    assert "Gestión del cliente" not in reply
+    assert "Gestion del cliente" not in reply
     assert "reply_to" not in body
 
 
@@ -1382,7 +1382,7 @@ async def test_from_me_self_target_by_lid_routes_to_tenant_console(
     body = response.json()
     reply = body["reply"]
     assert "Client management" not in reply
-    assert "Gestión del cliente" not in reply
+    assert "Gestion del cliente" not in reply
     assert "reply_to" not in body
 
 
@@ -1436,9 +1436,9 @@ async def test_from_me_self_target_by_phone_with_client_routes_to_pre_menu(
     body = response.json()
     reply = body["reply"]
     assert "Client management" not in reply
-    assert "Gestión del cliente" not in reply
+    assert "Gestion del cliente" not in reply
     assert "Two profiles detected" in reply or "dos perfiles" in reply
-    assert "Admin panel" in reply or "Panel de administración" in reply
+    assert "Admin panel" in reply or "Panel de administracion" in reply
     assert "reply_to" not in body
 
 
@@ -1476,7 +1476,7 @@ async def test_from_me_non_self_target_routes_to_shortcut(
     assert "reply" in body
     assert body["reply"]
     # Should contain the contextual menu
-    assert "Gestión" in body["reply"]
+    assert "Gestion" in body["reply"]
 
 
 async def test_from_me_owner_fallback_routes_to_console(
@@ -1512,9 +1512,9 @@ async def test_from_me_owner_fallback_routes_to_console(
     # Must route to Tenant console via owner fallback
     assert "Contexto de cliente" not in reply
     assert (
-        "Consola de Administración" in reply
-        or "No entendí" in reply
-        or "opción del menú" in reply
+        "Consola de Administracion" in reply
+        or "No entendi" in reply
+        or "opcion del menu" in reply
         or "Admin Console" in reply
     )
 
@@ -1712,7 +1712,7 @@ async def test_context_shortcut_intercepts_admin_message(
     assert "reply" in body
     reply = body["reply"]
     # Context response should show invalid option i18n text
-    assert "Opción inválida" in reply or "Invalid option" in reply
+    assert "Opcion invalida" in reply or "Invalid option" in reply
     # Must include reply_to for private admin reply
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
@@ -1743,7 +1743,7 @@ async def test_context_shortcut_no_context_falls_through(
     body = response.json()
     assert "reply" in body
     # Should be Tenant console reply, not context shortcut
-    assert "Consola de Administración" in body["reply"] or "No entendí" in body["reply"]
+    assert "Consola de Administracion" in body["reply"] or "No entendi" in body["reply"]
     # No context fields
     assert "reply_to" not in body or body.get("no_reply") is not True
 
@@ -1775,7 +1775,7 @@ async def test_context_shortcut_unblocked_menu_shows_options(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Opción inválida" in body["reply"] or "Invalid option" in body["reply"]
+    assert "Opcion invalida" in body["reply"] or "Invalid option" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
 
@@ -1815,7 +1815,7 @@ async def test_context_shortcut_blocked_menu_shows_unblock(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Opción inválida" in body["reply"] or "Invalid option" in body["reply"]
+    assert "Opcion invalida" in body["reply"] or "Invalid option" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
 
@@ -2084,7 +2084,7 @@ async def test_context_shortcut_invalid_input_does_not_refresh_ttl(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "Opción inválida" in body["reply"] or "Invalid option" in body["reply"]
+    assert "Opcion invalida" in body["reply"] or "Invalid option" in body["reply"]
 
     # TTL should still be 50 (not refreshed to 300)
     assert fake_mgr._redis._ttls.get(ctx_key) == 50
@@ -2173,7 +2173,7 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert "nombre registrado" in reply3
         assert "nombre de usuario" in reply3
 
-        # Step 3: send username → creating_password
+        # Step 3: send username → password choice
         resp4 = await client.post(
             ENDPOINT,
             json={
@@ -2186,9 +2186,23 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert resp4.status_code == 200
         reply4 = resp4.json()["reply"].lower()
         assert "usuario registrado" in reply4
-        assert "contrasena" in reply4
+        assert "generar" in reply4
+        assert "manual" in reply4
 
-        # Step 4: send password → creating_confirm
+        # Step 4: choose manual password
+        resp_choice = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp_choice.status_code == 200
+        assert "8 caracteres" in resp_choice.json()["reply"].lower()
+
+        # Step 5: send password → creating_confirm
         resp5 = await client.post(
             ENDPOINT,
             json={
@@ -2203,7 +2217,7 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert "confirmar" in reply5
         assert "resumen de creacion" in reply5
 
-        # Step 5: CONFIRMAR → client created, blocks cleared, context cleared
+        # Step 6: CONFIRMAR → client created, post-create menu shown
         resp6 = await client.post(
             ENDPOINT,
             json={
@@ -2216,11 +2230,14 @@ async def test_context_creating_phone_skip(client, db_session, active_tenant_use
         assert resp6.status_code == 200
         reply6 = resp6.json()["reply"].lower()
         assert "creado exitosamente" in reply6
+        assert "consola de administracion" not in reply6
+        assert "volver al menu" in reply6
+        assert "cerrar gestion" in reply6
 
-        # Verify context was cleared
+        # Verify context remains for post-create menu
         ctx_key = f"wa:client_ctx:{admin_phone_digits}"
         raw = await fake_mgr._redis.get(ctx_key)
-        assert raw is None
+        assert raw is not None
 
 
 async def test_context_creating_lid_only_prompts_phone(
@@ -2256,7 +2273,7 @@ async def test_context_creating_lid_only_prompts_phone(
         assert resp2.status_code == 200
         reply2 = resp2.json()["reply"].lower()
         assert "telefono" in reply2
-        assert "no se recibio telefono" in reply2
+        assert "asociarlo" in reply2
 
         # Step 2: send phone → creating_name
         resp3 = await client.post(
