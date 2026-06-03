@@ -32,7 +32,7 @@ from app.repositories import blocked_clients_repository, clients_repository
 from app.schemas.client import ClientCreate
 from app.schemas.whatsapp import WhatsAppConsoleResponse
 from app.services.client_service import ClientService
-from app.services.whatsapp_navigation import is_back, is_cancel, is_next
+from app.services.whatsapp_navigation import is_back
 from app.services.whatsapp_session_service import (
     WhatsAppSessionService,
 )
@@ -100,16 +100,8 @@ async def handle_ctx_creating_phone(
     data: dict,
     admin_jid: str | None,
     tenant: _TenantModel,
-) -> WhatsAppConsoleResponse | None:
-    """Handle phone input in the creating flow.
-
-    Returns ``None`` when the admin cancels (``0``), otherwise returns
-    a response advancing to the name step or re-prompting on invalid
-    input.
-    """
-    if msg_lower in ("0", "salir", "cerrar"):
-        return None  # Signal caller to clear context
-
+) -> WhatsAppConsoleResponse:
+    """Handle phone input in the creating flow."""
     stripped = message.strip()
     try:
         normalized = _validate_phone(stripped)
@@ -133,11 +125,8 @@ async def handle_ctx_creating_name(
     data: dict,
     admin_jid: str | None,
     tenant: _TenantModel,
-) -> WhatsAppConsoleResponse | None:
+) -> WhatsAppConsoleResponse:
     """Handle full name input in the creating flow."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        return None
-
     stripped = message.strip()
     if not stripped:
         return WhatsAppConsoleResponse(
@@ -167,11 +156,8 @@ async def handle_ctx_creating_username(
     data: dict,
     admin_jid: str | None,
     tenant: _TenantModel,
-) -> WhatsAppConsoleResponse | None:
+) -> WhatsAppConsoleResponse:
     """Handle local username input in the creating flow."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        return None
-
     stripped = message.strip()
     if not stripped:
         return WhatsAppConsoleResponse(
@@ -200,11 +186,8 @@ async def handle_ctx_creating_password_choice(
     data: dict,
     admin_jid: str | None,
     tenant: _TenantModel,
-) -> WhatsAppConsoleResponse | None:
+) -> WhatsAppConsoleResponse:
     """Handle password mode selection in the creating flow."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        return None
-
     if msg_lower == "1":
         data["temp_data"]["password"] = _generate_client_password()
         data["temp_data"]["password_mode"] = "generated"
@@ -233,11 +216,8 @@ async def handle_ctx_creating_password_manual(
     data: dict,
     admin_jid: str | None,
     tenant: _TenantModel,
-) -> WhatsAppConsoleResponse | None:
+) -> WhatsAppConsoleResponse:
     """Handle manual password input in the creating flow."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        return None
-
     password = message.strip()
     if len(password) < 8:
         return WhatsAppConsoleResponse(
@@ -279,14 +259,6 @@ async def handle_ctx_creating_confirm(
     Creates the client, clears any matching blocks, and clears the
     context.  Returns the success (or failure) reply.
     """
-    if msg_lower in ("0", "salir", "cerrar"):
-        data["temp_data"]["_ctx_cleared"] = True
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.cancelled"),
-            reply_to=admin_jid,
-        )
-
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         td = data["temp_data"]
@@ -390,13 +362,6 @@ async def handle_ctx_active_client_menu(
     2 Crear suscripcion
     0 Cerrar contexto
     """
-    if msg_lower in ("0", "salir", "cerrar"):
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.closed"),
-            reply_to=admin_jid,
-        )
-
     if msg_lower == "1":
         detail = _ctx_t(
             tenant, data, "wa.tenant.client_context.detail.body",
@@ -525,13 +490,6 @@ async def handle_ctx_active_edit_value(
             reply_to=admin_jid,
         )
 
-    if msg_lower in ("0", "salir", "cerrar"):
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.cancelled"),
-            reply_to=admin_jid,
-        )
-
     field = data["temp_data"].get("edit_field", "")
     new_value = message.strip()
     client_id = UUID(data["temp_data"]["client_id"])
@@ -562,7 +520,9 @@ async def handle_ctx_active_edit_value(
             reply_to=admin_jid,
         )
 
-    await clear_ctx()
+    data["temp_data"].pop("edit_field", None)
+    data["step"] = "active_detail"
+    await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
         reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.updated_success", client_name=client.full_name),
         reply_to=admin_jid,
@@ -576,17 +536,10 @@ async def handle_ctx_active_deactivate_confirm(
     admin_jid: str | None,
     tenant: _TenantModel,
     db: AsyncSession,
+    save_ctx,
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle deactivation confirmation for active client."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        reply = _ctx_t(tenant, data, "wa.tenant.client_context.deactivate.cancelled")
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=reply,
-            reply_to=admin_jid,
-        )
-
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
@@ -612,7 +565,11 @@ async def handle_ctx_active_deactivate_confirm(
             reply_to=admin_jid,
         )
 
-    await clear_ctx()
+    # Keep context alive so subsequent ``0`` closes target session
+    data["temp_data"]["menu_variant"] = "existing_inactive"
+    data["temp_data"]["target_state"] = "existing_inactive"
+    data["step"] = "inactive_menu"
+    await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
         reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.success", client_name=client.full_name),
         reply_to=admin_jid,
@@ -643,13 +600,6 @@ async def handle_ctx_inactive_client_menu(
     3 Eliminar
     0 Cerrar contexto
     """
-    if msg_lower in ("0", "salir", "cerrar"):
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.closed"),
-            reply_to=admin_jid,
-        )
-
     if msg_lower == "1":
         client_id = UUID(str(client.id))
         try:
@@ -667,7 +617,12 @@ async def handle_ctx_inactive_client_menu(
                 reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
                 reply_to=admin_jid,
             )
-        await clear_ctx()
+        # Keep context alive so subsequent ``0`` closes target session
+        data["temp_data"]["client_id"] = str(updated.id)
+        data["temp_data"]["menu_variant"] = "existing_active"
+        data["temp_data"]["target_state"] = "existing_active"
+        data["step"] = "active_menu"
+        await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
             reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.reactivate_success", client_name=updated.full_name),
             reply_to=admin_jid,
@@ -743,16 +698,10 @@ async def handle_ctx_inactive_edit_value(
     admin_jid: str | None,
     tenant: _TenantModel,
     db: AsyncSession,
+    save_ctx,
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle new value input for inactive client edit."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.cancelled"),
-            reply_to=admin_jid,
-        )
-
     field = data["temp_data"].get("edit_field", "")
     new_value = message.strip()
     client_id = UUID(data["temp_data"]["client_id"])
@@ -783,7 +732,10 @@ async def handle_ctx_inactive_edit_value(
             reply_to=admin_jid,
         )
 
-    await clear_ctx()
+    # Keep context alive so subsequent ``0`` closes target session
+    data["temp_data"].pop("edit_field", None)
+    data["step"] = "inactive_menu"
+    await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
         reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.updated_success", client_name=client.full_name),
         reply_to=admin_jid,
@@ -797,16 +749,10 @@ async def handle_ctx_inactive_delete_confirm(
     admin_jid: str | None,
     tenant: _TenantModel,
     db: AsyncSession,
+    save_ctx,
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle delete confirmation for inactive client."""
-    if msg_lower in ("0", "salir", "cerrar"):
-        await clear_ctx()
-        return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_cancelled"),
-            reply_to=admin_jid,
-        )
-
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
@@ -847,7 +793,11 @@ async def handle_ctx_inactive_delete_confirm(
             reply_to=admin_jid,
         )
 
-    await clear_ctx()
+    # Client deleted — transition context to unregistered target
+    data["temp_data"]["menu_variant"] = "unregistered"
+    data["temp_data"]["target_state"] = "unregistered_unblocked"
+    data["step"] = "menu"
+    await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
         reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_success", client_name=client_name),
         reply_to=admin_jid,

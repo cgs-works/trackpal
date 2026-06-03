@@ -1042,7 +1042,7 @@ async def _handle_active_client_context(
 
     if step == "active_deactivate_confirm":
         return await handle_ctx_active_deactivate_confirm(
-            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+            msg_lower, message, data, admin_jid, tenant, db, _save_ctx, _clear_ctx
         )
 
     # ── Inactive client menu steps ────────────────────────────────
@@ -1085,12 +1085,12 @@ async def _handle_active_client_context(
 
     if step == "inactive_edit_value":
         return await handle_ctx_inactive_edit_value(
-            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+            msg_lower, message, data, admin_jid, tenant, db, _save_ctx, _clear_ctx
         )
 
     if step == "inactive_delete_confirm":
         return await handle_ctx_inactive_delete_confirm(
-            msg_lower, message, data, admin_jid, tenant, db, _clear_ctx
+            msg_lower, message, data, admin_jid, tenant, db, _save_ctx, _clear_ctx
         )
 
     # Unknown step — clear context and fall through
@@ -1132,7 +1132,11 @@ async def _handle_ctx_unblocked_menu(
             whatsapp_lid=target_lid,
         )
         await db.commit()
-        await clear_ctx()
+        # Keep context alive so subsequent ``0`` closes target session
+        data["step"] = "menu"
+        data["temp_data"]["target_state"] = "unregistered_blocked"
+        data["temp_data"]["menu_variant"] = "blocked"
+        await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.block_access.success", identity=(target_phone or target_lid or "")),
             reply_to=admin_jid,
@@ -1188,7 +1192,11 @@ async def _handle_ctx_blocked_menu(
                 block_id=blocked.id,
             )
             await db.commit()
-        await clear_ctx()
+        # Keep context alive so subsequent ``0`` closes target session
+        data["step"] = "menu"
+        data["temp_data"]["target_state"] = "unregistered_unblocked"
+        data["temp_data"]["menu_variant"] = "unregistered"
+        await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.unblock_access.success", identity=(target_phone or target_lid or "")),
             reply_to=admin_jid,
