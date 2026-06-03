@@ -16,6 +16,7 @@ from app.api.v1.endpoints.integrations.console_handlers import (
     _handle_master_console,
     _handle_tenant_console,
     _handle_unauthenticated_codigo,
+    _unauth_session_key,
 )
 from app.api.v1.endpoints.integrations.console_modes import _handle_ambiguity
 from app.core.config import settings
@@ -40,6 +41,12 @@ logger = logging.getLogger(__name__)
 
 def _tl(tenant: object) -> str:
     return getattr(tenant, "locale", "es") or "es"
+
+
+def _phone_close_jid(phone_digits: str | None) -> str | None:
+    if not phone_digits:
+        return None
+    return f"{phone_digits}@s.whatsapp.net"
 
 
 def _jid_phone(jid: str | None) -> str | None:
@@ -257,9 +264,21 @@ async def _route_by_instance(
         )
 
     if has_client:
+        close_jid = _phone_close_jid(phone_digits)
         if msg_lower in ("codigo", "código", "code"):
             return await _handle_unauthenticated_codigo(
-                phone_digits, message, sender_lid, manager, tenant, db
+                phone_digits, message, sender_lid, manager, tenant, db, close_jid
+            )
+
+        unauth_key = _unauth_session_key(phone_digits, sender_lid, str(tenant.id))
+        session_service = WhatsAppSessionService(
+            connection_manager=manager,
+            ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+        )
+        existing = await session_service.get_session(unauth_key)
+        if existing and existing.flow == "codigo":
+            return await _handle_unauthenticated_codigo(
+                phone_digits, message, sender_lid, manager, tenant, db, close_jid
             )
 
         client_locale = _tl(tenant)
@@ -284,11 +303,8 @@ async def _route_by_instance(
     # Route to code lookup for ``codigo`` keywords, or
     # return silent ``no_reply`` when the sender is blocked.
 
-    from app.api.v1.endpoints.integrations.console_handlers import (
-        _unauth_session_key,
-    )
-
     msg_lower = message.strip().lower()
+    close_jid = _phone_close_jid(phone_digits)
 
     # Block check first — blocked senders always get silent treatment,
     # even when they already have an active ``codigo`` session. The block
@@ -314,13 +330,13 @@ async def _route_by_instance(
         existing = await session_service.get_session(unauth_key)
         if existing and existing.flow == "codigo":
             return await _handle_unauthenticated_codigo(
-                phone_digits, message, sender_lid, manager, tenant, db
+                phone_digits, message, sender_lid, manager, tenant, db, close_jid
             )
 
     # Only "codigo"/"código"/"code" triggers unauthenticated code lookup
     if msg_lower in ("codigo", "código", "code"):
         return await _handle_unauthenticated_codigo(
-            phone_digits, message, sender_lid, manager, tenant, db
+            phone_digits, message, sender_lid, manager, tenant, db, close_jid
         )
 
     return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))
@@ -478,7 +494,11 @@ async def _handle_from_me_routing(
         # Otherwise, reject silently (collision)
         return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
 
-    # ── Step 5: Render real contextual menu ───────────────────────
+    # ── Step 5: Only /menu starts Client Context Shortcut ─────────
+    if message.strip().lower() not in ("/menu", "menu"):
+        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
+
+    # ── Step 6: Render real contextual menu ───────────────────────
     from app.api.v1.endpoints.integrations.console_context_shortcut import (
         render_initial_context_menu,
     )
@@ -511,7 +531,7 @@ async def _handle_from_me_routing(
 
     await manager.execute("set_context", _set_ctx)
 
-    # ── Step 6: Return contextual response with reply_to and close_jid ─
+    # ── Step 7: Return contextual response with reply_to and close_jid ─
     # close_jid tells n8n which chat to close when the admin sends
     # "0"/"salir"/"cerrar" in the client-shortcut flow.
     return WhatsAppConsoleResponse(

@@ -174,14 +174,15 @@ To keep endpoint modules maintainable and within team size policy, the console e
 
 ## From-me Contextual Routing
 
-When ``from_me=true`` in the request, the message was sent by an admin from their own WhatsApp chat (outgoing ``/menu`` trigger). The backend routes these through ``_handle_from_me_routing()`` before the regular identity checks:
+When ``from_me=true`` in the request, the message was sent by an admin from their own WhatsApp chat (outgoing shortcut trigger). The backend routes these through ``_handle_from_me_routing()`` before the regular identity checks:
 
 1. **Resolve admin identity**: Use ``admin_phone`` if provided, otherwise fall back to ``tenant.whatsapp_phone`` (instance owner).
 2. **Determine target identity**: Normalise ``target_phone`` if available.
 3. **Self-target check**: If the target (phone or JID) matches the admin's own identity, route to the standard Tenant console.
-4. **Active context collision**: If a context session already exists at ``wa:client_ctx:{admin_phone}``, reject with ``no_reply=true`` and ``reply_to=<admin_jid>`` (keeps the rejection private).
-5. **Create context session**: Store a ``ConversationSession`` under ``wa:client_ctx:{admin_phone}`` with 5-minute TTL, setting step to ``menu`` and persisting ``target_phone``, ``target_lid``, ``target_jid``, and ``admin_jid`` in ``temp_data``.
-6. **Return contextual response**: Reply with the context initiation message and ``reply_to=admin_jid`` so n8n sends the reply privately to the admin chat.
+4. **Active context collision**: If a context session already exists at ``wa:client_ctx:{admin_phone}``, reject with ``no_reply=true`` and ``reply_to=<admin_jid>`` (keeps the rejection private), except ``0``/``salir``/``cerrar`` which close the active context.
+5. **Shortcut gate**: Only ``/menu``/``menu`` creates a Client Context Shortcut for a non-self target. Other non-self messages, including ``code``/``codigo``/``código``, return ``no_reply=true`` and do not create context.
+6. **Create context session**: Store a ``ConversationSession`` under ``wa:client_ctx:{admin_phone}`` with 5-minute TTL, setting step to ``menu`` and persisting ``target_phone``, ``target_lid``, ``target_jid``, and ``admin_jid`` in ``temp_data``.
+7. **Return contextual response**: Reply with the context initiation message and ``reply_to=admin_jid`` so n8n sends the reply privately to the admin chat.
 
 ## Unauthenticated Code Lookup
 
@@ -190,10 +191,12 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 1. Messages ``codigo``, ``código``, or ``code`` trigger the flow.
 2. Backend checks for Client Messaging Blocks first — blocked identities receive ``no_reply=true``.
 3. Redis lookup is guarded: if the context/session cache is unavailable, the handler falls back safely instead of failing the webhook.
-4. Session stored under ``session:unreg:{phone}`` or ``session:unreg:{lid}`` for multi-step dialog.
-5. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``.
-5. n8n polls the job and sends the final result.
-6. Non-codigo messages from unregistered identities return ``access_denied``.
+4. Session stored under ``session:unreg:{tenant-prefix}:{phone}`` or ``session:unreg:{tenant-prefix}:{lid}`` for the multi-step dialog.
+5. Registered clients with an active unauthenticated codigo session resume that session before the read-only Client Console, so ``0`` cancels codigo rather than exiting the Client Console.
+6. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``.
+7. n8n polls the job and sends the final result.
+8. ``0``/cancel inside the dialog clears the Redis session and returns ``status="closed"`` with phone-based ``reply_to``/``close_jid`` when the phone is known, so Evolution Go closes the correct chat session.
+9. Non-codigo messages from unregistered identities return ``access_denied``.
 
 ## Client Context Shortcut
 

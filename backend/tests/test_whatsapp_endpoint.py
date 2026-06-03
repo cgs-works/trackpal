@@ -1263,6 +1263,96 @@ async def test_unregistered_codigo_service_cancel_returns_cancelled(
     assert "cancelada" in body["reply"].lower() or "cancelled" in body["reply"].lower()
 
 
+async def test_unregistered_codigo_service_cancel_sets_closed_status(
+    client, db_session, active_tenant_user
+):
+    """Sending 0 during unauth codigo service selection closes Evolution session."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "Netflix" in resp1.json()["reply"]
+
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "0",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert resp2.status_code == 200
+    body = resp2.json()
+    assert body.get("status") == "closed"
+    assert body.get("reply_to") == "12015559999@s.whatsapp.net"
+    assert body.get("close_jid") == "12015559999@s.whatsapp.net"
+
+
+async def test_registered_client_codigo_cancel_resumes_codigo_not_client_console(
+    client, db_session, active_tenant_user
+):
+    """Registered clients with active unauth codigo session cancel codigo, not client console."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    db_session.add(
+        Client(
+            tenant_id=tenant.id,
+            owner_user_id=active_tenant_user.id,
+            username="registered-client",
+            phone="12015559999",
+            full_name="Registered Client",
+            is_active=True,
+        )
+    )
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        resp1 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "Netflix" in resp1.json()["reply"]
+
+        resp2 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "0",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert resp2.status_code == 200
+    body = resp2.json()
+    assert body.get("status") == "closed"
+    assert body.get("close_jid") == "12015559999@s.whatsapp.net"
+    assert "consola del cliente" not in body["reply"].lower()
+    assert "client console" not in body["reply"].lower()
+
+
 async def test_unregistered_codigo_service_cancel_with_alias_returns_cancelled(
     client, db_session, active_tenant_user
 ):
@@ -1370,6 +1460,73 @@ async def _setup_tenant_with_instance(db_session, active_tenant_user):
     tenant.locale = "es"
     await db_session.commit()
     return tenant
+
+
+async def test_from_me_code_to_non_self_target_is_silent_and_no_context(
+    client, db_session, active_tenant_user
+):
+    """from_me code/codigo to another chat does not start Client Context Shortcut."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "code",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002:81@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("no_reply") is True
+    assert body.get("reply") == ""
+    assert await fake_mgr._redis.get(f"wa:client_ctx:{admin_phone_digits}") is None
+
+
+async def test_from_me_menu_to_unregistered_target_starts_context(
+    client, db_session, active_tenant_user
+):
+    """from_me /menu still opens Client Context Shortcut for unregistered targets."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": "12015550002:81@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("no_reply") is not True
+    assert await fake_mgr._redis.get(f"wa:client_ctx:{admin_phone_digits}") is not None
 
 
 async def test_from_me_self_target_routes_to_tenant_console(

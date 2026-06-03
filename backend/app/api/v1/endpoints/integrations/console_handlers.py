@@ -49,7 +49,7 @@ from app.services.whatsapp_session_service import (
 )
 from app.services.whatsapp_tenant_console_facade import WhatsAppTenantConsoleFacade
 from app.services.whatsapp_tenant_console_service import WhatsAppTenantConsoleService
-from app.services.whatsapp_navigation import is_back, is_cancel
+from app.services.whatsapp_navigation import is_cancel
 
 from app.api.v1.endpoints.integrations.adapter import (
     _TenantConsoleAdapter,
@@ -414,6 +414,7 @@ async def _handle_unauthenticated_codigo(
     manager: RedisConnectionManager,
     tenant: Tenant,
     db: AsyncSession,
+    close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Start or continue code lookup for an unregistered WhatsApp identity.
 
@@ -486,12 +487,12 @@ async def _handle_unauthenticated_codigo(
 
     if session.step == _UNAUTH_CODIGO_STEP_SERVICE:
         return await _handle_unauth_codigo_service(
-            msg, session, session_service, session_key, tenant, db, locale
+            msg, session, session_service, session_key, tenant, db, locale, close_jid
         )
 
     if session.step == _UNAUTH_CODIGO_STEP_EMAIL:
         return await _handle_unauth_codigo_email(
-            msg, session, session_service, session_key, tenant, db, locale, manager
+            msg, session, session_service, session_key, tenant, db, locale, manager, close_jid
         )
 
     await session_service.clear_session(session_key)
@@ -506,6 +507,7 @@ async def _handle_unauth_codigo_service(
     tenant: Tenant,
     db: AsyncSession,
     locale: str,
+    close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Handle service selection in unauthenticated code lookup."""
     effective_keys = session.temp_data.get("codigo_effective_keys", [])
@@ -518,7 +520,12 @@ async def _handle_unauth_codigo_service(
     # Check cancel first
     if is_cancel(msg):
         await session_service.clear_session(session_key)
-        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.cancelled"),
+            status="closed",
+            reply_to=close_jid,
+            close_jid=close_jid,
+        )
 
     try:
         idx = int(msg.strip())
@@ -554,12 +561,18 @@ async def _handle_unauth_codigo_email(
     db: AsyncSession,
     locale: str,
     manager: RedisConnectionManager,
+    close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Handle email input, create lookup job, and return response with job_id."""
     # Check cancel
     if is_cancel(msg):
         await session_service.clear_session(session_key)
-        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.cancelled"),
+            status="closed",
+            reply_to=close_jid,
+            close_jid=close_jid,
+        )
 
     target_email = msg.strip()
     if (
