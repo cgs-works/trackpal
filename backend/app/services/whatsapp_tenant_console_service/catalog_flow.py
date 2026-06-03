@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.core.errors import UserFacingError, translate_error
+from app.services.whatsapp_navigation import is_back, is_cancel, is_next
 
 from . import _context as ctx
 
@@ -33,7 +34,7 @@ async def _fetch_service_list(self, tenant_id, db):
 
 
 async def _handle_catalog_service_select(self, phone, msg, session, session_service, tenant_id, db):
-    if msg == "0":
+    if is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
@@ -83,7 +84,7 @@ async def _handle_catalog_service_action(self, phone, msg, session, session_serv
         if session_service is not None:
             await session_service.save_session(session)
         return reply + "\n\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
-    elif msg == "0":
+    elif is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
@@ -119,7 +120,7 @@ async def _handle_catalog_edit_service(self, phone, msg, session, session_servic
 
 
 async def _handle_catalog_plan_select(self, phone, msg, session, session_service, tenant_id, db):
-    if msg == "0":
+    if is_back(msg):
         reply, selection_map = await self._fetch_service_list(tenant_id, db)
         if reply is None:
             if session_service is not None:
@@ -168,7 +169,7 @@ async def _handle_catalog_plan_action(self, phone, msg, session, session_service
         if session_service is not None:
             await session_service.save_session(session)
         return self._t(self.KEY_CATALOG_PLAN_EDIT_PROMPT)
-    elif msg == "0":
+    elif is_back(msg):
         reply, selection_map = await self._fetch_service_list(tenant_id, db)
         if reply is None:
             if session_service is not None:
