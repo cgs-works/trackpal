@@ -297,7 +297,7 @@ async def _route_by_instance(
     # Resume any existing unauthenticated codigo session first so the
     # multi-step dialog can continue across messages.
     if msg_lower not in ("codigo", "código", "code"):
-        unauth_key = _unauth_session_key(phone_digits, sender_lid)
+        unauth_key = _unauth_session_key(phone_digits, sender_lid, str(tenant.id))
         session_service = WhatsAppSessionService(
             connection_manager=manager,
             ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,

@@ -73,13 +73,20 @@ _UNAUTH_CODIGO_SERVICE_LABELS: dict[str, str] = {
 }
 
 
-def _unauth_session_key(phone_digits: str, sender_lid: str | None) -> str:
-    """Session key for unregistered identity code lookup."""
+def _unauth_session_key(phone_digits: str, sender_lid: str | None, tenant_id: str | None = None) -> str:
+    """Session key for unregistered identity code lookup.
+
+    Includes tenant_id when available to prevent collision when the same
+    phone reaches two different tenant instances.
+    """
+    prefix = "unreg"
+    if tenant_id:
+        prefix += f":{tenant_id[:8]}"
     if phone_digits:
-        return f"unreg:{phone_digits}"
+        return f"{prefix}:{phone_digits}"
     if sender_lid:
-        return f"unreg:{sender_lid}"
-    return "unreg:unknown"
+        return f"{prefix}:{sender_lid}"
+    return f"{prefix}:unknown"
 
 
 auth_service = AuthService()
@@ -387,7 +394,7 @@ async def _handle_unauthenticated_codigo(
     """
     locale = getattr(tenant, "locale", "es") or "es"
     msg = message.strip()
-    session_key = _unauth_session_key(phone_digits, sender_lid)
+    session_key = _unauth_session_key(phone_digits, sender_lid, str(tenant.id))
 
     session_service = WhatsAppSessionService(
         connection_manager=manager,
@@ -529,6 +536,10 @@ async def _handle_unauth_codigo_email(
         or "@" not in target_email
         or "." not in target_email.split("@", 1)[1]
     ):
+        session.step = _UNAUTH_CODIGO_STEP_SERVICE
+        session.temp_data.pop("service_key", None)
+        session.temp_data.pop("service_label", None)
+        await session_service.save_session(session)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_email")
         )
