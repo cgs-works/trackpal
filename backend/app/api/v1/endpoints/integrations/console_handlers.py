@@ -191,6 +191,7 @@ async def _handle_tenant_console(
     instance: str | None,
     manager: RedisConnectionManager,
     db: AsyncSession,
+    close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Handle message from identified Tenant Admin user."""
     session_service = WhatsAppSessionService(
@@ -347,6 +348,9 @@ async def _handle_tenant_console(
     )
     if exit_cmd:
         resp.status = "closed"
+        if close_jid:
+            resp.close_jid = close_jid
+            resp.reply_to = close_jid
     return resp
 
 
@@ -363,6 +367,7 @@ async def _handle_client_console(
     db: AsyncSession,
     identity: dict,
     locale: str = "es",
+    close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Handle message from identified Client user."""
     session_service = WhatsAppSessionService(
@@ -391,6 +396,9 @@ async def _handle_client_console(
     resp = WhatsAppConsoleResponse(reply=reply)
     if exit_cmd:
         resp.status = "closed"
+        if close_jid:
+            resp.close_jid = close_jid
+            resp.reply_to = close_jid
     return resp
 
 

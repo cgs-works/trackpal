@@ -232,6 +232,7 @@ async def _route_by_instance(
             db=db,
             tenant=tenant,
             client=client,
+            close_jid=_canonical_jid(admin_jid) or admin_jid,
         )
 
     if has_tenant_admin:
@@ -252,6 +253,7 @@ async def _route_by_instance(
             instance=instance,
             manager=manager,
             db=db,
+            close_jid=_canonical_jid(admin_jid) or admin_jid,
         )
 
     if has_client:
@@ -432,6 +434,7 @@ async def _handle_from_me_routing(
                 db=db,
                 tenant=tenant,
                 client=client,
+                close_jid=_canonical_jid(admin_jid) or admin_jid,
             )
 
         return await _handle_tenant_console(
@@ -440,6 +443,7 @@ async def _handle_from_me_routing(
             instance=instance,
             manager=manager,
             db=db,
+            close_jid=_canonical_jid(admin_jid) or admin_jid,
         )
 
     # ── Step 4: Check for existing active context ─────────────────

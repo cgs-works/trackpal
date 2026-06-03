@@ -55,6 +55,7 @@ async def _handle_ambiguity(
     db: AsyncSession,
     tenant: Any,
     client: Any,
+    close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Handle phone matching both tenant admin and client."""
     from app.api.v1.endpoints.integrations.console import _tl
@@ -79,9 +80,13 @@ async def _handle_ambiguity(
         )
         await cleanup_svc.clear_session(f"admin:{phone}")
         await cleanup_svc.clear_session(f"client:{phone}")
-        return WhatsAppConsoleResponse(
+        resp = WhatsAppConsoleResponse(
             reply=t(locale, "wa.client.mode_exit"), status="closed"
         )
+        if close_jid:
+            resp.close_jid = close_jid
+            resp.reply_to = close_jid
+        return resp
 
     stored_mode = await _get_mode(manager, phone)
 
@@ -93,6 +98,7 @@ async def _handle_ambiguity(
             instance=instance,
             manager=manager,
             db=db,
+            close_jid=close_jid,
         )
 
     if msg_lower in ("menu", "/menu"):
@@ -103,6 +109,7 @@ async def _handle_ambiguity(
                 instance=instance,
                 manager=manager,
                 db=db,
+                close_jid=close_jid,
             )
         if stored_mode == "client":
             return await _handle_client_console(
@@ -113,6 +120,7 @@ async def _handle_ambiguity(
                 db=db,
                 identity=_client_identity(client, tenant),
                 locale=locale,
+                close_jid=close_jid,
             )
 
         await _clear_mode(manager, phone)
@@ -126,6 +134,7 @@ async def _handle_ambiguity(
             instance=instance,
             manager=manager,
             db=db,
+            close_jid=close_jid,
         )
     if stored_mode == "client":
         return await _handle_client_console(
@@ -136,6 +145,7 @@ async def _handle_ambiguity(
             db=db,
             identity=_client_identity(client, tenant),
             locale=locale,
+            close_jid=close_jid,
         )
 
     if msg == "1":
@@ -146,6 +156,7 @@ async def _handle_ambiguity(
             instance=instance,
             manager=manager,
             db=db,
+            close_jid=close_jid,
         )
     if msg == "2":
         await _set_mode(manager, phone, "client")
@@ -157,6 +168,7 @@ async def _handle_ambiguity(
             db=db,
             identity=_client_identity(client, tenant),
             locale=locale,
+            close_jid=close_jid,
         )
 
     return WhatsAppConsoleResponse(reply=t(locale, "wa.client.mode_prompt"))
