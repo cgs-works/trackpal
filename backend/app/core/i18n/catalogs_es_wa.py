@@ -6,6 +6,11 @@ from typing import Final
 
 _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.cancelled": "🚫 Operacion cancelada.",
+    # ── WhatsApp console navigation labels ─────────────────────────
+    "wa.nav.next": "8️⃣ Siguiente",
+    "wa.nav.back": "9️⃣ Regresar",
+    "wa.nav.cancel": "0️⃣ Cancelar",
+    "wa.nav.invalid_option": "❌ Opcion invalida. Usa *8* para siguiente, *9* para regresar o *0* para cancelar cuando esas opciones esten disponibles.",
     # ── WhatsApp tenant console error messages ──────────────────────
     "wa.tenant.errors.client_create_service_unavailable": "❌ No se pudo crear el cliente. Servicio no disponible.",
     "wa.tenant.errors.client_create_failed_generic": "❌ Error al crear el cliente.",
