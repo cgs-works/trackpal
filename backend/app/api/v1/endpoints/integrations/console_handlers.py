@@ -72,6 +72,44 @@ _UNAUTH_CODIGO_SERVICE_LABELS: dict[str, str] = {
     "universal_plus": "Universal+",
 }
 
+_UNAUTH_PAGE_SIZE = 7
+
+
+def _build_unauth_service_page(
+    effective_keys: list[str],
+    page: int,
+    locale: str,
+) -> str:
+    """Build formatted service list for a given page.
+
+    Service options use ``[N]`` format (page-relative 1-7). Navigation
+    options ``8️⃣`` (previous), ``9️⃣`` (next), and
+    ``0️⃣`` (cancel) use emoji.
+    """
+    total = len(effective_keys)
+    total_pages = (total + _UNAUTH_PAGE_SIZE - 1) // _UNAUTH_PAGE_SIZE
+    start = page * _UNAUTH_PAGE_SIZE
+    end = min(start + _UNAUTH_PAGE_SIZE, total)
+
+    lines: list[str] = []
+    for i in range(start, end):
+        rel = i - start + 1
+        key = effective_keys[i]
+        label = _UNAUTH_CODIGO_SERVICE_LABELS.get(key, key.capitalize())
+        lines.append(f"[{rel}] {label}")
+
+    if total_pages > 1:
+        lines.append("")
+        if page > 0:
+            lines.append("8️⃣ " + _i18n_t(locale, "wa.tenant.codigo.prev_page"))
+        if page < total_pages - 1:
+            lines.append("9️⃣ " + _i18n_t(locale, "wa.tenant.codigo.next_page"))
+
+    lines.append("")
+    lines.append("0️⃣ " + _i18n_t(locale, "wa.tenant.codigo.cancel_direct"))
+
+    return "\n".join(lines)
+
 
 def _unauth_session_key(phone_digits: str, sender_lid: str | None, tenant_id: str | None = None) -> str:
     """Session key for unregistered identity code lookup.
@@ -459,19 +497,17 @@ async def _handle_unauthenticated_codigo(
                 reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
             )
 
-        # Build service list display
-        lines: list[str] = []
-        for i, key in enumerate(effective_keys, start=1):
-            label = _UNAUTH_CODIGO_SERVICE_LABELS.get(key, key.capitalize())
-            lines.append(f"{i}\U0001f53b {label}")
-        lines.append("0\U0001f53b " + _i18n_t(locale, "wa.tenant.codigo.cancel_direct"))
-        service_list = "\n".join(lines)
+        # Build service list display (paginated)
+        service_list = _build_unauth_service_page(effective_keys, 0, locale)
 
         # Create session with flow state
         session = await session_service.create_session(session_key)
         session.flow = _UNAUTH_CODIGO_FLOW
         session.step = _UNAUTH_CODIGO_STEP_SERVICE
-        session.temp_data = {"codigo_effective_keys": effective_keys}
+        session.temp_data = {
+            "codigo_effective_keys": effective_keys,
+            "codigo_current_page": 0,
+        }
         await session_service.save_session(session)
 
         return WhatsAppConsoleResponse(
@@ -509,7 +545,10 @@ async def _handle_unauth_codigo_service(
     locale: str,
     close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
-    """Handle service selection in unauthenticated code lookup."""
+    """Handle service selection in unauthenticated code lookup.
+
+    Supports pagination: 8 = previous page, 9 = next page.
+    """
     effective_keys = session.temp_data.get("codigo_effective_keys", [])
     if not effective_keys:
         await session_service.clear_session(session_key)
@@ -534,12 +573,47 @@ async def _handle_unauth_codigo_service(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
         )
 
-    if idx < 1 or idx > len(effective_keys):
+    total = len(effective_keys)
+    total_pages = (total + _UNAUTH_PAGE_SIZE - 1) // _UNAUTH_PAGE_SIZE
+    current_page = session.temp_data.get("codigo_current_page", 0)
+
+    # Pagination
+    if idx == 9 and total_pages > 1 and current_page < total_pages - 1:
+        current_page += 1
+        session.temp_data["codigo_current_page"] = current_page
+        await session_service.save_session(session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.codigo.service_prompt",
+                service_list=_build_unauth_service_page(
+                    effective_keys, current_page, locale
+                ),
+            )
+        )
+
+    if idx == 8 and total_pages > 1 and current_page > 0:
+        current_page -= 1
+        session.temp_data["codigo_current_page"] = current_page
+        await session_service.save_session(session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.codigo.service_prompt",
+                service_list=_build_unauth_service_page(
+                    effective_keys, current_page, locale
+                ),
+            )
+        )
+
+    # Page-relative index → actual index
+    actual_idx = current_page * _UNAUTH_PAGE_SIZE + (idx - 1)
+    if actual_idx < 0 or actual_idx >= total:
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_service")
         )
 
-    service_key = effective_keys[idx - 1]
+    service_key = effective_keys[actual_idx]
     label = _UNAUTH_CODIGO_SERVICE_LABELS.get(service_key, service_key.capitalize())
 
     session.temp_data["service_key"] = service_key
