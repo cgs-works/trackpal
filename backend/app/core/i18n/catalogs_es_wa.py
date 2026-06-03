@@ -197,6 +197,8 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.codigo.menu": "🔑 *Buscar Codigo de Acceso*",
     "wa.tenant.codigo.cancel": "Volver al menu principal",
     "wa.tenant.codigo.cancel_direct": "Cancelar",
+    "wa.tenant.codigo.prev_page": "Pagina anterior",
+    "wa.tenant.codigo.next_page": "Pagina siguiente",
     "wa.tenant.codigo.service_prompt": "🔑 *Buscar Codigo de Acceso*\n\nPara que servicio necesitas el codigo?\n\n{service_list}\n\nResponde con el numero del servicio.",
     "wa.tenant.codigo.email_prompt": "✉️ *Buscar Codigo de Acceso*\n\nServicio: *{service_label}*\n\nCual es el *email* del usuario en {service_label}?\n\nLo usaremos para buscar el codigo en la bandeja del buzon tecnico.\n\nEscribe el email o *0* para cancelar.",
     "wa.tenant.codigo.buscando": "🔍 *Buscando codigo...*\n\nEstamos revisando los correos de los ultimos 5 minutos.\n\nEn unos segundos recibiras el resultado.",

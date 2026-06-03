@@ -29,6 +29,48 @@ _CODIGO_SERVICE_LABELS: dict[str, str] = {
     "universal_plus": "Universal+",
 }
 
+_PAGE_SIZE = 7
+
+
+def _build_service_page(
+    effective_keys: list[str],
+    page: int,
+    loc: str,
+    started_from_menu: bool,
+) -> str:
+    """Build formatted service list for a given page.
+
+    Service options use ``[N]`` format (page-relative 1-7). Navigation
+    options ``8  `` (previous), ``9  `` (next), and ``0  `` (cancel) use
+    emoji to avoid confusion.
+    """
+    total = len(effective_keys)
+    total_pages = (total + _PAGE_SIZE - 1) // _PAGE_SIZE
+    start = page * _PAGE_SIZE
+    end = min(start + _PAGE_SIZE, total)
+
+    lines: list[str] = []
+    for i in range(start, end):
+        rel = i - start + 1
+        key = effective_keys[i]
+        label = _CODIGO_SERVICE_LABELS.get(key, key.capitalize())
+        lines.append(f"[{rel}] {label}")
+
+    if total_pages > 1:
+        if page > 0:
+            lines.append("8   " + _i18n_t(loc, "wa.tenant.codigo.prev_page"))
+        if page < total_pages - 1:
+            lines.append("9   " + _i18n_t(loc, "wa.tenant.codigo.next_page"))
+
+    cancel_key = (
+        "wa.tenant.codigo.cancel"
+        if started_from_menu
+        else "wa.tenant.codigo.cancel_direct"
+    )
+    lines.append("0   " + _i18n_t(loc, cancel_key))
+
+    return "\n".join(lines)
+
 
 async def _start_codigo_flow(
     self,
@@ -40,7 +82,7 @@ async def _start_codigo_flow(
     started_from_menu: bool = False,
     role: str = "tenant",
 ) -> str:
-    """Entry point — show list of available services for code lookup."""
+    """Entry point -- show list of available services for code lookup."""
     loc = ctx.get_locale()
 
     # Check mailbox is configured
@@ -63,19 +105,10 @@ async def _start_codigo_flow(
             return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_CLIENT)
         return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
 
-    # Build service list from effective keys
-    lines = []
-    for i, key in enumerate(effective_keys, start=1):
-        label = _CODIGO_SERVICE_LABELS.get(key, key.capitalize())
-        lines.append(f"{i}️⃣ {label}")
-    cancel_key = (
-        "wa.tenant.codigo.cancel"
-        if started_from_menu
-        else "wa.tenant.codigo.cancel_direct"
+    # Build page 1 of services
+    service_list = _build_service_page(
+        effective_keys, 0, loc, started_from_menu
     )
-    lines.append("0️⃣ " + _i18n_t(loc, cancel_key))
-
-    service_list = "\n".join(lines)
 
     # Create session with flow state
     session = await session_service.get_session(f"admin:{phone}")
@@ -87,6 +120,7 @@ async def _start_codigo_flow(
     session.temp_data = {
         "codigo_started_from_menu": "true" if started_from_menu else "false",
         "codigo_effective_keys": effective_keys,
+        "codigo_current_page": 0,
     }
     await session_service.save_session(session)
 
@@ -139,16 +173,49 @@ async def _handle_codigo_service(
         await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
 
-    # Parse selection
+    # Parse selection (supports pagination)
     try:
         idx = int(msg.strip())
     except ValueError:
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
-    if idx < 1 or idx > len(effective_keys):
+    current_page = session.temp_data.get("codigo_current_page", 0)
+    total = len(effective_keys)
+    total_pages = (total + _PAGE_SIZE - 1) // _PAGE_SIZE
+
+    # Pagination: next page
+    if idx == 9 and total_pages > 1 and current_page < total_pages - 1:
+        session.temp_data["codigo_current_page"] = current_page + 1
+        await session_service.save_session(session)
+        service_list = _build_service_page(
+            effective_keys,
+            current_page + 1,
+            loc,
+            session.temp_data.get("codigo_started_from_menu") == "true",
+        )
+        return self._t(self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list)
+
+    # Pagination: previous page
+    if idx == 8 and total_pages > 1 and current_page > 0:
+        session.temp_data["codigo_current_page"] = current_page - 1
+        await session_service.save_session(session)
+        service_list = _build_service_page(
+            effective_keys,
+            current_page - 1,
+            loc,
+            session.temp_data.get("codigo_started_from_menu") == "true",
+        )
+        return self._t(self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list)
+
+    # Validate index within current page
+    if idx < 1 or idx > _PAGE_SIZE:
         return self._t(self.KEY_CODIGO_INVALID_SERVICE)
 
-    service_key = effective_keys[idx - 1]
+    actual_idx = current_page * _PAGE_SIZE + (idx - 1)
+    if actual_idx >= total:
+        return self._t(self.KEY_CODIGO_INVALID_SERVICE)
+
+    service_key = effective_keys[actual_idx]
     label = _CODIGO_SERVICE_LABELS.get(service_key, service_key.capitalize())
 
     # Store selection and advance step
