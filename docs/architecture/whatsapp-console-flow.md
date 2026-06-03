@@ -372,6 +372,29 @@ Package: `backend/app/services/tenant_console_protocols/`. Submodules: `protocol
 
 Defines `ClientServiceProtocol`, `CatalogServiceProtocol`, and `SubscriptionServiceProtocol` for DI and to avoid circular imports.
 
+## Global WhatsApp Navigation Contract
+
+All WhatsApp console flows use the same strict numeric navigation contract:
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `8` | Siguiente / Next | Advance to the next page or interactive screen when available |
+| `9` | Regresar / Back | Return to the previous screen without cancelling the whole session |
+| `0` | Cancelar / Cancel | Cancel the active flow or close the console from a main menu |
+
+This contract applies to every console family:
+- **Master Console** — tenant create/edit/list/detail/lifecycle
+- **Tenant Admin Console** — clients, catalog, profile, subscriptions, access-code lookup
+- **Client Console** — profile view, subscriptions lookup
+- **Client Context Shortcut** — quick client management from WhatsApp
+- **Ambiguity Mode** — role selection when a user has both admin and client profiles
+- **Unauthenticated code lookup** — access-code lookup without login
+
+The contract is enforced by:
+- A shared `whatsapp_navigation.py` module with helper predicates (`is_cancel`, `is_back`, `is_next`) and a screen-stack API (`push_screen`, `pop_screen`, `replace_screen`, `clear_navigation`).
+- Contract tests (`test_whatsapp_console_navigation_contract.py`) that scan all source and catalog files for conflicting numeric navigation patterns.
+- Shared i18n labels under the `wa.nav.*` prefix in both English and Spanish catalogs.
+
 ## Shared session behavior
 
 - Master conversation state key: `session:{phone}`
@@ -379,7 +402,7 @@ Defines `ClientServiceProtocol`, `CatalogServiceProtocol`, and `SubscriptionServ
 - Client Context Shortcut key: `wa:client_ctx:{admin_phone}` (5-minute TTL)
 - Unauthenticated code lookup key: `session:unreg:{phone}` or `session:unreg:{lid}` (standard session TTL)
 - TTL: 15 minutes (standard); 5 minutes (context shortcut)
-- `0` is global exit across top-level and active flows
+- `0` is global exit across top-level and active flows; `9` goes back without cancelling; `8` advances to next screen when offered
 - Invalid input does not refresh TTL
 - Only valid contextual messages refresh contextual TTL
 
