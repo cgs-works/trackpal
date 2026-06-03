@@ -42,6 +42,9 @@ class EvolutionClient:
         payload = {
             "name": evolution_instance_name,
             "token": instance_token,
+            "advancedSettings": {
+                "ignoreGroups": True,
+            },
         }
         async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
             response = await client.post(

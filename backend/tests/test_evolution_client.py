@@ -36,7 +36,11 @@ class TestCreateInstance:
 
         mock_ctx.post.assert_called_once_with(
             "/instance/create",
-            json={"name": "tenant-acme", "token": "instance-token"},
+            json={
+                "name": "tenant-acme",
+                "token": "instance-token",
+                "advancedSettings": {"ignoreGroups": True},
+            },
             headers={"Content-Type": "application/json", "apikey": "global-key"},
         )
         assert result == {"instance_id": "inst-id", "instance_token": "instance-token"}
