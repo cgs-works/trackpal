@@ -135,7 +135,6 @@ def push_screen(session: Any, screen_id: str, **params: str) -> None:
 def pop_screen(session: Any) -> ConsoleScreen | None:
     state = load_navigation(session)
     if not state.stack:
-        save_navigation(session, ConsoleNavigationState(current=None, stack=[]))
         return None
     stack = list(state.stack)
     previous = stack.pop()
