@@ -207,6 +207,26 @@ class TestHelp:
         assert "menu" in reply.lower()
         assert "/menu" in reply.lower()
 
+    # ------------------------------------------------------------------
+    # Navigation contract: 8 next, 9 back, 0 cancel
+    # ------------------------------------------------------------------
+
+    async def test_help_text_contains_0_cancels(
+        self, console_service: WhatsAppConsoleService
+    ) -> None:
+        """HELP_TEXT must show 0 cancels, 9 goes back, 8 advances."""
+        reply = console_service.HELP_TEXT
+        assert "*0* cancela" in reply.lower()
+        assert "*9* regresa" in reply.lower()
+        assert "*8* avanza" in reply.lower()
+
+    async def test_help_text_no_old_nine_as_cancel(
+        self, console_service: WhatsAppConsoleService
+    ) -> None:
+        """HELP_TEXT must NOT claim *9* cancels the operation."""
+        reply = console_service.HELP_TEXT
+        assert "*9* o *cancelar* cancelan" not in reply
+
 
 # ---------------------------------------------------------------------------
 # Global reset commands
@@ -284,6 +304,52 @@ class TestResetCommands:
             is_master=True,
         )
         assert "Trackpal Master Console" in reply
+
+    # ------------------------------------------------------------------
+    # Navigation contract: 9 no longer a reset command
+    # ------------------------------------------------------------------
+
+    async def test_nine_no_flow_does_not_reset(
+        self, console_service: WhatsAppConsoleService
+    ) -> None:
+        """Without an active flow, '9' must NOT return main menu
+        because 9 is now 'back', not a reset command."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="9",
+            is_master=True,
+        )
+        # With no active flow and no specific handling for 9,
+        # it should fall through to the no-flow fallback.
+        assert "Trackpal Master Console" not in reply
+        assert "No entendí" in reply
+
+    async def test_nine_during_active_flow_does_not_clear_session(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """During an active flow, '9' must NOT cancel the flow
+        because 9 is 'back', not a cancel command."""
+        session = await session_service.create_session("+10000000000")
+        session.flow = "create_tenant"
+        session.step = "full_name"
+        session.temp_data = {"full_name": "John Doe"}
+        await session_service.save_session(session)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="9",
+            is_master=True,
+            session_service=session_service,
+        )
+
+        # Session should NOT be cleared
+        fetched = await session_service.get_session("+10000000000")
+        assert fetched is not None
+
+        # Reply should NOT contain menu
+        assert "Trackpal Master Console" not in reply
 
 
 # ---------------------------------------------------------------------------
@@ -403,6 +469,38 @@ class TestFallbackActiveFlow:
             session_service=None,
         )
         assert "No entendí" in reply
+
+    # ------------------------------------------------------------------
+    # Navigation contract: 0 cancels active flow
+    # ------------------------------------------------------------------
+
+    async def test_zero_during_active_flow_cancels(
+        self,
+        console_service: WhatsAppConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """During an active flow, sending '0' clears the session
+        and returns main menu (0 = cancel)."""
+        session = await session_service.create_session("+10000000000")
+        session.flow = "create_tenant"
+        session.step = "full_name"
+        session.temp_data = {"full_name": "John Doe"}
+        await session_service.save_session(session)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="0",
+            is_master=True,
+            session_service=session_service,
+        )
+
+        # Session should be cleared
+        fetched = await session_service.get_session("+10000000000")
+        assert fetched is None
+
+        # Reply should mention cancellation + main menu
+        assert "Trackpal Master Console" in reply
+        assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
 
 
 # ---------------------------------------------------------------------------
