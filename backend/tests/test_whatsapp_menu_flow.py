@@ -76,7 +76,7 @@ def fake_redis() -> FakeRedis:
 def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
     return WhatsAppSessionService(
         connection_manager=FakeManager(fake_redis=fake_redis),
-        ttl_seconds=900,
+        ttl_seconds=300,
     )
 
 
@@ -636,7 +636,7 @@ class TestTTLNotRefreshedOnNoise:
         # Should reprompt for password mode
         assert "Opción inválida" in reply or "No entendí" in reply
 
-        # TTL should NOT have been refreshed (still 400, not 900)
+        # TTL should NOT have been refreshed (still 400, not 300)
         assert fake_redis.get_ttl(key) == 400, (
             f"Expected TTL 400 (unchanged), got {fake_redis.get_ttl(key)}"
         )
@@ -711,7 +711,7 @@ async def test_tenant_active_flow_zero_cancels_but_nine_does_not_global_cancel(
     fake_redis_manager: FakeManager,
 ) -> None:
     """When an active flow exists, 0 clears the session and 9 does not."""
-    session_service = WhatsAppSessionService(fake_redis_manager, ttl_seconds=900)
+    session_service = WhatsAppSessionService(fake_redis_manager, ttl_seconds=300)
     session = await session_service.create_session("admin:12015550001")
     session.flow = "clients"
     session.step = "list_select"

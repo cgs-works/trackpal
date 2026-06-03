@@ -494,7 +494,7 @@ def fake_redis() -> FakeRedis:
 def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
     return WhatsAppSessionService(
         connection_manager=FakeManager(fake_redis=fake_redis),
-        ttl_seconds=900,
+        ttl_seconds=300,
     )
 
 

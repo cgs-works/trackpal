@@ -28,7 +28,7 @@ class WhatsAppAuthSessionService:
     def __init__(
         self,
         connection_manager: Any,
-        session_ttl_seconds: int = 900,
+        session_ttl_seconds: int = 300,
         fail_threshold: int = 5,
         lock_minutes: int = 5,
         fail_window_minutes: int = 15,

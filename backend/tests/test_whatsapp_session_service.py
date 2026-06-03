@@ -97,7 +97,7 @@ def fake_manager(fake_redis: FakeRedis) -> FakeManager:
 def service(fake_manager: FakeManager) -> WhatsAppSessionService:
     return WhatsAppSessionService(
         connection_manager=fake_manager,
-        ttl_seconds=900,  # 15 minutes
+        ttl_seconds=300,  # 15 minutes
     )
 
 
@@ -306,7 +306,7 @@ class TestTTL:
         await service.create_session("+1234567890")
         key = service._session_key("+1234567890")
         ttl = fake_redis.get_ttl(key)
-        assert ttl == 900, f"Expected TTL 900, got {ttl}"
+        assert ttl == 300, f"Expected TTL 900, got {ttl}"
 
     async def test_save_session_renews_ttl(
         self, service: WhatsAppSessionService, fake_redis: FakeRedis
@@ -320,7 +320,7 @@ class TestTTL:
         await service.save_session(session)
 
         ttl = fake_redis.get_ttl(key)
-        assert ttl == 900, f"Expected TTL 900 after save, got {ttl}"
+        assert ttl == 300, f"Expected TTL 900 after save, got {ttl}"
 
     async def test_update_session_sets_ttl(
         self, service: WhatsAppSessionService, fake_redis: FakeRedis
@@ -333,7 +333,7 @@ class TestTTL:
 
         await service.update_session("+1234567890", step="next")
         ttl = fake_redis.get_ttl(key)
-        assert ttl == 900, f"Expected TTL 900 after update, got {ttl}"
+        assert ttl == 300, f"Expected TTL 900 after update, got {ttl}"
 
     async def test_custom_ttl_seconds(
         self, fake_redis: FakeRedis
@@ -354,8 +354,8 @@ class TestTTL:
         session = await service.create_session("+1234567890")
         key = service._session_key("+1234567890")
 
-        # Original TTL should be 900
-        assert fake_redis.get_ttl(key) == 900
+        # Original TTL should be 300
+        assert fake_redis.get_ttl(key) == 300
 
         # Simulate elapsed time
         fake_redis._ttls[key] = 500
@@ -364,7 +364,7 @@ class TestTTL:
         session.flow = "edited_noise"
         await service.save_session(session, touch_ttl=False)
 
-        # TTL should remain at 500 (not reset to 900)
+        # TTL should remain at 500 (not reset to 300)
         ttl = fake_redis.get_ttl(key)
         assert ttl == 500, f"Expected TTL 500 (unchanged), got {ttl}"
 
@@ -383,7 +383,7 @@ class TestTTL:
         fake_redis._ttls[key] = 300
 
         await service.save_session(session, touch_ttl=True)
-        assert fake_redis.get_ttl(key) == 900
+        assert fake_redis.get_ttl(key) == 300
 
     async def test_save_with_touch_ttl_false_preserves_ttl_via_keepttl(
         self, service: WhatsAppSessionService, fake_redis: FakeRedis
@@ -395,7 +395,7 @@ class TestTTL:
         """
         session = await service.create_session("+1234567890")
         key = service._session_key("+1234567890")
-        assert fake_redis.get_ttl(key) == 900
+        assert fake_redis.get_ttl(key) == 300
 
         # Simulate elapsed time
         fake_redis._ttls[key] = 500
@@ -487,10 +487,10 @@ class TestUsedBackup:
 class TestSessionLifecyclePolicy:
     """Verify SessionLifecyclePolicy defaults and configuration."""
 
-    def test_default_ttl_is_900(self) -> None:
+    def test_default_ttl_is_300(self) -> None:
         from app.services.whatsapp_session_service import SessionLifecyclePolicy
         policy = SessionLifecyclePolicy()
-        assert policy.ttl_seconds == 900
+        assert policy.ttl_seconds == 300
 
     def test_custom_ttl(self) -> None:
         from app.services.whatsapp_session_service import SessionLifecyclePolicy

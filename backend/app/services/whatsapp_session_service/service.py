@@ -43,7 +43,7 @@ class SessionLifecyclePolicy:
     on ``save_session()``.
     """
 
-    def __init__(self, ttl_seconds: int = 900) -> None:
+    def __init__(self, ttl_seconds: int = 300) -> None:
         self.ttl_seconds = ttl_seconds
 
 
@@ -51,7 +51,7 @@ class WhatsAppSessionService:
     """Manage ephemeral WhatsApp conversation state in Redis.
 
     Each session is stored as a JSON blob under ``session:{phone}``
-    with a configurable TTL (default 15 minutes, 900s).
+    with a configurable TTL (default 5 minutes, 300s).
     """
 
     SESSION_KEY_PREFIX = "session:"
@@ -59,7 +59,7 @@ class WhatsAppSessionService:
     def __init__(
         self,
         connection_manager: Any,
-        ttl_seconds: int = 900,
+        ttl_seconds: int = 300,
     ) -> None:
         """Initialise the service.
 

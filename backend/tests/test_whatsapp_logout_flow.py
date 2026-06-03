@@ -543,7 +543,7 @@ class TestLoginReset:
         await fake_redis.set(
             auth_key,
             '{"phone":"+9999999999","user_id":"...","username":"master","role":"master","authenticated_at":"2026-01-01T00:00:00Z"}',
-            ex=900,
+            ex=300,
         )
 
         facade = _make_facade(console_service, session_service, auth_session_service)
@@ -633,14 +633,14 @@ class TestLoginReset:
         await fake_redis.set(
             auth_key,
             '{"phone":"+9999999999","user_id":"uuid","username":"master","role":"master","authenticated_at":"2026-01-01T00:00:00Z"}',
-            ex=900,
+            ex=300,
         )
         await fake_redis.set(
             conv_key,
             ConversationSession(
                 phone="+9999999999", flow="create_tenant"
             ).model_dump_json(),
-            ex=900,
+            ex=300,
         )
 
         facade = _make_facade(console_service, session_service, auth_session_service)
@@ -680,11 +680,11 @@ class TestFailoverBackupNoSession:
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
             connection_manager=manager,
-            ttl_seconds=900,
+            ttl_seconds=300,
         )
         auth_service = WhatsAppAuthSessionService(
             connection_manager=manager,
-            session_ttl_seconds=900,
+            session_ttl_seconds=300,
             fail_threshold=5,
             lock_minutes=5,
             fail_window_minutes=15,
@@ -725,11 +725,11 @@ class TestFailoverBackupNoSession:
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
             connection_manager=manager,
-            ttl_seconds=900,
+            ttl_seconds=300,
         )
         auth_service = WhatsAppAuthSessionService(
             connection_manager=manager,
-            session_ttl_seconds=900,
+            session_ttl_seconds=300,
             fail_threshold=5,
             lock_minutes=5,
             fail_window_minutes=15,
@@ -762,11 +762,11 @@ class TestFailoverBackupNoSession:
         manager = FakeManager(fake_redis=fake_redis, used_backup=True)
         session_service = WhatsAppSessionService(
             connection_manager=manager,
-            ttl_seconds=900,
+            ttl_seconds=300,
         )
         auth_service = WhatsAppAuthSessionService(
             connection_manager=manager,
-            session_ttl_seconds=900,
+            session_ttl_seconds=300,
             fail_threshold=5,
             lock_minutes=5,
             fail_window_minutes=15,

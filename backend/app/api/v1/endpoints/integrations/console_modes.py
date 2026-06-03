@@ -14,7 +14,7 @@ from app.services.whatsapp_navigation import is_cancel, is_back
 from app.services.whatsapp_session_service import WhatsAppSessionService
 
 MODE_KEY_PREFIX = "wa:mode:"
-MODE_TTL = 900
+MODE_TTL = 300
 
 
 async def _get_mode(manager: RedisConnectionManager, phone: str) -> str | None:

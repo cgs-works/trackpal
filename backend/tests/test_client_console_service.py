@@ -96,7 +96,7 @@ def fake_redis() -> FakeRedis:
 def session_service(fake_redis: FakeRedis) -> WhatsAppSessionService:
     return WhatsAppSessionService(
         connection_manager=FakeManager(fake_redis=fake_redis),
-        ttl_seconds=900,
+        ttl_seconds=300,
     )
 
 
@@ -279,7 +279,7 @@ class TestInstanceFirstRouting:
             authenticated_at=datetime.now(timezone.utc),
         )
         await fake_mgr._redis.set(
-            "wa:auth:12015550001", auth_session.model_dump_json(), ex=900
+            "wa:auth:12015550001", auth_session.model_dump_json(), ex=300
         )
 
         with patch(

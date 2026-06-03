@@ -1,193 +1,99 @@
 # AGENTS.md
 
-## Project Overview
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-Trackpal is a WhatsApp-driven CRM for independent delivery businesses. Architecture:
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-- **`backend/`** — Python FastAPI (>=3.12, SQLAlchemy 2.0 async, Pydantic v2, Alembic, Redis)
-- **`frontend/`** — Vue 3 (Composition API, Pinia, vue-router, Axios, plain JS via Vite)
-- **`n8n/`** — n8n workflow JSON exports (WhatsApp bot + subscription reminders)
-- **`docs/`** — System documentation (`docs/SUMMARY.md` is the index)
+## 1. Think Before Coding
 
-Integrated services: Evolution API (WhatsApp provisioning), n8n (webhook automation), Render (backend host), Cloudflare Pages (frontend host).
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-## Setup Commands
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-### Backend
+## 2. Simplicity First
 
-```bash
-cd backend
-uv sync                        # Install all dependency groups (includes dev)
-uv sync --no-dev               # Production install only
-uv run alembic upgrade head    # Run database migrations
-uv run python -m scripts.seed  # Seed master user (requires env vars)
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
 ```
 
-### Frontend
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-```bash
-cd frontend
-npm install                    # Install dependencies
-npm run dev                    # Start Vite dev server (port 5173, proxies /api -> :8000)
-npm run build                  # Production build to frontend/dist/
-npm run preview                # Preview production build locally
-```
+---
 
-## Environment Variables
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
-### Backend (`backend/.env`)
+## Project Guidelines
 
-See `backend/.env.example` for all vars. Required:
+### Documentation
+- `docs/SUMMARY.md` is the entry point. Read before assuming architecture.
+- Agent should update docs when changing behavior.
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL+asyncpg, e.g. `postgresql+asyncpg://user:pass@host:5432/dbname?sslmode=require` |
-| `SECRET_KEY` | JWT signing key. Generate: `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
-| `DATA_ENCRYPTION_KEY` | Fernet key for reversible encryption. Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
-| `N8N_API_KEY` | Shared API key for n8n X-API-Key header |
-| `CORS_ORIGINS` | Comma-separated allowed origins |
-| `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` | Evolution API instance for WhatsApp provisioning |
-| `REDIS_PRIMARY_URL` / `REDIS_BACKUP_URL` | Redis HA endpoints (`redis://` or `rediss://`) |
-| `MASTER_USERNAME` / `MASTER_PASSWORD` / `MASTER_NAME` / `MASTER_PHONE` | Master seed credentials |
-| OAuth vars | `GOOGLE_OAUTH_CLIENT_ID/SECRET/REDIRECT_URI`, `MICROSOFT_OAUTH_CLIENT_ID/SECRET/REDIRECT_URI/TENANT_ID` |
+### Testing
 
-### Frontend (`frontend/.env`)
+**Backend (pytest)**: `cd backend && uv run pytest`
+- Framework: pytest 9 + pytest-asyncio, SQLite in-memory.
+- Fixtures: `backend/tests/conftest.py`
+- Mocking: Evolution API disabled via `evolution_client.api_key = ""`
+- HTTP client: `httpx.AsyncClient` with ASGITransport
 
-| Variable | Description |
-|---|---|
-| `VITE_API_URL` | Backend API base URL, e.g. `http://localhost:8000/api/v1` |
+**Frontend (vitest)**: `cd frontend && npm test`
+- jsdom environment, `vi.mock("axios", ...)` pattern in store tests
+- Test files: `frontend/src/**/__tests__/*.spec.js`
 
-## Development Workflow
+### Code Style
 
-### Backend
+- **Python**: Ruff (`ruff check .`, `ruff format .`) with defaults.
+- **JS/Vue**: Composition API `<script setup>`, Pinia stores, Vue Router. Plain ESM (no TypeScript).
+- No pre-commit hooks.
 
-```bash
-cd backend
-uv run uvicorn app.main:app --reload    # Dev server on :8000
-uv run alembic revision --autogenerate -m "description"   # Create migration
-uv run alembic upgrade head            # Apply migrations
-uv run python -m scripts.seed          # Seed master user
-```
+### Key Patterns & Gotchas
 
-### Frontend
-
-```bash
-cd frontend
-npm run dev               # Dev server on :5173 with API proxy to :8000
-npm run build             # Production build to dist/
-```
-
-Vite proxy config (`frontend/vite.config.js`) forwards `/api` requests to `http://localhost:8000`.
-
-### n8n
-
-Workflow JSON files in `n8n/` can be imported into an n8n instance. Import via n8n UI → Workflows → Add from file.
-
-### Docs
-
-Docs are in `docs/` with `docs/SUMMARY.md` as entry point. Agent should update docs when changing behavior.
-
-## Testing Instructions
-
-### Backend (pytest)
-
-```bash
-cd backend
-uv run pytest                      # Run all tests
-uv run pytest -x                   # Stop on first failure
-uv run pytest -k "test_name"       # Filter by test name
-uv run pytest --coverage           # Coverage report (requires pytest-cov)
-uv run pytest -n auto              # Parallel (uses pytest-xdist)
-```
-
-Test details:
-- **Framework**: pytest 9 + pytest-asyncio
-- **Database**: SQLite in-memory (`sqlite+aiosqlite:///:memory:`, auto-fixture `setup_database`)
-- **Fixtures file**: `backend/tests/conftest.py`
-- **Mocking**: External Evolution API calls disabled via `evolution_client.api_key = ""`
-- **HTTP client**: `httpx.AsyncClient` with ASGITransport (no live server)
-
-### Frontend (vitest)
-
-```bash
-cd frontend
-npm test                         # vitest run
-npx vitest                       # Watch mode
-npx vitest run -t "test name"    # Filter by test name
-```
-
-Test details:
-- **Framework**: vitest 4 under jsdom environment
-- **Mocking**: `vi.mock("axios", ...)` pattern in store tests
-- **Test files**: `frontend/src/**/__tests__/*.spec.js`
-
-## Code Style & Linting
-
-- **Python**: Ruff is available (`.ruff_cache/` present). Run via `ruff check .` and `ruff format .` from `backend/`. No explicit config file — uses Ruff defaults.
-- **JS/Vue**: No ESLint or Prettier config found. Vite handles transpilation. Follow existing patterns: Composition API `<script setup>`, Pinia stores, Vue Router.
-- No TypeScript — all frontend code is plain ESM JavaScript.
-- No pre-commit hooks configured.
-
-## Build & Deployment
-
-### Frontend → Cloudflare Pages
-
-```bash
-cd frontend
-npm run build                    # Output: frontend/dist/
-```
-
-Set `VITE_API_URL` env var in Cloudflare Pages dashboard. Build command: `npm run build`. Output dir: `dist`.
-
-### Backend → Render
-
-Deployment is defined in `render.yaml` (root dir):
-
-- **Service name**: `trackpal-api`
-- **Runtime**: Python
-- **Region**: Oregon (free plan)
-- **Root dir**: `backend/`
-- **Build**: `pip install uv && uv sync`
-- **Start**: `uv run alembic upgrade head && uv run python -m scripts.seed && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- **Env vars**: See `render.yaml` for complete list. Sensitive vars (`DATABASE_URL`, `SECRET_KEY`, etc.) must be set manually in Render dashboard.
-
-No Docker setup exists.
-
-## Pull Request Guidelines
-
-- **Title format**: `[<area>] <Brief description>` — e.g. `[backend] Fix auth token expiry`
-- **Areas**: backend, frontend, n8n, infra, docs, devops
-- **Before submitting**: Ensure all tests pass and code follows existing patterns
-- **Issue templates** exist at `.github/ISSUE_TEMPLATE/` for: bug-report, feature-request, epic, task
-
-## Key Technical Context
-
-### Backend Architecture
-
-- FastAPI app in `backend/app/main.py` with lifespan events
-- SQLAlchemy async session per request via dependency injection
-- JWT auth (python-jose) with access + refresh tokens
-- Redis HA with failover for WhatsApp session state (circuit breaker pattern)
-- Evolution API client for WhatsApp instance provisioning
-- Fernet encryption for stored tenant OAuth credentials
-- OAuth 2.0 for mailbox integration (Google + Microsoft)
-
-### Database Migrations (Alembic)
-
-- Config: `backend/alembic.ini` + `backend/alembic/env.py`
-- Versions in `backend/alembic/versions/`
-- Models in `backend/app/models/`
-
-### n8n Integration
-
-- n8n workflows in `n8n/` as JSON exports
-- Backend exposes `/api/v1/n8n/identify` endpoint (X-API-Key auth) for n8n to resolve phone → client
-- `N8N_API_KEY` shared secret between backend and n8n
-
-## Common Gotchas
-
-1. **DATA_ENCRYPTION_KEY must be set** before importing app code. Test conftest sets it via `os.environ` before any imports.
-2. **Alembic autogenerate** requires a running database with models imported in `env.py`.
-3. **Frontend API proxy** only works in dev — production uses `VITE_API_URL` directly.
-4. **Redis HA**: Primary and backup URLs must be reachable. Circuit breaker opens after 3 failures.
-5. **Seed script** idempotent — safe to run on every deploy (Render start command runs it).
+1. **DATA_ENCRYPTION_KEY** must be set before any app import. Test conftest sets it via `os.environ`.
+2. **WhatsApp session model**: admin session key = `session:admin:{phone}`, client context = `wa:client_ctx:{admin_phone}`, unauth codigo = `session:unreg:{key}`. TTL 5 min for all sessions (aligned with Evolution Go auto-close timeout).
+3. **close_jid propagation**: n8n uses fallback chain `close_jid → reply_to → remoteJid`. Always set `close_jid` to canonical phone JID (e.g. `584243106642@s.whatsapp.net`) to avoid LID fallback which Evolution Go can't match.
+4. **Active-flow cancel**: universal cancel handler catches `0`/`salir`/`cancelar` before step-specific handlers. Verify route is reachable when adding new steps.
+5. **Redis HA**: Primary + backup URLs must be reachable. Circuit breaker opens after 3 failures.
+6. **Alembic autogenerate** needs running DB with models imported in `env.py`.
+7. **Seed script** idempotent — safe to run on every deploy.

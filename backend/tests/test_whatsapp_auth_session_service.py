@@ -83,7 +83,7 @@ def fake_manager(fake_redis: FakeRedis) -> FakeManager:
 def service(fake_manager: FakeManager) -> WhatsAppAuthSessionService:
     return WhatsAppAuthSessionService(
         connection_manager=fake_manager,
-        session_ttl_seconds=900,
+        session_ttl_seconds=300,
         fail_threshold=3,
         lock_minutes=5,
         fail_window_minutes=15,
@@ -279,9 +279,9 @@ class TestAuthSessionTTL:
         )
         await service.set_auth_session(auth)
         key = service._auth_key("+1234567890")
-        # TTL should be 900 (our fixture value)
+        # TTL should be 300 (our fixture value)
         ttl = fake_redis._ttls.get(key)
-        assert ttl == 900, f"Expected TTL 900, got {ttl}"
+        assert ttl == 300, f"Expected TTL 300, got {ttl}"
 
 
 # ===================================================================

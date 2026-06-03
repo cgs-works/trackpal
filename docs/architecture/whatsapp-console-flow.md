@@ -436,7 +436,7 @@ The contract is enforced by:
 - Tenant conversation state key: `session:admin:{phone}`
 - Client Context Shortcut key: `wa:client_ctx:{admin_phone}` (5-minute TTL)
 - Unauthenticated code lookup key: `session:unreg:{phone}` or `session:unreg:{lid}` (standard session TTL)
-- TTL: 15 minutes (standard); 5 minutes (context shortcut)
+- TTL: 5 minutes for all sessions (aligned with Evolution Go's 5-minute auto-close timeout)
 - `0` is global exit across top-level and active flows; `9` goes back without cancelling; `8` advances to next screen when offered
 - Invalid input does not refresh TTL
 - Only valid contextual messages refresh contextual TTL

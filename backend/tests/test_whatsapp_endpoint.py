@@ -284,7 +284,7 @@ async def test_primary_flow_with_fake_manager_returns_menu(client, master_user):
     )
     auth_key = "wa:auth:12015550001"
 
-    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=300)
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -324,7 +324,7 @@ async def test_failover_missing_session_returns_contingency_reset(client, master
     )
     auth_key = "wa:auth:12015550001"
 
-    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=300)
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -360,7 +360,7 @@ async def test_failover_missing_session_with_menu_choice_still_resets(
     )
     auth_key = "wa:auth:12015550001"
 
-    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=300)
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -399,7 +399,7 @@ async def test_failover_reset_creates_session_on_backup(client, master_user):
     )
     auth_key = "wa:auth:12015550001"
 
-    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=900)
+    await fake_mgr._redis.set(auth_key, auth_session.model_dump_json(), ex=300)
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -693,7 +693,7 @@ async def test_lid_with_senderPn_resolves_by_phone(client, db_session, master_us
     )
 
     await fake_mgr._redis.set(
-        "wa:auth:12015550001", auth_session.model_dump_json(), ex=900
+        "wa:auth:12015550001", auth_session.model_dump_json(), ex=300
     )
 
     with patch(
@@ -766,7 +766,7 @@ async def test_lid_without_senderPn_with_persisted_lid_resolves(
     )
 
     await fake_mgr._redis.set(
-        "wa:auth:12015550001", auth_session.model_dump_json(), ex=900
+        "wa:auth:12015550001", auth_session.model_dump_json(), ex=300
     )
 
     with patch(
@@ -1194,7 +1194,7 @@ async def test_blocked_unregistered_with_existing_codigo_session_returns_no_repl
     await fake_mgr._redis.set(
         "session:unreg:12015559999",
         json.dumps(unauth_session),
-        ex=900,
+        ex=300,
     )
 
     with patch(
