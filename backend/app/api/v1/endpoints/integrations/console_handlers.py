@@ -7,7 +7,7 @@ has resolved the caller's identity/role.
 from __future__ import annotations
 
 import logging
-from contextlib import suppress
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,6 +62,7 @@ logger = logging.getLogger(__name__)
 _UNAUTH_CODIGO_FLOW = "codigo"
 _UNAUTH_CODIGO_STEP_SERVICE = "service"
 _UNAUTH_CODIGO_STEP_EMAIL = "email"
+_UNAUTH_CODIGO_STEP_AWAITING_RESULT = "awaiting_result"
 
 _UNAUTH_CODIGO_SERVICE_LABELS: dict[str, str] = {
     "netflix": "Netflix",
@@ -531,6 +532,21 @@ async def _handle_unauthenticated_codigo(
             msg, session, session_service, session_key, tenant, db, locale, manager, close_jid
         )
 
+    if session.step == _UNAUTH_CODIGO_STEP_AWAITING_RESULT:
+        return await _handle_unauth_codigo_result(
+            msg,
+            session,
+            session_service,
+            session_key,
+            phone_digits,
+            sender_lid,
+            manager,
+            tenant,
+            db,
+            locale,
+            close_jid,
+        )
+
     await session_service.clear_session(session_key)
     return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.client.access_denied"))
 
@@ -711,14 +727,221 @@ async def _handle_unauth_codigo_email(
         logger.exception("Failed to create lookup job for tenant %s", tenant.id)
         return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
 
-    # Clear session on success
-    with suppress(Exception):
-        await session_service.clear_session(session_key)
+    # Keep session alive with awaiting_result step so the user can
+    # send cancel/retry/back later after n8n notifies the result.
+    session.step = _UNAUTH_CODIGO_STEP_AWAITING_RESULT
+    session.temp_data["lookup_job_id"] = lookup_job_id
+    session.temp_data["target_email"] = target_email
+    await session_service.save_session(session)
 
     return WhatsAppConsoleResponse(
         reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
         lookup_job_id=lookup_job_id,
         tenant_id=tenant_id_out,
+    )
+
+
+async def _handle_unauth_codigo_result(
+    msg: str,
+    session: ConversationSession,
+    session_service: WhatsAppSessionService,
+    session_key: str,
+    phone_digits: str,
+    sender_lid: str | None,
+    manager: RedisConnectionManager,
+    tenant: Tenant,
+    db: AsyncSession,
+    locale: str,
+    close_jid: str | None = None,
+) -> WhatsAppConsoleResponse:
+    """Handle user response after the lookup result notification.
+
+    The session is kept alive (step=awaiting_result) while n8n polls
+    the job.  When the user replies to the result message:
+    """
+    # Cancel always works
+    if is_cancel(msg):
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.cancelled"),
+            status="closed",
+            reply_to=close_jid,
+            close_jid=close_jid,
+        )
+
+    # Check if the lookup job actually completed (n8n might still be
+    # polling).  When the job is still pending we reply "still checking"
+    # and keep the session alive.
+    lookup_job_id = session.temp_data.get("lookup_job_id")
+    job = None
+    if lookup_job_id:
+        try:
+            job = await mailbox_lookup_repository.get_job(
+                db,
+                UUID(lookup_job_id),
+                tenant_id=tenant.id,
+            )
+        except Exception:
+            logger.exception("Failed to check lookup job %s", lookup_job_id)
+
+    job_done = job is not None and job.status in ("completed", "failed", "timeout")
+
+    if not job_done:
+        # Still waiting — redirect to retry/back/cancel prompt
+        if msg.strip() in ("1", "2"):
+            # User wants retry or back, but job isn't ready yet
+            # Show the service list again immediately
+            await session_service.clear_session(session_key)
+            effective_keys = await code_services_repository.get_effective_service_keys(
+                db, tenant.id
+            )
+            if not effective_keys:
+                return WhatsAppConsoleResponse(
+                    reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+                )
+            service_list = _build_unauth_service_page(effective_keys, 0, locale)
+            new_session = await session_service.create_session(session_key)
+            new_session.flow = _UNAUTH_CODIGO_FLOW
+            new_session.step = _UNAUTH_CODIGO_STEP_SERVICE
+            new_session.temp_data = {
+                "codigo_effective_keys": effective_keys,
+                "codigo_current_page": 0,
+            }
+            await session_service.save_session(new_session)
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(
+                    locale,
+                    "wa.tenant.codigo.service_prompt",
+                    service_list=service_list,
+                )
+            )
+        # Anything else → still checking
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.still_checking"),
+        )
+
+    # ── Job is done — route based on user choice ─────────────────
+    msg_clean = msg.strip()
+
+    if msg_clean == "1":
+        # Retry: restart with same service, ask for email again
+        service_key = session.temp_data.get("service_key")
+        target_email = session.temp_data.get("target_email", "")
+        if service_key and target_email:
+            # Create a new lookup job with the same parameters
+            mailbox = await mailbox_config_repository.get_by_tenant(db, tenant.id)
+            if mailbox is None or mailbox.status != "connected":
+                await session_service.clear_session(session_key)
+                return WhatsAppConsoleResponse(
+                    reply=_i18n_t(locale, "wa.tenant.codigo.no_mailbox")
+                )
+            try:
+                job2 = await mailbox_lookup_repository.create_job(
+                    db,
+                    tenant_id=tenant.id,
+                    mailbox_id=mailbox.id,
+                    service_key=service_key,
+                    target_email=target_email,
+                )
+                await db.flush()
+                await db.commit()
+                enqueued = False
+                try:
+                    enqueued = (
+                        await enqueue_job(manager, job2.id)
+                        if manager is not None
+                        else False
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to re-enqueue lookup job %s", job2.id
+                    )
+                if enqueued:
+                    session.temp_data["lookup_job_id"] = str(job2.id)
+                    await session_service.save_session(session)
+                    return WhatsAppConsoleResponse(
+                        reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
+                        lookup_job_id=str(job2.id),
+                        tenant_id=str(tenant.id),
+                    )
+                else:
+                    try:
+                        await db.delete(job2)
+                        await db.commit()
+                    except Exception:
+                        logger.critical(
+                            "Failed to delete job %s after re-enqueue failure",
+                            job2.id,
+                        )
+            except Exception:
+                logger.exception("Failed to create retry lookup job")
+
+        # Fallback: restart from service selection
+        await session_service.clear_session(session_key)
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant.id
+        )
+        if not effective_keys:
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+            )
+        service_list = _build_unauth_service_page(effective_keys, 0, locale)
+        new_session = await session_service.create_session(session_key)
+        new_session.flow = _UNAUTH_CODIGO_FLOW
+        new_session.step = _UNAUTH_CODIGO_STEP_SERVICE
+        new_session.temp_data = {
+            "codigo_effective_keys": effective_keys,
+            "codigo_current_page": 0,
+        }
+        await session_service.save_session(new_session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.codigo.service_prompt",
+                service_list=service_list,
+            )
+        )
+
+    if msg_clean == "2":
+        # Back to services: show service list page 0
+        await session_service.clear_session(session_key)
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant.id
+        )
+        if not effective_keys:
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+            )
+        service_list = _build_unauth_service_page(effective_keys, 0, locale)
+        new_session = await session_service.create_session(session_key)
+        new_session.flow = _UNAUTH_CODIGO_FLOW
+        new_session.step = _UNAUTH_CODIGO_STEP_SERVICE
+        new_session.temp_data = {
+            "codigo_effective_keys": effective_keys,
+            "codigo_current_page": 0,
+        }
+        await session_service.save_session(new_session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.codigo.service_prompt",
+                service_list=service_list,
+            )
+        )
+
+    if msg_clean == "0":
+        # Cancel
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.cancelled"),
+            status="closed",
+            reply_to=close_jid,
+            close_jid=close_jid,
+        )
+
+    # Unknown input → still checking (keep session alive)
+    return WhatsAppConsoleResponse(
+        reply=_i18n_t(locale, "wa.tenant.codigo.still_checking"),
     )
 
 
