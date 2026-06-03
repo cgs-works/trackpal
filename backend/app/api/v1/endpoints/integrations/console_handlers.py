@@ -215,6 +215,8 @@ async def _handle_tenant_console(
     if identity is None:
         return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
+    exit_cmd = message.strip().lower() in ("0", "salir")
+
     try:
         reply = await facade.process_message(
             phone=phone,
@@ -338,11 +340,14 @@ async def _handle_tenant_console(
         ):
             reply = tenant_console_service._t(tenant_console_service.KEY_CODIGO_ERROR)
 
-    return WhatsAppConsoleResponse(
+    resp = WhatsAppConsoleResponse(
         reply=reply,
         lookup_job_id=lookup_job_id,
         tenant_id=tenant_id_out,
     )
+    if exit_cmd:
+        resp.status = "closed"
+    return resp
 
 
 # ====================================================================

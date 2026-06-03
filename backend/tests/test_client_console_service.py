@@ -369,6 +369,44 @@ class TestInstanceFirstRouting:
         reply = response.json()["reply"]
         assert "Consola de Administración" in reply or "Trackpal" in reply
 
+    async def test_tenant_exit_sets_closed_status(
+        self,
+        client: AsyncClient,
+        active_tenant_user: Any,
+        db_session: Any,
+    ) -> None:
+        """Tenant admin sending 0 must tell n8n to close Evolution session."""
+        from sqlalchemy import select
+        from app.models import Tenant as TenantModel
+
+        result = await db_session.execute(
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
+        )
+        tenant = result.scalar_one()
+        tenant.evolution_instance_name = "tenant-exit-status-test"
+        await db_session.commit()
+
+        fake_mgr = FakeManager()
+
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550002",
+                    "message": "0",
+                    "instance": "tenant-exit-status-test",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "closed"
+
     async def test_unknown_instance_denies_access(
         self,
         client: AsyncClient,
@@ -445,6 +483,52 @@ class TestClientWithinTenant:
         reply = response.json()["reply"]
         assert "Consola de Cliente" in reply
         assert "Ver mi perfil" in reply
+
+    async def test_client_code_routes_to_codigo_flow(
+        self,
+        client: AsyncClient,
+        active_client_user: Any,
+        active_tenant_user: Any,
+        db_session: Any,
+    ) -> None:
+        """Registered client sending code must start codigo flow, not client menu."""
+        from sqlalchemy import select
+        from app.models import Tenant as TenantModel
+
+        result = await db_session.execute(
+            select(TenantModel).where(
+                TenantModel.owner_user_id == active_tenant_user.id
+            )
+        )
+        tenant = result.scalar_one()
+        tenant.evolution_instance_name = "tenant-client-code-test"
+        await db_session.commit()
+
+        fake_mgr = FakeManager()
+
+        with patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015550030",
+                    "message": "code",
+                    "instance": "tenant-client-code-test",
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+        assert response.status_code == 200
+        reply = response.json()["reply"].lower()
+        assert "consola de cliente" not in reply
+        assert "ver mi perfil" not in reply
+        assert (
+            "buscar código de acceso" in reply
+            or "buzón no configurado" in reply
+            or "mailbox not configured" in reply
+        )
 
     async def test_unknown_client_phone_in_tenant_instance(
         self,

@@ -183,6 +183,7 @@ async def _route_by_instance(
         )
 
     phone_digits = normalize_phone(phone) or phone
+    msg_lower = message.strip().lower()
 
     tenant_admin = None
     if tenant.whatsapp_phone and phone:
@@ -254,6 +255,11 @@ async def _route_by_instance(
         )
 
     if has_client:
+        if msg_lower in ("codigo", "código", "code"):
+            return await _handle_unauthenticated_codigo(
+                phone_digits, message, sender_lid, manager, tenant, db
+            )
+
         client_locale = _tl(tenant)
         client_identity = {
             "user_id": str(client.owner_user_id),
