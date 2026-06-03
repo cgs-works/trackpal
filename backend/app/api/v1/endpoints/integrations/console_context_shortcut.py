@@ -476,10 +476,17 @@ async def handle_ctx_active_edit_field(
     tenant: _TenantModel,
 ) -> WhatsAppConsoleResponse | None:
     """Handle field selection for active client edit."""
-    if msg_lower in ("0", "salir", "cerrar"):
+    if msg_lower == "9":
         data["step"] = "active_detail"
         return WhatsAppConsoleResponse(
             reply=_ctx_t(tenant, data, "wa.tenant.client_context.detail.header"),
+            reply_to=admin_jid,
+        )
+
+    if msg_lower in ("0", "salir", "cerrar"):
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.closed"),
             reply_to=admin_jid,
         )
 
@@ -487,7 +494,7 @@ async def handle_ctx_active_edit_field(
         data["temp_data"]["edit_field"] = "full_name"
         data["step"] = "active_edit_value"
         return WhatsAppConsoleResponse(
-            reply="Ingrese el *nuevo nombre completo*:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.name_prompt"),
             reply_to=admin_jid,
         )
 
@@ -495,12 +502,12 @@ async def handle_ctx_active_edit_field(
         data["temp_data"]["edit_field"] = "local_username"
         data["step"] = "active_edit_value"
         return WhatsAppConsoleResponse(
-            reply="Ingrese el *nuevo nombre de usuario*:",
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.username_prompt"),
             reply_to=admin_jid,
         )
 
     return WhatsAppConsoleResponse(
-        reply="Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n0 Volver",
+        reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_invalid"),
         reply_to=admin_jid,
     )
 
