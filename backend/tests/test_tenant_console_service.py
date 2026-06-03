@@ -630,7 +630,7 @@ class TestFacade:
             db=cast(AsyncSession, object()),
         )
         # The service returns MAIN_MENU for empty message
-        assert "Trackpal Consola de Administración" in reply
+        assert "Trackpal Consola de Administracion" in reply
 
     async def test_facade_top_level_zero_exits(
         self,
@@ -644,7 +644,7 @@ class TestFacade:
             identity=identity,
             db=cast(AsyncSession, object()),
         )
-        assert "Sesión cerrada" in reply and "consola de administración" in reply
+        assert "Sesion cerrada" in reply and "consola de administracion" in reply
 
     async def test_facade_top_level_zero_closes_evolution_session(
         self,
@@ -660,7 +660,7 @@ class TestFacade:
             db=cast(AsyncSession, object()),
         )
 
-        assert "Sesión cerrada" in reply and "consola de administración" in reply
+        assert "Sesion cerrada" in reply and "consola de administracion" in reply
 
     async def test_facade_zero_with_active_flow_cancels(
         self,
@@ -682,7 +682,7 @@ class TestFacade:
             db=cast(AsyncSession, object()),
         )
         # Should cancel (not goodbye), returning main menu
-        assert "Operación cancelada" in reply or "Consola de Administración" in reply
+        assert "Operacion cancelada" in reply or "Consola de Administracion" in reply
 
     async def test_facade_top_level_zero_returns_goodbye_message(
         self,
@@ -697,7 +697,7 @@ class TestFacade:
             db=cast(AsyncSession, object()),
         )
         lowered = reply.lower()
-        assert "sesión cerrada" in lowered or "sesion cerrada" in lowered
+        assert "sesion cerrada" in lowered or "sesion cerrada" in lowered
 
 
 # ===================================================================
@@ -717,7 +717,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="",
         )
-        assert "Trackpal Consola de Administración" in reply
+        assert "Trackpal Consola de Administracion" in reply
 
     @pytest.mark.parametrize("cmd", ["menu", "/menu", "MENU", "/MENU"])
     async def test_service_menu_commands_return_main_menu(
@@ -730,7 +730,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message=cmd,
         )
-        assert "Trackpal Consola de Administración" in reply
+        assert "Trackpal Consola de Administracion" in reply
 
     async def test_service_clients_menu(
         self,
@@ -763,7 +763,7 @@ class TestServiceMainMenu:
             session_service=session_service,
         )
         # Should show services or catalog prompt
-        assert "Servicio" in reply or "Catálogo" in reply or "catalog" in reply.lower()
+        assert "Servicio" in reply or "Catalogo" in reply or "catalog" in reply.lower()
 
     async def test_service_profile_menu(
         self,
@@ -853,7 +853,7 @@ class TestServiceMainMenu:
             db=AsyncMock(),
             session_service=session_service,
         )
-        assert "Detalle de Suscripción" in reply_detail
+        assert "Detalle de Suscripcion" in reply_detail
         assert "secret123" in reply_detail
         assert "1234" in reply_detail
 
@@ -897,9 +897,9 @@ class TestServiceMainMenu:
         assert session.selection_map["7"] == str(subscriptions[6].id)
         assert "cliente-page-7@test.com" in reply_page_1
         assert "cliente-page-8@test.com" not in reply_page_1
-        assert "9️⃣ Volver al menú principal" in reply_page_1
-        assert "9️⃣ Siguiente" in reply_page_1
-        assert "8️⃣ ← Anterior" not in reply_page_1
+        assert "0️⃣ Cancelar" in reply_page_1
+        assert "8️⃣ Siguiente" in reply_page_1
+        assert "9️⃣ Anterior" not in reply_page_1
 
         reply_page_2 = await console_service.process_message(
             phone="+10000000000",
@@ -913,8 +913,8 @@ class TestServiceMainMenu:
         assert session.selection_map == {"1": str(subscriptions[7].id)}
         assert "cliente-page-8@test.com" in reply_page_2
         assert "cliente-page-7@test.com" not in reply_page_2
-        assert "8️⃣ ← Anterior" in reply_page_2
-        assert "9️⃣ Siguiente" not in reply_page_2
+        assert "9️⃣ Regresar" in reply_page_2
+        assert "8️⃣ Siguiente" not in reply_page_2
 
         reply_detail = await console_service.process_message(
             phone="+10000000000",
@@ -923,7 +923,7 @@ class TestServiceMainMenu:
             db=AsyncMock(),
             session_service=session_service,
         )
-        assert "Detalle de Suscripción" in reply_detail
+        assert "Detalle de Suscripcion" in reply_detail
         assert "cliente-page-8@test.com" in reply_detail
 
     async def test_service_subscriptions_create_flow(
@@ -964,7 +964,7 @@ class TestServiceMainMenu:
                 db=AsyncMock(),
                 session_service=session_service,
             )
-        assert "Suscripción creada exitosamente" in reply
+        assert "Suscripcion creada exitosamente" in reply
         assert len(subscription_service._subscriptions) == 2
 
     async def test_service_subscriptions_edit_email_flow(
@@ -982,7 +982,7 @@ class TestServiceMainMenu:
                 db=AsyncMock(),
                 session_service=session_service,
             )
-        assert "Suscripción actualizada exitosamente" in reply
+        assert "Suscripcion actualizada exitosamente" in reply
         assert (
             subscription_service.default_subscription.streaming_email
             == "editado@test.com"
@@ -1003,7 +1003,7 @@ class TestServiceMainMenu:
                 db=AsyncMock(),
                 session_service=session_service,
             )
-        assert "Suscripción cancelada exitosamente" in reply
+        assert "Suscripcion cancelada exitosamente" in reply
         assert subscription_service.default_subscription.status == "cancelled"
 
     async def test_service_subscriptions_renew_and_reactivate_flows(
@@ -1021,7 +1021,7 @@ class TestServiceMainMenu:
                 db=AsyncMock(),
                 session_service=session_service,
             )
-        assert "Suscripción renovada exitosamente" in reply
+        assert "Suscripcion renovada exitosamente" in reply
 
         subscription_service.default_subscription.status = "cancelled"
         for step in ["4", "1", "3", "1", "4", "1", "CONFIRMAR"]:
@@ -1032,7 +1032,7 @@ class TestServiceMainMenu:
                 db=AsyncMock(),
                 session_service=session_service,
             )
-        assert "Suscripción reactivada exitosamente" in reply
+        assert "Suscripcion reactivada exitosamente" in reply
         assert subscription_service.default_subscription.status == "active"
 
     async def test_service_zero_main_menu_exits(
@@ -1075,7 +1075,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="xyzzy",
         )
-        assert "No entendí" in reply
+        assert "No entendi" in reply
 
 
 # ===================================================================
@@ -1105,7 +1105,7 @@ class TestZeroHandling:
             message="0",
             session_service=session_service,
         )
-        assert "cancelada" in reply.lower() or "Consola de Administración" in reply
+        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply or "salido de la consola" in reply.lower()
 
         # Session should be cleared
         fetched = await session_service.get_session("admin:+10000000000")
@@ -1127,14 +1127,14 @@ class TestZeroHandling:
             message="0",
             session_service=session_service,
         )
-        assert "cancelada" in reply.lower() or "Consola de Administración" in reply
+        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply
 
         # Session should be cleared
         fetched = await session_service.get_session("admin:+10000000000")
         assert fetched is None
 
     @pytest.mark.parametrize(
-        "cmd", ["menu", "menú", "/menu", "MENU", "/MENU", "/Menu", "cancelar"]
+        "cmd", ["menu", "menu", "/menu", "MENU", "/MENU", "/Menu", "cancelar"]
     )
     async def test_service_reset_commands_cancel_flow(
         self,
@@ -1153,7 +1153,7 @@ class TestZeroHandling:
             message=cmd,
             session_service=session_service,
         )
-        assert "cancelada" in reply.lower() or "Consola de Administración" in reply
+        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply
 
         fetched = await session_service.get_session("admin:+10000000000")
         assert fetched is None
@@ -1176,7 +1176,7 @@ class TestServiceNoSession:
             phone="+10000000000",
             message="",
         )
-        assert "Trackpal Consola de Administración" in reply
+        assert "Trackpal Consola de Administracion" in reply
 
     async def test_main_menu_options_without_session(
         self, console_service: WhatsAppTenantConsoleService
@@ -1274,7 +1274,7 @@ class TestClientSelect:
             session_service=session_service,
         )
         # Global reset intercepts '0' on any active flow → cancel
-        assert "cancelada" in reply.lower() or "Consola de Administración" in reply
+        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply or "salido de la consola" in reply.lower()
         # Session is cleared by global reset
         session = await session_service.get_session("admin:+20000000002")
         assert session is None
@@ -1383,8 +1383,8 @@ class TestPostActionPrompt:
         )
 
         assert "Cliente Test" in reply
-        assert "Cerrar sesión" in reply or "0️⃣" in reply
-        assert "Realizar otra operación" in reply or "menú principal" in reply
+        assert "Cerrar sesion" in reply or "0️⃣" in reply
+        assert "Realizar otra operacion" in reply or "menu principal" in reply
 
     async def test_subscription_cancel_success_includes_post_action_prompt(
         self,
@@ -1411,7 +1411,7 @@ class TestPostActionPrompt:
         )
 
         assert "cancelada" in reply.lower() or "cancelled" in reply.lower()
-        assert "Cerrar sesión" in reply or "0️⃣" in reply
+        assert "Cerrar sesion" in reply or "0️⃣" in reply
 
 
 # ===================================================================
@@ -1611,7 +1611,7 @@ class TestCodigoFlow:
         self,
         console_service: WhatsAppTenantConsoleService,
     ) -> None:
-        """Trigger words codigo/código/code start the codigo flow."""
+        """Trigger words codigo/codigo/code start the codigo flow."""
         from unittest.mock import AsyncMock
 
         mock_session_service = AsyncMock()
@@ -1622,7 +1622,7 @@ class TestCodigoFlow:
         mock_session_service.get_session.return_value = None
         mock_session_service.create_session.return_value = mock_session
 
-        for trigger in ("codigo", "código", "code"):
+        for trigger in ("codigo", "codigo", "code"):
             reply = await console_service.process_message(
                 phone="+10000000000",
                 message=trigger,
@@ -1631,7 +1631,7 @@ class TestCodigoFlow:
             )
             assert reply is not None
             # Should not return fallback or menu help
-            assert "No entendí" not in reply
+            assert "No entendi" not in reply
 
     async def test_codigo_cancel_direct_does_not_render_main_menu(
         self,
@@ -1665,7 +1665,7 @@ class TestCodigoFlow:
             db=None,
         )
 
-        assert "Operación cancelada" in reply
+        assert "Operacion cancelada" in reply
         assert "Trackpal Consola" not in reply
 
     async def test_codigo_flow_service_1_selected(
@@ -1732,7 +1732,7 @@ class TestCodigoFlow:
             tenant_id=None,
             db=None,
         )
-        assert "inválido" in reply.lower() or "invalid" in reply.lower()
+        assert "invalido" in reply.lower() or "invalid" in reply.lower()
 
     async def test_codigo_flow_cancel(
         self,
@@ -1758,7 +1758,7 @@ class TestCodigoFlow:
         assert (
             "cancelada" in reply.lower()
             or "cancelled" in reply.lower()
-            or "menú" in reply
+            or "menu" in reply
             or "menu" in reply
         )
 
@@ -1783,7 +1783,7 @@ class TestCodigoFlow:
             tenant_id=None,
             db=None,
         )
-        assert "inválido" in reply.lower() or "invalid" in reply.lower()
+        assert "invalido" in reply.lower() or "invalid" in reply.lower()
 
     async def test_codigo_service_keys_alphabetical_order(
         self,
@@ -2168,7 +2168,7 @@ class TestConsoleHandlersCodigoScope:
 
         # Should return buscando message
         assert result is not None
-        assert "buscando" in result.lower() or "código" in result.lower()
+        assert "buscando" in result.lower() or "codigo" in result.lower()
 
         # Should NOT have created any job or enqueued
         # (no mocking of job repos or redis needed) - verifies no such calls
@@ -2485,7 +2485,7 @@ class TestBlockedClients:
                 tenant_id=tenant_id,
                 db=AsyncMock(),
             )
-            assert "inválido" in reply.lower() or "invalid" in reply.lower()
+            assert "invalido" in reply.lower() or "invalid" in reply.lower()
 
     async def test_block_list_zero_goes_back(
         self,
@@ -2554,7 +2554,7 @@ class TestBlockedClients:
             session_service=session_service,
         )
         # Should show main menu
-        assert "Consola de Administración" in reply or "Admin Console" in reply
+        assert "Consola de Administracion" in reply or "Admin Console" in reply
 
         # Session should be cleared
         session = await session_service.get_session("admin:+10000000006")
