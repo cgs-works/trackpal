@@ -12,7 +12,7 @@ The backend integrates with **Evolution API** (WhatsApp Business API proxy, vers
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| `create_instance(name)` | `POST /instance/create` | Creates WhatsApp instance with Baileys integration |
+| `create_instance(name)` | `POST /instance/create` | Creates WhatsApp instance with Baileys integration. Payload includes ``advancedSettings: { "ignoreGroups": true }`` to prevent processing group messages. |
 | `register_webhook(instance_id)` | `POST /webhook/create/{instanceId}` | Registers n8n webhook for inbound messages (upsert) |
 | `delete_instance(name)` | `DELETE /instance/delete/{name}` | Removes instance; 404 is handled gracefully |
 

@@ -30,7 +30,8 @@ IF no_reply=true?
             ├─ No  → Evolution Go Send (uses reply_to when present) → Check Close Session
             └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
                        (`GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`)
-                       → Build result message → Send final result
+                       → Build result message (appends "1 Retry, 2 Back to services, 0 Cancel"
+                         on not_found) → Send final result
          ↓
     Check Close Session → Close Session(if logout)
 ```

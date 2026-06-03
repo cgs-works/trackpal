@@ -73,7 +73,7 @@ The console endpoint now routes by **WhatsApp instance** before resolving identi
    - If ``from_me=true`` → route via ``_handle_from_me_routing`` (see below).
    - Match `tenant.whatsapp_phone` (or `tenant.whatsapp_lid`) → tenant admin flow (after checking active Client Context Shortcut).
    - Match `(tenant_id, phone)` or `(tenant_id, whatsapp_lid)` in `clients` → client flow.
-   - Unregistered identity → check for active unauthenticated code lookup session, check Client Messaging Blocks, route to code lookup for ``codigo``/``código``/``code``, or return ``access_denied``.
+   - Unregistered identity → check for active unauthenticated code lookup session, check Client Messaging Blocks, route to code lookup for ``codigo``/``código``/``code``, or return ``not_registered`` message with ``status="closed"`` and ``close_jid`` (tells unregistered contacts to send ``code``/``código`` for access codes and closes their Evolution session).
 
 ### LID-aware identity path
 
@@ -88,7 +88,8 @@ If the same phone matches both `tenant.whatsapp_phone` and a `client` record wit
 - System **prompts** the user to choose mode: `1) Tenant` or `2) Cliente`.
 - Selection is persisted in Redis at key `wa:mode:{phone}` for the current session.
 - Special shortcut: messages `codigo|código|code` skip ambiguity prompt and route directly to tenant `codigo` flow.
-- When user exits (`0` or `salir`), the mode key is cleared from Redis.
+- When a dual-role user sends a cancel command (``0``, ``salir``, ``cancelar``), the ambiguity handler clears both sessions, the stored mode, and returns ``wa.client.mode_exit`` with ``status="closed"`` and ``close_jid`` set.
+- When user exits through tenant console (``0``), the response includes ``status="closed"`` and ``close_jid`` (canonical phone JID), so n8n closes the correct Evolution session.
 
 ### Exit contract (`status="closed"`)
 
@@ -193,10 +194,12 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 3. Redis lookup is guarded: if the context/session cache is unavailable, the handler falls back safely instead of failing the webhook.
 4. Session stored under ``session:unreg:{tenant-prefix}:{phone}`` or ``session:unreg:{tenant-prefix}:{lid}`` for the multi-step dialog.
 5. Registered clients with an active unauthenticated codigo session resume that session before the read-only Client Console, so ``0`` cancels codigo rather than exiting the Client Console.
-6. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``.
-7. n8n polls the job and sends the final result.
-8. ``0``/cancel inside the dialog clears the Redis session and returns ``status="closed"`` with phone-based ``reply_to``/``close_jid`` when the phone is known, so Evolution Go closes the correct chat session.
-9. Non-codigo messages from unregistered identities return ``access_denied``.
+6. Service list uses ``[N]`` bracket format (``[1] Service``, ``[2] Service``...) with emoji pagination (``8️⃣`` next, ``9️⃣`` previous, ``0️⃣`` cancel). Up to 7 services per page.
+7. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
+8. n8n polls the job and sends the final result. On ``not_found``, the message includes options: ``1 Retry / 2 Back to services / 0 Cancel`` (localised in ES/EN).
+9. Post-result options handled by ``_handle_unauth_codigo_result``: ``1`` creates new job, ``2`` shows service list, ``0`` closes session.
+10. ``0``/cancel at any step clears the Redis session and returns ``status="closed"`` with phone-based ``reply_to``/``close_jid`` when the phone is known, so Evolution Go closes the correct chat session.
+11. Non-codigo messages from unregistered identities return the ``not_registered`` message (``"No tienes una cuenta registrada. Envia 'code' o 'codigo' para buscar codigos de acceso."``) with ``status="closed"`` and ``close_jid``, telling them how to access codes and closing their session.
 
 ## Client Context Shortcut
 
@@ -228,6 +231,7 @@ Multi-step client creation with phone skip or LID-only phone prompt:
 2. Only ``target_lid`` exists → prompt for phone first → then proceed as above.
 3. ``0`` at any step cancels creation and clears context.
 4. On successful creation, matching Client Messaging Blocks are cleared automatically.
+5. After an action completes (block/unblock/create/deactivate/reactivate/edit/delete), the context is **kept alive** (``save_ctx`` instead of ``clear_ctx``) so a subsequent ``0`` from the admin is caught by the universal cancel handler, which correctly closes all sessions (admin + target + phone JID) instead of falling through to the Tenant console which only closes the admin's session.
 
 ### Active client menu
 
@@ -235,7 +239,7 @@ Multi-step client creation with phone skip or LID-only phone prompt:
 |--------|--------|
 | 1 | View client detail (name, username, phone, status). Submenu: 1 Edit data, 2 Deactivate, 0 Back |
 | 2 | Create subscription with client pre-selected (skips client selection in Tenant console) |
-| 0 | Close context |
+| 0 | Close context (closes admin + target + phone JID sessions) |
 
 Phone editing is disabled from the shortcut. Edit supports ``full_name`` and ``local_username`` only.
 
@@ -246,7 +250,7 @@ Phone editing is disabled from the shortcut. Edit supports ``full_name`` and ``l
 | 1 | Reactivate client |
 | 2 | Edit data (same fields as active, no phone) |
 | 3 | Delete client permanently (with CONFIRMAR prompt) |
-| 0 | Close context |
+| 0 | Close context (closes admin + target + phone JID sessions) |
 
 Inactive clients cannot be duplicated by contextual creation (they count as existing identities). The subscription shortcut is hidden until reactivation.
 
@@ -297,23 +301,48 @@ Option ``3`` lists active Client Messaging Blocks. Selecting a block offers to u
 
 ### Código lookup flow (`codigo|código|code`)
 
-Tenant console now supports a dedicated code-retrieval dialog:
-1. Trigger by exact message `codigo`, `código`, or `code`.
-2. Backend asks for service from effective code-services config (`tenant_selected ∩ global_active`), sorted alphabetically by visible label.
+Tenant console has a dedicated code-retrieval dialog. Two independent code paths exist — self-target (tenant admin sends ``code`` to their own number) and client-sent (a registered/unregistered client sends ``code`` to the tenant's number). Both use the same session model but different handler modules.
+
+#### Tenant self-target flow
+
+1. Trigger by exact message ``codigo``, ``código``, or ``code``.
+2. Backend shows a **paginated service list** with ``[N]`` bracket format for services (page-relative ``[1]`` to ``[7]``). Navigation uses emoji keycaps: ``8️⃣`` next page, ``9️⃣`` previous page, ``0️⃣`` cancel. A blank line separates services from navigation options. Up to 7 services per page (``PAGE_SIZE=7``).
 3. Backend asks for target email.
-4. Backend stores lookup intent in session (`service_key`, `target_email`) and keeps dialog response immediate.
-5. Integration handler performs lookup orchestration: create job, commit durable row, enqueue Redis.
-6. Response includes lookup scope for n8n polling (`lookup_job_id` + `tenant_id`) **only after** durable commit + successful enqueue.
+4. Backend stores lookup intent in session (``service_key``, ``target_email``, ``pending_lookup_intent``). **Session is kept alive** (``flow=codigo``, ``step=awaiting_result``) instead of clearing flow state.
+5. Integration handler (``_handle_tenant_console``) creates the job, commits it, enqueues to Redis, then: pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data.
+6. Session remains in ``awaiting_result`` step. When n8n delivers the result notification (e.g. "Code not found"), the user's reply routes back to the awaiting_result handler.
 
-n8n behavior for this path:
-- sends immediate "buscando..."
-- polls every 4s up to 20s on `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`
-- sends final result (`code|url|not_found|duplicate_suppressed|timeout|failed` mapping).
+#### Post-result response (``awaiting_result`` step)
 
-Failure contract for orchestration:
+| User input | Behavior |
+|------------|----------|
+| ``1`` | **Retry** — re-set ``pending_lookup_intent`` with same service_key/target_email. Backend creates a new lookup job. Returns "buscando...". |
+| ``2`` | **Back to services** — clear session, show codigo service list again (page 0). |
+| ``0`` | **Cancel** — clear session, return goodbye, n8n closes Evolution session. |
+| Other | **Still checking** — keep session alive, return "Still searching..." with retry/back/cancel options. |
+
+#### Client-sent code flow (unauth codigo)
+
+1. Trigger by ``codigo``, ``código``, or ``code`` from a registered or unregistered client.
+2. Backend shows the same **paginated service list** with ``[N]`` bracket format and emoji navigation (``8️⃣``/``9️⃣``/``0️⃣``), built by ``_build_unauth_service_page`` in ``console_handlers.py``.
+3. Service selection and email input follow the same pattern as the tenant self-target flow.
+4. Job creation happens **directly** in ``_handle_unauth_codigo_email`` (not delegated to the integration handler). Session transitions to ``awaiting_result`` step.
+5. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel.
+
+#### n8n behavior for this path
+
+- Sends immediate "buscando..."
+- Polls every 4s up to 20s on ``GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...``
+- Sends final result with options appended on ``not_found``:
+  - English: ``1️⃣ Retry / 2️⃣ Back to services / 0️⃣ Cancel``
+  - Spanish: ``1️⃣ Reintentar / 2️⃣ Volver a servicios / 0️⃣ Cancelar``
+- If user picks ``1`` (Retry), backend creates a new job and the poll cycle repeats.
+
+#### Failure contract for orchestration
+
 - If enqueue fails after commit, backend runs compensating delete of created job.
-- If compensating delete fails, backend marks job `failed` with `error_code=queue_unavailable` and logs critical.
-- In both failure branches, response must not include `lookup_job_id`.
+- If compensating delete fails, backend marks job ``failed`` with ``error_code=queue_unavailable`` and logs critical.
+- In both failure branches, response must not include ``lookup_job_id``.
 
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`
@@ -323,7 +352,7 @@ Package: `backend/app/services/whatsapp_tenant_console_facade/`. Submodules: `fa
 1. Resolve caller by phone. Within tenant context, first check `tenant.whatsapp_phone` (tenant admin), then fallback to client identity.
 2. Verify tenant is active.
 3. Resolve tenant context + locale (`tenant.locale`, persisted column).
-4. On top-level `0`, clear `session:admin:{phone}` and exit.
+4. On top-level ``0`` (no active flow), clear ``session:admin:{phone}`` and exit with ``status="closed"`` and ``close_jid`` set to the canonical phone JID (e.g. ``584243106642@s.whatsapp.net``). This ensures n8n sends the phone-based JID (not a LID) to Evolution Go's ``/webhook/change-status`` endpoint.
 5. Delegate to `WhatsAppTenantConsoleService.process_message()` with resolved `locale`.
 
 ### Locale Handling
