@@ -681,9 +681,8 @@ class TestFacade:
             identity=identity,
             db=cast(AsyncSession, object()),
         )
-        # Should cancel (not goodbye), returning main menu
-        assert "Operacion cancelada" in reply or "Consola de Administracion" in reply
-
+        # Should return goodbye without menu (n8n closes session)
+        assert "Has salido de la consola" in reply or "You have exited" in reply
     async def test_facade_top_level_zero_returns_goodbye_message(
         self,
         facade: WhatsAppTenantConsoleFacade,
@@ -1127,7 +1126,7 @@ class TestZeroHandling:
             message="0",
             session_service=session_service,
         )
-        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply
+        assert "Has salido de la consola" in reply or "You have exited" in reply
 
         # Session should be cleared
         fetched = await session_service.get_session("admin:+10000000000")

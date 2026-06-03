@@ -196,9 +196,8 @@ class WhatsAppTenantConsoleService(
                     if session_service is not None:
                         await session_service.clear_session(f"admin:{phone}")
                     if msg == "0":
-                        return self._with_main_menu(
-                            _i18n_t(ctx.get_locale(), "wa.tenant.goodbye")
-                        )
+                        # n8n closes Evolution session, so no menu appended
+                        return _i18n_t(ctx.get_locale(), "wa.tenant.goodbye")
                     return self._with_main_menu(
                         _i18n_t(ctx.get_locale(), "wa.tenant.cancelled")
                     )
