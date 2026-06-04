@@ -18,7 +18,9 @@ Manages the tenant catalog: services and their plans.
 
 - Loads services via `GET /api/v1/catalog/services`
 - Loads plans via `GET /api/v1/catalog/services/{id}/plans`
-- Create/edit/delete operations for services and plans
+- Creates and renames services and plans.
+- Deletes services/plans through REST preview + typed confirmation modal (`CONFIRMAR` or `CONFIRM`).
+- Preview modal shows affected plan count, active/historical/total subscription counts, and active subscription rows paginated at 10/page.
 - Handles duplicate name errors (409) from backend
 - Shows user-facing errors with locale-aware messages via `i18nStore`
 

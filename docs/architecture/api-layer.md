@@ -116,11 +116,15 @@ All catalog endpoints require tenant context. Tenant users derive it from their 
 - `POST /api/v1/catalog/services`
 - `GET /api/v1/catalog/services/{service_id}`
 - `PUT /api/v1/catalog/services/{service_id}`
-- `DELETE /api/v1/catalog/services/{service_id}`
+- `DELETE /api/v1/catalog/services/{service_id}?confirm=true` — Confirmed cascade delete for a service, its plans, and all related subscriptions. Without `confirm=true`, returns 400.
 - `GET /api/v1/catalog/services/{service_id}/plans`
 - `POST /api/v1/catalog/services/{service_id}/plans`
 - `PUT /api/v1/catalog/services/{service_id}/plans/{plan_id}`
-- `DELETE /api/v1/catalog/services/{service_id}/plans/{plan_id}`
+- `DELETE /api/v1/catalog/services/{service_id}/plans/{plan_id}?confirm=true` — Confirmed cascade delete for a plan and all related subscriptions. Without `confirm=true`, returns 400.
+- `GET /api/v1/catalog/services/{service_id}/delete-preview?page=1&page_size=10` — Preview cascade impact before deleting a service. Returns affected plan count, active/historical/total subscription counts, note, and paginated active subscription rows.
+- `GET /api/v1/catalog/services/{service_id}/plans/{plan_id}/delete-preview?page=1&page_size=10` — Preview cascade impact before deleting a plan.
+
+Active subscription counts use `status == "active"` only. Services and plans have no active/inactive lifecycle; existing rows count as active catalog items.
 
 Duplicate service/plan names return 409. Cross-tenant resources return 404.
 

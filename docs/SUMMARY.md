@@ -35,7 +35,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Backend Structure](codebase/backend-structure.md) | Backend directory tree, entry points, and key modules |
 | [Frontend Structure](codebase/frontend-structure.md) | Frontend directory tree, entry points, and key modules |
-| [Frontend Components](codebase/frontend-components.md) | Reusable Vue panels and their responsibilities |
+| [Frontend Components](codebase/frontend-components.md) | Reusable panels, including Catalog CRUD with delete preview confirmation, and their responsibilities |
 
 ## Code Standard
 

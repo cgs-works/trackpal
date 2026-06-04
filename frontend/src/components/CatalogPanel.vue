@@ -1,7 +1,8 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import api from '../services/api'
 import { useI18nStore } from '../stores/i18n'
+import { formatCount, formatPreviewRow, isDeleteConfirmationValid } from './catalogDeletePreview'
 
 const i18nStore = useI18nStore()
 
@@ -12,6 +13,94 @@ const serviceName = ref('')
 const planName = ref('')
 const catalogMessage = ref('')
 const errorMessage = ref('')
+
+const deletePreview = ref(null)
+const deleteTarget = ref(null)
+const deleteConfirmText = ref('')
+const deletePage = ref(1)
+const isDeleteLoading = ref(false)
+const isDeleting = ref(false)
+const deleteError = ref('')
+const canConfirmDelete = computed(() => isDeleteConfirmationValid(deleteConfirmText.value))
+
+function closeDeleteModal() {
+  deletePreview.value = null
+  deleteTarget.value = null
+  deleteConfirmText.value = ''
+  deletePage.value = 1
+  isDeleteLoading.value = false
+  isDeleting.value = false
+  deleteError.value = ''
+}
+
+function deletePreviewTitle() {
+  if (!deleteTarget.value) return ''
+  return i18nStore.t(deleteTarget.value.type === 'service'
+    ? 'frontend.catalog.delete_preview_title_service'
+    : 'frontend.catalog.delete_preview_title_plan')
+}
+
+function countText(count, oneKey, otherKey) {
+  return formatCount(i18nStore.t, count, oneKey, otherKey)
+}
+
+async function loadDeletePreview(page = 1) {
+  const target = deleteTarget.value
+  if (!target) return
+  isDeleteLoading.value = true
+  deleteError.value = ''
+  errorMessage.value = ''
+  try {
+    const url = target.type === 'service'
+      ? `/catalog/services/${target.serviceId}/delete-preview?page=${page}&page_size=10`
+      : `/catalog/services/${selectedServiceId.value}/plans/${target.planId}/delete-preview?page=${page}&page_size=10`
+    const response = await api.get(url)
+    deletePreview.value = response.data
+    deletePage.value = page
+  } catch (error) {
+    deleteError.value = getApiError(error, target.type === 'service'
+      ? i18nStore.t('frontend.catalog.error_delete_service')
+      : i18nStore.t('frontend.catalog.error_delete_plan'))
+  } finally {
+    isDeleteLoading.value = false
+  }
+}
+
+async function openDeleteService(service) {
+  catalogMessage.value = ''
+  errorMessage.value = ''
+  deleteTarget.value = { type: 'service', serviceId: service.id, name: service.name }
+  await loadDeletePreview(1)
+}
+
+async function openDeletePlan(plan) {
+  catalogMessage.value = ''
+  errorMessage.value = ''
+  deleteTarget.value = { type: 'plan', planId: plan.id, name: plan.name }
+  await loadDeletePreview(1)
+}
+
+async function confirmDelete() {
+  const target = deleteTarget.value
+  if (!target || !canConfirmDelete.value) return
+  isDeleting.value = true
+  try {
+    const url = target.type === 'service'
+      ? `/catalog/services/${target.serviceId}?confirm=true`
+      : `/catalog/services/${selectedServiceId.value}/plans/${target.planId}?confirm=true`
+    await api.delete(url)
+    if (target.type === 'service' && selectedServiceId.value === target.serviceId) selectedServiceId.value = ''
+    closeDeleteModal()
+    await loadServices()
+    if (selectedServiceId.value) await loadPlans()
+  } catch (error) {
+    deleteError.value = getApiError(error, target.type === 'service'
+      ? i18nStore.t('frontend.catalog.error_delete_service')
+      : i18nStore.t('frontend.catalog.error_delete_plan'))
+  } finally {
+    isDeleting.value = false
+  }
+}
 
 function getApiError(error, fallback) {
   const detail = error.response?.data?.detail
@@ -26,6 +115,14 @@ async function loadServices() {
   services.value = response.data || []
   if (!selectedServiceId.value && services.value.length) selectedServiceId.value = services.value[0].id
   if (selectedServiceId.value) await loadPlans()
+}
+
+async function loadInitialServices() {
+  try {
+    await loadServices()
+  } catch (error) {
+    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_load_services'))
+  }
 }
 
 async function loadPlans() {
@@ -63,19 +160,6 @@ async function renameService(service) {
   }
 }
 
-async function deleteService(service) {
-  catalogMessage.value = ''
-  errorMessage.value = ''
-  if (!window.confirm(i18nStore.t('frontend.catalog.delete_service_confirm', { name: service.name }))) return
-  try {
-    await api.delete(`/catalog/services/${service.id}`)
-    if (selectedServiceId.value === service.id) selectedServiceId.value = ''
-    await loadServices()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_service'))
-  }
-}
-
 async function createPlan() {
   catalogMessage.value = ''
   errorMessage.value = ''
@@ -102,19 +186,7 @@ async function renamePlan(plan) {
   }
 }
 
-async function deletePlan(plan) {
-  catalogMessage.value = ''
-  errorMessage.value = ''
-  if (!window.confirm(i18nStore.t('frontend.catalog.delete_plan_confirm', { name: plan.name }))) return
-  try {
-    await api.delete(`/catalog/services/${selectedServiceId.value}/plans/${plan.id}`)
-    await loadPlans()
-  } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_plan'))
-  }
-}
-
-onMounted(loadServices)
+onMounted(loadInitialServices)
 </script>
 
 <template>
@@ -137,7 +209,7 @@ onMounted(loadServices)
       <li v-for="service in services" :key="service.id">
         <button class="link-button" type="button" @click="selectedServiceId = service.id; loadPlans()">{{ service.name }}</button>
         <button class="link-button" type="button" @click="renameService(service)">{{ i18nStore.t('frontend.catalog.edit') }}</button>
-        <button class="link-button danger" type="button" @click="deleteService(service)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
+        <button class="link-button danger" type="button" @click="openDeleteService(service)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
       </li>
     </ul>
 
@@ -150,8 +222,142 @@ onMounted(loadServices)
       <li v-for="plan in plans" :key="plan.id">
         {{ plan.name }}
         <button class="link-button" type="button" @click="renamePlan(plan)">{{ i18nStore.t('frontend.catalog.edit') }}</button>
-        <button class="link-button danger" type="button" @click="deletePlan(plan)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
+        <button class="link-button danger" type="button" @click="openDeletePlan(plan)">{{ i18nStore.t('frontend.catalog.delete') }}</button>
       </li>
     </ul>
+
+    <!-- Delete preview modal -->
+    <div v-if="deleteTarget" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>{{ deletePreviewTitle() }}</h3>
+          <button class="modal-close" type="button" @click="closeDeleteModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p v-if="deleteError" class="alert alert-error">{{ deleteError }}</p>
+          <p v-if="isDeleteLoading">{{ i18nStore.t('frontend.catalog.delete_preview_loading') }}</p>
+          <template v-else-if="deletePreview">
+            <p class="delete-target-name"><strong>{{ deletePreview.target_name }}</strong></p>
+            <ul class="preview-counts">
+              <li v-if="deletePreview.target_type === 'service'">{{ i18nStore.t('frontend.catalog.affected_plans') }}: {{ countText(deletePreview.affected_plan_count, 'frontend.catalog.plan_one', 'frontend.catalog.plan_other') }}</li>
+              <li>{{ i18nStore.t('frontend.catalog.active_subscriptions') }}: {{ countText(deletePreview.active_subscription_count, 'frontend.catalog.subscription_one', 'frontend.catalog.subscription_other') }}</li>
+              <li>{{ i18nStore.t('frontend.catalog.historical_subscriptions') }}: {{ countText(deletePreview.historical_subscription_count, 'frontend.catalog.subscription_one', 'frontend.catalog.subscription_other') }}</li>
+              <li>{{ i18nStore.t('frontend.catalog.total_subscriptions') }}: {{ countText(deletePreview.total_subscription_count, 'frontend.catalog.subscription_one', 'frontend.catalog.subscription_other') }}</li>
+            </ul>
+            <p class="warning-note">{{ i18nStore.t('frontend.catalog.delete_preview_note') }}</p>
+            <ul v-if="deletePreview.active_subscriptions?.length" class="preview-rows">
+              <li v-for="row in deletePreview.active_subscriptions" :key="row.id">{{ formatPreviewRow(row) }}</li>
+            </ul>
+            <p v-else class="no-rows">{{ i18nStore.t('frontend.catalog.no_active_rows') }}</p>
+            <div v-if="deletePreview.pagination?.total_pages > 1" class="pagination-actions">
+              <button class="button button-secondary button-small" type="button" :disabled="deletePage <= 1 || isDeleteLoading" @click="loadDeletePreview(deletePage - 1)">{{ i18nStore.t('frontend.catalog.preview_prev') }}</button>
+              <button class="button button-secondary button-small" type="button" :disabled="!deletePreview.pagination.has_next || isDeleteLoading" @click="loadDeletePreview(deletePage + 1)">{{ i18nStore.t('frontend.catalog.preview_next') }}</button>
+            </div>
+            <label class="confirm-field">{{ i18nStore.t('frontend.catalog.confirm_label') }}<input v-model.trim="deleteConfirmText" type="text" :placeholder="i18nStore.t('frontend.catalog.confirm_placeholder')" /></label>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button class="button button-secondary" type="button" @click="closeDeleteModal">{{ i18nStore.t('frontend.catalog.cancel_delete') }}</button>
+          <button class="button button-primary danger-action" type="button" :disabled="!canConfirmDelete || isDeleting" @click="confirmDelete">{{ isDeleting ? i18nStore.t('frontend.catalog.deleting') : i18nStore.t('frontend.catalog.confirm_delete') }}</button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal {
+  background: var(--card-bg, #fff);
+  border-radius: 16px;
+  width: min(92vw, 620px);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px;
+}
+.modal-body {
+  padding: 0 24px 20px;
+  display: grid;
+  gap: 14px;
+}
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+.modal-close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.modal-close:hover {
+  background: var(--hover-bg, #f1f5f9);
+}
+.preview-counts {
+  margin: 0;
+  padding-left: 20px;
+}
+.preview-rows {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.875rem;
+}
+.preview-rows li {
+  margin-bottom: 4px;
+}
+.warning-note {
+  color: var(--danger, #ef4444);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.no-rows {
+  font-size: 0.875rem;
+  color: var(--muted, #64748b);
+}
+.pagination-actions {
+  display: flex;
+  gap: 8px;
+}
+.confirm-field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.875rem;
+}
+.danger-action {
+  background: var(--danger, #ef4444);
+  border-color: var(--danger, #ef4444);
+}
+.danger-action:hover {
+  background: var(--danger-hover, #dc2626);
+  border-color: var(--danger-hover, #dc2626);
+}
+.danger-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.delete-target-name {
+  font-size: 1.125rem;
+}
+</style>
