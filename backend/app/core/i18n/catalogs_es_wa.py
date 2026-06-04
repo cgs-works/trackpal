@@ -311,5 +311,6 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.catalog.delete_plan_zero_subscriptions": "El plan *{name}* no tiene suscripciones asociadas.\n\nSi confirmas, se eliminara:\n- El plan",
     "wa.tenant.catalog.count.subscription.one": "1 suscripcion asociada",
     "wa.tenant.catalog.count.subscription.other": "{count} suscripciones asociadas",
+    "wa.tenant.catalog.delete_confirm_prompt": "Escribe *CONFIRMAR* para eliminar o *0* para cancelar.",
     "wa.tenant.catalog.delete_note": "Las suscripciones historicas, expiradas y canceladas asociadas tambien se eliminaran, aunque no aparezcan en la lista.",
 }

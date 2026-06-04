@@ -184,14 +184,20 @@ async def _handle_catalog_service_action(self, phone, msg, session, session_serv
             if session_service is not None:
                 await session_service.save_session(session)
             return self._t(self.KEY_CATALOG_EMPTY_PLANS_MENU)
-        reply, selection_map = self._format_plan_list(plans)
+        page_size = self.CATALOG_PAGE_SIZE
+        page = 1
+        total_pages = max(1, math.ceil(len(plans) / page_size))
+        start = (page - 1) * page_size
+        page_plans = plans[start:start + page_size]
+        reply, selection_map = self._format_plan_list(page_plans, page=page, total_pages=total_pages)
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT
         session.selection_map = selection_map
         session.temp_data["service_id"] = service_id
+        session.temp_data["plan_page"] = page
         if session_service is not None:
             await session_service.save_session(session)
-        return reply + "\n\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
+        return reply + "\\n\\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
     elif msg == "3":
         # Create plan
         session.flow = self.CATALOG_FLOW
@@ -238,6 +244,34 @@ async def _handle_catalog_edit_service(self, phone, msg, session, session_servic
 
 async def _handle_catalog_plan_select(self, phone, msg, session, session_service, tenant_id, db):
     """Select a plan from the list."""
+    if is_next(msg):
+        page = session.temp_data.get("plan_page", 1)
+        next_page = page + 1
+        sid = session.temp_data.get("service_id")
+        if not sid:
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        parsed_id = self._safe_uuid(sid)
+        if parsed_id is None or tenant_id is None or db is None or self._catalog_service is None:
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        plans = await self._catalog_service.list_plans(db, tenant_id, parsed_id)
+        if not plans:
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        page_size = self.CATALOG_PAGE_SIZE
+        total_pages = max(1, math.ceil(len(plans) / page_size))
+        start = (next_page - 1) * page_size
+        page_plans = plans[start:start + page_size]
+        if not page_plans:
+            return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        reply, selection_map = self._format_plan_list(page_plans, page=next_page, total_pages=total_pages)
+        session.flow = self.CATALOG_FLOW
+        session.step = self.CATALOG_STEP_PLAN_SELECT
+        session.selection_map = selection_map
+        session.temp_data["plan_page"] = next_page
+        session.temp_data["service_id"] = sid
+        if session_service is not None:
+            await session_service.save_session(session)
+        return reply + "\n\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
+
     if is_back(msg):
         # Go back to service detail
         service_id = session.temp_data.get("service_id")

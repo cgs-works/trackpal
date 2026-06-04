@@ -97,7 +97,7 @@ async def _render_service_delete_warning(self, session, tenant_id, db, page=1):
             self._format_catalog_subscription_warning_row(row)
             for row in preview.active_subscriptions
         )
-    lines.extend(["", "Escribe *CONFIRMAR* para eliminar o *0* para cancelar."])
+    lines.extend(["", self._t("wa.tenant.catalog.delete_confirm_prompt")])
     if preview.pagination.has_next:
         lines.append(self._t("wa.nav.next"))
     lines.append(self._t("wa.nav.back"))
@@ -243,7 +243,7 @@ async def _render_plan_delete_warning(self, session, tenant_id, db, page=1):
             self._format_catalog_subscription_warning_row(row)
             for row in preview.active_subscriptions
         )
-    lines.extend(["", "Escribe *CONFIRMAR* para eliminar o *0* para cancelar."])
+    lines.extend(["", self._t("wa.tenant.catalog.delete_confirm_prompt")])
     if preview.pagination.has_next:
         lines.append(self._t("wa.nav.next"))
     lines.append(self._t("wa.nav.back"))

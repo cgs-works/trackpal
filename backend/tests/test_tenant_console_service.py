@@ -3018,3 +3018,93 @@ class TestCatalogFlow:
         success = await console_service.process_message("+10000000000", "CONFIRM", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
         assert "Plan" in success and "eliminado" in success
 
+
+    async def test_catalog_plan_list_paginates_and_shows_counts(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Plan list for a service paginates at CATALOG_PAGE_SIZE, 8=next, 9=back."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        catalog_service._plans.clear()
+        plan_names = [f"Plan {chr(65+i)}" for i in range(9)]  # 9 plans → 2 pages
+        for name in plan_names:
+            plan = FakePlanObj(service_id=service.id, name=name, active_subscription_count=1)
+            catalog_service._plans[str(plan.id)] = plan
+
+        # Navigate: Main menu → Catalog → Service 1 → Service detail → Option 2 (View plans)
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        reply = await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+
+        # Page 1: first 7 plans only
+        assert "1️⃣ Plan A - 1 suscripcion activa" in reply
+        assert "7️⃣ Plan G - 1 suscripcion activa" in reply
+        assert "Plan H" not in reply
+        assert "8️⃣ Siguiente" in reply
+
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert session.step == "plan_select"
+        assert session.selection_map["7"] == str(next(
+            p.id for p in catalog_service._plans.values() if p.name == "Plan G"
+        ))
+
+        # 8 → page 2
+        reply = await console_service.process_message(
+            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "1️⃣ Plan H - 1 suscripcion activa" in reply
+        assert "2️⃣ Plan I - 1 suscripcion activa" in reply
+        assert "Plan A" not in reply
+        # No "Next" on last page
+        assert "8️⃣ Siguiente" not in reply
+
+        # 9 → back to service detail
+        reply = await console_service.process_message(
+            "+10000000000", "9", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "Servicio" in reply
+        assert "Ver planes" in reply or "Acciones" in reply
+
+    async def test_delete_service_warning_uses_i18n_confirm_prompt(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Delete service warning uses i18n key — EN locale does not contain hardcoded ES text."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        service.plan_count = 2
+        service.active_subscription_count = 1
+
+        # Navigate to delete service list
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "3", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+
+        # Get warning with English locale
+        warning = await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()),
+            session_service=session_service, locale="en"
+        )
+
+        # Should NOT contain Spanish hardcoded text
+        assert "Escribe *CONFIRMAR* para eliminar" not in warning
+        # Should contain the English confirm prompt from i18n
+        assert "Type *CONFIRM* to delete" in warning
