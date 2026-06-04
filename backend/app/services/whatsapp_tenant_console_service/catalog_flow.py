@@ -197,7 +197,7 @@ async def _handle_catalog_service_action(self, phone, msg, session, session_serv
         session.temp_data["plan_page"] = page
         if session_service is not None:
             await session_service.save_session(session)
-        return reply + "\\n\\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
+        return reply + "\n\n" + self._t(self.KEY_CATALOG_PLAN_PROMPT)
     elif msg == "3":
         # Create plan
         session.flow = self.CATALOG_FLOW
