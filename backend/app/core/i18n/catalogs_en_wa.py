@@ -315,4 +315,9 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.catalog.delete_note": "Historical, expired, and cancelled subscriptions will also be deleted even when they are not listed.",
     "wa.tenant.catalog.delete_service_warning_body": "Service *{name}* has {plans} associated.\nActive subscriptions: {active}\nHistorical/inactive subscriptions: {historical}\nTotal affected: {total}",
     "wa.tenant.catalog.delete_plan_warning_body": "Plan *{name}* has associated subscriptions.\nActive subscriptions: {active}\nHistorical/inactive subscriptions: {historical}\nTotal affected: {total}",
+    "wa.tenant.catalog.service_list_header": "📋 *Services*",
+    "wa.tenant.catalog.service_detail_header": "📦 *Service*",
+    "wa.tenant.catalog.plan_list_header": "📋 *Plans*",
+    "wa.tenant.catalog.plan_detail_header": "📄 *Plan*",
+    "wa.tenant.catalog.name_label": "*Name:* {name}",
 }

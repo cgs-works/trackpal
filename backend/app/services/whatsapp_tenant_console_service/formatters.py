@@ -115,7 +115,11 @@ def _format_service_list(
             f"{_catalog_count('wa.tenant.catalog.count.subscription_active', active_count)}"
         )
         selection_map[num] = str(s.id)
-    reply = "📋 *Servicios*\n\n" + "\n".join(entries)
+    reply = (
+        _i18n_t(loc, "wa.tenant.catalog.service_list_header")
+        + "\n\n"
+        + "\n".join(entries)
+    )
     if total_pages > 1:
         reply += "\n\n" + _i18n_t(
             loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages
@@ -130,7 +134,10 @@ def _format_service_list(
 
 
 def _format_service_detail(service: Any) -> str:
-    return f"📦 *Servicio*\n\n*Nombre:* {service.name}\n"
+    loc = ctx.get_locale()
+    header = _i18n_t(loc, "wa.tenant.catalog.service_detail_header")
+    name_label = _i18n_t(loc, "wa.tenant.catalog.name_label", name=service.name)
+    return f"{header}\n\n{name_label}\n"
 
 
 def _format_plan_list(
@@ -150,7 +157,9 @@ def _format_plan_list(
             f"{_catalog_count('wa.tenant.catalog.count.subscription_active', active_count)}"
         )
         selection_map[num] = str(p.id)
-    reply = "📋 *Planes*\n\n" + "\n".join(entries)
+    reply = (
+        _i18n_t(loc, "wa.tenant.catalog.plan_list_header") + "\n\n" + "\n".join(entries)
+    )
     if total_pages > 1:
         reply += "\n\n" + _i18n_t(
             loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages
@@ -165,7 +174,10 @@ def _format_plan_list(
 
 
 def _format_plan_detail(plan: Any) -> str:
-    return f"📄 *Plan*\n\n*Nombre:* {plan.name}\n"
+    loc = ctx.get_locale()
+    header = _i18n_t(loc, "wa.tenant.catalog.plan_detail_header")
+    name_label = _i18n_t(loc, "wa.tenant.catalog.name_label", name=plan.name)
+    return f"{header}\n\n{name_label}\n"
 
 
 def _format_profile_detail(profile: Any, username: str) -> str:
@@ -176,7 +188,6 @@ def _format_profile_detail(profile: Any, username: str) -> str:
         f"*Email:* {profile.email or '—'}\n"
         f"*Teléfono:* {profile.phone or '—'}\n"
     )
-
 
 
 def _format_catalog_subscription_warning_row(row: Any) -> str:
@@ -190,7 +201,6 @@ def _format_catalog_subscription_warning_row(row: Any) -> str:
         f"{row.streaming_email} - {row.client_name or '—'} - {row.client_phone or '—'} - "
         f"{row.service_name}/{row.plan_name} - expira {expires_text}"
     )
-
 
 
 def _format_subscription_list(
