@@ -47,6 +47,8 @@ _CATALOG_ES_GENERAL: Final[dict[str, str]] = {
     "errors.profile_not_found": "Perfil no encontrado",
     "errors.reminder_log_not_found": "Registro de recordatorio no encontrado",
     "errors.catalog_delete_confirmation_required": "Debes confirmar la eliminación con confirm=true",
+    "errors.service_delete_failed": "No se pudo eliminar el servicio",
+    "errors.plan_delete_failed": "No se pudo eliminar el plan",
     "reminder.subscription.expiring": "⚠️ *Recordatorio*\n\nLa suscripción a *{service_name}* para *{client_name}* vence en {days} {day_word}.\n\n📧 Cuenta: {streaming_email}\n\nGestiona desde tu panel o envía *MENU* para más opciones.",
     "reminder.subscription.expired": "⚠️ La suscripción de {service_name} para {client_name} ha vencido ({expires_at}).",
     "reminder.subscription.renewed": "✅ Suscripción de {service_name} para {client_name} renovada hasta {expires_at}.",

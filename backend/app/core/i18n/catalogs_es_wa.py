@@ -313,4 +313,6 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.catalog.count.subscription.other": "{count} suscripciones asociadas",
     "wa.tenant.catalog.delete_confirm_prompt": "Escribe *CONFIRMAR* para eliminar o *0* para cancelar.",
     "wa.tenant.catalog.delete_note": "Las suscripciones historicas, expiradas y canceladas asociadas tambien se eliminaran, aunque no aparezcan en la lista.",
+    "wa.tenant.catalog.delete_service_warning_body": "El servicio *{name}* tiene {plans} asociados.\nSuscripciones activas: {active}\nSuscripciones historicas/no activas: {historical}\nTotal afectado: {total}",
+    "wa.tenant.catalog.delete_plan_warning_body": "El plan *{name}* tiene suscripciones asociadas.\nSuscripciones activas: {active}\nSuscripciones historicas/no activas: {historical}\nTotal afectado: {total}",
 }

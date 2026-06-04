@@ -6,7 +6,7 @@ import math
 
 from app.core.errors import UserFacingError, translate_error
 from app.schemas.catalog import PlanCreate, PlanUpdate, ServiceCreate, ServiceUpdate
-from app.services.whatsapp_navigation import is_back, is_cancel, is_next
+from app.services.whatsapp_navigation import is_back, is_next
 
 from . import _context as ctx
 
@@ -16,9 +16,7 @@ def _paginate(items, page, page_size):
     safe_page = max(1, page)
     total_pages = max(1, math.ceil(len(items) / page_size))
     start = (safe_page - 1) * page_size
-    return items[start:start + page_size], safe_page, total_pages
-
-
+    return items[start : start + page_size], safe_page, total_pages
 
 
 async def _catalog_menu_reply(self, tenant_id, db):
@@ -58,22 +56,25 @@ async def _set_post_action(self, phone, session_service, message):
     return message.rstrip() + self._t(self.KEY_CATALOG_POST_SUCCESS_PROMPT)
 
 
-async def _show_catalog_service_list(self, phone, session, session_service, tenant_id, db, *, page=1):
+async def _show_catalog_service_list(
+    self, phone, session, session_service, tenant_id, db, *, page=1
+):
     """Fetch, paginate, and display the service list."""
     if tenant_id is None or db is None or self._catalog_service is None:
         return self._t(self.KEY_CATALOG_INVALID_SELECTION)
     services = await self._catalog_service.list_service_summaries(db, tenant_id)
-    page_size = self.CATALOG_PAGE_SIZE
-    total_pages = max(1, math.ceil(len(services) / page_size))
-    start = (page - 1) * page_size
-    page_services = services[start : start + page_size]
+    page_services, safe_page, total_pages = self._paginate(
+        services, page, self.CATALOG_PAGE_SIZE
+    )
     if not page_services:
         return self._t(self.KEY_CATALOG_INVALID_SELECTION)
-    reply, selection_map = self._format_service_list(page_services, page=page, total_pages=total_pages)
+    reply, selection_map = self._format_service_list(
+        page_services, page=safe_page, total_pages=total_pages
+    )
     session.flow = self.CATALOG_FLOW
     session.step = self.CATALOG_STEP_SERVICE_SELECT
     session.selection_map = selection_map
-    session.temp_data["catalog_page"] = page
+    session.temp_data["catalog_page"] = safe_page
     if session_service is not None:
         await session_service.save_session(session)
     return reply + "\n\n" + self._t(self.KEY_CATALOG_SERVICE_PROMPT)
@@ -92,7 +93,9 @@ async def _fetch_service_list(self, tenant_id, db):
     return reply, selection_map
 
 
-async def _handle_catalog_menu(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_menu(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Route inputs on the catalog main menu."""
     services = []
     if tenant_id is not None and db is not None and self._catalog_service is not None:
@@ -104,7 +107,9 @@ async def _handle_catalog_menu(self, phone, msg, session, session_service, tenan
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
     if msg == "1" and has_services:
-        return await self._show_catalog_service_list(phone, session, session_service, tenant_id, db, page=1)
+        return await self._show_catalog_service_list(
+            phone, session, session_service, tenant_id, db, page=1
+        )
     if msg == "1" and not has_services:
         session.step = self.CATALOG_STEP_CREATE_SERVICE_NAME
         if session_service is not None:
@@ -122,11 +127,15 @@ async def _handle_catalog_menu(self, phone, msg, session, session_service, tenan
     return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
 
-async def _handle_catalog_service_select(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_service_select(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Select a service from the paginated list."""
     if is_next(msg):
         page = session.temp_data.get("catalog_page", 1)
-        return await self._show_catalog_service_list(phone, session, session_service, tenant_id, db, page=page + 1)
+        return await self._show_catalog_service_list(
+            phone, session, session_service, tenant_id, db, page=page + 1
+        )
     if is_back(msg):
         # Back to catalog menu
         reply = await self._catalog_menu_reply(tenant_id, db)
@@ -138,7 +147,12 @@ async def _handle_catalog_service_select(self, phone, msg, session, session_serv
             await session_service.save_session(session)
         return reply
     service_id = session.selection_map.get(msg)
-    if not service_id or tenant_id is None or db is None or self._catalog_service is None:
+    if (
+        not service_id
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
         return self._t(self.KEY_CATALOG_INVALID_SELECTION)
     parsed_id = self._safe_uuid(service_id)
     if parsed_id is None:
@@ -152,11 +166,15 @@ async def _handle_catalog_service_select(self, phone, msg, session, session_serv
     if session_service is not None:
         await session_service.save_session(session)
     return (
-        self._format_service_detail(service) + "\n" + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
+        self._format_service_detail(service)
+        + "\n"
+        + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
     )
 
 
-async def _handle_catalog_service_action(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_service_action(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Route actions on a selected service."""
     service_id = session.temp_data.get("service_id")
     if not service_id:
@@ -188,8 +206,10 @@ async def _handle_catalog_service_action(self, phone, msg, session, session_serv
         page = 1
         total_pages = max(1, math.ceil(len(plans) / page_size))
         start = (page - 1) * page_size
-        page_plans = plans[start:start + page_size]
-        reply, selection_map = self._format_plan_list(page_plans, page=page, total_pages=total_pages)
+        page_plans = plans[start : start + page_size]
+        reply, selection_map = self._format_plan_list(
+            page_plans, page=page, total_pages=total_pages
+        )
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT
         session.selection_map = selection_map
@@ -211,17 +231,26 @@ async def _handle_catalog_service_action(self, phone, msg, session, session_serv
             phone, session, session_service, tenant_id, db, page=1
         )
     elif is_back(msg):
-        return await self._show_catalog_service_list(phone, session, session_service, tenant_id, db, page=1)
+        return await self._show_catalog_service_list(
+            phone, session, session_service, tenant_id, db, page=1
+        )
     return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
 
-async def _handle_catalog_edit_service(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_edit_service(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Handle edit service name input."""
     name = msg.strip()
     if not name:
         return self._t(self.KEY_CATALOG_NAME_REQUIRED)
     service_id = getattr(session, "temp_data", {}).get("service_id")
-    if not service_id or tenant_id is None or db is None or self._catalog_service is None:
+    if (
+        not service_id
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
         return self._t("wa.tenant.errors.service_update_failed")
     parsed_id = self._safe_uuid(service_id)
     if parsed_id is None:
@@ -237,12 +266,15 @@ async def _handle_catalog_edit_service(self, phone, msg, session, session_servic
     if service is None:
         return self._t("wa.tenant.errors.service_not_found")
     return await self._set_post_action(
-        phone, session_service,
-        self._t(self.KEY_CATALOG_SERVICE_EDIT_SUCCESS, name=service.name)
+        phone,
+        session_service,
+        self._t(self.KEY_CATALOG_SERVICE_EDIT_SUCCESS, name=service.name),
     )
 
 
-async def _handle_catalog_plan_select(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_plan_select(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Select a plan from the list."""
     if is_next(msg):
         page = session.temp_data.get("plan_page", 1)
@@ -251,22 +283,28 @@ async def _handle_catalog_plan_select(self, phone, msg, session, session_service
         if not sid:
             return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         parsed_id = self._safe_uuid(sid)
-        if parsed_id is None or tenant_id is None or db is None or self._catalog_service is None:
+        if (
+            parsed_id is None
+            or tenant_id is None
+            or db is None
+            or self._catalog_service is None
+        ):
             return self._t(self.KEY_CATALOG_INVALID_SELECTION)
         plans = await self._catalog_service.list_plans(db, tenant_id, parsed_id)
         if not plans:
             return self._t(self.KEY_CATALOG_INVALID_SELECTION)
-        page_size = self.CATALOG_PAGE_SIZE
-        total_pages = max(1, math.ceil(len(plans) / page_size))
-        start = (next_page - 1) * page_size
-        page_plans = plans[start:start + page_size]
+        page_plans, safe_page, total_pages = self._paginate(
+            plans, next_page, self.CATALOG_PAGE_SIZE
+        )
         if not page_plans:
             return self._t(self.KEY_CATALOG_INVALID_SELECTION)
-        reply, selection_map = self._format_plan_list(page_plans, page=next_page, total_pages=total_pages)
+        reply, selection_map = self._format_plan_list(
+            page_plans, page=safe_page, total_pages=total_pages
+        )
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT
         session.selection_map = selection_map
-        session.temp_data["plan_page"] = next_page
+        session.temp_data["plan_page"] = safe_page
         session.temp_data["service_id"] = sid
         if session_service is not None:
             await session_service.save_session(session)
@@ -275,17 +313,26 @@ async def _handle_catalog_plan_select(self, phone, msg, session, session_service
     if is_back(msg):
         # Go back to service detail
         service_id = session.temp_data.get("service_id")
-        if service_id and db is not None and tenant_id is not None and self._catalog_service is not None:
+        if (
+            service_id
+            and db is not None
+            and tenant_id is not None
+            and self._catalog_service is not None
+        ):
             parsed_id = self._safe_uuid(service_id)
             if parsed_id is not None:
-                service = await self._catalog_service.get_service(db, tenant_id, parsed_id)
+                service = await self._catalog_service.get_service(
+                    db, tenant_id, parsed_id
+                )
                 if service is not None:
                     session.flow = self.CATALOG_FLOW
                     session.step = self.CATALOG_STEP_SERVICE_ACTION
                     if session_service is not None:
                         await session_service.save_session(session)
                     return (
-                        self._format_service_detail(service) + "\n" + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
+                        self._format_service_detail(service)
+                        + "\n"
+                        + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
                     )
         # Fallback: back to catalog menu
         reply = await self._catalog_menu_reply(tenant_id, db)
@@ -306,7 +353,9 @@ async def _handle_catalog_plan_select(self, phone, msg, session, session_service
     parsed_plan_id = self._safe_uuid(plan_id)
     if parsed_service_id is None or parsed_plan_id is None:
         return self._t(self.KEY_CATALOG_INVALID_SELECTION)
-    plan = await self._catalog_service.get_plan(db, tenant_id, parsed_service_id, parsed_plan_id)
+    plan = await self._catalog_service.get_plan(
+        db, tenant_id, parsed_service_id, parsed_plan_id
+    )
     if plan is None:
         return self._t(self.KEY_CATALOG_INVALID_SELECTION)
     session.flow = self.CATALOG_FLOW
@@ -320,7 +369,9 @@ async def _handle_catalog_plan_select(self, phone, msg, session, session_service
     )
 
 
-async def _handle_catalog_plan_action(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_plan_action(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Route actions on a selected plan."""
     plan_id = session.temp_data.get("plan_id")
     if not plan_id:
@@ -339,10 +390,17 @@ async def _handle_catalog_plan_action(self, phone, msg, session, session_service
     elif is_back(msg):
         # Back to service detail
         service_id = session.temp_data.get("service_id")
-        if service_id and db is not None and tenant_id is not None and self._catalog_service is not None:
+        if (
+            service_id
+            and db is not None
+            and tenant_id is not None
+            and self._catalog_service is not None
+        ):
             parsed_id = self._safe_uuid(service_id)
             if parsed_id is not None:
-                service = await self._catalog_service.get_service(db, tenant_id, parsed_id)
+                service = await self._catalog_service.get_service(
+                    db, tenant_id, parsed_id
+                )
                 if service is not None:
                     session.flow = self.CATALOG_FLOW
                     session.step = self.CATALOG_STEP_SERVICE_ACTION
@@ -350,7 +408,9 @@ async def _handle_catalog_plan_action(self, phone, msg, session, session_service
                     if session_service is not None:
                         await session_service.save_session(session)
                     return (
-                        self._format_service_detail(service) + "\n" + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
+                        self._format_service_detail(service)
+                        + "\n"
+                        + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
                     )
         # Fallback
         reply = await self._catalog_menu_reply(tenant_id, db)
@@ -360,14 +420,22 @@ async def _handle_catalog_plan_action(self, phone, msg, session, session_service
     return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
 
-async def _handle_catalog_edit_plan(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_edit_plan(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Handle edit plan name input."""
     name = msg.strip()
     if not name:
         return self._t(self.KEY_CATALOG_NAME_REQUIRED)
     plan_id = getattr(session, "temp_data", {}).get("plan_id")
     service_id = session.temp_data.get("service_id")
-    if not plan_id or not service_id or tenant_id is None or db is None or self._catalog_service is None:
+    if (
+        not plan_id
+        or not service_id
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
         return self._t("wa.tenant.errors.plan_update_failed")
     parsed_service_id = self._safe_uuid(service_id)
     parsed_plan_id = self._safe_uuid(plan_id)
@@ -384,12 +452,15 @@ async def _handle_catalog_edit_plan(self, phone, msg, session, session_service, 
     if plan is None:
         return self._t("wa.tenant.errors.plan_not_found")
     return await self._set_post_action(
-        phone, session_service,
-        self._t(self.KEY_CATALOG_PLAN_EDIT_SUCCESS, name=plan.name)
+        phone,
+        session_service,
+        self._t(self.KEY_CATALOG_PLAN_EDIT_SUCCESS, name=plan.name),
     )
 
 
-async def _handle_catalog_create_service_name(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_create_service_name(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Handle create service name input."""
     name = msg.strip()
     if not name:
@@ -408,18 +479,26 @@ async def _handle_catalog_create_service_name(self, phone, msg, session, session
         return self._t("wa.tenant.errors.catalog_load_failed")
     # Success → post-action prompt
     return await self._set_post_action(
-        phone, session_service,
-        self._t(self.KEY_CATALOG_CREATE_SERVICE_SUCCESS, name=service.name)
+        phone,
+        session_service,
+        self._t(self.KEY_CATALOG_CREATE_SERVICE_SUCCESS, name=service.name),
     )
 
 
-async def _handle_catalog_create_plan_name(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_create_plan_name(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Handle create plan name input."""
     name = msg.strip()
     if not name:
         return self._t(self.KEY_CATALOG_NAME_REQUIRED)
     service_id = session.temp_data.get("service_id")
-    if not service_id or tenant_id is None or db is None or self._catalog_service is None:
+    if (
+        not service_id
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
         return self._t("wa.tenant.errors.catalog_load_failed")
     parsed_service_id = self._safe_uuid(service_id)
     if parsed_service_id is None:
@@ -436,12 +515,15 @@ async def _handle_catalog_create_plan_name(self, phone, msg, session, session_se
         return self._t("wa.tenant.errors.catalog_load_failed")
     # Success → post-action prompt
     return await self._set_post_action(
-        phone, session_service,
-        self._t(self.KEY_CATALOG_CREATE_PLAN_SUCCESS, name=plan.name)
+        phone,
+        session_service,
+        self._t(self.KEY_CATALOG_CREATE_PLAN_SUCCESS, name=plan.name),
     )
 
 
-async def _handle_catalog_empty_plan_menu(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_empty_plan_menu(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Route inputs on the empty-plans sub-menu."""
     if msg == "1":
         # Create plan
@@ -453,10 +535,17 @@ async def _handle_catalog_empty_plan_menu(self, phone, msg, session, session_ser
     elif is_back(msg):
         # Back to service detail
         service_id = session.temp_data.get("service_id")
-        if service_id and db is not None and tenant_id is not None and self._catalog_service is not None:
+        if (
+            service_id
+            and db is not None
+            and tenant_id is not None
+            and self._catalog_service is not None
+        ):
             parsed_id = self._safe_uuid(service_id)
             if parsed_id is not None:
-                service = await self._catalog_service.get_service(db, tenant_id, parsed_id)
+                service = await self._catalog_service.get_service(
+                    db, tenant_id, parsed_id
+                )
                 if service is not None:
                     session.flow = self.CATALOG_FLOW
                     session.step = self.CATALOG_STEP_SERVICE_ACTION
@@ -464,7 +553,9 @@ async def _handle_catalog_empty_plan_menu(self, phone, msg, session, session_ser
                     if session_service is not None:
                         await session_service.save_session(session)
                     return (
-                        self._format_service_detail(service) + "\n" + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
+                        self._format_service_detail(service)
+                        + "\n"
+                        + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
                     )
         # Fallback
         reply = await self._catalog_menu_reply(tenant_id, db)
@@ -474,7 +565,9 @@ async def _handle_catalog_empty_plan_menu(self, phone, msg, session, session_ser
     return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
 
-async def _handle_catalog_post_action(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_catalog_post_action(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     """Route post-action decision: 1 = main menu, else invalid."""
     if msg == "1":
         if session_service is not None:

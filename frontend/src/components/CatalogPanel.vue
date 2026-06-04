@@ -20,6 +20,7 @@ const deleteConfirmText = ref('')
 const deletePage = ref(1)
 const isDeleteLoading = ref(false)
 const isDeleting = ref(false)
+const deleteError = ref('')
 const canConfirmDelete = computed(() => isDeleteConfirmationValid(deleteConfirmText.value))
 
 function closeDeleteModal() {
@@ -29,6 +30,7 @@ function closeDeleteModal() {
   deletePage.value = 1
   isDeleteLoading.value = false
   isDeleting.value = false
+  deleteError.value = ''
 }
 
 function deletePreviewTitle() {
@@ -45,6 +47,7 @@ function countText(count, oneKey, otherKey) {
 async function loadDeletePreview(page = 1) {
   if (!deleteTarget.value) return
   isDeleteLoading.value = true
+  deleteError.value = ''
   errorMessage.value = ''
   try {
     const url = deleteTarget.value.type === 'service'
@@ -54,8 +57,9 @@ async function loadDeletePreview(page = 1) {
     deletePreview.value = response.data
     deletePage.value = page
   } catch (error) {
-    errorMessage.value = getApiError(error, i18nStore.t('frontend.catalog.error_delete_service'))
-    closeDeleteModal()
+    deleteError.value = getApiError(error, deleteTarget.value.type === 'service'
+      ? i18nStore.t('frontend.catalog.error_delete_service')
+      : i18nStore.t('frontend.catalog.error_delete_plan'))
   } finally {
     isDeleteLoading.value = false
   }
@@ -88,7 +92,7 @@ async function confirmDelete() {
     await loadServices()
     if (selectedServiceId.value) await loadPlans()
   } catch (error) {
-    errorMessage.value = getApiError(error, deleteTarget.value.type === 'service'
+    deleteError.value = getApiError(error, deleteTarget.value.type === 'service'
       ? i18nStore.t('frontend.catalog.error_delete_service')
       : i18nStore.t('frontend.catalog.error_delete_plan'))
   } finally {
@@ -228,6 +232,7 @@ onMounted(loadInitialServices)
           <button class="modal-close" type="button" @click="closeDeleteModal">✕</button>
         </div>
         <div class="modal-body">
+          <p v-if="deleteError" class="alert alert-error">{{ deleteError }}</p>
           <p v-if="isDeleteLoading">{{ i18nStore.t('frontend.catalog.delete_preview_loading') }}</p>
           <template v-else-if="deletePreview">
             <p class="delete-target-name"><strong>{{ deletePreview.target_name }}</strong></p>

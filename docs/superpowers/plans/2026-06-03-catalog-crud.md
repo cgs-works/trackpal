@@ -15,10 +15,10 @@
 This spec spans backend, WhatsApp, frontend, docs, and PR prep, but the subsystems depend on the same backend preview/delete contract. Keep one plan with logical commits:
 
 1. Backend service/repository/API preview and confirmed cascade delete.
-2. WhatsApp Catalog menu/list/create/edit/detail behavior.
-3. WhatsApp delete warning/confirmation flows.
-4. Dashboard preview modal and frontend helper tests.
-5. Docs, full verification, Draft PR.
+1. WhatsApp Catalog menu/list/create/edit/detail behavior.
+1. WhatsApp delete warning/confirmation flows.
+1. Dashboard preview modal and frontend helper tests.
+1. Docs, full verification, Draft PR.
 
 ## File structure
 
@@ -324,19 +324,19 @@ from sqlalchemy.orm import aliased
 from app.models import Client, Plan, Service, Subscription
 ```
 
-2. Change `list_services()` ordering to alphabetical:
+1. Change `list_services()` ordering to alphabetical:
 
 ```python
 .order_by(func.lower(Service.name).asc(), Service.created_at.asc())
 ```
 
-3. Change `list_plans()` ordering to alphabetical:
+1. Change `list_plans()` ordering to alphabetical:
 
 ```python
 .order_by(func.lower(Plan.name).asc(), Plan.created_at.asc())
 ```
 
-4. Add helpers before `__all__`:
+1. Add helpers before `__all__`:
 
 ```python
 async def count_plans_for_service(db: AsyncSession, tenant_id: UUID, service_id: UUID) -> int:
@@ -449,7 +449,7 @@ async def delete_plans_for_service(db: AsyncSession, tenant_id: UUID, service_id
     )
 ```
 
-5. Add new function names to `__all__`.
+1. Add new function names to `__all__`.
 
 - [x] **Step 5: Implement service preview and confirm contract**
 
@@ -472,7 +472,7 @@ from app.schemas.catalog import (
 )
 ```
 
-2. Add dataclasses above `CatalogService`:
+1. Add dataclasses above `CatalogService`:
 
 ```python
 @dataclass(frozen=True)
@@ -491,7 +491,7 @@ class CatalogPlanSummary:
     active_subscription_count: int
 ```
 
-3. Add private helpers inside `CatalogService`:
+1. Add private helpers inside `CatalogService`:
 
 ```python
 def _page_bounds(self, page: int, page_size: int) -> tuple[int, int]:
@@ -523,7 +523,7 @@ def _row(self, sub, client, service, plan) -> CatalogDeleteSubscriptionRow:
     )
 ```
 
-4. Add summary methods:
+1. Add summary methods:
 
 ```python
 async def list_service_summaries(self, db: AsyncSession, tenant_id: UUID) -> list[CatalogServiceSummary]:
@@ -547,7 +547,7 @@ async def list_plan_summaries(self, db: AsyncSession, tenant_id: UUID, service_i
     return summaries
 ```
 
-5. Add preview methods:
+1. Add preview methods:
 
 ```python
 async def get_service_delete_preview(
@@ -603,7 +603,7 @@ async def get_plan_delete_preview(
     )
 ```
 
-6. Replace delete methods with confirm-gated versions:
+1. Replace delete methods with confirm-gated versions:
 
 ```python
 async def delete_service(
@@ -641,7 +641,7 @@ async def delete_plan(
     return preview
 ```
 
-7. Update `_commit_catalog_change` test expectation because method already raises `UserFacingError`, which subclasses `ValueError`:
+1. Update `_commit_catalog_change` test expectation because method already raises `UserFacingError`, which subclasses `ValueError`:
 
 ```python
 with pytest.raises(UserFacingError, match="service_name_already_exists"):
@@ -736,7 +736,7 @@ from app.schemas.catalog import (
 )
 ```
 
-2. Add helper near `catalog_service = CatalogService()`:
+1. Add helper near `catalog_service = CatalogService()`:
 
 ```python
 async def _confirmation_required(db: DbDep, tenant_id: ActiveTenantId) -> HTTPException:
@@ -747,7 +747,7 @@ async def _confirmation_required(db: DbDep, tenant_id: ActiveTenantId) -> HTTPEx
     )
 ```
 
-3. Add service preview route before service DELETE:
+1. Add service preview route before service DELETE:
 
 ```python
 @router.get("/services/{service_id}/delete-preview", response_model=CatalogDeletePreview)
@@ -767,7 +767,7 @@ async def preview_delete_service(
     return preview
 ```
 
-4. Replace service DELETE:
+1. Replace service DELETE:
 
 ```python
 @router.delete("/services/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -786,7 +786,7 @@ async def delete_service(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 ```
 
-5. Add plan preview route before plan DELETE:
+1. Add plan preview route before plan DELETE:
 
 ```python
 @router.get("/services/{service_id}/plans/{plan_id}/delete-preview", response_model=CatalogDeletePreview)
@@ -807,7 +807,7 @@ async def preview_delete_plan(
     return preview
 ```
 
-6. Replace plan DELETE:
+1. Replace plan DELETE:
 
 ```python
 @router.delete("/services/{service_id}/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1937,7 +1937,7 @@ import { computed, onMounted, ref } from 'vue'
 import { formatCount, formatPreviewRow, isDeleteConfirmationValid } from './catalogDeletePreview'
 ```
 
-2. Add state:
+1. Add state:
 
 ```javascript
 const deletePreview = ref(null)
@@ -1949,7 +1949,7 @@ const isDeleting = ref(false)
 const canConfirmDelete = computed(() => isDeleteConfirmationValid(deleteConfirmText.value))
 ```
 
-3. Add helpers:
+1. Add helpers:
 
 ```javascript
 function closeDeleteModal() {
@@ -2027,14 +2027,14 @@ async function confirmDelete() {
 }
 ```
 
-4. Replace button handlers:
+1. Replace button handlers:
 
 ```vue
 @click="openDeleteService(service)"
 @click="openDeletePlan(plan)"
 ```
 
-5. Add modal before closing `</section>`:
+1. Add modal before closing `</section>`:
 
 ```vue
 <div v-if="deleteTarget" class="modal-overlay" @click.self="closeDeleteModal">
@@ -2073,7 +2073,7 @@ async function confirmDelete() {
 </div>
 ```
 
-6. Add scoped styles matching existing dashboard modal pattern:
+1. Add scoped styles matching existing dashboard modal pattern:
 
 ```css
 .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }

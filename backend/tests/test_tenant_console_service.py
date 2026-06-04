@@ -233,7 +233,7 @@ class FakeCatalogService:
             [
                 plan
                 for plan in self._plans.values()
-                if plan.service_id in (None, service_id)
+                if plan.service_id == service_id
             ],
             key=lambda p: p.name.lower(),
         )
@@ -3104,7 +3104,245 @@ class TestCatalogFlow:
             session_service=session_service, locale="en"
         )
 
-        # Should NOT contain Spanish hardcoded text
+        # Should NOT contain Spanish hardcoded text (confirm prompt AND warning body)
         assert "Escribe *CONFIRMAR* para eliminar" not in warning
+        # Should NOT contain hardcoded Spanish warning body
+        assert "El servicio" not in warning
         # Should contain the English confirm prompt from i18n
-        assert "Type *CONFIRM* to delete" in warning
+        assert "Type *CONFIRM* or *CONFIRMAR*" in warning
+
+    async def test_delete_service_warning_body_localizes_to_english(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Delete service warning body uses i18n — EN locale has English body text, not hardcoded ES."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        service.plan_count = 2
+        service.active_subscription_count = 1
+
+        # Navigate to delete service list
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "3", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+
+        # Get warning with English locale
+        warning = await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()),
+            session_service=session_service, locale="en"
+        )
+
+        # Should contain English body text (not hardcoded Spanish)
+        assert "Service *" in warning
+        assert "has" in warning
+        assert "Active subscriptions:" in warning
+        assert "Historical/inactive subscriptions:" in warning
+        assert "Total affected:" in warning
+        # Should NOT contain Spanish hardcoded strings
+        assert "El servicio" not in warning
+        assert "asociados" not in warning
+        assert "Suscripciones activas:" not in warning
+
+    async def test_delete_plan_warning_body_localizes_to_english(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Delete plan warning body uses i18n — EN locale has English body text, not hardcoded ES."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        plan = FakePlanObj(service_id=service.id, name="Premium", active_subscription_count=1)
+        catalog_service._plans[str(plan.id)] = plan
+        service.plan_count = 1
+
+        # Navigate: Main menu -> Catalog -> Service 1 -> Service detail -> Option 4 -> Plan 1
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        # Get warning with English locale
+        warning = await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()),
+            session_service=session_service, locale="en"
+        )
+
+        # Should contain English body text (not hardcoded Spanish)
+        assert "Plan *Premium* has" in warning
+        assert "Active subscriptions:" in warning
+        assert "Historical/inactive subscriptions:" in warning
+        assert "Total affected:" in warning
+        # Should NOT contain Spanish hardcoded strings
+        assert "El plan" not in warning
+        assert "suscripciones asociadas" not in warning
+
+    async def test_catalog_page_is_stored_as_integer_and_next_page_works(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """catalog_page is stored as int; navigates to next page without type errors."""
+        tenant_id = uuid4()
+        # Populate many services to force pagination
+        catalog_service._services.clear()
+        for name in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
+            svc = FakeServiceObj(name=name, plan_count=1, active_subscription_count=0)
+            catalog_service._services[str(svc.id)] = svc
+
+        # Main menu -> Catalog
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        # Catalog -> View services (option 1)
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        # catalog_page should be int, not str
+        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should be int"
+        assert session.temp_data["catalog_page"] == 1
+
+        # Navigate to next page with 8
+        await console_service.process_message(
+            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should still be int after next"
+        assert session.temp_data["catalog_page"] == 2
+
+    async def test_catalog_delete_plan_list_page_stored_as_int_and_next_works(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """catalog_page for delete plan list is stored as int; next-page navigation works."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        # Populate many plans to force pagination
+        catalog_service._plans.clear()
+        for name in ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota"]:
+            plan = FakePlanObj(service_id=service.id, name=name, active_subscription_count=0)
+            catalog_service._plans[str(plan.id)] = plan
+
+        # Navigate: Main menu -> Catalog -> Service 1 -> Service detail -> Option 4 (Delete plan)
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should be int in delete plan list"
+        assert session.temp_data["catalog_page"] == 1
+
+        # Navigate to next page with 8
+        reply = await console_service.process_message(
+            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "Iota" in reply or "Theta" in reply  # should be on page 2
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should still be int after next in delete plan"
+        assert session.temp_data["catalog_page"] == 2
+
+    async def test_paginated_service_list_after_refactor(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """_show_catalog_service_list refactored to use _paginate still works correctly."""
+        tenant_id = uuid4()
+        catalog_service._services.clear()
+        for name in ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Zulu"]:
+            svc = FakeServiceObj(name=name, plan_count=0, active_subscription_count=0)
+            catalog_service._services[str(svc.id)] = svc
+
+        # Main menu -> Catalog -> View services
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        reply = await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+
+        # First 7 items on page 1, 8th item on next page
+        assert "1\uFE0F\u20E3 Alpha" in reply
+        assert "7\uFE0F\u20E3 Golf" in reply
+        assert "Zulu" not in reply
+        assert "8\uFE0F\u20E3 Siguiente" in reply
+
+        # Go to page 2
+        reply = await console_service.process_message(
+            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "1\uFE0F\u20E3 Zulu" in reply
+        assert "8\uFE0F\u20E3 Siguiente" not in reply
+
+    async def test_catalog_plan_select_next_page_after_refactor(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """_handle_catalog_plan_select next-page refactored to use _paginate still works correctly."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        catalog_service._plans.clear()
+        plan_names = [f"P{chr(65+i)}" for i in range(9)]
+        for name in plan_names:
+            plan = FakePlanObj(service_id=service.id, name=name, active_subscription_count=1)
+            catalog_service._plans[str(plan.id)] = plan
+
+        # Navigate to plan list
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        reply = await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "1\uFE0F\u20E3 PA" in reply
+        assert "7\uFE0F\u20E3 PG" in reply
+        assert "PH" not in reply
+        assert "8\uFE0F\u20E3 Siguiente" in reply
+
+        # 8 -> next page
+        reply = await console_service.process_message(
+            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "1\uFE0F\u20E3 PH" in reply
+        assert "2\uFE0F\u20E3 PI" in reply
+        assert "8\uFE0F\u20E3 Siguiente" not in reply
+

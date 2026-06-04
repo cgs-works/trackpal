@@ -221,7 +221,7 @@ class CatalogService:
             total_subscription_count=active_count + historical_count,
             active_subscriptions=[self._row(sub, client, svc, plan) for sub, client, svc, plan in rows],
             pagination=self._pagination(page=page, page_size=page_size, total_items=active_count),
-            note="Historical, expired, cancelled, and other non-active subscriptions will also be deleted even when they are not listed.",
+            note="frontend.catalog.delete_preview_note",
         )
 
     async def get_plan_delete_preview(
@@ -246,7 +246,7 @@ class CatalogService:
             total_subscription_count=active_count + historical_count,
             active_subscriptions=[self._row(sub, client, svc, row_plan) for sub, client, svc, row_plan in rows],
             pagination=self._pagination(page=page, page_size=page_size, total_items=active_count),
-            note="Historical, expired, cancelled, and other non-active subscriptions will also be deleted even when they are not listed.",
+            note="frontend.catalog.delete_preview_note",
         )
 
     # ── Confirm-gated delete methods ────────────────────────────────────────
@@ -259,13 +259,13 @@ class CatalogService:
         preview = await self.get_service_delete_preview(db, tenant_id, service_id)
         if preview is None:
             return None
-        service = await self.get_service(db, tenant_id, service_id)
+        service = await db.get(Service, service_id)
         if service is None:
             return None
         await catalog_repository.delete_subscriptions_for_service(db, tenant_id, service_id)
         await catalog_repository.delete_plans_for_service(db, tenant_id, service_id)
         await db.delete(service)
-        await db.commit()
+        await self._commit_catalog_change(db, "service_delete_failed")
         return preview
 
     async def delete_plan(
@@ -276,10 +276,10 @@ class CatalogService:
         preview = await self.get_plan_delete_preview(db, tenant_id, service_id, plan_id)
         if preview is None:
             return None
-        plan = await self.get_plan(db, tenant_id, service_id, plan_id)
+        plan = await db.get(Plan, plan_id)
         if plan is None:
             return None
         await catalog_repository.delete_subscriptions_for_plan(db, tenant_id, service_id, plan_id)
         await db.delete(plan)
-        await db.commit()
+        await self._commit_catalog_change(db, "plan_delete_failed")
         return preview

@@ -20,14 +20,6 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 catalog_service = CatalogService()
 
 
-async def _confirmation_required(db: DbDep, tenant_id: ActiveTenantId) -> HTTPException:
-    locale = await resolve_locale(db, tenant_id)
-    return HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=_t(locale, "errors.catalog_delete_confirmation_required"),
-    )
-
-
 @router.get("/services", response_model=list[ServiceResponse])
 async def list_services(db: DbDep, tenant_id: ActiveTenantId):
     return await catalog_service.list_services(db, tenant_id)
@@ -82,6 +74,8 @@ async def preview_delete_service(
     if preview is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+    locale = await resolve_locale(db, tenant_id)
+    preview.note = _t(locale, preview.note)
     return preview
 
 
@@ -92,9 +86,11 @@ async def delete_service(
     tenant_id: ActiveTenantId,
     confirm: bool = Query(False),
 ):
-    if not confirm:
-        raise await _confirmation_required(db, tenant_id)
-    deleted = await catalog_service.delete_service(db, tenant_id, service_id, confirm=True)
+    try:
+        deleted = await catalog_service.delete_service(db, tenant_id, service_id, confirm=confirm)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
     if deleted is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
@@ -155,6 +151,8 @@ async def preview_delete_plan(
     if preview is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
+    locale = await resolve_locale(db, tenant_id)
+    preview.note = _t(locale, preview.note)
     return preview
 
 
@@ -166,9 +164,11 @@ async def delete_plan(
     tenant_id: ActiveTenantId,
     confirm: bool = Query(False),
 ):
-    if not confirm:
-        raise await _confirmation_required(db, tenant_id)
-    deleted = await catalog_service.delete_plan(db, tenant_id, service_id, plan_id, confirm=True)
+    try:
+        deleted = await catalog_service.delete_plan(db, tenant_id, service_id, plan_id, confirm=confirm)
+    except UserFacingError as exc:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
     if deleted is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))

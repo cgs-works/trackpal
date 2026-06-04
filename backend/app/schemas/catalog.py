@@ -46,7 +46,7 @@ class CatalogDeleteSubscriptionRow(BaseModel):
     client_phone: str | None = None
     service_name: str
     plan_name: str
-    expires_at: datetime
+    expires_at: datetime | None = None
 
 
 class CatalogDeletePagination(BaseModel):
