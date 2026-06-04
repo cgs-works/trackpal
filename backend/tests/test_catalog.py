@@ -95,7 +95,7 @@ async def test_tenant_service_and_plan_crud(client, active_tenant_user):
     plain_delete = await client.delete(f"/api/v1/catalog/services/{sid}", headers=headers)
     assert plain_delete.status_code == 400
     # Re-create for confirmed-delete test
-    service2 = await client.post("/api/v1/catalog/services", json={"name": "Consultoría"}, headers=headers)
+    service2 = await client.post("/api/v1/catalog/services", json={"name": "Streaming"}, headers=headers)
     assert service2.status_code == 201
     sid2 = service2.json()["id"]
     confirmed_delete = await client.delete(f"/api/v1/catalog/services/{sid2}?confirm=true", headers=headers)
@@ -251,17 +251,11 @@ async def test_cross_tenant_isolation(client, active_tenant_user, db_session):
     resp = await client.get(f"/api/v1/catalog/services/{svc_a.id}/plans", headers=headers_b)
     assert resp.status_code == 404
 
-    # Tenant B CANNOT delete Tenant A's service (Task 2 gap: endpoint lacks
-    # confirm handling, but cross-tenant isolation is still verified by
-    # checking that Tenant A's data survives the attempt)
-    try:
-        await client.delete(f"/api/v1/catalog/services/{svc_a.id}", headers=headers_b)
-    except Exception:
-        pass
-    try:
-        await client.delete(f"/api/v1/catalog/services/{svc_a.id}?confirm=true", headers=headers_b)
-    except Exception:
-        pass
+    # Tenant B CANNOT delete Tenant A's service
+    resp = await client.delete(f"/api/v1/catalog/services/{svc_a.id}", headers=headers_b)
+    assert resp.status_code == 400
+    resp = await client.delete(f"/api/v1/catalog/services/{svc_a.id}?confirm=true", headers=headers_b)
+    assert resp.status_code == 404
 
     # Confirm Tenant A's data still exists despite Tenant B's delete attempts
     resp = await client.get(f"/api/v1/catalog/services/{svc_a.id}", headers=headers_a)

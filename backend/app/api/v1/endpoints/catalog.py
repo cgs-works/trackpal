@@ -1,15 +1,31 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.api.dependencies import ActiveTenantId, DbDep, resolve_locale
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
-from app.schemas.catalog import PlanCreate, PlanResponse, PlanUpdate, ServiceCreate, ServiceResponse, ServiceUpdate
+from app.schemas.catalog import (
+    CatalogDeletePreview,
+    PlanCreate,
+    PlanResponse,
+    PlanUpdate,
+    ServiceCreate,
+    ServiceResponse,
+    ServiceUpdate,
+)
 from app.services.catalog_service import CatalogService
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 catalog_service = CatalogService()
+
+
+async def _confirmation_required(db: DbDep, tenant_id: ActiveTenantId) -> HTTPException:
+    locale = await resolve_locale(db, tenant_id)
+    return HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=_t(locale, "errors.catalog_delete_confirmation_required"),
+    )
 
 
 @router.get("/services", response_model=list[ServiceResponse])
@@ -52,9 +68,34 @@ async def update_service(service_id: UUID, payload: ServiceUpdate, db: DbDep, te
     return service
 
 
+@router.get("/services/{service_id}/delete-preview", response_model=CatalogDeletePreview)
+async def preview_delete_service(
+    service_id: UUID,
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=10),
+):
+    preview = await catalog_service.get_service_delete_preview(
+        db, tenant_id, service_id, page=page, page_size=page_size
+    )
+    if preview is None:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+    return preview
+
+
 @router.delete("/services/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
-    if not await catalog_service.delete_service(db, tenant_id, service_id):
+async def delete_service(
+    service_id: UUID,
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+    confirm: bool = Query(False),
+):
+    if not confirm:
+        raise await _confirmation_required(db, tenant_id)
+    deleted = await catalog_service.delete_service(db, tenant_id, service_id, confirm=True)
+    if deleted is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -99,9 +140,36 @@ async def update_plan(service_id: UUID, plan_id: UUID, payload: PlanUpdate, db: 
     return plan
 
 
+@router.get("/services/{service_id}/plans/{plan_id}/delete-preview", response_model=CatalogDeletePreview)
+async def preview_delete_plan(
+    service_id: UUID,
+    plan_id: UUID,
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=10),
+):
+    preview = await catalog_service.get_plan_delete_preview(
+        db, tenant_id, service_id, plan_id, page=page, page_size=page_size
+    )
+    if preview is None:
+        locale = await resolve_locale(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
+    return preview
+
+
 @router.delete("/services/{service_id}/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_plan(service_id: UUID, plan_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
-    if not await catalog_service.delete_plan(db, tenant_id, service_id, plan_id):
+async def delete_plan(
+    service_id: UUID,
+    plan_id: UUID,
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+    confirm: bool = Query(False),
+):
+    if not confirm:
+        raise await _confirmation_required(db, tenant_id)
+    deleted = await catalog_service.delete_plan(db, tenant_id, service_id, plan_id, confirm=True)
+    if deleted is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
