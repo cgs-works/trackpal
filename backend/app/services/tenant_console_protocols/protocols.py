@@ -58,8 +58,7 @@ class CatalogServiceProtocol(Protocol):
     """Minimal interface for tenant-scoped catalog operations.
 
     Matches the subset of ``CatalogService`` methods that the tenant
-    console actually invokes.  Catalog creation and deletion are out
-    of scope for the tenant WhatsApp flow.
+    console actually invokes.
     """
 
     async def list_services(
@@ -89,6 +88,38 @@ class CatalogServiceProtocol(Protocol):
         service_id: UUID,
         plan_id: UUID,
         payload: Any,
+    ) -> Any | None: ...
+
+    async def list_service_summaries(
+        self, db: AsyncSession, tenant_id: UUID
+    ) -> list[Any]: ...
+
+    async def list_plan_summaries(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID
+    ) -> list[Any] | None: ...
+
+    async def create_service(
+        self, db: AsyncSession, tenant_id: UUID, payload: Any
+    ) -> Any | None: ...
+
+    async def create_plan(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, payload: Any
+    ) -> Any | None: ...
+
+    async def get_service_delete_preview(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, *, page: int = 1, page_size: int = 10
+    ) -> Any | None: ...
+
+    async def get_plan_delete_preview(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, page: int = 1, page_size: int = 10
+    ) -> Any | None: ...
+
+    async def delete_service(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, *, confirm: bool = False
+    ) -> Any | None: ...
+
+    async def delete_plan(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, confirm: bool = False
     ) -> Any | None: ...
 
 
