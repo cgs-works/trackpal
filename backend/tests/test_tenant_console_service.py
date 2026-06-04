@@ -163,12 +163,16 @@ class FakeClientService:
 class FakeServiceObj:
     id: UUID = field(default_factory=uuid4)
     name: str = "Test Service"
+    plan_count: int = 0
+    active_subscription_count: int = 0
 
 
 @dataclass
 class FakePlanObj:
     id: UUID = field(default_factory=uuid4)
+    service_id: UUID | None = None
     name: str = "Test Plan"
+    active_subscription_count: int = 0
 
 
 class FakeCatalogService:
@@ -180,6 +184,56 @@ class FakeCatalogService:
 
     async def list_services(self, db: Any, tenant_id: UUID) -> list[FakeServiceObj]:
         return list(self._services.values())
+
+    async def list_service_summaries(
+        self, db: Any, tenant_id: UUID
+    ) -> list[FakeServiceObj]:
+        return sorted(self._services.values(), key=lambda s: s.name.lower())
+
+    async def list_plan_summaries(
+        self, db: Any, tenant_id: UUID, service_id: UUID
+    ) -> list[FakePlanObj] | None:
+        if str(service_id) not in self._services:
+            return None
+        return sorted(
+            [
+                plan
+                for plan in self._plans.values()
+                if plan.service_id in (None, service_id)
+            ],
+            key=lambda p: p.name.lower(),
+        )
+
+    async def create_service(
+        self, db: Any, tenant_id: UUID, payload: Any
+    ) -> FakeServiceObj:
+        if any(
+            s.name.lower() == payload.name.lower()
+            for s in self._services.values()
+        ):
+            raise UserFacingError("service_name_already_exists")
+        service = FakeServiceObj(name=payload.name)
+        self._services[str(service.id)] = service
+        return service
+
+    async def create_plan(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        service_id: UUID,
+        payload: Any,
+    ) -> FakePlanObj | None:
+        if str(service_id) not in self._services:
+            return None
+        if any(
+            p.service_id == service_id
+            and p.name.lower() == payload.name.lower()
+            for p in self._plans.values()
+        ):
+            raise UserFacingError("plan_name_already_exists")
+        plan = FakePlanObj(service_id=service_id, name=payload.name)
+        self._plans[str(plan.id)] = plan
+        return plan
 
     async def get_service(
         self, db: Any, tenant_id: UUID, service_id: UUID
@@ -898,6 +952,7 @@ class TestServiceMainMenu:
         assert "cliente-page-8@test.com" not in reply_page_1
         assert "0️⃣ Cancelar" in reply_page_1
         assert "8️⃣ Siguiente" in reply_page_1
+        assert "8️⃣ Siguiente" in reply_page_1
         assert "9️⃣ Anterior" not in reply_page_1
 
         reply_page_2 = await console_service.process_message(
@@ -1462,7 +1517,7 @@ class TestUserFacingErrorTranslation:
     ) -> None:
         """Catalog service name duplicate returns translated text, not raw code."""
         session = SimpleNamespace(
-            selected_tenant_id=str(uuid4()),
+            temp_data={"service_id": str(uuid4())},
         )
 
         async def _raise(*args: Any, **kwargs: Any) -> None:
@@ -1488,8 +1543,7 @@ class TestUserFacingErrorTranslation:
     ) -> None:
         """Catalog plan name duplicate returns translated text, not raw code."""
         session = SimpleNamespace(
-            selected_tenant_id=str(uuid4()),
-            temp_data={"service_id": str(uuid4())},
+            temp_data={"service_id": str(uuid4()), "plan_id": str(uuid4())},
         )
 
         async def _raise(*args: Any, **kwargs: Any) -> None:
@@ -2583,3 +2637,236 @@ class TestBlockedClients:
         # Session should be cleared
         session = await session_service.get_session("admin:+10000000007")
         assert session is None
+
+# Additional catalog flow test class to append
+
+# ===================================================================
+# Catalog flow tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestCatalogFlow:
+    """Catalog menu, service list pagination, create/edit, detail, post-success."""
+
+    async def test_catalog_starts_with_main_catalog_menu(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Press 2 from main menu starts catalog flow with menu options."""
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            tenant_id=uuid4(),
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        assert "📦" in reply
+        assert "Ver servicios" in reply
+        assert "Crear servicio" in reply
+        assert "Eliminar servicio" in reply
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert session.flow == "catalog"
+        assert session.step == "menu"
+
+    async def test_catalog_empty_menu_only_offers_create(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Empty catalog menu only shows create option."""
+        catalog_service._services.clear()
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            tenant_id=uuid4(),
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        assert "No hay servicios" in reply
+        assert "Crear servicio" in reply
+        assert "Eliminar servicio" not in reply
+
+    async def test_catalog_service_list_is_alphabetical_paginated_and_has_counts(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Service list shows alphabetical paginated list with plan/subscription counts."""
+        catalog_service._services.clear()
+        for name in ["Zulu", "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Eta", "Theta"]:
+            service = FakeServiceObj(name=name, plan_count=1, active_subscription_count=2)
+            catalog_service._services[str(service.id)] = service
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=uuid4(), db=cast(AsyncSession, object()), session_service=session_service
+        )
+        reply = await console_service.process_message(
+            "+10000000000", "1", tenant_id=uuid4(), db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "1️⃣ Alpha - 1 plan - 2 suscripciones activas" in reply
+        assert "5️⃣ Eta" in reply
+        assert "8️⃣ Siguiente" in reply
+        assert "Zulu" not in reply
+
+    async def test_catalog_service_detail_hides_id_and_exposes_required_actions(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Service detail hides ID and shows create/delete plan actions."""
+        tenant_id = uuid4()
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        reply = await console_service.process_message(
+            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "*ID:*" not in reply
+        assert "Editar nombre" in reply
+        assert "Ver planes" in reply
+        assert "Crear plan" in reply
+        assert "Eliminar plan" in reply
+        assert "Eliminar servicio" not in reply
+
+    async def test_catalog_create_service_direct_success_and_duplicate_retry(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Create service flow: duplicate stays on step, success shows post-action."""
+        tenant_id = uuid4()
+        await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        prompt = await console_service.process_message(
+            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "nombre" in prompt.lower()
+        duplicate = await console_service.process_message(
+            "+10000000000", "Netflix", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "nombre del servicio ya existe" in duplicate
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert session.step == "create_service_name"
+        success = await console_service.process_message(
+            "+10000000000", "Disney", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+        )
+        assert "Servicio" in success and "creado" in success
+        assert "1️⃣ Volver al menu principal" in success
+
+    async def test_catalog_edit_service_success_uses_post_action(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Successful service edit transitions to POST_ACTION step with prompt, no ID shown."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        session = await session_service.create_session("admin:+10000000000")
+        session.flow = "catalog"
+        session.step = "edit_service"
+        session.temp_data = {"service_id": str(service.id)}
+        await session_service.save_session(session)
+
+        reply = await console_service._handle_catalog_edit_service(
+            phone="+10000000000",
+            msg="Netflix Renamed",
+            session=session,
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Success message present
+        assert "Nombre del servicio" in reply
+        assert "actualizado" in reply
+        # Post-action prompt appended
+        assert "1️⃣ Volver al menu principal" in reply
+        # No ID exposed
+        assert "*ID:*" not in reply
+        # Session is in POST_ACTION step
+        updated = await session_service.get_session("admin:+10000000000")
+        assert updated is not None
+        assert updated.step == "post_action"
+        assert updated.flow == "catalog"
+
+    async def test_catalog_edit_plan_success_uses_post_action(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Successful plan edit transitions to POST_ACTION step with prompt, no ID shown."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        plan = FakePlanObj(service_id=service.id, name="Premium")
+        catalog_service._plans[str(plan.id)] = plan
+        session = await session_service.create_session("admin:+10000000000")
+        session.flow = "catalog"
+        session.step = "edit_plan"
+        session.temp_data = {"service_id": str(service.id), "plan_id": str(plan.id)}
+        await session_service.save_session(session)
+
+        reply = await console_service._handle_catalog_edit_plan(
+            phone="+10000000000",
+            msg="Premium Plus",
+            session=session,
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Success message present
+        assert "Nombre del plan" in reply
+        assert "actualizado" in reply
+        # Post-action prompt appended
+        assert "1️⃣ Volver al menu principal" in reply
+        # No ID exposed
+        assert "*ID:*" not in reply
+        # Session is in POST_ACTION step
+        updated = await session_service.get_session("admin:+10000000000")
+        assert updated is not None
+        assert updated.step == "post_action"
+        assert updated.flow == "catalog"
+
+    async def test_catalog_edit_service_missing_id_returns_failure(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Edit service without service_id in temp_data returns failure message."""
+        session = SimpleNamespace(temp_data={})
+        reply = await console_service._handle_catalog_edit_service(
+            phone="+10000000000",
+            msg="New Name",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+        assert "No se pudo actualizar el servicio" in reply
+
+    async def test_catalog_edit_plan_missing_id_returns_failure(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        """Edit plan without plan_id in temp_data returns failure message."""
+        session = SimpleNamespace(temp_data={"service_id": str(uuid4())})
+        reply = await console_service._handle_catalog_edit_plan(
+            phone="+10000000000",
+            msg="New Name",
+            session=session,
+            session_service=None,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+        assert "No se pudo actualizar el plan" in reply

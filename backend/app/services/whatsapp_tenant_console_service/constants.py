@@ -41,6 +41,17 @@ CATALOG_STEP_PLAN_SELECT = "plan_select"
 CATALOG_STEP_PLAN_DETAIL = "plan_detail"
 CATALOG_STEP_PLAN_ACTION = "plan_action"
 CATALOG_STEP_EDIT_PLAN = "edit_plan"
+CATALOG_STEP_MENU = "menu"
+CATALOG_STEP_CREATE_SERVICE_NAME = "create_service_name"
+CATALOG_STEP_CREATE_PLAN_NAME = "create_plan_name"
+CATALOG_STEP_EMPTY_PLAN_MENU = "empty_plan_menu"
+CATALOG_STEP_POST_ACTION = "post_action"
+CATALOG_STEP_DELETE_SERVICE_SELECT = "delete_service_select"
+CATALOG_STEP_DELETE_SERVICE_CONFIRM = "delete_service_confirm"
+CATALOG_STEP_DELETE_PLAN_SELECT = "delete_plan_select"
+CATALOG_STEP_DELETE_PLAN_CONFIRM = "delete_plan_confirm"
+
+CATALOG_PAGE_SIZE = 7
 
 PROFILE_FLOW = "profile"
 PROFILE_STEP_ACTION = "action"
@@ -154,6 +165,15 @@ KEY_CATALOG_PLAN_EDIT_PROMPT = "wa.tenant.catalog.plan_edit_prompt"
 KEY_CATALOG_PLAN_EDIT_SUCCESS = "wa.tenant.catalog.plan_edit_success"
 KEY_CATALOG_INVALID_SELECTION = "wa.tenant.catalog.invalid_selection"
 KEY_CATALOG_NAME_REQUIRED = "wa.tenant.catalog.name_required"
+KEY_CATALOG_EMPTY_MENU = "wa.tenant.catalog.empty_menu"
+KEY_CATALOG_CREATE_SERVICE_PROMPT = "wa.tenant.catalog.create_service_prompt"
+KEY_CATALOG_CREATE_SERVICE_SUCCESS = "wa.tenant.catalog.create_service_success"
+KEY_CATALOG_CREATE_PLAN_PROMPT = "wa.tenant.catalog.create_plan_prompt"
+KEY_CATALOG_CREATE_PLAN_SUCCESS = "wa.tenant.catalog.create_plan_success"
+KEY_CATALOG_EMPTY_PLANS_MENU = "wa.tenant.catalog.empty_plans_menu"
+KEY_CATALOG_NO_PLANS_FOR_DELETE = "wa.tenant.catalog.no_plans_for_delete"
+KEY_CATALOG_POST_SUCCESS_PROMPT = "wa.tenant.catalog.post_success_prompt"
+KEY_CATALOG_POST_SUCCESS_INVALID = "wa.tenant.catalog.post_success_invalid"
 
 # -- Profile constants ---------------------------------------------------
 

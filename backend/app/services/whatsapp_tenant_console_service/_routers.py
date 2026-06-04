@@ -64,7 +64,11 @@ async def _route_clients_flow(
 async def _route_catalog_flow(
     self, phone, msg, step, session, session_service, tenant_id, db
 ):
-    if step == self.CATALOG_STEP_LIST:
+    if step == self.CATALOG_STEP_MENU:
+        return await self._handle_catalog_menu(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_LIST:
         return self._t(self.KEY_CLIENTS_MENU)
     elif step == self.CATALOG_STEP_SERVICE_SELECT:
         return await self._handle_catalog_service_select(
@@ -88,6 +92,22 @@ async def _route_catalog_flow(
         )
     elif step == self.CATALOG_STEP_EDIT_PLAN:
         return await self._handle_catalog_edit_plan(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_CREATE_SERVICE_NAME:
+        return await self._handle_catalog_create_service_name(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_CREATE_PLAN_NAME:
+        return await self._handle_catalog_create_plan_name(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_EMPTY_PLAN_MENU:
+        return await self._handle_catalog_empty_plan_menu(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_POST_ACTION:
+        return await self._handle_catalog_post_action(
             phone, msg, session, session_service, tenant_id, db
         )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)

@@ -29,6 +29,12 @@ def _post_action_prompt() -> str:
     return _i18n_t(ctx.get_locale(), "wa.tenant.post_action_prompt")
 
 
+def _catalog_count(key_base: str, count: int) -> str:
+    """Return pluralized catalog count string (one/other)."""
+    suffix = "one" if count == 1 else "other"
+    return _i18n_t(ctx.get_locale(), f"{key_base}.{suffix}", count=count)
+
+
 def _format_client_list(clients: list[Any]) -> tuple[str, dict[str, str]]:
     entries: list[str] = []
     selection_map: dict[str, str] = {}
@@ -90,30 +96,72 @@ def _format_client_detail(client: Any) -> str:
     )
 
 
-def _format_service_list(services: list[Any]) -> tuple[str, dict[str, str]]:
+def _format_service_list(
+    services: list[Any],
+    page: int = 1,
+    total_pages: int = 1,
+) -> tuple[str, dict[str, str]]:
+    """Format service list with plan/subscription counts and pagination nav."""
+    loc = ctx.get_locale()
     entries: list[str] = []
     selection_map: dict[str, str] = {}
     for i, s in enumerate(services, start=1):
         num = str(i)
-        entries.append(f"{num}️⃣ {s.name}")
+        plan_count = int(getattr(s, "plan_count", 0) or 0)
+        active_count = int(getattr(s, "active_subscription_count", 0) or 0)
+        entries.append(
+            f"{num}️⃣ {s.name} - "
+            f"{_catalog_count('wa.tenant.catalog.count.plan', plan_count)} - "
+            f"{_catalog_count('wa.tenant.catalog.count.subscription_active', active_count)}"
+        )
         selection_map[num] = str(s.id)
-    return "📋 *Servicios*\n\n" + "\n".join(entries), selection_map
+    reply = "📋 *Servicios*\n\n" + "\n".join(entries)
+    if total_pages > 1:
+        reply += "\n\n" + _i18n_t(
+            loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages
+        )
+    nav: list[str] = []
+    if page < total_pages:
+        nav.append(_i18n_t(loc, "wa.nav.next"))
+    nav.append(_i18n_t(loc, "wa.nav.back"))
+    nav.append(_i18n_t(loc, "wa.nav.cancel"))
+    reply += "\n" + " | ".join(nav)
+    return reply, selection_map
 
 
 def _format_service_detail(service: Any) -> str:
-    return (
-        f"📦 *Servicio*\n\n*Nombre:* {service.name}\n*ID:* {str(service.id)[:8]}...\n"
-    )
+    return f"📦 *Servicio*\n\n*Nombre:* {service.name}\n"
 
 
-def _format_plan_list(plans: list[Any]) -> tuple[str, dict[str, str]]:
+def _format_plan_list(
+    plans: list[Any],
+    page: int = 1,
+    total_pages: int = 1,
+) -> tuple[str, dict[str, str]]:
+    """Format plan list with subscription counts and pagination nav."""
+    loc = ctx.get_locale()
     entries: list[str] = []
     selection_map: dict[str, str] = {}
     for i, p in enumerate(plans, start=1):
         num = str(i)
-        entries.append(f"{num}️⃣ {p.name}")
+        active_count = int(getattr(p, "active_subscription_count", 0) or 0)
+        entries.append(
+            f"{num}️⃣ {p.name} - "
+            f"{_catalog_count('wa.tenant.catalog.count.subscription_active', active_count)}"
+        )
         selection_map[num] = str(p.id)
-    return "📋 *Planes*\n\n" + "\n".join(entries), selection_map
+    reply = "📋 *Planes*\n\n" + "\n".join(entries)
+    if total_pages > 1:
+        reply += "\n\n" + _i18n_t(
+            loc, "wa.tenant.subscriptions.list.page_info", page=page, total=total_pages
+        )
+    nav: list[str] = []
+    if page < total_pages:
+        nav.append(_i18n_t(loc, "wa.nav.next"))
+    nav.append(_i18n_t(loc, "wa.nav.back"))
+    nav.append(_i18n_t(loc, "wa.nav.cancel"))
+    reply += "\n" + " | ".join(nav)
+    return reply, selection_map
 
 
 def _format_plan_detail(plan: Any) -> str:

@@ -58,13 +58,21 @@ _handle_clients_block_unblock = cf._handle_clients_block_unblock
 
 # -- Catalog flow handlers
 _start_catalog_flow = caf._start_catalog_flow
+_catalog_menu_reply = caf._catalog_menu_reply
+_set_post_action = caf._set_post_action
 _fetch_service_list = caf._fetch_service_list
+_handle_catalog_menu = caf._handle_catalog_menu
+_show_catalog_service_list = caf._show_catalog_service_list
 _handle_catalog_service_select = caf._handle_catalog_service_select
 _handle_catalog_service_action = caf._handle_catalog_service_action
 _handle_catalog_edit_service = caf._handle_catalog_edit_service
 _handle_catalog_plan_select = caf._handle_catalog_plan_select
 _handle_catalog_plan_action = caf._handle_catalog_plan_action
 _handle_catalog_edit_plan = caf._handle_catalog_edit_plan
+_handle_catalog_create_service_name = caf._handle_catalog_create_service_name
+_handle_catalog_create_plan_name = caf._handle_catalog_create_plan_name
+_handle_catalog_empty_plan_menu = caf._handle_catalog_empty_plan_menu
+_handle_catalog_post_action = caf._handle_catalog_post_action
 
 # -- Profile flow handlers
 _start_profile_flow = pf._start_profile_flow
