@@ -373,13 +373,15 @@ Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so
 | # | Action | Description |
 |---|--------|-------------|
 | 1 | Clientes | List and manage clients |
-| 2 | Catálogo | View and edit service/plan names |
+| 2 | Catálogo | Service/plan CRUD. Starts with Catalog menu, supports service/plan list pagination (`8` next, `9` back, `0` close), direct create/edit, and destructive delete warnings requiring `CONFIRMAR`/`CONFIRM`. |
 | 3 | Mi Perfil | View/edit profile and password |
 | 4 | Suscripciones | List and manage subscriptions |
 | 5 | Ayuda | Show help |
 | 0 | Cancelar | Sale de la consola y cierra sesion |
 | 9 | Volver | Regresa al menu anterior en flujos interactivos |
 | 8 | Siguiente | Avanza a la siguiente pagina cuando hay paginacion |
+
+Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
 
 ### Subscription flows
 

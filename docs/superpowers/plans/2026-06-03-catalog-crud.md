@@ -1310,7 +1310,7 @@ git commit -m "feat(whatsapp): add catalog menu create and pagination flows"
 - Test: `backend/tests/test_tenant_console_service.py`
 - Test: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Add failing delete flow tests**
+- [x] **Step 1: Add failing delete flow tests**
 
 In `backend/tests/test_tenant_console_service.py`, add a preview dataclass near fakes:
 
@@ -1479,7 +1479,7 @@ async def test_tenant_catalog_zero_sets_closed_response_with_close_jid(client, a
 
 If the existing endpoint payload shape differs, use the nearest existing tenant-console close test payload and only change message to `0`.
 
-- [ ] **Step 2: Run failing delete flow tests**
+- [x] **Step 2: Run failing delete flow tests**
 
 Run:
 
@@ -1489,7 +1489,7 @@ cd backend && uv run pytest tests/test_tenant_console_service.py -k "delete_serv
 
 Expected: FAIL because delete handlers and i18n keys do not exist.
 
-- [ ] **Step 3: Add delete i18n keys**
+- [x] **Step 3: Add delete i18n keys**
 
 Add ES keys:
 
@@ -1509,7 +1509,7 @@ Add ES keys:
 
 Add English equivalents using `CONFIRM`, `service deleted successfully`, `plan deleted successfully`, and `Historical, expired, and cancelled subscriptions will also be deleted even when they are not listed.`
 
-- [ ] **Step 4: Add delete formatting helpers**
+- [x] **Step 4: Add delete formatting helpers**
 
 In `formatters.py`, add:
 
@@ -1528,7 +1528,7 @@ def _format_catalog_subscription_warning_row(row: Any) -> str:
 
 Use this helper from `catalog_delete_flow.py`.
 
-- [ ] **Step 5: Create delete flow module**
+- [x] **Step 5: Create delete flow module**
 
 Create `backend/app/services/whatsapp_tenant_console_service/catalog_delete_flow.py`:
 
@@ -1756,7 +1756,7 @@ async def _handle_catalog_delete_plan_confirm(self, phone, msg, session, session
     return await self._set_post_action(phone, session_service, message)
 ```
 
-- [ ] **Step 6: Wire delete handlers**
+- [x] **Step 6: Wire delete handlers**
 
 In `_assignments.py`:
 
@@ -1785,7 +1785,7 @@ elif step == self.CATALOG_STEP_DELETE_PLAN_CONFIRM:
     return await self._handle_catalog_delete_plan_confirm(phone, msg, session, session_service, tenant_id, db)
 ```
 
-- [ ] **Step 7: Run delete and endpoint tests**
+- [x] **Step 7: Run delete and endpoint tests**
 
 Run:
 
@@ -1796,7 +1796,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -k "close_jid or cat
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit WhatsApp delete flows**
+- [x] **Step 8: Commit WhatsApp delete flows**
 
 ```bash
 git add backend/app/services/whatsapp_tenant_console_service/catalog_delete_flow.py \
@@ -1823,7 +1823,7 @@ git commit -m "feat(whatsapp): add catalog delete confirmation flows"
 - Modify: `backend/app/core/i18n/catalogs_es_frontend.py`
 - Modify: `backend/app/core/i18n/catalogs_en_frontend.py`
 
-- [ ] **Step 1: Add frontend helper tests first**
+- [x] **Step 1: Add frontend helper tests first**
 
 Create directory:
 
@@ -1867,7 +1867,7 @@ describe('catalog delete preview helpers', () => {
 })
 ```
 
-- [ ] **Step 2: Run failing frontend helper tests**
+- [x] **Step 2: Run failing frontend helper tests**
 
 Run:
 
@@ -1877,7 +1877,7 @@ cd frontend && npm test -- catalogDeletePreview
 
 Expected: FAIL because `catalogDeletePreview.js` does not exist.
 
-- [ ] **Step 3: Add frontend helper module**
+- [x] **Step 3: Add frontend helper module**
 
 Create `frontend/src/components/catalogDeletePreview.js`:
 
@@ -1897,7 +1897,7 @@ export function formatPreviewRow(row) {
 }
 ```
 
-- [ ] **Step 4: Add frontend i18n keys**
+- [x] **Step 4: Add frontend i18n keys**
 
 Add ES frontend keys near existing `frontend.catalog.*` keys:
 
@@ -1926,7 +1926,7 @@ Add ES frontend keys near existing `frontend.catalog.*` keys:
 
 Add English equivalents with `Delete service`, `Delete plan`, `Historical, expired, and cancelled subscriptions will also be deleted even when they are not listed.`, `Type CONFIRMAR or CONFIRM to confirm`, `Delete permanently`.
 
-- [ ] **Step 5: Replace `window.confirm` in CatalogPanel.vue**
+- [x] **Step 5: Replace `window.confirm` in CatalogPanel.vue**
 
 In `frontend/src/components/CatalogPanel.vue`:
 
@@ -2087,7 +2087,7 @@ async function confirmDelete() {
 .danger-action { background: var(--danger, #ef4444); }
 ```
 
-- [ ] **Step 6: Run frontend tests and build**
+- [x] **Step 6: Run frontend tests and build**
 
 Run:
 
@@ -2099,7 +2099,7 @@ cd frontend && npm run build
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit dashboard changes**
+- [x] **Step 7: Commit dashboard changes**
 
 ```bash
 git add frontend/src/components/catalogDeletePreview.js \
@@ -2120,7 +2120,7 @@ git commit -m "feat(frontend): add catalog delete preview modal"
 - Modify: `docs/codebase/frontend-components.md`
 - Modify: `docs/SUMMARY.md`
 
-- [ ] **Step 1: Update API docs**
+- [x] **Step 1: Update API docs**
 
 In `docs/architecture/api-layer.md`, update Catalog Endpoints list to include:
 
@@ -2137,7 +2137,7 @@ Add note:
 Active subscription counts use `status == "active"` only. Services and plans have no active/inactive lifecycle; existing rows count as active catalog items.
 ```
 
-- [ ] **Step 2: Update WhatsApp flow docs**
+- [x] **Step 2: Update WhatsApp flow docs**
 
 In `docs/architecture/whatsapp-console-flow.md`, update Tenant Console Catalog section/table so option 2 says:
 
@@ -2151,7 +2151,7 @@ Add short paragraph:
 Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
 ```
 
-- [ ] **Step 3: Update frontend component docs**
+- [x] **Step 3: Update frontend component docs**
 
 In `docs/codebase/frontend-components.md`, update `CatalogPanel` bullets:
 
@@ -2161,7 +2161,7 @@ In `docs/codebase/frontend-components.md`, update `CatalogPanel` bullets:
 - Preview modal shows affected plan count, active/historical/total subscription counts, and active subscription rows paginated at 10/page.
 ```
 
-- [ ] **Step 4: Update docs summary wording**
+- [x] **Step 4: Update docs summary wording**
 
 In `docs/SUMMARY.md`, adjust the Frontend Components description if needed:
 
@@ -2171,7 +2171,7 @@ In `docs/SUMMARY.md`, adjust the Frontend Components description if needed:
 
 If this exact table row is not present, update the existing `Frontend Components` row with equivalent wording.
 
-- [ ] **Step 5: Run full backend verification**
+- [x] **Step 5: Run full backend verification**
 
 Run:
 
@@ -2181,7 +2181,7 @@ cd backend && uv run pytest
 
 Expected: PASS.
 
-- [ ] **Step 6: Run full frontend verification**
+- [x] **Step 6: Run full frontend verification**
 
 Run:
 
@@ -2192,7 +2192,7 @@ cd frontend && npm run build
 
 Expected: PASS.
 
-- [ ] **Step 7: Run formatting/lint if available without expanding scope**
+- [x] **Step 7: Run formatting/lint if available without expanding scope**
 
 Run backend Ruff commands documented by `AGENTS.md`:
 
@@ -2203,7 +2203,7 @@ cd backend && uv run ruff format --check .
 
 Expected: PASS. If Ruff is not installed in the environment, record exact command failure in PR notes and do not change tooling.
 
-- [ ] **Step 8: Commit docs and verification fixes**
+- [x] **Step 8: Commit docs and verification fixes**
 
 ```bash
 git add docs/architecture/api-layer.md \
