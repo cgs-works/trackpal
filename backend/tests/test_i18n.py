@@ -259,3 +259,28 @@ async def test_get_merged_catalog_immutable():
     # Original should be unchanged
     cat2 = get_merged_catalog("en")
     assert cat2["error.auth.invalid_credentials"] == "Invalid username or password"
+
+
+async def test_frontend_catalog_has_error_load_services_key():
+    """New frontend.catalog.error_load_services must exist in EN and ES."""
+    from app.core.i18n import get_merged_catalog
+
+    en = get_merged_catalog("en")
+    es = get_merged_catalog("es")
+
+    assert "frontend.catalog.error_load_services" in en
+    assert "frontend.catalog.error_load_services" in es
+
+
+async def test_old_delete_confirm_keys_removed():
+    """Dead keys frontend.catalog.delete_service_confirm and
+    frontend.catalog.delete_plan_confirm must not appear in merged catalog."""
+    from app.core.i18n import get_merged_catalog
+
+    en = get_merged_catalog("en")
+    es = get_merged_catalog("es")
+
+    assert "frontend.catalog.delete_service_confirm" not in en
+    assert "frontend.catalog.delete_plan_confirm" not in en
+    assert "frontend.catalog.delete_service_confirm" not in es
+    assert "frontend.catalog.delete_plan_confirm" not in es
