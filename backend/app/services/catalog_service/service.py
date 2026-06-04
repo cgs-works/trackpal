@@ -259,7 +259,7 @@ class CatalogService:
         preview = await self.get_service_delete_preview(db, tenant_id, service_id)
         if preview is None:
             return None
-        service = await db.get(Service, service_id)
+        service = await self.get_service(db, tenant_id, service_id)
         if service is None:
             return None
         await catalog_repository.delete_subscriptions_for_service(db, tenant_id, service_id)
@@ -276,7 +276,7 @@ class CatalogService:
         preview = await self.get_plan_delete_preview(db, tenant_id, service_id, plan_id)
         if preview is None:
             return None
-        plan = await db.get(Plan, plan_id)
+        plan = await self.get_plan(db, tenant_id, service_id, plan_id)
         if plan is None:
             return None
         await catalog_repository.delete_subscriptions_for_plan(db, tenant_id, service_id, plan_id)

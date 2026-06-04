@@ -90,7 +90,9 @@ async def delete_service(
         deleted = await catalog_service.delete_service(db, tenant_id, service_id, confirm=confirm)
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
+        if exc.code == "catalog_delete_confirmation_required":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     if deleted is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
@@ -168,7 +170,9 @@ async def delete_plan(
         deleted = await catalog_service.delete_plan(db, tenant_id, service_id, plan_id, confirm=confirm)
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
+        if exc.code == "catalog_delete_confirmation_required":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
     if deleted is None:
         locale = await resolve_locale(db, tenant_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))

@@ -45,19 +45,20 @@ function countText(count, oneKey, otherKey) {
 }
 
 async function loadDeletePreview(page = 1) {
-  if (!deleteTarget.value) return
+  const target = deleteTarget.value
+  if (!target) return
   isDeleteLoading.value = true
   deleteError.value = ''
   errorMessage.value = ''
   try {
-    const url = deleteTarget.value.type === 'service'
-      ? `/catalog/services/${deleteTarget.value.serviceId}/delete-preview?page=${page}&page_size=10`
-      : `/catalog/services/${selectedServiceId.value}/plans/${deleteTarget.value.planId}/delete-preview?page=${page}&page_size=10`
+    const url = target.type === 'service'
+      ? `/catalog/services/${target.serviceId}/delete-preview?page=${page}&page_size=10`
+      : `/catalog/services/${selectedServiceId.value}/plans/${target.planId}/delete-preview?page=${page}&page_size=10`
     const response = await api.get(url)
     deletePreview.value = response.data
     deletePage.value = page
   } catch (error) {
-    deleteError.value = getApiError(error, deleteTarget.value.type === 'service'
+    deleteError.value = getApiError(error, target.type === 'service'
       ? i18nStore.t('frontend.catalog.error_delete_service')
       : i18nStore.t('frontend.catalog.error_delete_plan'))
   } finally {
@@ -80,19 +81,20 @@ async function openDeletePlan(plan) {
 }
 
 async function confirmDelete() {
-  if (!deleteTarget.value || !canConfirmDelete.value) return
+  const target = deleteTarget.value
+  if (!target || !canConfirmDelete.value) return
   isDeleting.value = true
   try {
-    const url = deleteTarget.value.type === 'service'
-      ? `/catalog/services/${deleteTarget.value.serviceId}?confirm=true`
-      : `/catalog/services/${selectedServiceId.value}/plans/${deleteTarget.value.planId}?confirm=true`
+    const url = target.type === 'service'
+      ? `/catalog/services/${target.serviceId}?confirm=true`
+      : `/catalog/services/${selectedServiceId.value}/plans/${target.planId}?confirm=true`
     await api.delete(url)
-    if (deleteTarget.value.type === 'service' && selectedServiceId.value === deleteTarget.value.serviceId) selectedServiceId.value = ''
+    if (target.type === 'service' && selectedServiceId.value === target.serviceId) selectedServiceId.value = ''
     closeDeleteModal()
     await loadServices()
     if (selectedServiceId.value) await loadPlans()
   } catch (error) {
-    deleteError.value = getApiError(error, deleteTarget.value.type === 'service'
+    deleteError.value = getApiError(error, target.type === 'service'
       ? i18nStore.t('frontend.catalog.error_delete_service')
       : i18nStore.t('frontend.catalog.error_delete_plan'))
   } finally {

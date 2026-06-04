@@ -23,6 +23,8 @@ async def _show_catalog_delete_service_list(
     page_items, page, total_pages = self._paginate(
         services, page, self.CATALOG_PAGE_SIZE
     )
+    if not page_items:
+        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
     reply, selection_map = self._format_service_list(
         page_items, page=page, total_pages=total_pages
     )
@@ -58,7 +60,8 @@ async def _handle_catalog_delete_service_select(
         )
     if is_back(msg):
         session.step = self.CATALOG_STEP_MENU
-        await session_service.save_session(session)
+        if session_service is not None:
+            await session_service.save_session(session)
         return await self._catalog_menu_reply(tenant_id, db)
     service_id = session.selection_map.get(msg)
     parsed_service_id = self._safe_uuid(service_id)
@@ -67,7 +70,8 @@ async def _handle_catalog_delete_service_select(
     session.step = self.CATALOG_STEP_DELETE_SERVICE_CONFIRM
     session.temp_data["delete_service_id"] = str(parsed_service_id)
     session.temp_data["delete_page"] = "1"
-    await session_service.save_session(session)
+    if session_service is not None:
+        await session_service.save_session(session)
     return await self._render_service_delete_warning(session, tenant_id, db, page=1)
 
 
@@ -142,7 +146,8 @@ async def _handle_catalog_delete_service_confirm(
     if is_next(msg):
         page = int(session.temp_data.get("delete_page", "1")) + 1
         session.temp_data["delete_page"] = str(page)
-        await session_service.save_session(session)
+        if session_service is not None:
+            await session_service.save_session(session)
         return await self._render_service_delete_warning(
             session, tenant_id, db, page=page
         )
@@ -196,13 +201,16 @@ async def _show_catalog_delete_plan_list(
     plans = await self._catalog_service.list_plan_summaries(db, tenant_id, service_id)
     if not plans:
         session.step = self.CATALOG_STEP_MENU
-        await session_service.save_session(session)
+        if session_service is not None:
+            await session_service.save_session(session)
         return (
             self._t(self.KEY_CATALOG_NO_PLANS_FOR_DELETE)
             + "\n\n"
             + await self._catalog_menu_reply(tenant_id, db)
         )
     page_items, page, total_pages = self._paginate(plans, page, self.CATALOG_PAGE_SIZE)
+    if not page_items:
+        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
     reply, selection_map = self._format_plan_list(
         page_items, page=page, total_pages=total_pages
     )
@@ -211,7 +219,8 @@ async def _show_catalog_delete_plan_list(
     session.selection_map = selection_map
     session.temp_data["delete_service_id"] = str(service_id)
     session.temp_data["catalog_page"] = page
-    await session_service.save_session(session)
+    if session_service is not None:
+        await session_service.save_session(session)
     return reply + "\n\n" + self._t("wa.tenant.catalog.delete_plan_prompt")
 
 
@@ -256,7 +265,8 @@ async def _handle_catalog_delete_plan_select(
                     + self._t(self.KEY_CATALOG_SERVICE_ACTIONS)
                 )
         session.step = self.CATALOG_STEP_MENU
-        await session_service.save_session(session)
+        if session_service is not None:
+            await session_service.save_session(session)
         return await self._catalog_menu_reply(tenant_id, db)
     plan_id = session.selection_map.get(msg)
     parsed_plan_id = self._safe_uuid(plan_id)
@@ -265,7 +275,8 @@ async def _handle_catalog_delete_plan_select(
     session.step = self.CATALOG_STEP_DELETE_PLAN_CONFIRM
     session.temp_data["delete_plan_id"] = str(parsed_plan_id)
     session.temp_data["delete_page"] = "1"
-    await session_service.save_session(session)
+    if session_service is not None:
+        await session_service.save_session(session)
     return await self._render_plan_delete_warning(session, tenant_id, db, page=1)
 
 
@@ -337,7 +348,8 @@ async def _handle_catalog_delete_plan_confirm(
     if is_next(msg):
         page = int(session.temp_data.get("delete_page", "1")) + 1
         session.temp_data["delete_page"] = str(page)
-        await session_service.save_session(session)
+        if session_service is not None:
+            await session_service.save_session(session)
         return await self._render_plan_delete_warning(session, tenant_id, db, page=page)
     if is_back(msg):
         return await self._show_catalog_delete_plan_list(
