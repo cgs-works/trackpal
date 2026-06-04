@@ -129,7 +129,7 @@ def _format_service_list(
         nav.append(_i18n_t(loc, "wa.nav.next"))
     nav.append(_i18n_t(loc, "wa.nav.back"))
     nav.append(_i18n_t(loc, "wa.nav.cancel"))
-    reply += "\n" + " | ".join(nav)
+    reply += "\n" + "\n".join(nav)
     return reply, selection_map
 
 
@@ -169,7 +169,7 @@ def _format_plan_list(
         nav.append(_i18n_t(loc, "wa.nav.next"))
     nav.append(_i18n_t(loc, "wa.nav.back"))
     nav.append(_i18n_t(loc, "wa.nav.cancel"))
-    reply += "\n" + " | ".join(nav)
+    reply += "\n" + "\n".join(nav)
     return reply, selection_map
 
 
