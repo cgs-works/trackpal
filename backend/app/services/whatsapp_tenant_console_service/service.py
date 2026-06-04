@@ -88,6 +88,17 @@ class WhatsAppTenantConsoleService(
     _handle_catalog_create_plan_name = _._handle_catalog_create_plan_name
     _handle_catalog_empty_plan_menu = _._handle_catalog_empty_plan_menu
     _handle_catalog_post_action = _._handle_catalog_post_action
+    _show_catalog_delete_service_list = _._show_catalog_delete_service_list
+    _handle_catalog_delete_service_select = _._handle_catalog_delete_service_select
+    _render_service_delete_warning = _._render_service_delete_warning
+    _handle_catalog_delete_service_confirm = _._handle_catalog_delete_service_confirm
+    _show_catalog_delete_plan_list = _._show_catalog_delete_plan_list
+    _handle_catalog_delete_plan_select = _._handle_catalog_delete_plan_select
+    _render_plan_delete_warning = _._render_plan_delete_warning
+    _handle_catalog_delete_plan_confirm = _._handle_catalog_delete_plan_confirm
+    _format_catalog_subscription_warning_row = _._format_catalog_subscription_warning_row
+    _catalog_count = _._catalog_count
+    _paginate = _._paginate
     _start_profile_flow = _._start_profile_flow
     _handle_profile_action = _._handle_profile_action
     _show_profile = _._show_profile

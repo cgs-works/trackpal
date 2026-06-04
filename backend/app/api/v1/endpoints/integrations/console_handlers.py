@@ -233,6 +233,8 @@ async def _handle_tenant_console(
     close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
     """Handle message from identified Tenant Admin user."""
+    if close_jid is None:
+        close_jid = f"{phone}@s.whatsapp.net" if phone else None
     session_service = WhatsAppSessionService(
         connection_manager=manager,
         ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
@@ -255,7 +257,7 @@ async def _handle_tenant_console(
     if identity is None:
         return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
 
-    exit_cmd = message.strip().lower() in ("0", "salir")
+    exit_cmd = is_cancel(message)
 
     try:
         reply = await facade.process_message(
@@ -419,7 +421,7 @@ async def _handle_client_console(
         locale=locale,
     )
 
-    exit_cmd = message.strip().lower() in ("0", "salir")
+    exit_cmd = is_cancel(message)
 
     try:
         reply = await facade.process_message(

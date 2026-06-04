@@ -160,6 +160,40 @@ class FakeClientService:
 
 
 @dataclass
+class FakeDeletePagination:
+    page: int = 1
+    page_size: int = 7
+    total_items: int = 0
+    total_pages: int = 1
+    has_next: bool = False
+
+
+@dataclass
+class FakeDeleteRow:
+    id: UUID = field(default_factory=uuid4)
+    streaming_email: str = "active@example.com"
+    client_name: str = "Cliente Demo"
+    client_phone: str = "584241234567"
+    service_name: str = "Netflix"
+    plan_name: str = "Premium"
+    expires_at: datetime = field(default_factory=lambda: datetime(2026, 7, 1))
+
+
+@dataclass
+class FakeDeletePreview:
+    target_type: str = "service"
+    target_id: UUID = field(default_factory=uuid4)
+    target_name: str = "Netflix"
+    affected_plan_count: int = 0
+    active_subscription_count: int = 0
+    historical_subscription_count: int = 0
+    total_subscription_count: int = 0
+    active_subscriptions: list[FakeDeleteRow] = field(default_factory=list)
+    pagination: FakeDeletePagination = field(default_factory=FakeDeletePagination)
+    note: str = "Las suscripciones historicas tambien se eliminaran."
+
+
+@dataclass
 class FakeServiceObj:
     id: UUID = field(default_factory=uuid4)
     name: str = "Test Service"
@@ -277,6 +311,55 @@ class FakeCatalogService:
         plan.name = payload.name
         return plan
 
+
+
+    async def get_service_delete_preview(self, db: Any, tenant_id: UUID, service_id: UUID, *, page: int = 1, page_size: int = 7) -> FakeDeletePreview | None:
+        service = self._services.get(str(service_id))
+        if service is None:
+            return None
+        rows = [FakeDeleteRow(service_name=service.name, plan_name="Premium")]
+        return FakeDeletePreview(
+            target_type="service",
+            target_id=service.id,
+            target_name=service.name,
+            affected_plan_count=service.plan_count,
+            active_subscription_count=service.active_subscription_count,
+            historical_subscription_count=1,
+            total_subscription_count=service.active_subscription_count + 1,
+            active_subscriptions=rows[:page_size],
+            pagination=FakeDeletePagination(page=page, page_size=page_size, total_items=len(rows), total_pages=1, has_next=False),
+        )
+
+    async def get_plan_delete_preview(self, db: Any, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, page: int = 1, page_size: int = 7) -> FakeDeletePreview | None:
+        plan = self._plans.get(str(plan_id))
+        if plan is None:
+            return None
+        rows = [FakeDeleteRow(plan_name=plan.name)] if plan.active_subscription_count else []
+        return FakeDeletePreview(
+            target_type="plan",
+            target_id=plan.id,
+            target_name=plan.name,
+            affected_plan_count=0,
+            active_subscription_count=plan.active_subscription_count,
+            historical_subscription_count=0,
+            total_subscription_count=plan.active_subscription_count,
+            active_subscriptions=rows[:page_size],
+            pagination=FakeDeletePagination(page=page, page_size=page_size, total_items=len(rows), total_pages=1, has_next=False),
+        )
+
+    async def delete_service(self, db: Any, tenant_id: UUID, service_id: UUID, *, confirm: bool = False) -> FakeDeletePreview | None:
+        if not confirm:
+            raise UserFacingError("catalog_delete_confirmation_required")
+        preview = await self.get_service_delete_preview(db, tenant_id, service_id)
+        self._services.pop(str(service_id), None)
+        return preview
+
+    async def delete_plan(self, db: Any, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, confirm: bool = False) -> FakeDeletePreview | None:
+        if not confirm:
+            raise UserFacingError("catalog_delete_confirmation_required")
+        preview = await self.get_plan_delete_preview(db, tenant_id, service_id, plan_id)
+        self._plans.pop(str(plan_id), None)
+        return preview
 
 @dataclass
 class FakeSubscriptionObj:
@@ -2870,3 +2953,68 @@ class TestCatalogFlow:
             db=AsyncMock(),
         )
         assert "No se pudo actualizar el plan" in reply
+
+    async def test_delete_service_warning_requires_confirm_and_summarizes_cascade(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Verify delete service warning, invalid confirm retry, and successful confirm."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        service.plan_count = 3
+        service.active_subscription_count = 1
+        await console_service.process_message("+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message("+10000000000", "3", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        warning = await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        assert "eliminar servicio" in warning.lower()
+        assert "3" in warning
+        assert "planes" in warning
+        assert "suscripciones" in warning
+        assert "active@example.com - Cliente Demo - 584241234567 - Netflix/Premium" in warning
+        assert "CONFIRMAR" in warning
+        invalid = await console_service.process_message("+10000000000", "si", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        assert "CONFIRMAR" in invalid
+        success = await console_service.process_message("+10000000000", "confirmar", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        assert "Servicio" in success and "eliminado" in success
+        assert "3 planes" in success
+        assert "2 suscripciones" in success
+
+    async def test_delete_plan_no_plans_returns_to_catalog_menu(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Trying to delete a plan when service has none returns to catalog menu."""
+        tenant_id = uuid4()
+        catalog_service._plans.clear()
+        await console_service.process_message("+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        reply = await console_service.process_message("+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        assert "no tiene planes" in reply.lower()
+        assert "Cat" in reply or "catalog" in reply.lower()
+
+    async def test_delete_plan_warning_and_confirm(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        catalog_service: FakeCatalogService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        """Verify delete plan warning with subscription shows confirm prompt."""
+        tenant_id = uuid4()
+        service = next(iter(catalog_service._services.values()))
+        plan = FakePlanObj(service_id=service.id, name="Premium", active_subscription_count=1)
+        catalog_service._plans[str(plan.id)] = plan
+        await console_service.process_message("+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message("+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        warning = await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        assert "eliminar plan" in warning.lower()
+        assert "Premium" in warning
+        success = await console_service.process_message("+10000000000", "CONFIRM", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        assert "Plan" in success and "eliminado" in success
+

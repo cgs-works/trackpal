@@ -11,6 +11,16 @@ from app.services.whatsapp_navigation import is_back, is_cancel, is_next
 from . import _context as ctx
 
 
+def _paginate(items, page, page_size):
+    """Paginate an item list."""
+    safe_page = max(1, page)
+    total_pages = max(1, math.ceil(len(items) / page_size))
+    start = (safe_page - 1) * page_size
+    return items[start:start + page_size], safe_page, total_pages
+
+
+
+
 async def _catalog_menu_reply(self, tenant_id, db):
     """Return the catalog menu text (full or empty)."""
     if tenant_id is None or db is None or self._catalog_service is None:
@@ -106,8 +116,9 @@ async def _handle_catalog_menu(self, phone, msg, session, session_service, tenan
             await session_service.save_session(session)
         return self._t(self.KEY_CATALOG_CREATE_SERVICE_PROMPT)
     if msg == "3" and has_services:
-        # Delete service — Task 4 placeholder
-        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        return await self._show_catalog_delete_service_list(
+            phone, session, session_service, tenant_id, db, page=1
+        )
     return self._t(self.KEY_CATALOG_INVALID_SELECTION)
 
 
@@ -190,8 +201,9 @@ async def _handle_catalog_service_action(self, phone, msg, session, session_serv
             await session_service.save_session(session)
         return self._t(self.KEY_CATALOG_CREATE_PLAN_PROMPT)
     elif msg == "4":
-        # Delete plan — Task 4 placeholder
-        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        return await self._show_catalog_delete_plan_list(
+            phone, session, session_service, tenant_id, db, page=1
+        )
     elif is_back(msg):
         return await self._show_catalog_service_list(phone, session, session_service, tenant_id, db, page=1)
     return self._t(self.KEY_CATALOG_INVALID_SELECTION)
@@ -287,8 +299,9 @@ async def _handle_catalog_plan_action(self, phone, msg, session, session_service
             await session_service.save_session(session)
         return self._t(self.KEY_CATALOG_PLAN_EDIT_PROMPT)
     elif msg == "2":
-        # Delete plan — Task 4 placeholder
-        return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        return await self._show_catalog_delete_plan_list(
+            phone, session, session_service, tenant_id, db, page=1
+        )
     elif is_back(msg):
         # Back to service detail
         service_id = session.temp_data.get("service_id")

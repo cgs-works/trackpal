@@ -178,6 +178,21 @@ def _format_profile_detail(profile: Any, username: str) -> str:
     )
 
 
+
+def _format_catalog_subscription_warning_row(row: Any) -> str:
+    """Format a single subscription warning row for delete preview."""
+    expires = getattr(row, "expires_at", None)
+    if hasattr(expires, "strftime"):
+        expires_text = expires.strftime("%Y-%m-%d")
+    else:
+        expires_text = str(expires or "—")
+    return (
+        f"{row.streaming_email} - {row.client_name or '—'} - {row.client_phone or '—'} - "
+        f"{row.service_name}/{row.plan_name} - expira {expires_text}"
+    )
+
+
+
 def _format_subscription_list(
     subscriptions: list[Any],
     show_status: bool = True,

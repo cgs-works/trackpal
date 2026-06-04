@@ -7,6 +7,7 @@ from . import format_helpers as fh
 from . import clients_flow as cf
 from . import clients_crud as cc
 from . import catalog_flow as caf
+from . import catalog_delete_flow as cdf
 from . import subscriptions_flow as sf
 from . import subscriptions_create as sfc
 from . import subscriptions_create_confirm as sfcc
@@ -22,12 +23,15 @@ from . import _routers as rt
 _t = staticmethod(fmt._t)
 _with_main_menu = staticmethod(fmt._with_main_menu)
 _post_action_prompt = staticmethod(fmt._post_action_prompt)
+_catalog_count = staticmethod(fmt._catalog_count)
+_paginate = staticmethod(caf._paginate)
 _format_client_list = staticmethod(fmt._format_client_list)
 _format_client_detail = staticmethod(fmt._format_client_detail)
 _format_service_list = staticmethod(fmt._format_service_list)
 _format_service_detail = staticmethod(fmt._format_service_detail)
 _format_plan_list = staticmethod(fmt._format_plan_list)
 _format_plan_detail = staticmethod(fmt._format_plan_detail)
+_format_catalog_subscription_warning_row = staticmethod(fmt._format_catalog_subscription_warning_row)
 _format_profile_detail = staticmethod(fmt._format_profile_detail)
 _format_subscription_list = staticmethod(fmt._format_subscription_list)
 _format_subscription_detail = staticmethod(fmt._format_subscription_detail)
@@ -73,6 +77,16 @@ _handle_catalog_create_service_name = caf._handle_catalog_create_service_name
 _handle_catalog_create_plan_name = caf._handle_catalog_create_plan_name
 _handle_catalog_empty_plan_menu = caf._handle_catalog_empty_plan_menu
 _handle_catalog_post_action = caf._handle_catalog_post_action
+
+# -- Catalog delete flow handlers
+_show_catalog_delete_service_list = cdf._show_catalog_delete_service_list
+_handle_catalog_delete_service_select = cdf._handle_catalog_delete_service_select
+_render_service_delete_warning = cdf._render_service_delete_warning
+_handle_catalog_delete_service_confirm = cdf._handle_catalog_delete_service_confirm
+_show_catalog_delete_plan_list = cdf._show_catalog_delete_plan_list
+_handle_catalog_delete_plan_select = cdf._handle_catalog_delete_plan_select
+_render_plan_delete_warning = cdf._render_plan_delete_warning
+_handle_catalog_delete_plan_confirm = cdf._handle_catalog_delete_plan_confirm
 
 # -- Profile flow handlers
 _start_profile_flow = pf._start_profile_flow

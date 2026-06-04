@@ -382,6 +382,12 @@ async def _handle_from_me_routing(
             return WhatsAppConsoleResponse(reply="", no_reply=True)
 
     assert resolved_admin_phone is not None  # guaranteed by fallback check above
+    # Prefer phone-based close JID when normalized admin phone is available
+    preferred_close_jid = (
+        _phone_close_jid(resolved_admin_phone)
+        or _canonical_jid(admin_jid)
+        or admin_jid
+    )
 
     # ── Step 2: Determine target identity ─────────────────────────
     target_phone_norm = normalize_phone(target_phone) if target_phone else None
@@ -454,7 +460,7 @@ async def _handle_from_me_routing(
                 db=db,
                 tenant=tenant,
                 client=client,
-                close_jid=_canonical_jid(admin_jid) or admin_jid,
+                close_jid=preferred_close_jid,
             )
 
         return await _handle_tenant_console(
@@ -463,7 +469,7 @@ async def _handle_from_me_routing(
             instance=instance,
             manager=manager,
             db=db,
-            close_jid=_canonical_jid(admin_jid) or admin_jid,
+            close_jid=preferred_close_jid,
         )
 
     # ── Step 4: Check for existing active context ─────────────────
@@ -492,7 +498,7 @@ async def _handle_from_me_routing(
                 reply=t(locale, "wa.tenant.client_context.closed"),
                 status="closed",
                 reply_to=admin_jid,
-                close_jid=_canonical_jid(admin_jid) or admin_jid,
+                close_jid=preferred_close_jid,
                 close_jids=close_jids,
             )
         # Otherwise, reject silently (collision)
@@ -539,5 +545,5 @@ async def _handle_from_me_routing(
     # close_jid tells n8n which chat to close when the admin sends
     # "0"/"salir"/"cerrar" in the client-shortcut flow.
     return WhatsAppConsoleResponse(
-        reply=reply, reply_to=admin_jid, close_jid=_canonical_jid(admin_jid) or admin_jid
+        reply=reply, reply_to=admin_jid, close_jid=preferred_close_jid
     )

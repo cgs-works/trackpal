@@ -110,6 +110,22 @@ async def _route_catalog_flow(
         return await self._handle_catalog_post_action(
             phone, msg, session, session_service, tenant_id, db
         )
+    elif step == self.CATALOG_STEP_DELETE_SERVICE_SELECT:
+        return await self._handle_catalog_delete_service_select(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_DELETE_SERVICE_CONFIRM:
+        return await self._handle_catalog_delete_service_confirm(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_DELETE_PLAN_SELECT:
+        return await self._handle_catalog_delete_plan_select(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_DELETE_PLAN_CONFIRM:
+        return await self._handle_catalog_delete_plan_confirm(
+            phone, msg, session, session_service, tenant_id, db
+        )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)
 
 

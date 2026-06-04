@@ -2930,3 +2930,130 @@ async def test_whatsapp_console_response_serializes_close_jids():
             "34222222222@s.whatsapp.net",
         ],
     }
+
+
+async def test_tenant_catalog_zero_sets_closed_response_with_close_jid(
+    client, db_session, active_tenant_user
+):
+    """Sending 0 during catalog flow closes session and returns close_jid."""
+    from app.api.v1.endpoints.integrations.console import get_redis_manager
+    from unittest.mock import patch
+
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone  # "+12015550002"
+    admin_phone_digits = "12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Start catalog flow
+        await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        # Send 0 to cancel
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "salido" in body["reply"].lower()
+    assert body.get("status") == "closed"
+    assert body.get("close_jid") == "12015550002@s.whatsapp.net"
+
+
+async def test_tenant_catalog_cancelar_sets_closed_response_with_close_jid(
+    client, db_session, active_tenant_user
+):
+    """Sending 'cancelar' during catalog flow closes session and returns close_jid."""
+    from app.api.v1.endpoints.integrations.console import get_redis_manager
+    from unittest.mock import patch
+
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone  # "+12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Start catalog flow
+        await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        # Send "cancelar" to cancel (is_cancel alias)
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "cancelar",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "salido" in body["reply"].lower()
+    assert body.get("status") == "closed"
+    assert body.get("close_jid") == "12015550002@s.whatsapp.net"
+
+
+async def test_tenant_catalog_cerrar_sets_closed_response_with_close_jid(
+    client, db_session, active_tenant_user
+):
+    """Sending 'cerrar' during catalog flow closes session and returns close_jid."""
+    from app.api.v1.endpoints.integrations.console import get_redis_manager
+    from unittest.mock import patch
+
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone  # "+12015550002"
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Start catalog flow
+        await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        # Send "cerrar" to cancel (is_cancel alias)
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "cerrar",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "salido" in body["reply"].lower()
+    assert body.get("status") == "closed"
+    assert body.get("close_jid") == "12015550002@s.whatsapp.net"
