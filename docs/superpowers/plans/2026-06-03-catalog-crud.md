@@ -2222,7 +2222,7 @@ If verification required small code fixes, include only files changed by those f
 **Files:**
 - No code files unless PR command requires a generated template file.
 
-- [ ] **Step 1: Inspect final diff and commit history**
+- [x] **Step 1: Inspect final diff and commit history**
 
 Run:
 
@@ -2238,7 +2238,7 @@ Expected:
 - multiple logical commits
 - diff covers backend/API, WhatsApp/i18n, frontend, docs, tests
 
-- [ ] **Step 2: Push branch**
+- [x] **Step 2: Push branch**
 
 Run:
 
@@ -2248,7 +2248,7 @@ git push -u origin feature/43-catalog-crud-whatsapp-dashboard
 
 Expected: branch pushed.
 
-- [ ] **Step 3: Open Draft PR linked to GitHub #43 and Linear TPL-6**
+- [x] **Step 3: Open Draft PR linked to GitHub #43 and Linear TPL-6**
 
 Run:
 
@@ -2306,7 +2306,7 @@ Closes #43
 Linear: TPL-6
 ```
 
-- [ ] **Step 4: Commit nothing during PR step unless files changed intentionally**
+- [x] **Step 4: Commit nothing during PR step unless files changed intentionally**
 
 Run:
 
