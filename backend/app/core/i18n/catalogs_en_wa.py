@@ -234,9 +234,20 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.menu.blocked_lid_only": "📌 *Client management*\n\nThis contact is blocked from accessing the system.\nThey cannot request codes, view profile, or check subscriptions.\n\nChoose an option:\n1️⃣ Unblock access\n0️⃣ Cancel",
     "wa.tenant.client_context.phone_line": "Phone number: {phone}\n",
 
-    "wa.tenant.client_context.menu.active": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Create subscription\n4️⃣ Deactivate client\n5️⃣ Delete client\n0️⃣ Cancel",
+    "wa.tenant.client_context.menu.active": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ View subscriptions\n4️⃣ Deactivate client\n5️⃣ Delete client\n0️⃣ Cancel",
 
     "wa.tenant.client_context.active.delete_blocked": "❌ An active client cannot be deleted.\n\nClient: {client_name}\n{phone_line}\nDeactivate the client first and then try deleting it again.",
+
+    "wa.tenant.client_context.subscriptions.list": "📋 *Subscriptions for {client_name}*\n\n",
+    "wa.tenant.client_context.subscriptions.empty": "No active subscriptions.\n\n",
+    "wa.tenant.client_context.subscriptions.item": "{number}️⃣ {service_name} - {plan_name} - {status}",
+    "wa.tenant.client_context.subscriptions.item_with_expiry": "{number}️⃣ {service_name} - {plan_name} - {status} (expires {expires})",
+    "wa.tenant.client_context.subscriptions.detail": "📺 *Subscription detail*\n\n*Service:* {service_name}\n*Plan:* {plan_name}\n*Email:* {email}\n*Status:* {status}\n*Started:* {started}\n*Expires:* {expires}\n",
+    "wa.tenant.client_context.subscriptions.detail_nav": "1️⃣ Extend expiry\n9️⃣ Back\n0️⃣ Cancel",
+    "wa.tenant.client_context.subscriptions.list_nav_create": "{number}️⃣ Create new subscription\n9️⃣ Back\n0️⃣ Cancel",
+    "wa.tenant.client_context.subscriptions.list_nav": "9️⃣ Back\n0️⃣ Cancel",
+    "wa.tenant.client_context.subscriptions.duplicate": "❌ *{client_name}* already has an active subscription for *{service_name}* with the email *{email}*.\n\nChoose an option:\n1️⃣ Extend expiry of existing subscription\n2️⃣ Go back to select a different service/plan\n0️⃣ Cancel",
+    "wa.tenant.client_context.subscriptions.duplicate_extend_success": "✅ Subscription extended successfully.",
 
     "wa.tenant.client_context.menu.inactive": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Reactivate client\n4️⃣ Delete client\n0️⃣ Cancel",
     "wa.tenant.client_context.closed": "✅ Client management cancelled.",

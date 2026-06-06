@@ -978,6 +978,9 @@ async def _handle_active_client_context(
         handle_ctx_active_detail,
         handle_ctx_active_edit_field,
         handle_ctx_active_edit_value,
+        handle_ctx_active_view_subscriptions,
+        handle_ctx_view_subscription_detail,
+        handle_ctx_active_extend_subscription,
         handle_ctx_creating_confirm,
         handle_ctx_creating_first,
         handle_ctx_creating_name,
@@ -1113,6 +1116,10 @@ async def _handle_active_client_context(
             "active_edit_field",
             "active_edit_value",
             "active_deactivate_confirm",
+            "active_view_subscriptions",
+            "active_subscription_detail",
+            "active_extend_subs",
+            "active_extend_subs_confirm",
         }
         if step not in active_steps:
             # Active client discovered from a non-active context step:
@@ -1347,6 +1354,10 @@ async def _handle_active_client_context(
             "active_edit_field",
             "active_edit_value",
             "active_deactivate_confirm",
+            "active_view_subscriptions",
+            "active_subscription_detail",
+            "active_extend_subs",
+            "active_extend_subs_confirm",
         }
         and active_client is None
     ):
@@ -1398,6 +1409,46 @@ async def _handle_active_client_context(
     if step == "active_deactivate_confirm":
         return await handle_ctx_active_deactivate_confirm(
             msg_lower, message, data, admin_jid, tenant, db, _save_ctx, _clear_ctx
+        )
+
+    # ── Active client view subscriptions steps ────────────────────
+    if step == "active_view_subscriptions" and active_client is not None:
+        return await handle_ctx_active_view_subscriptions(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            active_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    if step == "active_subscription_detail" and active_client is not None:
+        return await handle_ctx_view_subscription_detail(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            active_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    if step in ("active_extend_subs", "active_extend_subs_confirm") and active_client is not None:
+        return await handle_ctx_active_extend_subscription(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            active_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
         )
 
     # ── Inactive client menu steps ────────────────────────────────

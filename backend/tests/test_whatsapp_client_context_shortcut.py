@@ -475,10 +475,10 @@ async def test_active_menu_option_2_enters_edit_flow(
     assert "Seleccione un *servicio*" not in reply
 
 
-async def test_active_menu_option_3_starts_subscription_flow_and_preserves_shortcut(
+async def test_active_menu_option_3_opens_view_subscriptions(
     client, db_session, active_tenant_user
 ):
-    """Option 3 on active root menu must start subscription creation and clear shortcut."""
+    """Option 3 on active root menu must show the subscriptions list with a create option."""
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
     await _create_context_client(
@@ -489,8 +489,6 @@ async def test_active_menu_option_3_starts_subscription_flow_and_preserves_short
         full_name="Subscription Client",
         username="tna01_ctx_subscription",
     )
-    db_session.add(Service(tenant_id=tenant.id, name="Streaming Pro"))
-    await db_session.commit()
 
     fake_mgr = _FakeManager(used_backup=False)
     ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559998")
@@ -513,6 +511,64 @@ async def test_active_menu_option_3_starts_subscription_flow_and_preserves_short
 
     assert response.status_code == 200
     reply = response.json()["reply"]
+    assert "Suscripciones" in reply
+    assert "Subscription Client" in reply
+    assert "No hay suscripciones" in reply
+    assert "Crear nueva suscripcion" in reply
+
+    ctx_data = await fake_mgr._redis.get(ctx_key)
+    assert ctx_data is not None
+    ctx = json.loads(ctx_data)
+    assert ctx["step"] == "active_view_subscriptions"
+
+
+async def test_view_subscriptions_creates_subscription_from_empty_list(
+    client, db_session, active_tenant_user
+):
+    """From empty subscriptions list, option '1' (create new) starts subscription flow."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559998",
+        is_active=True,
+        full_name="Subscription Client",
+        username="tna01_ctx_subscription",
+    )
+    db_session.add(Service(tenant_id=tenant.id, name="Streaming Pro"))
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559998")
+
+    # Start in active_view_subscriptions step (as if admin just opened it)
+    # Send '1' which is the 'Create new subscription' option when list is empty
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ), patch(
+        "app.core.redis_client.get_redis_manager",
+        return_value=fake_mgr,
+    ), patch(
+        "app.core.redis_client.lifespan.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # First set the context step to active_view_subscriptions
+        ctx_raw = await fake_mgr._redis.get(ctx_key)
+        ctx = json.loads(ctx_raw)
+        ctx["step"] = "active_view_subscriptions"
+        await fake_mgr._redis.set(ctx_key, json.dumps(ctx), ex=300)
+
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    # Now we should see the subscription creation flow (service selection)
     assert "suscripcion" in reply.lower()
     assert "Streaming Pro" in reply
     assert "[1]" in reply  # bracket service notation
@@ -520,13 +576,10 @@ async def test_active_menu_option_3_starts_subscription_flow_and_preserves_short
     assert "*Telefono:*" in reply
     assert "Subscription Client" in reply
     assert "12015559998" in reply
-    # Nav: only 9 (back) and 0 (cancel) appear since only 1 service (<=7)
     assert "9" in reply  # back nav
     assert "0" in reply  # cancel nav
-    # 8 (next) is not shown with <=7 services
-    # Context shortcut is kept alive with subscription_active step so that
-    # _handle_active_client_context can detect completion and re-render the
-    # client context menu instead of the tenant main menu.
+
+    # Context shortcut is kept alive with subscription_active step
     ctx_data = await fake_mgr._redis.get(ctx_key)
     assert ctx_data is not None
     ctx = json.loads(ctx_data)
@@ -539,7 +592,7 @@ async def test_active_menu_option_3_starts_subscription_flow_and_preserves_short
     assert session["flow"] == "subscriptions"
     assert session["step"] == "create_service"
     assert session["temp_data"]["client_name"] == "Subscription Client"
-    assert "starts_at" in session["temp_data"]  # needed by _build_subscription_create_confirm
+    assert "starts_at" in session["temp_data"]
 
 
 async def test_active_menu_option_5_blocks_delete_and_keeps_active_menu(
@@ -621,7 +674,7 @@ async def test_active_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl(
     reply = response.json()["reply"]
     assert "Opcion invalida" in reply
     assert "Editar cliente" in reply
-    assert "Crear suscripcion" in reply
+    assert "Ver suscripciones" in reply
     assert "Desactivar cliente" in reply
     assert "Eliminar cliente" in reply
     assert fake_mgr._redis._ttls[ctx_key] == 300
@@ -666,7 +719,7 @@ async def test_active_detail_back_rerenders_active_root_menu(
 
     reply = response.json()["reply"]
     assert "Editar cliente" in reply
-    assert "Crear suscripcion" in reply
+    assert "Ver suscripciones" in reply
     assert "Desactivar cliente" in reply
 
 
@@ -901,7 +954,7 @@ async def test_inactive_menu_option_3_reactivates_and_shows_active_menu(
 
     reply = response.json()["reply"]
     assert "reactivado" in reply.lower()
-    assert "Crear suscripcion" in reply
+    assert "Ver suscripciones" in reply
     ctx_data = json.loads(await fake_mgr._redis.get(ctx_key))
     assert ctx_data["step"] == "active_menu"
 

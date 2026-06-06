@@ -2632,7 +2632,7 @@ async def test_context_active_client_shows_menu(client, db_session, active_tenan
     reply = body["reply"]
     # Should show active client menu, not context creation menu
     assert "Context Active Client" in reply
-    assert "Crear suscripcion" in reply
+    assert "Ver suscripciones" in reply
     assert "Ver detalle" in reply
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 

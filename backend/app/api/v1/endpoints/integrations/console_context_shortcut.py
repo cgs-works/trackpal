@@ -389,8 +389,18 @@ async def handle_ctx_active_client_menu(
         )
 
     if msg_lower == "3":
-        return await _start_context_subscription(
-            client, data, admin_jid, tenant, db, save_ctx, clear_ctx
+        data["step"] = "active_view_subscriptions"
+        await save_ctx(refresh_ttl=True)
+        return await handle_ctx_active_view_subscriptions(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            client,
+            tenant,
+            db,
+            save_ctx,
+            clear_ctx,
         )
 
     if msg_lower == "4":
@@ -1039,6 +1049,467 @@ async def handle_ctx_inactive_delete_confirm(
 
 
 # ====================================================================
+# View subscriptions helpers
+# ====================================================================
+
+
+def _render_subscriptions_list_text(
+    locale: str,
+    client_name: str,
+    subscriptions: list,
+) -> str:
+    """Render the subscriptions list screen for the context shortcut."""
+    parts = [
+        t(locale, "wa.tenant.client_context.subscriptions.list", client_name=client_name)
+    ]
+
+    if not subscriptions:
+        parts.append(t(locale, "wa.tenant.client_context.subscriptions.empty"))
+        create_num = 1
+    else:
+        for i, sub in enumerate(subscriptions, start=1):
+            status_label = t(locale, "wa.tenant.subscriptions.status.active")
+            parts.append(
+                t(
+                    locale,
+                    "wa.tenant.client_context.subscriptions.item_with_expiry",
+                    number=i,
+                    service_name=sub.service.name,
+                    plan_name=sub.plan.name,
+                    status=status_label,
+                    expires=sub.expires_at.strftime("%Y-%m-%d") if sub.expires_at else "-",
+                )
+            )
+        create_num = len(subscriptions) + 1
+
+    parts.append("")
+    parts.append(
+        t(locale, "wa.tenant.client_context.subscriptions.list_nav_create", number=create_num)
+    )
+    return "\n".join(parts)
+
+
+def _render_subscription_detail_text(
+    locale: str,
+    sub,
+) -> str:
+    """Render a single subscription's detail for the context shortcut."""
+    if sub.status == "active":
+        status_label = t(locale, "wa.tenant.subscriptions.detail.status.active")
+    elif sub.status == "expired":
+        status_label = t(locale, "wa.tenant.subscriptions.detail.status.expired")
+    elif sub.status == "cancelled":
+        status_label = t(locale, "wa.tenant.subscriptions.detail.status.cancelled")
+    else:
+        status_label = sub.status
+
+    detail = t(
+        locale,
+        "wa.tenant.client_context.subscriptions.detail",
+        service_name=sub.service.name,
+        plan_name=sub.plan.name,
+        email=sub.streaming_email,
+        status=status_label,
+        started=sub.starts_at.strftime("%Y-%m-%d") if sub.starts_at else "-",
+        expires=sub.expires_at.strftime("%Y-%m-%d") if sub.expires_at else "-",
+    )
+    return detail + "\n" + t(locale, "wa.tenant.client_context.subscriptions.detail_nav")
+
+
+def _render_extend_duration_text(
+    locale: str,
+    service_name: str,
+    plan_name: str,
+) -> str:
+    """Render the extend subscription duration selection screen."""
+    return (
+        f"📅 *Extender Suscripcion*\n\n"
+        f"*Servicio:* {service_name}\n"
+        f"*Plan:* {plan_name}\n\n"
+        f"Selecciona la duracion:\n\n"
+        f"1️⃣ 1 mes\n"
+        f"2️⃣ 3 meses\n"
+        f"3️⃣ 6 meses\n"
+        f"4️⃣ 1 ano\n"
+        f"9️⃣ Volver\n"
+        f"0️⃣ Cancelar"
+    )
+
+
+def _render_extend_confirm_text(
+    locale: str,
+    service_name: str,
+    plan_name: str,
+    duration_label: str,
+    expires_at_str: str,
+) -> str:
+    """Render the extend subscription confirmation screen."""
+    return (
+        f"🔄 *Confirmar Extension*\n\n"
+        f"*Servicio:* {service_name}\n"
+        f"*Plan:* {plan_name}\n"
+        f"*Duracion:* {duration_label}\n"
+        f"*Nueva expiracion:* {expires_at_str}\n\n"
+        f"Escribe *CONFIRMAR* para extender la suscripcion.\n"
+        f"Escribe *0* para cancelar."
+    )
+
+
+# ====================================================================
+# View subscriptions handlers
+# ====================================================================
+
+
+async def handle_ctx_active_view_subscriptions(
+    msg_lower: str,
+    message: str,
+    data: dict,
+    admin_jid: str | None,
+    client: _ClientModel,
+    tenant: _TenantModel,
+    db: AsyncSession,
+    save_ctx,
+    clear_ctx,
+) -> WhatsAppConsoleResponse:
+    """Handle the view subscriptions list screen (active client)."""
+    # This handler is called both on entry (msg_lower from user selection)
+    # and on subsequent messages. On entry via the menu handler,
+    # msg_lower is the menu option "3", NOT a subscription selection.
+    # We re-route: if msg_lower == "3" (called from menu handler's entry),
+    # just render the list and return.
+
+    locale = _ctx_locale(tenant, data)
+    target_phone = data.get("temp_data", {}).get("target_phone")
+    step = data.get("step", "")
+
+    from app.models.subscription import Subscription as _Sub
+    from sqlalchemy import select as _select
+    from sqlalchemy.orm import selectinload as _selectinload
+
+    async def _fetch_subs():
+        stmt = (
+            _select(_Sub)
+            .options(_selectinload(_Sub.service), _selectinload(_Sub.plan))
+            .where(
+                _Sub.tenant_id == tenant.id,
+                _Sub.client_id == client.id,
+                _Sub.status == "active",
+            )
+            .order_by(_Sub.expires_at.asc())
+        )
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
+
+    subscriptions = await _fetch_subs()
+    num_subs = len(subscriptions)
+
+    # On first entry from menu handler, just render the list
+    if msg_lower == "3" and step == "active_view_subscriptions":
+        data["step"] = "active_view_subscriptions"
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_render_subscriptions_list_text(locale, client.full_name, subscriptions),
+            reply_to=admin_jid,
+        )
+
+    # Back navigation
+    if is_back(msg_lower):
+        data["step"] = "active_menu"
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_render_active_client_menu_text(locale, target_phone, client),
+            reply_to=admin_jid,
+        )
+
+    # Subscription selection or create option
+    if msg_lower.isdigit():
+        idx = int(msg_lower)
+        if 1 <= idx <= num_subs:
+            sub = subscriptions[idx - 1]
+            data["step"] = "active_subscription_detail"
+            data["temp_data"]["selected_sub_id"] = str(sub.id)
+            data["temp_data"]["selected_sub_service"] = sub.service.name
+            data["temp_data"]["selected_sub_plan"] = sub.plan.name
+            data["temp_data"]["selected_sub_email"] = sub.streaming_email
+            await save_ctx(refresh_ttl=True)
+            return WhatsAppConsoleResponse(
+                reply=_render_subscription_detail_text(locale, sub),
+                reply_to=admin_jid,
+            )
+
+        create_option = num_subs + 1
+        if idx == create_option:
+            return await _start_context_subscription(
+                client, data, admin_jid, tenant, db, save_ctx, clear_ctx
+            )
+
+    # Invalid option
+    await save_ctx(refresh_ttl=False)
+    return WhatsAppConsoleResponse(
+        reply=_with_current_screen_message(
+            _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
+            _render_subscriptions_list_text(locale, client.full_name, subscriptions),
+        ),
+        reply_to=admin_jid,
+    )
+
+
+async def handle_ctx_view_subscription_detail(
+    msg_lower: str,
+    message: str,
+    data: dict,
+    admin_jid: str | None,
+    client: _ClientModel,
+    tenant: _TenantModel,
+    db: AsyncSession,
+    save_ctx,
+    clear_ctx,
+) -> WhatsAppConsoleResponse:
+    """Handle actions from subscription detail view (active client)."""
+    locale = _ctx_locale(tenant, data)
+    target_phone = data.get("temp_data", {}).get("target_phone")
+    sub_id_str = data.get("temp_data", {}).get("selected_sub_id", "")
+    sub_service = data.get("temp_data", {}).get("selected_sub_service", "")
+    sub_plan = data.get("temp_data", {}).get("selected_sub_plan", "")
+
+    from app.models.subscription import Subscription as _Sub
+    from sqlalchemy import select as _select
+    from sqlalchemy.orm import selectinload as _selectinload
+
+    async def _fetch_sub():
+        if not sub_id_str:
+            return None
+        stmt = (
+            _select(_Sub)
+            .options(_selectinload(_Sub.service), _selectinload(_Sub.plan))
+            .where(
+                _Sub.tenant_id == tenant.id,
+                _Sub.id == UUID(sub_id_str),
+            )
+        )
+        res = await db.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def _fetch_subs():
+        stmt = (
+            _select(_Sub)
+            .options(_selectinload(_Sub.service), _selectinload(_Sub.plan))
+            .where(
+                _Sub.tenant_id == tenant.id,
+                _Sub.client_id == client.id,
+                _Sub.status == "active",
+            )
+            .order_by(_Sub.expires_at.asc())
+        )
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
+
+    # Back: go to subscriptions list
+    if is_back(msg_lower):
+        data["step"] = "active_view_subscriptions"
+        await save_ctx(refresh_ttl=True)
+        subs = await _fetch_subs()
+        return WhatsAppConsoleResponse(
+            reply=_render_subscriptions_list_text(locale, client.full_name, subs),
+            reply_to=admin_jid,
+        )
+
+    # Extend expiry
+    if msg_lower == "1":
+        sub = await _fetch_sub()
+        if sub is not None:
+            data["step"] = "active_extend_subs"
+            data["temp_data"]["extend_sub_id"] = sub_id_str
+            data["temp_data"]["extend_service_name"] = sub.service.name
+            data["temp_data"]["extend_plan_name"] = sub.plan.name
+            await save_ctx(refresh_ttl=True)
+            return WhatsAppConsoleResponse(
+                reply=_render_extend_duration_text(
+                    locale, sub.service.name, sub.plan.name
+                ),
+                reply_to=admin_jid,
+            )
+
+    # Invalid
+    await save_ctx(refresh_ttl=False)
+    sub = await _fetch_sub()
+    return WhatsAppConsoleResponse(
+        reply=_with_current_screen_message(
+            _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
+            _render_subscription_detail_text(locale, sub) if sub else (
+                _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.list")
+            ),
+        ),
+        reply_to=admin_jid,
+    )
+
+
+async def handle_ctx_active_extend_subscription(
+    msg_lower: str,
+    message: str,
+    data: dict,
+    admin_jid: str | None,
+    client: _ClientModel,
+    tenant: _TenantModel,
+    db: AsyncSession,
+    save_ctx,
+    clear_ctx,
+) -> WhatsAppConsoleResponse:
+    """Handle extend subscription duration selection and confirmation."""
+    locale = _ctx_locale(tenant, data)
+    target_phone = data.get("temp_data", {}).get("target_phone")
+    sub_id_str = data.get("temp_data", {}).get("extend_sub_id", "")
+    service_name = data.get("temp_data", {}).get("extend_service_name", "")
+    plan_name = data.get("temp_data", {}).get("extend_plan_name", "")
+
+    from app.models.subscription import Subscription as _Sub
+    from sqlalchemy import select as _select
+    from sqlalchemy.orm import selectinload as _selectinload
+
+    SUBSCRIPTIONS_DURATION_MAP = {
+        "1": "1_month",
+        "2": "3_months",
+        "3": "6_months",
+        "4": "1_year",
+    }
+
+    SUBSCRIPTIONS_DURATION_LABELS = {
+        "1_month": "1 mes",
+        "3_months": "3 meses",
+        "6_months": "6 meses",
+        "1_year": "1 ano",
+    }
+
+    async def _fetch_sub():
+        if not sub_id_str:
+            return None
+        stmt = (
+            _select(_Sub)
+            .options(_selectinload(_Sub.service), _selectinload(_Sub.plan))
+            .where(
+                _Sub.tenant_id == tenant.id,
+                _Sub.id == UUID(sub_id_str),
+            )
+        )
+        res = await db.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def _fetch_subs():
+        from app.models.subscription import Subscription as _Sub2
+        stmt = (
+            _select(_Sub2)
+            .options(_selectinload(_Sub2.service), _selectinload(_Sub2.plan))
+            .where(
+                _Sub2.tenant_id == tenant.id,
+                _Sub2.client_id == client.id,
+                _Sub2.status == "active",
+            )
+            .order_by(_Sub2.expires_at.asc())
+        )
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
+
+    # Back: go to subscription detail
+    if is_back(msg_lower):
+        data["step"] = "active_subscription_detail"
+        await save_ctx(refresh_ttl=True)
+        sub = await _fetch_sub()
+        return WhatsAppConsoleResponse(
+            reply=_render_subscription_detail_text(locale, sub) if sub else (
+                _render_subscriptions_list_text(locale, client.full_name, await _fetch_subs())
+            ),
+            reply_to=admin_jid,
+        )
+
+    # Duration selection or confirm
+    if msg_lower in SUBSCRIPTIONS_DURATION_MAP:
+        duration_type = SUBSCRIPTIONS_DURATION_MAP[msg_lower]
+        duration_label = SUBSCRIPTIONS_DURATION_LABELS.get(duration_type, duration_type)
+
+        # Calculate new expiry date
+        from datetime import timedelta
+        sub = await _fetch_sub()
+        if sub is None:
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply_to=admin_jid,
+            )
+
+        from app.services.subscription_service.helpers import (
+            calculate_expiration as _calc_exp,
+        )
+        new_expires = _calc_exp(sub.expires_at, duration_type, None)
+        expires_str = new_expires.strftime("%Y-%m-%d") if new_expires else "-"
+
+        data["temp_data"]["extend_duration_type"] = duration_type
+        data["temp_data"]["extend_duration_label"] = duration_label
+        data["temp_data"]["extend_new_expires"] = expires_str
+        data["step"] = "active_extend_subs_confirm"
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_render_extend_confirm_text(
+                locale, service_name, plan_name, duration_label, expires_str
+            ),
+            reply_to=admin_jid,
+        )
+
+    # Confirmation
+    if msg_lower.strip().lower() in ("confirmar", "confirm"):
+        duration_type = data.get("temp_data", {}).get("extend_duration_type", "")
+        if not duration_type or not sub_id_str:
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply_to=admin_jid,
+            )
+
+        from app.services.subscription_service.mutations import (
+            renew_subscription as _renew,
+        )
+        try:
+            renewed = await _renew(
+                db,
+                tenant.id,
+                UUID(sub_id_str),
+                duration_type,
+            )
+        except Exception:
+            renewed = None
+
+        if renewed is None:
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply_to=admin_jid,
+            )
+
+        # Success — return to subscriptions list
+        data["step"] = "active_view_subscriptions"
+        data["temp_data"].pop("extend_sub_id", None)
+        data["temp_data"].pop("extend_duration_type", None)
+        data["temp_data"].pop("extend_duration_label", None)
+        data["temp_data"].pop("extend_new_expires", None)
+        data["temp_data"].pop("extend_service_name", None)
+        data["temp_data"].pop("extend_plan_name", None)
+        await save_ctx(refresh_ttl=True)
+        subs = await _fetch_subs()
+        success_msg = _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.duplicate_extend_success")
+        list_text = _render_subscriptions_list_text(locale, client.full_name, subs)
+        return WhatsAppConsoleResponse(
+            reply=_with_current_screen_message(success_msg, list_text),
+            reply_to=admin_jid,
+        )
+
+    # Invalid
+    await save_ctx(refresh_ttl=False)
+    return WhatsAppConsoleResponse(
+        reply=_with_current_screen_message(
+            _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
+            _render_extend_duration_text(locale, service_name, plan_name),
+        ),
+        reply_to=admin_jid,
+    )
+
+
+# ====================================================================
 # Helpers
 # ====================================================================
 
@@ -1382,6 +1853,9 @@ __all__ = [
     "handle_ctx_active_edit_field",
     "handle_ctx_active_edit_value",
     "handle_ctx_active_deactivate_confirm",
+    "handle_ctx_active_view_subscriptions",
+    "handle_ctx_view_subscription_detail",
+    "handle_ctx_active_extend_subscription",
     "handle_ctx_inactive_client_menu",
     "handle_ctx_inactive_detail",
     "handle_ctx_inactive_edit_field",
