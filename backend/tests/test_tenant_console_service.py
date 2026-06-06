@@ -1104,6 +1104,64 @@ class TestServiceMainMenu:
         assert "Suscripcion creada exitosamente" in reply
         assert len(subscription_service._subscriptions) == 2
 
+    async def test_service_subscriptions_create_plan_back_navigation(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        subscription_service: FakeSubscriptionService,
+    ) -> None:
+        """9 at plan selection goes back to service selection."""
+        tenant_id = subscription_service.tenant_id
+        await console_service.process_message(
+            phone="+10000000000",
+            message="4",
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+        # Start create flow
+        await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+        # Select client
+        await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+        # Select service -> arrives at plan list
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+        # Verify we're at plan selection
+        assert "Selecciona el *plan*" in reply
+        assert "9" in reply or "Regresar" in reply or "Back" in reply
+
+        # Send 9 to go back
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="9",
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+        # Verify back to service selection
+        assert "Selecciona el *servicio*" in reply
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is not None
+        assert session.step == "create_service"
+        assert "service_id" not in session.temp_data
+
     async def test_service_subscriptions_edit_email_flow(
         self,
         console_service: WhatsAppTenantConsoleService,

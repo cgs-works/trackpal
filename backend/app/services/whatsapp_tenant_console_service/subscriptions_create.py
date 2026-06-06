@@ -26,6 +26,11 @@ async def _start_subscriptions_create(self, phone, session, session_service, ten
 
 
 async def _handle_subscriptions_create_client(self, phone, msg, session, session_service, tenant_id, db):
+    if msg.strip() == "9":
+        session.step = self.SUBSCRIPTIONS_STEP_MENU
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t(self.KEY_SUBSCRIPTIONS_MENU)
     del phone
     client_id = self._safe_uuid(session.selection_map.get(msg))
     if client_id is None or tenant_id is None or db is None or self._client_service is None:
@@ -51,6 +56,18 @@ async def _handle_subscriptions_create_client(self, phone, msg, session, session
 
 async def _handle_subscriptions_create_service(self, phone, msg, session, session_service, tenant_id, db):
     del phone
+    if msg.strip() == "9":
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_CLIENT
+        session.temp_data.pop("client_id", None)
+        session.temp_data.pop("client_name", None)
+        if self._client_service is None:
+            return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
+        clients = await self._client_service.list_clients(db, tenant_id) or []
+        client_list, selection_map = self._format_client_list(clients)
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list)
     service_id = self._safe_uuid(session.selection_map.get(msg))
     if service_id is None or tenant_id is None or db is None or self._catalog_service is None:
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
@@ -72,6 +89,18 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
 
 async def _handle_subscriptions_create_plan(self, phone, msg, session, session_service, tenant_id, db):
     del phone
+    if msg.strip() == "9":
+        session.step = self.SUBSCRIPTIONS_STEP_CREATE_SERVICE
+        session.temp_data.pop("service_id", None)
+        session.temp_data.pop("service_name", None)
+        if self._catalog_service is None:
+            return self._t("wa.tenant.errors.catalog_load_failed")
+        services = await self._catalog_service.list_services(db, tenant_id) or []
+        service_list, selection_map = self._format_service_list(services)
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
     plan_id = self._safe_uuid(session.selection_map.get(msg))
     service_id = self._safe_uuid(session.temp_data.get("service_id"))
     if plan_id is None or service_id is None or tenant_id is None or db is None or self._catalog_service is None:
