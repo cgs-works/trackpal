@@ -118,7 +118,7 @@ async def _create_context_client(
     full_name: str,
     username: str,
 ) -> Client:
-    ctx_user = User(username=f"{username}_user", password_hash="x", role="client")
+    ctx_user = User(username=f"{username}_user", password_hash="dummy-hash", role="client")
     db_session.add(ctx_user)
     await db_session.flush()
     ctx_client = Client(

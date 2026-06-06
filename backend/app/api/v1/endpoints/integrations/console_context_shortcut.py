@@ -549,7 +549,7 @@ async def handle_ctx_active_edit_value(
         client_service = ClientService()
         client = await client_service.update_client(db, tenant.id, client_id, payload)
     except UserFacingError as exc:
-        await save_ctx(refresh_ttl=False)
+        await save_ctx(refresh_ttl=True)
         locale = _ctx_locale(tenant, data)
         prompt_key = (
             "wa.tenant.client_context.edit.name_prompt"
@@ -615,8 +615,16 @@ async def handle_ctx_active_deactivate_confirm(
         locale = _ctx_locale(tenant, data)
         target_phone = data.get("temp_data", {}).get("target_phone")
         client_id = UUID(data["temp_data"]["client_id"])
-        client_service = ClientService()
-        client = await client_service.get_client(db, tenant.id, client_id)
+        try:
+            client_service = ClientService()
+            client = await client_service.get_client(db, tenant.id, client_id)
+        except Exception:
+            logger.exception("failed to reload client on back from deactivate confirm")
+            await clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+                reply_to=admin_jid,
+            )
         if client:
             return WhatsAppConsoleResponse(
                 reply=_render_active_client_menu_text(locale, target_phone, client),
@@ -884,7 +892,7 @@ async def handle_ctx_inactive_edit_value(
         client_service = ClientService()
         client = await client_service.update_client(db, tenant.id, client_id, payload)
     except UserFacingError as exc:
-        await save_ctx(refresh_ttl=False)
+        await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
             reply=_with_current_screen_message(
                 translate_error(locale, exc),
@@ -940,8 +948,16 @@ async def handle_ctx_inactive_delete_confirm(
         locale = _ctx_locale(tenant, data)
         target_phone = data.get("temp_data", {}).get("target_phone")
         client_id = UUID(data["temp_data"]["client_id"])
-        client_service = ClientService()
-        client = await client_service.get_client(db, tenant.id, client_id)
+        try:
+            client_service = ClientService()
+            client = await client_service.get_client(db, tenant.id, client_id)
+        except Exception:
+            logger.exception("failed to reload client on back from inactive delete confirm")
+            await clear_ctx()
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+                reply_to=admin_jid,
+            )
         if client:
             return WhatsAppConsoleResponse(
                 reply=_render_inactive_client_menu_text(locale, target_phone, client),
@@ -1195,10 +1211,17 @@ async def _reactivate_context_client(
     try:
         client_service = ClientService()
         updated = await client_service.activate_client(db, tenant.id, client_id)
-    except Exception as exc:
+    except UserFacingError as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.reactivate_error", exc=str(exc)),
+            reply=translate_error(_ctx_locale(tenant, data), exc),
+            reply_to=admin_jid,
+        )
+    except Exception:
+        logger.exception("failed to reactivate client")
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.reactivate_error", exc=""),
             reply_to=admin_jid,
         )
 

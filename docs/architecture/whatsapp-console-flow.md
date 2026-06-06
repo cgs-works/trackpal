@@ -247,7 +247,7 @@ Multi-step client creation with phone skip or LID-only phone prompt:
 Root-menu notes:
 - `9` is not shown in the root menu.
 - If the admin sends `9` at the root menu, it is treated as invalid input.
-- Invalid input at the root menu re-renders the same full contextual menu.
+- Invalid input at the root menu re-renders the same full contextual menu and refreshes the session TTL (300s).
 
 ### Inactive client menu
 
