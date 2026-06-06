@@ -1033,11 +1033,10 @@ async def _handle_active_client_context(
 
         await manager.execute("set_context", _set)
 
-    # ── Helper: clear context and tenant session ────────────────
+    # ── Helper: clear context ──────────────────────────────────
     async def _clear_ctx() -> None:
         async def _del(client):
             await client.delete(ctx_key)
-            await client.delete(f"session:admin:{phone}")
 
         await manager.execute("clear_context", _del)
 

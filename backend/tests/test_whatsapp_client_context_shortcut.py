@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.i18n import t
-from app.models import Tenant
+from app.models import Client, Service, Tenant, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -105,6 +105,63 @@ async def _setup_tenant_with_instance(db_session, active_tenant_user) -> Tenant:
 
 
 # ---------------------------------------------------------------------------
+# Context helpers
+# ---------------------------------------------------------------------------
+
+
+async def _create_context_client(
+    db_session,
+    tenant: Tenant,
+    *,
+    phone: str | None,
+    is_active: bool,
+    full_name: str,
+    username: str,
+) -> Client:
+    ctx_user = User(username=f"{username}_user", password_hash="x", role="client")
+    db_session.add(ctx_user)
+    await db_session.flush()
+    ctx_client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=ctx_user.id,
+        full_name=full_name,
+        username=username,
+        phone=phone,
+        is_active=is_active,
+    )
+    db_session.add(ctx_client)
+    await db_session.commit()
+    return ctx_client
+
+
+async def _seed_shortcut_context(
+    fake_mgr: _FakeManager,
+    admin_phone_digits: str,
+    *,
+    target_phone: str | None,
+    target_lid: str | None = None,
+    step: str = "menu",
+    ttl: int = 123,
+) -> str:
+    session = {
+        "phone": admin_phone_digits,
+        "flow": "client_shortcut",
+        "step": step,
+        "selected_tenant_id": None,
+        "temp_data": {
+            "target_phone": target_phone,
+            "target_lid": target_lid,
+            "target_jid": f"{target_phone or target_lid or 'unknown'}@s.whatsapp.net",
+            "admin_jid": f"{admin_phone_digits}@s.whatsapp.net",
+        },
+        "selection_map": {},
+    }
+    ctx_key = f"wa:client_ctx:{admin_phone_digits}"
+    await fake_mgr._redis.set(ctx_key, json.dumps(session), ex=ttl)
+    return ctx_key
+
+
+# ---------------------------------------------------------------------------
 # Repository / model contract tests
 # ---------------------------------------------------------------------------
 
@@ -138,7 +195,7 @@ def test_models_package_exports_blocked_client() -> None:
 
 
 def test_client_context_i18n_keys_exist_in_en_and_es():
-    params = {"identity": "34123456789", "client_name": "Ana", "status": "Activo"}
+    params = {"identity": "34123456789", "client_name": "Ana", "status": "Activo", "phone": "34123456789", "phone_line": "Phone: 34123456789\n"}
     keys = [
         "wa.tenant.client_context.menu.unregistered_with_phone",
         "wa.tenant.client_context.menu.unregistered_lid_only",
@@ -153,12 +210,14 @@ def test_client_context_i18n_keys_exist_in_en_and_es():
         "wa.tenant.client_context.create.phone_prompt",
         "wa.tenant.client_context.block_access.success",
         "wa.tenant.client_context.unblock_access.success",
+        "wa.tenant.client_context.phone_line",
+        "wa.tenant.client_context.active.delete_blocked",
     ]
     for locale in ("en", "es"):
         for key in keys:
             rendered = t(locale, key, **params)
             assert rendered != key
-            assert "Gestion del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled"))
+            assert "Gestion del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled", "phone_line", "delete_blocked"))
 
 
 # ---------------------------------------------------------------------------
@@ -373,3 +432,178 @@ async def test_active_context_invalid_input_uses_i18n(
     assert "Trackpal" not in data.get("reply", "")
     # Must use the i18n invalid_option text
     assert "Opcion invalida" in data.get("reply", "")
+
+
+# ---------------------------------------------------------------------------
+# Active root menu regressions (Task 1 TPL-7)
+# ---------------------------------------------------------------------------
+
+
+async def test_active_menu_option_2_enters_edit_flow(
+    client, db_session, active_tenant_user
+):
+    """Option 2 on active root menu must enter edit field selection."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559999",
+        is_active=True,
+        full_name="Context Active Client",
+        username="tna01_ctx_active",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559999")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "2", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert "Que campo desea editar" in reply
+    assert "Nombre completo" in reply
+    assert "Nombre de usuario" in reply
+    assert "Seleccione un *servicio*" not in reply
+
+
+async def test_active_menu_option_3_starts_subscription_flow_and_clears_shortcut(
+    client, db_session, active_tenant_user
+):
+    """Option 3 on active root menu must start subscription creation and clear shortcut."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559998",
+        is_active=True,
+        full_name="Subscription Client",
+        username="tna01_ctx_subscription",
+    )
+    db_session.add(Service(tenant_id=tenant.id, name="Streaming Pro"))
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559998")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ), patch(
+        "app.core.redis_client.get_redis_manager",
+        return_value=fake_mgr,
+    ), patch(
+        "app.core.redis_client.lifespan.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "3", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert "suscripcion" in reply.lower()
+    assert "Streaming Pro" in reply
+    assert await fake_mgr._redis.get(ctx_key) is None
+
+    session_raw = await fake_mgr._redis.get(f"session:admin:{admin_phone_digits}")
+    assert session_raw is not None
+    session = json.loads(session_raw)
+    assert session["flow"] == "subscriptions"
+    assert session["step"] == "create_service"
+    assert session["temp_data"]["client_name"] == "Subscription Client"
+
+
+async def test_active_menu_option_5_blocks_delete_and_keeps_active_menu(
+    client, db_session, active_tenant_user
+):
+    """Option 5 on active root menu must block deletion and stay in active_menu."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559997",
+        is_active=True,
+        full_name="Protected Active Client",
+        username="tna01_ctx_protected",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone="12015559997",
+        ttl=123,
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "5", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert "No se puede eliminar" in reply
+    assert "Desactivar cliente" in reply
+    assert "Eliminar cliente" in reply
+    assert fake_mgr._redis._ttls[ctx_key] == 300
+
+    ctx_data = json.loads(await fake_mgr._redis.get(ctx_key))
+    assert ctx_data["step"] == "active_menu"
+
+
+async def test_active_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl(
+    client, db_session, active_tenant_user
+):
+    """Invalid input on active root menu must re-render full menu and refresh TTL."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559996",
+        is_active=True,
+        full_name="Invalid Active Client",
+        username="tna01_ctx_invalid",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone="12015559996",
+        ttl=123,
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "9", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert "Opcion invalida" in reply
+    assert "Editar cliente" in reply
+    assert "Crear suscripcion" in reply
+    assert "Desactivar cliente" in reply
+    assert "Eliminar cliente" in reply
+    assert fake_mgr._redis._ttls[ctx_key] == 300

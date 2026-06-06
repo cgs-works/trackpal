@@ -357,36 +357,75 @@ async def handle_ctx_active_client_menu(
 ) -> WhatsAppConsoleResponse:
     """Handle messages for a target that is an existing active Client.
 
-    Menu:
-    1 Ver detalle del cliente
-    2 Crear suscripcion
-    0 Cerrar contexto
+    Menu (canonical):
+    1 Ver detalle
+    2 Editar cliente
+    3 Crear suscripcion
+    4 Desactivar cliente
+    5 Eliminar cliente
+    0 Cancelar
     """
+    locale = _ctx_locale(tenant, data)
+    target_phone = data.get("temp_data", {}).get("target_phone")
+
     if msg_lower == "1":
-        detail = _ctx_t(
-            tenant, data, "wa.tenant.client_context.detail.body",
-            client_name=client.full_name,
-            username=client.username,
-            phone=client.phone or "--",
-            status="Activo",
-        )
         data["step"] = "active_detail"
         data["temp_data"]["client_id"] = str(client.id)
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=detail + "\n\n" + _ctx_t(tenant, data, "wa.tenant.client_context.detail.options"),
+            reply=_render_active_client_detail_text(locale, target_phone, client),
             reply_to=admin_jid,
         )
 
     if msg_lower == "2":
+        data["step"] = "active_edit_field"
+        data["temp_data"]["client_id"] = str(client.id)
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.field_prompt"),
+            reply_to=admin_jid,
+        )
+
+    if msg_lower == "3":
         return await _start_context_subscription(
             client, data, admin_jid, tenant, db, save_ctx, clear_ctx
         )
 
-    # Invalid input — show menu
-    await save_ctx(refresh_ttl=False)
+    if msg_lower == "4":
+        data["step"] = "active_deactivate_confirm"
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.deactivate.confirm",
+                client_name=client.full_name,
+            ),
+            reply_to=admin_jid,
+        )
+
+    if msg_lower == "5":
+        await save_ctx(refresh_ttl=True)
+        return WhatsAppConsoleResponse(
+            reply=_with_current_screen_message(
+                _ctx_t(
+                    tenant,
+                    data,
+                    "wa.tenant.client_context.active.delete_blocked",
+                    client_name=client.full_name,
+                    phone_line=_client_phone_line(locale, target_phone or client.phone),
+                ),
+                _render_active_client_menu_text(locale, target_phone, client),
+            ),
+            reply_to=admin_jid,
+        )
+
+    await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
-        reply=_ctx_t(tenant, data, "wa.tenant.client_context.active.invalid_option", client_name=client.full_name),
+        reply=_with_current_screen_message(
+            _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
+            _render_active_client_menu_text(locale, target_phone, client),
+        ),
         reply_to=admin_jid,
     )
 
@@ -893,6 +932,60 @@ def _phone_label(phone: str | None) -> str:
     return (phone or "").lstrip("+")
 
 
+def _client_phone_line(locale: str, phone: str | None) -> str:
+    if not phone:
+        return ""
+    return t(locale, "wa.tenant.client_context.phone_line", phone=_phone_label(phone))
+
+
+def _render_active_client_menu_text(
+    locale: str,
+    target_phone: str | None,
+    client: _ClientModel,
+) -> str:
+    return t(
+        locale,
+        "wa.tenant.client_context.menu.active",
+        client_name=client.full_name,
+        phone_line=_client_phone_line(locale, target_phone or client.phone),
+        status=t(locale, "wa.tenant.clients.detail.status_active"),
+    )
+
+
+def _render_inactive_client_menu_text(
+    locale: str,
+    target_phone: str | None,
+    client: _ClientModel,
+) -> str:
+    return t(
+        locale,
+        "wa.tenant.client_context.menu.inactive",
+        client_name=client.full_name,
+        phone_line=_client_phone_line(locale, target_phone or client.phone),
+        status=t(locale, "wa.tenant.clients.detail.status_inactive"),
+    )
+
+
+def _render_active_client_detail_text(
+    locale: str,
+    target_phone: str | None,
+    client: _ClientModel,
+) -> str:
+    body = t(
+        locale,
+        "wa.tenant.client_context.detail.body",
+        client_name=client.full_name,
+        username=client.username,
+        phone_line=_client_phone_line(locale, target_phone or client.phone),
+        status=t(locale, "wa.tenant.clients.detail.status_active"),
+    )
+    return body + "\n" + t(locale, "wa.tenant.client_context.detail.options")
+
+
+def _with_current_screen_message(message: str, screen_text: str) -> str:
+    return f"{message}\n\n{screen_text}".strip()
+
+
 async def render_initial_context_menu(
     *,
     db: AsyncSession,
@@ -919,24 +1012,11 @@ async def render_initial_context_menu(
             db, tenant.id, target_phone
         )
     if client is not None:
-        status_key = (
-            "wa.tenant.clients.detail.status_active"
-            if client.is_active
-            else "wa.tenant.clients.detail.status_inactive"
-        )
-        key = (
-            "wa.tenant.client_context.menu.active"
-            if client.is_active
-            else "wa.tenant.client_context.menu.inactive"
-        )
         variant = "existing_active" if client.is_active else "existing_inactive"
-        return t(
-            locale,
-            key,
-            identity=identity,
-            client_name=client.full_name,
-            status=t(locale, status_key),
-        ), {
+        render_menu = (
+            _render_active_client_menu_text if client.is_active else _render_inactive_client_menu_text
+        )
+        return render_menu(locale, target_phone, client), {
             "target_state": variant,
             "menu_variant": variant,
             "client_id": str(client.id),
