@@ -232,8 +232,13 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.menu.unregistered_lid_only": "📌 *Client management*\n\nThis contact is not a client yet.\nThe client cannot see this menu.\n\nChoose an option:\n1️⃣ Create client\n2️⃣ Block access\n0️⃣ Cancel",
     "wa.tenant.client_context.menu.blocked_with_phone": "📌 *Client management*\n\nThis contact is blocked from accessing the system.\nThey cannot request codes, view profile, or check subscriptions.\n\nPhone number: {identity}\n\nChoose an option:\n1️⃣ Unblock access\n0️⃣ Cancel",
     "wa.tenant.client_context.menu.blocked_lid_only": "📌 *Client management*\n\nThis contact is blocked from accessing the system.\nThey cannot request codes, view profile, or check subscriptions.\n\nChoose an option:\n1️⃣ Unblock access\n0️⃣ Cancel",
-    "wa.tenant.client_context.menu.active": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\nPhone number: {identity}\nStatus: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Create subscription\n4️⃣ Deactivate client\n5️⃣ Delete client\n0️⃣ Cancel",
-    "wa.tenant.client_context.menu.inactive": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\nPhone number: {identity}\nStatus: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Reactivate client\n4️⃣ Delete client\n0️⃣ Cancel",
+    "wa.tenant.client_context.phone_line": "Phone number: {phone}\n",
+
+    "wa.tenant.client_context.menu.active": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Create subscription\n4️⃣ Deactivate client\n5️⃣ Delete client\n0️⃣ Cancel",
+
+    "wa.tenant.client_context.active.delete_blocked": "❌ An active client cannot be deleted.\n\nClient: {client_name}\n{phone_line}\nDeactivate the client first and then try deleting it again.",
+
+    "wa.tenant.client_context.menu.inactive": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Reactivate client\n4️⃣ Delete client\n0️⃣ Cancel",
     "wa.tenant.client_context.closed": "✅ Client management cancelled.",
     "wa.tenant.client_context.collision": "⚠️ You already have a client management session open. Send *0* in your private Tenant chat before opening another one.",
     "wa.tenant.client_context.invalid_option": "❌ Invalid option. Reply with one of the menu numbers or *0* to cancel.",
@@ -265,9 +270,11 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.active.invalid_option": "Invalid option.\n\n*{client_name}* (active)\n\n1 View client details\n2 Create subscription\n0 Close context",
 
     "wa.tenant.client_context.detail.header": "*Client details*",
-    "wa.tenant.client_context.detail.body": "*{client_name}*\nUsername: {username}\nPhone: {phone}\nStatus: {status}\n",
+    "wa.tenant.client_context.detail.body": "*{client_name}*\nUsername: {username}\n{phone_line}Status: {status}\n",
     "wa.tenant.client_context.detail.options": "1 Edit data\n2 Deactivate\n9 Back\n0 Cancel",
     "wa.tenant.client_context.detail.invalid_option": "Invalid option.\n\n1 Edit data\n2 Deactivate\n9 Back\n0 Cancel",
+
+    "wa.tenant.client_context.inactive.detail.options": "1 Edit data\n2 Reactivate\n3 Delete\n9 Back\n0 Cancel",
 
     "wa.tenant.client_context.deactivate.confirm": "Do you want to deactivate *{client_name}*?\n\nType *CONFIRM* to deactivate.\nOr *0* to cancel.",
     "wa.tenant.client_context.deactivate.cancelled": "Deactivation cancelled.",
