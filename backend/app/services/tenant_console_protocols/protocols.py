@@ -191,3 +191,7 @@ class SubscriptionServiceProtocol(Protocol):
     async def reveal_credentials(
         self, db: AsyncSession, tenant_id: UUID, subscription_id: UUID
     ) -> dict | None: ...
+
+    async def get_reminder_settings(
+        self, db: AsyncSession, tenant_id: UUID
+    ) -> Any: ...

@@ -566,6 +566,14 @@ class FakeSubscriptionService:
             "profile_pin": sub.profile_pin,
         }
 
+    async def get_reminder_settings(
+        self, db: Any, tenant_id: UUID
+    ) -> Any:
+        del db
+        # Return an object with a timezone attribute defaulting to UTC
+        _settings = type("_ReminderSettings", (), {"timezone": "UTC"})()
+        return _settings
+
 
 @dataclass
 class FakeProfileObj:

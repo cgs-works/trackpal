@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import string
 
 from uuid import UUID
@@ -1072,6 +1073,18 @@ async def _start_context_subscription(
         ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
     )
 
+    # Determine tenant timezone for subscription start date
+    _tz = timezone.utc
+    try:
+        from app.services.subscription_service.reminder_settings import (
+            get_reminder_settings,
+        )
+
+        _settings = await get_reminder_settings(db, tenant.id)
+        _tz = ZoneInfo(_settings.timezone)
+    except Exception:
+        pass
+
     phone = data.get("phone", "")
     session = await session_service.create_session(f"admin:{phone}")
     session.flow = "subscriptions"
@@ -1079,7 +1092,7 @@ async def _start_context_subscription(
     session.temp_data = {
         "client_id": str(client.id),
         "client_name": client.full_name,
-        "starts_at": datetime.now(timezone.utc).isoformat(),
+        "starts_at": datetime.now(_tz).isoformat(),
     }
     await session_service.save_session(session)
 

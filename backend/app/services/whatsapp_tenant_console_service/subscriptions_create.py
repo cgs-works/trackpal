@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import math
 
@@ -25,6 +26,17 @@ def _paginate(items, page, page_size):
 async def _start_subscriptions_create(self, phone, session, session_service, tenant_id, db):
     if tenant_id is None or db is None or self._client_service is None:
         return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
+    # Determine tenant timezone for subscription start date
+    _tz = timezone.utc
+    if self._subscription_service is not None:
+        try:
+            _settings = await self._subscription_service.get_reminder_settings(
+                db, tenant_id
+            )
+            _tz = ZoneInfo(_settings.timezone)
+        except Exception:
+            pass
+
     clients = await self._client_service.list_clients(db, tenant_id)
     if not clients:
         return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
@@ -32,7 +44,7 @@ async def _start_subscriptions_create(self, phone, session, session_service, ten
     client_list, selection_map = self._format_client_list(clients)
     session.flow = self.SUBSCRIPTIONS_FLOW
     session.step = self.SUBSCRIPTIONS_STEP_CREATE_CLIENT
-    session.temp_data = {"starts_at": datetime.now(timezone.utc).isoformat()}
+    session.temp_data = {"starts_at": datetime.now(_tz).isoformat()}
     session.selection_map = selection_map
     if session_service is not None:
         await session_service.save_session(session)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 async def _handle_subscriptions_cancel_confirm(
@@ -30,13 +31,23 @@ async def _handle_subscriptions_cancel_confirm(
 async def _handle_subscriptions_reactivate_duration(
     self, phone, msg, session, session_service, tenant_id, db
 ) -> str:
+    # Get tenant timezone before deleting references
+    _tz = timezone.utc
+    if tenant_id is not None and db is not None and self._subscription_service is not None:
+        try:
+            _settings = await self._subscription_service.get_reminder_settings(
+                db, tenant_id
+            )
+            _tz = ZoneInfo(_settings.timezone)
+        except Exception:
+            pass
     del phone, tenant_id, db
     duration_type = self.SUBSCRIPTIONS_DURATION_MAP.get(msg)
     if duration_type is None:
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     session.temp_data = {
         "duration_type": duration_type,
-        "starts_at": datetime.now(timezone.utc).isoformat(),
+        "starts_at": datetime.now(_tz).isoformat(),
     }
     if duration_type == "custom":
         session.step = self.SUBSCRIPTIONS_STEP_REACTIVATE_CUSTOM_DATE
