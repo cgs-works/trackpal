@@ -442,11 +442,14 @@ async def handle_ctx_active_detail(
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle actions from active client detail view."""
+    locale = _ctx_locale(tenant, data)
+    target_phone = data.get("temp_data", {}).get("target_phone")
+
     if is_back(msg_lower):
         data["step"] = "active_menu"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.active.menu_text", client_name=client.full_name),
+            reply=_render_active_client_menu_text(locale, target_phone, client),
             reply_to=admin_jid,
         )
 
@@ -468,7 +471,10 @@ async def handle_ctx_active_detail(
 
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
-        reply=_ctx_t(tenant, data, "wa.tenant.client_context.detail.invalid_option"),
+        reply=_with_current_screen_message(
+            _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
+            _render_active_client_detail_text(locale, target_phone, client),
+        ),
         reply_to=admin_jid,
     )
 
@@ -479,12 +485,15 @@ async def handle_ctx_active_edit_field(
     data: dict,
     admin_jid: str | None,
     tenant: _TenantModel,
+    client: _ClientModel | None = None,
 ) -> WhatsAppConsoleResponse | None:
     """Handle field selection for active client edit."""
-    if msg_lower == "9":
+    if is_back(msg_lower):
+        locale = _ctx_locale(tenant, data)
+        target_phone = data.get("temp_data", {}).get("target_phone")
         data["step"] = "active_detail"
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.detail.header"),
+            reply=_render_active_client_detail_text(locale, target_phone, client) if client else _ctx_t(tenant, data, "wa.tenant.client_context.detail.header"),
             reply_to=admin_jid,
         )
 
@@ -540,9 +549,18 @@ async def handle_ctx_active_edit_value(
         client_service = ClientService()
         client = await client_service.update_client(db, tenant.id, client_id, payload)
     except UserFacingError as exc:
-        await clear_ctx()
+        await save_ctx(refresh_ttl=False)
+        locale = _ctx_locale(tenant, data)
+        prompt_key = (
+            "wa.tenant.client_context.edit.name_prompt"
+            if field == "full_name"
+            else "wa.tenant.client_context.edit.username_prompt"
+        )
         return WhatsAppConsoleResponse(
-            reply=f"{translate_error(_ctx_locale(tenant, data), exc)}",
+            reply=_with_current_screen_message(
+                translate_error(locale, exc),
+                _ctx_t(tenant, data, prompt_key),
+            ),
             reply_to=admin_jid,
         )
     except Exception as exc:
@@ -563,7 +581,19 @@ async def handle_ctx_active_edit_value(
     data["step"] = "active_detail"
     await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
-        reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.updated_success", client_name=client.full_name),
+        reply=_with_current_screen_message(
+            _ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.edit.updated_success",
+                client_name=client.full_name,
+            ),
+            _render_active_client_detail_text(
+                _ctx_locale(tenant, data),
+                data.get("temp_data", {}).get("target_phone"),
+                client,
+            ),
+        ),
         reply_to=admin_jid,
     )
 
@@ -604,13 +634,23 @@ async def handle_ctx_active_deactivate_confirm(
             reply_to=admin_jid,
         )
 
+    locale = _ctx_locale(tenant, data)
+    target_phone = data.get("temp_data", {}).get("target_phone")
     # Keep context alive so subsequent ``0`` closes target session
     data["temp_data"]["menu_variant"] = "existing_inactive"
     data["temp_data"]["target_state"] = "existing_inactive"
     data["step"] = "inactive_menu"
     await save_ctx(refresh_ttl=True)
     return WhatsAppConsoleResponse(
-        reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.success", client_name=client.full_name),
+        reply=_with_current_screen_message(
+            _ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.deactivate.success",
+                client_name=client.full_name,
+            ),
+            _render_inactive_client_menu_text(locale, target_phone, client),
+        ),
         reply_to=admin_jid,
     )
 

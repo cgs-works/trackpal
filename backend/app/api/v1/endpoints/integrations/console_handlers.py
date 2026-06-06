@@ -1323,7 +1323,7 @@ async def _handle_active_client_context(
         )
 
     if step == "active_edit_field":
-        resp = await handle_ctx_active_edit_field(msg_lower, message, data, admin_jid, tenant)
+        resp = await handle_ctx_active_edit_field(msg_lower, message, data, admin_jid, tenant, active_client)
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp
