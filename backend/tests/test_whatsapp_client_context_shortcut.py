@@ -515,6 +515,14 @@ async def test_active_menu_option_3_starts_subscription_flow_and_clears_shortcut
     reply = response.json()["reply"]
     assert "suscripcion" in reply.lower()
     assert "Streaming Pro" in reply
+    assert "[1]" in reply  # bracket service notation
+    assert "*Cliente:*" in reply
+    assert "*Telefono:*" in reply
+    assert "Subscription Client" in reply
+    assert "12015559998" in reply
+    assert "8" in reply  # next page nav
+    assert "9" in reply  # back nav
+    assert "0" in reply  # cancel nav
     assert await fake_mgr._redis.get(ctx_key) is None
 
     session_raw = await fake_mgr._redis.get(f"session:admin:{admin_phone_digits}")

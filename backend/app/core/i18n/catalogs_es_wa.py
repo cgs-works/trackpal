@@ -302,6 +302,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.edit.updated_success": "*{client_name}* actualizado correctamente.",
 
     "wa.tenant.client_context.subscription.creating": "Creando suscripcion para *{client_name}*\n\n",
+    "wa.tenant.client_context.subscription.service_prompt": "Seleccione un *servicio*:",
     "wa.tenant.client_context.subscription.no_services": "No hay servicios disponibles para crear una suscripcion.",
 
     "wa.tenant.client_context.action_cancelled": "❌ Accion cancelada.",

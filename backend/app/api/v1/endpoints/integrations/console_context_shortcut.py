@@ -1097,7 +1097,7 @@ async def _start_context_subscription(
     service_lines: list[str] = []
     selection_map: dict[str, str] = {}
     for i, svc in enumerate(services, start=1):
-        service_lines.append(f"{i} {svc.name}")
+        service_lines.append(f"[{i}] {svc.name}")
         selection_map[str(i)] = str(svc.id)
 
     session.selection_map = selection_map
@@ -1105,12 +1105,27 @@ async def _start_context_subscription(
 
     await clear_ctx()
     locale = _ctx_locale(tenant, data)
+    client_phone = _phone_label(client.phone or "")
+    client_section = (
+        f"*Cliente:* {client.full_name}\n"
+        f"*Telefono:* {client_phone}\n"
+    )
+    nav = "\n".join([
+        t(locale, "wa.nav.next"),
+        t(locale, "wa.nav.back"),
+        t(locale, "wa.nav.cancel"),
+    ])
     return WhatsAppConsoleResponse(
-        reply=_ctx_t(tenant, data, "wa.tenant.client_context.subscription.creating", client_name=client.full_name)
-        + "Seleccione un *servicio*:\n\n"
-        + "\n".join(service_lines)
-        + "\n\n0 "
-        + t(locale, "wa.tenant.cancelled"),
+        reply=(
+            _ctx_t(tenant, data, "wa.tenant.client_context.subscription.creating", client_name=client.full_name)
+            + client_section
+            + "\n"
+            + t(locale, "wa.tenant.client_context.subscription.service_prompt")
+            + "\n\n"
+            + "\n".join(service_lines)
+            + "\n\n"
+            + nav
+        ),
         reply_to=admin_jid,
     )
 
