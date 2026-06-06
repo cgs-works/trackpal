@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+from datetime import datetime, timezone
 import string
 
 from uuid import UUID
@@ -1078,6 +1079,7 @@ async def _start_context_subscription(
     session.temp_data = {
         "client_id": str(client.id),
         "client_name": client.full_name,
+        "starts_at": datetime.now(timezone.utc).isoformat(),
     }
     await session_service.save_session(session)
 

@@ -532,6 +532,7 @@ async def test_active_menu_option_3_starts_subscription_flow_and_clears_shortcut
     assert session["flow"] == "subscriptions"
     assert session["step"] == "create_service"
     assert session["temp_data"]["client_name"] == "Subscription Client"
+    assert "starts_at" in session["temp_data"]  # needed by _build_subscription_create_confirm
 
 
 async def test_active_menu_option_5_blocks_delete_and_keeps_active_menu(
