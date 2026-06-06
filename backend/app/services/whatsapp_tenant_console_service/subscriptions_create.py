@@ -3,9 +3,23 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 
+import math
+
 from app.core.errors import UserFacingError, translate_error
+from app.services.whatsapp_navigation import is_next
 
 from . import _context as ctx
+
+
+PAGE_SIZE = 7
+
+
+def _paginate(items, page, page_size):
+    """Paginate an item list. Returns (page_items, safe_page, total_pages)."""
+    safe_page = max(1, page)
+    total_pages = max(1, math.ceil(len(items) / page_size))
+    start = (safe_page - 1) * page_size
+    return items[start : start + page_size], safe_page, total_pages
 
 
 async def _start_subscriptions_create(self, phone, session, session_service, tenant_id, db):
@@ -44,10 +58,12 @@ async def _handle_subscriptions_create_client(self, phone, msg, session, session
     services = await self._catalog_service.list_services(db, tenant_id)
     if not services:
         return self._t("wa.tenant.errors.no_services")
-    service_list, selection_map = self._format_service_list(services)
+    page_services, _safe_page, total_pages = _paginate(services, 1, PAGE_SIZE)
+    service_list, selection_map = self._format_service_list(page_services, page=1, total_pages=total_pages)
 
     session.temp_data.update({"client_id": str(client.id), "client_name": client.full_name})
     session.selection_map = selection_map
+    session.temp_data["service_page"] = 1
     session.step = self.SUBSCRIPTIONS_STEP_CREATE_SERVICE
     if session_service is not None:
         await session_service.save_session(session)
@@ -68,6 +84,23 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
         if session_service is not None:
             await session_service.save_session(session)
         return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list)
+
+    if is_next(msg):
+        page = session.temp_data.get("service_page", 1)
+        services = await self._catalog_service.list_services(db, tenant_id) or []
+        if not services:
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+        total_pages = max(1, (len(services) + PAGE_SIZE - 1) // PAGE_SIZE)
+        if page >= total_pages:
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+        page_services, _safe_page, _total_pages = _paginate(services, page + 1, PAGE_SIZE)
+        service_list, selection_map = self._format_service_list(page_services, page=page + 1, total_pages=total_pages)
+        session.temp_data["service_page"] = page + 1
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
+
     service_id = self._safe_uuid(session.selection_map.get(msg))
     if service_id is None or tenant_id is None or db is None or self._catalog_service is None:
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
@@ -77,10 +110,12 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
     plans = await self._catalog_service.list_plans(db, tenant_id, service_id) or []
     if not plans:
         return self._t("wa.tenant.errors.no_plans")
-    plan_list, selection_map = self._format_plan_list(plans)
+    page_plans, _safe_page, total_pages = _paginate(plans, 1, PAGE_SIZE)
+    plan_list, selection_map = self._format_plan_list(page_plans, page=1, total_pages=total_pages)
 
     session.temp_data.update({"service_id": str(service.id), "service_name": service.name})
     session.selection_map = selection_map
+    session.temp_data["plan_page"] = 1
     session.step = self.SUBSCRIPTIONS_STEP_CREATE_PLAN
     if session_service is not None:
         await session_service.save_session(session)
@@ -96,11 +131,33 @@ async def _handle_subscriptions_create_plan(self, phone, msg, session, session_s
         if self._catalog_service is None:
             return self._t("wa.tenant.errors.catalog_load_failed")
         services = await self._catalog_service.list_services(db, tenant_id) or []
-        service_list, selection_map = self._format_service_list(services)
+        page_services, _safe_page, total_pages = _paginate(services, 1, PAGE_SIZE)
+        service_list, selection_map = self._format_service_list(page_services, page=1, total_pages=total_pages)
+        session.temp_data["service_page"] = 1
         session.selection_map = selection_map
         if session_service is not None:
             await session_service.save_session(session)
         return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
+
+    if is_next(msg):
+        page = session.temp_data.get("plan_page", 1)
+        service_id_in = self._safe_uuid(session.temp_data.get("service_id"))
+        if service_id_in is None:
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+        plans = await self._catalog_service.list_plans(db, tenant_id, service_id_in) or []
+        if not plans:
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+        total_pages = max(1, (len(plans) + PAGE_SIZE - 1) // PAGE_SIZE)
+        if page >= total_pages:
+            return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
+        page_plans, _safe_page, _total_pages = _paginate(plans, page + 1, PAGE_SIZE)
+        plan_list, selection_map = self._format_plan_list(page_plans, page=page + 1, total_pages=total_pages)
+        session.temp_data["plan_page"] = page + 1
+        session.selection_map = selection_map
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PLAN_PROMPT, plan_list=plan_list)
+
     plan_id = self._safe_uuid(session.selection_map.get(msg))
     service_id = self._safe_uuid(session.temp_data.get("service_id"))
     if plan_id is None or service_id is None or tenant_id is None or db is None or self._catalog_service is None:

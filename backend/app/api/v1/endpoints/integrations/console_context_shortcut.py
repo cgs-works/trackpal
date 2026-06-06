@@ -1094,10 +1094,6 @@ async def _start_context_subscription(
             reply_to=admin_jid,
         )
 
-    # Show up to 7 services per page (matching CATALOG_PAGE_SIZE).
-    # Pagination is not implemented for this flow yet, so 8 (next) is
-    # only shown when more services exist but pressing it will fall
-    # to invalid-input handling.
     PAGE_SIZE = 7
     page = 1
     total_pages = max(1, (len(services) + PAGE_SIZE - 1) // PAGE_SIZE)
@@ -1111,6 +1107,7 @@ async def _start_context_subscription(
         selection_map[str(i)] = str(svc.id)
 
     session.selection_map = selection_map
+    session.temp_data["service_page"] = page
     await session_service.save_session(session)
 
     await clear_ctx()
