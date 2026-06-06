@@ -520,9 +520,10 @@ async def test_active_menu_option_3_starts_subscription_flow_and_clears_shortcut
     assert "*Telefono:*" in reply
     assert "Subscription Client" in reply
     assert "12015559998" in reply
-    assert "8" in reply  # next page nav
+    # Nav: only 9 (back) and 0 (cancel) appear since only 1 service (<=7)
     assert "9" in reply  # back nav
     assert "0" in reply  # cancel nav
+    # 8 (next) is not shown with <=7 services
     assert await fake_mgr._redis.get(ctx_key) is None
 
     session_raw = await fake_mgr._redis.get(f"session:admin:{admin_phone_digits}")

@@ -1094,9 +1094,19 @@ async def _start_context_subscription(
             reply_to=admin_jid,
         )
 
+    # Show up to 7 services per page (matching CATALOG_PAGE_SIZE).
+    # Pagination is not implemented for this flow yet, so 8 (next) is
+    # only shown when more services exist but pressing it will fall
+    # to invalid-input handling.
+    PAGE_SIZE = 7
+    page = 1
+    total_pages = max(1, (len(services) + PAGE_SIZE - 1) // PAGE_SIZE)
+    page_start = (page - 1) * PAGE_SIZE
+    page_services = services[page_start:page_start + PAGE_SIZE]
+
     service_lines: list[str] = []
     selection_map: dict[str, str] = {}
-    for i, svc in enumerate(services, start=1):
+    for i, svc in enumerate(page_services, start=page_start + 1):
         service_lines.append(f"[{i}] {svc.name}")
         selection_map[str(i)] = str(svc.id)
 
@@ -1110,11 +1120,12 @@ async def _start_context_subscription(
         f"*Cliente:* {client.full_name}\n"
         f"*Telefono:* {client_phone}\n"
     )
-    nav = "\n".join([
-        t(locale, "wa.nav.next"),
-        t(locale, "wa.nav.back"),
-        t(locale, "wa.nav.cancel"),
-    ])
+    nav_lines: list[str] = []
+    if page < total_pages:
+        nav_lines.append(t(locale, "wa.nav.next"))
+    nav_lines.append(t(locale, "wa.nav.back"))
+    nav_lines.append(t(locale, "wa.nav.cancel"))
+    nav = "\n".join(nav_lines)
     return WhatsAppConsoleResponse(
         reply=(
             _ctx_t(tenant, data, "wa.tenant.client_context.subscription.creating", client_name=client.full_name)
