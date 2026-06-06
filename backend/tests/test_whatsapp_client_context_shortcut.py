@@ -212,12 +212,13 @@ def test_client_context_i18n_keys_exist_in_en_and_es():
         "wa.tenant.client_context.unblock_access.success",
         "wa.tenant.client_context.phone_line",
         "wa.tenant.client_context.active.delete_blocked",
+        "wa.tenant.client_context.inactive.detail.options",
     ]
     for locale in ("en", "es"):
         for key in keys:
             rendered = t(locale, key, **params)
             assert rendered != key
-            assert "Gestion del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled", "phone_line", "delete_blocked"))
+            assert "Gestion del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled", "phone_line", "delete_blocked", "detail.options"))
 
 
 # ---------------------------------------------------------------------------
@@ -813,3 +814,184 @@ async def test_active_deactivate_confirm_success_shows_inactive_menu(
     assert "desactivado" in reply.lower()
     assert "Reactivar cliente" in reply
     assert "Eliminar cliente" in reply
+
+
+# ---------------------------------------------------------------------------
+# Inactive root menu regressions (Task 3 TPL-7)
+# ---------------------------------------------------------------------------
+
+
+async def test_inactive_menu_option_1_shows_detail(
+    client, db_session, active_tenant_user
+):
+    """Option 1 on inactive root menu must show the inactive detail screen."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559991",
+        is_active=False,
+        full_name="Inactive Detail Client",
+        username="tna01_ctx_inactive_detail",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559991")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    reply = response.json()["reply"]
+    assert "Inactive Detail Client" in reply
+    assert "Usuario:" in reply
+    assert "Reactivar" in reply
+    assert "Eliminar" in reply
+
+
+async def test_inactive_menu_option_3_reactivates_and_shows_active_menu(
+    client, db_session, active_tenant_user
+):
+    """Option 3 on inactive root menu must reactivate and show active menu."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559990",
+        is_active=False,
+        full_name="Reactivatable Client",
+        username="tna01_ctx_reactivate",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559990")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "3", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    reply = response.json()["reply"]
+    assert "reactivado" in reply.lower()
+    assert "Crear suscripcion" in reply
+    ctx_data = json.loads(await fake_mgr._redis.get(ctx_key))
+    assert ctx_data["step"] == "active_menu"
+
+
+async def test_inactive_menu_option_4_delete_flow_shows_unregistered_menu_after_confirm(
+    client, db_session, active_tenant_user
+):
+    """Option 4 delete flow must transition to unregistered menu after confirm."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    ctx_client = await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559989",
+        is_active=False,
+        full_name="Delete Inactive Client",
+        username="tna01_ctx_delete",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone="12015559989",
+        step="inactive_menu",
+    )
+    raw = json.loads(await fake_mgr._redis.get(ctx_key))
+    raw["temp_data"]["client_id"] = str(ctx_client.id)
+    await fake_mgr._redis.set(ctx_key, json.dumps(raw), ex=300)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        prompt_response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "4", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert "eliminar permanentemente" in prompt_response.json()["reply"].lower()
+
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "CONFIRMAR", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    reply = response.json()["reply"]
+    assert "eliminado" in reply.lower()
+    assert "Crear cliente para este numero" in reply
+    assert "Bloquear acceso" in reply
+
+
+async def test_inactive_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl(
+    client, db_session, active_tenant_user
+):
+    """Invalid input on inactive root menu must re-render full menu and refresh TTL."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone_digits = tenant.whatsapp_phone.lstrip("+")
+    await _create_context_client(
+        db_session,
+        tenant,
+        phone="12015559988",
+        is_active=False,
+        full_name="Invalid Inactive Client",
+        username="tna01_ctx_inactive_invalid",
+    )
+    fake_mgr = _FakeManager(used_backup=False)
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr,
+        admin_phone_digits,
+        target_phone="12015559988",
+        ttl=123,
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={"phone": tenant.whatsapp_phone, "message": "9", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    reply = response.json()["reply"]
+    assert "Opcion invalida" in reply
+    assert "Ver detalle" in reply
+    assert "Editar cliente" in reply
+    assert "Reactivar cliente" in reply
+    assert "Eliminar cliente" in reply
+    assert fake_mgr._redis._ttls[ctx_key] == 300
+
+
+async def test_render_initial_context_menu_lid_only_hides_phone_line(
+    db_session, active_tenant_user
+):
+    """LID-only render must not show phone number line."""
+    from app.api.v1.endpoints.integrations.console_context_shortcut import render_initial_context_menu
+
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    rendered, metadata = await render_initial_context_menu(
+        db=db_session,
+        tenant=tenant,
+        target_phone=None,
+        target_lid="998877665544@lid",
+        target_jid="998877665544@lid",
+    )
+
+    assert "Numero de telefono" not in rendered
+    assert metadata["menu_variant"] == "unregistered"

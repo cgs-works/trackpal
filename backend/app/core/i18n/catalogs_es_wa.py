@@ -275,6 +275,8 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.detail.options": "1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
     "wa.tenant.client_context.detail.invalid_option": "Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
 
+    "wa.tenant.client_context.inactive.detail.options": "1 Editar datos\n2 Reactivar\n3 Eliminar\n9 Regresar\n0 Cancelar",
+
     "wa.tenant.client_context.deactivate.confirm": "Desea desactivar a *{client_name}*?\n\nEscriba *CONFIRMAR* para desactivar.\nO *0* para cancelar.",
     "wa.tenant.client_context.deactivate.cancelled": "Desactivacion cancelada.",
     "wa.tenant.client_context.deactivate.prompt_again": "Escriba *CONFIRMAR* para desactivar o *0* para cancelar.",

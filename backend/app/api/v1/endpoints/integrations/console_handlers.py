@@ -987,6 +987,7 @@ async def _handle_active_client_context(
         handle_ctx_creating_username,
         handle_ctx_inactive_client_menu,
         handle_ctx_inactive_delete_confirm,
+        handle_ctx_inactive_detail,
         handle_ctx_inactive_edit_field,
         handle_ctx_inactive_edit_value,
         render_initial_context_menu,
@@ -1088,6 +1089,7 @@ async def _handle_active_client_context(
             data["temp_data"]["client_id"] = str(inactive_client.id)
             inactive_steps = {
                 "inactive_menu",
+                "inactive_detail",
                 "inactive_edit_field",
                 "inactive_edit_value",
                 "inactive_delete_confirm",
@@ -1348,6 +1350,7 @@ async def _handle_active_client_context(
         step
         in {
             "inactive_menu",
+            "inactive_detail",
             "inactive_edit_field",
             "inactive_edit_value",
             "inactive_delete_confirm",
@@ -1359,6 +1362,19 @@ async def _handle_active_client_context(
 
     if step == "inactive_menu" and inactive_client is not None:
         return await handle_ctx_inactive_client_menu(
+            msg_lower,
+            message,
+            data,
+            admin_jid,
+            inactive_client,
+            tenant,
+            db,
+            _save_ctx,
+            _clear_ctx,
+        )
+
+    if step == "inactive_detail" and inactive_client is not None:
+        return await handle_ctx_inactive_detail(
             msg_lower,
             message,
             data,
