@@ -28,7 +28,6 @@ _CATALOG_EN_GENERAL: Final[dict[str, str]] = {
     "errors.subscription_plan_not_found": "Plan not found or does not belong to the selected service",
     "errors.subscription_pin_requires_profile": "profile_pin requires profile_name",
     "errors.subscription_plan_service_mismatch": "Selected plan does not belong to the new service",
-    "errors.subscription_duplicate_service_email": "Client *{client_name}* already has an active subscription for *{service_name}* with email *{email}*.",
     "errors.subscription_create_failed": "Failed to create subscription",
     "errors.subscription_update_failed": "Failed to update subscription",
     "errors.subscription_cancel_failed": "Failed to cancel subscription",

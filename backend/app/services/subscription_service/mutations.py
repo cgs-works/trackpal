@@ -24,42 +24,6 @@ async def create_subscription(
     if payload.profile_pin and not payload.profile_name:
         raise UserFacingError("subscription_pin_requires_profile")
 
-    # Check for duplicate active subscription with same service + streaming email
-    from app.services.subscription_service.queries import (
-        get_active_subscriptions_for_client,
-    )
-
-    existing = await get_active_subscriptions_for_client(
-        db, tenant_id, payload.client_id
-    )
-    for sub in existing:
-        if (
-            sub.service_id == payload.service_id
-            and sub.streaming_email == payload.streaming_email
-        ):
-            from app.models import Service as _Svc
-            from sqlalchemy import select as _select
-
-            res = await db.execute(
-                _select(_Svc).where(_Svc.id == payload.service_id)
-            )
-            svc = res.scalar_one_or_none()
-            svc_name = svc.name if svc else "Unknown"
-            from app.repositories.clients_repository import (
-                get_client_by_id,
-            )
-
-            cli = await get_client_by_id(db, payload.client_id)
-            cli_name = cli.full_name if cli else "Unknown"
-            raise UserFacingError(
-                "subscription_duplicate_service_email",
-                params={
-                    "client_name": cli_name,
-                    "service_name": svc_name,
-                    "email": payload.streaming_email,
-                },
-            )
-
     starts_at = payload.starts_at
     if starts_at.tzinfo is None:
         starts_at = starts_at.replace(tzinfo=timezone.utc)

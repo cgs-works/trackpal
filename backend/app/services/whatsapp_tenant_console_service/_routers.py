@@ -283,6 +283,10 @@ async def _route_subscriptions_create_flow(
         return await self._handle_subscriptions_create_confirm(
             phone, msg, session, session_service, tenant_id, db
         )
+    elif step == self.SUBSCRIPTIONS_STEP_CREATE_DUPLICATE:
+        return await self._handle_subscriptions_create_duplicate(
+            phone, msg, session, session_service, tenant_id, db
+        )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)
 
 

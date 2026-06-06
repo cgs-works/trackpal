@@ -144,6 +144,7 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.subscriptions.create.profile_name": "✏️ *Create Subscription*\n\nWhat is the *profile name*?\n\n(Optional — type *—* to skip)",
     "wa.tenant.subscriptions.create.profile_option": "✏️ *Create Subscription*\n\nDo you want to add a profile name and profile PIN?\n\n1️⃣ Yes\n2️⃣ No",
     "wa.tenant.subscriptions.create.service_prompt": "✏️ *Create Subscription*\n\nSelect the *service*:\n\n{service_list}\n\nReply with the service number.",
+    "wa.tenant.subscriptions.create.duplicate_notice": "⚠️ Client *{client_name}* already has an active subscription for *{service_name}* with email *{email}*.\n\n1️⃣ Extend expiry\n2️⃣ Go back\n0️⃣ Cancel",
     "wa.tenant.subscriptions.create.success": "✅ *Subscription created successfully*",
     "wa.tenant.subscriptions.custom_date_prompt": "✏️ *Create Subscription*\n\nEnter the *expiration date* (YYYY-MM-DD).",
     "wa.tenant.subscriptions.detail.actions": "*Available actions:*\n1️⃣ Edit\n2️⃣ Cancel\n3️⃣ Renew\n4️⃣ Reactivate (cancelled only)\n9️⃣ Back",

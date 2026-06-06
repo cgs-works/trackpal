@@ -27,6 +27,7 @@ KEY_SUBSCRIPTIONS_CREATE_PIN_REQUIRES_PROFILE = "wa.tenant.subscriptions.create.
 KEY_SUBSCRIPTIONS_DURATION_PROMPT = "wa.tenant.subscriptions.duration_prompt"
 KEY_SUBSCRIPTIONS_CUSTOM_DATE_PROMPT = "wa.tenant.subscriptions.custom_date_prompt"
 KEY_SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE = "wa.tenant.subscriptions.create.confirm"
+KEY_SUBSCRIPTIONS_CREATE_DUPLICATE_NOTICE = "wa.tenant.subscriptions.create.duplicate_notice"
 KEY_SUBSCRIPTIONS_CREATE_SUCCESS = "wa.tenant.subscriptions.create.success"
 
 KEY_SUBSCRIPTIONS_EDIT_FIELD_PROMPT = "wa.tenant.subscriptions.edit.field_prompt"
