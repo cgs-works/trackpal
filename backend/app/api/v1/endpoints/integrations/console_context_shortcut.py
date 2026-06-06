@@ -1093,6 +1093,7 @@ async def _start_context_subscription(
         "client_id": str(client.id),
         "client_name": client.full_name,
         "starts_at": datetime.now(_tz).isoformat(),
+        "_from_ctx": True,
     }
     await session_service.save_session(session)
 
@@ -1125,7 +1126,14 @@ async def _start_context_subscription(
     session.temp_data["service_page"] = page
     await session_service.save_session(session)
 
-    await clear_ctx()
+    # Keep context shortcut alive with step="subscription_active" so that
+    # _handle_active_client_context can detect when the flow completes
+    # and re-render the client context menu instead of the tenant main menu.
+    data["step"] = "subscription_active"
+    data["temp_data"]["client_id"] = str(client.id)
+    data["temp_data"]["client_name"] = client.full_name
+    data["temp_data"]["client_phone"] = client.phone or ""
+    await save_ctx(refresh_ttl=True)
     locale = _ctx_locale(tenant, data)
     client_phone = _phone_label(client.phone or "")
     client_section = (

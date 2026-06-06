@@ -78,6 +78,16 @@ async def _handle_subscriptions_create_confirm(
     except ValueError as exc:
         return "❌ " + str(exc)
 
+    if session.temp_data.get("_from_ctx"):
+        # Subscription started from client context shortcut.
+        # Don't clear session (let console handler detect completion)
+        # and don't render main menu — the context handler will
+        # re-render the client context menu on the next message.
+        if session_service is not None:
+            await session_service.clear_session(f"admin:{phone}")
+        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SUCCESS)
+
+    # Normal flow: clear session and show main menu + post-action prompt
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")
     return (

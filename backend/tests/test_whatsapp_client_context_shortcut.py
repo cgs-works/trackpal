@@ -475,7 +475,7 @@ async def test_active_menu_option_2_enters_edit_flow(
     assert "Seleccione un *servicio*" not in reply
 
 
-async def test_active_menu_option_3_starts_subscription_flow_and_clears_shortcut(
+async def test_active_menu_option_3_starts_subscription_flow_and_preserves_shortcut(
     client, db_session, active_tenant_user
 ):
     """Option 3 on active root menu must start subscription creation and clear shortcut."""
@@ -524,7 +524,14 @@ async def test_active_menu_option_3_starts_subscription_flow_and_clears_shortcut
     assert "9" in reply  # back nav
     assert "0" in reply  # cancel nav
     # 8 (next) is not shown with <=7 services
-    assert await fake_mgr._redis.get(ctx_key) is None
+    # Context shortcut is kept alive with subscription_active step so that
+    # _handle_active_client_context can detect completion and re-render the
+    # client context menu instead of the tenant main menu.
+    ctx_data = await fake_mgr._redis.get(ctx_key)
+    assert ctx_data is not None
+    ctx = json.loads(ctx_data)
+    assert ctx["step"] == "subscription_active"
+    assert ctx["temp_data"]["client_name"] == "Subscription Client"
 
     session_raw = await fake_mgr._redis.get(f"session:admin:{admin_phone_digits}")
     assert session_raw is not None

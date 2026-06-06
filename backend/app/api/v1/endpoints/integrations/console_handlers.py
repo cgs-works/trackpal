@@ -1112,6 +1112,57 @@ async def _handle_active_client_context(
                     _clear_ctx,
                 )
 
+    # ── Subscription active — detect completion ─────────────────
+    if step == "subscription_active":
+        # A subscription was started from this context shortcut.
+        # Check whether the admin session still has an active flow.
+        async def _get_admin_session(client):
+            return await client.get(f"session:admin:{phone}")
+
+        admin_active = False
+        try:
+            admin_raw = await manager.execute(
+                "get_admin_sub_session", _get_admin_session
+            )
+            if admin_raw is not None:
+                try:
+                    import json as _json
+                    admin_data = _json.loads(admin_raw)
+                    admin_active = admin_data.get("flow") == "subscriptions"
+                except (_json.JSONDecodeError, ValueError, TypeError):
+                    pass
+        except (RedisUnavailableError, ConnectionError, TimeoutError, OSError):
+            pass
+
+        if admin_active:
+            # Subscription still in progress → fall through
+            return None
+
+        # Subscription finished → re-render context menu
+        data["step"] = "active_menu"
+        await _save_ctx(refresh_ttl=True)
+
+        # Look up the client to render the active menu
+        ctx_client = None
+        if target_phone_norm:
+            ctx_client = await clients_repository.get_active_client_by_tenant_phone(
+                db, tenant.id, target_phone_norm
+            )
+        if ctx_client is not None:
+            data["temp_data"]["client_id"] = str(ctx_client.id)
+            return await handle_ctx_active_client_menu(
+                msg_lower,
+                message,
+                data,
+                admin_jid,
+                ctx_client,
+                tenant,
+                db,
+                _save_ctx,
+                _clear_ctx,
+            )
+        return None
+
     # ── Handle 0 / cerrar at any step (close context) ─────────────
     if is_cancel(msg_lower):
         locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
