@@ -1330,6 +1330,16 @@ async def handle_ctx_view_subscription_detail(
                 reply_to=admin_jid,
             )
 
+    # Deactivate subscription
+    if msg_lower == "2":
+        data["step"] = "active_deactivate_sub_confirm"
+        await save_ctx(refresh_ttl=True)
+        confirm_text = _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.deactivate_confirm")
+        return WhatsAppConsoleResponse(
+            reply=confirm_text,
+            reply_to=admin_jid,
+        )
+
     # Invalid
     await save_ctx(refresh_ttl=False)
     sub = await _fetch_sub()
@@ -1511,6 +1521,115 @@ async def handle_ctx_active_extend_subscription(
 
 # ====================================================================
 # Helpers
+async def handle_ctx_active_deactivate_subscription(
+    msg_lower: str,
+    message: str,
+    data: dict,
+    admin_jid: str | None,
+    client: _ClientModel,
+    tenant: _TenantModel,
+    db: AsyncSession,
+    save_ctx,
+    clear_ctx,
+) -> WhatsAppConsoleResponse:
+    """Handle deactivate subscription confirmation screen (active client context).
+
+    Flow: deactivate_sub_confirm → user confirms → cancel_subscription → show success → subscriptions list
+    """
+    locale = _ctx_locale(tenant, data)
+    sub_id_str = data.get("temp_data", {}).get("selected_sub_id", "")
+
+    from app.models.subscription import Subscription as _Sub
+    from sqlalchemy import select as _select
+    from sqlalchemy.orm import selectinload as _selectinload
+
+    async def _fetch_sub():
+        if not sub_id_str:
+            return None
+        stmt = (
+            _select(_Sub)
+            .options(_selectinload(_Sub.service), _selectinload(_Sub.plan))
+            .where(
+                _Sub.tenant_id == tenant.id,
+                _Sub.id == UUID(sub_id_str),
+            )
+        )
+        res = await db.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def _fetch_subs():
+        stmt = (
+            _select(_Sub)
+            .options(_selectinload(_Sub.service), _selectinload(_Sub.plan))
+            .where(
+                _Sub.tenant_id == tenant.id,
+                _Sub.client_id == client.id,
+                _Sub.status == "active",
+            )
+            .order_by(_Sub.expires_at.asc())
+        )
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
+
+    # Back: go to subscription detail
+    if is_back(msg_lower):
+        data["step"] = "active_subscription_detail"
+        await save_ctx(refresh_ttl=True)
+        sub = await _fetch_sub()
+        return WhatsAppConsoleResponse(
+            reply=_render_subscription_detail_text(locale, sub) if sub else (
+                _render_subscriptions_list_text(locale, client.full_name, await _fetch_subs())
+            ),
+            reply_to=admin_jid,
+        )
+
+    # Confirmation
+    if msg_lower.strip().lower() in ("confirmar", "confirm"):
+        if not sub_id_str:
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply_to=admin_jid,
+            )
+
+        from app.services.subscription_service.mutations import (
+            cancel_subscription as _cancel_sub,
+        )
+        try:
+            cancelled = await _cancel_sub(db, tenant.id, UUID(sub_id_str))
+        except Exception:
+            cancelled = None
+
+        if cancelled is None:
+            return WhatsAppConsoleResponse(
+                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply_to=admin_jid,
+            )
+
+        # Success — return to subscriptions list
+        data["step"] = "active_view_subscriptions"
+        data["temp_data"].pop("selected_sub_id", None)
+        data["temp_data"].pop("selected_sub_service", None)
+        data["temp_data"].pop("selected_sub_plan", None)
+        await save_ctx(refresh_ttl=True)
+        subs = await _fetch_subs()
+        success_msg = _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.deactivate_success")
+        list_text = _render_subscriptions_list_text(locale, client.full_name, subs)
+        return WhatsAppConsoleResponse(
+            reply=_with_current_screen_message(success_msg, list_text),
+            reply_to=admin_jid,
+        )
+
+    # Invalid
+    await save_ctx(refresh_ttl=False)
+    return WhatsAppConsoleResponse(
+        reply=_with_current_screen_message(
+            _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
+            _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.deactivate_confirm"),
+        ),
+        reply_to=admin_jid,
+    )
+
+
 # ====================================================================
 
 
@@ -1856,6 +1975,7 @@ __all__ = [
     "handle_ctx_active_view_subscriptions",
     "handle_ctx_view_subscription_detail",
     "handle_ctx_active_extend_subscription",
+    "handle_ctx_active_deactivate_subscription",
     "handle_ctx_inactive_client_menu",
     "handle_ctx_inactive_detail",
     "handle_ctx_inactive_edit_field",
