@@ -609,6 +609,25 @@ async def handle_ctx_active_deactivate_confirm(
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle deactivation confirmation for active client."""
+    if is_back(msg_lower):
+        data["step"] = "active_menu"
+        await save_ctx(refresh_ttl=True)
+        locale = _ctx_locale(tenant, data)
+        target_phone = data.get("temp_data", {}).get("target_phone")
+        client_id = UUID(data["temp_data"]["client_id"])
+        client_service = ClientService()
+        client = await client_service.get_client(db, tenant.id, client_id)
+        if client:
+            return WhatsAppConsoleResponse(
+                reply=_render_active_client_menu_text(locale, target_phone, client),
+                reply_to=admin_jid,
+            )
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply_to=admin_jid,
+        )
+
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
@@ -915,6 +934,25 @@ async def handle_ctx_inactive_delete_confirm(
     clear_ctx,
 ) -> WhatsAppConsoleResponse:
     """Handle delete confirmation for inactive client."""
+    if is_back(msg_lower):
+        data["step"] = "inactive_menu"
+        await save_ctx(refresh_ttl=True)
+        locale = _ctx_locale(tenant, data)
+        target_phone = data.get("temp_data", {}).get("target_phone")
+        client_id = UUID(data["temp_data"]["client_id"])
+        client_service = ClientService()
+        client = await client_service.get_client(db, tenant.id, client_id)
+        if client:
+            return WhatsAppConsoleResponse(
+                reply=_render_inactive_client_menu_text(locale, target_phone, client),
+                reply_to=admin_jid,
+            )
+        await clear_ctx()
+        return WhatsAppConsoleResponse(
+            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply_to=admin_jid,
+        )
+
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
