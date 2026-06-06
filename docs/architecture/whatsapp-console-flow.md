@@ -237,22 +237,29 @@ Multi-step client creation with phone skip or LID-only phone prompt:
 
 | Option | Action |
 |--------|--------|
-| 1 | View client detail (name, username, phone, status). Submenu: 1 Edit data, 2 Deactivate, 0 Back |
-| 2 | Create subscription with client pre-selected (skips client selection in Tenant console) |
-| 0 | Close context (closes admin + target + phone JID sessions) |
+| 1 | View client detail -> `active_detail` |
+| 2 | Edit client -> `active_edit_field` |
+| 3 | Create subscription with the client preselected |
+| 4 | Deactivate client -> `active_deactivate_confirm` |
+| 5 | Do not delete active client; explain that deactivation is required first and stay in `active_menu` |
+| 0 | Close |
 
-Phone editing is disabled from the shortcut. Edit supports ``full_name`` and ``local_username`` only.
+Root-menu notes:
+- `9` is not shown in the root menu.
+- If the admin sends `9` at the root menu, it is treated as invalid input.
+- Invalid input at the root menu re-renders the same full contextual menu.
 
 ### Inactive client menu
 
 | Option | Action |
 |--------|--------|
-| 1 | Reactivate client |
-| 2 | Edit data (same fields as active, no phone) |
-| 3 | Delete client permanently (with CONFIRMAR prompt) |
-| 0 | Close context (closes admin + target + phone JID sessions) |
+| 1 | View client detail -> `inactive_detail` |
+| 2 | Edit client -> `inactive_edit_field` |
+| 3 | Reactivate client |
+| 4 | Delete client -> `inactive_delete_confirm` |
+| 0 | Close |
 
-Inactive clients cannot be duplicated by contextual creation (they count as existing identities). The subscription shortcut is hidden until reactivation.
+Inactive clients cannot be duplicated by contextual creation. The subscription shortcut remains unavailable until reactivation.
 
 ## Blocked Clients
 
