@@ -199,7 +199,7 @@ class TestListTenantsFlow:
             is_master=True,
             tenant_service=tenant_service,
         )
-        assert "Lista de Tenants" in reply
+        assert "Lista de empresas" in reply
         assert "Alpha Corp" in reply
         assert "Beta Inc" in reply
         assert "Gamma LLC" in reply
@@ -280,7 +280,7 @@ class TestListTenantsFlow:
             is_master=True,
             tenant_service=empty_service,
         )
-        assert "No hay tenants" in reply
+        assert "No hay empresas" in reply
 
     async def test_option_1_without_tenant_service_returns_main_menu(
         self,
@@ -335,7 +335,7 @@ class TestSelectTenantFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Detalle del Tenant" in reply
+        assert "Detalle de la empresa" in reply
         assert "Alpha Corp" in reply
         assert "alpha" in reply  # username
         assert "alpha@example.com" in reply
@@ -385,7 +385,7 @@ class TestSelectTenantFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Detalle del Tenant" in reply
+        assert "Detalle de la empresa" in reply
         assert "Beta Inc" in reply
         assert "❌ Inactivo" in reply
 
@@ -614,7 +614,7 @@ class TestListSelectWithoutSessionService:
             is_master=True,
             tenant_service=tenant_service,
         )
-        assert "Lista de Tenants" in reply
+        assert "Lista de empresas" in reply
 
     async def test_selection_without_session_service_returns_invalid(
         self,

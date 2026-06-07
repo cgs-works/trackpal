@@ -147,10 +147,10 @@ class TestMainMenu:
         self, console_service: WhatsAppConsoleService
     ) -> None:
         reply = console_service.MAIN_MENU
-        assert "Ver Tenants" in reply
-        assert "Crear Tenant" in reply
-        assert "Desactivar Tenant" in reply
-        assert "Eliminar Tenant" in reply
+        assert "Ver empresas" in reply
+        assert "Crear empresa" in reply
+        assert "Desactivar empresa" in reply
+        assert "Eliminar empresa" in reply
         assert "Ayuda" in reply
         assert "Cerrar sesión" in reply
 
@@ -199,10 +199,10 @@ class TestHelp:
         self, console_service: WhatsAppConsoleService
     ) -> None:
         reply = console_service.HELP_TEXT
-        assert "Ver Tenants" in reply
-        assert "Crear Tenant" in reply
-        assert "Desactivar Tenant" in reply
-        assert "Eliminar Tenant" in reply
+        assert "Ver empresas" in reply
+        assert "Crear empresa" in reply
+        assert "Desactivar empresa" in reply
+        assert "Eliminar empresa" in reply
         assert "cerrar sesión" in reply.lower() or "sesión" in reply.lower()
         assert "menu" in reply.lower()
         assert "/menu" in reply.lower()
@@ -536,7 +536,7 @@ class TestMenuOptionsNotImplemented:
             message="2",
             is_master=True,
         )
-        assert "Crear Tenant" in reply
+        assert "Crear empresa" in reply
         assert "nombre completo" in reply
 
 

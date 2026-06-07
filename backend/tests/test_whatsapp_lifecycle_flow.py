@@ -264,7 +264,7 @@ class TestDeactivateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Desactivar Tenant" in reply or "desactivar" in reply.lower()
+        assert "Desactivar empresa" in reply or "desactivar" in reply.lower()
         assert "CONFIRMAR" in reply or "confirmar" in reply.lower()
         assert "Alpha Corp" in reply
 
@@ -605,7 +605,7 @@ class TestDeleteFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Eliminar Tenant" in reply or "eliminar" in reply.lower()
+        assert "Eliminar empresa" in reply or "eliminar" in reply.lower()
         assert "CONFIRMAR" in reply or "confirmar" in reply.lower()
         assert "Beta Inc" in reply
 
@@ -784,7 +784,7 @@ class TestMainMenuLifecycleShortcuts:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Lista de Tenants" in reply
+        assert "Lista de empresas" in reply
         assert "Alpha Corp" in reply
         assert "Beta Inc" in reply
 
@@ -802,7 +802,7 @@ class TestMainMenuLifecycleShortcuts:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Lista de Tenants" in reply
+        assert "Lista de empresas" in reply
         assert "Alpha Corp" in reply
         assert "Beta Inc" in reply
 

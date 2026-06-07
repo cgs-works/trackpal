@@ -20,8 +20,8 @@ class TestContingencyReplyPolicy:
 
     def test_session_reset_includes_menu(self) -> None:
         text = ContingencyReplyPolicy.SESSION_RESET
-        assert "Ver Tenants" in text
-        assert "Crear Tenant" in text
+        assert "Ver empresas" in text
+        assert "Crear empresa" in text
 
     def test_temporary_unavailable_is_not_empty(self) -> None:
         assert ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
