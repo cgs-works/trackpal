@@ -1,10 +1,5 @@
 # TPL-8 Copy Visible y Terminología de Producto Implementation Plan
 
-Date: 2026-06-07
-Related: Linear TPL-8
-Phase: Plan
-Status: Completed
-
 > **REQUIRED SUB-SKILL:** Use the executing-plans skill to implement this plan task-by-task.
 
 **Goal:** Eliminar `tenant` del copy visible dentro del alcance TPL-8, aplicar la terminología aprobada por contexto, corregir mojibake en las cadenas tocadas y dejar sincronizados tests y documentación user-facing.

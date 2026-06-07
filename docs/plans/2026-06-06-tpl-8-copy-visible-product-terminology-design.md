@@ -2,8 +2,7 @@
 
 Date: 2026-06-06
 Related: Linear TPL-8
-Phase: Brainstorm
-Status: Completed
+Status: Draft consolidado para implementación
 
 ## Purpose
 
