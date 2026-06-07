@@ -527,8 +527,8 @@ class TestResetDuringLogin:
 
         assert "usuario" in reply.lower()
         # Must NOT be the main menu (no menu options)
-        assert "Ver Tenants" not in reply
-        assert "Crear Tenant" not in reply
+        assert "Ver empresas" not in reply
+        assert "Crear empresa" not in reply
 
 
 class TestLockout:
@@ -873,8 +873,8 @@ class TestAuthSessionExpiry:
 
         # Must prompt for login, not show main menu
         assert "usuario" in reply.lower() or "iniciar sesión" in reply.lower()
-        assert "Ver Tenants" not in reply
-        assert "Crear Tenant" not in reply
+        assert "Ver empresas" not in reply
+        assert "Crear empresa" not in reply
 
     async def test_expired_session_option_one_returns_username_prompt(
         self,
@@ -976,7 +976,7 @@ class TestBypassRegression:
         )
 
         assert "usuario" in reply.lower() or "iniciar sesión" in reply.lower()
-        assert "Ver Tenants" not in reply
+        assert "Ver empresas" not in reply
 
     async def test_option_two_prompts_login_when_no_auth(
         self,
