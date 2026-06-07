@@ -36,7 +36,9 @@ def test_build_result_message_keeps_retry_options_for_failed_timeout() -> None:
 def test_check_close_session_reads_close_after_send_from_upstream_result() -> None:
     js = _workflow_nodes()["Check close session"]["parameters"]["jsCode"]
 
-    assert "$('Build result message').first().json" in js
+    assert "try {" in js
+    assert "resultData = $('Build result message').first().json" in js
+    assert "catch (e)" in js
     assert "const shouldCloseAfterSend = data.close_after_send === true;" in js
     assert "if (hasLookupResult && !shouldCloseAfterSend)" in js
     assert "const isLogout = shouldCloseAfterSend" in js
