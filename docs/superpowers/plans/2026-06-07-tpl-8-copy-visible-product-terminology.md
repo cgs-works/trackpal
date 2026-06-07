@@ -6,20 +6,8 @@
 
 **Architecture:** El cambio es quirúrgico y se limita a values/literales visibles. No se renombran entidades internas, rutas, keys i18n ni artefactos de dominio. La implementación se divide en tres bloques: copy hardcoded del Master Console, catálogos i18n/frontend, y documentación/tests alineados con el nuevo vocabulario.
 
-**Tech Stack:** Python 3.11, FastAPI, catálogos i18n en Python dicts, Vue 3 + Vite, pytest, Vitest, ripgrep.
+**Tech Stack:** Python 3.14, FastAPI, catálogos i18n en Python dicts, Vue 3 + Vite, pytest, Vitest, ripgrep.
 
----
-
-## Pre-flight
-
-- Ya existe rama dedicada: `tpl-8-terminology`
-- Leer antes de tocar código:
-  - `docs/plans/2026-06-06-tpl-8-copy-visible-product-terminology-design.md`
-  - `docs/architecture/whatsapp-console-flow.md`
-  - `docs/architecture/n8n-workflow.md`
-  - `docs/project-pdr/business-rules.md`
-
----
 
 ### Task 1: Lock down the Master Console copy contract in backend tests
 
