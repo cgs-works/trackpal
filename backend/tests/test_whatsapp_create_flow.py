@@ -1739,7 +1739,7 @@ class TestConfirmationStep:
 
         # Should show success message
         assert (
-            "creado" in reply.lower()
+            "creada" in reply.lower()
             or "éxito" in reply.lower()
             or "exitoso" in reply.lower()
         )
@@ -1771,7 +1771,7 @@ class TestConfirmationStep:
             tenant_service=tenant_service,
         )
 
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
     async def test_cancel_during_confirm(
         self,
@@ -1899,7 +1899,7 @@ class TestFullCreateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
         # Session cleared
         session = await session_service.get_session("+10000000000")
@@ -1995,7 +1995,7 @@ class TestFullCreateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
         # Session cleared
         session = await session_service.get_session("+10000000000")
@@ -2073,7 +2073,7 @@ class TestFullCreateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
     async def test_duplicate_phone_during_creation(
         self,
@@ -2186,7 +2186,7 @@ class TestFullCreateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
     async def test_create_time_duplicate_username_returns_to_username_step(
         self,
@@ -2280,7 +2280,7 @@ class TestFullCreateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
     async def test_auto_password_shows_generated_password(
         self,
@@ -2459,7 +2459,7 @@ class TestFullCreateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "creado" in reply.lower() or "éxito" in reply.lower()
+        assert "creada" in reply.lower() or "éxito" in reply.lower()
 
         # Verify the created tenant has normalized values
         tenants = await tenant_service.get_tenants()

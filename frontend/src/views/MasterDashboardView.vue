@@ -23,7 +23,7 @@ const isEditMode = computed(() => modalMode.value === 'edit')
 const modalTitle = computed(() => (isEditMode.value ? 'Edit Business' : 'Create Business'))
 const modalPrefixHint = computed(() => (
   isEditMode.value
-    ? 'Changing this prefix will update all client login usernames for the tenant.'
+    ? 'Changing this prefix will update all client login usernames for this business.'
     : 'Leave blank to auto-generate a unique prefix.'
 ))
 const username = computed(() => authStore.username || authStore.user?.username || 'Master')
@@ -216,7 +216,7 @@ async function deleteTenant(tenant) {
     successMessage.value = 'Business deleted successfully.'
     await loadTenants()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'Unable to delete tenant')
+    errorMessage.value = getApiError(error, 'Unable to delete business')
   }
 }
 

@@ -210,7 +210,7 @@ async def _build_create_summary(
         f"*Usuario:* {data.get('username', '—')}\n"
         f"*Instancia Evolution:* {data.get('evolution_instance_name', '—')}\n"
         f"*Contraseña:* {password_info}\n\n"
-        "¿Todo está correcto? Escribe *CONFIRMAR* para crear el tenant.\n"
+        "¿Todo está correcto? Escribe *CONFIRMAR* para crear la empresa.\n"
         "Escribe *0* para cancelar y volver al menú principal."
     )
 
