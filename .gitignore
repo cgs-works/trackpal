@@ -10,3 +10,5 @@ skills-lock.json
 .ruff_cache
 /.pi-lens
 /.ralph
+# Local Pi runtime state
+.atl/
