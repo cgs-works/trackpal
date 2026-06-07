@@ -197,7 +197,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.client.mode_exit": "✅ Has salido. Adios!",
     "wa.client.mode_reset": "🔄 Modo reiniciado. Envia un mensaje para comenzar.",
     "wa.client.multiple_matches": "❌ Error de cuenta. Multiples registros encontrados. Contacta a soporte.",
-    "wa.client.profile.body": "👤 *Mi Perfil*\n\nNombre: {full_name}\nTenant: {tenant_name}\nTelefono: {phone}\nEstado: {status}",
+    "wa.client.profile.body": "👤 *Mi Perfil*\n\nNombre: {full_name}\nProveedor: {tenant_name}\nTeléfono: {phone}\nEstado: {status}",
     "wa.client.profile.not_found": "❌ Perfil no encontrado.",
     "wa.client.profile.status_active": "✅ Activo",
     "wa.client.profile.status_inactive": "❌ Inactivo",
@@ -255,7 +255,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.menu.inactive": "📌 *Gestion del cliente*\n\nEstas administrando este cliente desde tu panel privado.\nEl cliente no ve este menu.\n\nCliente: {client_name}\n{phone_line}Estado: {status}\n\nElige una opcion:\n1️⃣ Ver detalle\n2️⃣ Editar cliente\n3️⃣ Reactivar cliente\n4️⃣ Eliminar cliente\n0️⃣ Cancelar",
 
     "wa.tenant.client_context.closed": "✅ Gestion del cliente cancelada.",
-    "wa.tenant.client_context.collision": "⚠️ Ya tienes una gestion del cliente abierta. Envia *0* en tu chat privado de Tenant antes de abrir otra.",
+    "wa.tenant.client_context.collision": "⚠️ Ya tienes una gestión del cliente abierta. Envía *0* en tu chat privado de administración antes de abrir otra.",
     "wa.tenant.client_context.invalid_option": "❌ Opcion invalida. Responde con un numero del menu o *0* para cancelar.",
     "wa.tenant.client_context.create.phone_prefilled": "Telefono prefijado: {identity}\n\nEscribe el *nombre completo* del cliente o *0* para cancelar:",
     "wa.tenant.client_context.create.phone_prompt": "Escribe el numero de telefono del cliente para asociarlo a este chat.\n\n0️⃣ Cancelar",
@@ -281,9 +281,6 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.create.username_empty": "El nombre de usuario no puede estar vacio. Ingrese el *nombre de usuario* o *0* para cancelar:",
     "wa.tenant.client_context.create.username_invalid": "{exc}\n\nIngrese el *nombre de usuario* o *0* para cancelar:",
 
-    "wa.tenant.client_context.active.menu_text": "*{client_name}* (activo)\n\n1 Ver detalle del cliente\n2 Crear suscripcion\n0 Cerrar contexto",
-    "wa.tenant.client_context.active.invalid_option": "Opcion no valida.\n\n*{client_name}* (activo)\n\n1 Ver detalle del cliente\n2 Crear suscripcion\n0 Cerrar contexto",
-
     "wa.tenant.client_context.detail.header": "*Detalle del cliente*",
     "wa.tenant.client_context.detail.body": "*{client_name}*\nUsuario: {username}\n{phone_line}Estado: {status}\n",
     "wa.tenant.client_context.detail.options": "1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
@@ -297,8 +294,6 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.deactivate.error": "Error al desactivar: {exc}",
     "wa.tenant.client_context.deactivate.success": "*{client_name}* desactivado.",
 
-    "wa.tenant.client_context.inactive.menu_text": "*{client_name}* (inactivo)\n\n1 Reactivar\n2 Editar datos\n3 Eliminar\n0 Cerrar contexto",
-    "wa.tenant.client_context.inactive.invalid_option": "Opcion no valida.\n\n*{client_name}* (inactivo)\n\n1 Reactivar\n2 Editar datos\n3 Eliminar\n0 Cerrar contexto",
     "wa.tenant.client_context.inactive.reactivate_error": "Error al reactivar: {exc}",
     "wa.tenant.client_context.inactive.reactivate_success": "*{client_name}* reactivado.\n\nPuede gestionar suscripciones desde la Consola de Administracion.",
     "wa.tenant.client_context.inactive.delete_confirm": "Desea eliminar permanentemente a *{client_name}*?\n\nEscriba *CONFIRMAR* para eliminar.\nO *0* para cancelar.",
