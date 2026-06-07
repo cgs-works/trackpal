@@ -1,6 +1,6 @@
 # TPL-10 n8n Close Session Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make successful lookup results close the Evolution Go session after send, keep recoverable results open with explicit `1 / 2 / 0` options, and make local n8n-timeout retry semantics coherent for both tenant and unauth code flows.
 
@@ -42,7 +42,7 @@
 **Files:**
 - Create: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Write the failing workflow regression tests**
+- [x] **Step 1: Write the failing workflow regression tests**
 
 Create this file:
 
@@ -96,7 +96,7 @@ These tests should fail against the current workflow because:
 - `failed`/`timeout` do not include `1/2/0`
 - `Check close session` does not read from `Build result message`
 
-- [ ] **Step 2: Run the new workflow tests and verify they fail**
+- [x] **Step 2: Run the new workflow tests and verify they fail**
 
 Run:
 
@@ -106,7 +106,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: FAIL on missing `close_after_send` / missing retry text / missing upstream lookup-result read.
 
-- [ ] **Step 3: Commit the red workflow tests**
+- [x] **Step 3: Commit the red workflow tests**
 
 ```bash
 git add backend/tests/test_n8n_whatsapp_workflow.py
@@ -128,7 +128,7 @@ git commit -m "test: lock n8n lookup close-session contract"
 - Modify: `n8n/Trackpal WhatsApp Bot.json` (nodes `Build result message`, `Check close session`)
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Update `Build result message` to emit `close_after_send` and recoverable failure text**
+- [x] **Step 1: Update `Build result message` to emit `close_after_send` and recoverable failure text**
 
 Replace the current result-building logic with the same structure plus an explicit flag. The important shape is:
 
@@ -182,7 +182,7 @@ return {
 
 Do not add new nodes. Keep the change inside the existing Code node.
 
-- [ ] **Step 2: Update `Check close session` to read `close_after_send` from upstream result data**
+- [x] **Step 2: Update `Check close session` to read `close_after_send` from upstream result data**
 
 Change the close guard to this shape:
 
@@ -224,7 +224,7 @@ return uniqueCloseJids.map((remoteJid) => ({ json: { ...data, close_jid: remoteJ
 
 Do not change `Send result`. The point of this task is to stop depending on HTTP node output preservation.
 
-- [ ] **Step 3: Verify the workflow JSON still parses**
+- [x] **Step 3: Verify the workflow JSON still parses**
 
 Run:
 
@@ -240,7 +240,7 @@ PY
 
 Expected: `workflow json ok`
 
-- [ ] **Step 4: Re-run the focused workflow regression tests**
+- [x] **Step 4: Re-run the focused workflow regression tests**
 
 Run:
 
@@ -250,7 +250,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
@@ -271,7 +271,7 @@ git commit -m "fix: close successful lookup sessions in n8n"
 - Modify: `backend/tests/test_tenant_console_service.py`
 - Test: `backend/app/services/whatsapp_tenant_console_service/codigo_flow.py`
 
-- [ ] **Step 1: Add a failing test for tenant retry after local n8n timeout UX**
+- [x] **Step 1: Add a failing test for tenant retry after local n8n timeout UX**
 
 Add a test near the existing codigo-flow tests:
 
@@ -312,7 +312,7 @@ async def test_codigo_awaiting_result_retry_allows_pending_job(
 
 This should fail today because the current code returns `wa.tenant.codigo.still_checking` when the previous job is still pending.
 
-- [ ] **Step 2: Add a failing test for tenant back-to-services while the old job is still pending**
+- [x] **Step 2: Add a failing test for tenant back-to-services while the old job is still pending**
 
 Add a second test:
 
@@ -356,7 +356,7 @@ async def test_codigo_awaiting_result_back_reopens_services_even_if_job_pending(
 
 This should fail today because the current code returns `still_checking` for `2` while the old job is pending.
 
-- [ ] **Step 3: Run just the new tenant tests and confirm they fail**
+- [x] **Step 3: Run just the new tenant tests and confirm they fail**
 
 Run:
 
@@ -366,7 +366,7 @@ cd backend && uv run pytest tests/test_tenant_console_service.py -k "codigo_awai
 
 Expected: FAIL.
 
-- [ ] **Step 4: Commit the red tenant tests**
+- [x] **Step 4: Commit the red tenant tests**
 
 ```bash
 git add backend/tests/test_tenant_console_service.py
@@ -387,7 +387,7 @@ git commit -m "test: lock tenant codigo pending retry behavior"
 - Modify: `backend/app/services/whatsapp_tenant_console_service/codigo_flow.py:289-408`
 - Test: `backend/tests/test_tenant_console_service.py`
 
-- [ ] **Step 1: Remove the tenant-side `job_done` blocker for explicit `1` and `2` choices**
+- [x] **Step 1: Remove the tenant-side `job_done` blocker for explicit `1` and `2` choices**
 
 Make the logic look like this:
 
@@ -432,7 +432,7 @@ if msg.strip() == "2":
 
 Keep `job_done` for the unknown-input fallback. Do not refactor the whole function.
 
-- [ ] **Step 2: Preserve the existing cancel path exactly**
+- [x] **Step 2: Preserve the existing cancel path exactly**
 
 Do not rewrite the cancel branch beyond keeping it intact:
 
@@ -444,7 +444,7 @@ if msg.strip() == "0":
 
 `_handle_tenant_console()` already adds `status="closed"` + `close_jid` when `is_cancel(message)` is true, so this task must not break that contract.
 
-- [ ] **Step 3: Re-run the targeted tenant tests**
+- [x] **Step 3: Re-run the targeted tenant tests**
 
 Run:
 
@@ -454,7 +454,7 @@ cd backend && uv run pytest tests/test_tenant_console_service.py -k "codigo_awai
 
 Expected: PASS.
 
-- [ ] **Step 4: Run the broader tenant console regression slice**
+- [x] **Step 4: Run the broader tenant console regression slice**
 
 Run:
 
@@ -464,7 +464,7 @@ cd backend && uv run pytest tests/test_tenant_console_service.py -k "codigo_flow
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/whatsapp_tenant_console_service/codigo_flow.py backend/tests/test_tenant_console_service.py
@@ -486,7 +486,7 @@ git commit -m "fix: allow tenant codigo retry after local timeout"
 - Modify: `backend/tests/test_whatsapp_endpoint.py`
 - Test: `backend/app/api/v1/endpoints/integrations/console_handlers.py`
 
-- [ ] **Step 1: Add a failing test for unauth retry while the previous job is still pending**
+- [x] **Step 1: Add a failing test for unauth retry while the previous job is still pending**
 
 Add an endpoint-adjacent regression test close to the unauth codigo tests:
 
@@ -553,7 +553,7 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
 
 This should fail today because the current unauth handler sends the user back to the service list instead of re-queuing with saved inputs.
 
-- [ ] **Step 2: Run the new unauth retry test and confirm it fails**
+- [x] **Step 2: Run the new unauth retry test and confirm it fails**
 
 Run:
 
@@ -563,7 +563,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -k "unregistered_cod
 
 Expected: FAIL.
 
-- [ ] **Step 3: Keep the existing cancel-close tests as regression coverage**
+- [x] **Step 3: Keep the existing cancel-close tests as regression coverage**
 
 Do not rewrite these existing tests unless necessary:
 - `test_unregistered_codigo_service_cancel_sets_closed_status`
@@ -571,7 +571,7 @@ Do not rewrite these existing tests unless necessary:
 
 They already protect the requirement that `0 Cancelar` closes the session.
 
-- [ ] **Step 4: Commit the red unauth retry test**
+- [x] **Step 4: Commit the red unauth retry test**
 
 ```bash
 git add backend/tests/test_whatsapp_endpoint.py
@@ -593,7 +593,7 @@ git commit -m "test: lock unauth codigo pending retry behavior"
 - Modify: `backend/app/api/v1/endpoints/integrations/console_handlers.py:746-946`
 - Test: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Narrow the `not job_done` branch so it no longer intercepts explicit retry**
+- [x] **Step 1: Narrow the `not job_done` branch so it no longer intercepts explicit retry**
 
 Change this part:
 
@@ -635,7 +635,7 @@ if not job_done and msg_clean not in ("1", "2", "0"):
 
 That leaves `msg_clean == "1"` to flow into the existing retry-creation logic even when the previous job is still pending.
 
-- [ ] **Step 2: Reuse the existing retry-create path for `msg_clean == "1"`**
+- [x] **Step 2: Reuse the existing retry-create path for `msg_clean == "1"`**
 
 Do not invent a second retry path. Keep this structure and let it execute regardless of `job_done`:
 
@@ -662,7 +662,7 @@ if msg_clean == "1":
 
 This is the whole point of the backend change: retry with saved inputs, even when the previous DB job has not reached a terminal state yet.
 
-- [ ] **Step 3: Preserve the cancel-close branch exactly**
+- [x] **Step 3: Preserve the cancel-close branch exactly**
 
 Keep this intact:
 
@@ -679,7 +679,7 @@ if is_cancel(msg):
 
 The user requirement is explicit: `0 Cancelar` must close, not remain open.
 
-- [ ] **Step 4: Run the focused unauth retry test**
+- [x] **Step 4: Run the focused unauth retry test**
 
 Run:
 
@@ -689,7 +689,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -k "unregistered_cod
 
 Expected: PASS.
 
-- [ ] **Step 5: Re-run the surrounding unauth codigo slice**
+- [x] **Step 5: Re-run the surrounding unauth codigo slice**
 
 Run:
 
@@ -699,7 +699,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -k "unregistered_ide
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/api/v1/endpoints/integrations/console_handlers.py backend/tests/test_whatsapp_endpoint.py
@@ -724,7 +724,7 @@ git commit -m "fix: allow unauth codigo retry after local timeout"
 - Test: `backend/tests/test_tenant_console_service.py`
 - Test: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Update `docs/architecture/n8n-workflow.md` to match the new workflow contract**
+- [x] **Step 1: Update `docs/architecture/n8n-workflow.md` to match the new workflow contract**
 
 Apply these documentation changes:
 
@@ -741,7 +741,7 @@ Apply these documentation changes:
 Guard: if `lookup_job_id` exists and `close_after_send !== true`, keep the session open because the lookup flow is still recoverable.
 ```
 
-- [ ] **Step 2: Update `docs/architecture/whatsapp-console-flow.md` to document local-timeout retry semantics**
+- [x] **Step 2: Update `docs/architecture/whatsapp-console-flow.md` to document local-timeout retry semantics**
 
 Update both unauth and tenant sections with wording like:
 
@@ -753,7 +753,7 @@ Do this in:
 - the unauthenticated code lookup section
 - the tenant `awaiting_result` section
 
-- [ ] **Step 3: Run the focused final regression set**
+- [x] **Step 3: Run the focused final regression set**
 
 Run:
 
@@ -763,7 +763,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py tests/test_tenan
 
 Expected: PASS.
 
-- [ ] **Step 4: Run backend style checks only if Python files changed in this task need it**
+- [x] **Step 4: Run backend style checks only if Python files changed in this task need it**
 
 Run:
 
@@ -773,7 +773,7 @@ cd backend && uv run ruff check tests/test_n8n_whatsapp_workflow.py tests/test_t
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit docs + final verification snapshot**
+- [x] **Step 5: Commit docs + final verification snapshot**
 
 ```bash
 git add docs/architecture/n8n-workflow.md docs/architecture/whatsapp-console-flow.md
