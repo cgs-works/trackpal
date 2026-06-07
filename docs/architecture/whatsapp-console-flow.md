@@ -197,9 +197,10 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 6. Service list uses ``[N]`` bracket format (``[1] Service``, ``[2] Service``...) with emoji pagination (``8️⃣`` next, ``9️⃣`` previous, ``0️⃣`` cancel). Up to 7 services per page.
 7. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
 8. n8n polls the job and sends the final result. On ``not_found``, the message includes options: ``1 Retry / 2 Back to services / 0 Cancel`` (localised in ES/EN).
-9. Post-result options handled by ``_handle_unauth_codigo_result``: ``1`` creates new job, ``2`` shows service list, ``0`` closes session.
-10. ``0``/cancel at any step clears the Redis session and returns ``status="closed"`` with phone-based ``reply_to``/``close_jid`` when the phone is known, so Evolution Go closes the correct chat session.
-11. Non-codigo messages from unregistered identities return the ``not_registered`` message (``"No tienes una cuenta registrada. Envia 'code' o 'codigo' para buscar codigos de acceso."``) with ``status="closed"`` and ``close_jid``, telling them how to access codes and closing their session.
+9. When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
+10. Post-result options handled by ``_handle_unauth_codigo_result``: ``1`` creates new job, ``2`` shows service list, ``0`` closes session.
+11. ``0``/cancel at any step clears the Redis session and returns ``status="closed"`` with phone-based ``reply_to``/``close_jid`` when the phone is known, so Evolution Go closes the correct chat session.
+12. Non-codigo messages from unregistered identities return the ``not_registered`` message (``"No tienes una cuenta registrada. Envia 'code' o 'codigo' para buscar codigos de acceso."``) with ``status="closed"`` and ``close_jid``, telling them how to access codes and closing their session.
 
 ## Client Context Shortcut
 
@@ -327,6 +328,8 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 | ``2`` | **Back to services** — clear session, show codigo service list again (page 0). |
 | ``0`` | **Cancel** — clear session, return goodbye, n8n closes Evolution session. |
 | Other | **Still checking** — keep session alive, return "Still searching..." with retry/back/cancel options. |
+
+When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
 
 #### Client-sent code flow (unauth codigo)
 

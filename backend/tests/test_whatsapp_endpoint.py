@@ -5,7 +5,8 @@ Verifies API-key auth, Master/non-Master handling, and response shape.
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
@@ -1350,6 +1351,78 @@ async def test_registered_client_codigo_cancel_resumes_codigo_not_client_console
     assert body.get("close_jid") == "12015559999@s.whatsapp.net"
     assert "consola del cliente" not in body["reply"].lower()
     assert "client console" not in body["reply"].lower()
+
+
+async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending(
+    client, db_session, active_tenant_user
+):
+    """Retry with 1 during unauth codigo awaiting result creates a fresh job even
+    when the previous mailbox job is still pending (local n8n timeout scenario)."""
+    from types import SimpleNamespace
+
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    retry_job = SimpleNamespace(id=uuid4())
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        # Step 1: start codigo flow
+        resp1 = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp1.status_code == 200
+        assert "Netflix" in resp1.json()["reply"]
+
+        # Step 2: select service "1"
+        resp2 = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp2.status_code == 200
+
+        # Step 3: submit email
+        resp3 = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp3.status_code == 200
+
+        # Step 4: retry with "1" while previous job is pending
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.get_job",
+                AsyncMock(return_value=SimpleNamespace(status="pending")),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+                AsyncMock(return_value=SimpleNamespace(id=uuid4(), status="connected")),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=retry_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
+                AsyncMock(return_value=True),
+            ),
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("lookup_job_id") == str(retry_job.id)
+    assert body.get("tenant_id") == str(tenant.id)
+    assert "buscando" in body["reply"].lower() or "searching" in body["reply"].lower()
 
 
 async def test_unregistered_codigo_service_cancel_with_alias_returns_cancelled(

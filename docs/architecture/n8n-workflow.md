@@ -30,7 +30,8 @@ IF no_reply=true?
             ├─ No  → Evolution Go Send (uses reply_to when present) → Check Close Session
             └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
                        (`GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`)
-                       → Build result message (appends "1 Retry, 2 Back to services, 0 Cancel"
+                       → Build result message (`close_after_send=true` for terminal `code`/`url`,
+                         `false` for recoverable; appends "1 Retry, 2 Back to services, 0 Cancel"
                          on not_found) → Send final result
          ↓
     Check Close Session → Close Session(if logout)
@@ -151,17 +152,24 @@ Sends the reply text back to the user via Evolution Go.
 | Never Error | `true` |
 
 Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. When ``reply_to`` is present in the response, the send target uses the ``reply_to`` JID instead of the original sender's phone JID. This ensures administrative replies are sent privately to the admin chat rather than to the target contact. When ``reply_to`` is absent, reply target uses preserved `remoteJid` (can be `@lid` or phone JID depending on Evolution session state).
+### 6a. Build Result Message (Code Node)
+
+Code node that constructs the final lookup result message after polling completes.
+
+**Logic**: `Build result message` emits `close_after_send=true` for terminal `code`/`url` results and `false` for recoverable outcomes (`not_found`, `duplicate_suppressed`, `failed`, `timeout`, unknown fallback non-success). `failed` and `timeout` messages now include `1 Retry / 2 Back to services / 0 Cancel`.
+
 ### 7. Check Close Session (Code Node)
 
 JavaScript that conditionally triggers session close.
 
-**Logic**: Close-session trigger is true when either:
+**Logic**: `Check Close Session` closes when either:
 1. `status === "closed"` from backend response, or
-2. message is logout command (`0`/`salir`) and reply text matches close semantic.
+2. lookup result flow has `close_after_send === true`, or
+3. message is logout command (`0`/`salir`) and reply text matches close semantic.
 
 When `close_jids` is present in the response, node emits one item per JID in the array so Close Session processes each one (multi-session closure for Client Context Shortcut).
 
-Guard: if `lookup_job_id` exists, do not close session in this branch (poll/result flow owns close behavior).
+Guard: if `lookup_job_id` exists and `close_after_send !== true`, keep the session open because the lookup flow is still recoverable.
 
 ### 8. Close Session (HTTP Request Node)
 

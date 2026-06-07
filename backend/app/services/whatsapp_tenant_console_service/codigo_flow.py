@@ -328,10 +328,6 @@ async def _handle_codigo_awaiting_result(
             job_done = True  # treat error as done so we don't loop
 
     if msg.strip() == "1":
-        # Retry — only if job is done, otherwise say still checking
-        if not job_done:
-            return _i18n_t(loc, "wa.tenant.codigo.still_checking")
-
         service_key = session.temp_data.get("service_key", "")
         target_email = session.temp_data.get("target_email", "")
         if service_key and target_email:
@@ -368,10 +364,6 @@ async def _handle_codigo_awaiting_result(
         )
 
     if msg.strip() == "2":
-        # Back to services — show service list
-        if not job_done:
-            return _i18n_t(loc, "wa.tenant.codigo.still_checking")
-
         effective_keys = (
             await code_services_repository.get_effective_service_keys(
                 db, tenant_id

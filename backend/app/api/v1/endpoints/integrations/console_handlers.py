@@ -789,9 +789,9 @@ async def _handle_unauth_codigo_result(
     job_done = job is not None and job.status in ("completed", "failed", "timeout")
 
     if not job_done:
-        # Still waiting — redirect to retry/back/cancel prompt
-        if msg.strip() in ("1", "2"):
-            # User wants retry or back, but job isn't ready yet
+        # Still waiting — redirect to back/cancel prompt
+        if msg.strip() == "2":
+            # User wants back, but job isn't ready yet
             # Show the service list again immediately
             await session_service.clear_session(session_key)
             effective_keys = await code_services_repository.get_effective_service_keys(
@@ -817,10 +817,14 @@ async def _handle_unauth_codigo_result(
                     service_list=service_list,
                 )
             )
-        # Anything else → still checking
-        return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.codigo.still_checking"),
-        )
+
+        if msg.strip() not in ("1", "2", "0"):
+            # Anything else → still checking
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.still_checking"),
+            )
+
+        # msg.strip() == "1" falls through to retry logic below
 
     # ── Job is done — route based on user choice ─────────────────
     msg_clean = msg.strip()
