@@ -6,10 +6,10 @@
 
 MAIN_MENU = (
     "🤖 *Trackpal Master Console*\n\n"
-    "1️⃣ Ver Tenants\n"
-    "2️⃣ Crear Tenant\n"
-    "3️⃣ Desactivar Tenant\n"
-    "4️⃣ Eliminar Tenant\n"
+    "1️⃣ Ver empresas\n"
+    "2️⃣ Crear empresa\n"
+    "3️⃣ Desactivar empresa\n"
+    "4️⃣ Eliminar empresa\n"
     "5️⃣ Ayuda\n\n"
     "0️⃣ Cerrar sesión\n\n"
     "Responde con el número de la opción deseada."
@@ -22,14 +22,14 @@ ACCESS_DENIED = (
 HELP_TEXT = (
     "🤖 *Ayuda - Trackpal Master Console*\n\n"
     "Los comandos disponibles son:\n\n"
-    "1️⃣ *Ver Tenants* — Muestra la lista de tenants.\n"
-    "2️⃣ *Crear Tenant* — Inicia el flujo de creación.\n"
-    "3️⃣ *Desactivar Tenant* — Desactiva un tenant activo.\n"
-    "4️⃣ *Eliminar Tenant* — Elimina un tenant inactivo.\n"
+    "1️⃣ *Ver empresas* — Muestra la lista de empresas.\n"
+    "2️⃣ *Crear empresa* — Inicia el flujo de creación.\n"
+    "3️⃣ *Desactivar empresa* — Desactiva una empresa activa.\n"
+    "4️⃣ *Eliminar empresa* — Elimina una empresa inactiva.\n"
     "5️⃣ *Ayuda* — Muestra este mensaje de ayuda.\n"
     "0️⃣ *Cerrar sesión* — Cierra tu sesión en la consola Master.\n\n"
     "En el menú principal, escribe *0* para cerrar sesión.\n"
-    "Dentro de un flujo, *0* cancela la operacion, *9* regresa y *8* avanza.\n"
+    "Dentro de un flujo, *0* cancela la operación, *9* regresa y *8* avanza.\n"
     "Escribe */menu* para volver al menú principal."
 )
 
@@ -101,50 +101,50 @@ INVALID_SELECTION = (
     "o escribe *9* para volver al menú principal."
 )
 
-NO_TENANTS = "📭 No hay tenants registrados."
+NO_TENANTS = "📭 No hay empresas registradas."
 
 # ------------------------------------------------------------------
 # Create flow prompts
 # ------------------------------------------------------------------
 
 CREATE_PROMPT_FULL_NAME = (
-    "✏️ *Crear Tenant*\n\n"
-    "Vamos a crear un nuevo tenant.\n\n"
-    "¿Cuál es el *nombre completo* del tenant?"
+    "✏️ *Crear empresa*\n\n"
+    "Vamos a crear una nueva empresa.\n\n"
+    "¿Cuál es el *nombre completo* de la empresa?"
 )
 
 CREATE_PROMPT_EMAIL = (
-    "✏️ *Crear Tenant*\n\n"
-    "¿Cuál es el *email* del tenant?\n\n"
+    "✏️ *Crear empresa*\n\n"
+    "¿Cuál es el *email* de la empresa?\n\n"
     "(Opcional — escribe *—* para omitir)"
 )
 
 CREATE_PROMPT_PHONE = (
-    "✏️ *Crear Tenant*\n\n"
-    "¿Cuál es el *teléfono* del tenant?\n\n"
+    "✏️ *Crear empresa*\n\n"
+    "¿Cuál es el *teléfono* de la empresa?\n\n"
     "(Opcional — escribe *—* para omitir)"
 )
 
 CREATE_PROMPT_USERNAME = (
-    "✏️ *Crear Tenant*\n\n"
-    "¿Cuál es el *nombre de usuario* para el tenant?\n\n"
+    "✏️ *Crear empresa*\n\n"
+    "¿Cuál es el *nombre de usuario* para la empresa?\n\n"
     "(Se usará para iniciar sesión en Trackpal)"
 )
 
 CREATE_PROMPT_EVOLUTION_INSTANCE = (
-    "✏️ *Crear Tenant*\n\n"
+    "✏️ *Crear empresa*\n\n"
     "¿Cuál es el *nombre de la instancia de Evolution*?"
 )
 
 CREATE_PROMPT_PASSWORD_MODE = (
-    "✏️ *Crear Tenant*\n\n"
+    "✏️ *Crear empresa*\n\n"
     "¿Cómo deseas generar la contraseña?\n\n"
     "1️⃣ *Automática* (recomendado)\n"
     "2️⃣ *Manual* (tú la escribes)"
 )
 
 CREATE_PROMPT_MANUAL_PASSWORD = (
-    "✏️ *Crear Tenant*\n\n"
+    "✏️ *Crear empresa*\n\n"
     "Escribe la *contraseña* manualmente.\n\n"
     "⚠️  Ten en cuenta que estás enviando una contraseña "
     "a través de WhatsApp. Asegúrate de estar en un "

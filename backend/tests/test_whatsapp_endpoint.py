@@ -342,7 +342,7 @@ async def test_failover_missing_session_returns_contingency_reset(client, master
     assert "contingencia" in reply.lower()
     assert "sesión" in reply.lower() or "sesion" in reply.lower()
     # Must include menu options so the Master can continue
-    assert "Ver Tenants" in reply
+    assert "Ver empresas" in reply
 
 
 async def test_failover_missing_session_with_menu_choice_still_resets(

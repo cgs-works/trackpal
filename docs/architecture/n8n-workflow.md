@@ -208,11 +208,11 @@ Parse Input:
 Config node adds: { trackpal_backend_url, trackpal_n8n_api_key, evolution_api_url, default_instance }
   ↓
 Console Call → POST /api/v1/integrations/n8n/console
-  → Backend processes, returns { reply: "📋 *Lista de Tenants*\n..." }
+  → Backend processes, returns { reply: "📋 *Lista de empresas*\n..." }
   ↓
 Merge & lookup data:
   { phone, message, instance, remoteJid, apiKey, fromMe, adminJid,
-    reply: "📋 *Lista de Tenants*\n...", status: null,
+    reply: "📋 *Lista de empresas*\n...", status: null,
     lookup_job_id: null, tenant_id: null, reply_to: null, no_reply: null }
   ↓
 IF has no_reply? → No
@@ -221,7 +221,7 @@ IF has lookup_job_id? → No
   ↓
 Evolution Go Send → POST /send/text
   → Headers: { apikey: "<instance-api-key>" }
-  → Body: { number: "1234567890", text: "📋 *Lista de Tenants*\n..." }
+  → Body: { number: "1234567890", text: "📋 *Lista de empresas*\n..." }
   → User receives the WhatsApp message
   ↓
 Check Close Session (only if message === "0" and reply matches logout)

@@ -194,6 +194,38 @@ def test_models_package_exports_blocked_client() -> None:
     assert "ClientMessagingBlock" not in models.__all__
 
 
+def test_catalog_new_terminology_applied():
+    """Verify the new product terminology is applied in WhatsApp catalogs.
+
+    - wa.client.profile.body must use ``Proveedor:`` / ``Provider:`` (not ``Tenant:``)
+    - wa.tenant.client_context.collision must not expose ``Tenant``
+    """
+    params = {
+        "full_name": "Ana",
+        "tenant_name": "MiEmpresa",
+        "phone": "+34123456789",
+        "status": "Activo",
+    }
+
+    # Profile body must use new terminology (Proveedor/Provider)
+    es_profile = t("es", "wa.client.profile.body", **params)
+    en_profile = t("en", "wa.client.profile.body", **params)
+    assert "Proveedor:" in es_profile, f"ES profile should say Proveedor:, got: {es_profile}"
+    assert "Provider:" in en_profile, f"EN profile should say Provider:, got: {en_profile}"
+    assert "Tenant:" not in es_profile, f"ES profile should not contain Tenant:, got: {es_profile}"
+    assert "Tenant:" not in en_profile, f"EN profile should not contain Tenant:, got: {en_profile}"
+
+    # Collision message must not expose Tenant term
+    es_collision = t("es", "wa.tenant.client_context.collision")
+    en_collision = t("en", "wa.tenant.client_context.collision")
+    assert "chat privado de Tenant" not in es_collision, (
+        f"ES collision should not say 'Tenant', got: {es_collision}"
+    )
+    assert "private Tenant chat" not in en_collision, (
+        f"EN collision should not say 'Tenant', got: {en_collision}"
+    )
+
+
 def test_client_context_i18n_keys_exist_in_en_and_es():
     params = {"identity": "34123456789", "client_name": "Ana", "status": "Activo", "phone": "34123456789", "phone_line": "Phone: 34123456789\n"}
     keys = [

@@ -20,10 +20,10 @@ const modalMode = ref('create')
 const form = ref(getEmptyForm())
 
 const isEditMode = computed(() => modalMode.value === 'edit')
-const modalTitle = computed(() => (isEditMode.value ? 'Edit Tenant' : 'Create Tenant'))
+const modalTitle = computed(() => (isEditMode.value ? 'Edit Business' : 'Create Business'))
 const modalPrefixHint = computed(() => (
   isEditMode.value
-    ? 'Changing this prefix will update all client login usernames for the tenant.'
+    ? 'Changing this prefix will update all client login usernames for this business.'
     : 'Leave blank to auto-generate a unique prefix.'
 ))
 const username = computed(() => authStore.username || authStore.user?.username || 'Master')
@@ -72,7 +72,7 @@ async function loadTenants() {
       inactive: tenants.value.filter((tenant) => !isTenantActive(tenant)).length,
     }
   } catch (error) {
-    errorMessage.value = getApiError(error, 'Unable to load tenants')
+    errorMessage.value = getApiError(error, 'Unable to load businesses')
   } finally {
     isLoading.value = false
   }
@@ -151,7 +151,7 @@ async function handleSubmit() {
         payload.client_prefix = form.value.client_prefix
       }
       await api.put(`/tenants/${form.value.id}`, payload)
-      successMessage.value = 'Tenant updated successfully.'
+      successMessage.value = 'Business updated successfully.'
     } else {
       const payload = {
         full_name: form.value.full_name,
@@ -172,14 +172,14 @@ async function handleSubmit() {
       const response = await api.post('/tenants', payload)
       const generatedPassword = getGeneratedPassword(response.data)
       successMessage.value = generatedPassword
-        ? `Tenant created successfully. Generated password: ${generatedPassword}`
-        : 'Tenant created successfully.'
+        ? `Business created successfully. Generated password: ${generatedPassword}`
+        : 'Business created successfully.'
     }
 
     isModalOpen.value = false
     await loadTenants()
   } catch (error) {
-    modalError.value = getApiError(error, 'Unable to save tenant')
+    modalError.value = getApiError(error, 'Unable to save business')
   } finally {
     isSaving.value = false
   }
@@ -192,10 +192,10 @@ async function toggleTenantStatus(tenant) {
 
   try {
     await api.patch(endpoint)
-    successMessage.value = active ? 'Tenant deactivated successfully.' : 'Tenant activated successfully.'
+    successMessage.value = active ? 'Business deactivated successfully.' : 'Business activated successfully.'
     await loadTenants()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'Unable to update tenant status')
+    errorMessage.value = getApiError(error, 'Unable to update business status')
   }
 }
 
@@ -203,20 +203,20 @@ async function deleteTenant(tenant) {
   clearMessages()
 
   if (isTenantActive(tenant)) {
-    errorMessage.value = 'Cannot delete active tenant. Deactivate first.'
+    errorMessage.value = 'Cannot delete active business. Deactivate first.'
     return
   }
 
-  if (!window.confirm(`Delete tenant ${tenant.full_name}? This action cannot be undone.`)) {
+  if (!window.confirm(`Delete business ${tenant.full_name}? This action cannot be undone.`)) {
     return
   }
 
   try {
     await api.delete(`/tenants/${tenant.id}`)
-    successMessage.value = 'Tenant deleted successfully.'
+    successMessage.value = 'Business deleted successfully.'
     await loadTenants()
   } catch (error) {
-    errorMessage.value = getApiError(error, 'Unable to delete tenant')
+    errorMessage.value = getApiError(error, 'Unable to delete business')
   }
 }
 
@@ -226,7 +226,7 @@ async function manageCatalog(tenant) {
     await authStore.switchTenant(tenant.id)
     await router.push('/admin/dashboard')
   } catch (error) {
-    errorMessage.value = getApiError(error, 'Unable to switch tenant context')
+    errorMessage.value = getApiError(error, 'Unable to switch business context')
   }
 }
 
@@ -252,9 +252,9 @@ onMounted(loadTenants)
       </div>
     </header>
 
-    <section class="summary-grid" aria-label="Tenant summary">
+    <section class="summary-grid" aria-label="Business summary">
       <article class="summary-card">
-        <span>Total Tenants</span>
+        <span>Total Businesses</span>
         <strong>{{ meta.total }}</strong>
       </article>
       <article class="summary-card">
@@ -270,17 +270,17 @@ onMounted(loadTenants)
     <section class="content-card">
       <div class="section-header">
         <div>
-          <h2>Tenants</h2>
-          <p>Manage tenant accounts and Evolution instances.</p>
+          <h2>Businesses</h2>
+          <p>Manage business accounts and Evolution instances.</p>
         </div>
-        <button class="button button-primary" type="button" @click="openCreateModal">Create Tenant</button>
+        <button class="button button-primary" type="button" @click="openCreateModal">Create Business</button>
       </div>
 
       <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
       <p v-if="successMessage" class="alert alert-success">{{ successMessage }}</p>
 
-      <div v-if="isLoading" class="empty-state">Loading tenants...</div>
-      <div v-else-if="!tenants.length" class="empty-state">No tenants registered yet</div>
+      <div v-if="isLoading" class="empty-state">Loading businesses...</div>
+      <div v-else-if="!tenants.length" class="empty-state">No businesses registered yet</div>
       <div v-else class="table-wrapper">
         <table>
           <thead>

@@ -44,7 +44,7 @@ async def _handle_create_confirm(
                 await session_service.clear_session(phone)
 
             reply = (
-                "✅ *Tenant creado exitosamente*\n\n"
+                "✅ *Empresa creada exitosamente*\n\n"
                 f"*Nombre:* {tenant.full_name}\n"
                 f"*Usuario:* {tenant.username}\n"
                 f"*Email:* {tenant.email or '—'}\n"
@@ -61,7 +61,7 @@ async def _handle_create_confirm(
 
             return self._with_main_menu(reply)
         else:
-            error = result.get("error", "Error desconocido al crear el tenant.")
+            error = result.get("error", "Error desconocido al crear la empresa.")
             error_lower = error.lower()
             if "phone" in error_lower or "teléfono" in error_lower:
                 session.step = self.CREATE_STEP_PHONE
@@ -75,4 +75,4 @@ async def _handle_create_confirm(
                 return "❌ " + error + "\n\n" + msg.CREATE_PROMPT_USERNAME
             return "❌ " + error + "\n\n" + await self._build_create_summary(session)
 
-    return "❌ No se pudo crear el tenant. Servicio no disponible."
+    return "❌ No se pudo crear la empresa. Servicio no disponible."

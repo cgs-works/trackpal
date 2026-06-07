@@ -51,10 +51,10 @@ Package: `backend/app/services/whatsapp_master_console_facade/`. Submodules: `fa
 
 | # | Action | Description |
 |---|--------|-------------|
-| 1 | Ver Tenants | List tenants with status and counts |
-| 2 | Crear Tenant | Create tenant + Evolution instance |
-| 3 | Desactivar Tenant | Deactivate tenant |
-| 4 | Eliminar Tenant | Delete inactive tenant |
+| 1 | Ver empresas | List businesses with status and counts |
+| 2 | Crear empresa | Create business + Evolution instance |
+| 3 | Desactivar empresa | Deactivate business |
+| 4 | Eliminar empresa | Delete inactive business |
 | 5 | Ayuda | Show help |
 | 0 | Cerrar sesión | Global exit |
 
