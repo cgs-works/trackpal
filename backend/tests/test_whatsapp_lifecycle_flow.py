@@ -293,7 +293,7 @@ class TestDeactivateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Desactivado" in reply or "desactivado" in reply.lower()
+        assert "Desactivada" in reply or "desactivada" in reply.lower()
         assert "Alpha Corp" in reply
 
         # Tenant should actually be deactivated
@@ -326,7 +326,7 @@ class TestDeactivateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Desactivado" in reply or "desactivado" in reply.lower()
+        assert "Desactivada" in reply or "desactivada" in reply.lower()
 
         tenant = await tenant_service.get_tenant(TENANT_ACTIVE_ID)
         assert tenant is not None
@@ -482,7 +482,7 @@ class TestReactivateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Reactivado" in reply or "reactivado" in reply.lower()
+        assert "Reactivada" in reply or "reactivada" in reply.lower()
         assert "Beta Inc" in reply
 
         # Tenant should be active
@@ -510,7 +510,7 @@ class TestReactivateFlow:
         )
         # Should NOT contain a CONFIRMAR prompt
         assert "CONFIRMAR" not in reply
-        assert "Reactivado" in reply or "reactivado" in reply.lower()
+        assert "Reactivada" in reply or "reactivada" in reply.lower()
 
     async def test_session_cleared_after_reactivation(
         self,
@@ -562,7 +562,7 @@ class TestDeleteFlow:
             tenant_service=tenant_service,
         )
         assert "no se puede eliminar" in reply.lower()
-        assert "activo" in reply.lower()
+        assert "empresa activa" in reply.lower()
         assert "desactiva" in reply.lower()
 
     async def test_delete_active_tenant_does_not_change_status(
@@ -634,7 +634,7 @@ class TestDeleteFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Eliminado" in reply or "eliminado" in reply.lower()
+        assert "Eliminada" in reply or "eliminada" in reply.lower()
         assert "Beta Inc" in reply
 
         # Tenant should be deleted
@@ -886,7 +886,7 @@ class TestFullLifecycleScenario:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Reactivado" in reply or "reactivado" in reply.lower()
+        assert "Reactivada" in reply or "reactivada" in reply.lower()
 
         # Verify reactivated
         tenant = await tenant_service.get_tenant(TENANT_ACTIVE_ID)
@@ -941,7 +941,7 @@ class TestFullLifecycleScenario:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Eliminado" in reply or "eliminado" in reply.lower()
+        assert "Eliminada" in reply or "eliminada" in reply.lower()
 
         # Verify deleted
         tenant = await tenant_service.get_tenant(TENANT_ACTIVE_ID)

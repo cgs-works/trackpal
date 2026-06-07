@@ -55,7 +55,7 @@ async def _handle_edit_step(
 def _get_edit_field_selection_prompt() -> str:
     """Build the edit field selection menu."""
     return (
-        "✏️ *Editar Tenant*\n\n"
+        "✏️ *Editar empresa*\n\n"
         "¿Qué campo deseas editar?\n\n"
         "1️⃣ Nombre completo\n"
         "2️⃣ Email\n"

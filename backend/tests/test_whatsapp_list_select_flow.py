@@ -229,8 +229,8 @@ class TestListTenantsFlow:
             is_master=True,
             tenant_service=tenant_service,
         )
-        assert "Activos: 2" in reply
-        assert "Inactivos: 1" in reply
+        assert "Activas: 2" in reply
+        assert "Inactivas: 1" in reply
 
     async def test_list_contains_numbered_entries(
         self,

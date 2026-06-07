@@ -5,7 +5,7 @@ EDIT_STEP_SELECT_FIELD = "select_field"
 EDIT_STEP_NEW_VALUE = "new_value"
 
 EDIT_PROMPT_SELECT_FIELD = (
-    "✏️ *Editar Tenant*",
+    "✏️ *Editar empresa*",
     "",
     "¿Qué campo deseas editar?",
     "",
@@ -24,11 +24,11 @@ EDIT_FIELD_MAP = {
 }
 
 EDIT_FIELD_PROMPTS = {
-    "full_name": ("✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo nombre completo*?"),
-    "email": ("✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo email*?"),
-    "phone": ("✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo teléfono*?"),
+    "full_name": ("✏️ *Editar empresa*\n\n¿Cuál es el *nuevo nombre completo*?"),
+    "email": ("✏️ *Editar empresa*\n\n¿Cuál es el *nuevo email*?"),
+    "phone": ("✏️ *Editar empresa*\n\n¿Cuál es el *nuevo teléfono*?"),
     "evolution_instance_name": (
-        "✏️ *Editar Tenant*\n\n¿Cuál es el *nuevo nombre de instancia Evolution*?"
+        "✏️ *Editar empresa*\n\n¿Cuál es el *nuevo nombre de instancia Evolution*?"
     ),
 }
 

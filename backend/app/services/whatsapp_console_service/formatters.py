@@ -43,11 +43,11 @@ def _format_tenant_list(tenants: list[Any]) -> tuple[str, dict[str, str]]:
             inactive_count += 1
 
     header = (
-        "📋 *Lista de Tenants*\n"
-        f"Activos: {active_count} | Inactivos: {inactive_count}\n\n"
+        "📋 *Lista de empresas*\n"
+        f"Activas: {active_count} | Inactivas: {inactive_count}\n\n"
     )
     body = "\n".join(entries)
-    footer = "\n\nResponde con el número del tenant para ver sus detalles."
+    footer = "\n\nResponde con el número de la empresa para ver sus detalles."
 
     return header + body + footer, selection_map
 
@@ -69,7 +69,7 @@ def _format_tenant_detail(tenant: Any) -> str:
             created = str(tenant.created_at)
 
     return (
-        f"👤 *Detalle del Tenant*\n\n"
+        f"👤 *Detalle de la empresa*\n\n"
         f"*Nombre:* {tenant.full_name}\n"
         f"*Usuario:* {tenant.username}\n"
         f"*Email:* {tenant.email or '—'}\n"
