@@ -2380,6 +2380,75 @@ class TestConsoleHandlersCodigoScope:
         assert mock_session.temp_data.get("target_email") == "user@example.com"
         assert "pending_job_id" not in mock_session.temp_data
 
+    async def test_codigo_awaiting_result_retry_allows_pending_job(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+
+        mock_session_service = AsyncMock()
+        mock_session = SimpleNamespace(
+            temp_data={
+                "lookup_job_id": str(uuid4()),
+                "service_key": "netflix",
+                "target_email": "user@example.com",
+            }
+        )
+
+        with patch(
+            "app.services.whatsapp_tenant_console_service.codigo_flow.mailbox_lookup_repository.get_job",
+            AsyncMock(return_value=SimpleNamespace(status="pending")),
+        ):
+            reply = await console_service._handle_codigo_awaiting_result(
+                phone="+10000000000",
+                msg="1",
+                session=mock_session,
+                session_service=mock_session_service,
+                tenant_id=uuid4(),
+                db=AsyncMock(),
+            )
+
+        assert "buscando" in reply.lower() or "searching" in reply.lower()
+        assert mock_session.temp_data["pending_lookup_intent"] == "true"
+        mock_session_service.save_session.assert_awaited_once_with(mock_session)
+
+    async def test_codigo_awaiting_result_back_reopens_services_even_if_job_pending(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+
+        tenant_id = uuid4()
+        mock_session_service = AsyncMock()
+        mock_session = SimpleNamespace(temp_data={"lookup_job_id": str(uuid4())})
+        new_session = SimpleNamespace(flow=None, step=None, temp_data={})
+        mock_session_service.create_session.return_value = new_session
+
+        with (
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow.mailbox_lookup_repository.get_job",
+                AsyncMock(return_value=SimpleNamespace(status="pending")),
+            ),
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow.code_services_repository.get_effective_service_keys",
+                AsyncMock(return_value=["netflix"]),
+            ),
+        ):
+            reply = await console_service._handle_codigo_awaiting_result(
+                phone="+10000000000",
+                msg="2",
+                session=mock_session,
+                session_service=mock_session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        assert "Netflix" in reply
+        assert new_session.flow == console_service.CODIGO_FLOW
+        assert new_session.step == console_service.CODIGO_STEP_SERVICE
+
 
 # ===================================================================
 # Bug 02 — Navigation contract: 9=back, 0=exit
