@@ -48,7 +48,7 @@
 - `docs/architecture/evolution-integration.md`
   - Add a brief note that deployed `fromMe=true` payloads are expected to include `adminJid=instance.Jid`, and rollout must verify that assumption.
 
-## Task 1: Lock the tenant-identity lookup contract
+## Task 1: Lock the tenant-identity lookup contract  [x]
 
 **Skills to read before starting:**
 - `superpowers:test-driven-development`
@@ -60,7 +60,7 @@
 - Modify: `backend/app/repositories/tenants_repository.py`
 - Test: `backend/tests/test_tenants_repository.py`
 
-- [ ] **Step 1: Write the failing repository regression tests**
+- [x] **Step 1: Write the failing repository regression tests**
 
 Create `backend/tests/test_tenants_repository.py` with this exact content:
 
@@ -165,7 +165,7 @@ async def test_get_active_by_whatsapp_identity_returns_none_without_identity(db_
     assert found is None
 ```
 
-- [ ] **Step 2: Run the new repository tests and verify they fail**
+- [x] **Step 2: Run the new repository tests and verify they fail**
 
 Run:
 
@@ -175,7 +175,7 @@ cd backend && uv run pytest tests/test_tenants_repository.py -q
 
 Expected: FAIL with `AttributeError` because `tenants_repository.get_active_by_whatsapp_identity` does not exist yet.
 
-- [ ] **Step 3: Implement the minimal repository helper**
+- [x] **Step 3: Implement the minimal repository helper**
 
 In `backend/app/repositories/tenants_repository.py`, make these edits:
 
@@ -234,7 +234,7 @@ async def get_active_by_whatsapp_identity(
     "get_active_by_whatsapp_identity",
 ```
 
-- [ ] **Step 4: Re-run the repository tests and lint the file**
+- [x] **Step 4: Re-run the repository tests and lint the file**
 
 Run:
 
@@ -247,7 +247,7 @@ Expected:
 - `4 passed`
 - Ruff exits with status 0 and no findings.
 
-- [ ] **Step 5: Commit the repository helper**
+- [x] **Step 5: Commit the repository helper**
 
 ```bash
 git add backend/app/repositories/tenants_repository.py backend/tests/test_tenants_repository.py
