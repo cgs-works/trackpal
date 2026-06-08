@@ -109,12 +109,13 @@ return WhatsAppConsoleResponse(
     reply="",
     no_reply=True,
     status="closed",
-    reply_to=close_jid,
     close_jid=close_jid,
 )
 ```
 
-`close_jid` should be the sender's phone JID when `phone_digits` is available, otherwise the sender LID if that is the only identity available.
+Do not include `reply_to` in this silent response. The workflow should route closure from `close_jid`, and omitting `reply_to` removes an unnecessary fallback path back to the external admin chat if workflow logic is changed later.
+
+`close_jid` should be the sender's canonical phone JID when `phone_digits` is available, otherwise the sender LID if that is the only identity available.
 
 ### 2. Add tenant identity lookup support
 
@@ -167,18 +168,21 @@ The guard must not silence these cases:
 
 Keep the separate but related TPL-12 fix for `fromMe=true` routing:
 
-- In `_handle_from_me_routing()`, derive `resolved_admin_phone` primarily from the tenant resolved by `instance`, not from n8n's `admin_phone` when that payload value is ambiguous.
+- In `_handle_from_me_routing()`, derive `resolved_admin_phone` authoritatively from the tenant resolved by `instance` when `tenant.whatsapp_phone` is present.
+- Only fall back to n8n's `admin_phone` when the tenant record does not yet provide a usable phone.
 - Build `resolved_admin_jid` from `_canonical_jid(admin_jid) or admin_jid or f"{resolved_admin_phone}@s.whatsapp.net"`.
 - Use `resolved_admin_jid` for `reply_to`, `temp_data["admin_jid"]`, and close-session targets that refer to the admin's private chat.
+- If no authoritative admin phone can be resolved, prefer a safe no-reply fallback plus logging over routing a private admin response to an ambiguous target chat.
 
 This protects Client Context Shortcut when the deployed Evolution Go payload omits `adminJid`, or when n8n parsed `phone` as the target instead of the admin.
 
 ### 6. Ensure n8n closes sessions even for no-reply backend responses
 
-Update the workflow contract if necessary:
+The current workflow graph already supports this contract; no structural n8n routing change is required.
 
 - `no_reply=true` must prevent `Evolution API Send`.
 - `status="closed"` plus `close_jid` or `close_jids` must still reach `Check close session` and `Close session`.
+- The existing `IF no reply -> Check close session -> Close session` path is compatible with the silent guard response.
 
 This is mandatory for the silent guard. A silent response that does not close the Evolution Go session only hides one message and leaves the loop risk in memory.
 
@@ -232,8 +236,8 @@ If production lacks any of these, deploy or patch Evolution Go separately before
 
 - Add a backend log line when the silent guard triggers, including receiving tenant id, sender phone/LID presence, and reason `external_admin_menu_silenced`.
 - Do not include sensitive message bodies beyond the exact command classification.
-- If tenant identity lookup fails due to a database exception, fail closed for the guard decision by returning `False` and continue existing behavior. Do not accidentally silence legitimate users because identity lookup errored.
-- If `close_jid` cannot be computed, return `no_reply=true` without `status="closed"` only as a last resort; log the missing close target. The expected path must compute a close target.
+- If tenant identity lookup fails due to a database exception, fail safe for the guard decision by returning `False`, log the error, and continue existing behavior. Do not accidentally silence legitimate users because identity lookup errored.
+- If `close_jid` cannot be computed, return `no_reply=true` without `status="closed"` only as a last resort; log the missing close target. The expected path must compute a canonical close target.
 - If n8n close-session call fails, the workflow should still send no reply. Operational logs should surface the failed close call.
 
 ## Testing strategy
