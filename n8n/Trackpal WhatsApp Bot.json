@@ -112,6 +112,53 @@
     },
     {
       "parameters": {
+        "jsCode": "const input = $json;\n\nconst canonicalJid = (value) => {\n  const raw = String(value || '').trim();\n  if (!raw) return '';\n  if (!raw.includes('@')) return raw;\n  const [local, domain] = raw.split('@', 2);\n  return `${local.split(':', 1)[0]}@${domain}`;\n};\n\nconst message = String(input.message || '').trim().toLowerCase();\nconst fromMe = input.fromMe === true;\nconst targetJid = canonicalJid(input.targetJid);\nconst adminJid = canonicalJid(input.adminJid);\nconst remoteJid = canonicalJid(input.remoteJid);\n\nconst isMenuCommand = message === '/menu' || message === 'menu';\nconst isSelfTarget = Boolean(\n  targetJid &&\n  ((adminJid && targetJid === adminJid) || (remoteJid && targetJid === remoteJid && adminJid === remoteJid))\n);\n\nconst shouldSkipBackend = Boolean(\n  fromMe &&\n  targetJid &&\n  !isSelfTarget &&\n  !isMenuCommand\n);\n\nif (shouldSkipBackend) {\n  return [{\n    json: {\n      ...input,\n      reply: '',\n      no_reply: true,\n      status: 'closed',\n      close_jid: targetJid,\n      close_jids: [targetJid],\n      skip_console_call: true,\n      guard_reason: 'from_me_external_non_menu',\n    },\n  }];\n}\n\nreturn [{ json: { ...input, skip_console_call: false } }];"
+      },
+      "id": "f0a76839-519f-4f9e-b7d0-2f0a4f5d9001",
+      "name": "Guard fromMe external non-menu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip_console_call }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "condition-ifskipconsole-001"
+            }
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          }
+        },
+        "options": {}
+      },
+      "id": "f0a76839-519f-4f9e-b7d0-2f0a4f5d9002",
+      "name": "IF skip console call",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        928,
+        -384
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids } }];"
       },
       "id": "d51d43de-ca7e-4066-acee-7db288c7b9a9",
@@ -191,7 +238,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const fallback = $('Merge & lookup data').first().json;\nlet resultData = {};\ntry {\n  resultData = $('Build result message').first().json;\n} catch (e) {\n  // Build result message did not execute on this path\n}\nconst data = { ...fallback, ...resultData, ...$json };\nconst msg = String(data.message || fallback.message || '').trim().toLowerCase();\nconst reply = String(data.reply || fallback.reply || '').toLowerCase();\n\nconst hasLookupResult = Boolean(data.lookup_job_id);\nconst shouldCloseAfterSend = data.close_after_send === true;\nif (hasLookupResult && !shouldCloseAfterSend) {\n  return [];\n}\n\nconst isLogoutReply =\n  reply.includes('sesión cerrada') ||\n  reply.includes('sesion cerrada') ||\n  reply.includes('has cerrado sesión') ||\n  reply.includes('has cerrado sesion') ||\n  reply.includes('goodbye') ||\n  reply.includes('cerrado');\nconst isClosedStatus = String(data.status || '').toLowerCase() === 'closed';\nconst isLogoutCommand = msg === '0' || msg === 'salir';\nconst isLogout = shouldCloseAfterSend || isClosedStatus || (isLogoutCommand && isLogoutReply);\n\nif (!isLogout) {\n  return [];\n}\n\nconst closeJids = Array.isArray(data.close_jids) && data.close_jids.length\n  ? data.close_jids\n  : [data.close_jid || data.reply_to || data.remoteJid];\nconst uniqueCloseJids = [...new Set(closeJids.filter(Boolean).map(String))];\n\nreturn uniqueCloseJids.map((remoteJid) => ({ json: { ...data, close_jid: remoteJid } }));"
+        "jsCode": "let fallback = {};\ntry {\n  fallback = $('Merge & lookup data').first().json;\n} catch (e) {\n  fallback = {};\n}\n\nlet resultData = {};\ntry {\n  resultData = $('Build result message').first().json;\n} catch (e) {\n  resultData = {};\n}\n\nconst data = { ...fallback, ...resultData, ...$json };\nconst msg = String(data.message || fallback.message || '').trim().toLowerCase();\nconst reply = String(data.reply || fallback.reply || '').toLowerCase();\n\nconst hasLookupResult = Boolean(data.lookup_job_id);\nconst shouldCloseAfterSend = data.close_after_send === true;\nif (hasLookupResult && !shouldCloseAfterSend) {\n  return [];\n}\n\nconst isLogoutReply =\n  reply.includes('sesión cerrada') ||\n  reply.includes('sesion cerrada') ||\n  reply.includes('has cerrado sesión') ||\n  reply.includes('has cerrado sesion') ||\n  reply.includes('goodbye') ||\n  reply.includes('cerrado');\nconst isClosedStatus = String(data.status || '').toLowerCase() === 'closed';\nconst isLogoutCommand = msg === '0' || msg === 'salir';\nconst isLogout = shouldCloseAfterSend || isClosedStatus || (isLogoutCommand && isLogoutReply);\n\nif (!isLogout) {\n  return [];\n}\n\nconst closeJids = Array.isArray(data.close_jids) && data.close_jids.length\n  ? data.close_jids\n  : [data.close_jid || data.reply_to || data.remoteJid];\nconst uniqueCloseJids = [...new Set(closeJids.filter(Boolean).map(String))];\n\nreturn uniqueCloseJids.map((remoteJid) => ({ json: { ...data, close_jid: remoteJid } }));"
       },
       "id": "b76705da-cbeb-41a7-bac3-64fb70cb96ff",
       "name": "Check close session",
@@ -501,7 +548,7 @@
       "main": [
         [
           {
-            "node": "Console call",
+            "node": "Guard fromMe external non-menu",
             "type": "main",
             "index": 0
           }
@@ -684,6 +731,35 @@
         [
           {
             "node": "Check close session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard fromMe external non-menu": {
+      "main": [
+        [
+          {
+            "node": "IF skip console call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF skip console call": {
+      "main": [
+        [
+          {
+            "node": "Check close session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Console call",
             "type": "main",
             "index": 0
           }

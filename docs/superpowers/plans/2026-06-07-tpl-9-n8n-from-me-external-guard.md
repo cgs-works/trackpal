@@ -160,7 +160,7 @@ git commit -m "test: lock tpl-9 n8n guard contract"
 - Modify: `n8n/Trackpal WhatsApp Bot.json`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Insert the new guard Code node after `Config` in the `nodes` array**
+- [x] **Step 1: Insert the new guard Code node after `Config` in the `nodes` array**
 
 Add this node object to `n8n/Trackpal WhatsApp Bot.json`:
 
@@ -182,7 +182,7 @@ Add this node object to `n8n/Trackpal WhatsApp Bot.json`:
 
 Do not change `Parse input`. The guard should consume the merged output of `Config`, so the guarded branch can still reuse the existing `Config` references downstream.
 
-- [ ] **Step 2: Insert the new IF node that routes guarded items around `Console call`**
+- [x] **Step 2: Insert the new IF node that routes guarded items around `Console call`**
 
 Add this node object immediately after the guard node:
 
@@ -223,7 +223,7 @@ Add this node object immediately after the guard node:
 }
 ```
 
-- [ ] **Step 3: Replace the `Check close session` JavaScript so the guard branch works even when `Merge & lookup data` never ran**
+- [x] **Step 3: Replace the `Check close session` JavaScript so the guard branch works even when `Merge & lookup data` never ran**
 
 Replace the current `jsCode` for `Check close session` with this exact code:
 
@@ -277,7 +277,7 @@ return uniqueCloseJids.map((remoteJid) => ({ json: { ...data, close_jid: remoteJ
 
 Do not change `Close session`. The point of placing the guard after `Config` is to keep the existing `$('Config').first()` references intact.
 
-- [ ] **Step 4: Rewire the workflow connections so guarded items skip `Console call` and go straight to `Check close session`**
+- [x] **Step 4: Rewire the workflow connections so guarded items skip `Console call` and go straight to `Check close session`**
 
 Update the `connections` object to this shape for the affected blocks:
 
@@ -326,7 +326,7 @@ Update the `connections` object to this shape for the affected blocks:
 
 Leave `Console call -> Merge & lookup data`, `Merge & lookup data -> IF no reply`, and all lookup nodes unchanged.
 
-- [ ] **Step 5: Verify the workflow JSON still parses after the edits**
+- [x] **Step 5: Verify the workflow JSON still parses after the edits**
 
 Run:
 
@@ -342,7 +342,7 @@ PY
 
 Expected: `workflow json ok`
 
-- [ ] **Step 6: Re-run the focused workflow regression tests and verify they pass**
+- [x] **Step 6: Re-run the focused workflow regression tests and verify they pass**
 
 Run:
 
@@ -352,7 +352,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit the workflow implementation**
+- [x] **Step 7: Commit the workflow implementation**
 
 ```bash
 git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
