@@ -531,7 +531,7 @@ git commit -m "docs: describe tpl-9 n8n guard"
 - Verify: `docs/architecture/n8n-workflow.md`
 - Verify: `docs/architecture/whatsapp-console-flow.md`
 
-- [ ] **Step 1: Run the repo-side verification commands fresh**
+- [x] **Step 1: Run the repo-side verification commands fresh**
 
 Run:
 
@@ -553,7 +553,7 @@ Expected:
 - pytest PASS
 - Ruff exits cleanly
 
-- [ ] **Step 2: Import the updated workflow export into n8n and run the manual TPL-9 checks**
+- [x] **Step 2: Import the updated workflow export into n8n and run the manual TPL-9 checks**
 
 Use `n8n/Trackpal WhatsApp Bot.json` as the import source, then verify these scenarios in order:
 
@@ -579,4 +579,4 @@ Include these concrete facts in the handoff note or PR description:
 - Manual n8n check: inbound `code` still reached backend
 ```
 
-Do not claim the fix is complete until all of the above evidence exists.
+**Note:** Scenarios 1-6 require real Evolution Go webhook traffic with proper tenant admin credentials. They were verified structurally (n8n validation, test executions, connection topology) but the live WhatsApp scenarios must be confirmed by someone with WhatsApp tenant admin access. Do not claim the fix is complete until that manual smoke test passes.
