@@ -996,7 +996,7 @@ async def test_unregistered_identity_codigo_multistep(
     client, db_session, active_tenant_user
 ):
     """Unregistered identity goes through full codigo flow:
-    service selection then email, receiving lookup_job_id."""
+    service selection → email → confirm → awaiting_result."""
     _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
 
     fake_mgr = _FakeManager(used_backup=False)
@@ -1032,12 +1032,12 @@ async def test_unregistered_identity_codigo_multistep(
         body2 = resp2.json()
         assert "email" in body2["reply"].lower() or "correo" in body2["reply"].lower()
 
-        # Step 3: send valid email → lookup job created
+        # Step 3: send valid email → confirm prompt, NO job created
         resp3 = await client.post(
             ENDPOINT,
             json={
                 "phone": "+12015559999",
-                "message": "user@example.com",
+                "message": "User@Example.COM",
                 "instance": TEST_INSTANCE,
             },
             headers={"X-API-Key": settings.n8n_api_key},
@@ -1045,13 +1045,183 @@ async def test_unregistered_identity_codigo_multistep(
         assert resp3.status_code == 200
         body3 = resp3.json()
         assert (
-            "buscando" in body3["reply"].lower()
-            or "searching" in body3["reply"].lower()
+            "confirm" in body3["reply"].lower()
+            or "confirmar" in body3["reply"].lower()
         )
-        assert "lookup_job_id" in body3
-        assert body3["lookup_job_id"] is not None
-        assert "tenant_id" in body3
-        assert body3["tenant_id"] is not None
+        assert "user@example.com" in body3["reply"]
+        assert "lookup_job_id" not in body3
+
+        # Step 4: send "1" (confirm) → job created, awaiting result
+        resp4 = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert resp4.status_code == 200
+        body4 = resp4.json()
+        assert (
+            "buscando" in body4["reply"].lower()
+            or "searching" in body4["reply"].lower()
+        )
+        assert body4["lookup_job_id"] is not None
+        assert body4["tenant_id"] is not None
+
+
+async def test_unregistered_identity_codigo_confirm_option_2_returns_email_prompt(
+    client, db_session, active_tenant_user
+):
+    """Option 2 (correct email) on confirm step goes back to email prompt."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+        resp = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "2", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    body = resp.json()
+    assert "email" in body["reply"].lower() or "correo" in body["reply"].lower()
+    assert "lookup_job_id" not in body
+
+
+async def test_unregistered_identity_codigo_confirm_option_9_returns_services(
+    client, db_session, active_tenant_user
+):
+    """Option 9 on confirm step goes back to services."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+        resp = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "9", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    body = resp.json()
+    assert "Netflix" in body["reply"]
+    assert "lookup_job_id" not in body
+
+
+async def test_unregistered_identity_codigo_confirm_option_0_closes_session(
+    client, db_session, active_tenant_user
+):
+    """Option 0 on confirm step closes the session."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+        resp = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "0", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    body = resp.json()
+    assert body["status"] == "closed"
+    assert body["reply_to"] == "12015559999@s.whatsapp.net"
+    assert body["close_jid"] == "12015559999@s.whatsapp.net"
+
+
+async def test_unregistered_identity_codigo_confirm_invalid_option_does_not_create_job(
+    client, db_session, active_tenant_user
+):
+    """Invalid option on confirm step returns error, no job created."""
+    _tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+        resp = await client.post(
+            ENDPOINT,
+            json={"phone": "+12015559999", "message": "cancelar", "instance": TEST_INSTANCE},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    body = resp.json()
+    assert "opción inválida" in body["reply"].lower() or "invalid option" in body["reply"].lower()
+    assert "lookup_job_id" not in body
 
 
 async def test_unregistered_identity_blocked_returns_no_reply(
