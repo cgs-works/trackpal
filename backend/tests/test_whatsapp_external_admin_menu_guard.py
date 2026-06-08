@@ -4,7 +4,14 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.models import Client, CodeServiceGlobalStatus, Tenant, TenantCodeServiceSelection, TenantMailbox, User
+from app.models import (
+    Client,
+    CodeServiceGlobalStatus,
+    Tenant,
+    TenantCodeServiceSelection,
+    TenantMailbox,
+    User,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -20,7 +27,9 @@ class _FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
         if ex is not None:
             self._ttls[key] = ex
@@ -43,7 +52,9 @@ class _FakeRedis:
 
 
 class _FakeManager:
-    def __init__(self, *, used_backup: bool = False, fail_on_execute: bool = False) -> None:
+    def __init__(
+        self, *, used_backup: bool = False, fail_on_execute: bool = False
+    ) -> None:
         from app.core.redis_client import RedisUnavailableError
 
         self._redis = _FakeRedis()
@@ -249,4 +260,6 @@ async def test_from_me_menu_uses_tenant_owner_fallback_for_reply_to_when_admin_p
     assert body["reply_to"] == "12015550002@s.whatsapp.net"
     assert body["close_jid"] == "12015550002@s.whatsapp.net"
     assert body["reply"]
-    assert "gesti" in body["reply"].lower() or "client management" in body["reply"].lower()
+    assert (
+        "gesti" in body["reply"].lower() or "client management" in body["reply"].lower()
+    )

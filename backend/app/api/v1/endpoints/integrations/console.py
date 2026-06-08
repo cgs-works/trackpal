@@ -70,7 +70,7 @@ async def _should_silence_external_admin_menu(
     message: str,
     db: AsyncSession,
 ) -> bool:
-    if message.strip() != "/menu":
+    if message.strip().lower() != "/menu":
         return False
 
     if phone_digits and tenant.whatsapp_phone:
@@ -342,7 +342,9 @@ async def _route_by_instance(
     # return silent ``no_reply`` when the sender is blocked.
 
     msg_lower = message.strip().lower()
-    close_jid = _phone_close_jid(phone_digits) or _canonical_jid(sender_lid) or sender_lid
+    close_jid = (
+        _phone_close_jid(phone_digits) or _canonical_jid(sender_lid) or sender_lid
+    )
 
     # Block check first — blocked senders always get silent treatment,
     # even when they already have an active ``codigo`` session. The block
@@ -565,11 +567,15 @@ async def _handle_from_me_routing(
                 close_jids=close_jids,
             )
         # Otherwise, reject silently (collision)
-        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=resolved_admin_jid)
+        return WhatsAppConsoleResponse(
+            reply="", no_reply=True, reply_to=resolved_admin_jid
+        )
 
     # ── Step 5: Only /menu starts Client Context Shortcut ─────────
     if message.strip().lower() not in ("/menu", "menu"):
-        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=resolved_admin_jid)
+        return WhatsAppConsoleResponse(
+            reply="", no_reply=True, reply_to=resolved_admin_jid
+        )
 
     # ── Step 6: Render real contextual menu ───────────────────────
     from app.api.v1.endpoints.integrations.console_context_shortcut import (
