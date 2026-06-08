@@ -320,6 +320,9 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 3. Backend asks for target email.
 4. Backend validates and normalises the email via centralised ``validate_email()``, stores it as ``target_email`` in session, and advances to an **email confirmation step** (``email_confirm``).
 5. User confirms the email (``1``) → backend stores ``pending_lookup_intent`` with ``service_key`` and ``target_email``. Selecting ``2`` (correct email) returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session. **Session is kept alive** (``flow=codigo``, ``step=awaiting_result``) instead of clearing flow state.
+
+> **Strict confirmation mode:** When ``session.step == "email_confirm"``, only the numeric inputs ``1``, ``2``, ``9``, and ``0`` are accepted. Textual cancel aliases such as ``cancelar``, ``salir``, or ``menu`` are treated as **invalid options** — they do not trigger the global cancel/reset/help handlers. This is deliberate: the ``email_confirm`` step bypasses global interception so that text aliases cannot accidentally cancel the flow. Session keys used in this step: ``target_email`` (stored after validation), ``pending_lookup_intent`` (set on confirm ``1``), ``flow=codigo``, and later ``lookup_job_id`` (set after the integration handler enqueues the job).
+
 6. Integration handler (``_handle_tenant_console``) creates the job, commits it, enqueues to Redis, then: pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data.
 7. Session remains in ``awaiting_result`` step. When n8n delivers the result notification (e.g. "Code not found"), the user's reply routes back to the awaiting_result handler.
 
@@ -340,7 +343,7 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 2. Backend shows the same **paginated service list** with ``[N]`` bracket format and emoji navigation (``8️⃣``/``9️⃣``/``0️⃣``), built by ``_build_unauth_service_page`` in ``console_handlers.py``.
 3. Service selection and email input follow the same pattern as the tenant self-target flow.
 4. Email is validated and normalised via centralised ``validate_email()``, stored as ``target_email`` in session, and the step advances to **email confirmation** (``email_confirm``).
-5. The user confirms the email (``1``) → backend creates the ``MailLookupJob``, enqueues it, and transitions to ``awaiting_result`` step. Selecting ``2`` (correct email) returns to the email prompt, ``9`` returns to the service list, ``0`` cancels.
+5. In the ``email_confirm`` step, only ``1``, ``2``, ``9``, and ``0`` are accepted; all other inputs (including textual cancel/reset aliases) are rejected as invalid options. ``1`` confirms and the backend creates the ``MailLookupJob``, enqueues it, and transitions to ``awaiting_result``. ``2`` returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session.
 6. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel.
 
 #### n8n behavior for this path

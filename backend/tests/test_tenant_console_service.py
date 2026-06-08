@@ -2426,7 +2426,7 @@ class TestConsoleHandlersCodigoScope:
 
         # Should NOT have set pending_lookup_intent (that's now in confirm step)
         assert "pending_lookup_intent" not in mock_session.temp_data
-        assert "pending_job_id" not in mock_session.temp_data
+        assert "lookup_job_id" not in mock_session.temp_data
 
         mock_session_service.save_session.assert_awaited_once_with(mock_session)
 

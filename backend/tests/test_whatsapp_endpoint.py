@@ -960,6 +960,30 @@ async def _setup_tenant_for_codigo(db_session, active_tenant_user) -> Tenant:
     return tenant
 
 
+async def _reach_unauth_codigo_confirm_step(
+    client,
+    instance: str,
+    email: str = "user@example.com",
+    phone: str = "+12015559999",
+) -> None:
+    """Progress an unauthenticated codigo session to the email_confirm step."""
+    await client.post(
+        ENDPOINT,
+        json={"phone": phone, "message": "codigo", "instance": instance},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+    await client.post(
+        ENDPOINT,
+        json={"phone": phone, "message": "1", "instance": instance},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+    await client.post(
+        ENDPOINT,
+        json={"phone": phone, "message": email, "instance": instance},
+        headers={"X-API-Key": settings.n8n_api_key},
+    )
+
+
 async def test_unregistered_identity_codigo_starts_flow(
     client, db_session, active_tenant_user
 ):
@@ -1082,21 +1106,7 @@ async def test_unregistered_identity_codigo_confirm_option_2_returns_email_promp
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
+        await _reach_unauth_codigo_confirm_step(client, TEST_INSTANCE)
 
         resp = await client.post(
             ENDPOINT,
@@ -1120,21 +1130,7 @@ async def test_unregistered_identity_codigo_confirm_option_9_returns_services(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
+        await _reach_unauth_codigo_confirm_step(client, TEST_INSTANCE)
 
         resp = await client.post(
             ENDPOINT,
@@ -1158,21 +1154,7 @@ async def test_unregistered_identity_codigo_confirm_option_0_closes_session(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
+        await _reach_unauth_codigo_confirm_step(client, TEST_INSTANCE)
 
         resp = await client.post(
             ENDPOINT,
@@ -1197,21 +1179,7 @@ async def test_unregistered_identity_codigo_confirm_invalid_option_does_not_crea
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
         return_value=fake_mgr,
     ):
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
-        await client.post(
-            ENDPOINT,
-            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
-            headers={"X-API-Key": settings.n8n_api_key},
-        )
+        await _reach_unauth_codigo_confirm_step(client, TEST_INSTANCE)
 
         resp = await client.post(
             ENDPOINT,

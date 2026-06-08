@@ -813,10 +813,17 @@ async def _handle_unauth_codigo_email_confirm(
         )
         await db.flush()
         await db.commit()
-        enqueued = await enqueue_job(manager, job.id) if manager is not None else False
     except Exception:
         logger.exception("Failed to create lookup job for tenant %s", tenant.id)
         return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
+
+    try:
+        enqueued = await enqueue_job(manager, job.id) if manager is not None else False
+    except Exception:
+        logger.exception(
+            "Failed to enqueue lookup job %s for tenant %s", job.id, tenant.id
+        )
+        enqueued = False
 
     if not enqueued:
         try:
