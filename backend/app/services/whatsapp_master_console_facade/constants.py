@@ -27,8 +27,7 @@ WRONG_PASSWORD_TEMPLATE = (
 )
 
 ROLE_NOT_ALLOWED = (
-    "❌ Acceso denegado. Solo los usuarios con rol "
-    "Master pueden usar esta consola."
+    "❌ Acceso denegado. Solo los usuarios con rol Master pueden usar esta consola."
 )
 
 LOGOUT_CONFIRMATION = (

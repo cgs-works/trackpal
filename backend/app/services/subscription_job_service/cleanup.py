@@ -45,9 +45,7 @@ async def _get_tenant_end_of_day(
 ) -> datetime:
     tz_map = await _get_tenant_timezone_map(db)
     _tenant_tz_str = tz_map.get(tenant_id, "UTC")
-    return datetime(
-        today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc
-    )
+    return datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc)
 
 
 async def _expire_active_subs(

@@ -19,7 +19,9 @@ from .validation import validate_ids
 async def create_subscription(
     db: AsyncSession, tenant_id: uuid.UUID, payload: SubscriptionCreate
 ) -> Subscription:
-    await validate_ids(db, tenant_id, payload.client_id, payload.service_id, payload.plan_id)
+    await validate_ids(
+        db, tenant_id, payload.client_id, payload.service_id, payload.plan_id
+    )
 
     if payload.profile_pin and not payload.profile_name:
         raise UserFacingError("subscription_pin_requires_profile")

@@ -14,7 +14,9 @@ dashboard_service = DashboardService()
 
 @router.get(
     "",
-    response_model=MasterDashboardResponse | TenantDashboardResponse | ClientDashboardResponse,
+    response_model=MasterDashboardResponse
+    | TenantDashboardResponse
+    | ClientDashboardResponse,
 )
 async def get_dashboard(db: DbDep, current_user: CurrentUser):
     dashboard = await dashboard_service.get_dashboard(db, current_user)

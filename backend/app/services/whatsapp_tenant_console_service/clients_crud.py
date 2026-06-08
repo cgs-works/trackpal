@@ -1,7 +1,7 @@
 """Client create/edit/lifecycle handlers."""
 
 from app.core.errors import UserFacingError, translate_error
-from app.services.whatsapp_navigation import is_back, is_cancel, is_next
+from app.services.whatsapp_navigation import is_back
 
 from . import _context as ctx
 

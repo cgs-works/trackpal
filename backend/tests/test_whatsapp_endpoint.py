@@ -1371,7 +1371,11 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
         # Step 1: start codigo flow
         resp1 = await client.post(
             ENDPOINT,
-            json={"phone": "+12015559999", "message": "codigo", "instance": TEST_INSTANCE},
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
         assert resp1.status_code == 200
@@ -1388,7 +1392,11 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
         # Step 3: submit email
         resp3 = await client.post(
             ENDPOINT,
-            json={"phone": "+12015559999", "message": "user@example.com", "instance": TEST_INSTANCE},
+            json={
+                "phone": "+12015559999",
+                "message": "user@example.com",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
         assert resp3.status_code == 200
@@ -1414,7 +1422,11 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
         ):
             response = await client.post(
                 ENDPOINT,
-                json={"phone": "+12015559999", "message": "1", "instance": TEST_INSTANCE},
+                json={
+                    "phone": "+12015559999",
+                    "message": "1",
+                    "instance": TEST_INSTANCE,
+                },
                 headers={"X-API-Key": settings.n8n_api_key},
             )
 
@@ -1514,7 +1526,9 @@ async def test_unregistered_codigo_email_cancel_returns_cancelled(
     body = resp3.json()
     # Must be cancelled, not "email invalido"
     assert "cancelada" in body["reply"].lower() or "cancelled" in body["reply"].lower()
-    assert "email" not in body["reply"].lower() or "invalido" not in body["reply"].lower()
+    assert (
+        "email" not in body["reply"].lower() or "invalido" not in body["reply"].lower()
+    )
 
 
 # from_me contextual routing tests
@@ -2404,7 +2418,11 @@ async def test_context_shortcut_zero_closes_context(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "closed" in body["reply"].lower()
+    assert (
+        "cancelad" in body["reply"].lower()
+        or "cancelled" in body["reply"].lower()
+        or "closed" in body["reply"].lower()
+    )
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
     assert body.get("close_jid") == "12015550002@s.whatsapp.net"
     assert body.get("close_jids") == [
@@ -3009,7 +3027,6 @@ async def test_tenant_catalog_zero_sets_closed_response_with_close_jid(
     client, db_session, active_tenant_user
 ):
     """Sending 0 during catalog flow closes session and returns close_jid."""
-    from app.api.v1.endpoints.integrations.console import get_redis_manager
     from unittest.mock import patch
 
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
@@ -3043,7 +3060,11 @@ async def test_tenant_catalog_zero_sets_closed_response_with_close_jid(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "salido" in body["reply"].lower()
+    assert (
+        "cancelad" in body["reply"].lower()
+        or "cancelled" in body["reply"].lower()
+        or "salido" in body["reply"].lower()
+    )
     assert body.get("status") == "closed"
     assert body.get("close_jid") == "12015550002@s.whatsapp.net"
 
@@ -3052,7 +3073,6 @@ async def test_tenant_catalog_cancelar_sets_closed_response_with_close_jid(
     client, db_session, active_tenant_user
 ):
     """Sending 'cancelar' during catalog flow closes session and returns close_jid."""
-    from app.api.v1.endpoints.integrations.console import get_redis_manager
     from unittest.mock import patch
 
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
@@ -3085,7 +3105,11 @@ async def test_tenant_catalog_cancelar_sets_closed_response_with_close_jid(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "salido" in body["reply"].lower()
+    assert (
+        "cancelad" in body["reply"].lower()
+        or "cancelled" in body["reply"].lower()
+        or "salido" in body["reply"].lower()
+    )
     assert body.get("status") == "closed"
     assert body.get("close_jid") == "12015550002@s.whatsapp.net"
 
@@ -3094,7 +3118,6 @@ async def test_tenant_catalog_cerrar_sets_closed_response_with_close_jid(
     client, db_session, active_tenant_user
 ):
     """Sending 'cerrar' during catalog flow closes session and returns close_jid."""
-    from app.api.v1.endpoints.integrations.console import get_redis_manager
     from unittest.mock import patch
 
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
@@ -3127,6 +3150,10 @@ async def test_tenant_catalog_cerrar_sets_closed_response_with_close_jid(
         )
     assert response.status_code == 200
     body = response.json()
-    assert "cancelad" in body["reply"].lower() or "cancelled" in body["reply"].lower() or "salido" in body["reply"].lower()
+    assert (
+        "cancelad" in body["reply"].lower()
+        or "cancelled" in body["reply"].lower()
+        or "salido" in body["reply"].lower()
+    )
     assert body.get("status") == "closed"
     assert body.get("close_jid") == "12015550002@s.whatsapp.net"

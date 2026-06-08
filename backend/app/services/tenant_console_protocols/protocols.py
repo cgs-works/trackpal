@@ -24,9 +24,7 @@ class ClientServiceProtocol(Protocol):
     circular imports between endpoint and service layers.
     """
 
-    async def list_clients(
-        self, db: AsyncSession, tenant_id: UUID
-    ) -> list[Any]: ...
+    async def list_clients(self, db: AsyncSession, tenant_id: UUID) -> list[Any]: ...
 
     async def get_client(
         self, db: AsyncSession, tenant_id: UUID, client_id: UUID
@@ -61,9 +59,7 @@ class CatalogServiceProtocol(Protocol):
     console actually invokes.
     """
 
-    async def list_services(
-        self, db: AsyncSession, tenant_id: UUID
-    ) -> list[Any]: ...
+    async def list_services(self, db: AsyncSession, tenant_id: UUID) -> list[Any]: ...
 
     async def get_service(
         self, db: AsyncSession, tenant_id: UUID, service_id: UUID
@@ -107,19 +103,43 @@ class CatalogServiceProtocol(Protocol):
     ) -> Any | None: ...
 
     async def get_service_delete_preview(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, *, page: int = 1, page_size: int = 10
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        *,
+        page: int = 1,
+        page_size: int = 10,
     ) -> Any | None: ...
 
     async def get_plan_delete_preview(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, page: int = 1, page_size: int = 10
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        *,
+        page: int = 1,
+        page_size: int = 10,
     ) -> Any | None: ...
 
     async def delete_service(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, *, confirm: bool = False
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        *,
+        confirm: bool = False,
     ) -> Any | None: ...
 
     async def delete_plan(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, confirm: bool = False
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        *,
+        confirm: bool = False,
     ) -> Any | None: ...
 
 
@@ -192,6 +212,4 @@ class SubscriptionServiceProtocol(Protocol):
         self, db: AsyncSession, tenant_id: UUID, subscription_id: UUID
     ) -> dict | None: ...
 
-    async def get_reminder_settings(
-        self, db: AsyncSession, tenant_id: UUID
-    ) -> Any: ...
+    async def get_reminder_settings(self, db: AsyncSession, tenant_id: UUID) -> Any: ...

@@ -14,6 +14,7 @@ class RedisUnavailableError(RuntimeError):
     Configuration errors (e.g. no primary URL) remain plain
     ``RuntimeError``.
     """
+
     pass
 
 
@@ -29,6 +30,7 @@ class FailoverState(enum.Enum):
     HALF_OPEN:
         Open window expired; next real operation will probe primary.
     """
+
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"

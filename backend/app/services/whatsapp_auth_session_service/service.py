@@ -167,7 +167,9 @@ class WhatsAppAuthSessionService:
 
         async def _record(client: Any) -> tuple[int, WhatsAppAuthLockState | None]:
             raw = await client.get(fail_key)
-            state: WhatsAppAuthFailState | None = self._deserialise(raw, WhatsAppAuthFailState)
+            state: WhatsAppAuthFailState | None = self._deserialise(
+                raw, WhatsAppAuthFailState
+            )
 
             if state is None:
                 state = WhatsAppAuthFailState(
@@ -182,7 +184,9 @@ class WhatsAppAuthSessionService:
             if state.count >= self._fail_threshold:
                 locked_until = now + timedelta(minutes=self._lock_minutes)
                 lock = WhatsAppAuthLockState(locked_until=locked_until)
-                await client.set(lock_key, self._serialise(lock), ex=int(self._lock_minutes * 60))
+                await client.set(
+                    lock_key, self._serialise(lock), ex=int(self._lock_minutes * 60)
+                )
                 await client.delete(fail_key)
                 return (state.count, lock)
 

@@ -384,9 +384,7 @@ async def _handle_from_me_routing(
     assert resolved_admin_phone is not None  # guaranteed by fallback check above
     # Prefer phone-based close JID when normalized admin phone is available
     preferred_close_jid = (
-        _phone_close_jid(resolved_admin_phone)
-        or _canonical_jid(admin_jid)
-        or admin_jid
+        _phone_close_jid(resolved_admin_phone) or _canonical_jid(admin_jid) or admin_jid
     )
 
     # ── Step 2: Determine target identity ─────────────────────────

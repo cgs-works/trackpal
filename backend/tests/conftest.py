@@ -1,5 +1,6 @@
 import os
 from cryptography.fernet import Fernet
+
 # Set up a valid DATA_ENCRYPTION_KEY for testing before app or config is loaded
 os.environ["DATA_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
 
@@ -117,7 +118,9 @@ async def deactivated_tenant_user(db_session):
 
 
 async def _tenant_for_user(db_session, user_id):
-    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == user_id))
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == user_id)
+    )
     return result.scalar_one_or_none()
 
 

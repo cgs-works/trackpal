@@ -9,9 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import RefreshSession
 
 
-async def get_valid_sessions(
-    db: AsyncSession, user_id: UUID
-) -> list[RefreshSession]:
+async def get_valid_sessions(db: AsyncSession, user_id: UUID) -> list[RefreshSession]:
     """Get all non-revoked, non-expired sessions for a user."""
     result = await db.execute(
         select(RefreshSession).where(

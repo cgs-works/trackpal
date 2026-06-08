@@ -20,7 +20,9 @@ from app.api.v1.endpoints.subscriptions.router import router
 subscription_service = SubscriptionService()
 
 
-@router.post("", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_subscription(
     payload: SubscriptionCreate,
     db: DbDep,

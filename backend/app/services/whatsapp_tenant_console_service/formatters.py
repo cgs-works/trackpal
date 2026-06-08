@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from app.core.i18n import t as _i18n_t
 

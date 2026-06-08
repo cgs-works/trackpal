@@ -7,12 +7,10 @@ and global commands during unauthenticated state.
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
 from app.core.config import settings
-from app.services.auth_service import AuthService
 from app.services.whatsapp_auth_session_service import (
     WhatsAppAuthSessionService,
     WhatsAppAuthLockState,
@@ -20,7 +18,6 @@ from app.services.whatsapp_auth_session_service import (
 )
 from app.services.whatsapp_console_service import WhatsAppConsoleService
 from app.services.whatsapp_session_service import (
-    ConversationSession,
     WhatsAppSessionService,
 )
 from app.core.security import get_password_hash
@@ -640,7 +637,6 @@ class TestLockout:
         db_session,
     ) -> None:
         """Remove lock key → account unblocked → login prompts again."""
-        from datetime import datetime, timedelta, timezone
         from app.core.config import settings
         from app.models import User, MasterProfile
 
@@ -701,15 +697,13 @@ class TestLockout:
     ) -> None:
         """Locked phone → lockout reply even before login flow starts."""
         from datetime import datetime, timedelta, timezone
-        from app.services.whatsapp_auth_session_service import WhatsAppAuthLockState
 
         # Manually create lock state
         lock = WhatsAppAuthLockState(
             locked_until=datetime.now(timezone.utc) + timedelta(minutes=5),
         )
         fake_redis = FakeRedis()
-        lock_key = f"wa:auth:lock:+12015550001"
-        import json
+        lock_key = "wa:auth:lock:+12015550001"
 
         await fake_redis.set(lock_key, lock.model_dump_json(), ex=300)
 

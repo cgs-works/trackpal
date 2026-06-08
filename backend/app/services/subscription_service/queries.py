@@ -64,15 +64,24 @@ async def list_subscriptions(
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
         stmt = stmt.where(
-            and_(Subscription.expires_at >= today_start, Subscription.expires_at <= today_end)
+            and_(
+                Subscription.expires_at >= today_start,
+                Subscription.expires_at <= today_end,
+            )
         )
     elif quick_filter == "next_7_days":
         stmt = stmt.where(
-            and_(Subscription.expires_at >= now, Subscription.expires_at <= now + timedelta(days=7))
+            and_(
+                Subscription.expires_at >= now,
+                Subscription.expires_at <= now + timedelta(days=7),
+            )
         )
     elif quick_filter == "next_30_days":
         stmt = stmt.where(
-            and_(Subscription.expires_at >= now, Subscription.expires_at <= now + timedelta(days=30))
+            and_(
+                Subscription.expires_at >= now,
+                Subscription.expires_at <= now + timedelta(days=30),
+            )
         )
 
     if expires_from:

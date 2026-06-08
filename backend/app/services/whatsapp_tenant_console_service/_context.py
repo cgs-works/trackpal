@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import contextvars
 
-_current_locale: contextvars.ContextVar[str] = contextvars.ContextVar("wa_locale", default="es")
+_current_locale: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "wa_locale", default="es"
+)
 
 
 def set_locale(locale: str) -> contextvars.Token[str]:

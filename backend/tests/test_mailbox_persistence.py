@@ -7,8 +7,6 @@ import pytest
 
 from app.core.encryption import encrypt_value
 from app.models import (
-    MailCodeDeliveryLog,
-    MailLookupJob,
     Tenant,
     TenantMailbox,
 )

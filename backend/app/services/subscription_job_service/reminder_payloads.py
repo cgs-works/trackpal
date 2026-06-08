@@ -187,9 +187,7 @@ async def generate_reminder_payloads(
             streaming_email = sub.streaming_email or ""
 
             # Compute tenant-local days-until-expiry
-            days_until_expiry = compute_days_until_expiry(
-                sub.expires_at, tz_name, now
-            )
+            days_until_expiry = compute_days_until_expiry(sub.expires_at, tz_name, now)
 
             # Compute tenant-local today for sent_for_date
             tz = ZoneInfo(tz_name)

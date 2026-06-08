@@ -39,7 +39,9 @@ async def create_tenant(
     phone = validate_phone(payload.phone)
     client_prefix = payload.client_prefix or await generate_unique_client_prefix(db)
 
-    if payload.client_prefix and await tenants_repository.client_prefix_exists(db, client_prefix):
+    if payload.client_prefix and await tenants_repository.client_prefix_exists(
+        db, client_prefix
+    ):
         raise ValueError("Prefijo de cliente ya registrado")
 
     existing_username = await users_repository.get_by_username(db, username)
@@ -77,11 +79,15 @@ async def create_tenant(
     await db.flush()
 
     try:
-        instance_data = await evolution_client.create_instance(payload.evolution_instance_name)
+        instance_data = await evolution_client.create_instance(
+            payload.evolution_instance_name
+        )
         if instance_data and instance_data.get("instance_id"):
             await evolution_client.register_webhook(instance_data["instance_id"])
             if instance_data.get("instance_token"):
-                profile.evolution_instance_token = encrypt_value(instance_data["instance_token"])
+                profile.evolution_instance_token = encrypt_value(
+                    instance_data["instance_token"]
+                )
     except Exception as exc:
         await db.rollback()
         raise ValueError(f"Failed to create Evolution instance: {exc}") from exc
@@ -113,7 +119,9 @@ async def update_tenant(
             update_data["phone"] = validate_phone(update_data["phone"])
 
     if "client_prefix" in update_data and update_data["client_prefix"] is not None:
-        update_data["client_prefix"] = validate_client_prefix(update_data["client_prefix"])
+        update_data["client_prefix"] = validate_client_prefix(
+            update_data["client_prefix"]
+        )
 
     if "phone" in update_data and update_data["phone"] != profile.phone:
         if update_data["phone"] is not None:
@@ -121,8 +129,13 @@ async def update_tenant(
             if existing and existing[0].id != profile.owner_user_id:
                 raise ValueError("Phone already registered")
 
-    if "client_prefix" in update_data and update_data["client_prefix"] != profile.client_prefix:
-        if await tenants_repository.client_prefix_exists(db, update_data["client_prefix"], profile.id):
+    if (
+        "client_prefix" in update_data
+        and update_data["client_prefix"] != profile.client_prefix
+    ):
+        if await tenants_repository.client_prefix_exists(
+            db, update_data["client_prefix"], profile.id
+        ):
             raise ValueError("Prefijo de cliente ya registrado")
         client_service = ClientService()
         await client_service.sync_client_usernames_for_tenant(

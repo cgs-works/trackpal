@@ -23,7 +23,9 @@ def _warn_missing(key: str, locale: str) -> None:
     count = missing_key_counter[key]
     # Log every 1st, 10th, 100th… occurrence to avoid spam
     if count in (1, 10, 100, 1000) or count % 10000 == 0:
-        logger.warning("i18n missing key %r in locale %r (count=%d)", key, locale, count)
+        logger.warning(
+            "i18n missing key %r in locale %r (count=%d)", key, locale, count
+        )
 
 
 def t(locale: str, key: str, /, **params: Any) -> str:

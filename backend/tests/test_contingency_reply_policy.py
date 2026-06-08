@@ -40,4 +40,7 @@ class TestContingencyReplyPolicy:
         assert isinstance(ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE, str)
 
     def test_session_reset_differs_from_temporary_unavailable(self) -> None:
-        assert ContingencyReplyPolicy.SESSION_RESET != ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
+        assert (
+            ContingencyReplyPolicy.SESSION_RESET
+            != ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
+        )

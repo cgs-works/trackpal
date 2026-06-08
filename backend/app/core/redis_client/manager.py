@@ -40,6 +40,7 @@ class RedisConnectionManager:
         self.health_check_interval = health_check_interval
         if redis_cls is None:
             from redis.asyncio import Redis as _Redis
+
             redis_cls = _Redis
         self._redis_cls = redis_cls
         self._initialised = False

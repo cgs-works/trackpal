@@ -735,5 +735,7 @@ async def test_tenant_active_flow_zero_cancels_but_nine_does_not_global_cancel(
         message="0",
         session_service=session_service,
     )
-    assert "salido de la consola" in zero_reply or "Operaci\u00f3n cancelada" in zero_reply
+    assert (
+        "salido de la consola" in zero_reply or "Operaci\u00f3n cancelada" in zero_reply
+    )
     assert await session_service.get_session("admin:12015550001") is None

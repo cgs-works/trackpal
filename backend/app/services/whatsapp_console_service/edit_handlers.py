@@ -8,9 +8,7 @@ from app.core.input_validation import (
     validate_full_name,
     validate_phone,
 )
-from . import messages as msg
 from . import lifecycle_messages as lc_msg
-from . import edit_messages as edit_msg
 from . import formatters as fmt
 from app.services.whatsapp_master_console_facade.constants import POST_ACTION_PROMPT
 

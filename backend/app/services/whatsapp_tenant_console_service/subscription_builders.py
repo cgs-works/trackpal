@@ -13,7 +13,8 @@ def _build_subscription_create_confirm(self, data: dict) -> str:
         if expires_at_raw
         else self._calculate_subscription_expiry(starts_at, data["duration_type"])
     )
-    return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE,
+    return self._t(
+        self.KEY_SUBSCRIPTIONS_CREATE_CONFIRM_TEMPLATE,
         client_name=data.get("client_name", "—"),
         service_name=data.get("service_name", "—"),
         plan_name=data.get("plan_name", "—"),
@@ -35,7 +36,8 @@ def _build_subscription_reactivate_confirm(self, data: dict) -> str:
         if expires_at_raw
         else self._calculate_subscription_expiry(starts_at, data["duration_type"])
     )
-    return self._t(self.KEY_SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE,
+    return self._t(
+        self.KEY_SUBSCRIPTIONS_REACTIVATE_CONFIRM_TEMPLATE,
         duration_label=self._format_subscription_duration(data["duration_type"]),
         starts_at=self._format_short_date(starts_at),
         expires_at=self._format_short_date(expires_at),
@@ -56,7 +58,8 @@ async def _build_subscription_renew_confirm(self, session, tenant_id, db):
         if expires_at_raw
         else self._calculate_subscription_expiry(base_expires, duration_type)
     )
-    return self._t(self.KEY_SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE,
+    return self._t(
+        self.KEY_SUBSCRIPTIONS_RENEW_CONFIRM_TEMPLATE,
         duration_label=self._format_subscription_duration(duration_type),
         expires_at=self._format_short_date(expires_at),
     )

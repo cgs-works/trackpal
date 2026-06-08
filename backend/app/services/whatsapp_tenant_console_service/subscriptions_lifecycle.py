@@ -33,7 +33,11 @@ async def _handle_subscriptions_reactivate_duration(
 ) -> str:
     # Get tenant timezone before deleting references
     _tz = timezone.utc
-    if tenant_id is not None and db is not None and self._subscription_service is not None:
+    if (
+        tenant_id is not None
+        and db is not None
+        and self._subscription_service is not None
+    ):
         try:
             _settings = await self._subscription_service.get_reminder_settings(
                 db, tenant_id

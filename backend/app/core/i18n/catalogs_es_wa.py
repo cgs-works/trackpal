@@ -192,7 +192,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.client.internal_error": "❌ Error interno. Intenta de nuevo.",
     "wa.client.goodbye": "✅ Has salido de la consola de cliente.\n\nAdios!",
     "wa.client.access_denied": "❌ Acceso denegado, no tienes una cuenta activa.",
-    "wa.client.not_registered": "❌ No tienes una cuenta registrada.\n\nSi deseas consultar tus códigos de acceso, envía la palabra \"código\".",
+    "wa.client.not_registered": '❌ No tienes una cuenta registrada.\n\nSi deseas consultar tus códigos de acceso, envía la palabra "código".',
     "wa.client.mode_prompt": "⚠️ Se detectaron dos perfiles para tu numero de telefono.\n\nComo quieres proceder?\n1️⃣ Panel de administracion\n2️⃣ Cliente\n\n0️⃣ Cancelar\n\nElige una opcion:",
     "wa.client.mode_exit": "✅ Has salido. Adios!",
     "wa.client.mode_reset": "🔄 Modo reiniciado. Envia un mensaje para comenzar.",
@@ -234,11 +234,8 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.menu.blocked_with_phone": "📌 *Gestion del cliente*\n\nEste contacto tiene bloqueado el acceso al sistema.\nNo puede pedir codigos, ver perfil ni consultar suscripciones.\n\nNumero de telefono: {identity}\n\nElige una opcion:\n1️⃣ Desbloquear acceso\n0️⃣ Cancelar",
     "wa.tenant.client_context.menu.blocked_lid_only": "📌 *Gestion del cliente*\n\nEste contacto tiene bloqueado el acceso al sistema.\nNo puede pedir codigos, ver perfil ni consultar suscripciones.\n\nElige una opcion:\n1️⃣ Desbloquear acceso\n0️⃣ Cancelar",
     "wa.tenant.client_context.phone_line": "Numero de telefono: {phone}\n",
-
     "wa.tenant.client_context.menu.active": "📌 *Gestion del cliente*\n\nEstas administrando este cliente desde tu panel privado.\nEl cliente no ve este menu.\n\nCliente: {client_name}\n{phone_line}Estado: {status}\n\nElige una opcion:\n1️⃣ Ver detalle\n2️⃣ Editar cliente\n3️⃣ Ver suscripciones\n4️⃣ Desactivar cliente\n5️⃣ Eliminar cliente\n0️⃣ Cancelar",
-
     "wa.tenant.client_context.active.delete_blocked": "❌ No se puede eliminar un cliente activo.\n\nCliente: {client_name}\n{phone_line}\nDesactivalo primero y luego intenta eliminarlo.",
-
     "wa.tenant.client_context.subscriptions.list": "📋 *Suscripciones de {client_name}*\n\n",
     "wa.tenant.client_context.subscriptions.empty": "No hay suscripciones activas.\n\n",
     "wa.tenant.client_context.subscriptions.item": "{number}️⃣ {service_name} - {plan_name} - {status}",
@@ -251,9 +248,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.subscriptions.duplicate_extend_success": "✅ Suscripcion extendida exitosamente.",
     "wa.tenant.client_context.subscriptions.deactivate_confirm": "⚠️ ¿Estas seguro de que deseas desactivar esta suscripcion? Escribe *CONFIRMAR* para confirmar.",
     "wa.tenant.client_context.subscriptions.deactivate_success": "✅ Suscripcion desactivada exitosamente.",
-
     "wa.tenant.client_context.menu.inactive": "📌 *Gestion del cliente*\n\nEstas administrando este cliente desde tu panel privado.\nEl cliente no ve este menu.\n\nCliente: {client_name}\n{phone_line}Estado: {status}\n\nElige una opcion:\n1️⃣ Ver detalle\n2️⃣ Editar cliente\n3️⃣ Reactivar cliente\n4️⃣ Eliminar cliente\n0️⃣ Cancelar",
-
     "wa.tenant.client_context.closed": "✅ Gestion del cliente cancelada.",
     "wa.tenant.client_context.collision": "⚠️ Ya tienes una gestión del cliente abierta. Envía *0* en tu chat privado de administración antes de abrir otra.",
     "wa.tenant.client_context.invalid_option": "❌ Opcion invalida. Responde con un numero del menu o *0* para cancelar.",
@@ -272,7 +267,6 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.post_create.invalid_option": "❌ Opcion invalida.\n\nElige una opcion:\n1️⃣ Volver al menu de gestion del cliente\n0️⃣ Cerrar gestion",
     "wa.tenant.client_context.block_access.success": "✅ Acceso bloqueado para *{identity}*.",
     "wa.tenant.client_context.unblock_access.success": "✅ Acceso desbloqueado para *{identity}*.",
-
     "wa.tenant.client_context.create.phone_invalid": "Telefono no valido. Ingrese un numero valido o *0* para cancelar:",
     "wa.tenant.client_context.create.phone_registered": "Telefono registrado.\n\n*Nombre completo* del cliente:",
     "wa.tenant.client_context.create.name_empty": "El nombre no puede estar vacio. Ingrese el *nombre completo* o *0* para cancelar:",
@@ -280,20 +274,16 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.create.name_registered": "Nombre registrado.\n\n*Nombre de usuario* local para el cliente:",
     "wa.tenant.client_context.create.username_empty": "El nombre de usuario no puede estar vacio. Ingrese el *nombre de usuario* o *0* para cancelar:",
     "wa.tenant.client_context.create.username_invalid": "{exc}\n\nIngrese el *nombre de usuario* o *0* para cancelar:",
-
     "wa.tenant.client_context.detail.header": "*Detalle del cliente*",
     "wa.tenant.client_context.detail.body": "*{client_name}*\nUsuario: {username}\n{phone_line}Estado: {status}\n",
     "wa.tenant.client_context.detail.options": "1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
     "wa.tenant.client_context.detail.invalid_option": "Opcion no valida.\n\n1 Editar datos\n2 Desactivar\n9 Regresar\n0 Cancelar",
-
     "wa.tenant.client_context.inactive.detail.options": "1 Editar datos\n2 Reactivar\n3 Eliminar\n9 Regresar\n0 Cancelar",
-
     "wa.tenant.client_context.deactivate.confirm": "Desea desactivar a *{client_name}*?\n\nEscriba *CONFIRMAR* para desactivar.\nO *0* para cancelar.",
     "wa.tenant.client_context.deactivate.cancelled": "Desactivacion cancelada.",
     "wa.tenant.client_context.deactivate.prompt_again": "Escriba *CONFIRMAR* para desactivar o *0* para cancelar.",
     "wa.tenant.client_context.deactivate.error": "Error al desactivar: {exc}",
     "wa.tenant.client_context.deactivate.success": "*{client_name}* desactivado.",
-
     "wa.tenant.client_context.inactive.reactivate_error": "Error al reactivar: {exc}",
     "wa.tenant.client_context.inactive.reactivate_success": "*{client_name}* reactivado.\n\nPuede gestionar suscripciones desde la Consola de Administracion.",
     "wa.tenant.client_context.inactive.delete_confirm": "Desea eliminar permanentemente a *{client_name}*?\n\nEscriba *CONFIRMAR* para eliminar.\nO *0* para cancelar.",
@@ -301,7 +291,6 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.inactive.delete_prompt_again": "Escriba *CONFIRMAR* para eliminar o *0* para cancelar.",
     "wa.tenant.client_context.inactive.delete_error": "Error al eliminar: {exc}",
     "wa.tenant.client_context.inactive.delete_success": "*{client_name}* eliminado permanentemente.",
-
     "wa.tenant.client_context.edit.field_prompt": "Que campo desea editar?\n\n1 Nombre completo\n2 Nombre de usuario\n9 Regresar\n0 Cancelar\n\nEl telefono no se puede editar desde el acceso directo.",
     "wa.tenant.client_context.edit.field_invalid": "Opcion no valida.\n\n1 Nombre completo\n2 Nombre de usuario\n9 Regresar\n0 Cancelar",
     "wa.tenant.client_context.edit.name_prompt": "Ingrese el *nuevo nombre completo*:",
@@ -309,13 +298,10 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.edit.cancelled": "Edicion cancelada.",
     "wa.tenant.client_context.edit.update_error": "Error al actualizar: {exc}",
     "wa.tenant.client_context.edit.updated_success": "*{client_name}* actualizado correctamente.",
-
     "wa.tenant.client_context.subscription.creating": "Creando suscripcion para *{client_name}*\n\n",
     "wa.tenant.client_context.subscription.service_prompt": "Seleccione un *servicio*:",
     "wa.tenant.client_context.subscription.no_services": "No hay servicios disponibles para crear una suscripcion.",
-
     "wa.tenant.client_context.action_cancelled": "❌ Accion cancelada.",
-
     "wa.tenant.client_context.error.client_not_found": "Cliente no encontrado.",
     "wa.tenant.client_context.error.service_unavailable": "Servicio no disponible en este momento.",
     "wa.tenant.client_context.error.no_services": "No hay servicios disponibles para crear una suscripcion.",

@@ -26,7 +26,7 @@ async def _handle_subscriptions_menu(
     if is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self._t('wa.tenant.main_menu'))
+        return self._with_main_menu(self._t("wa.tenant.main_menu"))
     if msg == "1":
         session.step = self.SUBSCRIPTIONS_STEP_FILTER
         if session_service is not None:
@@ -120,7 +120,7 @@ async def _handle_subscriptions_list(
     if is_cancel(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
-        return self._with_main_menu(self._t('wa.tenant.main_menu'))
+        return self._with_main_menu(self._t("wa.tenant.main_menu"))
 
     # Handle page navigation
     if is_back(msg):

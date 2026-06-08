@@ -2,7 +2,11 @@
 
 from app.services.tenant_service.helpers import generate_unique_client_prefix
 from app.services.tenant_service.queries import get_tenants, get_tenant
-from app.services.tenant_service.mutations import create_tenant, update_tenant, delete_tenant
+from app.services.tenant_service.mutations import (
+    create_tenant,
+    update_tenant,
+    delete_tenant,
+)
 from app.services.tenant_service.lifecycle import deactivate_tenant, activate_tenant
 
 

@@ -67,7 +67,9 @@ class TestCreate:
 
     async def test_create_with_lid(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
-        block = await blocked_repo.create(db_session, tenant.id, whatsapp_lid="test@lid")
+        block = await blocked_repo.create(
+            db_session, tenant.id, whatsapp_lid="test@lid"
+        )
         assert block.whatsapp_lid == "test@lid"
         assert block.phone is None
 
@@ -89,7 +91,9 @@ class TestFindActive:
     async def test_find_by_phone(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
         await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        found = await blocked_repo.find_active(db_session, tenant.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert found is not None
         assert found.phone == "12015550030"
 
@@ -102,16 +106,24 @@ class TestFindActive:
         assert found is not None
         assert found.whatsapp_lid == "blocked@lid"
 
-    async def test_find_returns_none_for_no_match(self, db_session: AsyncSession) -> None:
+    async def test_find_returns_none_for_no_match(
+        self, db_session: AsyncSession
+    ) -> None:
         _user, tenant = await _seed_tenant(db_session)
-        found = await blocked_repo.find_active(db_session, tenant.id, phone="12015559999")
+        found = await blocked_repo.find_active(
+            db_session, tenant.id, phone="12015559999"
+        )
         assert found is None
 
-    async def test_find_returns_none_when_unblocked(self, db_session: AsyncSession) -> None:
+    async def test_find_returns_none_when_unblocked(
+        self, db_session: AsyncSession
+    ) -> None:
         _user, tenant = await _seed_tenant(db_session)
         block = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
         await blocked_repo.unblock(db_session, tenant.id, block.id)
-        found = await blocked_repo.find_active(db_session, tenant.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert found is None
 
     async def test_find_no_args_returns_none(self, db_session: AsyncSession) -> None:
@@ -124,7 +136,9 @@ class TestTenantIsolation:
         _user, tenant_a = await _seed_tenant(db_session)
         tenant_b = await _seed_other_tenant(db_session)
         await blocked_repo.create(db_session, tenant_a.id, phone="12015550030")
-        found = await blocked_repo.find_active(db_session, tenant_b.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant_b.id, phone="12015550030"
+        )
         assert found is None
 
     async def test_list_active_is_tenant_scoped(self, db_session: AsyncSession) -> None:
@@ -145,18 +159,26 @@ class TestTenantIsolation:
         result = await blocked_repo.unblock(db_session, tenant_b.id, block.id)
         assert result is None
         # Block still active in original tenant
-        found = await blocked_repo.find_active(db_session, tenant_a.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant_a.id, phone="12015550030"
+        )
         assert found is not None
 
-    async def test_clear_identity_is_tenant_scoped(self, db_session: AsyncSession) -> None:
+    async def test_clear_identity_is_tenant_scoped(
+        self, db_session: AsyncSession
+    ) -> None:
         _user, tenant_a = await _seed_tenant(db_session)
         tenant_b = await _seed_other_tenant(db_session)
         await blocked_repo.create(db_session, tenant_a.id, phone="12015550030")
         # Clear from wrong tenant
-        cleared = await blocked_repo.clear_identity(db_session, tenant_b.id, phone="12015550030")
+        cleared = await blocked_repo.clear_identity(
+            db_session, tenant_b.id, phone="12015550030"
+        )
         assert cleared == 0
         # Block still active in original tenant
-        found = await blocked_repo.find_active(db_session, tenant_a.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant_a.id, phone="12015550030"
+        )
         assert found is not None
 
 
@@ -196,7 +218,9 @@ class TestUnblock:
         assert result.is_active is False
         # Verify persistence
         db_session.expire(block)
-        found = await blocked_repo.find_active(db_session, tenant.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert found is None
 
     async def test_unblock_already_unblocked_returns_none(
@@ -214,6 +238,7 @@ class TestUnblock:
     ) -> None:
         _user, tenant = await _seed_tenant(db_session)
         import uuid
+
         result = await blocked_repo.unblock(db_session, tenant.id, uuid.uuid4())
         assert result is None
 
@@ -222,9 +247,13 @@ class TestClearIdentity:
     async def test_clear_by_phone(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
         await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        cleared = await blocked_repo.clear_identity(db_session, tenant.id, phone="12015550030")
+        cleared = await blocked_repo.clear_identity(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert cleared == 1
-        found = await blocked_repo.find_active(db_session, tenant.id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert found is None
 
     async def test_clear_by_lid(self, db_session: AsyncSession) -> None:
@@ -245,26 +274,31 @@ class TestClearIdentity:
         _user, tenant = await _seed_tenant(db_session)
         await blocked_repo.create(db_session, tenant.id, phone="12015550030")
         await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        cleared = await blocked_repo.clear_identity(db_session, tenant.id, phone="12015550030")
+        cleared = await blocked_repo.clear_identity(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert cleared == 2
 
-    async def test_clear_no_args_returns_zero(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_clear_no_args_returns_zero(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
         assert await blocked_repo.clear_identity(db_session, tenant.id) == 0
 
-    async def test_clear_no_match_returns_zero(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_clear_no_match_returns_zero(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
-        assert await blocked_repo.clear_identity(db_session, tenant.id, phone="12015559999") == 0
+        assert (
+            await blocked_repo.clear_identity(
+                db_session, tenant.id, phone="12015559999"
+            )
+            == 0
+        )
 
     async def test_clear_idempotent(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
         await blocked_repo.create(db_session, tenant.id, phone="12015550030")
         await blocked_repo.clear_identity(db_session, tenant.id, phone="12015550030")
-        cleared = await blocked_repo.clear_identity(db_session, tenant.id, phone="12015550030")
+        cleared = await blocked_repo.clear_identity(
+            db_session, tenant.id, phone="12015550030"
+        )
         assert cleared == 0
 
 
@@ -281,7 +315,9 @@ class TestPersistence:
 
         # Re-fetch from a "new" session perspective
         db_session.expire_all()
-        found = await blocked_repo.find_active(db_session, tenant_id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant_id, phone="12015550030"
+        )
         assert found is not None
         assert found.id == block.id
 
@@ -297,7 +333,9 @@ class TestPersistence:
         await db_session.commit()
 
         db_session.expire_all()
-        found = await blocked_repo.find_active(db_session, tenant_id, phone="12015550030")
+        found = await blocked_repo.find_active(
+            db_session, tenant_id, phone="12015550030"
+        )
         assert found is None
 
     async def test_created_block_appears_in_list(
@@ -371,9 +409,7 @@ class TestClientCreationClearsBlock:
         are not affected — intentional tenant-scoped per-field clearing."""
         _, tenant = await _seed_tenant(db_session)
         await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        await blocked_repo.create(
-            db_session, tenant.id, whatsapp_lid="other@lid"
-        )
+        await blocked_repo.create(db_session, tenant.id, whatsapp_lid="other@lid")
 
         cleared = await blocked_repo.clear_identity(
             db_session, tenant.id, phone="12015550030"

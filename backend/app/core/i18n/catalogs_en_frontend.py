@@ -175,7 +175,6 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.catalog.service_created": "Service created.",
     "frontend.catalog.rename_service_prompt": "New service name",
     "frontend.catalog.rename_plan_prompt": "New plan name",
-
     "frontend.catalog.delete_preview_title_service": "Delete service",
     "frontend.catalog.delete_preview_title_plan": "Delete plan",
     "frontend.catalog.delete_preview_loading": "Loading preview...",

@@ -20,6 +20,7 @@ from app.services.whatsapp_session_service import (
 # Fake Redis — dict-based async double that mimics only the methods we need
 # ---------------------------------------------------------------------------
 
+
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
 
@@ -30,7 +31,9 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
         if ex is not None:
             self._ttls[key] = ex
@@ -59,6 +62,7 @@ class FakeRedis:
 # Fake connection manager that wraps FakeRedis
 # ---------------------------------------------------------------------------
 
+
 class FakeManager:
     """Duck-typed connection manager that delegates execute() to FakeRedis."""
 
@@ -83,6 +87,7 @@ class FakeManager:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()
@@ -104,6 +109,7 @@ def service(fake_manager: FakeManager) -> WhatsAppSessionService:
 # ---------------------------------------------------------------------------
 # Session model
 # ---------------------------------------------------------------------------
+
 
 class TestConversationSessionModel:
     """Verify the session data shape."""
@@ -144,6 +150,7 @@ class TestConversationSessionModel:
 # Session creation and retrieval
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestGetSession:
     async def test_returns_none_when_no_session(
@@ -167,9 +174,7 @@ class TestGetSession:
 
 @pytest.mark.asyncio
 class TestCreateSession:
-    async def test_creates_with_defaults(
-        self, service: WhatsAppSessionService
-    ) -> None:
+    async def test_creates_with_defaults(self, service: WhatsAppSessionService) -> None:
         session = await service.create_session("+1234567890")
         assert session.phone == "+1234567890"
         assert session.flow == ""
@@ -178,9 +183,7 @@ class TestCreateSession:
         assert session.temp_data == {}
         assert session.selection_map == {}
 
-    async def test_overwrites_existing(
-        self, service: WhatsAppSessionService
-    ) -> None:
+    async def test_overwrites_existing(self, service: WhatsAppSessionService) -> None:
         await service.create_session("+1234567890")
         session2 = await service.create_session("+1234567890")
         assert session2.phone == "+1234567890"
@@ -225,13 +228,9 @@ class TestSaveSession:
 
 @pytest.mark.asyncio
 class TestUpdateSession:
-    async def test_updates_single_field(
-        self, service: WhatsAppSessionService
-    ) -> None:
+    async def test_updates_single_field(self, service: WhatsAppSessionService) -> None:
         await service.create_session("+1234567890")
-        updated = await service.update_session(
-            "+1234567890", flow="create_tenant"
-        )
+        updated = await service.update_session("+1234567890", flow="create_tenant")
         assert updated is not None
         assert updated.flow == "create_tenant"
         assert updated.step == ""  # untouched
@@ -251,9 +250,7 @@ class TestUpdateSession:
         assert updated.step == "choose_field"
         assert updated.selected_tenant_id == "uuid-target"
 
-    async def test_updates_temp_data(
-        self, service: WhatsAppSessionService
-    ) -> None:
+    async def test_updates_temp_data(self, service: WhatsAppSessionService) -> None:
         await service.create_session("+1234567890")
         updated = await service.update_session(
             "+1234567890",
@@ -262,9 +259,7 @@ class TestUpdateSession:
         assert updated is not None
         assert updated.temp_data == {"full_name": "Jane"}
 
-    async def test_updates_selection_map(
-        self, service: WhatsAppSessionService
-    ) -> None:
+    async def test_updates_selection_map(self, service: WhatsAppSessionService) -> None:
         await service.create_session("+1234567890")
         updated = await service.update_session(
             "+1234567890",
@@ -282,9 +277,7 @@ class TestUpdateSession:
 
 @pytest.mark.asyncio
 class TestClearSession:
-    async def test_removes_session(
-        self, service: WhatsAppSessionService
-    ) -> None:
+    async def test_removes_session(self, service: WhatsAppSessionService) -> None:
         await service.create_session("+1234567890")
         await service.clear_session("+1234567890")
 
@@ -335,9 +328,7 @@ class TestTTL:
         ttl = fake_redis.get_ttl(key)
         assert ttl == 300, f"Expected TTL 900 after update, got {ttl}"
 
-    async def test_custom_ttl_seconds(
-        self, fake_redis: FakeRedis
-    ) -> None:
+    async def test_custom_ttl_seconds(self, fake_redis: FakeRedis) -> None:
         custom_manager = FakeManager(fake_redis=fake_redis)
         custom_service = WhatsAppSessionService(
             connection_manager=custom_manager, ttl_seconds=300
@@ -451,6 +442,7 @@ class TestTTL:
 # used_backup signal
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestUsedBackup:
     """Verify session service delegates used_backup to connection manager."""
@@ -459,9 +451,11 @@ class TestUsedBackup:
         self, fake_redis: FakeRedis
     ) -> None:
         """Manager without used_backup attribute → service returns False."""
+
         class LegacyManager:
             async def execute(self, operation_name, async_callable):
                 return await async_callable(fake_redis)
+
         service = WhatsAppSessionService(connection_manager=LegacyManager())
         assert service.used_backup is False
 
@@ -484,16 +478,19 @@ class TestUsedBackup:
 # SessionLifecyclePolicy
 # ---------------------------------------------------------------------------
 
+
 class TestSessionLifecyclePolicy:
     """Verify SessionLifecyclePolicy defaults and configuration."""
 
     def test_default_ttl_is_300(self) -> None:
         from app.services.whatsapp_session_service import SessionLifecyclePolicy
+
         policy = SessionLifecyclePolicy()
         assert policy.ttl_seconds == 300
 
     def test_custom_ttl(self) -> None:
         from app.services.whatsapp_session_service import SessionLifecyclePolicy
+
         policy = SessionLifecyclePolicy(ttl_seconds=600)
         assert policy.ttl_seconds == 600
 
@@ -502,10 +499,17 @@ class TestSessionLifecyclePolicy:
 # Serialization guard — minimal payload
 # ---------------------------------------------------------------------------
 
+
 class TestSessionSerialization:
     """Session JSON must contain only PRD-approved fields."""
 
-    APPROVED_FIELDS = {"flow", "step", "selected_tenant_id", "temp_data", "selection_map"}
+    APPROVED_FIELDS = {
+        "flow",
+        "step",
+        "selected_tenant_id",
+        "temp_data",
+        "selection_map",
+    }
 
     def test_serialized_json_has_no_extra_top_level_fields(self) -> None:
         """ConversationSession.model_dump_json() must not contain raw
@@ -560,6 +564,7 @@ class TestSessionSerialization:
 # ---------------------------------------------------------------------------
 # Explicit delete verification
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestExplicitDelete:

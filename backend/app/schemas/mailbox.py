@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # --- Enums ---
 
+
 class MailboxProvider(str, Enum):
     google = "google"
     microsoft = "microsoft"
@@ -43,6 +44,7 @@ class LookupResultType(str, Enum):
 
 
 # --- Tenant dashboard schemas ---
+
 
 class MailboxConfigUpdate(BaseModel):
     model_config = ConfigDict()
@@ -107,14 +109,27 @@ class OAuthStartResponse(BaseModel):
 
 # --- n8n lookup schemas ---
 
+
 class LookupCreateRequest(BaseModel):
     model_config = ConfigDict()
 
     service_key: str = Field(min_length=1, max_length=64)
-    tenant_instance: str | None = Field(None, max_length=255, description="Evolution API instance name to resolve tenant")
-    tenant_id: UUID | None = Field(None, description="Direct tenant ID (alternative to tenant_instance)")
-    mailbox_email: str | None = Field(None, max_length=255, description="Optional filter by mailbox email")
-    target_email: str = Field(min_length=3, max_length=255, description="Target email to filter email content during extraction — required for code lookup")
+    tenant_instance: str | None = Field(
+        None,
+        max_length=255,
+        description="Evolution API instance name to resolve tenant",
+    )
+    tenant_id: UUID | None = Field(
+        None, description="Direct tenant ID (alternative to tenant_instance)"
+    )
+    mailbox_email: str | None = Field(
+        None, max_length=255, description="Optional filter by mailbox email"
+    )
+    target_email: str = Field(
+        min_length=3,
+        max_length=255,
+        description="Target email to filter email content during extraction — required for code lookup",
+    )
 
 
 class LookupCreateResponse(BaseModel):

@@ -112,7 +112,9 @@ def _build_unauth_service_page(
     return "\n".join(lines)
 
 
-def _unauth_session_key(phone_digits: str, sender_lid: str | None, tenant_id: str | None = None) -> str:
+def _unauth_session_key(
+    phone_digits: str, sender_lid: str | None, tenant_id: str | None = None
+) -> str:
     """Session key for unregistered identity code lookup.
 
     Includes tenant_id when available to prevent collision when the same
@@ -531,7 +533,15 @@ async def _handle_unauthenticated_codigo(
 
     if session.step == _UNAUTH_CODIGO_STEP_EMAIL:
         return await _handle_unauth_codigo_email(
-            msg, session, session_service, session_key, tenant, db, locale, manager, close_jid
+            msg,
+            session,
+            session_service,
+            session_key,
+            tenant,
+            db,
+            locale,
+            manager,
+            close_jid,
         )
 
     if session.step == _UNAUTH_CODIGO_STEP_AWAITING_RESULT:
@@ -859,9 +869,7 @@ async def _handle_unauth_codigo_result(
                         else False
                     )
                 except Exception:
-                    logger.exception(
-                        "Failed to re-enqueue lookup job %s", job2.id
-                    )
+                    logger.exception("Failed to re-enqueue lookup job %s", job2.id)
                 if enqueued:
                     session.temp_data["lookup_job_id"] = str(job2.id)
                     await session_service.save_session(session)
@@ -1070,6 +1078,7 @@ async def _handle_active_client_context(
             if admin_raw is not None:
                 try:
                     import json as _json
+
                     admin_data = _json.loads(admin_raw)
                     admin_active = admin_data.get("flow") == "subscriptions"
                 except (_json.JSONDecodeError, ValueError, TypeError):
@@ -1232,10 +1241,16 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_phone":
-        resp = await handle_ctx_creating_phone(msg_lower, message, data, admin_jid, tenant)
+        resp = await handle_ctx_creating_phone(
+            msg_lower, message, data, admin_jid, tenant
+        )
         if resp is None:
             await _clear_ctx()
-            locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+            locale = (
+                data.get("temp_data", {}).get("locale")
+                or getattr(tenant, "locale", "es")
+                or "es"
+            )
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(locale, "wa.tenant.client_context.create.cancelled"),
                 reply_to=admin_jid,
@@ -1244,10 +1259,16 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_name":
-        resp = await handle_ctx_creating_name(msg_lower, message, data, admin_jid, tenant)
+        resp = await handle_ctx_creating_name(
+            msg_lower, message, data, admin_jid, tenant
+        )
         if resp is None:
             await _clear_ctx()
-            locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+            locale = (
+                data.get("temp_data", {}).get("locale")
+                or getattr(tenant, "locale", "es")
+                or "es"
+            )
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(locale, "wa.tenant.client_context.create.cancelled"),
                 reply_to=admin_jid,
@@ -1256,10 +1277,16 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_username":
-        resp = await handle_ctx_creating_username(msg_lower, message, data, admin_jid, tenant)
+        resp = await handle_ctx_creating_username(
+            msg_lower, message, data, admin_jid, tenant
+        )
         if resp is None:
             await _clear_ctx()
-            locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+            locale = (
+                data.get("temp_data", {}).get("locale")
+                or getattr(tenant, "locale", "es")
+                or "es"
+            )
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(locale, "wa.tenant.client_context.create.cancelled"),
                 reply_to=admin_jid,
@@ -1268,12 +1295,16 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_password_choice":
-        resp = await handle_ctx_creating_password_choice(msg_lower, data, admin_jid, tenant)
+        resp = await handle_ctx_creating_password_choice(
+            msg_lower, data, admin_jid, tenant
+        )
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(
-                    data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es",
+                    data.get("temp_data", {}).get("locale")
+                    or getattr(tenant, "locale", "es")
+                    or "es",
                     "wa.tenant.client_context.create.cancelled",
                 ),
                 reply_to=admin_jid,
@@ -1282,12 +1313,16 @@ async def _handle_active_client_context(
         return resp
 
     if step == "creating_password_manual":
-        resp = await handle_ctx_creating_password_manual(msg_lower, message, data, admin_jid, tenant)
+        resp = await handle_ctx_creating_password_manual(
+            msg_lower, message, data, admin_jid, tenant
+        )
         if resp is None:
             await _clear_ctx()
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(
-                    data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es",
+                    data.get("temp_data", {}).get("locale")
+                    or getattr(tenant, "locale", "es")
+                    or "es",
                     "wa.tenant.client_context.create.cancelled",
                 ),
                 reply_to=admin_jid,
@@ -1312,7 +1347,11 @@ async def _handle_active_client_context(
         return resp
 
     if step == "post_create_menu":
-        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+        locale = (
+            data.get("temp_data", {}).get("locale")
+            or getattr(tenant, "locale", "es")
+            or "es"
+        )
         if msg_lower == "1":
             created_client = await clients_repository.get_active_client_by_tenant_phone(
                 db,
@@ -1336,7 +1375,9 @@ async def _handle_active_client_context(
                 )
         if is_cancel(msg_lower):
             await _clear_ctx()
-            close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
+            close_jids = _client_context_close_jids(
+                data.get("temp_data", {}), admin_jid
+            )
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(locale, "wa.tenant.client_context.closed"),
                 status="closed",
@@ -1346,7 +1387,9 @@ async def _handle_active_client_context(
             )
         await _save_ctx(refresh_ttl=False)
         return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.client_context.post_create.invalid_option"),
+            reply=_i18n_t(
+                locale, "wa.tenant.client_context.post_create.invalid_option"
+            ),
             reply_to=admin_jid,
         )
 
@@ -1397,11 +1440,17 @@ async def _handle_active_client_context(
         )
 
     if step == "active_edit_field":
-        resp = await handle_ctx_active_edit_field(msg_lower, message, data, admin_jid, tenant, active_client)
+        resp = await handle_ctx_active_edit_field(
+            msg_lower, message, data, admin_jid, tenant, active_client
+        )
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp
-        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+        locale = (
+            data.get("temp_data", {}).get("locale")
+            or getattr(tenant, "locale", "es")
+            or "es"
+        )
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.action_cancelled"),
             reply_to=admin_jid,
@@ -1444,7 +1493,10 @@ async def _handle_active_client_context(
             _clear_ctx,
         )
 
-    if step in ("active_extend_subs", "active_extend_subs_confirm") and active_client is not None:
+    if (
+        step in ("active_extend_subs", "active_extend_subs_confirm")
+        and active_client is not None
+    ):
         return await handle_ctx_active_extend_subscription(
             msg_lower,
             message,
@@ -1512,11 +1564,17 @@ async def _handle_active_client_context(
         )
 
     if step == "inactive_edit_field":
-        resp = await handle_ctx_inactive_edit_field(msg_lower, message, data, admin_jid, tenant, inactive_client)
+        resp = await handle_ctx_inactive_edit_field(
+            msg_lower, message, data, admin_jid, tenant, inactive_client
+        )
         if resp is not None:
             await _save_ctx(refresh_ttl=True)
             return resp
-        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+        locale = (
+            data.get("temp_data", {}).get("locale")
+            or getattr(tenant, "locale", "es")
+            or "es"
+        )
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.client_context.action_cancelled"),
             reply_to=admin_jid,
@@ -1549,7 +1607,11 @@ async def _handle_ctx_unblocked_menu(
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle a message in the unblocked unregistered target menu."""
-    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+    locale = (
+        data.get("temp_data", {}).get("locale")
+        or getattr(tenant, "locale", "es")
+        or "es"
+    )
 
     if msg_lower == "1":
         # Crear cliente — enter flow and render first prompt immediately.
@@ -1577,12 +1639,20 @@ async def _handle_ctx_unblocked_menu(
         data["temp_data"]["menu_variant"] = "blocked"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.client_context.block_access.success", identity=(target_phone or target_lid or "")),
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.client_context.block_access.success",
+                identity=(target_phone or target_lid or ""),
+            ),
             reply_to=admin_jid,
         )
 
     if is_cancel(msg_lower):
-        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+        locale = (
+            data.get("temp_data", {}).get("locale")
+            or getattr(tenant, "locale", "es")
+            or "es"
+        )
         await clear_ctx()
         close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
         return WhatsAppConsoleResponse(
@@ -1594,7 +1664,11 @@ async def _handle_ctx_unblocked_menu(
         )
 
     # Invalid input — do NOT refresh TTL
-    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+    locale = (
+        data.get("temp_data", {}).get("locale")
+        or getattr(tenant, "locale", "es")
+        or "es"
+    )
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
         reply=_i18n_t(locale, "wa.tenant.client_context.invalid_option"),
@@ -1614,7 +1688,11 @@ async def _handle_ctx_blocked_menu(
     db: AsyncSession,
 ) -> WhatsAppConsoleResponse:
     """Handle a message in the blocked target menu."""
-    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+    locale = (
+        data.get("temp_data", {}).get("locale")
+        or getattr(tenant, "locale", "es")
+        or "es"
+    )
 
     if msg_lower == "1":
         # Desbloquear mensajes — find active block and unblock
@@ -1637,12 +1715,20 @@ async def _handle_ctx_blocked_menu(
         data["temp_data"]["menu_variant"] = "unregistered"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.client_context.unblock_access.success", identity=(target_phone or target_lid or "")),
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.client_context.unblock_access.success",
+                identity=(target_phone or target_lid or ""),
+            ),
             reply_to=admin_jid,
         )
 
     if is_cancel(msg_lower):
-        locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+        locale = (
+            data.get("temp_data", {}).get("locale")
+            or getattr(tenant, "locale", "es")
+            or "es"
+        )
         await clear_ctx()
         close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
         return WhatsAppConsoleResponse(
@@ -1654,7 +1740,11 @@ async def _handle_ctx_blocked_menu(
         )
 
     # Invalid input — do NOT refresh TTL
-    locale = data.get("temp_data", {}).get("locale") or getattr(tenant, "locale", "es") or "es"
+    locale = (
+        data.get("temp_data", {}).get("locale")
+        or getattr(tenant, "locale", "es")
+        or "es"
+    )
     await save_ctx(refresh_ttl=False)
     return WhatsAppConsoleResponse(
         reply=_i18n_t(locale, "wa.tenant.client_context.invalid_option"),

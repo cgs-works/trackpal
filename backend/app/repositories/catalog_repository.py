@@ -23,9 +23,7 @@ async def get_service(
 ) -> Service | None:
     """Get service by tenant and service id."""
     result = await db.execute(
-        select(Service).where(
-            Service.tenant_id == tenant_id, Service.id == service_id
-        )
+        select(Service).where(Service.tenant_id == tenant_id, Service.id == service_id)
     )
     return result.scalar_one_or_none()
 
@@ -46,9 +44,7 @@ async def service_name_exists(
     return (await db.execute(stmt)).first() is not None
 
 
-async def list_plans(
-    db: AsyncSession, tenant_id: UUID, service_id: UUID
-) -> list[Plan]:
+async def list_plans(db: AsyncSession, tenant_id: UUID, service_id: UUID) -> list[Plan]:
     """List all plans for a service, alphabetical by name."""
     result = await db.execute(
         select(Plan)
@@ -93,7 +89,9 @@ async def plan_name_exists(
 # ── Count helpers (single-entity) ─────────────────────────────────────────
 
 
-async def count_plans_for_service(db: AsyncSession, tenant_id: UUID, service_id: UUID) -> int:
+async def count_plans_for_service(
+    db: AsyncSession, tenant_id: UUID, service_id: UUID
+) -> int:
     """Return the number of plans for a service within a tenant."""
     result = await db.execute(
         select(func.count(Plan.id)).where(
@@ -144,7 +142,9 @@ async def count_subscriptions_for_plan(
 # ── Aggregate summary helpers (N+1 prevention) ────────────────────────────
 
 
-async def count_plans_for_services(db: AsyncSession, tenant_id: UUID) -> dict[UUID, int]:
+async def count_plans_for_services(
+    db: AsyncSession, tenant_id: UUID
+) -> dict[UUID, int]:
     """Return a dict mapping service_id -> plan_count for all services in a tenant (1 query)."""
     result = await db.execute(
         select(Plan.service_id, func.count(Plan.id))
@@ -154,7 +154,9 @@ async def count_plans_for_services(db: AsyncSession, tenant_id: UUID) -> dict[UU
     return {service_id: int(count) for service_id, count in result.all()}
 
 
-async def count_subscriptions_for_all_services(db: AsyncSession, tenant_id: UUID) -> dict[UUID, tuple[int, int]]:
+async def count_subscriptions_for_all_services(
+    db: AsyncSession, tenant_id: UUID
+) -> dict[UUID, tuple[int, int]]:
     """Return a dict mapping service_id -> (active_count, historical_count) for all services (1 query)."""
     active_expr = func.sum(case((Subscription.status == "active", 1), else_=0))
     total_expr = func.count(Subscription.id)
@@ -210,7 +212,11 @@ async def list_active_subscription_rows_for_service(
             Subscription.service_id == service_id,
             Subscription.status == "active",
         )
-        .order_by(Subscription.expires_at.is_(None).asc(), Subscription.expires_at.asc(), Subscription.created_at.asc())
+        .order_by(
+            Subscription.expires_at.is_(None).asc(),
+            Subscription.expires_at.asc(),
+            Subscription.created_at.asc(),
+        )
         .offset(offset)
         .limit(limit)
     )
@@ -218,7 +224,13 @@ async def list_active_subscription_rows_for_service(
 
 
 async def list_active_subscription_rows_for_plan(
-    db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, offset: int, limit: int
+    db: AsyncSession,
+    tenant_id: UUID,
+    service_id: UUID,
+    plan_id: UUID,
+    *,
+    offset: int,
+    limit: int,
 ) -> list[tuple[Subscription, Client, Service, Plan]]:
     """List active subscription rows (with joins) for a plan, ordered by expiration."""
     result = await db.execute(
@@ -232,7 +244,11 @@ async def list_active_subscription_rows_for_plan(
             Subscription.plan_id == plan_id,
             Subscription.status == "active",
         )
-        .order_by(Subscription.expires_at.is_(None).asc(), Subscription.expires_at.asc(), Subscription.created_at.asc())
+        .order_by(
+            Subscription.expires_at.is_(None).asc(),
+            Subscription.expires_at.asc(),
+            Subscription.created_at.asc(),
+        )
         .offset(offset)
         .limit(limit)
     )
@@ -242,7 +258,9 @@ async def list_active_subscription_rows_for_plan(
 # ── Cascade delete helpers ─────────────────────────────────────────────────
 
 
-async def delete_subscriptions_for_service(db: AsyncSession, tenant_id: UUID, service_id: UUID) -> None:
+async def delete_subscriptions_for_service(
+    db: AsyncSession, tenant_id: UUID, service_id: UUID
+) -> None:
     """Delete all subscriptions under a service within a tenant."""
     await db.execute(
         delete(Subscription).where(
@@ -252,7 +270,9 @@ async def delete_subscriptions_for_service(db: AsyncSession, tenant_id: UUID, se
     )
 
 
-async def delete_subscriptions_for_plan(db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID) -> None:
+async def delete_subscriptions_for_plan(
+    db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID
+) -> None:
     """Delete all subscriptions under a plan within a tenant."""
     await db.execute(
         delete(Subscription).where(
@@ -263,7 +283,9 @@ async def delete_subscriptions_for_plan(db: AsyncSession, tenant_id: UUID, servi
     )
 
 
-async def delete_plans_for_service(db: AsyncSession, tenant_id: UUID, service_id: UUID) -> None:
+async def delete_plans_for_service(
+    db: AsyncSession, tenant_id: UUID, service_id: UUID
+) -> None:
     """Delete all plans for a service within a tenant."""
     await db.execute(
         delete(Plan).where(

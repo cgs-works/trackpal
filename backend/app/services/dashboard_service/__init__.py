@@ -9,7 +9,9 @@ from app.schemas.dashboard import (
     TenantDashboardResponse,
 )
 from app.services.profile_service import ProfileService
-from app.services.subscription_service.queries import get_active_subscriptions_for_client
+from app.services.subscription_service.queries import (
+    get_active_subscriptions_for_client,
+)
 
 
 class DashboardService:
@@ -39,7 +41,9 @@ class DashboardService:
 
     async def _client_dashboard(self, db, profile) -> ClientDashboardResponse:
         tenant = getattr(profile, "tenant", None)
-        subs = await get_active_subscriptions_for_client(db, profile.tenant_id, profile.id)
+        subs = await get_active_subscriptions_for_client(
+            db, profile.tenant_id, profile.id
+        )
         subscriptions = [
             ClientActiveSubscription(
                 id=sub.id,

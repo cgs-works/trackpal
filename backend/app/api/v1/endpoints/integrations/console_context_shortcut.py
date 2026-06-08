@@ -140,7 +140,12 @@ async def handle_ctx_creating_name(
         name = _validate_full_name(stripped)
     except Exception as exc:
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.name_invalid", exc=str(exc)),
+            reply=_ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.create.name_invalid",
+                exc=str(exc),
+            ),
             reply_to=admin_jid,
         )
 
@@ -163,7 +168,9 @@ async def handle_ctx_creating_username(
     stripped = message.strip()
     if not stripped:
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.username_empty"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.create.username_empty"
+            ),
             reply_to=admin_jid,
         )
 
@@ -171,7 +178,12 @@ async def handle_ctx_creating_username(
         local_username = validate_client_local_username(stripped)
     except Exception as exc:
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.username_invalid", exc=str(exc)),
+            reply=_ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.create.username_invalid",
+                exc=str(exc),
+            ),
             reply_to=admin_jid,
         )
 
@@ -202,12 +214,16 @@ async def handle_ctx_creating_password_choice(
     if msg_lower == "2":
         data["step"] = "creating_password_manual"
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_manual_prompt"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.create.password_manual_prompt"
+            ),
             reply_to=admin_jid,
         )
 
     return WhatsAppConsoleResponse(
-        reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_choice_invalid"),
+        reply=_ctx_t(
+            tenant, data, "wa.tenant.client_context.create.password_choice_invalid"
+        ),
         reply_to=admin_jid,
     )
 
@@ -223,14 +239,18 @@ async def handle_ctx_creating_password_manual(
     password = message.strip()
     if len(password) < 8:
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.password_too_short"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.create.password_too_short"
+            ),
             reply_to=admin_jid,
         )
 
     data["temp_data"]["password"] = password
     data["temp_data"]["password_mode"] = "manual"
     data["step"] = "creating_confirm"
-    return WhatsAppConsoleResponse(reply=_creation_summary(tenant, data), reply_to=admin_jid)
+    return WhatsAppConsoleResponse(
+        reply=_creation_summary(tenant, data), reply_to=admin_jid
+    )
 
 
 def _creation_summary(tenant: _TenantModel, data: dict) -> str:
@@ -266,7 +286,11 @@ async def handle_ctx_creating_confirm(
         td = data["temp_data"]
         summary = _creation_summary(tenant, data)
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.create.confirm_invalid") + "\n\n" + summary,
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.create.confirm_invalid"
+            )
+            + "\n\n"
+            + summary,
             reply_to=admin_jid,
         )
 
@@ -477,7 +501,12 @@ async def handle_ctx_active_detail(
         data["step"] = "active_deactivate_confirm"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.confirm", client_name=client.full_name),
+            reply=_ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.deactivate.confirm",
+                client_name=client.full_name,
+            ),
             reply_to=admin_jid,
         )
 
@@ -505,7 +534,9 @@ async def handle_ctx_active_edit_field(
         target_phone = data.get("temp_data", {}).get("target_phone")
         data["step"] = "active_detail"
         return WhatsAppConsoleResponse(
-            reply=_render_active_client_detail_text(locale, target_phone, client) if client else _ctx_t(tenant, data, "wa.tenant.client_context.detail.header"),
+            reply=_render_active_client_detail_text(locale, target_phone, client)
+            if client
+            else _ctx_t(tenant, data, "wa.tenant.client_context.detail.header"),
             reply_to=admin_jid,
         )
 
@@ -578,14 +609,18 @@ async def handle_ctx_active_edit_value(
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.update_error", exc=str(exc)),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.edit.update_error", exc=str(exc)
+            ),
             reply_to=admin_jid,
         )
 
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.client_not_found"
+            ),
             reply_to=admin_jid,
         )
 
@@ -634,7 +669,9 @@ async def handle_ctx_active_deactivate_confirm(
             logger.exception("failed to reload client on back from deactivate confirm")
             await clear_ctx()
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.client_not_found"
+                ),
                 reply_to=admin_jid,
             )
         if client:
@@ -644,14 +681,18 @@ async def handle_ctx_active_deactivate_confirm(
             )
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.client_not_found"
+            ),
             reply_to=admin_jid,
         )
 
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.prompt_again"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.deactivate.prompt_again"
+            ),
             reply_to=admin_jid,
         )
 
@@ -662,14 +703,18 @@ async def handle_ctx_active_deactivate_confirm(
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.deactivate.error", exc=str(exc)),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.deactivate.error", exc=str(exc)
+            ),
             reply_to=admin_jid,
         )
 
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.client_not_found"
+            ),
             reply_to=admin_jid,
         )
 
@@ -915,14 +960,18 @@ async def handle_ctx_inactive_edit_value(
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.edit.update_error", exc=str(exc)),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.edit.update_error", exc=str(exc)
+            ),
             reply_to=admin_jid,
         )
 
     if client is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.client_not_found"
+            ),
             reply_to=admin_jid,
         )
 
@@ -964,10 +1013,14 @@ async def handle_ctx_inactive_delete_confirm(
             client_service = ClientService()
             client = await client_service.get_client(db, tenant.id, client_id)
         except Exception:
-            logger.exception("failed to reload client on back from inactive delete confirm")
+            logger.exception(
+                "failed to reload client on back from inactive delete confirm"
+            )
             await clear_ctx()
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.client_not_found"
+                ),
                 reply_to=admin_jid,
             )
         if client:
@@ -977,14 +1030,18 @@ async def handle_ctx_inactive_delete_confirm(
             )
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.client_not_found"
+            ),
             reply_to=admin_jid,
         )
 
     stripped = message.strip().upper()
     if stripped not in ("CONFIRMAR", "CONFIRM"):
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_prompt_again"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.inactive.delete_prompt_again"
+            ),
             reply_to=admin_jid,
         )
 
@@ -1010,14 +1067,21 @@ async def handle_ctx_inactive_delete_confirm(
     except Exception as exc:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_error", exc=str(exc)),
+            reply=_ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.inactive.delete_error",
+                exc=str(exc),
+            ),
             reply_to=admin_jid,
         )
 
     if not deleted:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.delete_error", exc=""),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.inactive.delete_error", exc=""
+            ),
             reply_to=admin_jid,
         )
 
@@ -1060,7 +1124,11 @@ def _render_subscriptions_list_text(
 ) -> str:
     """Render the subscriptions list screen for the context shortcut."""
     parts = [
-        t(locale, "wa.tenant.client_context.subscriptions.list", client_name=client_name)
+        t(
+            locale,
+            "wa.tenant.client_context.subscriptions.list",
+            client_name=client_name,
+        )
     ]
 
     if not subscriptions:
@@ -1077,14 +1145,20 @@ def _render_subscriptions_list_text(
                     service_name=sub.service.name,
                     plan_name=sub.plan.name,
                     status=status_label,
-                    expires=sub.expires_at.strftime("%Y-%m-%d") if sub.expires_at else "-",
+                    expires=sub.expires_at.strftime("%Y-%m-%d")
+                    if sub.expires_at
+                    else "-",
                 )
             )
         create_num = len(subscriptions) + 1
 
     parts.append("")
     parts.append(
-        t(locale, "wa.tenant.client_context.subscriptions.list_nav_create", number=create_num)
+        t(
+            locale,
+            "wa.tenant.client_context.subscriptions.list_nav_create",
+            number=create_num,
+        )
     )
     return "\n".join(parts)
 
@@ -1113,7 +1187,9 @@ def _render_subscription_detail_text(
         started=sub.starts_at.strftime("%Y-%m-%d") if sub.starts_at else "-",
         expires=sub.expires_at.strftime("%Y-%m-%d") if sub.expires_at else "-",
     )
-    return detail + "\n" + t(locale, "wa.tenant.client_context.subscriptions.detail_nav")
+    return (
+        detail + "\n" + t(locale, "wa.tenant.client_context.subscriptions.detail_nav")
+    )
 
 
 def _render_extend_duration_text(
@@ -1208,7 +1284,9 @@ async def handle_ctx_active_view_subscriptions(
         data["step"] = "active_view_subscriptions"
         await save_ctx(refresh_ttl=True)
         return WhatsAppConsoleResponse(
-            reply=_render_subscriptions_list_text(locale, client.full_name, subscriptions),
+            reply=_render_subscriptions_list_text(
+                locale, client.full_name, subscriptions
+            ),
             reply_to=admin_jid,
         )
 
@@ -1334,7 +1412,9 @@ async def handle_ctx_view_subscription_detail(
     if msg_lower == "2":
         data["step"] = "active_deactivate_sub_confirm"
         await save_ctx(refresh_ttl=True)
-        confirm_text = _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.deactivate_confirm")
+        confirm_text = _ctx_t(
+            tenant, data, "wa.tenant.client_context.subscriptions.deactivate_confirm"
+        )
         return WhatsAppConsoleResponse(
             reply=confirm_text,
             reply_to=admin_jid,
@@ -1346,9 +1426,9 @@ async def handle_ctx_view_subscription_detail(
     return WhatsAppConsoleResponse(
         reply=_with_current_screen_message(
             _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
-            _render_subscription_detail_text(locale, sub) if sub else (
-                _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.list")
-            ),
+            _render_subscription_detail_text(locale, sub)
+            if sub
+            else (_ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.list")),
         ),
         reply_to=admin_jid,
     )
@@ -1406,6 +1486,7 @@ async def handle_ctx_active_extend_subscription(
 
     async def _fetch_subs():
         from app.models.subscription import Subscription as _Sub2
+
         stmt = (
             _select(_Sub2)
             .options(_selectinload(_Sub2.service), _selectinload(_Sub2.plan))
@@ -1425,8 +1506,12 @@ async def handle_ctx_active_extend_subscription(
         await save_ctx(refresh_ttl=True)
         sub = await _fetch_sub()
         return WhatsAppConsoleResponse(
-            reply=_render_subscription_detail_text(locale, sub) if sub else (
-                _render_subscriptions_list_text(locale, client.full_name, await _fetch_subs())
+            reply=_render_subscription_detail_text(locale, sub)
+            if sub
+            else (
+                _render_subscriptions_list_text(
+                    locale, client.full_name, await _fetch_subs()
+                )
             ),
             reply_to=admin_jid,
         )
@@ -1437,17 +1522,20 @@ async def handle_ctx_active_extend_subscription(
         duration_label = SUBSCRIPTIONS_DURATION_LABELS.get(duration_type, duration_type)
 
         # Calculate new expiry date
-        from datetime import timedelta
+
         sub = await _fetch_sub()
         if sub is None:
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.service_unavailable"
+                ),
                 reply_to=admin_jid,
             )
 
         from app.services.subscription_service.helpers import (
             calculate_expiration as _calc_exp,
         )
+
         new_expires = _calc_exp(sub.expires_at, duration_type, None)
         expires_str = new_expires.strftime("%Y-%m-%d") if new_expires else "-"
 
@@ -1468,13 +1556,16 @@ async def handle_ctx_active_extend_subscription(
         duration_type = data.get("temp_data", {}).get("extend_duration_type", "")
         if not duration_type or not sub_id_str:
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.service_unavailable"
+                ),
                 reply_to=admin_jid,
             )
 
         from app.services.subscription_service.mutations import (
             renew_subscription as _renew,
         )
+
         try:
             renewed = await _renew(
                 db,
@@ -1487,7 +1578,9 @@ async def handle_ctx_active_extend_subscription(
 
         if renewed is None:
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.service_unavailable"
+                ),
                 reply_to=admin_jid,
             )
 
@@ -1501,7 +1594,11 @@ async def handle_ctx_active_extend_subscription(
         data["temp_data"].pop("extend_plan_name", None)
         await save_ctx(refresh_ttl=True)
         subs = await _fetch_subs()
-        success_msg = _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.duplicate_extend_success")
+        success_msg = _ctx_t(
+            tenant,
+            data,
+            "wa.tenant.client_context.subscriptions.duplicate_extend_success",
+        )
         list_text = _render_subscriptions_list_text(locale, client.full_name, subs)
         return WhatsAppConsoleResponse(
             reply=_with_current_screen_message(success_msg, list_text),
@@ -1577,8 +1674,12 @@ async def handle_ctx_active_deactivate_subscription(
         await save_ctx(refresh_ttl=True)
         sub = await _fetch_sub()
         return WhatsAppConsoleResponse(
-            reply=_render_subscription_detail_text(locale, sub) if sub else (
-                _render_subscriptions_list_text(locale, client.full_name, await _fetch_subs())
+            reply=_render_subscription_detail_text(locale, sub)
+            if sub
+            else (
+                _render_subscriptions_list_text(
+                    locale, client.full_name, await _fetch_subs()
+                )
             ),
             reply_to=admin_jid,
         )
@@ -1587,13 +1688,16 @@ async def handle_ctx_active_deactivate_subscription(
     if msg_lower.strip().lower() in ("confirmar", "confirm"):
         if not sub_id_str:
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.service_unavailable"
+                ),
                 reply_to=admin_jid,
             )
 
         from app.services.subscription_service.mutations import (
             cancel_subscription as _cancel_sub,
         )
+
         try:
             cancelled = await _cancel_sub(db, tenant.id, UUID(sub_id_str))
         except Exception:
@@ -1601,7 +1705,9 @@ async def handle_ctx_active_deactivate_subscription(
 
         if cancelled is None:
             return WhatsAppConsoleResponse(
-                reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+                reply=_ctx_t(
+                    tenant, data, "wa.tenant.client_context.error.service_unavailable"
+                ),
                 reply_to=admin_jid,
             )
 
@@ -1612,7 +1718,9 @@ async def handle_ctx_active_deactivate_subscription(
         data["temp_data"].pop("selected_sub_plan", None)
         await save_ctx(refresh_ttl=True)
         subs = await _fetch_subs()
-        success_msg = _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.deactivate_success")
+        success_msg = _ctx_t(
+            tenant, data, "wa.tenant.client_context.subscriptions.deactivate_success"
+        )
         list_text = _render_subscriptions_list_text(locale, client.full_name, subs)
         return WhatsAppConsoleResponse(
             reply=_with_current_screen_message(success_msg, list_text),
@@ -1624,7 +1732,11 @@ async def handle_ctx_active_deactivate_subscription(
     return WhatsAppConsoleResponse(
         reply=_with_current_screen_message(
             _ctx_t(tenant, data, "wa.tenant.client_context.invalid_option"),
-            _ctx_t(tenant, data, "wa.tenant.client_context.subscriptions.deactivate_confirm"),
+            _ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.subscriptions.deactivate_confirm",
+            ),
         ),
         reply_to=admin_jid,
     )
@@ -1654,7 +1766,9 @@ async def _start_context_subscription(
     manager = _get_redis()
     if manager is None:
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.service_unavailable"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.service_unavailable"
+            ),
             reply_to=admin_jid,
         )
 
@@ -1696,7 +1810,9 @@ async def _start_context_subscription(
         await session_service.clear_session(f"admin:{phone}")
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.subscription.no_services"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.subscription.no_services"
+            ),
             reply_to=admin_jid,
         )
 
@@ -1704,7 +1820,7 @@ async def _start_context_subscription(
     page = 1
     total_pages = max(1, (len(services) + PAGE_SIZE - 1) // PAGE_SIZE)
     page_start = (page - 1) * PAGE_SIZE
-    page_services = services[page_start:page_start + PAGE_SIZE]
+    page_services = services[page_start : page_start + PAGE_SIZE]
 
     service_lines: list[str] = []
     selection_map: dict[str, str] = {}
@@ -1726,10 +1842,7 @@ async def _start_context_subscription(
     await save_ctx(refresh_ttl=True)
     locale = _ctx_locale(tenant, data)
     client_phone = _phone_label(client.phone or "")
-    client_section = (
-        f"*Cliente:* {client.full_name}\n"
-        f"*Telefono:* {client_phone}\n"
-    )
+    client_section = f"*Cliente:* {client.full_name}\n*Telefono:* {client_phone}\n"
     nav_lines: list[str] = []
     if page < total_pages:
         nav_lines.append(t(locale, "wa.nav.next"))
@@ -1738,7 +1851,12 @@ async def _start_context_subscription(
     nav = "\n".join(nav_lines)
     return WhatsAppConsoleResponse(
         reply=(
-            _ctx_t(tenant, data, "wa.tenant.client_context.subscription.creating", client_name=client.full_name)
+            _ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.subscription.creating",
+                client_name=client.full_name,
+            )
             + client_section
             + "\n"
             + t(locale, "wa.tenant.client_context.subscription.service_prompt")
@@ -1857,14 +1975,21 @@ async def _reactivate_context_client(
         logger.exception("failed to reactivate client")
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.inactive.reactivate_error", exc=""),
+            reply=_ctx_t(
+                tenant,
+                data,
+                "wa.tenant.client_context.inactive.reactivate_error",
+                exc="",
+            ),
             reply_to=admin_jid,
         )
 
     if updated is None:
         await clear_ctx()
         return WhatsAppConsoleResponse(
-            reply=_ctx_t(tenant, data, "wa.tenant.client_context.error.client_not_found"),
+            reply=_ctx_t(
+                tenant, data, "wa.tenant.client_context.error.client_not_found"
+            ),
             reply_to=admin_jid,
         )
 
@@ -1915,7 +2040,9 @@ async def render_initial_context_menu(
     if client is not None:
         variant = "existing_active" if client.is_active else "existing_inactive"
         render_menu = (
-            _render_active_client_menu_text if client.is_active else _render_inactive_client_menu_text
+            _render_active_client_menu_text
+            if client.is_active
+            else _render_inactive_client_menu_text
         )
         return render_menu(locale, target_phone, client), {
             "target_state": variant,

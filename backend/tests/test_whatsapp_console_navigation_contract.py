@@ -18,8 +18,13 @@ SOURCE_GLOBS = [
 FORBIDDEN_PATTERNS = [
     re.compile(r"(?<!\d)0(?:️)?(?:⃣|️⃣)?\s*(?:Volver|Regresar|Back|Return)", re.IGNORECASE),
     re.compile(r"(?<!\d)9(?:️)?(?:⃣|️⃣)?\s*(?:Siguiente|Next)", re.IGNORECASE),
-    re.compile(r"(?<!\d)8(?:️)?(?:⃣|️⃣)?\s*(?:Anterior|Previous|Regresar|Back)", re.IGNORECASE),
-    re.compile(r"(?:escribe|write|type|respond(?:e)?)\s+\*?9\*?\s+(?:para\s+)?(?:cancelar|cancel)", re.IGNORECASE),
+    re.compile(
+        r"(?<!\d)8(?:️)?(?:⃣|️⃣)?\s*(?:Anterior|Previous|Regresar|Back)", re.IGNORECASE
+    ),
+    re.compile(
+        r"(?:escribe|write|type|respond(?:e)?)\s+\*?9\*?\s+(?:para\s+)?(?:cancelar|cancel)",
+        re.IGNORECASE,
+    ),
 ]
 
 REQUIRED_LABELS_ES = ["8️⃣ Siguiente", "9️⃣ Regresar", "0️⃣ Cancelar"]

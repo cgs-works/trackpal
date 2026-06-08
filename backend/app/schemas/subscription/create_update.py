@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -28,7 +28,14 @@ class SubscriptionCreate(BaseModel):
     @field_validator("duration_type")
     @classmethod
     def validate_duration_type(cls, v: str) -> str:
-        valid_durations = {"1_month", "3_months", "6_months", "9_months", "1_year", "custom"}
+        valid_durations = {
+            "1_month",
+            "3_months",
+            "6_months",
+            "9_months",
+            "1_year",
+            "custom",
+        }
         if v not in valid_durations:
             raise ValueError(f"duration_type must be one of {valid_durations}")
         return v
@@ -61,7 +68,14 @@ class SubscriptionUpdate(BaseModel):
     def validate_duration_type(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        valid_durations = {"1_month", "3_months", "6_months", "9_months", "1_year", "custom"}
+        valid_durations = {
+            "1_month",
+            "3_months",
+            "6_months",
+            "9_months",
+            "1_year",
+            "custom",
+        }
         if v not in valid_durations:
             raise ValueError(f"duration_type must be one of {valid_durations}")
         return v
@@ -90,9 +104,7 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
         if v is None:
             return v
         if not validate_timezone(v):
-            raise ValueError(
-                f"'{v}' is not a valid IANA timezone identifier"
-            )
+            raise ValueError(f"'{v}' is not a valid IANA timezone identifier")
         return v
 
     @field_validator("reminder_time")
@@ -116,7 +128,13 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
     def validate_recipient_mode(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        valid_modes = {"tenant_only", "client_only", "tenant_client", "tenant_and_client", "both"}
+        valid_modes = {
+            "tenant_only",
+            "client_only",
+            "tenant_client",
+            "tenant_and_client",
+            "both",
+        }
         if v not in valid_modes:
             raise ValueError(f"recipient_mode must be one of {valid_modes}")
         return v

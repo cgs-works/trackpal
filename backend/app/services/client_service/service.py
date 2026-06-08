@@ -3,7 +3,12 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_rls_context, restore_rls_context, set_internal_tenant_rls_context, set_rls_context
+from app.core.database import (
+    get_rls_context,
+    restore_rls_context,
+    set_internal_tenant_rls_context,
+    set_rls_context,
+)
 from app.core.errors import UserFacingError
 from app.core.input_validation import (
     validate_client_local_username,
@@ -12,7 +17,12 @@ from app.core.input_validation import (
     validate_password_policy,
 )
 from app.core.security import get_password_hash
-from app.repositories import clients_repository, sessions_repository, tenants_repository, users_repository
+from app.repositories import (
+    clients_repository,
+    sessions_repository,
+    tenants_repository,
+    users_repository,
+)
 from app.models import Client, Tenant, User
 from app.schemas.client import ClientCreate, ClientUpdate
 
@@ -51,7 +61,9 @@ class ClientService:
         password = validate_password_policy(payload.password)
         canonical_username = build_client_username(tenant.client_prefix, local_username)
 
-        if await clients_repository.local_username_exists(db, tenant_id, canonical_username):
+        if await clients_repository.local_username_exists(
+            db, tenant_id, canonical_username
+        ):
             raise UserFacingError("client_local_username_exists")
         if phone and await clients_repository.phone_exists(db, tenant_id, phone):
             raise UserFacingError("phone_already_registered")
@@ -96,20 +108,30 @@ class ClientService:
 
         if "full_name" in update_data and update_data["full_name"] is not None:
             update_data["full_name"] = validate_full_name(update_data["full_name"])
-        if "local_username" in update_data and update_data["local_username"] is not None:
+        if (
+            "local_username" in update_data
+            and update_data["local_username"] is not None
+        ):
             update_data["local_username"] = validate_client_local_username(
                 update_data["local_username"]
             )
         if "phone" in update_data:
             update_data["phone"] = validate_phone(update_data["phone"])
 
-        new_local_username = update_data.get("local_username", client.username.split("_", 1)[1] if "_" in client.username else client.username)
+        new_local_username = update_data.get(
+            "local_username",
+            client.username.split("_", 1)[1]
+            if "_" in client.username
+            else client.username,
+        )
         canonical_username = build_client_username(
             client.tenant.client_prefix, new_local_username
         )
 
         if new_local_username != (
-            client.username.split("_", 1)[1] if "_" in client.username else client.username
+            client.username.split("_", 1)[1]
+            if "_" in client.username
+            else client.username
         ):
             if await clients_repository.local_username_exists(
                 db, tenant_id, canonical_username, client.id
@@ -117,13 +139,18 @@ class ClientService:
                 raise UserFacingError("client_local_username_exists")
 
         if "phone" in update_data and update_data["phone"] != client.phone:
-            if update_data["phone"] is not None and await clients_repository.phone_exists(
+            if update_data[
+                "phone"
+            ] is not None and await clients_repository.phone_exists(
                 db, tenant_id, update_data["phone"], client.id
             ):
                 raise UserFacingError("phone_already_registered")
 
-        if canonical_username != client.user.username and await users_repository.username_exists(
-            db, canonical_username, client.user.id
+        if (
+            canonical_username != client.user.username
+            and await users_repository.username_exists(
+                db, canonical_username, client.user.id
+            )
         ):
             raise UserFacingError("username_already_registered")
 
@@ -192,7 +219,11 @@ class ClientService:
             clients = await clients_repository.get_clients_with_user(db, tenant_id)
             for client in clients:
                 # Extract local part from existing canonical username
-                local_part = client.username.split("_", 1)[1] if "_" in client.username else client.username
+                local_part = (
+                    client.username.split("_", 1)[1]
+                    if "_" in client.username
+                    else client.username
+                )
                 new_canonical = build_client_username(new_prefix, local_part)
                 client.user.username = new_canonical
                 client.username = new_canonical

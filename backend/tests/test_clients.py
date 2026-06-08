@@ -7,7 +7,9 @@ from app.models import Client, Tenant, User
 pytestmark = pytest.mark.asyncio
 
 
-async def _login_tenant(client, username: str = "tenant", password: str = "tenant-password") -> dict[str, str]:
+async def _login_tenant(
+    client, username: str = "tenant", password: str = "tenant-password"
+) -> dict[str, str]:
     response = await client.post(
         "/api/v1/auth/login", json={"username": username, "password": password}
     )
@@ -158,7 +160,9 @@ async def test_local_username_update_syncs_login_username(client, active_tenant_
     assert new_login.status_code == 200
 
 
-async def test_prefix_update_syncs_client_usernames(client, active_tenant_user, auth_headers, db_session):
+async def test_prefix_update_syncs_client_usernames(
+    client, active_tenant_user, auth_headers, db_session
+):
     headers = await _login_tenant(client)
     create_response = await _create_client(client, headers)
     client_id = create_response.json()["id"]
@@ -230,7 +234,9 @@ async def test_deactivate_delete_client_removes_user(client, active_tenant_user)
     assert deactivate_response.status_code == 200
     assert deactivate_response.json()["is_active"] is False
 
-    delete_response = await client.delete(f"/api/v1/clients/{client_id}", headers=headers)
+    delete_response = await client.delete(
+        f"/api/v1/clients/{client_id}", headers=headers
+    )
     assert delete_response.status_code == 204
 
     get_response = await client.get(f"/api/v1/clients/{client_id}", headers=headers)
@@ -242,11 +248,15 @@ async def test_delete_active_client_forbidden(client, active_tenant_user):
     create_response = await _create_client(client, headers)
     client_id = create_response.json()["id"]
 
-    delete_response = await client.delete(f"/api/v1/clients/{client_id}", headers=headers)
+    delete_response = await client.delete(
+        f"/api/v1/clients/{client_id}", headers=headers
+    )
     assert delete_response.status_code == 403
 
 
-async def test_cross_tenant_client_access_blocked(client, auth_headers, active_tenant_user):
+async def test_cross_tenant_client_access_blocked(
+    client, auth_headers, active_tenant_user
+):
     tenant_headers = await _login_tenant(client)
     create_response = await _create_client(client, tenant_headers)
 
@@ -296,7 +306,9 @@ async def test_client_cannot_access_catalog_management(client, active_client_use
     assert catalog_response.status_code == 403
 
 
-async def test_tenant_delete_removes_client_users(client, active_tenant_user, auth_headers, db_session):
+async def test_tenant_delete_removes_client_users(
+    client, active_tenant_user, auth_headers, db_session
+):
     headers = await _login_tenant(client)
     create_response = await _create_client(client, headers)
     client_user_id = UUID(create_response.json()["owner_user_id"])
@@ -340,7 +352,9 @@ async def test_master_cannot_create_clients(client, auth_headers):
     assert response.status_code == 403
 
 
-async def test_update_client_duplicate_local_username_spanish(client, active_tenant_user):
+async def test_update_client_duplicate_local_username_spanish(
+    client, active_tenant_user
+):
     """UserFacingError on update returns tenant-localized (es) message.
 
     Locale resolved before service call, so IntegrityError rollback in
@@ -350,13 +364,19 @@ async def test_update_client_duplicate_local_username_spanish(client, active_ten
     await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
 
     # Create client A
-    resp_a = await _create_client(client, headers, local_username="client_a", phone="+12015550030")
+    resp_a = await _create_client(
+        client, headers, local_username="client_a", phone="+12015550030"
+    )
     assert resp_a.status_code == 201
     client_a_id = resp_a.json()["id"]
 
     # Create client B with different local_username
     resp_b = await _create_client(
-        client, headers, local_username="client_b", full_name="Client B", phone="+12015550031"
+        client,
+        headers,
+        local_username="client_b",
+        full_name="Client B",
+        phone="+12015550031",
     )
     assert resp_b.status_code == 201
 
@@ -382,4 +402,7 @@ async def test_delete_client_active_spanish(client, active_tenant_user):
     response = await client.delete(f"/api/v1/clients/{client_id}", headers=headers)
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "No se puede eliminar un cliente activo. Desactívalo primero."
+    assert (
+        response.json()["detail"]
+        == "No se puede eliminar un cliente activo. Desactívalo primero."
+    )

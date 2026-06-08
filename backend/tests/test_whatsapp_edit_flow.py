@@ -568,7 +568,7 @@ class TestEditNewValue:
         )
 
         # Should return success message + main menu
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp Renamed" in reply
         assert "Trackpal Master Console" in reply
 
@@ -597,7 +597,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp" in reply
         assert "Trackpal Master Console" in reply
 
@@ -625,7 +625,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp" in reply
         assert "Trackpal Master Console" in reply
 
@@ -653,7 +653,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp" in reply
         assert "Trackpal Master Console" in reply
 
@@ -682,7 +682,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "New Name" in reply
         assert "Trackpal Master Console" in reply
 
@@ -823,7 +823,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Trackpal Master Console" in reply
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
@@ -847,7 +847,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Trackpal Master Console" in reply
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
@@ -919,7 +919,7 @@ class TestEditNewValue:
         )
 
         # Should show success with main menu
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "Trackpal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
@@ -1053,7 +1053,7 @@ class TestEditFlowFullScenario:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "New Alpha Name" in reply
         assert "Trackpal Master Console" in reply
 
@@ -1093,7 +1093,7 @@ class TestEditFlowFullScenario:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Tenant actualizado exitosamente" in reply
+        assert "Empresa actualizada exitosamente" in reply
         assert "New Alpha Name" in reply  # Previous edit preserved in DB
         assert "Trackpal Master Console" in reply
 

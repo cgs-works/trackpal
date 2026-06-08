@@ -69,10 +69,17 @@ async def _handle_subscriptions_create_confirm(
                 db, tenant_id, client_id
             )
             for sub in existing:
-                if sub.service_id == service_id and sub.streaming_email == data["streaming_email"]:
+                if (
+                    sub.service_id == service_id
+                    and sub.streaming_email == data["streaming_email"]
+                ):
                     # Duplicate found — store info and show options
-                    service_name = getattr(sub.service, "name", self._t("wa.tenant.errors.unknown"))
-                    client_name = data.get("client_name", self._t("wa.tenant.errors.unknown"))
+                    service_name = getattr(
+                        sub.service, "name", self._t("wa.tenant.errors.unknown")
+                    )
+                    client_name = data.get(
+                        "client_name", self._t("wa.tenant.errors.unknown")
+                    )
                     session.temp_data["existing_sub_id"] = str(sub.id)
                     session.temp_data["duplicate_client_name"] = client_name
                     session.temp_data["duplicate_service_name"] = service_name

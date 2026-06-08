@@ -20,12 +20,22 @@ def upgrade() -> None:
     op.create_table(
         "client_messaging_blocks",
         sa.Column(
-            "id", sa.Uuid(), primary_key=True, server_default=sa.text("gen_random_uuid()")
+            "id",
+            sa.Uuid(),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
         ),
-        sa.Column("tenant_id", sa.Uuid(), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id",
+            sa.Uuid(),
+            sa.ForeignKey("tenants.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("phone", sa.String(50), nullable=True),
         sa.Column("whatsapp_lid", sa.String(100), nullable=True),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -39,8 +49,12 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index("ix_cmb_tenant_phone", "client_messaging_blocks", ["tenant_id", "phone"])
-    op.create_index("ix_cmb_tenant_lid", "client_messaging_blocks", ["tenant_id", "whatsapp_lid"])
+    op.create_index(
+        "ix_cmb_tenant_phone", "client_messaging_blocks", ["tenant_id", "phone"]
+    )
+    op.create_index(
+        "ix_cmb_tenant_lid", "client_messaging_blocks", ["tenant_id", "whatsapp_lid"]
+    )
 
 
 def downgrade() -> None:

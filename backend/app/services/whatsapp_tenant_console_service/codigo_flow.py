@@ -115,9 +115,7 @@ async def _start_codigo_flow(
         return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
 
     # Build page 1 of services
-    service_list = _build_service_page(
-        effective_keys, 0, loc, started_from_menu
-    )
+    service_list = _build_service_page(effective_keys, 0, loc, started_from_menu)
 
     # Create session with flow state
     session = await session_service.get_session(f"admin:{phone}")
@@ -168,14 +166,10 @@ async def _handle_codigo_service(
 
     # Check cancel first
     if is_cancel(msg):
-        started_from_menu = (
-            session.temp_data.get("codigo_started_from_menu") == "true"
-        )
+        started_from_menu = session.temp_data.get("codigo_started_from_menu") == "true"
         await session_service.clear_session(f"admin:{phone}")
         if started_from_menu:
-            return self._with_main_menu(
-                _i18n_t(loc, "wa.tenant.cancelled"), locale=loc
-            )
+            return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
         return _i18n_t(loc, "wa.tenant.cancelled")
 
     if is_back(msg):
@@ -319,11 +313,14 @@ async def _handle_codigo_awaiting_result(
                 tenant_id=tenant_id,
             )
             job_done = job is not None and job.status in (
-                "completed", "failed", "timeout"
+                "completed",
+                "failed",
+                "timeout",
             )
         except Exception:
             logger.exception(
-                "Failed to check lookup job %s", lookup_job_id,
+                "Failed to check lookup job %s",
+                lookup_job_id,
             )
             job_done = True  # treat error as done so we don't loop
 
@@ -336,19 +333,15 @@ async def _handle_codigo_awaiting_result(
             return _i18n_t(loc, "wa.tenant.codigo.buscando")
 
         # Fallback — restart from service list
-        effective_keys = (
-            await code_services_repository.get_effective_service_keys(
-                db, tenant_id
-            )
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant_id
         )
         if not effective_keys:
             await session_service.clear_session(f"admin:{phone}")
             return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
 
         await session_service.clear_session(f"admin:{phone}")
-        new_session = await session_service.create_session(
-            f"admin:{phone}"
-        )
+        new_session = await session_service.create_session(f"admin:{phone}")
         new_session.flow = self.CODIGO_FLOW
         new_session.step = self.CODIGO_STEP_SERVICE
         new_session.temp_data = {
@@ -357,26 +350,26 @@ async def _handle_codigo_awaiting_result(
         }
         await session_service.save_session(new_session)
         service_list = _build_service_page(
-            effective_keys, 0, loc, started_from_menu=False,
+            effective_keys,
+            0,
+            loc,
+            started_from_menu=False,
         )
         return self._t(
-            self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list,
+            self.KEY_CODIGO_SERVICE_PROMPT,
+            service_list=service_list,
         )
 
     if msg.strip() == "2":
-        effective_keys = (
-            await code_services_repository.get_effective_service_keys(
-                db, tenant_id
-            )
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db, tenant_id
         )
         if not effective_keys:
             await session_service.clear_session(f"admin:{phone}")
             return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
 
         await session_service.clear_session(f"admin:{phone}")
-        new_session = await session_service.create_session(
-            f"admin:{phone}"
-        )
+        new_session = await session_service.create_session(f"admin:{phone}")
         new_session.flow = self.CODIGO_FLOW
         new_session.step = self.CODIGO_STEP_SERVICE
         new_session.temp_data = {
@@ -385,10 +378,14 @@ async def _handle_codigo_awaiting_result(
         }
         await session_service.save_session(new_session)
         service_list = _build_service_page(
-            effective_keys, 0, loc, started_from_menu=False,
+            effective_keys,
+            0,
+            loc,
+            started_from_menu=False,
         )
         return self._t(
-            self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list,
+            self.KEY_CODIGO_SERVICE_PROMPT,
+            service_list=service_list,
         )
 
     if msg.strip() == "0":

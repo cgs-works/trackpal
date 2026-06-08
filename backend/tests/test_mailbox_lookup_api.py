@@ -153,7 +153,6 @@ class TestCreateLookupEndpoint:
 
     async def test_create_job_inactive_tenant(self, client: AsyncClient, db_session):
         """Inactive tenant -> 400."""
-        from app.models import Tenant
 
         tenant, _ = await _seed_tenant(db_session)
         tenant.is_active = False

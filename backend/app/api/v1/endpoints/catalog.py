@@ -25,15 +25,21 @@ async def list_services(db: DbDep, tenant_id: ActiveTenantId):
     return await catalog_service.list_services(db, tenant_id)
 
 
-@router.post("/services", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/services", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_service(payload: ServiceCreate, db: DbDep, tenant_id: ActiveTenantId):
     try:
         return await catalog_service.create_service(db, tenant_id, payload)
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
 
 
 @router.get("/services/{service_id}", response_model=ServiceResponse)
@@ -41,26 +47,42 @@ async def get_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     service = await catalog_service.get_service(db, tenant_id, service_id)
     if service is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.service_not_found"),
+        )
     return service
 
 
 @router.put("/services/{service_id}", response_model=ServiceResponse)
-async def update_service(service_id: UUID, payload: ServiceUpdate, db: DbDep, tenant_id: ActiveTenantId):
+async def update_service(
+    service_id: UUID, payload: ServiceUpdate, db: DbDep, tenant_id: ActiveTenantId
+):
     try:
-        service = await catalog_service.update_service(db, tenant_id, service_id, payload)
+        service = await catalog_service.update_service(
+            db, tenant_id, service_id, payload
+        )
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if service is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.service_not_found"),
+        )
     return service
 
 
-@router.get("/services/{service_id}/delete-preview", response_model=CatalogDeletePreview)
+@router.get(
+    "/services/{service_id}/delete-preview", response_model=CatalogDeletePreview
+)
 async def preview_delete_service(
     service_id: UUID,
     db: DbDep,
@@ -73,7 +95,10 @@ async def preview_delete_service(
     )
     if preview is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.service_not_found"),
+        )
     locale = await resolve_locale(db, tenant_id)
     preview.note = _t(locale, preview.note)
     return preview
@@ -87,15 +112,25 @@ async def delete_service(
     confirm: bool = Query(False),
 ):
     try:
-        deleted = await catalog_service.delete_service(db, tenant_id, service_id, confirm=confirm)
+        deleted = await catalog_service.delete_service(
+            db, tenant_id, service_id, confirm=confirm
+        )
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
         if exc.code == "catalog_delete_confirmation_required":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=translate_error(locale, exc),
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     if deleted is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.service_not_found"),
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -104,41 +139,75 @@ async def list_plans(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     plans = await catalog_service.list_plans(db, tenant_id, service_id)
     if plans is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.service_not_found"),
+        )
     return plans
 
 
-@router.post("/services/{service_id}/plans", response_model=PlanResponse, status_code=status.HTTP_201_CREATED)
-async def create_plan(service_id: UUID, payload: PlanCreate, db: DbDep, tenant_id: ActiveTenantId):
+@router.post(
+    "/services/{service_id}/plans",
+    response_model=PlanResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_plan(
+    service_id: UUID, payload: PlanCreate, db: DbDep, tenant_id: ActiveTenantId
+):
     try:
         plan = await catalog_service.create_plan(db, tenant_id, service_id, payload)
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if plan is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.service_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.service_not_found"),
+        )
     return plan
 
 
 @router.put("/services/{service_id}/plans/{plan_id}", response_model=PlanResponse)
-async def update_plan(service_id: UUID, plan_id: UUID, payload: PlanUpdate, db: DbDep, tenant_id: ActiveTenantId):
+async def update_plan(
+    service_id: UUID,
+    plan_id: UUID,
+    payload: PlanUpdate,
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+):
     try:
-        plan = await catalog_service.update_plan(db, tenant_id, service_id, plan_id, payload)
+        plan = await catalog_service.update_plan(
+            db, tenant_id, service_id, plan_id, payload
+        )
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if plan is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.plan_not_found"),
+        )
     return plan
 
 
-@router.get("/services/{service_id}/plans/{plan_id}/delete-preview", response_model=CatalogDeletePreview)
+@router.get(
+    "/services/{service_id}/plans/{plan_id}/delete-preview",
+    response_model=CatalogDeletePreview,
+)
 async def preview_delete_plan(
     service_id: UUID,
     plan_id: UUID,
@@ -152,13 +221,18 @@ async def preview_delete_plan(
     )
     if preview is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.plan_not_found"),
+        )
     locale = await resolve_locale(db, tenant_id)
     preview.note = _t(locale, preview.note)
     return preview
 
 
-@router.delete("/services/{service_id}/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/services/{service_id}/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_plan(
     service_id: UUID,
     plan_id: UUID,
@@ -167,13 +241,23 @@ async def delete_plan(
     confirm: bool = Query(False),
 ):
     try:
-        deleted = await catalog_service.delete_plan(db, tenant_id, service_id, plan_id, confirm=confirm)
+        deleted = await catalog_service.delete_plan(
+            db, tenant_id, service_id, plan_id, confirm=confirm
+        )
     except UserFacingError as exc:
         locale = await resolve_locale(db, tenant_id)
         if exc.code == "catalog_delete_confirmation_required":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=translate_error(locale, exc)) from exc
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=translate_error(locale, exc),
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
     if deleted is None:
         locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.plan_not_found"))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.plan_not_found"),
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

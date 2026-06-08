@@ -118,7 +118,9 @@ async def _create_context_client(
     full_name: str,
     username: str,
 ) -> Client:
-    ctx_user = User(username=f"{username}_user", password_hash="dummy-hash", role="client")
+    ctx_user = User(
+        username=f"{username}_user", password_hash="dummy-hash", role="client"
+    )
     db_session.add(ctx_user)
     await db_session.flush()
     ctx_client = Client(
@@ -210,10 +212,18 @@ def test_catalog_new_terminology_applied():
     # Profile body must use new terminology (Proveedor/Provider)
     es_profile = t("es", "wa.client.profile.body", **params)
     en_profile = t("en", "wa.client.profile.body", **params)
-    assert "Proveedor:" in es_profile, f"ES profile should say Proveedor:, got: {es_profile}"
-    assert "Provider:" in en_profile, f"EN profile should say Provider:, got: {en_profile}"
-    assert "Tenant:" not in es_profile, f"ES profile should not contain Tenant:, got: {es_profile}"
-    assert "Tenant:" not in en_profile, f"EN profile should not contain Tenant:, got: {en_profile}"
+    assert "Proveedor:" in es_profile, (
+        f"ES profile should say Proveedor:, got: {es_profile}"
+    )
+    assert "Provider:" in en_profile, (
+        f"EN profile should say Provider:, got: {en_profile}"
+    )
+    assert "Tenant:" not in es_profile, (
+        f"ES profile should not contain Tenant:, got: {es_profile}"
+    )
+    assert "Tenant:" not in en_profile, (
+        f"EN profile should not contain Tenant:, got: {en_profile}"
+    )
 
     # Collision message must not expose Tenant term
     es_collision = t("es", "wa.tenant.client_context.collision")
@@ -227,7 +237,13 @@ def test_catalog_new_terminology_applied():
 
 
 def test_client_context_i18n_keys_exist_in_en_and_es():
-    params = {"identity": "34123456789", "client_name": "Ana", "status": "Activo", "phone": "34123456789", "phone_line": "Phone: 34123456789\n"}
+    params = {
+        "identity": "34123456789",
+        "client_name": "Ana",
+        "status": "Activo",
+        "phone": "34123456789",
+        "phone_line": "Phone: 34123456789\n",
+    }
     keys = [
         "wa.tenant.client_context.menu.unregistered_with_phone",
         "wa.tenant.client_context.menu.unregistered_lid_only",
@@ -250,7 +266,23 @@ def test_client_context_i18n_keys_exist_in_en_and_es():
         for key in keys:
             rendered = t(locale, key, **params)
             assert rendered != key
-            assert "Gestion del cliente" in rendered or "Client management" in rendered or key.endswith(("closed", "collision", "invalid_option", "success", "phone_prompt", "phone_prefilled", "phone_line", "delete_blocked", "detail.options"))
+            assert (
+                "Gestion del cliente" in rendered
+                or "Client management" in rendered
+                or key.endswith(
+                    (
+                        "closed",
+                        "collision",
+                        "invalid_option",
+                        "success",
+                        "phone_prompt",
+                        "phone_prefilled",
+                        "phone_line",
+                        "delete_blocked",
+                        "detail.options",
+                    )
+                )
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -487,7 +519,9 @@ async def test_active_menu_option_2_enters_edit_flow(
         username="tna01_ctx_active",
     )
     fake_mgr = _FakeManager(used_backup=False)
-    await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559999")
+    await _seed_shortcut_context(
+        fake_mgr, admin_phone_digits, target_phone="12015559999"
+    )
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -495,7 +529,11 @@ async def test_active_menu_option_2_enters_edit_flow(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "2", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -523,21 +561,31 @@ async def test_active_menu_option_3_opens_view_subscriptions(
     )
 
     fake_mgr = _FakeManager(used_backup=False)
-    ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559998")
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr, admin_phone_digits, target_phone="12015559998"
+    )
 
-    with patch(
-        "app.api.v1.endpoints.integrations.console.get_redis_manager",
-        return_value=fake_mgr,
-    ), patch(
-        "app.core.redis_client.get_redis_manager",
-        return_value=fake_mgr,
-    ), patch(
-        "app.core.redis_client.lifespan.get_redis_manager",
-        return_value=fake_mgr,
+    with (
+        patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.core.redis_client.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.core.redis_client.lifespan.get_redis_manager",
+            return_value=fake_mgr,
+        ),
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "3", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "3",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -572,19 +620,25 @@ async def test_view_subscriptions_creates_subscription_from_empty_list(
     await db_session.commit()
 
     fake_mgr = _FakeManager(used_backup=False)
-    ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559998")
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr, admin_phone_digits, target_phone="12015559998"
+    )
 
     # Start in active_view_subscriptions step (as if admin just opened it)
     # Send '1' which is the 'Create new subscription' option when list is empty
-    with patch(
-        "app.api.v1.endpoints.integrations.console.get_redis_manager",
-        return_value=fake_mgr,
-    ), patch(
-        "app.core.redis_client.get_redis_manager",
-        return_value=fake_mgr,
-    ), patch(
-        "app.core.redis_client.lifespan.get_redis_manager",
-        return_value=fake_mgr,
+    with (
+        patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.core.redis_client.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.core.redis_client.lifespan.get_redis_manager",
+            return_value=fake_mgr,
+        ),
     ):
         # First set the context step to active_view_subscriptions
         ctx_raw = await fake_mgr._redis.get(ctx_key)
@@ -594,7 +648,11 @@ async def test_view_subscriptions_creates_subscription_from_empty_list(
 
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "1", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -655,7 +713,11 @@ async def test_active_menu_option_5_blocks_delete_and_keeps_active_menu(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "5", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "5",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -698,7 +760,11 @@ async def test_active_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "9", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "9",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -745,7 +811,11 @@ async def test_active_detail_back_rerenders_active_root_menu(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "9", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "9",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -783,7 +853,11 @@ async def test_active_edit_field_back_returns_full_active_detail(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "9", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "9",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -826,7 +900,11 @@ async def test_active_edit_success_shows_updated_detail_screen(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "New Active Name", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "New Active Name",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -868,7 +946,11 @@ async def test_active_menu_option_4_opens_deactivate_confirm(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "4", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "4",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -908,7 +990,11 @@ async def test_active_deactivate_confirm_success_shows_inactive_menu(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "CONFIRMAR", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "CONFIRMAR",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -938,7 +1024,9 @@ async def test_inactive_menu_option_1_shows_detail(
         username="tna01_ctx_inactive_detail",
     )
     fake_mgr = _FakeManager(used_backup=False)
-    await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559991")
+    await _seed_shortcut_context(
+        fake_mgr, admin_phone_digits, target_phone="12015559991"
+    )
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -946,7 +1034,11 @@ async def test_inactive_menu_option_1_shows_detail(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "1", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -972,7 +1064,9 @@ async def test_inactive_menu_option_3_reactivates_and_shows_active_menu(
         username="tna01_ctx_reactivate",
     )
     fake_mgr = _FakeManager(used_backup=False)
-    ctx_key = await _seed_shortcut_context(fake_mgr, admin_phone_digits, target_phone="12015559990")
+    ctx_key = await _seed_shortcut_context(
+        fake_mgr, admin_phone_digits, target_phone="12015559990"
+    )
 
     with patch(
         "app.api.v1.endpoints.integrations.console.get_redis_manager",
@@ -980,7 +1074,11 @@ async def test_inactive_menu_option_3_reactivates_and_shows_active_menu(
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "3", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "3",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -1022,14 +1120,22 @@ async def test_inactive_menu_option_4_delete_flow_shows_unregistered_menu_after_
     ):
         prompt_response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "4", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "4",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
         assert "eliminar permanentemente" in prompt_response.json()["reply"].lower()
 
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "CONFIRMAR", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "CONFIRMAR",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -1067,7 +1173,11 @@ async def test_inactive_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl
     ):
         response = await client.post(
             ENDPOINT,
-            json={"phone": tenant.whatsapp_phone, "message": "9", "instance": TEST_INSTANCE},
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "9",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
@@ -1084,7 +1194,9 @@ async def test_render_initial_context_menu_lid_only_hides_phone_line(
     db_session, active_tenant_user
 ):
     """LID-only render must not show phone number line."""
-    from app.api.v1.endpoints.integrations.console_context_shortcut import render_initial_context_menu
+    from app.api.v1.endpoints.integrations.console_context_shortcut import (
+        render_initial_context_menu,
+    )
 
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     rendered, metadata = await render_initial_context_menu(

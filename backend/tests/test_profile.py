@@ -134,7 +134,9 @@ async def test_change_password_client(client, active_client_user):
     )
 
     assert response.status_code == 200
-    new_headers = await _login(client, active_client_user.username, "new-client-password")
+    new_headers = await _login(
+        client, active_client_user.username, "new-client-password"
+    )
     assert new_headers["Authorization"].startswith("Bearer ")
 
 
@@ -153,7 +155,9 @@ async def test_change_password_client_uses_tenant_locale(client, active_client_u
     assert response.json()["detail"] == "Contraseña actual incorrecta"
 
 
-async def test_change_password_client_short_new_password_rejected(client, active_client_user):
+async def test_change_password_client_short_new_password_rejected(
+    client, active_client_user
+):
     headers = await _login(client, active_client_user.username, "client-password")
 
     response = await client.put(
@@ -165,7 +169,9 @@ async def test_change_password_client_short_new_password_rejected(client, active
     assert response.status_code == 422
 
 
-async def test_change_password_client_empty_new_password_rejected(client, active_client_user):
+async def test_change_password_client_empty_new_password_rejected(
+    client, active_client_user
+):
     headers = await _login(client, active_client_user.username, "client-password")
 
     response = await client.put(
@@ -192,6 +198,7 @@ async def test_change_password_wrong_old(client, active_tenant_user):
 async def test_update_profile_phone_is_canonical(client, master_user, db_session):
     """Updated profile phone stored canonical without + prefix."""
     from uuid import UUID
+
     master_headers = await _login(client, "master", "master-password")
 
     response = await client.put(
@@ -205,6 +212,7 @@ async def test_update_profile_phone_is_canonical(client, master_user, db_session
 
     from app.models import MasterProfile
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
     )
@@ -212,9 +220,12 @@ async def test_update_profile_phone_is_canonical(client, master_user, db_session
     assert profile.phone == "12015550012"
 
 
-async def test_update_profile_phone_jid_becomes_canonical(client, master_user, db_session):
+async def test_update_profile_phone_jid_becomes_canonical(
+    client, master_user, db_session
+):
     """JID-style phone input stored canonical."""
     from uuid import UUID
+
     master_headers = await _login(client, "master", "master-password")
 
     response = await client.put(
@@ -228,6 +239,7 @@ async def test_update_profile_phone_jid_becomes_canonical(client, master_user, d
 
     from app.models import MasterProfile
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
     )
@@ -447,9 +459,7 @@ async def test_update_profile_service_rejects_invalid_phone_direct(
     payload.phone = "abc"  # bypass Pydantic
 
     service = ProfileService()
-    with pytest.raises(
-        ValueError, match="Phone must contain at least one digit"
-    ):
+    with pytest.raises(ValueError, match="Phone must contain at least one digit"):
         await service.update_profile(db_session, master_user, payload)
 
 

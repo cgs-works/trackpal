@@ -230,21 +230,14 @@ class FakeCatalogService:
         if str(service_id) not in self._services:
             return None
         return sorted(
-            [
-                plan
-                for plan in self._plans.values()
-                if plan.service_id == service_id
-            ],
+            [plan for plan in self._plans.values() if plan.service_id == service_id],
             key=lambda p: p.name.lower(),
         )
 
     async def create_service(
         self, db: Any, tenant_id: UUID, payload: Any
     ) -> FakeServiceObj:
-        if any(
-            s.name.lower() == payload.name.lower()
-            for s in self._services.values()
-        ):
+        if any(s.name.lower() == payload.name.lower() for s in self._services.values()):
             raise UserFacingError("service_name_already_exists")
         service = FakeServiceObj(name=payload.name)
         self._services[str(service.id)] = service
@@ -260,8 +253,7 @@ class FakeCatalogService:
         if str(service_id) not in self._services:
             return None
         if any(
-            p.service_id == service_id
-            and p.name.lower() == payload.name.lower()
+            p.service_id == service_id and p.name.lower() == payload.name.lower()
             for p in self._plans.values()
         ):
             raise UserFacingError("plan_name_already_exists")
@@ -311,9 +303,15 @@ class FakeCatalogService:
         plan.name = payload.name
         return plan
 
-
-
-    async def get_service_delete_preview(self, db: Any, tenant_id: UUID, service_id: UUID, *, page: int = 1, page_size: int = 7) -> FakeDeletePreview | None:
+    async def get_service_delete_preview(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        service_id: UUID,
+        *,
+        page: int = 1,
+        page_size: int = 7,
+    ) -> FakeDeletePreview | None:
         service = self._services.get(str(service_id))
         if service is None:
             return None
@@ -327,14 +325,33 @@ class FakeCatalogService:
             historical_subscription_count=1,
             total_subscription_count=service.active_subscription_count + 1,
             active_subscriptions=rows[:page_size],
-            pagination=FakeDeletePagination(page=page, page_size=page_size, total_items=len(rows), total_pages=1, has_next=False),
+            pagination=FakeDeletePagination(
+                page=page,
+                page_size=page_size,
+                total_items=len(rows),
+                total_pages=1,
+                has_next=False,
+            ),
         )
 
-    async def get_plan_delete_preview(self, db: Any, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, page: int = 1, page_size: int = 7) -> FakeDeletePreview | None:
+    async def get_plan_delete_preview(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        *,
+        page: int = 1,
+        page_size: int = 7,
+    ) -> FakeDeletePreview | None:
         plan = self._plans.get(str(plan_id))
         if plan is None:
             return None
-        rows = [FakeDeleteRow(plan_name=plan.name)] if plan.active_subscription_count else []
+        rows = (
+            [FakeDeleteRow(plan_name=plan.name)]
+            if plan.active_subscription_count
+            else []
+        )
         return FakeDeletePreview(
             target_type="plan",
             target_id=plan.id,
@@ -344,22 +361,39 @@ class FakeCatalogService:
             historical_subscription_count=0,
             total_subscription_count=plan.active_subscription_count,
             active_subscriptions=rows[:page_size],
-            pagination=FakeDeletePagination(page=page, page_size=page_size, total_items=len(rows), total_pages=1, has_next=False),
+            pagination=FakeDeletePagination(
+                page=page,
+                page_size=page_size,
+                total_items=len(rows),
+                total_pages=1,
+                has_next=False,
+            ),
         )
 
-    async def delete_service(self, db: Any, tenant_id: UUID, service_id: UUID, *, confirm: bool = False) -> FakeDeletePreview | None:
+    async def delete_service(
+        self, db: Any, tenant_id: UUID, service_id: UUID, *, confirm: bool = False
+    ) -> FakeDeletePreview | None:
         if not confirm:
             raise UserFacingError("catalog_delete_confirmation_required")
         preview = await self.get_service_delete_preview(db, tenant_id, service_id)
         self._services.pop(str(service_id), None)
         return preview
 
-    async def delete_plan(self, db: Any, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, confirm: bool = False) -> FakeDeletePreview | None:
+    async def delete_plan(
+        self,
+        db: Any,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        *,
+        confirm: bool = False,
+    ) -> FakeDeletePreview | None:
         if not confirm:
             raise UserFacingError("catalog_delete_confirmation_required")
         preview = await self.get_plan_delete_preview(db, tenant_id, service_id, plan_id)
         self._plans.pop(str(plan_id), None)
         return preview
+
 
 @dataclass
 class FakeSubscriptionObj:
@@ -566,9 +600,7 @@ class FakeSubscriptionService:
             "profile_pin": sub.profile_pin,
         }
 
-    async def get_reminder_settings(
-        self, db: Any, tenant_id: UUID
-    ) -> Any:
+    async def get_reminder_settings(self, db: Any, tenant_id: UUID) -> Any:
         del db
         # Return an object with a timezone attribute defaulting to UTC
         _settings = type("_ReminderSettings", (), {"timezone": "UTC"})()
@@ -828,6 +860,7 @@ class TestFacade:
         )
         # Should return goodbye without menu (n8n closes session)
         assert "Has salido de la consola" in reply or "You have exited" in reply
+
     async def test_facade_top_level_zero_returns_goodbye_message(
         self,
         facade: WhatsAppTenantConsoleFacade,
@@ -1308,7 +1341,11 @@ class TestZeroHandling:
             message="0",
             session_service=session_service,
         )
-        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply or "salido de la consola" in reply.lower()
+        assert (
+            "cancelada" in reply.lower()
+            or "Consola de Administracion" in reply
+            or "salido de la consola" in reply.lower()
+        )
 
         # Session should be cleared
         fetched = await session_service.get_session("admin:+10000000000")
@@ -1477,7 +1514,11 @@ class TestClientSelect:
             session_service=session_service,
         )
         # Global reset intercepts '0' on any active flow → cancel
-        assert "cancelada" in reply.lower() or "Consola de Administracion" in reply or "salido de la consola" in reply.lower()
+        assert (
+            "cancelada" in reply.lower()
+            or "Consola de Administracion" in reply
+            or "salido de la consola" in reply.lower()
+        )
         # Session is cleared by global reset
         session = await session_service.get_session("admin:+20000000002")
         assert session is None
@@ -2856,6 +2897,7 @@ class TestBlockedClients:
         session = await session_service.get_session("admin:+10000000007")
         assert session is None
 
+
 # Additional catalog flow test class to append
 
 # ===================================================================
@@ -2916,14 +2958,33 @@ class TestCatalogFlow:
     ) -> None:
         """Service list shows alphabetical paginated list with plan/subscription counts."""
         catalog_service._services.clear()
-        for name in ["Zulu", "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Eta", "Theta"]:
-            service = FakeServiceObj(name=name, plan_count=1, active_subscription_count=2)
+        for name in [
+            "Zulu",
+            "Alpha",
+            "Beta",
+            "Gamma",
+            "Delta",
+            "Epsilon",
+            "Eta",
+            "Theta",
+        ]:
+            service = FakeServiceObj(
+                name=name, plan_count=1, active_subscription_count=2
+            )
             catalog_service._services[str(service.id)] = service
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=uuid4(), db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=uuid4(),
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         reply = await console_service.process_message(
-            "+10000000000", "1", tenant_id=uuid4(), db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=uuid4(),
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "1️⃣ Alpha - 1 plan - 2 suscripciones activas" in reply
         assert "5️⃣ Eta" in reply
@@ -2938,13 +2999,25 @@ class TestCatalogFlow:
         """Service detail hides ID and shows create/delete plan actions."""
         tenant_id = uuid4()
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         reply = await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "*ID:*" not in reply
         assert "Editar nombre" in reply
@@ -2962,21 +3035,37 @@ class TestCatalogFlow:
         """Create service flow: duplicate stays on step, success shows post-action."""
         tenant_id = uuid4()
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         prompt = await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "nombre" in prompt.lower()
         duplicate = await console_service.process_message(
-            "+10000000000", "Netflix", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "Netflix",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "nombre del servicio ya existe" in duplicate
         session = await session_service.get_session("admin:+10000000000")
         assert session is not None
         assert session.step == "create_service_name"
         success = await console_service.process_message(
-            "+10000000000", "Disney", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "Disney",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "Servicio" in success and "creado" in success
         assert "1️⃣ Volver al menu principal" in success
@@ -3100,18 +3189,51 @@ class TestCatalogFlow:
         service = next(iter(catalog_service._services.values()))
         service.plan_count = 3
         service.active_subscription_count = 1
-        await console_service.process_message("+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        await console_service.process_message("+10000000000", "3", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        warning = await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message(
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            "+10000000000",
+            "3",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        warning = await console_service.process_message(
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
         assert "eliminar servicio" in warning.lower()
         assert "3" in warning
         assert "planes" in warning
         assert "suscripciones" in warning
-        assert "active@example.com - Cliente Demo - 584241234567 - Netflix/Premium" in warning
+        assert (
+            "active@example.com - Cliente Demo - 584241234567 - Netflix/Premium"
+            in warning
+        )
         assert "CONFIRMAR" in warning
-        invalid = await console_service.process_message("+10000000000", "si", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        invalid = await console_service.process_message(
+            "+10000000000",
+            "si",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
         assert "CONFIRMAR" in invalid
-        success = await console_service.process_message("+10000000000", "confirmar", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        success = await console_service.process_message(
+            "+10000000000",
+            "confirmar",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
         assert "Servicio" in success and "eliminado" in success
         assert "3 planes" in success
         assert "2 suscripciones" in success
@@ -3125,10 +3247,34 @@ class TestCatalogFlow:
         """Trying to delete a plan when service has none returns to catalog menu."""
         tenant_id = uuid4()
         catalog_service._plans.clear()
-        await console_service.process_message("+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        reply = await console_service.process_message("+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message(
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        reply = await console_service.process_message(
+            "+10000000000",
+            "4",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
         assert "no tiene planes" in reply.lower()
         assert "Cat" in reply or "catalog" in reply.lower()
 
@@ -3141,18 +3287,55 @@ class TestCatalogFlow:
         """Verify delete plan warning with subscription shows confirm prompt."""
         tenant_id = uuid4()
         service = next(iter(catalog_service._services.values()))
-        plan = FakePlanObj(service_id=service.id, name="Premium", active_subscription_count=1)
+        plan = FakePlanObj(
+            service_id=service.id, name="Premium", active_subscription_count=1
+        )
         catalog_service._plans[str(plan.id)] = plan
-        await console_service.process_message("+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        await console_service.process_message("+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
-        warning = await console_service.process_message("+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        await console_service.process_message(
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        await console_service.process_message(
+            "+10000000000",
+            "4",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
+        warning = await console_service.process_message(
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
         assert "eliminar plan" in warning.lower()
         assert "Premium" in warning
-        success = await console_service.process_message("+10000000000", "CONFIRM", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service)
+        success = await console_service.process_message(
+            "+10000000000",
+            "CONFIRM",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+        )
         assert "Plan" in success and "eliminado" in success
-
 
     async def test_catalog_plan_list_paginates_and_shows_counts(
         self,
@@ -3164,23 +3347,41 @@ class TestCatalogFlow:
         tenant_id = uuid4()
         service = next(iter(catalog_service._services.values()))
         catalog_service._plans.clear()
-        plan_names = [f"Plan {chr(65+i)}" for i in range(9)]  # 9 plans → 2 pages
+        plan_names = [f"Plan {chr(65 + i)}" for i in range(9)]  # 9 plans → 2 pages
         for name in plan_names:
-            plan = FakePlanObj(service_id=service.id, name=name, active_subscription_count=1)
+            plan = FakePlanObj(
+                service_id=service.id, name=name, active_subscription_count=1
+            )
             catalog_service._plans[str(plan.id)] = plan
 
         # Navigate: Main menu → Catalog → Service 1 → Service detail → Option 2 (View plans)
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         reply = await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
 
         # Page 1: first 7 plans only
@@ -3192,13 +3393,17 @@ class TestCatalogFlow:
         session = await session_service.get_session("admin:+10000000000")
         assert session is not None
         assert session.step == "plan_select"
-        assert session.selection_map["7"] == str(next(
-            p.id for p in catalog_service._plans.values() if p.name == "Plan G"
-        ))
+        assert session.selection_map["7"] == str(
+            next(p.id for p in catalog_service._plans.values() if p.name == "Plan G")
+        )
 
         # 8 → page 2
         reply = await console_service.process_message(
-            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "8",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "1️⃣ Plan H - 1 suscripcion activa" in reply
         assert "2️⃣ Plan I - 1 suscripcion activa" in reply
@@ -3208,7 +3413,11 @@ class TestCatalogFlow:
 
         # 9 → back to service detail
         reply = await console_service.process_message(
-            "+10000000000", "9", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "9",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "Servicio" in reply
         assert "Ver planes" in reply or "Acciones" in reply
@@ -3227,16 +3436,28 @@ class TestCatalogFlow:
 
         # Navigate to delete service list
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "3", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "3",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
 
         # Get warning with English locale
         warning = await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()),
-            session_service=session_service, locale="en"
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+            locale="en",
         )
 
         # Should NOT contain Spanish hardcoded text (confirm prompt AND warning body)
@@ -3260,16 +3481,28 @@ class TestCatalogFlow:
 
         # Navigate to delete service list
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "3", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "3",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
 
         # Get warning with English locale
         warning = await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()),
-            session_service=session_service, locale="en"
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+            locale="en",
         )
 
         # Should contain English body text (not hardcoded Spanish)
@@ -3292,27 +3525,49 @@ class TestCatalogFlow:
         """Delete plan warning body uses i18n — EN locale has English body text, not hardcoded ES."""
         tenant_id = uuid4()
         service = next(iter(catalog_service._services.values()))
-        plan = FakePlanObj(service_id=service.id, name="Premium", active_subscription_count=1)
+        plan = FakePlanObj(
+            service_id=service.id, name="Premium", active_subscription_count=1
+        )
         catalog_service._plans[str(plan.id)] = plan
         service.plan_count = 1
 
         # Navigate: Main menu -> Catalog -> Service 1 -> Service detail -> Option 4 -> Plan 1
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "4",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         # Get warning with English locale
         warning = await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()),
-            session_service=session_service, locale="en"
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
+            locale="en",
         )
 
         # Should contain English body text (not hardcoded Spanish)
@@ -3340,26 +3595,42 @@ class TestCatalogFlow:
 
         # Main menu -> Catalog
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         # Catalog -> View services (option 1)
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
 
         session = await session_service.get_session("admin:+10000000000")
         assert session is not None
         # catalog_page should be int, not str
-        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should be int"
+        assert isinstance(session.temp_data.get("catalog_page"), int), (
+            "catalog_page should be int"
+        )
         assert session.temp_data["catalog_page"] == 1
 
         # Navigate to next page with 8
         await console_service.process_message(
-            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "8",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         session = await session_service.get_session("admin:+10000000000")
         assert session is not None
-        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should still be int after next"
+        assert isinstance(session.temp_data.get("catalog_page"), int), (
+            "catalog_page should still be int after next"
+        )
         assert session.temp_data["catalog_page"] == 2
 
     async def test_catalog_delete_plan_list_page_stored_as_int_and_next_works(
@@ -3373,37 +3644,73 @@ class TestCatalogFlow:
         service = next(iter(catalog_service._services.values()))
         # Populate many plans to force pagination
         catalog_service._plans.clear()
-        for name in ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota"]:
-            plan = FakePlanObj(service_id=service.id, name=name, active_subscription_count=0)
+        for name in [
+            "Alpha",
+            "Beta",
+            "Gamma",
+            "Delta",
+            "Epsilon",
+            "Zeta",
+            "Eta",
+            "Theta",
+            "Iota",
+        ]:
+            plan = FakePlanObj(
+                service_id=service.id, name=name, active_subscription_count=0
+            )
             catalog_service._plans[str(plan.id)] = plan
 
         # Navigate: Main menu -> Catalog -> Service 1 -> Service detail -> Option 4 (Delete plan)
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "4", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "4",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
 
         session = await session_service.get_session("admin:+10000000000")
         assert session is not None
-        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should be int in delete plan list"
+        assert isinstance(session.temp_data.get("catalog_page"), int), (
+            "catalog_page should be int in delete plan list"
+        )
         assert session.temp_data["catalog_page"] == 1
 
         # Navigate to next page with 8
         reply = await console_service.process_message(
-            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "8",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         assert "Iota" in reply or "Theta" in reply  # should be on page 2
         session = await session_service.get_session("admin:+10000000000")
         assert session is not None
-        assert isinstance(session.temp_data.get("catalog_page"), int), "catalog_page should still be int after next in delete plan"
+        assert isinstance(session.temp_data.get("catalog_page"), int), (
+            "catalog_page should still be int after next in delete plan"
+        )
         assert session.temp_data["catalog_page"] == 2
 
     async def test_paginated_service_list_after_refactor(
@@ -3415,30 +3722,51 @@ class TestCatalogFlow:
         """_show_catalog_service_list refactored to use _paginate still works correctly."""
         tenant_id = uuid4()
         catalog_service._services.clear()
-        for name in ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Zulu"]:
+        for name in [
+            "Alpha",
+            "Bravo",
+            "Charlie",
+            "Delta",
+            "Echo",
+            "Foxtrot",
+            "Golf",
+            "Zulu",
+        ]:
             svc = FakeServiceObj(name=name, plan_count=0, active_subscription_count=0)
             catalog_service._services[str(svc.id)] = svc
 
         # Main menu -> Catalog -> View services
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         reply = await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
 
         # First 7 items on page 1, 8th item on next page
-        assert "1\uFE0F\u20E3 Alpha" in reply
-        assert "7\uFE0F\u20E3 Golf" in reply
+        assert "1\ufe0f\u20e3 Alpha" in reply
+        assert "7\ufe0f\u20e3 Golf" in reply
         assert "Zulu" not in reply
-        assert "8\uFE0F\u20E3 Siguiente" in reply
+        assert "8\ufe0f\u20e3 Siguiente" in reply
 
         # Go to page 2
         reply = await console_service.process_message(
-            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "8",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
-        assert "1\uFE0F\u20E3 Zulu" in reply
-        assert "8\uFE0F\u20E3 Siguiente" not in reply
+        assert "1\ufe0f\u20e3 Zulu" in reply
+        assert "8\ufe0f\u20e3 Siguiente" not in reply
 
     async def test_catalog_plan_select_next_page_after_refactor(
         self,
@@ -3450,34 +3778,55 @@ class TestCatalogFlow:
         tenant_id = uuid4()
         service = next(iter(catalog_service._services.values()))
         catalog_service._plans.clear()
-        plan_names = [f"P{chr(65+i)}" for i in range(9)]
+        plan_names = [f"P{chr(65 + i)}" for i in range(9)]
         for name in plan_names:
-            plan = FakePlanObj(service_id=service.id, name=name, active_subscription_count=1)
+            plan = FakePlanObj(
+                service_id=service.id, name=name, active_subscription_count=1
+            )
             catalog_service._plans[str(plan.id)] = plan
 
         # Navigate to plan list
         await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         await console_service.process_message(
-            "+10000000000", "1", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "1",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
         reply = await console_service.process_message(
-            "+10000000000", "2", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "2",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
-        assert "1\uFE0F\u20E3 PA" in reply
-        assert "7\uFE0F\u20E3 PG" in reply
+        assert "1\ufe0f\u20e3 PA" in reply
+        assert "7\ufe0f\u20e3 PG" in reply
         assert "PH" not in reply
-        assert "8\uFE0F\u20E3 Siguiente" in reply
+        assert "8\ufe0f\u20e3 Siguiente" in reply
 
         # 8 -> next page
         reply = await console_service.process_message(
-            "+10000000000", "8", tenant_id=tenant_id, db=cast(AsyncSession, object()), session_service=session_service
+            "+10000000000",
+            "8",
+            tenant_id=tenant_id,
+            db=cast(AsyncSession, object()),
+            session_service=session_service,
         )
-        assert "1\uFE0F\u20E3 PH" in reply
-        assert "2\uFE0F\u20E3 PI" in reply
-        assert "8\uFE0F\u20E3 Siguiente" not in reply
-
+        assert "1\ufe0f\u20e3 PH" in reply
+        assert "2\ufe0f\u20e3 PI" in reply
+        assert "8\ufe0f\u20e3 Siguiente" not in reply

@@ -51,7 +51,9 @@ class SubscriptionResponse(BaseModel):
                 "has_password": bool(data.streaming_password_encrypted),
                 "has_pin": bool(data.profile_pin_encrypted),
             }
-        data["has_password"] = bool(data.get("streaming_password_encrypted") or data.get("has_password"))
+        data["has_password"] = bool(
+            data.get("streaming_password_encrypted") or data.get("has_password")
+        )
         data["has_pin"] = bool(data.get("profile_pin_encrypted") or data.get("has_pin"))
         return data
 

@@ -27,9 +27,21 @@ def upgrade() -> None:
         sa.Column("email", sa.String(length=255), nullable=True),
         sa.Column("whatsapp_phone", sa.String(length=50), nullable=True),
         sa.Column("evolution_instance_name", sa.String(length=200), nullable=True),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("owner_user_id"),
@@ -48,26 +60,61 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("tenant_id", "id", name="uq_services_tenant_id_id"),
     )
-    op.create_index("ix_services_tenant_lower_name", "services", ["tenant_id", sa.text("lower(name)")], unique=True)
+    op.create_index(
+        "ix_services_tenant_lower_name",
+        "services",
+        ["tenant_id", sa.text("lower(name)")],
+        unique=True,
+    )
     op.create_table(
         "plans",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("service_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["tenant_id", "service_id"], ["services.tenant_id", "services.id"], ondelete="CASCADE", name="fk_plans_tenant_service"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "service_id"],
+            ["services.tenant_id", "services.id"],
+            ondelete="CASCADE",
+            name="fk_plans_tenant_service",
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_plans_tenant_service_lower_name", "plans", ["tenant_id", "service_id", sa.text("lower(name)")], unique=True)
+    op.create_index(
+        "ix_plans_tenant_service_lower_name",
+        "plans",
+        ["tenant_id", "service_id", sa.text("lower(name)")],
+        unique=True,
+    )
 
     op.execute("ALTER TABLE tenants ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE services ENABLE ROW LEVEL SECURITY")

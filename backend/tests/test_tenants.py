@@ -51,7 +51,9 @@ async def test_create_tenant_auto_password(client, auth_headers):
 
 
 async def test_create_tenant_duplicate_username(client, auth_headers):
-    await _create_tenant(client, auth_headers, username="dup_user", phone="+12015550006")
+    await _create_tenant(
+        client, auth_headers, username="dup_user", phone="+12015550006"
+    )
 
     response = await _create_tenant(
         client, auth_headers, username="dup_user", phone="+12015550007"
@@ -168,7 +170,9 @@ async def test_update_tenant(client, auth_headers, active_tenant_user):
     assert data["client_prefix"] == "z9"
 
 
-async def test_update_tenant_duplicate_client_prefix(client, auth_headers, active_tenant_user, deactivated_tenant_user):
+async def test_update_tenant_duplicate_client_prefix(
+    client, auth_headers, active_tenant_user, deactivated_tenant_user
+):
     response = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"client_prefix": "tnb01"},
@@ -239,6 +243,7 @@ async def test_create_tenant_phone_is_canonical(client, auth_headers, db_session
     # Verify in database directly
     from app.models import Tenant
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(Tenant).where(Tenant.id == UUID(data["id"]))
     )
@@ -247,7 +252,9 @@ async def test_create_tenant_phone_is_canonical(client, auth_headers, db_session
     assert profile.whatsapp_phone == "12015550008"
 
 
-async def test_create_tenant_phone_jid_becomes_canonical(client, auth_headers, db_session):
+async def test_create_tenant_phone_jid_becomes_canonical(
+    client, auth_headers, db_session
+):
     """JID suffix phone stored as canonical digits-only."""
     from uuid import UUID
 
@@ -264,6 +271,7 @@ async def test_create_tenant_phone_jid_becomes_canonical(client, auth_headers, d
 
     from app.models import Tenant
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(Tenant).where(Tenant.id == UUID(data["id"]))
     )
@@ -271,7 +279,9 @@ async def test_create_tenant_phone_jid_becomes_canonical(client, auth_headers, d
     assert profile.whatsapp_phone == "12015550009"
 
 
-async def test_update_tenant_phone_is_canonical(client, auth_headers, active_tenant_user, db_session):
+async def test_update_tenant_phone_is_canonical(
+    client, auth_headers, active_tenant_user, db_session
+):
     """Updated phone stored without + prefix."""
     from uuid import UUID
 
@@ -290,6 +300,7 @@ async def test_update_tenant_phone_is_canonical(client, auth_headers, active_ten
 
     from app.models import Tenant
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(Tenant).where(Tenant.owner_user_id == UUID(str(active_tenant_user.id)))
     )
@@ -458,7 +469,7 @@ async def test_create_tenant_same_logical_payload_normalized(
         auth_headers,
         username="logical_test_a",
         full_name="Alice   Smith",  # multiple internal spaces
-        email="Alice@Example.COM",   # mixed case
+        email="Alice@Example.COM",  # mixed case
         phone="+12015551001",
     )
     assert resp1.status_code == 201
@@ -469,31 +480,29 @@ async def test_create_tenant_same_logical_payload_normalized(
         client,
         auth_headers,
         username="logical_test_b",
-        full_name="Alice Smith",     # single space
-        email="alice@example.com",   # already lowercase
-        phone="+12015551002",          # distinct phone
+        full_name="Alice Smith",  # single space
+        email="alice@example.com",  # already lowercase
+        phone="+12015551002",  # distinct phone
     )
     assert resp2.status_code == 201
     d2 = resp2.json()
 
     # Assert canonical forms for first tenant
-    assert d1["full_name"] == "Alice Smith"     # collapsed
-    assert d1["email"] == "Alice@example.com"    # domain lowercased
-    assert d1["phone"] == "12015551001"          # digits-only
+    assert d1["full_name"] == "Alice Smith"  # collapsed
+    assert d1["email"] == "Alice@example.com"  # domain lowercased
+    assert d1["phone"] == "12015551001"  # digits-only
 
     # Assert canonical forms for second tenant
-    assert d2["full_name"] == "Alice Smith"     # single space stays
-    assert d2["email"] == "alice@example.com"    # already lowercase
-    assert d2["phone"] == "12015551002"          # digits-only (no + added)
+    assert d2["full_name"] == "Alice Smith"  # single space stays
+    assert d2["email"] == "alice@example.com"  # already lowercase
+    assert d2["phone"] == "12015551002"  # digits-only (no + added)
 
     # Verify persistence in DB
     for uid, expected_phone in [
         (d1["id"], "12015551001"),
         (d2["id"], "12015551002"),
     ]:
-        result = await db_session.execute(
-            select(Tenant).where(Tenant.id == UUID(uid))
-        )
+        result = await db_session.execute(select(Tenant).where(Tenant.id == UUID(uid)))
         profile = result.scalar_one_or_none()
         assert profile is not None
         assert profile.name == "Alice Smith"
@@ -548,7 +557,9 @@ async def test_update_tenant_invalid_phone(client, auth_headers, active_tenant_u
     assert response.status_code == 422
 
 
-async def test_update_tenant_short_phone_rejected(client, auth_headers, active_tenant_user):
+async def test_update_tenant_short_phone_rejected(
+    client, auth_headers, active_tenant_user
+):
     """Too-short phone in update returns 422."""
     response = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
@@ -582,9 +593,9 @@ async def test_create_tenant_service_normalizes_values(db_session):
 
     payload = TenantCreate(
         username="service_test",
-        full_name="John   Smith",   # multiple spaces
-        email="User@Example.COM",    # mixed case
-        phone="+12015550040",        # with +
+        full_name="John   Smith",  # multiple spaces
+        email="User@Example.COM",  # mixed case
+        phone="+12015550040",  # with +
         password="test-password",
         evolution_instance_name="service-test-instance",
     )
@@ -592,9 +603,9 @@ async def test_create_tenant_service_normalizes_values(db_session):
     service = TenantService()
     profile, _ = await service.create_tenant(db_session, payload)
 
-    assert profile.full_name == "John Smith"          # collapsed
-    assert profile.email == "User@example.com"         # domain lowercased
-    assert profile.phone == "12015550040"              # canonical digits only
+    assert profile.full_name == "John Smith"  # collapsed
+    assert profile.email == "User@example.com"  # domain lowercased
+    assert profile.phone == "12015550040"  # canonical digits only
 
 
 async def test_create_tenant_service_normalizes_phone_jid(db_session):
@@ -634,9 +645,7 @@ async def test_create_tenant_service_rejects_invalid_username_direct(db_session)
     payload.username = "/menu"
 
     service = TenantService()
-    with pytest.raises(
-        ValueError, match="Username must start with a lowercase letter"
-    ):
+    with pytest.raises(ValueError, match="Username must start with a lowercase letter"):
         await service.create_tenant(db_session, payload)
 
 
@@ -656,9 +665,7 @@ async def test_create_tenant_service_rejects_invalid_phone_direct(db_session):
     payload.phone = "abc"  # bypass Pydantic
 
     service = TenantService()
-    with pytest.raises(
-        ValueError, match="Phone must contain at least one digit"
-    ):
+    with pytest.raises(ValueError, match="Phone must contain at least one digit"):
         await service.create_tenant(db_session, payload)
 
 
@@ -705,28 +712,24 @@ async def test_create_tenant_service_rejects_invalid_email_direct(db_session):
         await service.create_tenant(db_session, payload)
 
 
-async def test_update_tenant_service_normalizes_values(
-    db_session, active_tenant_user
-):
+async def test_update_tenant_service_normalizes_values(db_session, active_tenant_user):
     """Service layer normalizes full_name, email, phone on update."""
     from app.schemas.tenant import TenantUpdate
     from app.services.tenant_service import TenantService
 
     payload = TenantUpdate(
-        full_name="Updated   Name",   # multiple spaces
-        email="Updated@Example.COM",   # mixed case
-        phone="+12015550050",          # with +
+        full_name="Updated   Name",  # multiple spaces
+        email="Updated@Example.COM",  # mixed case
+        phone="+12015550050",  # with +
     )
 
     service = TenantService()
-    profile = await service.update_tenant(
-        db_session, active_tenant_user.id, payload
-    )
+    profile = await service.update_tenant(db_session, active_tenant_user.id, payload)
 
     assert profile is not None
-    assert profile.full_name == "Updated Name"          # collapsed
-    assert profile.email == "Updated@example.com"       # domain lowercased
-    assert profile.phone == "12015550050"               # canonical digits only
+    assert profile.full_name == "Updated Name"  # collapsed
+    assert profile.email == "Updated@example.com"  # domain lowercased
+    assert profile.phone == "12015550050"  # canonical digits only
 
 
 async def test_duplicate_username_service_layer(db_session):

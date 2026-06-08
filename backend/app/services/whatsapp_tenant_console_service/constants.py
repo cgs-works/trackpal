@@ -117,17 +117,10 @@ CLIENT_EDIT_FIELD_MAP = {
 }
 
 CLIENT_EDIT_PROMPTS = {
-    "full_name": (
-        "✏️ *Editar Cliente*\n\n"
-        "¿Cuál es el *nuevo nombre completo*?"
-    ),
-    "phone": (
-        "✏️ *Editar Cliente*\n\n"
-        "¿Cuál es el *nuevo teléfono*?"
-    ),
+    "full_name": ("✏️ *Editar Cliente*\n\n¿Cuál es el *nuevo nombre completo*?"),
+    "phone": ("✏️ *Editar Cliente*\n\n¿Cuál es el *nuevo teléfono*?"),
     "local_username": (
-        "✏️ *Editar Cliente*\n\n"
-        "¿Cuál es el *nuevo nombre de usuario local*?"
+        "✏️ *Editar Cliente*\n\n¿Cuál es el *nuevo nombre de usuario local*?"
     ),
 }
 
@@ -188,18 +181,9 @@ PROFILE_EDIT_FIELD_MAP = {
 }
 
 PROFILE_EDIT_PROMPTS = {
-    "full_name": (
-        "✏️ *Editar Perfil*\n\n"
-        "¿Cuál es el *nuevo nombre completo*?"
-    ),
-    "email": (
-        "✏️ *Editar Perfil*\n\n"
-        "¿Cuál es el *nuevo email*?"
-    ),
-    "phone": (
-        "✏️ *Editar Perfil*\n\n"
-        "¿Cuál es el *nuevo teléfono*?"
-    ),
+    "full_name": ("✏️ *Editar Perfil*\n\n¿Cuál es el *nuevo nombre completo*?"),
+    "email": ("✏️ *Editar Perfil*\n\n¿Cuál es el *nuevo email*?"),
+    "phone": ("✏️ *Editar Perfil*\n\n¿Cuál es el *nuevo teléfono*?"),
 }
 
 KEY_PROFILE_EDIT_ERROR_INVALID_FIELD = "wa.tenant.profile.edit_invalid_field"
@@ -236,10 +220,10 @@ KEY_CODIGO_NO_CODE_SERVICES_CLIENT = "wa.tenant.codigo.no_code_services_client"
 # Global service keys available for code lookup
 # Alphabetical order by visible label (Disney+, HBO Max, Netflix, Prime Video, Spotify, Universal+)
 STREAMING_SERVICE_KEYS: list[str] = [
-    "disney",         # 1️⃣ Disney+
-    "hbo_max",        # 2️⃣ HBO Max
-    "netflix",        # 3️⃣ Netflix
-    "prime_video",    # 4️⃣ Prime Video
-    "spotify",        # 5️⃣ Spotify
-    "universal_plus", # 6️⃣ Universal+
+    "disney",  # 1️⃣ Disney+
+    "hbo_max",  # 2️⃣ HBO Max
+    "netflix",  # 3️⃣ Netflix
+    "prime_video",  # 4️⃣ Prime Video
+    "spotify",  # 5️⃣ Spotify
+    "universal_plus",  # 6️⃣ Universal+
 ]

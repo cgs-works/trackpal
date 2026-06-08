@@ -15,9 +15,7 @@ MAIN_MENU = (
     "Responde con el número de la opción deseada."
 )
 
-ACCESS_DENIED = (
-    "⚠️ Este servicio solo está disponible para el Master de Trackpal."
-)
+ACCESS_DENIED = "⚠️ Este servicio solo está disponible para el Master de Trackpal."
 
 HELP_TEXT = (
     "🤖 *Ayuda - Trackpal Master Console*\n\n"
@@ -89,11 +87,7 @@ TENANT_DETAIL_ACTIVE_ACTIONS = (
 )
 
 TENANT_DETAIL_INACTIVE_ACTIONS = (
-    "*Acciones disponibles:*\n"
-    "1️⃣ Editar\n"
-    "2️⃣ Reactivar\n"
-    "3️⃣ Eliminar\n"
-    "9️⃣ Volver al menú"
+    "*Acciones disponibles:*\n1️⃣ Editar\n2️⃣ Reactivar\n3️⃣ Eliminar\n9️⃣ Volver al menú"
 )
 
 INVALID_SELECTION = (
@@ -132,8 +126,7 @@ CREATE_PROMPT_USERNAME = (
 )
 
 CREATE_PROMPT_EVOLUTION_INSTANCE = (
-    "✏️ *Crear empresa*\n\n"
-    "¿Cuál es el *nombre de la instancia de Evolution*?"
+    "✏️ *Crear empresa*\n\n¿Cuál es el *nombre de la instancia de Evolution*?"
 )
 
 CREATE_PROMPT_PASSWORD_MODE = (
@@ -163,13 +156,11 @@ CREATE_ERROR_SHORT_PASSWORD = (
 )
 
 CREATE_ERROR_USERNAME_EMPTY = (
-    "❌ El nombre de usuario no puede estar vacío.\n\n"
-    "Intenta de nuevo."
+    "❌ El nombre de usuario no puede estar vacío.\n\nIntenta de nuevo."
 )
 
 CREATE_ERROR_INSTANCE_EMPTY = (
-    "❌ El nombre de instancia Evolution no puede estar vacío.\n\n"
-    "Intenta de nuevo."
+    "❌ El nombre de instancia Evolution no puede estar vacío.\n\nIntenta de nuevo."
 )
 
 # ------------------------------------------------------------------
@@ -188,14 +179,10 @@ VALIDATION_MESSAGES = {
     "email_required": "El email no puede estar vacío.",
     "phone_required": "El teléfono no puede estar vacío.",
     "phone_no_digits": "El teléfono debe contener al menos un dígito.",
-    "phone_invalid": (
-        "El teléfono ingresado no es un número internacional válido."
-    ),
+    "phone_invalid": ("El teléfono ingresado no es un número internacional válido."),
     "phone_parse_error": "El teléfono ingresado no pudo ser procesado.",
     "username_required": "El nombre de usuario no puede estar vacío.",
-    "username_too_long": (
-        "El nombre de usuario debe tener máximo 20 caracteres."
-    ),
+    "username_too_long": ("El nombre de usuario debe tener máximo 20 caracteres."),
     "username_invalid": (
         "El nombre de usuario debe empezar con una letra minúscula y "
         "contener solo letras minúsculas, números y guiones bajos."
@@ -203,7 +190,3 @@ VALIDATION_MESSAGES = {
 }
 
 SKIP_WORDS = {"—", "skip", "ninguno", "none", "-"}
-
-
-
-

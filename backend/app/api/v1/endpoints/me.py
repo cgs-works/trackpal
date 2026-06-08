@@ -44,15 +44,14 @@ async def get_profile(db: DbDep, current_user: CurrentUser):
     if profile is None:
         locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.profile_not_found")
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.profile_not_found"),
         )
     return _profile_response(current_user, profile)
 
 
 @router.put("", response_model=ProfileResponse)
-async def update_profile(
-    payload: ProfileUpdate, db: DbDep, current_user: CurrentUser
-):
+async def update_profile(payload: ProfileUpdate, db: DbDep, current_user: CurrentUser):
     try:
         profile = await profile_service.update_profile(db, current_user, payload)
     except PermissionError as exc:
@@ -72,7 +71,8 @@ async def update_profile(
     if profile is None:
         locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=_t(locale, "errors.profile_not_found")
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.profile_not_found"),
         )
     return _profile_response(current_user, profile)
 
@@ -87,6 +87,7 @@ async def change_password(
     if not changed:
         locale = await _resolve_profile_locale(db, current_user)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=_t(locale, "errors.incorrect_old_password")
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_t(locale, "errors.incorrect_old_password"),
         )
     return {"message": "Password updated successfully"}

@@ -40,7 +40,9 @@ async def test_login_deactivated_tenant(client, deactivated_tenant_user):
     assert response.status_code == 401
 
 
-async def test_login_deactivated_tenant_is_rejected_after_profile_lookup(client, deactivated_tenant_user):
+async def test_login_deactivated_tenant_is_rejected_after_profile_lookup(
+    client, deactivated_tenant_user
+):
     response = await client.post(
         "/api/v1/auth/login",
         json={"username": "inactive-tenant", "password": "tenant-password"},
@@ -72,7 +74,9 @@ async def test_login_inactive_client_rejected(client, inactive_client_user):
     assert response.status_code == 401
 
 
-async def test_login_client_under_inactive_tenant_rejected(client, active_client_user, active_tenant_user, auth_headers):
+async def test_login_client_under_inactive_tenant_rejected(
+    client, active_client_user, active_tenant_user, auth_headers
+):
     response = await client.patch(
         f"/api/v1/tenants/{active_tenant_user.id}/deactivate",
         headers=auth_headers,
@@ -87,22 +91,30 @@ async def test_login_client_under_inactive_tenant_rejected(client, active_client
     assert login_response.status_code == 401
 
 
-async def test_malformed_tenant_token_without_active_tenant_returns_401(client, active_tenant_user, monkeypatch):
+async def test_malformed_tenant_token_without_active_tenant_returns_401(
+    client, active_tenant_user, monkeypatch
+):
     async def raise_missing_context(*args, **kwargs):
         raise ValueError("active_tenant_id required for tenant RLS context")
 
     monkeypatch.setattr(dependencies, "set_rls_context", raise_missing_context)
     token = create_access_token(subject=str(active_tenant_user.id), role="tenant")
 
-    response = await client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 401
 
 
-async def test_malformed_client_token_without_active_tenant_returns_401(client, active_client_user):
+async def test_malformed_client_token_without_active_tenant_returns_401(
+    client, active_client_user
+):
     token = create_access_token(subject=str(active_client_user.id), role="client")
 
-    response = await client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 401
 
@@ -160,7 +172,9 @@ async def test_refresh_token_client(client, active_client_user):
     assert response.json()["active_tenant_id"]
 
 
-async def test_refresh_token_client_under_inactive_tenant_rejected(client, active_client_user, active_tenant_user, auth_headers):
+async def test_refresh_token_client_under_inactive_tenant_rejected(
+    client, active_client_user, active_tenant_user, auth_headers
+):
     login_response = await client.post(
         "/api/v1/auth/login",
         json={"username": active_client_user.username, "password": "client-password"},
@@ -212,7 +226,9 @@ async def test_identify_by_phone(client, master_user):
     assert response.json()["role"] == "master"
 
 
-async def test_identify_by_phone_finds_active_tenant_with_api_key_context(client, active_tenant_user):
+async def test_identify_by_phone_finds_active_tenant_with_api_key_context(
+    client, active_tenant_user
+):
     response = await client.get(
         "/api/v1/integrations/n8n/identify",
         params={"phone": "+12015550002"},
@@ -326,6 +342,7 @@ async def test_identify_plus_prefix_with_canonical_db(client, db_session, master
     from uuid import UUID
     from app.models import MasterProfile
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
     )
@@ -349,6 +366,7 @@ async def test_identify_jid_suffix_with_canonical_db(client, db_session, master_
     from uuid import UUID
     from app.models import MasterProfile
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
     )
@@ -371,6 +389,7 @@ async def test_identify_no_plus_with_canonical_db(client, db_session, master_use
     from uuid import UUID
     from app.models import MasterProfile
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
     )
@@ -389,11 +408,14 @@ async def test_identify_no_plus_with_canonical_db(client, db_session, master_use
     assert response.json()["role"] == "master"
 
 
-async def test_identify_plus_jid_suffix_with_canonical_db(client, db_session, master_user):
+async def test_identify_plus_jid_suffix_with_canonical_db(
+    client, db_session, master_user
+):
     """+ prefix + JID suffix identifies canonical DB phone."""
     from uuid import UUID
     from app.models import MasterProfile
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(MasterProfile).where(MasterProfile.id == UUID(str(master_user.id)))
     )
@@ -411,9 +433,7 @@ async def test_identify_plus_jid_suffix_with_canonical_db(client, db_session, ma
     assert response.json()["username"] == "master"
 
 
-async def test_identify_plus_prefix_finds_prefixed_db(
-    client, master_user
-):
+async def test_identify_plus_prefix_finds_prefixed_db(client, master_user):
     """+ prefix input still finds DB phone with + prefix (pre-migration)."""
     response = await client.get(
         "/api/v1/integrations/n8n/identify",

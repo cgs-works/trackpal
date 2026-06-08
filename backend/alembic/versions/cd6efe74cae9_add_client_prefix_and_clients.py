@@ -24,7 +24,9 @@ def _generate_client_prefix(existing: set[str]) -> str:
     alphabet = string.ascii_lowercase
     tail = string.ascii_lowercase + string.digits
     for _ in range(100):
-        prefix = secrets.choice(alphabet) + "".join(secrets.choice(tail) for _ in range(4))
+        prefix = secrets.choice(alphabet) + "".join(
+            secrets.choice(tail) for _ in range(4)
+        )
         if prefix not in existing:
             existing.add(prefix)
             return prefix
@@ -32,17 +34,25 @@ def _generate_client_prefix(existing: set[str]) -> str:
 
 
 def upgrade() -> None:
-    op.add_column("tenants", sa.Column("client_prefix", sa.String(length=5), nullable=True))
+    op.add_column(
+        "tenants", sa.Column("client_prefix", sa.String(length=5), nullable=True)
+    )
 
     bind = op.get_bind()
     existing_prefixes = {
         row[0]
-        for row in bind.execute(sa.text("SELECT client_prefix FROM tenants WHERE client_prefix IS NOT NULL")).all()
+        for row in bind.execute(
+            sa.text("SELECT client_prefix FROM tenants WHERE client_prefix IS NOT NULL")
+        ).all()
         if row[0]
     }
     tenant_ids = [
         row[0]
-        for row in bind.execute(sa.text("SELECT id FROM tenants WHERE client_prefix IS NULL ORDER BY created_at, id")).all()
+        for row in bind.execute(
+            sa.text(
+                "SELECT id FROM tenants WHERE client_prefix IS NULL ORDER BY created_at, id"
+            )
+        ).all()
     ]
     for tenant_id in tenant_ids:
         prefix = _generate_client_prefix(existing_prefixes)
@@ -52,7 +62,9 @@ def upgrade() -> None:
         )
 
     op.alter_column("tenants", "client_prefix", nullable=False)
-    op.create_unique_constraint("uq_tenants_client_prefix", "tenants", ["client_prefix"])
+    op.create_unique_constraint(
+        "uq_tenants_client_prefix", "tenants", ["client_prefix"]
+    )
 
     op.create_table(
         "clients",
@@ -62,9 +74,21 @@ def upgrade() -> None:
         sa.Column("full_name", sa.String(length=200), nullable=False),
         sa.Column("local_username", sa.String(length=94), nullable=False),
         sa.Column("phone", sa.String(length=50), nullable=True),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -76,7 +100,9 @@ def upgrade() -> None:
         ["tenant_id", sa.text("lower(local_username)")],
         unique=True,
     )
-    op.create_index("ix_clients_tenant_phone", "clients", ["tenant_id", "phone"], unique=True)
+    op.create_index(
+        "ix_clients_tenant_phone", "clients", ["tenant_id", "phone"], unique=True
+    )
 
     op.execute("ALTER TABLE clients ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE clients FORCE ROW LEVEL SECURITY")

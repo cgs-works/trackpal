@@ -5,7 +5,9 @@ from app.services.whatsapp_auth_session_service.models import (
     WhatsAppAuthFailState,
     WhatsAppAuthLockState,
 )
-from app.services.whatsapp_auth_session_service.service import WhatsAppAuthSessionService
+from app.services.whatsapp_auth_session_service.service import (
+    WhatsAppAuthSessionService,
+)
 
 __all__ = [
     "WhatsAppAuthSession",

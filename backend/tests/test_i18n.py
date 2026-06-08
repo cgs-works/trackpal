@@ -80,7 +80,9 @@ async def test_update_profile_locale_case_insensitive(client, active_tenant_user
     assert data["locale"] == "es"
 
 
-async def test_update_profile_locale_persistence(client, active_tenant_user, db_session):
+async def test_update_profile_locale_persistence(
+    client, active_tenant_user, db_session
+):
     """Locale change persists across requests."""
     headers = await _login(client, "tenant", "tenant-password")
 
@@ -127,7 +129,10 @@ async def test_catalog_endpoint_returns_english_default(client, active_tenant_us
     assert data["locale"] == "en"
     assert data["locale_name"] == "English"
     assert "catalog" in data
-    assert data["catalog"]["error.auth.invalid_credentials"] == "Invalid username or password"
+    assert (
+        data["catalog"]["error.auth.invalid_credentials"]
+        == "Invalid username or password"
+    )
 
 
 async def test_catalog_endpoint_returns_spanish(client, active_tenant_user):
@@ -142,10 +147,15 @@ async def test_catalog_endpoint_returns_spanish(client, active_tenant_user):
     data = response.json()
     assert data["locale"] == "es"
     assert data["locale_name"] == "Español"
-    assert data["catalog"]["error.auth.invalid_credentials"] == "Usuario o contraseña inválidos"
+    assert (
+        data["catalog"]["error.auth.invalid_credentials"]
+        == "Usuario o contraseña inválidos"
+    )
 
 
-async def test_catalog_endpoint_spanish_falls_back_to_english(client, active_tenant_user):
+async def test_catalog_endpoint_spanish_falls_back_to_english(
+    client, active_tenant_user
+):
     """Missing es key falls back to English value."""
     headers = await _login(client, "tenant", "tenant-password")
 
@@ -176,7 +186,10 @@ async def test_catalog_endpoint_locale_refetch_after_change(client, active_tenan
     # Fetch again
     resp_es = await client.get("/api/v1/i18n/catalog", headers=headers)
     assert resp_es.json()["locale"] == "es"
-    assert resp_es.json()["catalog"]["error.auth.invalid_credentials"] == "Usuario o contraseña inválidos"
+    assert (
+        resp_es.json()["catalog"]["error.auth.invalid_credentials"]
+        == "Usuario o contraseña inválidos"
+    )
 
 
 async def test_catalog_endpoint_master_returns_english(client, master_user):
@@ -202,7 +215,7 @@ async def test_catalog_endpoint_unauthorized(client):
 
 
 async def test_t_function_translates():
-    from app.core.i18n import t, missing_key_counter
+    from app.core.i18n import t
 
     assert t("en", "error.auth.invalid_credentials") == "Invalid username or password"
     assert t("es", "error.auth.invalid_credentials") == "Usuario o contraseña inválidos"
@@ -211,7 +224,15 @@ async def test_t_function_translates():
 async def test_t_function_with_params():
     from app.core.i18n import t
 
-    result = t("en", "reminder.subscription.expiring", service_name="Netflix", client_name="Juan", days="3", day_word="days", streaming_email="juan@example.com")
+    result = t(
+        "en",
+        "reminder.subscription.expiring",
+        service_name="Netflix",
+        client_name="Juan",
+        days="3",
+        day_word="days",
+        streaming_email="juan@example.com",
+    )
     assert "Netflix" in result
     assert "Juan" in result
     assert "3" in result
@@ -307,10 +328,18 @@ async def test_wa_client_profile_body_new_terminology():
     es_profile = t("es", "wa.client.profile.body", **params)
     en_profile = t("en", "wa.client.profile.body", **params)
 
-    assert "Proveedor:" in es_profile, f"ES profile must say Proveedor:, got: {es_profile}"
-    assert "Provider:" in en_profile, f"EN profile must say Provider:, got: {en_profile}"
-    assert "Tenant:" not in es_profile, f"ES profile must not contain Tenant:, got: {es_profile}"
-    assert "Tenant:" not in en_profile, f"EN profile must not contain Tenant:, got: {en_profile}"
+    assert "Proveedor:" in es_profile, (
+        f"ES profile must say Proveedor:, got: {es_profile}"
+    )
+    assert "Provider:" in en_profile, (
+        f"EN profile must say Provider:, got: {en_profile}"
+    )
+    assert "Tenant:" not in es_profile, (
+        f"ES profile must not contain Tenant:, got: {es_profile}"
+    )
+    assert "Tenant:" not in en_profile, (
+        f"EN profile must not contain Tenant:, got: {en_profile}"
+    )
 
 
 async def test_wa_collision_message_no_tenant():
@@ -345,14 +374,22 @@ async def test_frontend_catalog_new_terminology():
     # exit_tenant
     es_exit = t("es", "frontend.dashboard.tenant.exit_tenant")
     en_exit = t("en", "frontend.dashboard.tenant.exit_tenant")
-    assert "tenant" not in es_exit.lower(), f"ES exit_tenant must avoid 'tenant', got: {es_exit}"
-    assert "tenant" not in en_exit.lower(), f"EN exit_tenant must avoid 'tenant', got: {en_exit}"
+    assert "tenant" not in es_exit.lower(), (
+        f"ES exit_tenant must avoid 'tenant', got: {es_exit}"
+    )
+    assert "tenant" not in en_exit.lower(), (
+        f"EN exit_tenant must avoid 'tenant', got: {en_exit}"
+    )
 
     # recipient modes
     es_mode_tenant = t("es", "frontend.subscriptions.recipient_mode_tenant_only")
     en_mode_tenant = t("en", "frontend.subscriptions.recipient_mode_tenant_only")
-    assert "tenant" not in es_mode_tenant.lower(), f"ES mode tenant_only: {es_mode_tenant}"
-    assert "tenant" not in en_mode_tenant.lower(), f"EN mode tenant_only: {en_mode_tenant}"
+    assert "tenant" not in es_mode_tenant.lower(), (
+        f"ES mode tenant_only: {es_mode_tenant}"
+    )
+    assert "tenant" not in en_mode_tenant.lower(), (
+        f"EN mode tenant_only: {en_mode_tenant}"
+    )
 
     es_mode_both = t("es", "frontend.subscriptions.recipient_mode_both")
     en_mode_both = t("en", "frontend.subscriptions.recipient_mode_both")
@@ -362,5 +399,9 @@ async def test_frontend_catalog_new_terminology():
     # client.tenant label
     es_client_tenant = t("es", "frontend.dashboard.client.tenant")
     en_client_tenant = t("en", "frontend.dashboard.client.tenant")
-    assert es_client_tenant != "Tenant", f"ES client.tenant should not be 'Tenant', got: {es_client_tenant}"
-    assert en_client_tenant != "Tenant", f"EN client.tenant should not be 'Tenant', got: {en_client_tenant}"
+    assert es_client_tenant != "Tenant", (
+        f"ES client.tenant should not be 'Tenant', got: {es_client_tenant}"
+    )
+    assert en_client_tenant != "Tenant", (
+        f"EN client.tenant should not be 'Tenant', got: {en_client_tenant}"
+    )

@@ -192,7 +192,7 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.client.internal_error": "❌ Internal error. Try again.",
     "wa.client.goodbye": "✅ You have exited the client console.\n\nGoodbye!",
     "wa.client.access_denied": "❌ Access denied, you do not have an active account.",
-    "wa.client.not_registered": "❌ You do not have a registered account.\n\nIf you want to look up your access codes, send the word \"code\".",
+    "wa.client.not_registered": '❌ You do not have a registered account.\n\nIf you want to look up your access codes, send the word "code".',
     "wa.client.mode_prompt": "⚠️ Two profiles detected for your phone number.\n\nHow do you want to proceed?\n1️⃣ Admin panel\n2️⃣ Client\n\n0️⃣ Cancel\n\nChoose an option:",
     "wa.client.mode_exit": "✅ You have exited. Goodbye!",
     "wa.client.mode_reset": "🔄 Mode reset. Send a message to start.",
@@ -234,11 +234,8 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.menu.blocked_with_phone": "📌 *Client management*\n\nThis contact is blocked from accessing the system.\nThey cannot request codes, view profile, or check subscriptions.\n\nPhone number: {identity}\n\nChoose an option:\n1️⃣ Unblock access\n0️⃣ Cancel",
     "wa.tenant.client_context.menu.blocked_lid_only": "📌 *Client management*\n\nThis contact is blocked from accessing the system.\nThey cannot request codes, view profile, or check subscriptions.\n\nChoose an option:\n1️⃣ Unblock access\n0️⃣ Cancel",
     "wa.tenant.client_context.phone_line": "Phone number: {phone}\n",
-
     "wa.tenant.client_context.menu.active": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ View subscriptions\n4️⃣ Deactivate client\n5️⃣ Delete client\n0️⃣ Cancel",
-
     "wa.tenant.client_context.active.delete_blocked": "❌ An active client cannot be deleted.\n\nClient: {client_name}\n{phone_line}\nDeactivate the client first and then try deleting it again.",
-
     "wa.tenant.client_context.subscriptions.list": "📋 *Subscriptions for {client_name}*\n\n",
     "wa.tenant.client_context.subscriptions.empty": "No active subscriptions.\n\n",
     "wa.tenant.client_context.subscriptions.item": "{number}️⃣ {service_name} - {plan_name} - {status}",
@@ -251,7 +248,6 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.subscriptions.duplicate_extend_success": "✅ Subscription extended successfully.",
     "wa.tenant.client_context.subscriptions.deactivate_confirm": "⚠️ Are you sure you want to deactivate this subscription? Type *CONFIRM* to confirm.",
     "wa.tenant.client_context.subscriptions.deactivate_success": "✅ Subscription deactivated successfully.",
-
     "wa.tenant.client_context.menu.inactive": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Reactivate client\n4️⃣ Delete client\n0️⃣ Cancel",
     "wa.tenant.client_context.closed": "✅ Client management cancelled.",
     "wa.tenant.client_context.collision": "⚠️ You already have a client management session open. Send *0* in your private admin chat before opening another one.",
@@ -271,7 +267,6 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.post_create.invalid_option": "❌ Invalid option.\n\nChoose an option:\n1️⃣ Return to client management menu\n0️⃣ Close management",
     "wa.tenant.client_context.block_access.success": "✅ Access blocked for *{identity}*.",
     "wa.tenant.client_context.unblock_access.success": "✅ Access unblocked for *{identity}*.",
-
     "wa.tenant.client_context.create.phone_invalid": "Invalid phone number. Enter a valid number or *0* to cancel:",
     "wa.tenant.client_context.create.phone_registered": "Phone registered.\n\nClient's *full name*:",
     "wa.tenant.client_context.create.name_empty": "Name cannot be empty. Enter the *full name* or *0* to cancel:",
@@ -279,20 +274,16 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.create.name_registered": "Name registered.\n\nClient's local *username*:",
     "wa.tenant.client_context.create.username_empty": "Username cannot be empty. Enter the *username* or *0* to cancel:",
     "wa.tenant.client_context.create.username_invalid": "{exc}\n\nEnter the *username* or *0* to cancel:",
-
     "wa.tenant.client_context.detail.header": "*Client details*",
     "wa.tenant.client_context.detail.body": "*{client_name}*\nUsername: {username}\n{phone_line}Status: {status}\n",
     "wa.tenant.client_context.detail.options": "1 Edit data\n2 Deactivate\n9 Back\n0 Cancel",
     "wa.tenant.client_context.detail.invalid_option": "Invalid option.\n\n1 Edit data\n2 Deactivate\n9 Back\n0 Cancel",
-
     "wa.tenant.client_context.inactive.detail.options": "1 Edit data\n2 Reactivate\n3 Delete\n9 Back\n0 Cancel",
-
     "wa.tenant.client_context.deactivate.confirm": "Do you want to deactivate *{client_name}*?\n\nType *CONFIRM* to deactivate.\nOr *0* to cancel.",
     "wa.tenant.client_context.deactivate.cancelled": "Deactivation cancelled.",
     "wa.tenant.client_context.deactivate.prompt_again": "Type *CONFIRM* to deactivate or *0* to cancel.",
     "wa.tenant.client_context.deactivate.error": "Error deactivating: {exc}",
     "wa.tenant.client_context.deactivate.success": "*{client_name}* deactivated.",
-
     "wa.tenant.client_context.inactive.reactivate_error": "Error reactivating: {exc}",
     "wa.tenant.client_context.inactive.reactivate_success": "*{client_name}* reactivated.\n\nYou can manage subscriptions from the Admin Console.",
     "wa.tenant.client_context.inactive.delete_confirm": "Do you want to permanently delete *{client_name}*?\n\nType *CONFIRM* to delete.\nOr *0* to cancel.",
@@ -300,7 +291,6 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.inactive.delete_prompt_again": "Type *CONFIRM* to delete or *0* to cancel.",
     "wa.tenant.client_context.inactive.delete_error": "Error deleting: {exc}",
     "wa.tenant.client_context.inactive.delete_success": "*{client_name}* permanently deleted.",
-
     "wa.tenant.client_context.edit.field_prompt": "Which field do you want to edit?\n\n1 Full name\n2 Username\n9 Back\n0 Cancel\n\nPhone cannot be edited from the shortcut.",
     "wa.tenant.client_context.edit.field_invalid": "Invalid option.\n\n1 Full name\n2 Username\n9 Back\n0 Cancel",
     "wa.tenant.client_context.edit.name_prompt": "Enter the *new full name*:",
@@ -308,13 +298,10 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.edit.cancelled": "Edit cancelled.",
     "wa.tenant.client_context.edit.update_error": "Error updating: {exc}",
     "wa.tenant.client_context.edit.updated_success": "*{client_name}* updated correctly.",
-
     "wa.tenant.client_context.subscription.creating": "Creating subscription for *{client_name}*\n\n",
     "wa.tenant.client_context.subscription.service_prompt": "Select a *service*:",
     "wa.tenant.client_context.subscription.no_services": "No services available to create a subscription.",
-
     "wa.tenant.client_context.action_cancelled": "❌ Action cancelled.",
-
     "wa.tenant.client_context.error.client_not_found": "Client not found.",
     "wa.tenant.client_context.error.service_unavailable": "Service not available at this time.",
     "wa.tenant.client_context.error.no_services": "No services available to create a subscription.",

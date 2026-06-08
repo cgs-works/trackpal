@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pytest
 
+
 # Copy of the migration's _normalize_phone to avoid importing from the
 # migration module (which would trigger Alembic dependencies).
 def _normalize_phone(value: str | None) -> str | None:
@@ -118,9 +119,7 @@ def _detect_cross_table_collisions(
 
     common = master_set & tenant_set
     if common:
-        raise ValueError(
-            f"Cross-table phone collision after normalization: {common}"
-        )
+        raise ValueError(f"Cross-table phone collision after normalization: {common}")
     return common
 
 
@@ -168,7 +167,7 @@ class TestWithinTableCollisionDetection:
         detected even though row 1 does not need an UPDATE.
         """
         rows = [
-            {"id": 1, "phone": "1234567890"},      # already canonical
+            {"id": 1, "phone": "1234567890"},  # already canonical
             {"id": 2, "phone": "+1 (234) 567-890"},  # normalises to 1234567890
         ]
         with pytest.raises(ValueError, match="Collision detected.*1234567890"):

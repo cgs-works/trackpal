@@ -138,7 +138,9 @@ class TestValidateClientLocalUsername:
             ("", "client_local_username_required"),
         ],
     )
-    def test_invalid_client_local_username(self, value: str, expected_code: str) -> None:
+    def test_invalid_client_local_username(
+        self, value: str, expected_code: str
+    ) -> None:
         with pytest.raises(InputValidationError) as exc:
             validate_client_local_username(value)
         assert exc.value.code == expected_code
@@ -202,10 +204,10 @@ class TestValidateFullName:
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
-            ("Juan Pérez", "Juan Pérez"),           # Spanish accented letter
-            ("Maria Müller", "Maria Müller"),         # German umlaut
-            ("张三", "张三"),                         # Chinese characters
-            ("Jean-Pierre", None),                    # hyphen → should fail
+            ("Juan Pérez", "Juan Pérez"),  # Spanish accented letter
+            ("Maria Müller", "Maria Müller"),  # German umlaut
+            ("张三", "张三"),  # Chinese characters
+            ("Jean-Pierre", None),  # hyphen → should fail
         ],
     )
     def test_valid_full_name_letters_and_spaces(
@@ -226,10 +228,7 @@ class TestValidateFullName:
     def test_internal_spaces_collapsed(self) -> None:
         """Multiple internal spaces are collapsed to one."""
         assert validate_full_name("John   Smith") == "John Smith"
-        assert (
-            validate_full_name("Maria  Ana  Lopez")
-            == "Maria Ana Lopez"
-        )
+        assert validate_full_name("Maria  Ana  Lopez") == "Maria Ana Lopez"
 
     @pytest.mark.parametrize(
         ("value",),
@@ -252,8 +251,8 @@ class TestValidateFullName:
             ("John.Doe",),
             ("John, Smith",),
             ("John;Smith",),
-            ("John\nDoe",),    # newline not a letter/space
-            ("John\tDoe",),    # tab not a letter/space
+            ("John\nDoe",),  # newline not a letter/space
+            ("John\tDoe",),  # tab not a letter/space
         ],
     )
     def test_slash_punctuation_rejected(self, value: str) -> None:
@@ -355,13 +354,11 @@ class TestValidatePhone:
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
-            ("+14155552671", "14155552671"),       # with +
-            ("14155552671", "14155552671"),          # without +
+            ("+14155552671", "14155552671"),  # with +
+            ("14155552671", "14155552671"),  # without +
         ],
     )
-    def test_valid_e164_returns_digits(
-        self, value: str, expected: str
-    ) -> None:
+    def test_valid_e164_returns_digits(self, value: str, expected: str) -> None:
         """Valid E.164 phone returns digits-only canonical form."""
         assert validate_phone(value) == expected
 
@@ -383,18 +380,16 @@ class TestValidatePhone:
     @pytest.mark.parametrize(
         ("value",),
         [
-            ("123",),        # too short, no country code
-            ("abc",),        # non-phone text
-            ("+123",),       # invalid country code + short
-            ("+1",),         # too short even if starts with +
+            ("123",),  # too short, no country code
+            ("abc",),  # non-phone text
+            ("+123",),  # invalid country code + short
+            ("+1",),  # too short even if starts with +
             ("",),
             ("   ",),
             (None,),
         ],
     )
-    def test_invalid_or_blank_optional_returns_none(
-        self, value: str | None
-    ) -> None:
+    def test_invalid_or_blank_optional_returns_none(self, value: str | None) -> None:
         """Invalid/blank/None returns None when not required."""
         # For valid-format-but-invalid numbers, InputValidationError is raised
         # For blank/None, None is returned
@@ -480,9 +475,7 @@ class TestValidatePhone:
             ("14155552671x789", "phone_extension_suffix"),
         ],
     )
-    def test_phone_extension_rejected(
-        self, value: str, expected_code: str
-    ) -> None:
+    def test_phone_extension_rejected(self, value: str, expected_code: str) -> None:
         """Extension patterns are rejected, not silently accepted."""
         with pytest.raises(InputValidationError) as exc:
             validate_phone(value)
@@ -496,9 +489,7 @@ class TestValidatePhone:
             ("+14155552671=123", "phone_invalid_chars"),
         ],
     )
-    def test_phone_suffix_junk_rejected(
-        self, value: str, expected_code: str
-    ) -> None:
+    def test_phone_suffix_junk_rejected(self, value: str, expected_code: str) -> None:
         """Noisy suffix junk after the number is rejected."""
         with pytest.raises(InputValidationError) as exc:
             validate_phone(value)

@@ -60,7 +60,9 @@ class CatalogService:
         safe_page_size = max(1, min(100, int(page_size or 10)))
         return safe_page, safe_page_size
 
-    def _pagination(self, *, page: int, page_size: int, total_items: int) -> CatalogDeletePagination:
+    def _pagination(
+        self, *, page: int, page_size: int, total_items: int
+    ) -> CatalogDeletePagination:
         total_pages = max(1, math.ceil(total_items / page_size))
         return CatalogDeletePagination(
             page=page,
@@ -86,13 +88,25 @@ class CatalogService:
     async def list_services(self, db: AsyncSession, tenant_id: UUID) -> list[Service]:
         return await catalog_repository.list_services(db, tenant_id)
 
-    async def get_service(self, db: AsyncSession, tenant_id: UUID, service_id: UUID) -> Service | None:
+    async def get_service(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID
+    ) -> Service | None:
         return await catalog_repository.get_service(db, tenant_id, service_id)
 
-    async def _service_name_exists(self, db: AsyncSession, tenant_id: UUID, name: str, exclude_id: UUID | None = None) -> bool:
-        return await catalog_repository.service_name_exists(db, tenant_id, name, exclude_id)
+    async def _service_name_exists(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        name: str,
+        exclude_id: UUID | None = None,
+    ) -> bool:
+        return await catalog_repository.service_name_exists(
+            db, tenant_id, name, exclude_id
+        )
 
-    async def create_service(self, db: AsyncSession, tenant_id: UUID, payload: ServiceCreate) -> Service:
+    async def create_service(
+        self, db: AsyncSession, tenant_id: UUID, payload: ServiceCreate
+    ) -> Service:
         name = _clean_name(payload.name)
         if await self._service_name_exists(db, tenant_id, name):
             raise UserFacingError("service_name_already_exists")
@@ -103,7 +117,13 @@ class CatalogService:
         await db.refresh(service)
         return service
 
-    async def update_service(self, db: AsyncSession, tenant_id: UUID, service_id: UUID, payload: ServiceUpdate) -> Service | None:
+    async def update_service(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        payload: ServiceUpdate,
+    ) -> Service | None:
         service = await self.get_service(db, tenant_id, service_id)
         if service is None:
             return None
@@ -119,18 +139,33 @@ class CatalogService:
 
     # ── Plan listing ────────────────────────────────────────────────────────
 
-    async def list_plans(self, db: AsyncSession, tenant_id: UUID, service_id: UUID) -> list[Plan] | None:
+    async def list_plans(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID
+    ) -> list[Plan] | None:
         if await self.get_service(db, tenant_id, service_id) is None:
             return None
         return await catalog_repository.list_plans(db, tenant_id, service_id)
 
-    async def get_plan(self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID) -> Plan | None:
+    async def get_plan(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID
+    ) -> Plan | None:
         return await catalog_repository.get_plan(db, tenant_id, service_id, plan_id)
 
-    async def _plan_name_exists(self, db: AsyncSession, tenant_id: UUID, service_id: UUID, name: str, exclude_id: UUID | None = None) -> bool:
-        return await catalog_repository.plan_name_exists(db, tenant_id, service_id, name, exclude_id)
+    async def _plan_name_exists(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        name: str,
+        exclude_id: UUID | None = None,
+    ) -> bool:
+        return await catalog_repository.plan_name_exists(
+            db, tenant_id, service_id, name, exclude_id
+        )
 
-    async def create_plan(self, db: AsyncSession, tenant_id: UUID, service_id: UUID, payload: PlanCreate) -> Plan | None:
+    async def create_plan(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, payload: PlanCreate
+    ) -> Plan | None:
         if await self.get_service(db, tenant_id, service_id) is None:
             return None
         name = _clean_name(payload.name)
@@ -143,7 +178,14 @@ class CatalogService:
         await db.refresh(plan)
         return plan
 
-    async def update_plan(self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, payload: PlanUpdate) -> Plan | None:
+    async def update_plan(
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        payload: PlanUpdate,
+    ) -> Plan | None:
         plan = await self.get_plan(db, tenant_id, service_id, plan_id)
         if plan is None:
             return None
@@ -159,14 +201,18 @@ class CatalogService:
 
     # ── Summary methods (aggregated queries, no N+1) ────────────────────────
 
-    async def list_service_summaries(self, db: AsyncSession, tenant_id: UUID) -> list[CatalogServiceSummary]:
+    async def list_service_summaries(
+        self, db: AsyncSession, tenant_id: UUID
+    ) -> list[CatalogServiceSummary]:
         """Return summaries for all services using 3 total queries (no N+1).
 
         Preserves alphabetical ordering via list_services.
         """
         services = await self.list_services(db, tenant_id)
         plan_counts = await catalog_repository.count_plans_for_services(db, tenant_id)
-        sub_counts = await catalog_repository.count_subscriptions_for_all_services(db, tenant_id)
+        sub_counts = await catalog_repository.count_subscriptions_for_all_services(
+            db, tenant_id
+        )
         return [
             CatalogServiceSummary(
                 id=s.id,
@@ -177,7 +223,9 @@ class CatalogService:
             for s in services
         ]
 
-    async def list_plan_summaries(self, db: AsyncSession, tenant_id: UUID, service_id: UUID) -> list[CatalogPlanSummary] | None:
+    async def list_plan_summaries(
+        self, db: AsyncSession, tenant_id: UUID, service_id: UUID
+    ) -> list[CatalogPlanSummary] | None:
         """Return summaries for all plans in a service using 2 total queries (no N+1).
 
         Preserves alphabetical ordering via list_plans.
@@ -185,7 +233,9 @@ class CatalogService:
         plans = await self.list_plans(db, tenant_id, service_id)
         if plans is None:
             return None
-        sub_counts = await catalog_repository.count_subscriptions_for_all_plans(db, tenant_id, service_id)
+        sub_counts = await catalog_repository.count_subscriptions_for_all_plans(
+            db, tenant_id, service_id
+        )
         return [
             CatalogPlanSummary(
                 id=p.id,
@@ -199,15 +249,28 @@ class CatalogService:
     # ── Delete preview methods ──────────────────────────────────────────────
 
     async def get_service_delete_preview(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, *, page: int = 1, page_size: int = 10
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        *,
+        page: int = 1,
+        page_size: int = 10,
     ) -> CatalogDeletePreview | None:
         service = await self.get_service(db, tenant_id, service_id)
         if service is None:
             return None
         page, page_size = self._page_bounds(page, page_size)
         offset = (page - 1) * page_size
-        plan_count = await catalog_repository.count_plans_for_service(db, tenant_id, service_id)
-        active_count, historical_count = await catalog_repository.count_subscriptions_for_service(db, tenant_id, service_id)
+        plan_count = await catalog_repository.count_plans_for_service(
+            db, tenant_id, service_id
+        )
+        (
+            active_count,
+            historical_count,
+        ) = await catalog_repository.count_subscriptions_for_service(
+            db, tenant_id, service_id
+        )
         rows = await catalog_repository.list_active_subscription_rows_for_service(
             db, tenant_id, service_id, offset=offset, limit=page_size
         )
@@ -219,20 +282,36 @@ class CatalogService:
             active_subscription_count=active_count,
             historical_subscription_count=historical_count,
             total_subscription_count=active_count + historical_count,
-            active_subscriptions=[self._row(sub, client, svc, plan) for sub, client, svc, plan in rows],
-            pagination=self._pagination(page=page, page_size=page_size, total_items=active_count),
+            active_subscriptions=[
+                self._row(sub, client, svc, plan) for sub, client, svc, plan in rows
+            ],
+            pagination=self._pagination(
+                page=page, page_size=page_size, total_items=active_count
+            ),
             note="frontend.catalog.delete_preview_note",
         )
 
     async def get_plan_delete_preview(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, page: int = 1, page_size: int = 10
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        *,
+        page: int = 1,
+        page_size: int = 10,
     ) -> CatalogDeletePreview | None:
         plan = await self.get_plan(db, tenant_id, service_id, plan_id)
         if plan is None:
             return None
         page, page_size = self._page_bounds(page, page_size)
         offset = (page - 1) * page_size
-        active_count, historical_count = await catalog_repository.count_subscriptions_for_plan(db, tenant_id, service_id, plan_id)
+        (
+            active_count,
+            historical_count,
+        ) = await catalog_repository.count_subscriptions_for_plan(
+            db, tenant_id, service_id, plan_id
+        )
         rows = await catalog_repository.list_active_subscription_rows_for_plan(
             db, tenant_id, service_id, plan_id, offset=offset, limit=page_size
         )
@@ -244,15 +323,25 @@ class CatalogService:
             active_subscription_count=active_count,
             historical_subscription_count=historical_count,
             total_subscription_count=active_count + historical_count,
-            active_subscriptions=[self._row(sub, client, svc, row_plan) for sub, client, svc, row_plan in rows],
-            pagination=self._pagination(page=page, page_size=page_size, total_items=active_count),
+            active_subscriptions=[
+                self._row(sub, client, svc, row_plan)
+                for sub, client, svc, row_plan in rows
+            ],
+            pagination=self._pagination(
+                page=page, page_size=page_size, total_items=active_count
+            ),
             note="frontend.catalog.delete_preview_note",
         )
 
     # ── Confirm-gated delete methods ────────────────────────────────────────
 
     async def delete_service(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, *, confirm: bool = False
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        *,
+        confirm: bool = False,
     ) -> CatalogDeletePreview | None:
         if not confirm:
             raise UserFacingError("catalog_delete_confirmation_required")
@@ -262,14 +351,22 @@ class CatalogService:
         service = await self.get_service(db, tenant_id, service_id)
         if service is None:
             return None
-        await catalog_repository.delete_subscriptions_for_service(db, tenant_id, service_id)
+        await catalog_repository.delete_subscriptions_for_service(
+            db, tenant_id, service_id
+        )
         await catalog_repository.delete_plans_for_service(db, tenant_id, service_id)
         await db.delete(service)
         await self._commit_catalog_change(db, "service_delete_failed")
         return preview
 
     async def delete_plan(
-        self, db: AsyncSession, tenant_id: UUID, service_id: UUID, plan_id: UUID, *, confirm: bool = False
+        self,
+        db: AsyncSession,
+        tenant_id: UUID,
+        service_id: UUID,
+        plan_id: UUID,
+        *,
+        confirm: bool = False,
     ) -> CatalogDeletePreview | None:
         if not confirm:
             raise UserFacingError("catalog_delete_confirmation_required")
@@ -279,7 +376,9 @@ class CatalogService:
         plan = await self.get_plan(db, tenant_id, service_id, plan_id)
         if plan is None:
             return None
-        await catalog_repository.delete_subscriptions_for_plan(db, tenant_id, service_id, plan_id)
+        await catalog_repository.delete_subscriptions_for_plan(
+            db, tenant_id, service_id, plan_id
+        )
         await db.delete(plan)
         await self._commit_catalog_change(db, "plan_delete_failed")
         return preview

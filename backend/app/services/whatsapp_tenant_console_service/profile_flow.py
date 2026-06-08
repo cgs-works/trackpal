@@ -9,7 +9,7 @@ from sqlalchemy import update as sa_update
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import LOCALE_NAMES, t as _i18n_t
 from app.models import Tenant
-from app.services.whatsapp_navigation import is_back, is_cancel, is_next
+from app.services.whatsapp_navigation import is_back
 
 from . import _context as ctx
 

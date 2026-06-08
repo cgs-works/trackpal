@@ -1,6 +1,6 @@
 """Subscription update operation (largest single mutation)."""
 
-from datetime import datetime, timezone
+from datetime import timezone
 from typing import Optional
 
 from sqlalchemy import select

@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import HTTPException, status
 
 from app.api.dependencies import ApiKeyDbDep
 from app.core.i18n import t as _t

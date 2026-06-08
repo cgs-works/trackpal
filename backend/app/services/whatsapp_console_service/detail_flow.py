@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from . import messages as msg
 from . import lifecycle_messages as lc_msg
 
 

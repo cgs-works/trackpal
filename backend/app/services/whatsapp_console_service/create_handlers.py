@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 
 from app.core.input_validation import (
     InputValidationError,
@@ -213,4 +212,3 @@ async def _build_create_summary(
         "¿Todo está correcto? Escribe *CONFIRMAR* para crear la empresa.\n"
         "Escribe *0* para cancelar y volver al menú principal."
     )
-

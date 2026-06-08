@@ -28,6 +28,5 @@ class ContingencyReplyPolicy:
     )
 
     TEMPORARY_UNAVAILABLE = (
-        "⚠️ Consola temporalmente no disponible. "
-        "Intenta nuevamente en unos minutos."
+        "⚠️ Consola temporalmente no disponible. Intenta nuevamente en unos minutos."
     )

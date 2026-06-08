@@ -23,6 +23,7 @@ from app.services.whatsapp_auth_session_service import (
 # Fake Redis — dict-based async double
 # ---------------------------------------------------------------------------
 
+
 class FakeRedis:
     """Minimal in-memory fake for redis.asyncio.Redis."""
 
@@ -33,7 +34,9 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
         if ex is not None:
             self._ttls[key] = ex
@@ -55,6 +58,7 @@ class FakeRedis:
 # Fake connection manager
 # ---------------------------------------------------------------------------
 
+
 class FakeManager:
     """Duck-typed connection manager that delegates execute() to FakeRedis."""
 
@@ -68,6 +72,7 @@ class FakeManager:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fake_redis() -> FakeRedis:
@@ -93,6 +98,7 @@ def service(fake_manager: FakeManager) -> WhatsAppAuthSessionService:
 # ===================================================================
 # Model tests
 # ===================================================================
+
 
 class TestWhatsAppAuthSessionModel:
     """Verify WhatsAppAuthSession data shape."""
@@ -171,6 +177,7 @@ class TestWhatsAppAuthLockStateModel:
 # Auth session CRUD
 # ===================================================================
 
+
 @pytest.mark.asyncio
 class TestGetAuthSession:
     async def test_returns_none_when_no_session(
@@ -200,9 +207,7 @@ class TestGetAuthSession:
 
 @pytest.mark.asyncio
 class TestSetAuthSession:
-    async def test_persists_session(
-        self, service: WhatsAppAuthSessionService
-    ) -> None:
+    async def test_persists_session(self, service: WhatsAppAuthSessionService) -> None:
         now = datetime.now(timezone.utc)
         auth = WhatsAppAuthSession(
             phone="+1234567890",
@@ -242,9 +247,7 @@ class TestSetAuthSession:
 
 @pytest.mark.asyncio
 class TestClearAuthSession:
-    async def test_removes_session(
-        self, service: WhatsAppAuthSessionService
-    ) -> None:
+    async def test_removes_session(self, service: WhatsAppAuthSessionService) -> None:
         now = datetime.now(timezone.utc)
         auth = WhatsAppAuthSession(
             phone="+1234567890",
@@ -287,6 +290,7 @@ class TestAuthSessionTTL:
 # ===================================================================
 # Lockout primitives
 # ===================================================================
+
 
 @pytest.mark.asyncio
 class TestGetLockState:

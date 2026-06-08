@@ -6,10 +6,8 @@ from zoneinfo import ZoneInfo
 
 import math
 
-from app.core.errors import UserFacingError, translate_error
 from app.services.whatsapp_navigation import is_next
 
-from . import _context as ctx
 
 
 PAGE_SIZE = 7
@@ -23,7 +21,9 @@ def _paginate(items, page, page_size):
     return items[start : start + page_size], safe_page, total_pages
 
 
-async def _start_subscriptions_create(self, phone, session, session_service, tenant_id, db):
+async def _start_subscriptions_create(
+    self, phone, session, session_service, tenant_id, db
+):
     if tenant_id is None or db is None or self._client_service is None:
         return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
     # Determine tenant timezone for subscription start date
@@ -51,7 +51,9 @@ async def _start_subscriptions_create(self, phone, session, session_service, ten
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list)
 
 
-async def _handle_subscriptions_create_client(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_subscriptions_create_client(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     if msg.strip() == "9":
         session.step = self.SUBSCRIPTIONS_STEP_MENU
         if session_service is not None:
@@ -59,7 +61,12 @@ async def _handle_subscriptions_create_client(self, phone, msg, session, session
         return self._t(self.KEY_SUBSCRIPTIONS_MENU)
     del phone
     client_id = self._safe_uuid(session.selection_map.get(msg))
-    if client_id is None or tenant_id is None or db is None or self._client_service is None:
+    if (
+        client_id is None
+        or tenant_id is None
+        or db is None
+        or self._client_service is None
+    ):
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     client = await self._client_service.get_client(db, tenant_id, client_id)
     if client is None:
@@ -71,18 +78,26 @@ async def _handle_subscriptions_create_client(self, phone, msg, session, session
     if not services:
         return self._t("wa.tenant.errors.no_services")
     page_services, _safe_page, total_pages = _paginate(services, 1, PAGE_SIZE)
-    service_list, selection_map = self._format_service_list(page_services, page=1, total_pages=total_pages)
+    service_list, selection_map = self._format_service_list(
+        page_services, page=1, total_pages=total_pages
+    )
 
-    session.temp_data.update({"client_id": str(client.id), "client_name": client.full_name})
+    session.temp_data.update(
+        {"client_id": str(client.id), "client_name": client.full_name}
+    )
     session.selection_map = selection_map
     session.temp_data["service_page"] = 1
     session.step = self.SUBSCRIPTIONS_STEP_CREATE_SERVICE
     if session_service is not None:
         await session_service.save_session(session)
-    return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
+    return self._t(
+        self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list
+    )
 
 
-async def _handle_subscriptions_create_service(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_subscriptions_create_service(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     del phone
     if msg.strip() == "9":
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_CLIENT
@@ -95,7 +110,9 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
         session.selection_map = selection_map
         if session_service is not None:
             await session_service.save_session(session)
-        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list)
+        return self._t(
+            self.KEY_SUBSCRIPTIONS_CREATE_CLIENT_PROMPT, client_list=client_list
+        )
 
     if is_next(msg):
         page = session.temp_data.get("service_page", 1)
@@ -105,16 +122,27 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
         total_pages = max(1, (len(services) + PAGE_SIZE - 1) // PAGE_SIZE)
         if page >= total_pages:
             return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
-        page_services, _safe_page, _total_pages = _paginate(services, page + 1, PAGE_SIZE)
-        service_list, selection_map = self._format_service_list(page_services, page=page + 1, total_pages=total_pages)
+        page_services, _safe_page, _total_pages = _paginate(
+            services, page + 1, PAGE_SIZE
+        )
+        service_list, selection_map = self._format_service_list(
+            page_services, page=page + 1, total_pages=total_pages
+        )
         session.temp_data["service_page"] = page + 1
         session.selection_map = selection_map
         if session_service is not None:
             await session_service.save_session(session)
-        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
+        return self._t(
+            self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list
+        )
 
     service_id = self._safe_uuid(session.selection_map.get(msg))
-    if service_id is None or tenant_id is None or db is None or self._catalog_service is None:
+    if (
+        service_id is None
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     service = await self._catalog_service.get_service(db, tenant_id, service_id)
     if service is None:
@@ -123,9 +151,13 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
     if not plans:
         return self._t("wa.tenant.errors.no_plans")
     page_plans, _safe_page, total_pages = _paginate(plans, 1, PAGE_SIZE)
-    plan_list, selection_map = self._format_plan_list(page_plans, page=1, total_pages=total_pages)
+    plan_list, selection_map = self._format_plan_list(
+        page_plans, page=1, total_pages=total_pages
+    )
 
-    session.temp_data.update({"service_id": str(service.id), "service_name": service.name})
+    session.temp_data.update(
+        {"service_id": str(service.id), "service_name": service.name}
+    )
     session.selection_map = selection_map
     session.temp_data["plan_page"] = 1
     session.step = self.SUBSCRIPTIONS_STEP_CREATE_PLAN
@@ -134,7 +166,9 @@ async def _handle_subscriptions_create_service(self, phone, msg, session, sessio
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PLAN_PROMPT, plan_list=plan_list)
 
 
-async def _handle_subscriptions_create_plan(self, phone, msg, session, session_service, tenant_id, db):
+async def _handle_subscriptions_create_plan(
+    self, phone, msg, session, session_service, tenant_id, db
+):
     del phone
     if msg.strip() == "9":
         session.step = self.SUBSCRIPTIONS_STEP_CREATE_SERVICE
@@ -144,26 +178,34 @@ async def _handle_subscriptions_create_plan(self, phone, msg, session, session_s
             return self._t("wa.tenant.errors.catalog_load_failed")
         services = await self._catalog_service.list_services(db, tenant_id) or []
         page_services, _safe_page, total_pages = _paginate(services, 1, PAGE_SIZE)
-        service_list, selection_map = self._format_service_list(page_services, page=1, total_pages=total_pages)
+        service_list, selection_map = self._format_service_list(
+            page_services, page=1, total_pages=total_pages
+        )
         session.temp_data["service_page"] = 1
         session.selection_map = selection_map
         if session_service is not None:
             await session_service.save_session(session)
-        return self._t(self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list)
+        return self._t(
+            self.KEY_SUBSCRIPTIONS_CREATE_SERVICE_PROMPT, service_list=service_list
+        )
 
     if is_next(msg):
         page = session.temp_data.get("plan_page", 1)
         service_id_in = self._safe_uuid(session.temp_data.get("service_id"))
         if service_id_in is None:
             return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
-        plans = await self._catalog_service.list_plans(db, tenant_id, service_id_in) or []
+        plans = (
+            await self._catalog_service.list_plans(db, tenant_id, service_id_in) or []
+        )
         if not plans:
             return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         total_pages = max(1, (len(plans) + PAGE_SIZE - 1) // PAGE_SIZE)
         if page >= total_pages:
             return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         page_plans, _safe_page, _total_pages = _paginate(plans, page + 1, PAGE_SIZE)
-        plan_list, selection_map = self._format_plan_list(page_plans, page=page + 1, total_pages=total_pages)
+        plan_list, selection_map = self._format_plan_list(
+            page_plans, page=page + 1, total_pages=total_pages
+        )
         session.temp_data["plan_page"] = page + 1
         session.selection_map = selection_map
         if session_service is not None:
@@ -172,7 +214,13 @@ async def _handle_subscriptions_create_plan(self, phone, msg, session, session_s
 
     plan_id = self._safe_uuid(session.selection_map.get(msg))
     service_id = self._safe_uuid(session.temp_data.get("service_id"))
-    if plan_id is None or service_id is None or tenant_id is None or db is None or self._catalog_service is None:
+    if (
+        plan_id is None
+        or service_id is None
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
         return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
     plan = await self._catalog_service.get_plan(db, tenant_id, service_id, plan_id)
     if plan is None:
@@ -185,7 +233,9 @@ async def _handle_subscriptions_create_plan(self, phone, msg, session, session_s
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_EMAIL_PROMPT)
 
 
-async def _handle_subscriptions_create_email(self, phone, msg, session, session_service):
+async def _handle_subscriptions_create_email(
+    self, phone, msg, session, session_service
+):
     del phone
     email = msg.strip()
     if not email:
@@ -197,7 +247,9 @@ async def _handle_subscriptions_create_email(self, phone, msg, session, session_
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PASSWORD_PROMPT)
 
 
-async def _handle_subscriptions_create_password(self, phone, msg, session, session_service):
+async def _handle_subscriptions_create_password(
+    self, phone, msg, session, session_service
+):
     del phone
     value = msg.strip()
     if value.lower() in self.SUBSCRIPTIONS_SKIP_WORDS:
@@ -215,7 +267,9 @@ async def _handle_subscriptions_create_password(self, phone, msg, session, sessi
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PASSWORD_CONFIRM_PROMPT)
 
 
-async def _handle_subscriptions_create_password_confirm(self, phone, msg, session, session_service):
+async def _handle_subscriptions_create_password_confirm(
+    self, phone, msg, session, session_service
+):
     del phone
     pending = session.temp_data.get("streaming_password_pending")
     if msg.strip() != pending:
@@ -228,7 +282,9 @@ async def _handle_subscriptions_create_password_confirm(self, phone, msg, sessio
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PROFILE_OPTION_PROMPT)
 
 
-async def _handle_subscriptions_create_profile_option(self, phone, msg, session, session_service):
+async def _handle_subscriptions_create_profile_option(
+    self, phone, msg, session, session_service
+):
     del phone
     value = msg.strip()
     if value == "1":
@@ -247,7 +303,9 @@ async def _handle_subscriptions_create_profile_option(self, phone, msg, session,
     return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
 
 
-async def _handle_subscriptions_create_profile_name(self, phone, msg, session, session_service):
+async def _handle_subscriptions_create_profile_name(
+    self, phone, msg, session, session_service
+):
     del phone
     value = msg.strip()
     session.temp_data["profile_name"] = (
@@ -280,7 +338,9 @@ async def _handle_subscriptions_create_pin(self, phone, msg, session, session_se
     return self._t(self.KEY_SUBSCRIPTIONS_CREATE_PIN_CONFIRM_PROMPT)
 
 
-async def _handle_subscriptions_create_pin_confirm(self, phone, msg, session, session_service):
+async def _handle_subscriptions_create_pin_confirm(
+    self, phone, msg, session, session_service
+):
     del phone
     pending = session.temp_data.get("profile_pin_pending")
     if msg.strip() != pending:

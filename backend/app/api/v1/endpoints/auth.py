@@ -5,7 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.api.dependencies import MasterUser
-from app.schemas.auth import LoginRequest, RefreshRequest, SwitchTenantRequest, TokenResponse
+from app.schemas.auth import (
+    LoginRequest,
+    RefreshRequest,
+    SwitchTenantRequest,
+    TokenResponse,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -32,7 +37,9 @@ async def login(payload: LoginRequest, db: DbDep):
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(payload: RefreshRequest, db: DbDep):
-    result = await auth_service.refresh_access_token(db, payload.refresh_token, payload.active_tenant_id)
+    result = await auth_service.refresh_access_token(
+        db, payload.refresh_token, payload.active_tenant_id
+    )
     if not result:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,8 +54,12 @@ async def logout(payload: RefreshRequest, db: DbDep):
 
 
 @router.post("/switch-tenant", response_model=TokenResponse)
-async def switch_tenant(payload: SwitchTenantRequest, db: DbDep, current_user: MasterUser):
+async def switch_tenant(
+    payload: SwitchTenantRequest, db: DbDep, current_user: MasterUser
+):
     result = await auth_service.switch_tenant(db, current_user, payload.tenant_id)
     if not result:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
+        )
     return result

@@ -112,7 +112,9 @@ def replace_screen(session: Any, screen_id: str, **params: str) -> None:
     save_navigation(
         session,
         ConsoleNavigationState(
-            current=ConsoleScreen(id=screen_id, params={k: str(v) for k, v in params.items()}),
+            current=ConsoleScreen(
+                id=screen_id, params={k: str(v) for k, v in params.items()}
+            ),
             stack=load_navigation(session).stack,
         ),
     )
@@ -126,7 +128,9 @@ def push_screen(session: Any, screen_id: str, **params: str) -> None:
     save_navigation(
         session,
         ConsoleNavigationState(
-            current=ConsoleScreen(id=screen_id, params={k: str(v) for k, v in params.items()}),
+            current=ConsoleScreen(
+                id=screen_id, params={k: str(v) for k, v in params.items()}
+            ),
             stack=stack,
         ),
     )

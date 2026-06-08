@@ -14,7 +14,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "cd2efe74cae5"
@@ -81,7 +80,9 @@ def upgrade() -> None:
             )
         master_canonical_map[normalized] = row.phone
         if normalized != row.phone:
-            master_updates.append({"id": row.id, "old_phone": row.phone, "new_phone": normalized})
+            master_updates.append(
+                {"id": row.id, "old_phone": row.phone, "new_phone": normalized}
+            )
 
     tenant_updates: list[dict] = []
     tenant_canonical_map: dict[str, str] = {}
@@ -100,7 +101,9 @@ def upgrade() -> None:
             )
         tenant_canonical_map[normalized] = row.phone
         if normalized != row.phone:
-            tenant_updates.append({"id": row.id, "old_phone": row.phone, "new_phone": normalized})
+            tenant_updates.append(
+                {"id": row.id, "old_phone": row.phone, "new_phone": normalized}
+            )
 
     # ---- Cross-table collision check ----
     # Include already-canonical values in cross-table check
@@ -121,8 +124,7 @@ def upgrade() -> None:
     # ---- Apply bulk updates (single SQL statement per table via VALUES) ----
     if master_updates:
         value_rows = ", ".join(
-            f"(:id_{i}, :phone_{i})"
-            for i in range(len(master_updates))
+            f"(:id_{i}, :phone_{i})" for i in range(len(master_updates))
         )
         update_sql = (
             "UPDATE master_profiles "
@@ -138,8 +140,7 @@ def upgrade() -> None:
 
     if tenant_updates:
         value_rows = ", ".join(
-            f"(:id_{i}, :phone_{i})"
-            for i in range(len(tenant_updates))
+            f"(:id_{i}, :phone_{i})" for i in range(len(tenant_updates))
         )
         update_sql = (
             "UPDATE tenant_profiles "

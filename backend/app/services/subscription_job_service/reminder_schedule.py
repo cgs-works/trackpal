@@ -4,7 +4,7 @@ Provides tenant-local time calculation, threshold checking, and
 days-until-expiry computation, plus batched data loading.
 """
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -27,9 +27,7 @@ def is_valid_timezone(tz_name: str) -> bool:
         return False
 
 
-def is_reminder_time_ok(
-    now_utc: datetime, reminder_time: str, tz_name: str
-) -> bool:
+def is_reminder_time_ok(now_utc: datetime, reminder_time: str, tz_name: str) -> bool:
     """Return True when tenant local time is at or after *reminder_time*.
 
     If *tz_name* is invalid the check returns ``True`` so the caller can

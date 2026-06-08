@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 
 from . import messages as msg
 from . import formatters as fmt

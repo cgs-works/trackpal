@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from app.services.whatsapp_navigation import is_back, is_cancel, is_next
+from app.services.whatsapp_navigation import is_back
 
 logger = logging.getLogger(__name__)
 

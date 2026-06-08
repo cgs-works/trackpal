@@ -11,7 +11,11 @@ from typing import Any
 
 import pytest
 
-from app.core.redis_client import FailoverState, RedisConnectionManager, RedisUnavailableError
+from app.core.redis_client import (
+    FailoverState,
+    RedisConnectionManager,
+    RedisUnavailableError,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -309,6 +313,7 @@ async def test_execute_primary_failure_below_threshold_stays_closed(
     manager_with_failover,
 ):
     """A single primary failure below threshold does not open breaker."""
+
     async def failing_op(client):
         raise ConnectionError("primary down")
 
@@ -379,6 +384,7 @@ async def test_execute_uses_backup_when_open(manager_with_failover):
     manager_with_failover._policy._opened_at = 0.0  # long ago but we'll freeze
     # Actually set opened_at to recent so window hasn't expired
     import time
+
     manager_with_failover._policy._opened_at = time.monotonic()
 
     call_log: list[Any] = []
