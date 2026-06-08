@@ -711,7 +711,7 @@ git add backend/app/api/v1/endpoints/integrations/console.py backend/tests/test_
 git commit -m "fix: silence external admin menu in tenant routing"
 ```
 
-## Task 3: Lock and implement the workflow bot-echo filter
+## Task 3: Lock and implement the workflow bot-echo filter  [x]
 
 **Skills to read before starting:**
 - `superpowers:test-driven-development`
@@ -725,7 +725,7 @@ git commit -m "fix: silence external admin menu in tenant routing"
 - Modify: `n8n/Trackpal WhatsApp Bot.json`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Add the failing workflow-export regression test**
+- [x] **Step 1: Add the failing workflow-export regression test**
 
 Append this test to `backend/tests/test_n8n_whatsapp_workflow.py`:
 
@@ -738,7 +738,7 @@ def test_parse_input_filters_not_registered_bot_echoes_without_dropping_from_me(
     assert "if (!fromMe && looksLikeTrackpalGeneratedReply)" in js
 ```
 
-- [ ] **Step 2: Run the workflow regression tests and verify they fail**
+- [x] **Step 2: Run the workflow regression tests and verify they fail**
 
 Run:
 
@@ -748,7 +748,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: FAIL because the current Parse Input JS does not yet include the Spanish and English `not registered` fragments.
 
-- [ ] **Step 3: Update only the Parse Input filter in the workflow export**
+- [x] **Step 3: Update only the Parse Input filter in the workflow export**
 
 In `n8n/Trackpal WhatsApp Bot.json`, inside node `Parse input`, replace the `looksLikeTrackpalGeneratedReply` block with this exact code:
 
@@ -768,7 +768,7 @@ if (!fromMe && looksLikeTrackpalGeneratedReply) {
 
 Do not change node names, connections, `reply_to` expressions, or the `IF no reply` branch.
 
-- [ ] **Step 4: Verify the workflow JSON and tests now pass**
+- [x] **Step 4: Verify the workflow JSON and tests now pass**
 
 Run:
 
@@ -787,7 +787,7 @@ Expected:
 - `workflow json ok`
 - workflow regression suite passes.
 
-- [ ] **Step 5: Commit the workflow filter change**
+- [x] **Step 5: Commit the workflow filter change**
 
 ```bash
 git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py

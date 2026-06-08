@@ -123,3 +123,11 @@ def test_check_close_session_tolerates_guard_branch_without_merge_data() -> None
     assert "fallback = $('Merge & lookup data').first().json;" in js
     assert "resultData = $('Build result message').first().json;" in js
     assert "const data = { ...fallback, ...resultData, ...$json };" in js
+
+
+def test_parse_input_filters_not_registered_bot_echoes_without_dropping_from_me() -> None:
+    js = _workflow_nodes()["Parse input"]["parameters"]["jsCode"]
+
+    assert "no tienes una cuenta registrada" in js
+    assert "you do not have a registered account" in js
+    assert "if (!fromMe && looksLikeTrackpalGeneratedReply)" in js
