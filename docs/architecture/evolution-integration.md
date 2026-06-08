@@ -61,6 +61,8 @@ Relevant fields in the webhook payload:
 - `targetJid` — the `remoteJid` the user is acting on (e.g. `55500000001@lid`)
 - `senderPn`, `senderLid` — sender identity resolution
 
+**TrackPal admin identity fallback:** TrackPal's private admin shortcut flow assumes deployed ``fromMe=true`` webhook payloads include ``adminJid=instance.Jid``. The TrackPal backend now falls back to the tenant record when that payload is ambiguous, but rollout should still verify that the deployed Evolution Go build and instance data emit ``adminJid`` for private admin-chat follow-up messages.
+
 **Canonical session JID resolution:**
 When the `remoteJid` contains `@lid` and `senderPn` is resolved, the system uses the phone number as the canonical session key instead of the LID. Device suffixes (e.g. `:81`) are stripped from all JIDs before session key lookups. This ensures `fromMe` messages from the tenant's device JID (with suffix) and subsequent replies from the admin (without suffix) share the same Evolution chatbot session.
 

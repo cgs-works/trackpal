@@ -62,6 +62,44 @@ def _jid_phone(jid: str | None) -> str | None:
     return normalize_phone(local)
 
 
+async def _should_silence_external_admin_menu(
+    *,
+    tenant: Tenant,
+    phone_digits: str | None,
+    sender_lid: str | None,
+    message: str,
+    db: AsyncSession,
+) -> bool:
+    if message.strip().lower() != "/menu":
+        return False
+
+    if phone_digits and tenant.whatsapp_phone:
+        tenant_phone = normalize_phone(tenant.whatsapp_phone)
+        if tenant_phone and tenant_phone == phone_digits:
+            return False
+
+    tenant_lid = getattr(tenant, "whatsapp_lid", None)
+    if sender_lid and tenant_lid and sender_lid == tenant_lid:
+        return False
+
+    try:
+        matched_tenant = await tenants_repository.get_active_by_whatsapp_identity(
+            db,
+            phone_digits=phone_digits,
+            whatsapp_lid=sender_lid,
+        )
+    except Exception:
+        logger.exception(
+            "External admin /menu lookup failed for tenant=%s phone=%s lid=%s",
+            tenant.id,
+            phone_digits,
+            sender_lid,
+        )
+        return False
+
+    return bool(matched_tenant and matched_tenant.id != tenant.id)
+
+
 console_router = APIRouter(tags=["integrations"])
 auth_service = AuthService()
 CONSOLE_STATE_UNAVAILABLE_REPLY = ContingencyReplyPolicy.TEMPORARY_UNAVAILABLE
@@ -304,7 +342,9 @@ async def _route_by_instance(
     # return silent ``no_reply`` when the sender is blocked.
 
     msg_lower = message.strip().lower()
-    close_jid = _phone_close_jid(phone_digits)
+    close_jid = (
+        _phone_close_jid(phone_digits) or _canonical_jid(sender_lid) or sender_lid
+    )
 
     # Block check first — blocked senders always get silent treatment,
     # even when they already have an active ``codigo`` session. The block
@@ -318,6 +358,27 @@ async def _route_by_instance(
     )
     if blocked:
         return WhatsAppConsoleResponse(reply="", no_reply=True)
+
+    # External admin guard — silence exact /menu from another tenant
+    if await _should_silence_external_admin_menu(
+        tenant=tenant,
+        phone_digits=phone_digits,
+        sender_lid=sender_lid,
+        message=message,
+        db=db,
+    ):
+        logger.info(
+            "external_admin_menu_silenced tenant=%s phone=%s lid=%s",
+            tenant.id,
+            phone_digits,
+            sender_lid,
+        )
+        return WhatsAppConsoleResponse(
+            reply="",
+            no_reply=True,
+            status="closed",
+            close_jid=close_jid,
+        )
 
     # Resume any existing unauthenticated codigo session first so the
     # multi-step dialog can continue across messages.
@@ -372,20 +433,26 @@ async def _handle_from_me_routing(
     silently via ``no_reply=true`` and ``reply_to=<admin_jid>``.
     """
     # ── Step 1: Resolve admin identity ────────────────────────────
-    resolved_admin_phone = normalize_phone(admin_phone) if admin_phone else None
-    if not resolved_admin_phone:
-        # Fall back to tenant's whatsapp_phone
-        if tenant.whatsapp_phone:
-            resolved_admin_phone = normalize_phone(tenant.whatsapp_phone)
-        else:
-            # Cannot identify admin — no further routing possible
-            return WhatsAppConsoleResponse(reply="", no_reply=True)
-
-    assert resolved_admin_phone is not None  # guaranteed by fallback check above
-    # Prefer phone-based close JID when normalized admin phone is available
-    preferred_close_jid = (
-        _phone_close_jid(resolved_admin_phone) or _canonical_jid(admin_jid) or admin_jid
+    resolved_admin_phone = (
+        normalize_phone(tenant.whatsapp_phone) if tenant.whatsapp_phone else None
     )
+    if not resolved_admin_phone and admin_phone:
+        resolved_admin_phone = normalize_phone(admin_phone)
+    if not resolved_admin_phone:
+        logger.warning(
+            "from_me_admin_identity_unresolved tenant=%s instance=%s target_jid=%s",
+            tenant.id,
+            instance,
+            target_jid,
+        )
+        return WhatsAppConsoleResponse(reply="", no_reply=True)
+
+    resolved_admin_jid = (
+        _canonical_jid(admin_jid)
+        or admin_jid
+        or f"{resolved_admin_phone}@s.whatsapp.net"
+    )
+    preferred_close_jid = _phone_close_jid(resolved_admin_phone) or resolved_admin_jid
 
     # ── Step 2: Determine target identity ─────────────────────────
     target_phone_norm = normalize_phone(target_phone) if target_phone else None
@@ -412,7 +479,7 @@ async def _handle_from_me_routing(
     is_self_target = (
         phone_self_target
         or lid_self_target
-        or (admin_jid and target_jid and admin_jid == target_jid)
+        or (resolved_admin_jid and target_jid and resolved_admin_jid == target_jid)
     )
 
     if is_self_target:
@@ -488,23 +555,27 @@ async def _handle_from_me_routing(
         if message.strip().lower() in ("0", "salir", "cerrar"):
             context_data = json.loads(existing_raw)
             close_jids = _client_context_close_jids(
-                context_data.get("temp_data", {}), admin_jid
+                context_data.get("temp_data", {}), resolved_admin_jid
             )
             await manager.execute("clear_context", _del_ctx)
             locale = getattr(tenant, "locale", "es") or "es"
             return WhatsAppConsoleResponse(
                 reply=t(locale, "wa.tenant.client_context.closed"),
                 status="closed",
-                reply_to=admin_jid,
+                reply_to=resolved_admin_jid,
                 close_jid=preferred_close_jid,
                 close_jids=close_jids,
             )
         # Otherwise, reject silently (collision)
-        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
+        return WhatsAppConsoleResponse(
+            reply="", no_reply=True, reply_to=resolved_admin_jid
+        )
 
     # ── Step 5: Only /menu starts Client Context Shortcut ─────────
     if message.strip().lower() not in ("/menu", "menu"):
-        return WhatsAppConsoleResponse(reply="", no_reply=True, reply_to=admin_jid)
+        return WhatsAppConsoleResponse(
+            reply="", no_reply=True, reply_to=resolved_admin_jid
+        )
 
     # ── Step 6: Render real contextual menu ───────────────────────
     from app.api.v1.endpoints.integrations.console_context_shortcut import (
@@ -529,7 +600,7 @@ async def _handle_from_me_routing(
             "target_phone": target_phone_norm or target_phone,
             "target_lid": target_lid,
             "target_jid": target_jid,
-            "admin_jid": _canonical_jid(admin_jid) or admin_jid,
+            "admin_jid": _canonical_jid(resolved_admin_jid) or resolved_admin_jid,
             **context_meta,
         },
     )
@@ -543,5 +614,5 @@ async def _handle_from_me_routing(
     # close_jid tells n8n which chat to close when the admin sends
     # "0"/"salir"/"cerrar" in the client-shortcut flow.
     return WhatsAppConsoleResponse(
-        reply=reply, reply_to=admin_jid, close_jid=preferred_close_jid
+        reply=reply, reply_to=resolved_admin_jid, close_jid=preferred_close_jid
     )

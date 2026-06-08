@@ -3169,7 +3169,6 @@ async def test_tenant_catalog_zero_sets_closed_response_with_close_jid(
 
     tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
     admin_phone = tenant.whatsapp_phone  # "+12015550002"
-    admin_phone_digits = "12015550002"
 
     fake_mgr = _FakeManager(used_backup=False)
     with patch(

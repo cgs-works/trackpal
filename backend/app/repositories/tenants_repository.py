@@ -3,10 +3,11 @@
 import uuid
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.phone import normalize_phone
 from app.models import Client, Tenant
 
 
@@ -147,6 +148,42 @@ async def get_by_whatsapp_lid(db: AsyncSession, lid: str) -> Tenant | None:
     return result.scalar_one_or_none()
 
 
+async def get_active_by_whatsapp_identity(
+    db: AsyncSession,
+    *,
+    phone_digits: str | None = None,
+    whatsapp_lid: str | None = None,
+) -> Tenant | None:
+    """Get an active tenant by WhatsApp phone or LID identity.
+
+    Phone matching accepts both canonical digits-only values and legacy
+    `+`-prefixed values stored in the database.
+    """
+    phone_norm = normalize_phone(phone_digits) if phone_digits else None
+    lid = (whatsapp_lid or "").strip() or None
+
+    if not phone_norm and not lid:
+        return None
+
+    stmt = select(Tenant).options(selectinload(Tenant.owner)).where(Tenant.is_active)
+
+    phone_variants = [phone_norm, f"+{phone_norm}"] if phone_norm else []
+    if phone_variants and lid:
+        stmt = stmt.where(
+            or_(
+                Tenant.whatsapp_phone.in_(phone_variants),
+                Tenant.whatsapp_lid == lid,
+            )
+        )
+    elif phone_variants:
+        stmt = stmt.where(Tenant.whatsapp_phone.in_(phone_variants))
+    else:
+        stmt = stmt.where(Tenant.whatsapp_lid == lid)
+
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def update_tenant_lid(db: AsyncSession, tenant_id: uuid.UUID, lid: str) -> None:
     """Persist whatsapp_lid on a tenant (progressive fill)."""
     result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
@@ -185,4 +222,5 @@ __all__ = [
     "get_by_instance",
     "get_by_whatsapp_lid",
     "update_tenant_lid",
+    "get_active_by_whatsapp_identity",
 ]
