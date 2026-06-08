@@ -64,9 +64,20 @@ def test_guard_from_me_external_non_menu_sets_skip_and_close_contract() -> None:
     assert "skip_console_call: true" in js
     assert "no_reply: true" in js
     assert "status: 'closed'" in js
-    assert "close_jid: targetJid" in js
-    assert "close_jids: [targetJid]" in js
+    assert "const targetPhoneJid" in js
+    assert "const closeJid = targetPhoneJid || targetJid" in js
+    assert "close_jid: closeJid" in js
+    assert "close_jids: [closeJid]" in js
     assert "guard_reason: 'from_me_external_non_menu'" in js
+
+
+def test_guard_close_jid_prefers_target_phone_over_lid() -> None:
+    js = _workflow_nodes()["Guard fromMe external non-menu"]["parameters"]["jsCode"]
+
+    assert "const targetPhoneJid" in js
+    assert "targetPhone" in js
+    assert "targetPhoneJid || targetJid" in js
+    assert "close_jid: closeJid" in js
 
 
 def test_guard_keeps_menu_self_target_and_missing_target_on_backend_path() -> None:
