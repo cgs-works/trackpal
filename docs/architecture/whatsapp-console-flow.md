@@ -177,6 +177,8 @@ To keep endpoint modules maintainable and within team size policy, the console e
 
 When ``from_me=true`` in the request, the message was sent by an admin from their own WhatsApp chat (outgoing shortcut trigger). The backend routes these through ``_handle_from_me_routing()`` before the regular identity checks:
 
+Before ``_handle_from_me_routing()`` runs, the n8n workflow now pre-guards external ``from_me=true`` non-menu traffic. If the admin targets an external chat and sends anything other than ``/menu`` or ``menu``, n8n skips the backend call, sends no reply, and closes the target Evolution session. Only allowed shortcut starters (``/menu`` and ``menu``) continue to backend contextual routing.
+
 1. **Resolve admin identity**: Use ``admin_phone`` if provided, otherwise fall back to ``tenant.whatsapp_phone`` (instance owner).
 2. **Determine target identity**: Normalise ``target_phone`` if available.
 3. **Self-target check**: If the target (phone or JID) matches the admin's own identity, route to the standard Tenant console.

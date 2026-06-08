@@ -6,9 +6,17 @@ WORKFLOW_PATH = (
 )
 
 
+def _workflow_payload() -> dict:
+    return json.loads(WORKFLOW_PATH.read_text(encoding="utf-8"))
+
+
 def _workflow_nodes() -> dict[str, dict]:
-    payload = json.loads(WORKFLOW_PATH.read_text(encoding="utf-8"))
+    payload = _workflow_payload()
     return {node["name"]: node for node in payload["nodes"]}
+
+
+def _workflow_connections() -> dict[str, dict]:
+    return _workflow_payload()["connections"]
 
 
 def test_build_result_message_sets_close_after_send_contract() -> None:
@@ -42,3 +50,65 @@ def test_check_close_session_reads_close_after_send_from_upstream_result() -> No
     assert "const shouldCloseAfterSend = data.close_after_send === true;" in js
     assert "if (hasLookupResult && !shouldCloseAfterSend)" in js
     assert "const isLogout = shouldCloseAfterSend" in js
+
+
+def test_guard_from_me_external_non_menu_sets_skip_and_close_contract() -> None:
+    js = _workflow_nodes()["Guard fromMe external non-menu"]["parameters"]["jsCode"]
+
+    assert "const canonicalJid = (value) => {" in js
+    assert "const isMenuCommand = message === '/menu' || message === 'menu';" in js
+    assert "const shouldSkipBackend = Boolean(" in js
+    assert "fromMe &&" in js
+    assert "!isSelfTarget" in js
+    assert "!isMenuCommand" in js
+    assert "skip_console_call: true" in js
+    assert "no_reply: true" in js
+    assert "status: 'closed'" in js
+    assert "close_jid: targetJid" in js
+    assert "close_jids: [targetJid]" in js
+    assert "guard_reason: 'from_me_external_non_menu'" in js
+
+
+def test_guard_keeps_menu_self_target_and_missing_target_on_backend_path() -> None:
+    js = _workflow_nodes()["Guard fromMe external non-menu"]["parameters"]["jsCode"]
+
+    assert "const isSelfTarget = Boolean(" in js
+    assert "targetJid &&" in js
+    assert "targetJid === adminJid" in js
+    assert "targetJid === remoteJid && adminJid === remoteJid" in js
+    assert "return [{ json: { ...input, skip_console_call: false } }];" in js
+
+
+def test_if_skip_console_call_routes_guarded_items_to_close_path() -> None:
+    node = _workflow_nodes()["IF skip console call"]
+    condition = node["parameters"]["conditions"]["conditions"][0]
+
+    assert condition["leftValue"] == "={{ $json.skip_console_call }}"
+    assert condition["operator"]["type"] == "boolean"
+    assert condition["operator"]["operation"] == "true"
+
+
+def test_guard_connections_bypass_console_call_on_true_branch() -> None:
+    connections = _workflow_connections()
+
+    assert (
+        connections["Config"]["main"][0][0]["node"] == "Guard fromMe external non-menu"
+    )
+    assert (
+        connections["Guard fromMe external non-menu"]["main"][0][0]["node"]
+        == "IF skip console call"
+    )
+    assert (
+        connections["IF skip console call"]["main"][0][0]["node"]
+        == "Check close session"
+    )
+    assert connections["IF skip console call"]["main"][1][0]["node"] == "Console call"
+
+
+def test_check_close_session_tolerates_guard_branch_without_merge_data() -> None:
+    js = _workflow_nodes()["Check close session"]["parameters"]["jsCode"]
+
+    assert "let fallback = {};" in js
+    assert "fallback = $('Merge & lookup data').first().json;" in js
+    assert "resultData = $('Build result message').first().json;" in js
+    assert "const data = { ...fallback, ...resultData, ...$json };" in js

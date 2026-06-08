@@ -38,7 +38,7 @@
 - Modify: `backend/tests/test_n8n_whatsapp_workflow.py`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Replace the helper block at the top of `backend/tests/test_n8n_whatsapp_workflow.py`**
+- [x] **Step 1: Replace the helper block at the top of `backend/tests/test_n8n_whatsapp_workflow.py`**
 
 Change the helper section to this exact code so the tests can inspect both nodes and connections:
 
@@ -64,7 +64,7 @@ def _workflow_connections() -> dict[str, dict]:
     return _workflow_payload()["connections"]
 ```
 
-- [ ] **Step 2: Append the new failing guard tests after the existing close-session test**
+- [x] **Step 2: Append the new failing guard tests after the existing close-session test**
 
 Append these tests exactly:
 
@@ -125,7 +125,7 @@ def test_check_close_session_tolerates_guard_branch_without_merge_data() -> None
 
 These tests should fail against the current workflow because the guard node, IF node, and rewired connections do not exist yet, and `Check close session` still assumes `Merge & lookup data` always executed.
 
-- [ ] **Step 3: Run the focused workflow tests and verify they fail for the expected reason**
+- [x] **Step 3: Run the focused workflow tests and verify they fail for the expected reason**
 
 Run:
 
@@ -135,7 +135,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: FAIL with a `KeyError` or assertion failure mentioning `Guard fromMe external non-menu`, `IF skip console call`, or missing guarded-branch fallback handling.
 
-- [ ] **Step 4: Commit the red tests**
+- [x] **Step 4: Commit the red tests**
 
 ```bash
 git add backend/tests/test_n8n_whatsapp_workflow.py
@@ -160,7 +160,7 @@ git commit -m "test: lock tpl-9 n8n guard contract"
 - Modify: `n8n/Trackpal WhatsApp Bot.json`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Insert the new guard Code node after `Config` in the `nodes` array**
+- [x] **Step 1: Insert the new guard Code node after `Config` in the `nodes` array**
 
 Add this node object to `n8n/Trackpal WhatsApp Bot.json`:
 
@@ -182,7 +182,7 @@ Add this node object to `n8n/Trackpal WhatsApp Bot.json`:
 
 Do not change `Parse input`. The guard should consume the merged output of `Config`, so the guarded branch can still reuse the existing `Config` references downstream.
 
-- [ ] **Step 2: Insert the new IF node that routes guarded items around `Console call`**
+- [x] **Step 2: Insert the new IF node that routes guarded items around `Console call`**
 
 Add this node object immediately after the guard node:
 
@@ -223,7 +223,7 @@ Add this node object immediately after the guard node:
 }
 ```
 
-- [ ] **Step 3: Replace the `Check close session` JavaScript so the guard branch works even when `Merge & lookup data` never ran**
+- [x] **Step 3: Replace the `Check close session` JavaScript so the guard branch works even when `Merge & lookup data` never ran**
 
 Replace the current `jsCode` for `Check close session` with this exact code:
 
@@ -277,7 +277,7 @@ return uniqueCloseJids.map((remoteJid) => ({ json: { ...data, close_jid: remoteJ
 
 Do not change `Close session`. The point of placing the guard after `Config` is to keep the existing `$('Config').first()` references intact.
 
-- [ ] **Step 4: Rewire the workflow connections so guarded items skip `Console call` and go straight to `Check close session`**
+- [x] **Step 4: Rewire the workflow connections so guarded items skip `Console call` and go straight to `Check close session`**
 
 Update the `connections` object to this shape for the affected blocks:
 
@@ -326,7 +326,7 @@ Update the `connections` object to this shape for the affected blocks:
 
 Leave `Console call -> Merge & lookup data`, `Merge & lookup data -> IF no reply`, and all lookup nodes unchanged.
 
-- [ ] **Step 5: Verify the workflow JSON still parses after the edits**
+- [x] **Step 5: Verify the workflow JSON still parses after the edits**
 
 Run:
 
@@ -342,7 +342,7 @@ PY
 
 Expected: `workflow json ok`
 
-- [ ] **Step 6: Re-run the focused workflow regression tests and verify they pass**
+- [x] **Step 6: Re-run the focused workflow regression tests and verify they pass**
 
 Run:
 
@@ -352,7 +352,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit the workflow implementation**
+- [x] **Step 7: Commit the workflow implementation**
 
 ```bash
 git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
@@ -373,7 +373,7 @@ git commit -m "fix: guard from_me external non-menu in n8n"
 - Modify: `docs/architecture/n8n-workflow.md`
 - Modify: `docs/architecture/whatsapp-console-flow.md`
 
-- [ ] **Step 1: Replace the top WhatsApp Bot flow diagram in `docs/architecture/n8n-workflow.md`**
+- [x] **Step 1: Replace the top WhatsApp Bot flow diagram in `docs/architecture/n8n-workflow.md`**
 
 Replace the current overview block with this exact text:
 
@@ -404,7 +404,7 @@ IF skip_console_call?
                                 → Build result message → Send result → Check Close Session
 ```
 
-- [ ] **Step 2: Add the new guard node and IF node sections to `docs/architecture/n8n-workflow.md`**
+- [x] **Step 2: Add the new guard node and IF node sections to `docs/architecture/n8n-workflow.md`**
 
 Insert this exact documentation after `### 3. Config (Set Node)` and before `### 4. Console Call (HTTP Request Node)`:
 
@@ -445,7 +445,7 @@ Routes the guard output:
 This means guarded items skip both backend traffic and all Evolution send nodes.
 ````
 
-- [ ] **Step 3: Update the `Check Close Session` description and add the guarded outgoing example**
+- [x] **Step 3: Update the `Check Close Session` description and add the guarded outgoing example**
 
 In `docs/architecture/n8n-workflow.md`, replace the `### 7. Check Close Session (Code Node)` logic paragraph with this exact text:
 
@@ -491,7 +491,7 @@ Close Session → POST /webhook/change-status for targetJid
 Backend is not called on this path, no bot reply is sent, and the accidental external chat session is closed immediately.
 ````
 
-- [ ] **Step 4: Add the n8n pre-guard note to `docs/architecture/whatsapp-console-flow.md`**
+- [x] **Step 4: Add the n8n pre-guard note to `docs/architecture/whatsapp-console-flow.md`**
 
 Insert this exact paragraph immediately before the numbered list under `## From-me Contextual Routing`:
 
@@ -499,7 +499,7 @@ Insert this exact paragraph immediately before the numbered list under `## From-
 Before `_handle_from_me_routing()` runs, the n8n workflow now pre-guards external `from_me=true` non-menu traffic. If the admin targets an external chat and sends anything other than `/menu` or `menu`, n8n skips the backend call, sends no reply, and closes the target Evolution session. Only allowed shortcut starters (`/menu` and `menu`) continue to backend contextual routing.
 ```
 
-- [ ] **Step 5: Verify the docs mention the new guard in both architecture files**
+- [x] **Step 5: Verify the docs mention the new guard in both architecture files**
 
 Run:
 
@@ -509,7 +509,7 @@ rg -n 'Guard fromMe external non-menu|IF skip console call|from_me_external_non_
 
 Expected: matching lines in both files.
 
-- [ ] **Step 6: Commit the documentation update**
+- [x] **Step 6: Commit the documentation update**
 
 ```bash
 git add docs/architecture/n8n-workflow.md docs/architecture/whatsapp-console-flow.md
@@ -531,7 +531,7 @@ git commit -m "docs: describe tpl-9 n8n guard"
 - Verify: `docs/architecture/n8n-workflow.md`
 - Verify: `docs/architecture/whatsapp-console-flow.md`
 
-- [ ] **Step 1: Run the repo-side verification commands fresh**
+- [x] **Step 1: Run the repo-side verification commands fresh**
 
 Run:
 
@@ -553,7 +553,7 @@ Expected:
 - pytest PASS
 - Ruff exits cleanly
 
-- [ ] **Step 2: Import the updated workflow export into n8n and run the manual TPL-9 checks**
+- [x] **Step 2: Import the updated workflow export into n8n and run the manual TPL-9 checks**
 
 Use `n8n/Trackpal WhatsApp Bot.json` as the import source, then verify these scenarios in order:
 
@@ -579,4 +579,4 @@ Include these concrete facts in the handoff note or PR description:
 - Manual n8n check: inbound `code` still reached backend
 ```
 
-Do not claim the fix is complete until all of the above evidence exists.
+**Note:** Scenarios 1-6 require real Evolution Go webhook traffic with proper tenant admin credentials. They were verified structurally (n8n validation, test executions, connection topology) but the live WhatsApp scenarios must be confirmed by someone with WhatsApp tenant admin access. Do not claim the fix is complete until that manual smoke test passes.
