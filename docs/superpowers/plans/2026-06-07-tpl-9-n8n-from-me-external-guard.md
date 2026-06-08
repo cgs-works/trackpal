@@ -373,7 +373,7 @@ git commit -m "fix: guard from_me external non-menu in n8n"
 - Modify: `docs/architecture/n8n-workflow.md`
 - Modify: `docs/architecture/whatsapp-console-flow.md`
 
-- [ ] **Step 1: Replace the top WhatsApp Bot flow diagram in `docs/architecture/n8n-workflow.md`**
+- [x] **Step 1: Replace the top WhatsApp Bot flow diagram in `docs/architecture/n8n-workflow.md`**
 
 Replace the current overview block with this exact text:
 
@@ -404,7 +404,7 @@ IF skip_console_call?
                                 → Build result message → Send result → Check Close Session
 ```
 
-- [ ] **Step 2: Add the new guard node and IF node sections to `docs/architecture/n8n-workflow.md`**
+- [x] **Step 2: Add the new guard node and IF node sections to `docs/architecture/n8n-workflow.md`**
 
 Insert this exact documentation after `### 3. Config (Set Node)` and before `### 4. Console Call (HTTP Request Node)`:
 
@@ -445,7 +445,7 @@ Routes the guard output:
 This means guarded items skip both backend traffic and all Evolution send nodes.
 ````
 
-- [ ] **Step 3: Update the `Check Close Session` description and add the guarded outgoing example**
+- [x] **Step 3: Update the `Check Close Session` description and add the guarded outgoing example**
 
 In `docs/architecture/n8n-workflow.md`, replace the `### 7. Check Close Session (Code Node)` logic paragraph with this exact text:
 
@@ -491,7 +491,7 @@ Close Session → POST /webhook/change-status for targetJid
 Backend is not called on this path, no bot reply is sent, and the accidental external chat session is closed immediately.
 ````
 
-- [ ] **Step 4: Add the n8n pre-guard note to `docs/architecture/whatsapp-console-flow.md`**
+- [x] **Step 4: Add the n8n pre-guard note to `docs/architecture/whatsapp-console-flow.md`**
 
 Insert this exact paragraph immediately before the numbered list under `## From-me Contextual Routing`:
 
@@ -499,7 +499,7 @@ Insert this exact paragraph immediately before the numbered list under `## From-
 Before `_handle_from_me_routing()` runs, the n8n workflow now pre-guards external `from_me=true` non-menu traffic. If the admin targets an external chat and sends anything other than `/menu` or `menu`, n8n skips the backend call, sends no reply, and closes the target Evolution session. Only allowed shortcut starters (`/menu` and `menu`) continue to backend contextual routing.
 ```
 
-- [ ] **Step 5: Verify the docs mention the new guard in both architecture files**
+- [x] **Step 5: Verify the docs mention the new guard in both architecture files**
 
 Run:
 
@@ -509,7 +509,7 @@ rg -n 'Guard fromMe external non-menu|IF skip console call|from_me_external_non_
 
 Expected: matching lines in both files.
 
-- [ ] **Step 6: Commit the documentation update**
+- [x] **Step 6: Commit the documentation update**
 
 ```bash
 git add docs/architecture/n8n-workflow.md docs/architecture/whatsapp-console-flow.md
