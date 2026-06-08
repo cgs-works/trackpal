@@ -234,7 +234,9 @@ async def test_external_tenant_admin_menu_is_not_silenced_when_sender_is_active_
 async def test_from_me_menu_uses_tenant_owner_fallback_for_reply_to_when_admin_payload_is_ambiguous(
     client, db_session, active_tenant_user
 ):
-    await _setup_tenant_with_instance(db_session, active_tenant_user)
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    phone_digits = tenant.whatsapp_phone.lstrip("+")
+    expected_jid = f"{phone_digits}@s.whatsapp.net"
 
     fake_mgr = _FakeManager(used_backup=False)
     with patch(
@@ -257,8 +259,8 @@ async def test_from_me_menu_uses_tenant_owner_fallback_for_reply_to_when_admin_p
 
     assert response.status_code == 200
     body = response.json()
-    assert body["reply_to"] == "12015550002@s.whatsapp.net"
-    assert body["close_jid"] == "12015550002@s.whatsapp.net"
+    assert body["reply_to"] == expected_jid
+    assert body["close_jid"] == expected_jid
     assert body["reply"]
     assert (
         "gesti" in body["reply"].lower() or "client management" in body["reply"].lower()
