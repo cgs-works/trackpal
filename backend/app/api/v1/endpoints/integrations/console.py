@@ -376,8 +376,6 @@ async def _route_by_instance(
         return WhatsAppConsoleResponse(
             reply="",
             no_reply=True,
-            status="closed",
-            close_jid=close_jid,
         )
 
     # Resume any existing unauthenticated codigo session first so the

@@ -1263,6 +1263,52 @@ async def test_unregistered_identity_blocked_any_message_no_reply(
     assert not body.get("reply") or body.get("reply") == ""
 
 
+async def test_external_admin_menu_to_other_tenant_is_silent_without_close_signal(
+    client, db_session, active_tenant_user
+):
+    """Cross-tenant inbound /menu is ignored silently without closing admin chat."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+
+    other_user = User(
+        username="other-tenant",
+        password_hash="test-hash",
+        role="tenant",
+    )
+    db_session.add(other_user)
+    await db_session.flush()
+    other_tenant = Tenant(
+        owner_user_id=other_user.id,
+        client_prefix="tnc01",
+        name="Other Tenant",
+        whatsapp_phone="+12015550044",
+        evolution_instance_name="other-tenant-instance",
+        is_active=True,
+    )
+    db_session.add(other_tenant)
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "/menu",
+                "instance": other_tenant.evolution_instance_name,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("reply") == ""
+    assert body.get("no_reply") is True
+    assert "status" not in body
+    assert "close_jid" not in body
+
+
 async def test_unregistered_identity_non_codigo_returns_access_denied(
     client, db_session, active_tenant_user
 ):

@@ -205,7 +205,7 @@ The node closes when either:
 
 When `close_jids` is present, the node emits one item per JID so `Close session` processes each one.
 
-The existing ``IF no reply -> Check Close Session -> Close Session`` path already supports backend responses shaped as ``reply=""``, ``no_reply=true``, ``status="closed"``, ``close_jid="..."``; no workflow rewiring is required for the silent external-admin ``/menu`` guard.
+The existing ``IF no reply -> Check Close Session -> Close Session`` path still handles real close responses (for example ``status="closed"`` plus ``close_jid``), but the silent external-admin ``/menu`` guard now returns only ``reply=""`` and ``no_reply=true`` so the workflow does not close the admin chat.
 
 ### 8. Close Session (HTTP Request Node)
 

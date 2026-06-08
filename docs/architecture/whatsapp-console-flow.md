@@ -73,7 +73,7 @@ The console endpoint now routes by **WhatsApp instance** before resolving identi
    - If ``from_me=true`` → route via ``_handle_from_me_routing`` (see below).
    - Match `tenant.whatsapp_phone` (or `tenant.whatsapp_lid`) → tenant admin flow (after checking active Client Context Shortcut).
    - Match `(tenant_id, phone)` or `(tenant_id, whatsapp_lid)` in `clients` → client flow.
-   - Unregistered identity → check for Client Messaging Blocks first, then silently close exact ``/menu`` from another active TrackPal tenant/admin who is not a client of the receiving tenant, then resume/start unauthenticated code lookup for ``codigo``/``código``/``code``, or return ``not_registered`` with ``status="closed"`` and ``close_jid``.
+   - Unregistered identity → check for Client Messaging Blocks first, then silently ignore exact ``/menu`` from another active TrackPal tenant/admin who is not a client of the receiving tenant (``reply=""`` + ``no_reply=true`` only, no close signal), then resume/start unauthenticated code lookup for ``codigo``/``código``/``code``, or return ``not_registered`` with ``status="closed"`` and ``close_jid``.
 
 ### LID-aware identity path
 
