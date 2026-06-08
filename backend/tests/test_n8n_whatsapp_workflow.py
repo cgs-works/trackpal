@@ -91,9 +91,17 @@ def test_if_skip_console_call_routes_guarded_items_to_close_path() -> None:
 def test_guard_connections_bypass_console_call_on_true_branch() -> None:
     connections = _workflow_connections()
 
-    assert connections["Config"]["main"][0][0]["node"] == "Guard fromMe external non-menu"
-    assert connections["Guard fromMe external non-menu"]["main"][0][0]["node"] == "IF skip console call"
-    assert connections["IF skip console call"]["main"][0][0]["node"] == "Check close session"
+    assert (
+        connections["Config"]["main"][0][0]["node"] == "Guard fromMe external non-menu"
+    )
+    assert (
+        connections["Guard fromMe external non-menu"]["main"][0][0]["node"]
+        == "IF skip console call"
+    )
+    assert (
+        connections["IF skip console call"]["main"][0][0]["node"]
+        == "Check close session"
+    )
     assert connections["IF skip console call"]["main"][1][0]["node"] == "Console call"
 
 
