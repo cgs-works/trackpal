@@ -197,7 +197,7 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 4. Session stored under ``session:unreg:{tenant-prefix}:{phone}`` or ``session:unreg:{tenant-prefix}:{lid}`` for the multi-step dialog.
 5. Registered clients with an active unauthenticated codigo session resume that session before the read-only Client Console, so ``0`` cancels codigo rather than exiting the Client Console.
 6. Service list uses ``[N]`` bracket format (``[1] Service``, ``[2] Service``...) with emoji pagination (``8️⃣`` next, ``9️⃣`` previous, ``0️⃣`` cancel). Up to 7 services per page.
-7. Steps: service selection → email input → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
+7. Steps: service selection → email input → email confirmation → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
 8. n8n polls the job and sends the final result. On ``not_found``, the message includes options: ``1 Retry / 2 Back to services / 0 Cancel`` (localised in ES/EN).
 9. When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
 10. Post-result options handled by ``_handle_unauth_codigo_result``: ``1`` creates new job, ``2`` shows service list, ``0`` closes session.
@@ -318,9 +318,10 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 1. Trigger by exact message ``codigo``, ``código``, or ``code``.
 2. Backend shows a **paginated service list** with ``[N]`` bracket format for services (page-relative ``[1]`` to ``[7]``). Navigation uses emoji keycaps: ``8️⃣`` next page, ``9️⃣`` previous page, ``0️⃣`` cancel. A blank line separates services from navigation options. Up to 7 services per page (``PAGE_SIZE=7``).
 3. Backend asks for target email.
-4. Backend stores lookup intent in session (``service_key``, ``target_email``, ``pending_lookup_intent``). **Session is kept alive** (``flow=codigo``, ``step=awaiting_result``) instead of clearing flow state.
-5. Integration handler (``_handle_tenant_console``) creates the job, commits it, enqueues to Redis, then: pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data.
-6. Session remains in ``awaiting_result`` step. When n8n delivers the result notification (e.g. "Code not found"), the user's reply routes back to the awaiting_result handler.
+4. Backend validates and normalises the email via centralised ``validate_email()``, stores it as ``target_email`` in session, and advances to an **email confirmation step** (``email_confirm``).
+5. User confirms the email (``1``) → backend stores ``pending_lookup_intent`` with ``service_key`` and ``target_email``. Selecting ``2`` (correct email) returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session. **Session is kept alive** (``flow=codigo``, ``step=awaiting_result``) instead of clearing flow state.
+6. Integration handler (``_handle_tenant_console``) creates the job, commits it, enqueues to Redis, then: pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data.
+7. Session remains in ``awaiting_result`` step. When n8n delivers the result notification (e.g. "Code not found"), the user's reply routes back to the awaiting_result handler.
 
 #### Post-result response (``awaiting_result`` step)
 
@@ -338,8 +339,9 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 1. Trigger by ``codigo``, ``código``, or ``code`` from a registered or unregistered client.
 2. Backend shows the same **paginated service list** with ``[N]`` bracket format and emoji navigation (``8️⃣``/``9️⃣``/``0️⃣``), built by ``_build_unauth_service_page`` in ``console_handlers.py``.
 3. Service selection and email input follow the same pattern as the tenant self-target flow.
-4. Job creation happens **directly** in ``_handle_unauth_codigo_email`` (not delegated to the integration handler). Session transitions to ``awaiting_result`` step.
-5. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel.
+4. Email is validated and normalised via centralised ``validate_email()``, stored as ``target_email`` in session, and the step advances to **email confirmation** (``email_confirm``).
+5. The user confirms the email (``1``) → backend creates the ``MailLookupJob``, enqueues it, and transitions to ``awaiting_result`` step. Selecting ``2`` (correct email) returns to the email prompt, ``9`` returns to the service list, ``0`` cancels.
+6. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel.
 
 #### n8n behavior for this path
 
