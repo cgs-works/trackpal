@@ -225,7 +225,7 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.codigo.timeout": "⏰ *Timeout*\n\nThe code search took too long. Try again.",
     "wa.tenant.codigo.invalid_service": "❌ Invalid number. Reply with a number from the list, *9* to go back or *0* to cancel.",
     "wa.tenant.codigo.invalid_email": "❌ Invalid email. Reply with a valid email or *0* to cancel.",
-    "wa.tenant.codigo.email_confirm_prompt": "✉️ *Confirm email*\n\nService: *{service_label}*\nEmail: *{target_email}*\n\nIs this email correct?\n\n1️⃣ Yes\n2️⃣ Correct email\n9️⃣ Back to services\n0️⃣ Cancel",
+    "wa.tenant.codigo.email_confirm_prompt": "✉️ *Confirm email*\n\nService: *{service_label}*\nEmail: {target_email}\n\nIs this email correct?\n\n1️⃣ Yes\n2️⃣ Correct email\n9️⃣ Back to services\n0️⃣ Cancel",
     "wa.tenant.codigo.invalid_email_confirm_option": "❌ Invalid option. Reply *1* to confirm, *2* to correct the email, *9* to go back to services, or *0* to cancel.",
     "wa.tenant.post_action_prompt": "\nWhat would you like to do?\n\n1️⃣ Perform another operation\n2️⃣ Return to main menu\n0️⃣ Close session\n\nReply with the option number.",
     "wa.tenant.codigo.no_mailbox": "❌ *Mailbox not configured*\n\nYour business does not have a technical mailbox configured for code lookup.\n\nConfigure it from the web dashboard: *Code Mailbox*.",

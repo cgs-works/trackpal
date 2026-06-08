@@ -225,7 +225,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.codigo.timeout": "⏰ *Tiempo de espera agotado*\n\nLa busqueda del codigo tardo demasiado. Intenta de nuevo.",
     "wa.tenant.codigo.invalid_service": "❌ Numero invalido. Responde con un numero de la lista, *9* para regresar o *0* para cancelar.",
     "wa.tenant.codigo.invalid_email": "❌ Email invalido. Responde con un email valido o *0* para cancelar.",
-    "wa.tenant.codigo.email_confirm_prompt": "✉️ *Confirmar email*\n\nServicio: *{service_label}*\nEmail: *{target_email}*\n\n¿El correo ingresado es correcto?\n\n1️⃣ Sí\n2️⃣ Corregir email\n9️⃣ Volver a servicios\n0️⃣ Cancelar",
+    "wa.tenant.codigo.email_confirm_prompt": "✉️ *Confirmar email*\n\nServicio: *{service_label}*\nEmail: {target_email}\n\n¿El correo ingresado es correcto?\n\n1️⃣ Sí\n2️⃣ Corregir email\n9️⃣ Volver a servicios\n0️⃣ Cancelar",
     "wa.tenant.codigo.invalid_email_confirm_option": "❌ Opción inválida. Responde *1* para confirmar, *2* para corregir el email, *9* para volver a servicios o *0* para cancelar.",
     "wa.tenant.post_action_prompt": "\nQue deseas hacer?\n\n1️⃣ Realizar otra operacion\n2️⃣ Volver al menu principal\n0️⃣ Cerrar sesion\n\nResponde con el numero de la opcion.",
     "wa.tenant.codigo.no_mailbox": "❌ *Buzón no configurado*\n\nTu empresa no tiene un buzón técnico configurado para buscar códigos.\n\nConfigúralo desde el panel web: *Buzón de códigos*.",
