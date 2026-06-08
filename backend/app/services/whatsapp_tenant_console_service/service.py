@@ -155,6 +155,7 @@ class WhatsAppTenantConsoleService(
     _start_codigo_flow = _._start_codigo_flow
     _handle_codigo_service = _._handle_codigo_service
     _handle_codigo_email = _._handle_codigo_email
+    _handle_codigo_email_confirm = _._handle_codigo_email_confirm
     _handle_codigo_awaiting_result = _._handle_codigo_awaiting_result
     # fmt: on
 
@@ -207,11 +208,23 @@ class WhatsAppTenantConsoleService(
             # RESET_COMMANDS check intercepts it.
             if has_active_flow:
                 assert session is not None
-                # Global exit: "0" or "menu" clears session + returns
-                if is_cancel(msg) or msg.lower() in (
-                    "menu",
-                    "menú",
-                    "/menu",
+                # ── Strict-flow bypass for codigo email_confirm ────
+                # During email_confirm we want text aliases like
+                # "cancelar", "salir", "menu" to be treated as
+                # invalid options by the flow handler, not as global
+                # reset commands.
+                strict_codigo_confirm = False
+                if session.flow == self.CODIGO_FLOW:
+                    strict_codigo_confirm = (
+                        session.step == self.CODIGO_STEP_EMAIL_CONFIRM
+                    )
+
+                if not strict_codigo_confirm and (
+                    is_cancel(msg) or msg.lower() in (
+                        "menu",
+                        "menú",
+                        "/menu",
+                    )
                 ):
                     if session_service is not None:
                         await session_service.clear_session(f"admin:{phone}")
@@ -221,7 +234,7 @@ class WhatsAppTenantConsoleService(
                     return self._with_main_menu(
                         _i18n_t(ctx.get_locale(), "wa.tenant.cancelled")
                     )
-                if msg.lower() in self.HELP_COMMANDS:
+                if not strict_codigo_confirm and msg.lower() in self.HELP_COMMANDS:
                     return self._t(self.KEY_HELP_TEXT)
                 return await self._route_active_flow(
                     phone,

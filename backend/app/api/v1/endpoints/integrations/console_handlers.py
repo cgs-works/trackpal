@@ -62,6 +62,7 @@ logger = logging.getLogger(__name__)
 _UNAUTH_CODIGO_FLOW = "codigo"
 _UNAUTH_CODIGO_STEP_SERVICE = "service"
 _UNAUTH_CODIGO_STEP_EMAIL = "email"
+_UNAUTH_CODIGO_STEP_EMAIL_CONFIRM = "email_confirm"
 _UNAUTH_CODIGO_STEP_AWAITING_RESULT = "awaiting_result"
 
 _UNAUTH_CODIGO_SERVICE_LABELS: dict[str, str] = {
@@ -544,6 +545,19 @@ async def _handle_unauthenticated_codigo(
             close_jid,
         )
 
+    if session.step == _UNAUTH_CODIGO_STEP_EMAIL_CONFIRM:
+        return await _handle_unauth_codigo_email_confirm(
+            msg,
+            session,
+            session_service,
+            session_key,
+            tenant,
+            db,
+            locale,
+            manager,
+            close_jid,
+        )
+
     if session.step == _UNAUTH_CODIGO_STEP_AWAITING_RESULT:
         return await _handle_unauth_codigo_result(
             msg,
@@ -665,7 +679,9 @@ async def _handle_unauth_codigo_email(
     manager: RedisConnectionManager,
     close_jid: str | None = None,
 ) -> WhatsAppConsoleResponse:
-    """Handle email input, create lookup job, and return response with job_id."""
+    """Handle email input — validate, store normalized, move to email_confirm."""
+    from app.core.input_validation import InputValidationError, validate_email
+
     # Check cancel
     if is_cancel(msg):
         await session_service.clear_session(session_key)
@@ -676,31 +692,116 @@ async def _handle_unauth_codigo_email(
             close_jid=close_jid,
         )
 
-    target_email = msg.strip()
-    if (
-        not target_email
-        or len(target_email) < 3
-        or "@" not in target_email
-        or "." not in target_email.split("@", 1)[1]
-    ):
+    try:
+        normalized_email = validate_email(msg, required=True)
+    except InputValidationError:
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_email")
         )
 
     service_key = session.temp_data.get("service_key")
-    if not service_key:
+    service_label = session.temp_data.get("service_label")
+    if not service_key or not service_label:
         await session_service.clear_session(session_key)
         return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
 
-    # Create lookup job
+    target_email = normalized_email.lower()
+    session.temp_data["target_email"] = target_email
+    session.step = _UNAUTH_CODIGO_STEP_EMAIL_CONFIRM
+    await session_service.save_session(session)
+
+    return WhatsAppConsoleResponse(
+        reply=_i18n_t(
+            locale,
+            "wa.tenant.codigo.email_confirm_prompt",
+            service_label=service_label,
+            target_email=target_email,
+        )
+    )
+
+
+async def _handle_unauth_codigo_email_confirm(
+    msg: str,
+    session: ConversationSession,
+    session_service: WhatsAppSessionService,
+    session_key: str,
+    tenant: Tenant,
+    db: AsyncSession,
+    locale: str,
+    manager: RedisConnectionManager,
+    close_jid: str | None = None,
+) -> WhatsAppConsoleResponse:
+    """Handle email confirm step.
+
+    Options:
+        1 = confirm → create + enqueue job
+        2 = correct email → back to email prompt
+        9 = back to services
+        0 = cancel
+    """
+    raw = msg.strip()
+
+    if raw == "2":
+        service_label = session.temp_data.get("service_label", "")
+        session.temp_data.pop("target_email", None)
+        session.step = _UNAUTH_CODIGO_STEP_EMAIL
+        await session_service.save_session(session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.email_prompt", service_label=service_label)
+        )
+
+    if raw == "9":
+        effective_keys = session.temp_data.get("codigo_effective_keys", [])
+        if not effective_keys:
+            effective_keys = await code_services_repository.get_effective_service_keys(
+                db, tenant.id
+            )
+        if not effective_keys:
+            await session_service.clear_session(session_key)
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+            )
+
+        for key in ("service_key", "service_label", "target_email", "lookup_job_id"):
+            session.temp_data.pop(key, None)
+        session.temp_data["codigo_effective_keys"] = effective_keys
+        session.temp_data["codigo_current_page"] = 0
+        session.step = _UNAUTH_CODIGO_STEP_SERVICE
+        await session_service.save_session(session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.codigo.service_prompt",
+                service_list=_build_unauth_service_page(effective_keys, 0, locale),
+            )
+        )
+
+    if raw == "0":
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.cancelled"),
+            status="closed",
+            reply_to=close_jid,
+            close_jid=close_jid,
+        )
+
+    if raw != "1":
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(locale, "wa.tenant.codigo.invalid_email_confirm_option")
+        )
+
+    # raw == "1" — confirm: create and enqueue the job
+    service_key = session.temp_data.get("service_key")
+    target_email = session.temp_data.get("target_email")
+    if not service_key or not target_email:
+        await session_service.clear_session(session_key)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.cancelled"))
+
     mailbox = await mailbox_config_repository.get_by_tenant(db, tenant.id)
     if mailbox is None or mailbox.status != "connected":
         return WhatsAppConsoleResponse(
             reply=_i18n_t(locale, "wa.tenant.codigo.no_mailbox")
         )
-
-    lookup_job_id: str | None = None
-    tenant_id_out: str | None = None
 
     try:
         job = await mailbox_lookup_repository.create_job(
@@ -712,44 +813,34 @@ async def _handle_unauth_codigo_email(
         )
         await db.flush()
         await db.commit()
-
-        enqueued = False
-        try:
-            enqueued = (
-                await enqueue_job(manager, job.id) if manager is not None else False
-            )
-        except Exception:
-            logger.exception(
-                "Failed to enqueue lookup job %s for tenant %s", job.id, tenant.id
-            )
-
-        if enqueued:
-            lookup_job_id = str(job.id)
-            tenant_id_out = str(tenant.id)
-        else:
-            try:
-                await db.delete(job)
-                await db.commit()
-            except Exception:
-                logger.critical("Failed to delete job %s after enqueue failure", job.id)
-            return WhatsAppConsoleResponse(
-                reply=_i18n_t(locale, "wa.tenant.codigo.error")
-            )
     except Exception:
         logger.exception("Failed to create lookup job for tenant %s", tenant.id)
         return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
 
-    # Keep session alive with awaiting_result step so the user can
-    # send cancel/retry/back later after n8n notifies the result.
+    try:
+        enqueued = await enqueue_job(manager, job.id) if manager is not None else False
+    except Exception:
+        logger.exception(
+            "Failed to enqueue lookup job %s for tenant %s", job.id, tenant.id
+        )
+        enqueued = False
+
+    if not enqueued:
+        try:
+            await db.delete(job)
+            await db.commit()
+        except Exception:
+            logger.critical("Failed to delete job %s after enqueue failure", job.id)
+        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
+
     session.step = _UNAUTH_CODIGO_STEP_AWAITING_RESULT
-    session.temp_data["lookup_job_id"] = lookup_job_id
-    session.temp_data["target_email"] = target_email
+    session.temp_data["lookup_job_id"] = str(job.id)
     await session_service.save_session(session)
 
     return WhatsAppConsoleResponse(
         reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
-        lookup_job_id=lookup_job_id,
-        tenant_id=tenant_id_out,
+        lookup_job_id=str(job.id),
+        tenant_id=str(tenant.id),
     )
 
 
