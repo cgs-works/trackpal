@@ -1786,7 +1786,7 @@ async def _handle_ctx_blocked_menu(
     )
 
     if msg_lower == "1":
-        # Desbloquear mensajes — find active block and unblock
+        # Desbloquear mensajes — unblock immediately and close context
         blocked = await blocked_clients_repository.find_active(
             db,
             tenant.id,
@@ -1800,18 +1800,18 @@ async def _handle_ctx_blocked_menu(
                 block_id=blocked.id,
             )
             await db.commit()
-        # Keep context alive so subsequent ``0`` closes target session
-        data["step"] = "menu"
-        data["temp_data"]["target_state"] = "unregistered_unblocked"
-        data["temp_data"]["menu_variant"] = "unregistered"
-        await save_ctx(refresh_ttl=True)
+        await clear_ctx()
+        close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(
                 locale,
                 "wa.tenant.client_context.unblock_access.success",
                 identity=(target_phone or target_lid or ""),
             ),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
+            close_jids=close_jids,
         )
 
     if is_cancel(msg_lower):
