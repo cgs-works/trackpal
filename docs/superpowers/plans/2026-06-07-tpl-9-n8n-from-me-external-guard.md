@@ -38,7 +38,7 @@
 - Modify: `backend/tests/test_n8n_whatsapp_workflow.py`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
-- [ ] **Step 1: Replace the helper block at the top of `backend/tests/test_n8n_whatsapp_workflow.py`**
+- [x] **Step 1: Replace the helper block at the top of `backend/tests/test_n8n_whatsapp_workflow.py`**
 
 Change the helper section to this exact code so the tests can inspect both nodes and connections:
 
@@ -64,7 +64,7 @@ def _workflow_connections() -> dict[str, dict]:
     return _workflow_payload()["connections"]
 ```
 
-- [ ] **Step 2: Append the new failing guard tests after the existing close-session test**
+- [x] **Step 2: Append the new failing guard tests after the existing close-session test**
 
 Append these tests exactly:
 
@@ -125,7 +125,7 @@ def test_check_close_session_tolerates_guard_branch_without_merge_data() -> None
 
 These tests should fail against the current workflow because the guard node, IF node, and rewired connections do not exist yet, and `Check close session` still assumes `Merge & lookup data` always executed.
 
-- [ ] **Step 3: Run the focused workflow tests and verify they fail for the expected reason**
+- [x] **Step 3: Run the focused workflow tests and verify they fail for the expected reason**
 
 Run:
 
@@ -135,7 +135,7 @@ cd backend && uv run pytest tests/test_n8n_whatsapp_workflow.py -q
 
 Expected: FAIL with a `KeyError` or assertion failure mentioning `Guard fromMe external non-menu`, `IF skip console call`, or missing guarded-branch fallback handling.
 
-- [ ] **Step 4: Commit the red tests**
+- [x] **Step 4: Commit the red tests**
 
 ```bash
 git add backend/tests/test_n8n_whatsapp_workflow.py
