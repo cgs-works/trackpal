@@ -14,27 +14,23 @@ n8n Webhook Node
 Parse Input (Code Node) — normalises phone, message, instance, apiKey, remoteJid,
     sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid
     ↓
-[Config (Set Node)] — supplies config vars from node fields
+Config (Set Node) — supplies config vars from node fields
     ↓
-Console Call (HTTP Request Node) — POST /api/v1/integrations/n8n/console
-    (includes from_me, admin_phone, admin_jid, target_*, reply_to, no_reply fields)
+Guard fromMe external non-menu (Code Node) — classifies external `fromMe=true`
+    non-menu traffic before backend routing
     ↓
-Merge & lookup data (Code Node) — merges reply + control fields (reply_to, no_reply)
-    with original input; skips fallback reply when no_reply=true
-    ↓
-IF no_reply=true?
-   ├─ Yes → Check Close Session (skip all Evolution sends)
-   └─ No  → ─┐
+IF skip_console_call?
+   ├─ Yes → Check Close Session → Close Session
+   └─ No  → Console Call (HTTP Request Node) — POST /api/v1/integrations/n8n/console
               ↓
-         IF has lookup_job_id?
-            ├─ No  → Evolution Go Send (uses reply_to when present) → Check Close Session
-            └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
-                       (`GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...`)
-                       → Build result message (`close_after_send=true` for terminal `code`/`url`,
-                         `false` for recoverable; appends "1 Retry, 2 Back to services, 0 Cancel"
-                         on not_found) → Send final result
-         ↓
-    Check Close Session → Close Session(if logout)
+         Merge & lookup data (Code Node) — merges reply + control fields
+              ↓
+         IF no_reply=true?
+           ├─ Yes → Check Close Session (skip all Evolution sends)
+           └─ No  → IF has lookup_job_id?
+                     ├─ No  → Evolution Go Send → Check Close Session
+                     └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
+                                → Build result message → Send result → Check Close Session
 ```
 
 ## Workflow File
@@ -96,6 +92,41 @@ A **Set** node (typeVersion 3.4) that injects configuration values into the work
 | `default_instance` | `Sublify` | Fallback Evolution instance name |
 
 Note: `evolution_api_key` is **not** in the Config node. Per-message authentication uses the instance `apiKey` from the Evolution Go trusted webhook payload. Subscription reminders use the per-tenant decrypted token.
+
+### 3a. Guard fromMe external non-menu (Code Node)
+
+A Code node that runs after `Config` and before `Console call`.
+
+**Purpose**: stop accidental backend dispatch for outgoing tenant-admin messages that target an external chat but are not intentional Client Context Shortcut commands.
+
+**Classification**:
+- canonicalize `adminJid`, `targetJid`, and `remoteJid` by stripping device suffixes such as `:81`
+- allow `/menu` and `menu` to continue
+- allow self-target traffic to continue
+- allow missing-`targetJid` traffic to continue defensively
+- when `fromMe=true`, `targetJid` is external, and the message is not `/menu` or `menu`, emit:
+
+```json
+{
+  "reply": "",
+  "no_reply": true,
+  "status": "closed",
+  "close_jid": "<targetJid>",
+  "close_jids": ["<targetJid>"],
+  "skip_console_call": true,
+  "guard_reason": "from_me_external_non_menu"
+}
+```
+
+This keeps the fix text-agnostic and closes the accidental Evolution session immediately.
+
+### 3b. IF skip console call (IF Node)
+
+Routes the guard output:
+- **true branch** → `Check close session`
+- **false branch** → existing `Console call` path
+
+This means guarded items skip both backend traffic and all Evolution send nodes.
 
 ### 4. Console Call (HTTP Request Node)
 
@@ -162,14 +193,16 @@ Code node that constructs the final lookup result message after polling complete
 
 JavaScript that conditionally triggers session close.
 
-**Logic**: `Check Close Session` closes when either:
-1. `status === "closed"` from backend response, or
+**Logic**: `Check Close Session` now tolerates two upstream shapes:
+1. the normal backend path (`Merge & lookup data`, optionally `Build result message`), and
+2. the guarded path where `Guard fromMe external non-menu` sends the item directly here and `Merge & lookup data` never ran.
+
+The node closes when either:
+1. `status === "closed"` from backend or guard output,
 2. lookup result flow has `close_after_send === true`, or
 3. message is logout command (`0`/`salir`) and reply text matches close semantic.
 
-When `close_jids` is present in the response, node emits one item per JID in the array so Close Session processes each one (multi-session closure for Client Context Shortcut).
-
-Guard: if `lookup_job_id` exists and `close_after_send !== true`, keep the session open because the lookup flow is still recoverable.
+When `close_jids` is present, the node emits one item per JID so `Close session` processes each one.
 
 ### 8. Close Session (HTTP Request Node)
 
@@ -276,6 +309,27 @@ Evolution Go Send → POST /send/text
   Body: { number: "12025551234@s.whatsapp.net", text: "✅ Contexto..." }
   → Reply sent privately to admin chat, not to the target contact
 ```
+
+### Outgoing external non-menu trigger (admin → external chat, from_me=true)
+
+```text
+Evolution Go webhook payload (isTrusted=true, fromMe=true)
+  ↓
+Parse Input → Config
+  ↓
+Guard fromMe external non-menu
+  → emits { no_reply: true, status: "closed", close_jid: targetJid,
+            close_jids: [targetJid], skip_console_call: true,
+            guard_reason: "from_me_external_non_menu" }
+  ↓
+IF skip_console_call? → Yes
+  ↓
+Check Close Session
+  ↓
+Close Session → POST /webhook/change-status for targetJid
+```
+
+Backend is not called on this path, no bot reply is sent, and the accidental external chat session is closed immediately.
 
 ### Silent reply (blocked identity or context collision)
 
