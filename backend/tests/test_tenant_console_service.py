@@ -2390,36 +2390,135 @@ class TestConsoleHandlersCodigoScope:
         self,
         console_service: WhatsAppTenantConsoleService,
     ) -> None:
-        """codigo_flow._handle_codigo_email no longer creates jobs or enqueues."""
+        """_handle_codigo_email now goes to email_confirm, not awaiting_result."""
         from unittest.mock import AsyncMock
 
         mock_session_service = AsyncMock()
         mock_session = AsyncMock()
-        mock_session.temp_data = {"service_key": "netflix"}
+        mock_session.temp_data = {
+            "service_key": "netflix",
+            "service_label": "Netflix",
+        }
         mock_session.flow = console_service.CODIGO_FLOW
         mock_session.step = console_service.CODIGO_STEP_EMAIL
         mock_session_service.get_session.return_value = mock_session
 
         result = await console_service._handle_codigo_email(
             phone="+10000000000",
-            msg="user@example.com",
+            msg="User@Example.COM",
             session=mock_session,
             session_service=mock_session_service,
             tenant_id=uuid4(),
             db=None,
         )
 
-        # Should return buscando message
+        # Should return email confirm prompt, not buscando directly
         assert result is not None
-        assert "buscando" in result.lower() or "codigo" in result.lower()
+        assert "confirm" in result.lower() or "confirmar" in result.lower()
+        assert "user@example.com" in result
 
-        # Should NOT have created any job or enqueued
-        # (no mocking of job repos or redis needed) - verifies no such calls
-        # Session should have intent data instead of pending_job_id
-        assert mock_session.temp_data.get("pending_lookup_intent") == "true"
-        assert mock_session.temp_data.get("service_key") == "netflix"
+        # Should now be in EMAIL_CONFIRM step, not awaiting_result
+        assert mock_session.step == console_service.CODIGO_STEP_EMAIL_CONFIRM
+
+        # Should store normalized email
         assert mock_session.temp_data.get("target_email") == "user@example.com"
+        assert mock_session.temp_data.get("service_key") == "netflix"
+
+        # Should NOT have set pending_lookup_intent (that's now in confirm step)
+        assert "pending_lookup_intent" not in mock_session.temp_data
         assert "pending_job_id" not in mock_session.temp_data
+
+        mock_session_service.save_session.assert_awaited_once_with(mock_session)
+
+    async def test_codigo_email_valid_moves_to_email_confirm(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {
+            "service_key": "netflix",
+            "service_label": "Netflix",
+        }
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_EMAIL
+
+        reply = await console_service._handle_codigo_email(
+            phone="+10000000000",
+            msg="User@Example.COM",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        assert "confirm" in reply.lower() or "confirmar" in reply.lower()
+        assert "user@example.com" in reply
+        assert mock_session.step == console_service.CODIGO_STEP_EMAIL_CONFIRM
+        assert mock_session.temp_data["target_email"] == "user@example.com"
+        assert "pending_lookup_intent" not in mock_session.temp_data
+        mock_session_service.save_session.assert_awaited_once_with(mock_session)
+
+    async def test_codigo_email_confirm_yes_sets_pending_lookup_intent(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = AsyncMock()
+        mock_session.temp_data = {
+            "service_key": "netflix",
+            "service_label": "Netflix",
+            "target_email": "user@example.com",
+        }
+        mock_session.flow = console_service.CODIGO_FLOW
+        mock_session.step = console_service.CODIGO_STEP_EMAIL_CONFIRM
+
+        reply = await console_service._handle_codigo_email_confirm(
+            phone="+10000000000",
+            msg="1",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        assert "buscando" in reply.lower() or "searching" in reply.lower()
+        assert mock_session.step == console_service.CODIGO_STEP_AWAITING_RESULT
+        assert mock_session.temp_data["pending_lookup_intent"] == "true"
+
+    async def test_codigo_email_confirm_text_cancel_is_invalid_option(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+    ) -> None:
+        session = await session_service.create_session("admin:+10000000000")
+        session.flow = console_service.CODIGO_FLOW
+        session.step = console_service.CODIGO_STEP_EMAIL_CONFIRM
+        session.temp_data = {
+            "service_key": "netflix",
+            "service_label": "Netflix",
+            "target_email": "user@example.com",
+            "codigo_effective_keys": ["netflix"],
+            "codigo_current_page": 0,
+        }
+        await session_service.save_session(session)
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="cancelar",
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+            session_service=session_service,
+        )
+
+        assert "inválida" in reply.lower() or "invalid" in reply.lower()
+        saved = await session_service.get_session("admin:+10000000000")
+        assert saved is not None
+        assert saved.step == console_service.CODIGO_STEP_EMAIL_CONFIRM
 
     async def test_codigo_awaiting_result_retry_allows_pending_job(
         self,

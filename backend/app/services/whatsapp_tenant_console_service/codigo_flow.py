@@ -15,6 +15,7 @@ from app.core.i18n import t as _i18n_t
 
 from uuid import UUID
 
+from app.core.input_validation import InputValidationError, validate_email
 from app.repositories import (
     code_services_repository,
     mailbox_config_repository,
@@ -239,45 +240,107 @@ async def _handle_codigo_email(
     tenant_id: Any,
     db: Any,
 ) -> str:
-    """Handle email input — store lookup intent for handler orchestration.
+    """Handle email input — validate, store, and move to email confirm.
 
-    No longer creates jobs or enqueues to Redis.  Stores intent data
-    in session so the central tenant handler (``_handle_tenant_console``)
-    can create the job durably after this flow returns.
+    Uses ``validate_email`` for proper normalization and validation.
+    On success stores ``target_email`` in session and advances to
+    ``CODIGO_STEP_EMAIL_CONFIRM`` so the user can confirm before
+    the lookup is triggered.
     """
     loc = ctx.get_locale()
 
-    # Check cancel
     if is_cancel(msg):
         await session_service.clear_session(f"admin:{phone}")
         return _i18n_t(loc, "wa.tenant.cancelled")
 
-    target_email = msg.strip()
-    if (
-        not target_email
-        or len(target_email) < 3
-        or "@" not in target_email
-        or "." not in target_email.split("@", 1)[1]
-    ):
+    try:
+        normalized_email = validate_email(msg, required=True)
+    except InputValidationError:
         return _i18n_t(loc, "wa.tenant.codigo.invalid_email")
 
     service_key = session.temp_data.get("service_key")
-    if not service_key:
-        # Stale session — bail out
+    service_label = session.temp_data.get("service_label")
+    if not service_key or not service_label:
         await session_service.clear_session(f"admin:{phone}")
         return self._with_main_menu(_i18n_t(loc, "wa.tenant.cancelled"), locale=loc)
 
-    # Store lookup intent in session for handler to process durably
-    session.temp_data["service_key"] = service_key
+    target_email = normalized_email.lower()
     session.temp_data["target_email"] = target_email
-    session.temp_data["pending_lookup_intent"] = "true"
-    # Keep session alive in awaiting_result so user can retry/back/cancel
-    # after n8n delivers the result notification.
-    session.flow = self.CODIGO_FLOW
-    session.step = self.CODIGO_STEP_AWAITING_RESULT
+    session.temp_data.pop("pending_lookup_intent", None)
+    session.temp_data.pop("lookup_job_id", None)
+    session.step = self.CODIGO_STEP_EMAIL_CONFIRM
     await session_service.save_session(session)
 
-    return _i18n_t(loc, "wa.tenant.codigo.buscando")
+    return self._t(
+        self.KEY_CODIGO_EMAIL_CONFIRM_PROMPT,
+        service_label=service_label,
+        target_email=target_email,
+    )
+
+
+async def _handle_codigo_email_confirm(
+    self,
+    phone: str,
+    msg: str,
+    session: Any,
+    session_service: Any,
+    tenant_id: Any,
+    db: Any,
+) -> str:
+    """Handle email confirmation — 1=confirm, 2=correct, 9=back to services, 0=cancel."""
+    loc = ctx.get_locale()
+    raw = msg.strip()
+
+    if raw == "1":
+        session.temp_data["pending_lookup_intent"] = "true"
+        session.step = self.CODIGO_STEP_AWAITING_RESULT
+        await session_service.save_session(session)
+        return _i18n_t(loc, "wa.tenant.codigo.buscando")
+
+    if raw == "2":
+        service_label = session.temp_data.get("service_label", "")
+        session.temp_data.pop("target_email", None)
+        session.temp_data.pop("pending_lookup_intent", None)
+        session.step = self.CODIGO_STEP_EMAIL
+        await session_service.save_session(session)
+        return self._t(self.KEY_CODIGO_EMAIL_PROMPT, service_label=service_label)
+
+    if raw == "9":
+        effective_keys = session.temp_data.get("codigo_effective_keys", [])
+        if not effective_keys and tenant_id is not None and db is not None:
+            effective_keys = await code_services_repository.get_effective_service_keys(
+                db, tenant_id
+            )
+        if not effective_keys:
+            await session_service.clear_session(f"admin:{phone}")
+            return self._t(self.KEY_CODIGO_NO_CODE_SERVICES_TENANT)
+
+        for key in (
+            "service_key",
+            "service_label",
+            "target_email",
+            "pending_lookup_intent",
+            "lookup_job_id",
+        ):
+            session.temp_data.pop(key, None)
+        session.temp_data["codigo_effective_keys"] = effective_keys
+        session.temp_data["codigo_current_page"] = 0
+        session.step = self.CODIGO_STEP_SERVICE
+        await session_service.save_session(session)
+
+        service_list = _build_service_page(
+            effective_keys,
+            0,
+            loc,
+            session.temp_data.get("codigo_started_from_menu") == "true",
+        )
+        return self._t(self.KEY_CODIGO_SERVICE_PROMPT, service_list=service_list)
+
+    if raw == "0":
+        await session_service.clear_session(f"admin:{phone}")
+        return _i18n_t(loc, "wa.tenant.cancelled")
+
+    return self._t(self.KEY_CODIGO_INVALID_EMAIL_CONFIRM_OPTION)
 
 
 async def _handle_codigo_awaiting_result(

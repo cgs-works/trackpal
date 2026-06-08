@@ -153,6 +153,7 @@ from . import codigo_flow as cgf
 _start_codigo_flow = cgf._start_codigo_flow
 _handle_codigo_service = cgf._handle_codigo_service
 _handle_codigo_email = cgf._handle_codigo_email
+_handle_codigo_email_confirm = cgf._handle_codigo_email_confirm
 _handle_codigo_awaiting_result = cgf._handle_codigo_awaiting_result
 
 # -- Sub-routers
