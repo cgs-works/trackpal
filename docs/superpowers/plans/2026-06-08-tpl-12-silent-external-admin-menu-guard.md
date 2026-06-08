@@ -254,7 +254,7 @@ git add backend/app/repositories/tenants_repository.py backend/tests/test_tenant
 git commit -m "feat: add tenant whatsapp identity lookup"
 ```
 
-## Task 2: Lock and implement backend routing for silent external admin `/menu`
+## Task 2: Lock and implement backend routing for silent external admin `/menu`  [x]
 
 **Skills to read before starting:**
 - `superpowers:test-driven-development`
@@ -268,7 +268,7 @@ git commit -m "feat: add tenant whatsapp identity lookup"
 - Test: `backend/tests/test_whatsapp_external_admin_menu_guard.py`
 - Regression: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Write focused endpoint regression tests**
+- [x] **Step 1: Write focused endpoint regression tests**
 
 Create `backend/tests/test_whatsapp_external_admin_menu_guard.py` with this exact content:
 
@@ -527,7 +527,7 @@ async def test_from_me_menu_uses_tenant_owner_fallback_for_reply_to_when_admin_p
     assert "gesti" in body["reply"].lower() or "client management" in body["reply"].lower()
 ```
 
-- [ ] **Step 2: Run the new endpoint tests and verify they fail for the right reason**
+- [x] **Step 2: Run the new endpoint tests and verify they fail for the right reason**
 
 Run:
 
@@ -539,7 +539,7 @@ Expected: FAIL because:
 - `/menu` from another tenant currently returns `wa.client.not_registered` instead of a silent closed response.
 - the ambiguous `from_me` shortcut response still lacks the canonical admin `reply_to` / `close_jid` fallback.
 
-- [ ] **Step 3: Implement the backend guard and authoritative admin fallback**
+- [x] **Step 3: Implement the backend guard and authoritative admin fallback**
 
 In `backend/app/api/v1/endpoints/integrations/console.py`, make the following edits.
 
@@ -690,7 +690,7 @@ async def _should_silence_external_admin_menu(
     )
 ```
 
-- [ ] **Step 4: Run the focused backend tests plus the existing endpoint regression file**
+- [x] **Step 4: Run the focused backend tests plus the existing endpoint regression file**
 
 Run:
 
@@ -704,7 +704,7 @@ Expected:
 - existing `test_whatsapp_endpoint.py` still passes
 - Ruff exits with status 0.
 
-- [ ] **Step 5: Commit the backend routing fix**
+- [x] **Step 5: Commit the backend routing fix**
 
 ```bash
 git add backend/app/api/v1/endpoints/integrations/console.py backend/tests/test_whatsapp_external_admin_menu_guard.py
