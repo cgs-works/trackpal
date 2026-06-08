@@ -45,108 +45,9 @@
 - `verification-before-completion` — before marking the task done, run the listed pytest command and confirm the output.
 - Plus one execution skill from the plan header: `subagent-driven-development` (recommended) or `executing-plans`.
 
-- [ ] **Step 1: Write the failing tenant-admin tests**
-
-```python
-async def test_codigo_email_valid_moves_to_email_confirm(
-    self,
-    console_service: WhatsAppTenantConsoleService,
-) -> None:
-    from unittest.mock import AsyncMock
-
-    mock_session_service = AsyncMock()
-    mock_session = AsyncMock()
-    mock_session.temp_data = {
-        "service_key": "netflix",
-        "service_label": "Netflix",
-    }
-    mock_session.flow = console_service.CODIGO_FLOW
-    mock_session.step = console_service.CODIGO_STEP_EMAIL
-
-    reply = await console_service._handle_codigo_email(
-        phone="+10000000000",
-        msg="User@Example.COM",
-        session=mock_session,
-        session_service=mock_session_service,
-        tenant_id=uuid4(),
-        db=AsyncMock(),
-    )
-
-    assert "confirm" in reply.lower() or "confirmar" in reply.lower()
-    assert "user@example.com" in reply
-    assert mock_session.step == console_service.CODIGO_STEP_EMAIL_CONFIRM
-    assert mock_session.temp_data["target_email"] == "user@example.com"
-    assert "pending_lookup_intent" not in mock_session.temp_data
-    mock_session_service.save_session.assert_awaited_once_with(mock_session)
-
-
-async def test_codigo_email_confirm_yes_sets_pending_lookup_intent(
-    self,
-    console_service: WhatsAppTenantConsoleService,
-) -> None:
-    from unittest.mock import AsyncMock
-
-    mock_session_service = AsyncMock()
-    mock_session = AsyncMock()
-    mock_session.temp_data = {
-        "service_key": "netflix",
-        "service_label": "Netflix",
-        "target_email": "user@example.com",
-    }
-    mock_session.flow = console_service.CODIGO_FLOW
-    mock_session.step = console_service.CODIGO_STEP_EMAIL_CONFIRM
-
-    reply = await console_service._handle_codigo_email_confirm(
-        phone="+10000000000",
-        msg="1",
-        session=mock_session,
-        session_service=mock_session_service,
-        tenant_id=uuid4(),
-        db=AsyncMock(),
-    )
-
-    assert "buscando" in reply.lower() or "searching" in reply.lower()
-    assert mock_session.step == console_service.CODIGO_STEP_AWAITING_RESULT
-    assert mock_session.temp_data["pending_lookup_intent"] == "true"
-
-
-async def test_codigo_email_confirm_text_cancel_is_invalid_option(
-    self,
-    console_service: WhatsAppTenantConsoleService,
-    session_service: WhatsAppSessionService,
-) -> None:
-    session = await session_service.create_session("admin:+10000000000")
-    session.flow = console_service.CODIGO_FLOW
-    session.step = console_service.CODIGO_STEP_EMAIL_CONFIRM
-    session.temp_data = {
-        "service_key": "netflix",
-        "service_label": "Netflix",
-        "target_email": "user@example.com",
-        "codigo_effective_keys": ["netflix"],
-        "codigo_current_page": 0,
-    }
-    await session_service.save_session(session)
-
-    reply = await console_service.process_message(
-        phone="+10000000000",
-        message="cancelar",
-        tenant_id=uuid4(),
-        db=AsyncMock(),
-        session_service=session_service,
-    )
-
-    assert "opcion invalida" in reply.lower() or "invalid option" in reply.lower()
-    saved = await session_service.get_session("admin:+10000000000")
-    assert saved is not None
-    assert saved.step == console_service.CODIGO_STEP_EMAIL_CONFIRM
-```
-
-- [ ] **Step 2: Run the tenant-admin tests to verify they fail**
-
-Run: `cd backend && uv run pytest tests/test_tenant_console_service.py -k "codigo_email_confirm" -v`
-Expected: FAIL with missing `CODIGO_STEP_EMAIL_CONFIRM` / missing `_handle_codigo_email_confirm` and one failure showing `cancelar` is treated as a global cancel instead of an invalid confirm option.
-
-- [ ] **Step 3: Write the minimal tenant-admin implementation**
+- [x] **Step 1: Write the failing tenant-admin tests** — done
+- [x] **Step 2: Run the tenant-admin tests to verify they fail** — done (RED)
+- [x] **Step 3: Write the minimal tenant-admin implementation** — done
 
 ```python
 # backend/app/services/whatsapp_tenant_console_service/constants.py
@@ -347,12 +248,8 @@ async def _handle_codigo_email_confirm(
 "wa.tenant.codigo.invalid_email_confirm_option": "❌ Invalid option. Reply *1* to confirm, *2* to correct the email, *9* to go back to services, or *0* to cancel.",
 ```
 
-- [ ] **Step 4: Run the tenant-admin tests to verify they pass**
-
-Run: `cd backend && uv run pytest tests/test_tenant_console_service.py -k "codigo_email_confirm" -v`
-Expected: PASS for the new tenant-admin confirmation tests.
-
-- [ ] **Step 5: Commit**
+- [x] **Step 4: Run the tenant-admin tests to verify they pass** — done (GREEN — all 98 tests pass)
+- [x] **Step 5: Commit** — done (commit 3034ea8)
 
 ```bash
 git add backend/tests/test_tenant_console_service.py \
@@ -400,43 +297,9 @@ git commit -m "feat: add tenant codigo email confirmation"
 - `verification-before-completion` — before marking the task done, run the listed `rg` verification command and confirm the expected matches.
 - Plus one execution skill from the plan header: `subagent-driven-development` (recommended) or `executing-plans`.
 
-- [ ] **Step 1: Update the WhatsApp flow architecture doc**
-
-```md
-#### Tenant self-target flow
-
-1. Trigger by exact message `codigo`, `código`, or `code`.
-2. Backend shows a paginated service list.
-3. Backend asks for target email.
-4. Backend validates the email with `validate_email(required=True)`, lowercases it explicitly, stores it in session, and moves to `email_confirm`.
-5. In `email_confirm`, only `1`, `2`, `9`, and `0` are valid:
-   - `1` confirms and sets `pending_lookup_intent`
-   - `2` returns to the email prompt
-   - `9` returns to the service list
-   - `0` cancels
-6. The integration handler creates the job only after confirm `1`.
-
-#### Client-sent code flow (unauth codigo)
-
-1. Trigger by `codigo`, `código`, or `code`.
-2. Backend shows the paginated service list.
-3. Backend asks for email.
-4. Backend validates and lowercases the email, then moves to `email_confirm`.
-5. In `email_confirm`, only `1`, `2`, `9`, and `0` are valid.
-6. `lookup_job_id` is returned only after confirm `1` creates and enqueues the job.
-```
-
-- [ ] **Step 2: Verify the doc mentions the new confirm step and lowercase rule**
-
-Run: `rg -n "email_confirm|validate_email|required=True|lowercase|lookup_job_id" docs/architecture/whatsapp-console-flow.md`
-Expected: output includes both tenant and unauth sections with the new confirm-step language.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add docs/architecture/whatsapp-console-flow.md
-git commit -m "docs: describe codigo email confirmation flow"
-```
+- [x] **Step 1: Update the WhatsApp flow architecture doc** — done (3 sections updated in whatsapp-console-flow.md)
+- [x] **Step 2: Verify the doc mentions the new confirm step and lowercase rule** — done
+- [x] **Step 3: Commit** — done (commit 1dd3808)
 
 ---
 
