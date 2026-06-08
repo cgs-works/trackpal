@@ -382,6 +382,62 @@ async def test_from_me_self_menu_routes_to_tenant_console(
     assert "Gestion del cliente" not in body.get("reply", "")
 
 
+async def test_block_access_closes_client_context_immediately(
+    client, db_session, active_tenant_user
+):
+    """Choosing block access in client context must return a close signal."""
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    admin_phone = tenant.whatsapp_phone
+    admin_jid = f"{admin_phone}@s.whatsapp.net"
+    target_external_phone = "+12015559999"
+
+    fake_mgr = _FakeManager(used_backup=False)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        start = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "/menu",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": admin_jid,
+                "target_phone": target_external_phone,
+                "target_jid": f"{target_external_phone}@s.whatsapp.net",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+        assert start.status_code == 200
+
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": admin_phone,
+                "message": "2",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": admin_phone,
+                "admin_jid": admin_jid,
+                "target_phone": admin_phone,
+                "target_jid": tenant.whatsapp_lid or "77988435632309@lid",
+                "target_lid": tenant.whatsapp_lid or "77988435632309@lid",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "closed"
+    assert body["reply_to"] == admin_jid
+    assert body["close_jid"] == admin_jid
+    assert admin_jid in body["close_jids"]
+    assert "12015559999@s.whatsapp.net" in body["close_jids"]
+
+
 async def test_context_close_cleans_redis_session(
     client, db_session, active_tenant_user
 ):

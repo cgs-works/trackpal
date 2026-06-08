@@ -290,7 +290,7 @@ Blocked Clients prevent unregistered WhatsApp identities from using the console,
 
 - Blocked unregistered identities receive ``no_reply=true`` for all messages (``codigo``, ``/menu``, or any other attempt).
 - n8n must not send any message when ``no_reply=true``, keeping the block silent from the user's perspective.
-- Blocks are created immediately without confirmation (from the Context Shortcut).
+- Blocks are created immediately without confirmation (from the Context Shortcut) and now close the shortcut immediately by returning ``status="closed"``, ``close_jid``, and ``close_jids`` for n8n/Evolution session cleanup.
 - Blocked targets can be unblocked from the Context Shortcut or from the Tenant console Clients menu.
 - When a Client is successfully created for a blocked identity, blocks are cleared automatically.
 

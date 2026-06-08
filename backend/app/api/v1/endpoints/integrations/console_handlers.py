@@ -1716,7 +1716,7 @@ async def _handle_ctx_unblocked_menu(
         return resp
 
     if msg_lower == "2":
-        # Bloquear mensajes — create block immediately without confirmation
+        # Bloquear mensajes — create block immediately and close context
         await blocked_clients_repository.create(
             db,
             tenant_id=tenant.id,
@@ -1724,18 +1724,18 @@ async def _handle_ctx_unblocked_menu(
             whatsapp_lid=target_lid,
         )
         await db.commit()
-        # Keep context alive so subsequent ``0`` closes target session
-        data["step"] = "menu"
-        data["temp_data"]["target_state"] = "unregistered_blocked"
-        data["temp_data"]["menu_variant"] = "blocked"
-        await save_ctx(refresh_ttl=True)
+        await clear_ctx()
+        close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
         return WhatsAppConsoleResponse(
             reply=_i18n_t(
                 locale,
                 "wa.tenant.client_context.block_access.success",
                 identity=(target_phone or target_lid or ""),
             ),
+            status="closed",
             reply_to=admin_jid,
+            close_jid=admin_jid,
+            close_jids=close_jids,
         )
 
     if is_cancel(msg_lower):
