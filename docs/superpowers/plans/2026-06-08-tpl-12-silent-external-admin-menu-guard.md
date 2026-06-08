@@ -794,7 +794,7 @@ git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflo
 git commit -m "fix: filter not-registered bot echoes in workflow"
 ```
 
-## Task 4: Update docs and run full verification including the Evolution Go rollout gate
+## Task 4: Update docs and run full verification including the Evolution Go rollout gate  [x]
 
 **Skills to read before starting:**
 - `docs`
@@ -812,7 +812,7 @@ git commit -m "fix: filter not-registered bot echoes in workflow"
 - Verify: `n8n/Trackpal WhatsApp Bot.json`
 - Verify: `E:/Documentos/GitHub/evolution-go/pkg/webhook/service/listener.go`
 
-- [ ] **Step 1: Update `docs/architecture/whatsapp-console-flow.md`**
+- [x] **Step 1: Update `docs/architecture/whatsapp-console-flow.md`**
 
 Make these text edits:
 
@@ -832,7 +832,7 @@ Make these text edits:
 7. **Return contextual response**: reply with the context initiation message and ``reply_to=<resolved admin jid>`` so n8n sends the reply privately to the admin chat even when the original outgoing webhook payload was ambiguous.
 ```
 
-- [ ] **Step 2: Update `docs/architecture/n8n-workflow.md`**
+- [x] **Step 2: Update `docs/architecture/n8n-workflow.md`**
 
 Make these text edits:
 
@@ -848,7 +848,7 @@ Make these text edits:
 The existing `IF no reply -> Check Close Session -> Close Session` path already supports backend responses shaped as `reply=""`, `no_reply=true`, `status="closed"`, `close_jid="..."`; no workflow rewiring is required for the silent external-admin `/menu` guard.
 ```
 
-- [ ] **Step 3: Update `docs/architecture/evolution-integration.md`**
+- [x] **Step 3: Update `docs/architecture/evolution-integration.md`**
 
 Under the `from_me` trigger dispatch section, add this exact note:
 
@@ -856,7 +856,7 @@ Under the `from_me` trigger dispatch section, add this exact note:
 TrackPal's private admin shortcut flow assumes deployed `fromMe=true` webhook payloads include `adminJid=instance.Jid`. The TrackPal backend now falls back to the tenant record when that payload is ambiguous, but rollout should still verify that the deployed Evolution Go build and instance data emit `adminJid` for private admin-chat follow-up messages.
 ```
 
-- [ ] **Step 4: Run the full automated verification suite**
+- [x] **Step 4: Run the full automated verification suite**
 
 Run:
 
@@ -879,7 +879,7 @@ Expected:
 - `workflow json ok`
 - `rg` finds the new documentation text.
 
-- [ ] **Step 5: Run the live rollout gate before closing the issue**
+- [x] **Step 5: Run the live rollout gate before closing the issue**
 
 Do these checks in order:
 
@@ -896,7 +896,7 @@ Do these checks in order:
 5. Inspect the live n8n execution input for the private follow-up message and confirm `adminJid` is non-empty.
 6. If `adminJid` is empty in live `fromMe=true` follow-up events, **stop rollout** and deploy the current `evolution-go` build before marking TPL-12 complete.
 
-- [ ] **Step 6: Commit the doc updates**
+- [x] **Step 6: Commit the doc updates**
 
 ```bash
 git add docs/architecture/whatsapp-console-flow.md docs/architecture/n8n-workflow.md docs/architecture/evolution-integration.md

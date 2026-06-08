@@ -73,7 +73,7 @@ The console endpoint now routes by **WhatsApp instance** before resolving identi
    - If ``from_me=true`` → route via ``_handle_from_me_routing`` (see below).
    - Match `tenant.whatsapp_phone` (or `tenant.whatsapp_lid`) → tenant admin flow (after checking active Client Context Shortcut).
    - Match `(tenant_id, phone)` or `(tenant_id, whatsapp_lid)` in `clients` → client flow.
-   - Unregistered identity → check for active unauthenticated code lookup session, check Client Messaging Blocks, route to code lookup for ``codigo``/``código``/``code``, or return ``not_registered`` message with ``status="closed"`` and ``close_jid`` (tells unregistered contacts to send ``code``/``código`` for access codes and closes their Evolution session).
+   - Unregistered identity → check for Client Messaging Blocks first, then silently close exact ``/menu`` from another active TrackPal tenant/admin who is not a client of the receiving tenant, then resume/start unauthenticated code lookup for ``codigo``/``código``/``code``, or return ``not_registered`` with ``status="closed"`` and ``close_jid``.
 
 ### LID-aware identity path
 
@@ -179,13 +179,13 @@ When ``from_me=true`` in the request, the message was sent by an admin from thei
 
 Before ``_handle_from_me_routing()`` runs, the n8n workflow now pre-guards external ``from_me=true`` non-menu traffic. If the admin targets an external chat and sends anything other than ``/menu`` or ``menu``, n8n skips the backend call, sends no reply, and closes the target Evolution session. Only allowed shortcut starters (``/menu`` and ``menu``) continue to backend contextual routing.
 
-1. **Resolve admin identity**: Use ``admin_phone`` if provided, otherwise fall back to ``tenant.whatsapp_phone`` (instance owner).
+1. **Resolve admin identity**: derive the authoritative admin phone from the tenant resolved by ``instance`` first, then fall back to payload ``admin_phone`` only when the tenant record has no usable WhatsApp phone.
 2. **Determine target identity**: Normalise ``target_phone`` if available.
 3. **Self-target check**: If the target (phone or JID) matches the admin's own identity, route to the standard Tenant console.
 4. **Active context collision**: If a context session already exists at ``wa:client_ctx:{admin_phone}``, reject with ``no_reply=true`` and ``reply_to=<admin_jid>`` (keeps the rejection private), except ``0``/``salir``/``cerrar`` which close the active context.
 5. **Shortcut gate**: Only ``/menu``/``menu`` creates a Client Context Shortcut for a non-self target. Other non-self messages, including ``code``/``codigo``/``código``, return ``no_reply=true`` and do not create context.
 6. **Create context session**: Store a ``ConversationSession`` under ``wa:client_ctx:{admin_phone}`` with 5-minute TTL, setting step to ``menu`` and persisting ``target_phone``, ``target_lid``, ``target_jid``, and ``admin_jid`` in ``temp_data``.
-7. **Return contextual response**: Reply with the context initiation message and ``reply_to=admin_jid`` so n8n sends the reply privately to the admin chat.
+7. **Return contextual response**: reply with the context initiation message and ``reply_to=<resolved admin jid>`` so n8n sends the reply privately to the admin chat even when the original outgoing webhook payload was ambiguous.
 
 ## Unauthenticated Code Lookup
 

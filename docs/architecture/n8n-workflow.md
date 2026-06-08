@@ -77,6 +77,7 @@ JavaScript code that normalises the raw Evolution Go payload into a consistent s
 - **Extracts contextual fields** from multiple Evolution shapes: `fromMe`, `adminJid`, `targetJid`, `targetPhone`, `targetLid`.
 - For outgoing `fromMe=true` messages, treats `remoteJid` as the target chat and derives `targetPhone` or `targetLid` from it when explicit target fields are missing.
 - Suppresses known Trackpal-generated access-denied/fallback replies when they re-enter the webhook as bot echoes, preventing recursive “access denied” loops.
+- Suppresses known Trackpal-generated not-registered replies (`no tienes una cuenta registrada` / `you do not have a registered account`) when they re-enter the webhook as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
 - **Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid, raw }`
 ### 3. Config (Set Node)
 
@@ -203,6 +204,8 @@ The node closes when either:
 3. message is logout command (`0`/`salir`) and reply text matches close semantic.
 
 When `close_jids` is present, the node emits one item per JID so `Close session` processes each one.
+
+The existing ``IF no reply -> Check Close Session -> Close Session`` path already supports backend responses shaped as ``reply=""``, ``no_reply=true``, ``status="closed"``, ``close_jid="..."``; no workflow rewiring is required for the silent external-admin ``/menu`` guard.
 
 ### 8. Close Session (HTTP Request Node)
 
