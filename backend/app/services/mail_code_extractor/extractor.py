@@ -16,7 +16,7 @@ from typing import NamedTuple, TypedDict
 from ._types import ResultType
 from .catalog_v1 import get_service_entry
 
-MAX_CANDIDATE_AGE_MINUTES = 5
+MAX_CANDIDATE_AGE_MINUTES = 15
 
 
 class ParsedEmail(TypedDict):
