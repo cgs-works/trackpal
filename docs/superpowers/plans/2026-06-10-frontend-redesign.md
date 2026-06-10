@@ -935,7 +935,7 @@ git commit -m "feat: redesign login on shared ui system"
 **Backend contract refs:**
 - `backend/tests/test_profile.py`
 
-- [ ] **Step 1: Write the failing settings page test**
+- [x] **Step 1: Write the failing settings page test**
 
 ```js
 import { describe, it, expect, vi } from 'vitest'
@@ -968,12 +968,12 @@ describe('TenantSettingsView', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/TenantSettingsView.spec.js`
 Expected: FAIL because `TenantSettingsView.vue` is still a stub.
 
-- [ ] **Step 3: Turn `TenantDashboardView.vue` into the tenant overview page and implement `TenantSettingsView.vue`**
+- [x] **Step 3: Turn `TenantDashboardView.vue` into the tenant overview page and implement `TenantSettingsView.vue`**
 
 Update `frontend/src/views/TenantDashboardView.vue` so it becomes the overview page, not the old tabbed container.
 
@@ -1032,7 +1032,7 @@ const cards = computed(() => {
 
 Implement `frontend/src/views/TenantSettingsView.vue` by moving the current profile/password logic out of the old tabbed dashboard. Keep the existing `/me`, `/me/password`, and `i18nStore.loadCatalog()` behavior. Do **not** allow this page in support mode; the route guard from Task 3 enforces that.
 
-- [ ] **Step 4: Run the settings test**
+- [x] **Step 4: Run the settings test**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/TenantSettingsView.spec.js`
 Expected: PASS.
@@ -1288,7 +1288,7 @@ git commit -m "feat: migrate tenant management sections to shared shell"
 **Backend contract refs:**
 - `backend/tests/test_subscriptions.py`
 
-- [ ] **Step 1: Write the failing regression tests**
+- [x] **Step 1: Write the failing regression tests**
 
 ```js
 // frontend/src/views/__tests__/SubscriptionsView.spec.js
@@ -1342,12 +1342,12 @@ describe('SubscriptionsView regressions', () => {
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/SubscriptionsView.spec.js`
 Expected: FAIL because the filter component does not hydrate from route state and the reminder modal still uses the wrong prop contract.
 
-- [ ] **Step 3: Fix the prop contract and filter-state sync before re-skinning the rest**
+- [x] **Step 3: Fix the prop contract and filter-state sync before re-skinning the rest**
 
 Make these exact logic changes first:
 
@@ -1408,7 +1408,7 @@ watch(
 
 4. In `frontend/src/views/SubscriptionsView.vue`, pass `:initial-filters="activeFilters"` into `SubscriptionFilters`.
 
-- [ ] **Step 4: Re-skin the subscription workspace without changing business behavior**
+- [x] **Step 4: Re-skin the subscription workspace without changing business behavior**
 
 After the regression fixes pass, migrate the templates in:
 - `SubscriptionsView.vue`
@@ -1425,7 +1425,7 @@ Rules for this task:
 - keep the reminder-settings cache behavior from `authStore`
 - remove hardcoded Spanish button text where translation props already exist; always use `t(...)`
 
-- [ ] **Step 5: Run the regression tests and the full frontend test suite**
+- [x] **Step 5: Run the regression tests and the full frontend test suite**
 
 Run:
 - `cd frontend && npx vitest run src/views/__tests__/SubscriptionsView.spec.js`
@@ -1433,7 +1433,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/views/SubscriptionsView.vue frontend/src/components/subscriptions/ReminderSettingsModal.vue frontend/src/components/subscriptions/SubscriptionFilters.vue frontend/src/components/subscriptions/SubscriptionModal.vue frontend/src/components/subscriptions/SubscriptionRenewModal.vue frontend/src/components/subscriptions/SubscriptionReactivateModal.vue frontend/src/components/subscriptions/SubscriptionCancelModal.vue frontend/src/components/subscriptions/SubscriptionTable.vue frontend/src/views/__tests__/SubscriptionsView.spec.js
@@ -1578,7 +1578,7 @@ git commit -m "feat: migrate master and client dashboards to shared shell"
 - Modify: `docs/codebase/frontend-structure.md`
 - Modify: `docs/code-standard/frontend-conventions.md`
 
-- [ ] **Step 1: Update the docs to match the new route map and component layout**
+- [x] **Step 1: Update the docs to match the new route map and component layout**
 
 Update `docs/architecture/frontend-architecture.md` so it describes:
 - the canonical routes (`/master/overview`, `/admin/*`, `/client/overview`)
@@ -1598,7 +1598,7 @@ Update `docs/code-standard/frontend-conventions.md` so it records:
 - the “keep business logic, replace template” migration rule for future UI work
 - the expectation to write a view/component test for new shared UI work
 
-- [ ] **Step 2: Run the final verification commands**
+- [x] **Step 2: Run the final verification commands**
 
 Run:
 - `cd frontend && npm test`
@@ -1610,7 +1610,7 @@ Expected:
 - Frontend build: PASS
 - Backend contract suite: PASS
 
-- [ ] **Step 3: Request a code review before merge**
+- [x] **Step 3: Request a code review before merge**
 
 Run the code review workflow after the tests/build pass. The review checklist must explicitly verify:
 - the three known regressions are fixed
@@ -1618,7 +1618,7 @@ Run the code review workflow after the tests/build pass. The review checklist mu
 - login, master, tenant, subscriptions, mailbox, and client surfaces all still reach the same backend endpoints
 - the UI uses shared primitives instead of ad-hoc card/button/input markup
 
-- [ ] **Step 4: Commit the docs update**
+- [x] **Step 4: Commit the docs update**
 
 ```bash
 git add docs/architecture/frontend-architecture.md docs/codebase/frontend-structure.md docs/code-standard/frontend-conventions.md
