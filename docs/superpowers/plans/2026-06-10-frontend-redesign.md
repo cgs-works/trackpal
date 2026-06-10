@@ -1185,7 +1185,7 @@ git commit -m "fix: restore tenant mailbox wiring and redesign mailbox page"
 - `backend/tests/test_catalog.py`
 - `backend/tests/test_code_services.py`
 
-- [ ] **Step 1: Write the failing tenant section smoke tests**
+- [x] **Step 1: Write the failing tenant section smoke tests**
 
 ```js
 // frontend/src/views/__tests__/TenantSectionViews.spec.js
@@ -1213,12 +1213,12 @@ describe('tenant section routes', () => {
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/TenantSectionViews.spec.js`
 Expected: FAIL because the route files still contain only the minimal content from Task 3.
 
-- [ ] **Step 3: Implement the route wrappers and migrate the business panels**
+- [x] **Step 3: Implement the route wrappers and migrate the business panels**
 
 Implement the three route files using this pattern:
 
@@ -1248,7 +1248,7 @@ Then rework the three business panels so they use the new shared system:
 
 For `CatalogPanel.vue`, the confirm-delete flow must still require typed confirmation and still call the existing `?confirm=true` backend endpoints.
 
-- [ ] **Step 4: Run the smoke tests and the existing delete-preview helper test**
+- [x] **Step 4: Run the smoke tests and the existing delete-preview helper test**
 
 Run:
 - `cd frontend && npx vitest run src/views/__tests__/TenantSectionViews.spec.js`
@@ -1256,7 +1256,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/TenantClientsView.vue frontend/src/views/TenantCatalogView.vue frontend/src/views/TenantCodeServicesView.vue frontend/src/components/ClientManagementPanel.vue frontend/src/components/CatalogPanel.vue frontend/src/components/CodeServicesTenantPanel.vue frontend/src/views/__tests__/TenantSectionViews.spec.js
