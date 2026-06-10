@@ -44,7 +44,7 @@
 - Modify: `backend/app/services/evolution_client/client.py:70-105`
 - Test: `backend/tests/test_evolution_client.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add/adjust the payload assertions so they require `listeningFromMe=True` while keeping the regex unchanged.
 
@@ -82,7 +82,7 @@ assert update_kwargs["json"]["listeningFromMe"] is True
 assert update_kwargs["json"]["triggerValue"] == r"(?i)^\s*(?:/menu|codigo|código|code)\b"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -110,7 +110,7 @@ payload = {
 
 Do not change the regex, operator, URL, or upsert flow.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -120,7 +120,7 @@ cd backend && uv run pytest tests/test_evolution_client.py -q
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/evolution_client/client.py backend/tests/test_evolution_client.py
@@ -394,7 +394,7 @@ git commit -m "feat: add remote codigo cancel by phone"
 - Modify: `backend/app/api/v1/endpoints/integrations/console_handlers.py`
 - Test: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add the LID path, job-cancel path, no-session path, and active-context-priority path. If any import is missing in `backend/tests/test_whatsapp_endpoint.py`, add these near the top of the file before writing the tests:
 
@@ -576,7 +576,7 @@ async def test_from_me_remote_zero_keeps_active_context_session(
     assert await fake_mgr._redis.get("wa:client_ctx:12015550002") is not None
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -586,7 +586,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -q -k "cancels_targe
 
 Expected: FAIL until the helper and route are hardened for all edge cases.
 
-- [ ] **Step 3: Finish implementation**
+- [x] **Step 3: Finish implementation**
 
 Refine the helper and route with these exact safeguards:
 
@@ -654,7 +654,7 @@ for logical_key in candidate_keys:
 
 Do **not** touch `wa:client_ctx:{admin_phone}` or `session:admin:{admin_phone}` in this path.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -670,7 +670,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -q
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/api/v1/endpoints/integrations/console.py backend/app/api/v1/endpoints/integrations/console_handlers.py backend/tests/test_whatsapp_endpoint.py
@@ -824,7 +824,7 @@ git commit -m "feat: allow remote zero through n8n guard"
 - Modify: `docs/architecture/evolution-integration.md`
 - Verify: backend tests + workflow JSON parse + manual smoke checklist
 
-- [ ] **Step 1: Update the architecture docs**
+- [x] **Step 1: Update the architecture docs**
 
 In `docs/architecture/whatsapp-console-flow.md`, update the `From-me Contextual Routing` section so it says external `from_me=true` non-menu traffic is still pre-guarded by n8n **except** the exact remote `0`, which now reaches `_handle_from_me_routing()` to cancel target `codigo` silently.
 
@@ -844,7 +844,7 @@ In `docs/architecture/evolution-integration.md`, update webhook registration + d
 Remote tenant-side `0` cancellation for unauthenticated `codigo` relies on an already-open chatbot session for the target chat plus `listeningFromMe=true`. TrackPal does not add `0` to the trigger; when no target chatbot session exists, the feature remains unavailable.
 ```
 
-- [ ] **Step 2: Run full automated verification**
+- [x] **Step 2: Run full automated verification**
 
 Run:
 
@@ -870,7 +870,7 @@ PY
 
 Expected: all commands PASS.
 
-- [ ] **Step 3: Run the manual smoke checklist**
+- [x] **Step 3: Run the manual smoke checklist**
 
 Execute these manual checks against a real Evolution+n8n environment after deploying the workflow and backend changes:
 
@@ -887,7 +887,7 @@ Execute these manual checks against a real Evolution+n8n environment after deplo
 
 Expected: only the exact supported scenario works; the expired-session limitation remains documented.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/architecture/whatsapp-console-flow.md docs/architecture/evolution-integration.md

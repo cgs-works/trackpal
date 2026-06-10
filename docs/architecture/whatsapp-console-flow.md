@@ -177,7 +177,9 @@ To keep endpoint modules maintainable and within team size policy, the console e
 
 When ``from_me=true`` in the request, the message was sent by an admin from their own WhatsApp chat (outgoing shortcut trigger). The backend routes these through ``_handle_from_me_routing()`` before the regular identity checks:
 
-Before ``_handle_from_me_routing()`` runs, the n8n workflow now pre-guards external ``from_me=true`` non-menu traffic. If the admin targets an external chat and sends anything other than ``/menu`` or ``menu``, n8n skips the backend call, sends no reply, and closes the target Evolution session. Only allowed shortcut starters (``/menu`` and ``menu``) continue to backend contextual routing.
+Before ``_handle_from_me_routing()`` runs, the n8n workflow pre-guards external ``from_me=true`` non-menu traffic. The only exception is the exact message ``0`` sent to a non-self target chat: that payload is allowed through so TrackPal can cancel the target unauthenticated ``codigo`` flow and return ``no_reply=true`` + ``status="closed"`` + ``close_jid=<target>``.
+
+If the admin targets an external chat and sends anything other than ``/menu``, ``menu``, or ``0``, n8n skips the backend call, sends no reply, and closes the target Evolution session. Only allowed shortcut starters (``/menu``, ``menu``) and the remote cancel signal (``0``) continue to backend contextual routing.
 
 1. **Resolve admin identity**: derive the authoritative admin phone from the tenant resolved by ``instance`` first, then fall back to payload ``admin_phone`` only when the tenant record has no usable WhatsApp phone.
 2. **Determine target identity**: Normalise ``target_phone`` if available.
