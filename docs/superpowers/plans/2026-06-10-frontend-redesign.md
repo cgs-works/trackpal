@@ -1064,7 +1064,7 @@ git commit -m "feat: split tenant overview and settings"
 - `backend/tests/test_mailbox_oauth_imap.py`
 - `backend/tests/test_mailbox_persistence.py`
 
-- [ ] **Step 1: Write the failing mailbox page test for the real regression**
+- [x] **Step 1: Write the failing mailbox page test for the real regression**
 
 ```js
 import { describe, it, expect, vi } from 'vitest'
@@ -1095,12 +1095,12 @@ describe('TenantMailboxView', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/TenantMailboxView.spec.js`
 Expected: FAIL because the view does not load mailbox state yet.
 
-- [ ] **Step 3: Implement `TenantMailboxView.vue` and re-skin `MailboxConfigPanel.vue`**
+- [x] **Step 3: Implement `TenantMailboxView.vue` and re-skin `MailboxConfigPanel.vue`**
 
 Implement `frontend/src/views/TenantMailboxView.vue` like this:
 
@@ -1149,12 +1149,12 @@ Then refactor `frontend/src/components/MailboxConfigPanel.vue` to keep the exist
 
 Do **not** move the mutation API calls out of the component in this task. The point of this task is to fix loading/refresh and re-skin the UI without changing mailbox behavior.
 
-- [ ] **Step 4: Run the mailbox page test**
+- [x] **Step 4: Run the mailbox page test**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/TenantMailboxView.spec.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/TenantMailboxView.vue frontend/src/components/MailboxConfigPanel.vue frontend/src/views/__tests__/TenantMailboxView.spec.js
