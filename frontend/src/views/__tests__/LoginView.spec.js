@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { renderWithApp } from '@/test-utils/renderWithApp'
 import LoginView from '../LoginView.vue'
 
@@ -25,7 +26,8 @@ describe('LoginView', () => {
     await wrapper.get('#username').setValue('tenant')
     await wrapper.get('#password').setValue('tenant-password')
     await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
 
-    expect(wrapper.html()).toContain('Trackpal')
+    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/admin/overview')
   })
 })

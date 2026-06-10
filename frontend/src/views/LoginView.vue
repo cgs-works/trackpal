@@ -87,6 +87,13 @@ async function handleSubmit() {
           </form>
         </div>
       </div>
+      <div class="mt-6 flex items-center justify-center gap-3 text-sm text-muted-foreground lg:hidden">
+        <ThemeToggle />
+        <select id="locale-select-mobile" v-model="locale" @change="setLocale(locale)" class="h-9 rounded-md border border-input bg-background px-3">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </div>
     </section>
   </main>
 </template>
