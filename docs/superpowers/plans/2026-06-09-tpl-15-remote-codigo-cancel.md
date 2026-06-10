@@ -92,7 +92,7 @@ cd backend && uv run pytest tests/test_evolution_client.py -q
 
 Expected: FAIL because the current payload does not contain `"listeningFromMe": True`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Update `register_webhook()` payload in `backend/app/services/evolution_client/client.py`.
 
@@ -143,7 +143,7 @@ git commit -m "feat: enable from-me webhook dispatch"
 - Modify: `backend/app/api/v1/endpoints/integrations/console_handlers.py` (new helper near `_unauth_session_key` and codigo helpers)
 - Test: `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add these endpoint tests first. If they are not already imported in `backend/tests/test_whatsapp_endpoint.py`, add `import json` near the top of the file.
 
@@ -256,7 +256,7 @@ async def test_from_me_remote_zero_does_not_clear_admin_session(
     assert await fake_mgr._redis.get("session:admin:12015550002") is not None
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -266,7 +266,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -q -k "remote_zero o
 
 Expected: FAIL because `_handle_from_me_routing()` still treats non-menu non-self traffic as silent ignore and has no remote-cancel branch.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Add a helper in `backend/app/api/v1/endpoints/integrations/console_handlers.py`.
 
@@ -361,7 +361,7 @@ Then wire the new branch in `backend/app/api/v1/endpoints/integrations/console.p
 
 Also update the import list in `console.py` so `_cancel_target_codigo_flow` is imported from `console_handlers`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -371,7 +371,7 @@ cd backend && uv run pytest tests/test_whatsapp_endpoint.py -q -k "remote_zero o
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/api/v1/endpoints/integrations/console.py backend/app/api/v1/endpoints/integrations/console_handlers.py backend/tests/test_whatsapp_endpoint.py
