@@ -3,6 +3,7 @@
 Verifies API-key auth, Master/non-Master handling, and response shape.
 """
 
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -23,6 +24,7 @@ from app.models import (
     TenantMailbox,
     User,
 )
+from app.repositories import mailbox_lookup_repository
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_auth_session_service import (
     WhatsAppAuthLockState,
@@ -1101,8 +1103,7 @@ async def test_unregistered_identity_codigo_multistep(
         assert resp3.status_code == 200
         body3 = resp3.json()
         assert (
-            "confirm" in body3["reply"].lower()
-            or "confirmar" in body3["reply"].lower()
+            "confirm" in body3["reply"].lower() or "confirmar" in body3["reply"].lower()
         )
         assert "user@example.com" in body3["reply"]
         assert "lookup_job_id" not in body3
@@ -1215,12 +1216,19 @@ async def test_unregistered_identity_codigo_confirm_invalid_option_does_not_crea
 
         resp = await client.post(
             ENDPOINT,
-            json={"phone": "+12015559999", "message": "cancelar", "instance": TEST_INSTANCE},
+            json={
+                "phone": "+12015559999",
+                "message": "cancelar",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
     body = resp.json()
-    assert "opción inválida" in body["reply"].lower() or "invalid option" in body["reply"].lower()
+    assert (
+        "opción inválida" in body["reply"].lower()
+        or "invalid option" in body["reply"].lower()
+    )
     assert "lookup_job_id" not in body
 
 
@@ -1917,7 +1925,10 @@ async def test_unregistered_codigo_non_trigger_still_returns_still_checking(
 
     assert response.status_code == 200
     body = response.json()
-    assert "todavia buscando" in body["reply"].lower() or "still checking" in body["reply"].lower()
+    assert (
+        "todavia buscando" in body["reply"].lower()
+        or "still checking" in body["reply"].lower()
+    )
 
 
 # from_me contextual routing tests
@@ -2415,6 +2426,294 @@ async def test_from_me_non_self_target_sets_context_in_redis(
     # Target info should be in temp_data
     assert data["temp_data"]["target_phone"] == "12015559999"
     assert data["temp_data"]["admin_jid"] == "12015550002@s.whatsapp.net"
+
+
+async def test_from_me_remote_zero_cancels_target_codigo_by_phone(
+    client, db_session, active_tenant_user
+):
+    """from_me message "0" to non-self target cancels an active unauth codigo."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    session_key = await _seed_unauth_codigo_awaiting_result(fake_mgr, tenant.id)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": "",
+        "no_reply": True,
+        "status": "closed",
+        "close_jid": "12015559999@s.whatsapp.net",
+    }
+    assert await fake_mgr._redis.get(session_key) is None
+    assert await fake_mgr._redis.get("wa:client_ctx:12015550002") is None
+
+
+async def test_from_me_remote_alias_does_not_cancel_target_codigo(
+    client, db_session, active_tenant_user
+):
+    """from_me message "cancelar" does NOT trigger remote codigo cancel."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    session_key = await _seed_unauth_codigo_awaiting_result(fake_mgr, tenant.id)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "cancelar",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("no_reply") is True
+    assert body.get("reply") == ""
+    assert body.get("status") != "closed"
+    assert await fake_mgr._redis.get(session_key) is not None
+
+
+async def test_from_me_remote_zero_does_not_clear_admin_session(
+    client, db_session, active_tenant_user
+):
+    """from_me remote "0" cancels codigo but preserves admin session."""
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    await _seed_unauth_codigo_awaiting_result(fake_mgr, tenant.id)
+    await fake_mgr._redis.set(
+        "session:admin:12015550002",
+        json.dumps(
+            {
+                "phone": "12015550002",
+                "flow": "",
+                "step": "",
+                "temp_data": {},
+                "selection_map": {},
+            }
+        ),
+        ex=300,
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    assert await fake_mgr._redis.get("session:admin:12015550002") is not None
+
+
+async def test_from_me_remote_zero_cancels_target_codigo_by_lid(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    tenant_prefix = str(tenant.id)[:8]
+    lid_key = f"session:unreg:{tenant_prefix}:998877665544332211@lid"
+    await fake_mgr._redis.set(
+        lid_key,
+        json.dumps(
+            {
+                "phone": f"unreg:{tenant_prefix}:998877665544332211@lid",
+                "flow": "codigo",
+                "step": "awaiting_result",
+                "selected_tenant_id": None,
+                "temp_data": {
+                    "service_key": "netflix",
+                    "target_email": "user@example.com",
+                },
+                "selection_map": {},
+            }
+        ),
+        ex=300,
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "998877665544332211@lid",
+                "target_lid": "998877665544332211@lid",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": "",
+        "no_reply": True,
+        "status": "closed",
+        "close_jid": "998877665544332211@lid",
+    }
+    assert await fake_mgr._redis.get(lid_key) is None
+
+
+async def test_from_me_remote_zero_cancels_active_lookup_job(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    mailbox = (
+        await db_session.execute(
+            select(TenantMailbox).where(TenantMailbox.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    job = await mailbox_lookup_repository.create_job(
+        db_session,
+        tenant.id,
+        mailbox.id,
+        "netflix",
+        target_email="user@example.com",
+    )
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    session_key = await _seed_unauth_codigo_awaiting_result(
+        fake_mgr,
+        tenant.id,
+        lookup_job_id=str(job.id),
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    await db_session.refresh(job)
+    assert job.status == "failed"
+    assert job.error_code == "user_cancelled"
+    assert await fake_mgr._redis.get(session_key) is None
+
+
+async def test_from_me_remote_zero_without_target_session_still_closes(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": "",
+        "no_reply": True,
+        "status": "closed",
+        "close_jid": "12015559999@s.whatsapp.net",
+    }
+
+
+async def test_from_me_remote_zero_keeps_active_context_session(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    await _setup_context(fake_mgr, "12015550002")
+    await _seed_unauth_codigo_awaiting_result(fake_mgr, tenant.id)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    # The remote cancel should NOT clear the admin's active context session
+    assert await fake_mgr._redis.get("wa:client_ctx:12015550002") is not None
 
 
 # ---------------------------------------------------------------------------

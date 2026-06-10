@@ -30,6 +30,7 @@ Upsert flow:
    - `enabled=true`, `webhookUrl=https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient`
    - `triggerType=keyword`, `triggerOperator=startsWith`, `triggerValue=/menu`
    - `isTrusted=true` (includes `apiKey` in payload)
+   - `listeningFromMe=true` (enables outgoing-message webhook dispatch)
 2. If create fails (4xx), `GET /webhook/find/{instanceId}` to list existing webhooks
 3. Find matching webhook by `webhookUrl`, fallback to first available
 4. `PUT /webhook/update/{webhookId}` to reconcile contract
@@ -65,6 +66,9 @@ Relevant fields in the webhook payload:
 
 **Canonical session JID resolution:**
 When the `remoteJid` contains `@lid` and `senderPn` is resolved, the system uses the phone number as the canonical session key instead of the LID. Device suffixes (e.g. `:81`) are stripped from all JIDs before session key lookups. This ensures `fromMe` messages from the tenant's device JID (with suffix) and subsequent replies from the admin (without suffix) share the same Evolution chatbot session.
+
+**Remote cancel limitation:**
+Remote tenant-side ``0`` cancellation for unauthenticated ``codigo`` relies on an already-open chatbot session for the target chat plus ``listeningFromMe=true``. TrackPal does not add ``0`` to the trigger; when no target chatbot session exists, the feature remains unavailable.
 
 **Diagnostic log tags (evolution-go):**
 

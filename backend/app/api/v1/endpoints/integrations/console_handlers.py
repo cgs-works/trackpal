@@ -131,6 +131,81 @@ def _unauth_session_key(
     return f"{prefix}:unknown"
 
 
+async def _cancel_target_codigo_flow(
+    *,
+    manager: RedisConnectionManager,
+    db: AsyncSession,
+    tenant_id: UUID,
+    target_phone: str | None,
+    target_lid: str | None,
+) -> bool:
+    """Cancel an active unauth codigo lookup for a remote target phone.
+
+    Called from :func:`_handle_from_me_routing` when the admin sends "0"
+    to a non-self target.  The helper finds the unauthenticated codigo
+    session, cancels any active DB lookup job, and clears the session.
+    """
+    session_service = WhatsAppSessionService(
+        connection_manager=manager,
+        ttl_seconds=settings.whatsapp_session_ttl_minutes * 60,
+    )
+
+    candidate_keys = list(
+        dict.fromkeys(
+            key
+            for key in (
+                _unauth_session_key(target_phone, None, str(tenant_id))
+                if target_phone
+                else None,
+                _unauth_session_key("", target_lid, str(tenant_id))
+                if target_lid
+                else None,
+            )
+            if key
+        )
+    )
+
+    found = False
+    for logical_key in candidate_keys:
+        session = await session_service.get_session(logical_key)
+        if session is None or session.flow != "codigo":
+            continue
+
+        found = True
+        lookup_job_id = (session.temp_data or {}).get("lookup_job_id")
+        if lookup_job_id:
+            try:
+                cancelled = (
+                    await mailbox_lookup_repository.cancel_active_job_if_present(
+                        db,
+                        UUID(lookup_job_id),
+                        tenant_id=tenant_id,
+                    )
+                )
+                if cancelled:
+                    await db.commit()
+            except ValueError:
+                logger.warning(
+                    "Ignoring invalid lookup job id during remote codigo cancel: %s",
+                    lookup_job_id,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to cancel lookup job %s during remote codigo cancel",
+                    lookup_job_id,
+                )
+                try:
+                    await db.rollback()
+                except Exception:
+                    logger.exception(
+                        "Failed to rollback after remote codigo cancel cancellation error"
+                    )
+
+        await session_service.clear_session(logical_key)
+
+    return found
+
+
 auth_service = AuthService()
 console_service = WhatsAppConsoleService()
 tenant_service = TenantService()
@@ -747,7 +822,9 @@ async def _handle_unauth_codigo_email_confirm(
         session.step = _UNAUTH_CODIGO_STEP_EMAIL
         await session_service.save_session(session)
         return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.codigo.email_prompt", service_label=service_label)
+            reply=_i18n_t(
+                locale, "wa.tenant.codigo.email_prompt", service_label=service_label
+            )
         )
 
     if raw == "9":
@@ -894,10 +971,12 @@ async def _handle_unauth_codigo_result(
     if restart_trigger:
         if lookup_job_id:
             try:
-                cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
-                    db,
-                    UUID(lookup_job_id),
-                    tenant_id=tenant.id,
+                cancelled = (
+                    await mailbox_lookup_repository.cancel_active_job_if_present(
+                        db,
+                        UUID(lookup_job_id),
+                        tenant_id=tenant.id,
+                    )
                 )
                 if cancelled:
                     await db.commit()

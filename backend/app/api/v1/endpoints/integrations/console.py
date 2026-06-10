@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import ApiKeyDbDep
 from app.api.v1.endpoints.integrations.adapter import UNKNOWN_PHONE_REPLY
 from app.api.v1.endpoints.integrations.console_handlers import (
+    _cancel_target_codigo_flow,
     _canonical_jid,
     _client_context_close_jids,
     _handle_active_client_context,
@@ -533,6 +534,28 @@ async def _handle_from_me_routing(
             manager=manager,
             db=db,
             close_jid=preferred_close_jid,
+        )
+
+    # ── Step 3b: Remote codigo cancel (admin sends "0" to non-self target) ──
+    remote_cancel = message.strip() == "0"
+    if remote_cancel:
+        await _cancel_target_codigo_flow(
+            manager=manager,
+            db=db,
+            tenant_id=tenant.id,
+            target_phone=target_phone_norm,
+            target_lid=target_lid,
+        )
+        target_close_jid = (
+            _phone_close_jid(target_phone_norm)
+            or _canonical_jid(target_jid)
+            or target_jid
+        )
+        return WhatsAppConsoleResponse(
+            reply="",
+            no_reply=True,
+            status="closed",
+            close_jid=target_close_jid,
         )
 
     # ── Step 4: Check for existing active context ─────────────────

@@ -106,7 +106,9 @@ class TestRegisterWebhook:
             "triggerOperator": "regex",
             "triggerValue": r"(?i)^\s*(?:/menu|codigo|código|code)\b",
             "isTrusted": True,
+            "listeningFromMe": True,
         }
+        assert "0" not in kwargs["json"]["triggerValue"]
 
     async def test_register_webhook_updates_existing_wrapped_data(self) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
@@ -139,6 +141,12 @@ class TestRegisterWebhook:
             headers={"Content-Type": "application/json", "apikey": "global-key"},
         )
         assert mock_ctx.put.call_args.args[0] == "/webhook/update/webhook-id"
+        _, update_kwargs = mock_ctx.put.call_args
+        assert update_kwargs["json"]["listeningFromMe"] is True
+        assert (
+            update_kwargs["json"]["triggerValue"]
+            == r"(?i)^\s*(?:/menu|codigo|código|code)\b"
+        )
         update_response.raise_for_status.assert_called_once()
 
 
