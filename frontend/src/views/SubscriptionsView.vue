@@ -177,6 +177,7 @@ onMounted(async () => {
           {{ i18nStore.t('frontend.subscriptions.new') || '+ New Subscription' }}
         </button>
         <button
+          data-testid="open-reminder-settings"
           @click="isReminderSettingsOpen = true"
           type="button"
           class="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-stone-50 dark:hover:bg-zinc-800 border border-stone-200 dark:border-zinc-800 text-stone-700 dark:text-zinc-300 text-xs font-semibold rounded-md shadow-sm transition-colors cursor-pointer"
@@ -191,6 +192,7 @@ onMounted(async () => {
       :clients="clients"
       :services="services"
       :t="i18nStore.t"
+      :initial-filters="activeFilters"
       @apply="handleApplyFilters"
       @clear="handleClearFilters"
     />
@@ -259,8 +261,9 @@ onMounted(async () => {
 
     <!-- Automated Reminder Settings Modal -->
     <ReminderSettingsModal
-      v-if="isReminderSettingsOpen"
+      :isOpen="isReminderSettingsOpen"
       @close="isReminderSettingsOpen = false"
+      @saved="handleSave"
     />
   </DashboardLayout>
 </template>

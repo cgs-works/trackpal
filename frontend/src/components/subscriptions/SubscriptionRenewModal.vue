@@ -1,6 +1,15 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import api from '../../services/api'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
@@ -55,37 +64,38 @@ async function handleRenew() {
 </script>
 
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md w-full max-w-md p-6 shadow-md transition-all">
-      <div class="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800/60 pb-3 mb-4">
-        <h3 class="text-sm font-bold text-stone-900 dark:text-zinc-100">
-          🔄 Renovar Suscripción
-        </h3>
-        <button @click="emit('close')" type="button" class="text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300">✕</button>
-      </div>
+  <Dialog :open="isOpen" @update:open="(v) => !v && emit('close')">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>
+          🔄 {{ t('frontend.subscriptions.renew_title') || 'Renew Subscription' }}
+        </DialogTitle>
+      </DialogHeader>
 
-      <form @submit.prevent="handleRenew" class="flex flex-col gap-4 text-xs">
+      <form @submit.prevent="handleRenew" class="flex flex-col gap-4 text-sm">
         <div class="flex flex-col gap-1.5">
-          <label class="font-semibold text-stone-500 dark:text-zinc-400">Duración de la Renovación</label>
-          <select v-model="renewForm.duration_type" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
-            <option value="" disabled>Seleccionar duración</option>
+          <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.renew_duration') || 'Renewal Duration' }}</label>
+          <select v-model="renewForm.duration_type" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
+            <option value="" disabled>{{ t('frontend.subscriptions.select_duration') || 'Select Duration' }}</option>
             <option v-for="opt in durationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
         </div>
 
         <div v-if="isCustomDuration" class="flex flex-col gap-1.5">
-          <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.end') }}</label>
-          <input v-model="renewForm.expires_at" type="date" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
-        </div>
-
-        <div class="flex justify-end gap-2 border-t border-stone-100 dark:border-zinc-800/60 pt-4 mt-2">
-          <button @click="emit('close')" type="button" class="px-4 py-2 text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800/50 rounded-md transition-colors cursor-pointer">Cancelar</button>
-          <button :disabled="isSaving" type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5">
-            <span v-if="isSaving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            Renovar
-          </button>
+          <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.end') }}</label>
+          <Input v-model="renewForm.expires_at" type="date" required />
         </div>
       </form>
-    </div>
-  </div>
+
+      <DialogFooter class="gap-2">
+        <Button variant="outline" @click="emit('close')" type="button">
+          {{ t('frontend.subscriptions.cancel_action') || 'Cancel' }}
+        </Button>
+        <Button @click="handleRenew" :disabled="isSaving" type="button">
+          <span v-if="isSaving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5"></span>
+          {{ t('frontend.subscriptions.renew') || 'Renew' }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>

@@ -181,7 +181,7 @@ function getPlanName(planId) {
                 @click="emit('edit', sub)"
                 type="button"
                 class="p-1.5 rounded hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-500 dark:text-zinc-400 transition-colors cursor-pointer"
-                title="Editar"
+                :title="t('frontend.subscriptions.edit')"
               >
                 ✏️
               </button>
@@ -190,25 +190,25 @@ function getPlanName(planId) {
                 @click="emit('renew', sub)"
                 type="button"
                 class="px-2 py-1 text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 transition-colors cursor-pointer"
-                title="Renovar"
+                :title="t('frontend.subscriptions.renew')"
               >
-                🔄 Renovar
+                🔄 {{ t('frontend.subscriptions.renew') }}
               </button>
               <button
                 v-if="sub.status !== 'active'"
                 @click="emit('reactivate', sub)"
                 type="button"
                 class="px-2 py-1 text-[10px] font-bold bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 rounded hover:bg-green-100 transition-colors cursor-pointer"
-                title="Reactivar"
+                :title="t('frontend.subscriptions.reactivate')"
               >
-                ⚡ Reactivar
+                ⚡ {{ t('frontend.subscriptions.reactivate') }}
               </button>
               <button
                 v-if="sub.status === 'active'"
                 @click="emit('cancel', sub)"
                 type="button"
                 class="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 dark:text-red-400 transition-colors cursor-pointer"
-                title="Cancelar"
+                :title="t('frontend.subscriptions.cancel')"
               >
                 🛑
               </button>
@@ -217,7 +217,7 @@ function getPlanName(planId) {
         </tr>
         <tr v-if="subscriptions.length === 0">
           <td colspan="10" class="p-8 text-center text-stone-400 dark:text-zinc-600 font-medium">
-            No subscriptions found.
+            {{ t('frontend.subscriptions.no_subscriptions') || 'No subscriptions found.' }}
           </td>
         </tr>
       </tbody>

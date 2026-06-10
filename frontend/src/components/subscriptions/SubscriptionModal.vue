@@ -1,6 +1,15 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import api from '../../services/api'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 /**
  * @typedef {Object} SubscriptionModalProps
@@ -144,31 +153,30 @@ async function handleSave() {
 </script>
 
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md w-full max-w-lg p-6 shadow-md transition-all">
-      <div class="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800/60 pb-3 mb-4">
-        <h3 class="text-sm font-bold text-stone-900 dark:text-zinc-100">
-          {{ props.sub ? t('frontend.subscriptions.edit_title') || 'Editar Suscripción' : t('frontend.subscriptions.new_title') || 'Nueva Suscripción' }}
-        </h3>
-        <button @click="emit('close')" type="button" class="text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300">✕</button>
-      </div>
+  <Dialog :open="isOpen" @update:open="(v) => !v && emit('close')">
+    <DialogContent class="sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>
+          {{ props.sub ? t('frontend.subscriptions.edit_title') || 'Edit Subscription' : t('frontend.subscriptions.new_title') || 'New Subscription' }}
+        </DialogTitle>
+      </DialogHeader>
 
-      <form @submit.prevent="handleSave" class="flex flex-col gap-4 text-xs">
+      <form @submit.prevent="handleSave" class="flex flex-col gap-4 text-sm">
         <div class="grid grid-cols-2 gap-4">
           <!-- Client select -->
           <div class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.client') }}</label>
-            <select v-model="formData.client_id" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
-              <option value="" disabled>Select Client</option>
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.client') }}</label>
+            <select v-model="formData.client_id" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
+              <option value="" disabled>{{ t('frontend.subscriptions.select_client') || 'Select Client' }}</option>
               <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.full_name }} ({{ c.phone }})</option>
             </select>
           </div>
 
           <!-- Service select -->
           <div class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.service') }}</label>
-            <select v-model="formData.service_id" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
-              <option value="" disabled>Select Service</option>
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.service') }}</label>
+            <select v-model="formData.service_id" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
+              <option value="" disabled>{{ t('frontend.subscriptions.select_service') || 'Select Service' }}</option>
               <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
           </div>
@@ -177,17 +185,17 @@ async function handleSave() {
         <div class="grid grid-cols-2 gap-4">
           <!-- Plan select -->
           <div class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.plan') }}</label>
-            <select v-model="formData.plan_id" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
-              <option value="" disabled>Select Plan</option>
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.plan') }}</label>
+            <select v-model="formData.plan_id" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
+              <option value="" disabled>{{ t('frontend.subscriptions.select_plan') || 'Select Plan' }}</option>
               <option v-for="p in availablePlans" :key="p.id" :value="p.id">{{ p.name }}</option>
             </select>
           </div>
 
           <!-- Email -->
           <div class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.email') }}</label>
-            <input v-model="formData.streaming_email" type="email" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.email') }}</label>
+            <Input v-model="formData.streaming_email" type="email" required />
           </div>
         </div>
 
@@ -198,70 +206,72 @@ async function handleSave() {
               v-if="!showPassword"
               @click="showPassword = true"
               type="button"
-              class="px-3 py-2 text-center bg-stone-100 hover:bg-stone-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-stone-700 dark:text-zinc-200 rounded-md transition-colors cursor-pointer"
+              class="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
             >
-              🔑 {{ props.sub ? 'Actualizar Contraseña' : 'Establecer Contraseña' }}
+              🔑 {{ props.sub ? (t('frontend.subscriptions.update_password') || 'Update Password') : (t('frontend.subscriptions.set_password') || 'Set Password') }}
             </button>
             <div v-else class="flex flex-col gap-1.5 w-full">
-              <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.password') }}</label>
-              <input v-model="formData.streaming_password" type="text" class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
+              <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.password') }}</label>
+              <Input v-model="formData.streaming_password" type="text" />
             </div>
           </div>
 
           <!-- Start Date -->
           <div class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.start') }}</label>
-            <input v-model="formData.starts_at" type="date" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.start') }}</label>
+            <Input v-model="formData.starts_at" type="date" required />
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <!-- Duration Select -->
           <div class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">Duración</label>
-            <select v-model="formData.duration_type" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
-              <option value="" disabled>Seleccionar duración</option>
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.duration') || 'Duration' }}</label>
+            <select v-model="formData.duration_type" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
+              <option value="" disabled>{{ t('frontend.subscriptions.select_duration') || 'Select Duration' }}</option>
               <option v-for="opt in durationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
 
           <!-- Custom expiration -->
           <div v-if="isCustomDuration" class="flex flex-col gap-1.5">
-            <label class="font-semibold text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.end') }}</label>
-            <input v-model="formData.expires_at" type="date" required class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
+            <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.end') }}</label>
+            <Input v-model="formData.expires_at" type="date" required />
           </div>
         </div>
 
         <!-- Profile details toggle -->
-        <div class="border-t border-stone-100 dark:border-zinc-800/60 pt-4 mt-2">
+        <div class="border-t border-border pt-4 mt-2">
           <button
             v-if="!showProfile"
             @click="showProfile = true"
             type="button"
-            class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+            class="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
           >
-            + Añadir detalles de Perfil (Pantallas / PIN)
+            + {{ t('frontend.subscriptions.add_profile') || 'Add Profile Details (Screens / PIN)' }}
           </button>
           <div v-else class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="font-semibold text-stone-500 dark:text-zinc-400">Nombre de Perfil</label>
-              <input v-model="formData.profile_name" type="text" placeholder="Ej. Perfil 1" class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
+              <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.profile_name') || 'Profile Name' }}</label>
+              <Input v-model="formData.profile_name" type="text" :placeholder="t('frontend.subscriptions.profile_name_placeholder') || 'e.g. Profile 1'" />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="font-semibold text-stone-500 dark:text-zinc-400">PIN de Perfil</label>
-              <input v-model="formData.profile_pin" type="text" placeholder="Ej. 1234" class="px-3 py-2 bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-800 dark:text-zinc-200 focus:outline-none">
+              <label class="text-xs font-semibold text-muted-foreground">{{ t('frontend.subscriptions.profile_pin') || 'Profile PIN' }}</label>
+              <Input v-model="formData.profile_pin" type="text" :placeholder="t('frontend.subscriptions.profile_pin_placeholder') || 'e.g. 1234'" />
             </div>
           </div>
         </div>
-
-        <div class="flex justify-end gap-2 border-t border-stone-100 dark:border-zinc-800/60 pt-4 mt-2">
-          <button @click="emit('close')" type="button" class="px-4 py-2 text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800/50 rounded-md transition-colors cursor-pointer">Cancelar</button>
-          <button :disabled="isSaving" type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-55">
-            <span v-if="isSaving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            {{ props.sub ? 'Guardar Cambios' : 'Crear Suscripción' }}
-          </button>
-        </div>
       </form>
-    </div>
-  </div>
+
+      <DialogFooter class="gap-2">
+        <Button variant="outline" @click="emit('close')" type="button">
+          {{ t('frontend.subscriptions.cancel_action') || 'Cancel' }}
+        </Button>
+        <Button @click="handleSave" :disabled="isSaving" type="button">
+          <span v-if="isSaving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5"></span>
+          {{ props.sub ? (t('frontend.subscriptions.save_changes') || 'Save Changes') : (t('frontend.subscriptions.create') || 'Create Subscription') }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
