@@ -82,6 +82,7 @@ class EvolutionClient:
             "triggerOperator": "regex",
             "triggerValue": r"(?i)^\s*(?:/menu|codigo|código|code)\b",
             "isTrusted": True,
+            "listeningFromMe": True,
         }
         async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
             create_response = await client.post(
