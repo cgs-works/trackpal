@@ -17,7 +17,7 @@ vi.mock('@/stores/auth', () => ({
 }))
 
 vi.mock('@/stores/i18n', () => ({
-  useI18nStore: () => ({ t: key => key }) ,
+  useI18nStore: () => ({ t: key => key }),
 }))
 
 describe('SubscriptionsView regressions', () => {
