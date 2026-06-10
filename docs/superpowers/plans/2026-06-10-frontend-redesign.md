@@ -1,993 +1,1623 @@
-# Plan de Implementación: Rediseño del Frontend (Trackpal 2026)
+# Frontend Redesign Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rediseñar por completo el frontend de Trackpal para adoptar una interfaz de Consola Premium estilo Linear, integrando Tailwind CSS v4, implementando un sistema de temas (Light/Dark) persistente en LocalStorage, y modularizando las pantallas clave (como `SubscriptionsView.vue`) para cumplir con el límite de < 501 líneas de código de `AGENTS.md`.
+**Goal:** Rebuild the Trackpal frontend on a Tailwind v4 + shadcn-based UI system while preserving all existing backend-integrated business flows and fixing the regressions introduced by the recent rewrite.
 
-**Architecture:** Compartiremos la estructura de navegación y estado de configuración mediante un layout maestro modular (`DashboardLayout.vue`). Las vistas específicas se encapsularán como slots dentro de este layout, dividiendo componentes masivos en partes de responsabilidad única.
+**Architecture:** Keep backend contracts unchanged. Introduce the new frontend in layers: tooling and tokens first, then shell and routing, then migrate one workflow at a time. Preserve existing API and Pinia logic whenever possible; only change script logic when required to fix broken wiring or expose functionality through the new navigation.
 
-**Tech Stack:** Vue 3, Vite, Pinia, vue-router, Tailwind CSS v4, Vitest
+**Tech Stack:** Vue 3, Pinia, Vue Router, Axios, Tailwind CSS v4, shadcn-vue-compatible primitives, Vitest, @vue/test-utils, vue-sonner
 
 ---
 
-### Task 1: Instalar y Configurar Tailwind CSS v4
+## Read this before touching code
+
+**Spec:**
+- `docs/superpowers/specs/2026-06-10-frontend-redesign-design.md`
+
+**Frontend docs:**
+- `docs/architecture/frontend-architecture.md`
+- `docs/codebase/frontend-structure.md`
+- `docs/code-standard/frontend-conventions.md`
+
+**Backend contract refs (read-only, do not modify in this plan):**
+- `docs/architecture/api-layer.md`
+- `backend/tests/test_auth.py`
+- `backend/tests/test_tenants.py`
+- `backend/tests/test_profile.py`
+- `backend/tests/test_catalog.py`
+- `backend/tests/test_clients.py`
+- `backend/tests/test_subscriptions.py`
+- `backend/tests/test_code_services.py`
+- `backend/tests/test_mailbox_oauth_imap.py`
+- `backend/tests/test_mailbox_persistence.py`
+
+## Baseline scan summary
+
+### Current frontend stack
+- Vue 3 + Pinia + Vue Router + Axios
+- Tailwind CSS v4 already installed via `@tailwindcss/vite`
+- Existing theme toggle in `frontend/src/composables/useTheme.js`
+- Existing shared shell in `frontend/src/components/DashboardLayout.vue`
+- Existing frontend tests are minimal: theme, auth-store reminder cache, catalog delete-preview helper
+
+### Current backend contracts used by the frontend
+| Surface | Frontend callers | Backend endpoints | Backend contract tests |
+|---|---|---|---|
+| Login | `src/views/LoginView.vue`, `src/stores/auth.js` | `POST /auth/login`, `GET /i18n/catalog` | `test_auth.py`, `test_i18n.py` |
+| Master | `src/views/MasterDashboardView.vue`, `src/components/CodeServicesGlobalPanel.vue` | `/tenants`, `/auth/switch-tenant`, `/code-services/global` | `test_tenants.py`, `test_code_services.py` |
+| Tenant settings | `src/views/TenantDashboardView.vue` | `/me`, `/me/password` | `test_profile.py` |
+| Clients | `src/components/ClientManagementPanel.vue` | `/clients*` | `test_clients.py` |
+| Catalog | `src/components/CatalogPanel.vue` | `/catalog/services*`, `/delete-preview` | `test_catalog.py` |
+| Subscriptions | `src/views/SubscriptionsView.vue`, `src/components/subscriptions/*` | `/subscriptions*`, `/subscription-settings*`, `/catalog/services/{id}/plans`, `/clients` | `test_subscriptions.py` |
+| Mailbox | `src/components/MailboxConfigPanel.vue` | `/tenant/mailbox/*` | `test_mailbox_oauth_imap.py`, `test_mailbox_persistence.py` |
+| Code services (tenant) | `src/components/CodeServicesTenantPanel.vue` | `/code-services/tenants/current*` | `test_code_services.py` |
+| Client dashboard | `src/views/ClientDashboardView.vue` | `/dashboard`, `/me`, `/me/password` | `test_profile.py`, `test_subscriptions.py` |
+
+### Known regressions to fix during migration
+1. `frontend/src/views/TenantDashboardView.vue` renders `MailboxConfigPanel` without passing `mailbox` or handling `@updated`; existing mailbox state never loads.
+2. `frontend/src/views/SubscriptionsView.vue` mounts `ReminderSettingsModal` without passing the prop it actually uses; the modal never renders or loads settings.
+3. `frontend/src/components/subscriptions/SubscriptionFilters.vue` keeps its own local filter state and does not hydrate from `route.query.client_id`; clicking “subscriptions” from a client row loses visible filter state on the next interaction.
+4. `frontend/src/components/DashboardLayout.vue` builds navigation from `authStore.role` only, so master support mode (`activeTenantId`) shows the wrong menu while the user is on tenant routes.
+5. Tenant settings must not be exposed in master support mode because `/me` remains master-scoped; only direct tenants should reach `/admin/settings`.
+
+## File structure to end up with
+
+### New configuration / tooling files
+- Create: `frontend/jsconfig.json` — alias support for `@/*`
+- Create: `frontend/components.json` — shadcn-vue project config for JavaScript + Tailwind v4
+- Create: `frontend/src/lib/utils.js` — `cn()` helper for class merging
+- Create: `frontend/src/test-utils/renderWithApp.js` — shared mount helper for Pinia + Router tests
+
+### New shared UI files
+- Create via shadcn CLI: `frontend/src/components/ui/*`
+  - Required primitives in this plan: `button`, `input`, `textarea`, `select`, `dialog`, `sheet`, `tabs`, `badge`, `dropdown-menu`, `table`, `separator`, `switch`, `checkbox`, `card`, `sonner`
+- Create: `frontend/src/components/InlineAlert.vue`
+- Create: `frontend/src/components/EmptyState.vue`
+- Create: `frontend/src/components/LoadingBlock.vue`
+- Create: `frontend/src/components/PageHeader.vue`
+- Create: `frontend/src/components/StatusBadge.vue`
+
+### New navigation / route files
+- Create: `frontend/src/config/navigation.js`
+- Create: `frontend/src/views/TenantClientsView.vue`
+- Create: `frontend/src/views/TenantCatalogView.vue`
+- Create: `frontend/src/views/TenantMailboxView.vue`
+- Create: `frontend/src/views/TenantCodeServicesView.vue`
+- Create: `frontend/src/views/TenantSettingsView.vue`
+- Create: `frontend/src/views/MasterCodeServicesView.vue`
+
+### Existing files that must be migrated, not replaced blindly
+- Modify: `frontend/src/style.css`
+- Modify: `frontend/src/App.vue`
+- Modify: `frontend/src/main.js`
+- Modify: `frontend/src/router/index.js`
+- Modify: `frontend/src/components/DashboardLayout.vue`
+- Modify: `frontend/src/components/ThemeToggle.vue`
+- Modify: `frontend/src/composables/useTheme.js`
+- Modify: `frontend/src/views/LoginView.vue`
+- Modify: `frontend/src/views/MasterDashboardView.vue`
+- Modify: `frontend/src/views/TenantDashboardView.vue`
+- Modify: `frontend/src/views/SubscriptionsView.vue`
+- Modify: `frontend/src/views/ClientDashboardView.vue`
+- Modify: `frontend/src/components/CatalogPanel.vue`
+- Modify: `frontend/src/components/ClientManagementPanel.vue`
+- Modify: `frontend/src/components/CodeServicesGlobalPanel.vue`
+- Modify: `frontend/src/components/CodeServicesTenantPanel.vue`
+- Modify: `frontend/src/components/MailboxConfigPanel.vue`
+- Modify: `frontend/src/components/subscriptions/ReminderSettingsModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionFilters.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionRenewModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionReactivateModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionCancelModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionTable.vue`
+
+### Docs that must be updated at the end
+- Modify: `docs/architecture/frontend-architecture.md`
+- Modify: `docs/codebase/frontend-structure.md`
+- Modify: `docs/code-standard/frontend-conventions.md`
+
+### Ground rules for every implementation task
+- Keep backend APIs unchanged.
+- Preserve current Pinia store names and Axios service import path.
+- For business components, prefer “replace template, keep logic” over rewriting scripts from scratch.
+- Use inline alerts for long-form errors, toasts only for short confirmations.
+- Do not add remote fonts in this pass.
+- Use role-aware routing plus support-mode routing; do not infer navigation from `authStore.role` alone.
+
+---
+
+### Task 1: Tooling, aliases, shadcn foundation, and test harness
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
 
 **Files:**
+- Create: `frontend/jsconfig.json`
+- Create: `frontend/components.json`
+- Create: `frontend/src/lib/utils.js`
+- Create: `frontend/src/lib/__tests__/utils.spec.js`
+- Create: `frontend/src/test-utils/renderWithApp.js`
 - Modify: `frontend/package.json`
 - Modify: `frontend/vite.config.js`
-- Modify: `frontend/src/style.css`
+- Modify: `frontend/src/App.vue`
 
-- [x] **Step 1: Instalar dependencias de Tailwind CSS v4**
+- [ ] **Step 1: Write the failing `cn()` helper test**
 
-Ejecuta en la carpeta `frontend/`:
-```bash
-cd frontend && npm install tailwindcss @tailwindcss/vite
+```js
+// frontend/src/lib/__tests__/utils.spec.js
+import { describe, it, expect } from 'vitest'
+import { cn } from '../utils'
+
+describe('cn', () => {
+  it('merges tailwind classes and keeps the last conflicting utility', () => {
+    expect(cn('px-2 text-sm', 'px-4', false && 'hidden')).toBe('text-sm px-4')
+  })
+})
 ```
 
-- [x] **Step 2: Configurar Vite para integrar el plugin de Tailwind CSS v4**
+- [ ] **Step 2: Run the test to verify it fails**
 
-Modifica `frontend/vite.config.js` para añadir el plugin oficial:
-```javascript
+Run: `cd frontend && npx vitest run src/lib/__tests__/utils.spec.js`
+Expected: FAIL with `Cannot find module '../utils'` or equivalent import error.
+
+- [ ] **Step 3: Install the missing dependencies and create the project scaffolding**
+
+Run:
+
+```bash
+cd frontend && npm i class-variance-authority clsx tailwind-merge lucide-vue-next tw-animate-css reka-ui vue-sonner
+cd frontend && npm i -D @vue/test-utils
+```
+
+Create `frontend/jsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.js", "src/**/*.vue"]
+}
+```
+
+Create `frontend/components.json`:
+
+```json
+{
+  "$schema": "https://shadcn-vue.com/schema.json",
+  "style": "new-york",
+  "typescript": false,
+  "tailwind": {
+    "config": "",
+    "css": "src/style.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "composables": "@/composables",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib"
+  },
+  "iconLibrary": "lucide"
+}
+```
+
+Modify `frontend/vite.config.js`:
+
+```js
+/// <reference types="vitest" />
+import path from 'node:path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    tailwindcss()
-  ],
+  plugins: [vue(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
-        changeOrigin: true
-      }
-    }
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     environment: 'jsdom',
     globals: true,
-  }
+  },
 })
 ```
 
-- [x] **Step 3: Inyectar directiva de Tailwind CSS v4 en style.css**
+Create `frontend/src/lib/utils.js`:
 
-Reemplaza los contenidos de `frontend/src/style.css` con el import de Tailwind v4 y variables base:
-```css
-@import "tailwindcss";
+```js
+import { clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
-@layer base {
-  html, body {
-    @apply min-h-screen bg-stone-50 text-stone-900 transition-colors duration-200 antialiased;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  }
-
-  html.dark, html.dark body {
-    @apply bg-zinc-950 text-zinc-100;
-  }
+export function cn(...inputs) {
+  return twMerge(clsx(inputs))
 }
 ```
 
-- [x] **Step 4: Verificar que la compilación funciona correctamente**
+Create `frontend/src/test-utils/renderWithApp.js`:
 
-Ejecuta en la carpeta `frontend/`:
-```bash
-npm run build
-```
-Expected: Compilación exitosa sin errores de sintaxis CSS ni advertencias de Vite.
+```js
+import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { createRouter, createMemoryHistory } from 'vue-router'
 
-- [x] **Step 5: Confirmar cambios**
+export async function renderWithApp(component, {
+  props = {},
+  slots = {},
+  routes = [{ path: '/', component }],
+  path = '/',
+  global = {},
+} = {}) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
 
-```bash
-git add frontend/package.json frontend/vite.config.js frontend/src/style.css
-git commit -m "feat: install and configure tailwind css v4 with vite plugin"
-```
-
----
-
-### Task 2: Implementar Sistema de Temas y Componente ThemeToggle
-
-**Files:**
-- Create: `frontend/src/composables/useTheme.js`
-- Create: `frontend/src/components/ThemeToggle.vue`
-- Create: `frontend/src/composables/__tests__/theme.spec.js`
-
-- [x] **Task 2 completed**
-
-- [x] **Step 1: Escribir tests de unidad para el composable de gestión de tema**
-
-Crea `frontend/src/composables/__tests__/theme.spec.js`:
-```javascript
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useTheme } from '../useTheme'
-
-describe('useTheme', () => {
-  beforeEach(() => {
-    localStorage.clear()
-    document.documentElement.classList.remove('dark')
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes,
   })
 
-  it('debe inicializar el tema por defecto', () => {
-    const { theme } = useTheme()
-    expect(theme.value).toBe('light')
+  router.push(path)
+  await router.isReady()
+
+  return mount(component, {
+    props,
+    slots,
+    global: {
+      plugins: [pinia, router],
+      ...global,
+    },
   })
-
-  it('debe cambiar de tema correctamente', () => {
-    const { theme, toggleTheme } = useTheme()
-    toggleTheme()
-    expect(theme.value).toBe('dark')
-    expect(localStorage.getItem('theme')).toBe('dark')
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
-  })
-})
-```
-
-- [x] **Step 2: Verificar que el test falla**
-
-Ejecuta:
-```bash
-cd frontend && npm test -- src/composables/__tests__/theme.spec.js
-```
-Expected: FAIL porque `useTheme` no está definido.
-
-- [x] **Step 3: Implementar useTheme.js**
-
-Crea `frontend/src/composables/useTheme.js`:
-```javascript
-import { ref, watch } from 'vue'
-
-const theme = ref('light')
-
-export function useTheme() {
-  function initTheme() {
-    const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      theme.value = 'dark'
-      document.documentElement.classList.add('dark')
-      document.documentElement.style.colorScheme = 'dark'
-    } else {
-      theme.value = 'light'
-      document.documentElement.classList.remove('dark')
-      document.documentElement.style.colorScheme = 'light'
-    }
-  }
-
-  function toggleTheme() {
-    if (theme.value === 'dark') {
-      theme.value = 'light'
-      localStorage.setItem('theme', 'light')
-      document.documentElement.classList.remove('dark')
-      document.documentElement.style.colorScheme = 'light'
-    } else {
-      theme.value = 'dark'
-      localStorage.setItem('theme', 'dark')
-      document.documentElement.classList.add('dark')
-      document.documentElement.style.colorScheme = 'dark'
-    }
-  }
-
-  // Inicialización única
-  initTheme()
-
-  return {
-    theme,
-    toggleTheme
-  }
 }
 ```
 
-- [x] **Step 4: Verificar que el test ahora pasa**
+Run the shadcn CLI after the config files exist:
 
-Ejecuta:
 ```bash
-npm test -- src/composables/__tests__/theme.spec.js
+cd frontend && npx shadcn-vue@latest add button input textarea select dialog sheet tabs badge dropdown-menu table separator switch checkbox card sonner
 ```
-Expected: PASS.
 
-- [x] **Step 5: Crear componente ThemeToggle.vue**
+Modify `frontend/src/App.vue` so the toaster is always mounted:
 
-Crea `frontend/src/components/ThemeToggle.vue`:
 ```vue
 <script setup>
-import { useTheme } from '../composables/useTheme'
-
-const { theme, toggleTheme } = useTheme()
+import 'vue-sonner/style.css'
+import { Toaster } from '@/components/ui/sonner'
 </script>
 
 <template>
-  <button
-    @click="toggleTheme"
-    type="button"
-    class="p-2 rounded-md hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-500 dark:text-zinc-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-    :title="theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
-    aria-label="Toggle Theme"
-  >
-    <!-- Sun Icon (visible in dark theme) -->
-    <svg v-if="theme === 'dark'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-amber-400">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21M4.22 4.22l1.625 1.625M16.125 16.125l1.625 1.625M3 12h2.25m13.5 0H21M4.22 19.78l1.625-1.625M16.125 7.875l1.625-1.625M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
-    </svg>
-    <!-- Moon Icon (visible in light theme) -->
-    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-stone-500">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
-    </svg>
-  </button>
+  <router-view />
+  <Toaster class="pointer-events-auto" rich-colors close-button />
 </template>
 ```
 
-- [x] **Step 6: Confirmar cambios**
+- [ ] **Step 4: Run the helper test and a production build**
+
+Run:
+- `cd frontend && npx vitest run src/lib/__tests__/utils.spec.js`
+- `cd frontend && npm run build`
+
+Expected:
+- Vitest PASS
+- Vite build PASS
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add frontend/src/composables/useTheme.js frontend/src/components/ThemeToggle.vue frontend/src/composables/__tests__/theme.spec.js
-git commit -m "feat: implement theme toggle and core theme manager composable"
+git add frontend/package.json frontend/package-lock.json frontend/jsconfig.json frontend/components.json frontend/vite.config.js frontend/src/App.vue frontend/src/lib/utils.js frontend/src/lib/__tests__/utils.spec.js frontend/src/test-utils/renderWithApp.js frontend/src/components/ui
+git commit -m "chore: add shadcn frontend foundation"
 ```
 
 ---
 
-### Task 3: Rediseñar LoginView.vue con Estilo Linear
+### Task 2: Global theme tokens and shared feedback primitives
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
 
 **Files:**
-- Modify: `frontend/src/views/LoginView.vue`
+- Modify: `frontend/src/style.css`
+- Modify: `frontend/src/composables/useTheme.js`
+- Modify: `frontend/src/components/ThemeToggle.vue`
+- Create: `frontend/src/components/InlineAlert.vue`
+- Create: `frontend/src/components/EmptyState.vue`
+- Create: `frontend/src/components/LoadingBlock.vue`
+- Create: `frontend/src/components/PageHeader.vue`
+- Create: `frontend/src/components/StatusBadge.vue`
+- Test: `frontend/src/components/__tests__/PageHeader.spec.js`
+- Test: `frontend/src/components/__tests__/StatusBadge.spec.js`
+- Test: `frontend/src/composables/__tests__/theme.spec.js`
 
-- [x] **Step 1: Escribir LoginView con Tailwind CSS v4**
+- [ ] **Step 1: Write the failing shared-component tests**
 
-Modifica `frontend/src/views/LoginView.vue` integrando clases utilitarias de Tailwind, la transición de error, y agregando `ThemeToggle` en el footer:
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { useI18nStore } from '../stores/i18n'
-import { usePublicI18n } from '../i18n/usePublicI18n'
-import ThemeToggle from '../components/ThemeToggle.vue'
+```js
+// frontend/src/components/__tests__/PageHeader.spec.js
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import PageHeader from '../PageHeader.vue'
 
-const router = useRouter()
-const authStore = useAuthStore()
-const i18nStore = useI18nStore()
-const { locale, setLocale, t } = usePublicI18n()
+describe('PageHeader', () => {
+  it('renders title, description, and actions slot', () => {
+    const wrapper = mount(PageHeader, {
+      props: { title: 'Subscriptions', description: 'Manage client access' },
+      slots: { actions: '<button>New</button>' },
+    })
 
-const username = ref('')
-const password = ref('')
-const errorMessage = ref('')
-const isLoading = ref(false)
+    expect(wrapper.text()).toContain('Subscriptions')
+    expect(wrapper.text()).toContain('Manage client access')
+    expect(wrapper.text()).toContain('New')
+  })
+})
+```
 
-async function handleSubmit() {
-  errorMessage.value = ''
-  isLoading.value = true
+```js
+// frontend/src/components/__tests__/StatusBadge.spec.js
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import StatusBadge from '../StatusBadge.vue'
 
-  try {
-    const data = await authStore.login(username.value, password.value)
-    await i18nStore.loadCatalog()
+describe('StatusBadge', () => {
+  it('renders the label and variant classes for active state', () => {
+    const wrapper = mount(StatusBadge, {
+      props: { variant: 'active', label: 'Active' },
+    })
 
-    const role = data.user?.role
+    expect(wrapper.text()).toContain('Active')
+    expect(wrapper.classes().join(' ')).toContain('text-emerald')
+  })
+})
+```
 
-    if (role === 'master') {
-      await router.push('/master/dashboard')
-    } else if (role === 'tenant') {
-      await router.push('/admin/dashboard')
-    } else if (role === 'client') {
-      await router.push('/client/dashboard')
-    } else {
-      errorMessage.value = t('login.unknown_role')
-    }
-  } catch (error) {
-    errorMessage.value = error.response?.data?.detail || t('login.error')
-  } finally {
-    isLoading.value = false
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run:
+- `cd frontend && npx vitest run src/components/__tests__/PageHeader.spec.js`
+- `cd frontend && npx vitest run src/components/__tests__/StatusBadge.spec.js`
+
+Expected: FAIL because the components do not exist yet.
+
+- [ ] **Step 3: Implement the global token system and shared components**
+
+Modify `frontend/src/style.css` to establish the theme contract:
+
+```css
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --background: oklch(0.982 0.004 95);
+  --foreground: oklch(0.245 0.01 95);
+  --card: oklch(0.995 0.002 95);
+  --card-foreground: oklch(0.245 0.01 95);
+  --muted: oklch(0.956 0.006 95);
+  --muted-foreground: oklch(0.52 0.014 95);
+  --border: oklch(0.905 0.01 95);
+  --input: oklch(0.905 0.01 95);
+  --ring: oklch(0.56 0.07 265);
+  --primary: oklch(0.38 0.05 265);
+  --primary-foreground: oklch(0.985 0.002 95);
+  --success: oklch(0.56 0.12 150);
+  --warning: oklch(0.71 0.13 80);
+  --destructive: oklch(0.58 0.16 25);
+  --sidebar: oklch(0.97 0.004 95);
+  --sidebar-foreground: oklch(0.28 0.01 95);
+}
+
+.dark {
+  --background: oklch(0.18 0.01 95);
+  --foreground: oklch(0.94 0.003 95);
+  --card: oklch(0.22 0.01 95);
+  --card-foreground: oklch(0.94 0.003 95);
+  --muted: oklch(0.25 0.01 95);
+  --muted-foreground: oklch(0.72 0.01 95);
+  --border: oklch(0.3 0.01 95);
+  --input: oklch(0.3 0.01 95);
+  --ring: oklch(0.68 0.05 265);
+  --primary: oklch(0.78 0.04 265);
+  --primary-foreground: oklch(0.2 0.01 95);
+  --success: oklch(0.72 0.11 150);
+  --warning: oklch(0.78 0.12 80);
+  --destructive: oklch(0.72 0.16 25);
+  --sidebar: oklch(0.2 0.01 95);
+  --sidebar-foreground: oklch(0.9 0.003 95);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
   }
 }
+```
+
+Create `frontend/src/components/PageHeader.vue`:
+
+```vue
+<script setup>
+defineProps({
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+})
 </script>
 
 <template>
-  <main class="min-h-screen flex flex-col items-center justify-center p-6 bg-stone-50 dark:bg-zinc-950 transition-colors duration-200 relative select-none">
-    
-    <div class="w-full max-w-[360px] bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-8 shadow-sm transition-all">
-      <div class="mb-6 text-center">
-        <span class="text-xs font-semibold tracking-wider text-indigo-500 uppercase">Trackpal</span>
-        <h1 class="text-xl font-bold tracking-tight text-stone-900 dark:text-zinc-100 mt-1">
-          {{ t('login.title') }}
-        </h1>
-      </div>
-
-      <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
-        <div class="flex flex-col gap-1.5">
-          <label for="username" class="text-xs font-medium text-stone-500 dark:text-zinc-400">
-            {{ t('login.username') }}
-          </label>
-          <input
-            id="username"
-            v-model="username"
-            type="text"
-            autocomplete="username"
-            required
-            :disabled="isLoading"
-            class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 placeholder-stone-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-stone-50 dark:disabled:bg-zinc-900 disabled:text-stone-400 dark:disabled:text-zinc-500 transition-all duration-150"
-          >
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label for="password" class="text-xs font-medium text-stone-500 dark:text-zinc-400">
-            {{ t('login.password') }}
-          </label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            autocomplete="current-password"
-            required
-            :disabled="isLoading"
-            class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 placeholder-stone-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-stone-50 dark:disabled:bg-zinc-900 disabled:text-stone-400 dark:disabled:text-zinc-500 transition-all duration-150"
-          >
-        </div>
-
-        <Transition name="fade">
-          <div v-if="errorMessage" class="text-xs font-medium text-red-500 bg-red-50 dark:bg-red-950/20 border border-red-200/30 dark:border-red-950/40 rounded px-3 py-2" role="alert">
-            {{ errorMessage }}
-          </div>
-        </Transition>
-
-        <button
-          type="submit"
-          :disabled="isLoading"
-          class="mt-2 w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium text-sm rounded-md shadow-sm transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-        >
-          <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-          {{ isLoading ? t('login.signing_in') : t('login.sign_in') }}
-        </button>
-      </form>
+  <div class="flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-end md:justify-between">
+    <div class="space-y-1">
+      <h1 class="text-xl font-semibold tracking-tight text-foreground">{{ title }}</h1>
+      <p v-if="description" class="text-sm text-muted-foreground">{{ description }}</p>
     </div>
+    <div v-if="$slots.actions" class="flex items-center gap-2">
+      <slot name="actions" />
+    </div>
+  </div>
+</template>
+```
 
-    <div class="absolute bottom-6 flex items-center gap-4">
-      <div class="flex items-center gap-2">
-        <select
-          id="locale-select"
-          v-model="locale"
-          @change="setLocale(locale)"
-          class="text-xs text-stone-500 dark:text-zinc-400 bg-transparent border border-stone-200 dark:border-zinc-800 rounded px-2 py-1.5 focus:outline-none focus:border-indigo-500 cursor-pointer"
-          aria-label="Language Selector"
-        >
+Create `frontend/src/components/StatusBadge.vue`:
+
+```vue
+<script setup>
+import { computed } from 'vue'
+import { cn } from '@/lib/utils'
+
+const props = defineProps({
+  variant: { type: String, default: 'neutral' },
+  label: { type: String, required: true },
+})
+
+const classes = computed(() => {
+  const map = {
+    active: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    inactive: 'border-border bg-muted text-muted-foreground',
+    expired: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    cancelled: 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300',
+    neutral: 'border-border bg-muted text-muted-foreground',
+  }
+
+  return cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', map[props.variant] || map.neutral)
+})
+</script>
+
+<template>
+  <span :class="classes">{{ label }}</span>
+</template>
+```
+
+Create `frontend/src/components/InlineAlert.vue`:
+
+```vue
+<script setup>
+import { computed } from 'vue'
+import { cn } from '@/lib/utils'
+
+const props = defineProps({
+  variant: { type: String, default: 'info' },
+  message: { type: String, required: true },
+})
+
+const classes = computed(() => {
+  const map = {
+    info: 'border-border bg-muted text-foreground',
+    success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200',
+    error: 'border-red-500/20 bg-red-500/10 text-red-800 dark:text-red-200',
+  }
+  return cn('rounded-md border px-3 py-2 text-sm', map[props.variant] || map.info)
+})
+</script>
+
+<template>
+  <p :class="classes">{{ message }}</p>
+</template>
+```
+
+Create `frontend/src/components/EmptyState.vue` and `frontend/src/components/LoadingBlock.vue` with the same design language.
+
+Modify `frontend/src/components/ThemeToggle.vue` to use the shadcn button primitive instead of ad-hoc classes.
+
+- [ ] **Step 4: Run the new shared-component tests and the existing theme tests**
+
+Run:
+- `cd frontend && npx vitest run src/components/__tests__/PageHeader.spec.js src/components/__tests__/StatusBadge.spec.js`
+- `cd frontend && npx vitest run src/composables/__tests__/theme.spec.js`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/style.css frontend/src/components/ThemeToggle.vue frontend/src/composables/useTheme.js frontend/src/components/InlineAlert.vue frontend/src/components/EmptyState.vue frontend/src/components/LoadingBlock.vue frontend/src/components/PageHeader.vue frontend/src/components/StatusBadge.vue frontend/src/components/__tests__/PageHeader.spec.js frontend/src/components/__tests__/StatusBadge.spec.js
+git commit -m "feat: add frontend theme tokens and shared feedback components"
+```
+
+---
+
+### Task 3: Router expansion and shared app shell
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
+
+**Files:**
+- Create: `frontend/src/config/navigation.js`
+- Create: `frontend/src/components/__tests__/DashboardLayout.spec.js`
+- Create: `frontend/src/router/__tests__/router.spec.js`
+- Create: `frontend/src/views/TenantClientsView.vue`
+- Create: `frontend/src/views/TenantCatalogView.vue`
+- Create: `frontend/src/views/TenantMailboxView.vue`
+- Create: `frontend/src/views/TenantCodeServicesView.vue`
+- Create: `frontend/src/views/TenantSettingsView.vue`
+- Create: `frontend/src/views/MasterCodeServicesView.vue`
+- Modify: `frontend/src/router/index.js`
+- Modify: `frontend/src/components/DashboardLayout.vue`
+
+- [ ] **Step 1: Write the failing shell and router tests**
+
+```js
+// frontend/src/router/__tests__/router.spec.js
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import router from '../index'
+import { useAuthStore } from '@/stores/auth'
+
+describe('router', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+  })
+
+  it('redirects legacy tenant dashboard to /admin/overview', async () => {
+    const store = useAuthStore()
+    store.token = 'token'
+    store.user = { role: 'tenant', id: 'tenant-user' }
+
+    await router.push('/admin/dashboard')
+    expect(router.currentRoute.value.fullPath).toBe('/admin/overview')
+  })
+
+  it('allows master support mode into tenant workflow pages but not /admin/settings', async () => {
+    const store = useAuthStore()
+    store.token = 'token'
+    store.user = { role: 'master', id: 'master-user' }
+    store.activeTenantId = 'tenant-1'
+
+    await router.push('/admin/clients')
+    expect(router.currentRoute.value.fullPath).toBe('/admin/clients')
+
+    await router.push('/admin/settings')
+    expect(router.currentRoute.value.fullPath).not.toBe('/admin/settings')
+  })
+})
+```
+
+```js
+// frontend/src/components/__tests__/DashboardLayout.spec.js
+import { describe, it, expect } from 'vitest'
+import DashboardLayout from '../DashboardLayout.vue'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import { useAuthStore } from '@/stores/auth'
+
+describe('DashboardLayout', () => {
+  it('shows tenant support navigation when a master has activeTenantId and is on /admin/*', async () => {
+    const wrapper = await renderWithApp(DashboardLayout, {
+      routes: [{ path: '/admin/clients', component: DashboardLayout }],
+      path: '/admin/clients',
+      slots: { default: '<div>body</div>' },
+    })
+
+    const store = useAuthStore()
+    store.user = { role: 'master', username: 'master' }
+    store.activeTenantId = 'tenant-1'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('Clients')
+    expect(wrapper.text()).toContain('Exit support')
+  })
+})
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run:
+- `cd frontend && npx vitest run src/router/__tests__/router.spec.js`
+- `cd frontend && npx vitest run src/components/__tests__/DashboardLayout.spec.js`
+
+Expected: FAIL because the new routes and support-mode shell behavior do not exist yet.
+
+- [ ] **Step 3: Implement the navigation model, route map, and shell**
+
+Create `frontend/src/config/navigation.js`:
+
+```js
+export function getNavigationContext(authStore, route) {
+  const isSupportMode = authStore.role === 'master' && !!authStore.activeTenantId && route.path.startsWith('/admin')
+
+  if (isSupportMode) {
+    return {
+      mode: 'tenant-support',
+      items: [
+        { label: 'Overview', to: '/admin/overview' },
+        { label: 'Clients', to: '/admin/clients' },
+        { label: 'Catalog', to: '/admin/catalog' },
+        { label: 'Subscriptions', to: '/admin/subscriptions' },
+        { label: 'Mailbox', to: '/admin/mailbox' },
+        { label: 'Code Services', to: '/admin/code-services' },
+      ],
+    }
+  }
+
+  if (authStore.role === 'master') {
+    return {
+      mode: 'master',
+      items: [
+        { label: 'Overview', to: '/master/overview' },
+        { label: 'Code Services', to: '/master/code-services' },
+      ],
+    }
+  }
+
+  if (authStore.role === 'tenant') {
+    return {
+      mode: 'tenant',
+      items: [
+        { label: 'Overview', to: '/admin/overview' },
+        { label: 'Clients', to: '/admin/clients' },
+        { label: 'Catalog', to: '/admin/catalog' },
+        { label: 'Subscriptions', to: '/admin/subscriptions' },
+        { label: 'Mailbox', to: '/admin/mailbox' },
+        { label: 'Code Services', to: '/admin/code-services' },
+        { label: 'Settings', to: '/admin/settings' },
+      ],
+    }
+  }
+
+  return {
+    mode: 'client',
+    items: [{ label: 'Overview', to: '/client/overview' }],
+  }
+}
+```
+
+Modify `frontend/src/router/index.js` so the canonical routes become:
+
+```js
+const routes = [
+  { path: '/login', name: 'login', component: LoginView, meta: { requiresAuth: false } },
+
+  { path: '/master/overview', name: 'master-overview', meta: { requiresAuth: true, role: 'master' }, component: () => import('../views/MasterDashboardView.vue') },
+  { path: '/master/code-services', name: 'master-code-services', meta: { requiresAuth: true, role: 'master' }, component: () => import('../views/MasterCodeServicesView.vue') },
+  { path: '/master/dashboard', redirect: '/master/overview' },
+
+  { path: '/admin/overview', name: 'tenant-overview', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: true }, component: () => import('../views/TenantDashboardView.vue') },
+  { path: '/admin/clients', name: 'tenant-clients', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: true }, component: () => import('../views/TenantClientsView.vue') },
+  { path: '/admin/catalog', name: 'tenant-catalog', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: true }, component: () => import('../views/TenantCatalogView.vue') },
+  { path: '/admin/subscriptions', name: 'tenant-subscriptions', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: true }, component: () => import('../views/SubscriptionsView.vue') },
+  { path: '/admin/mailbox', name: 'tenant-mailbox', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: true }, component: () => import('../views/TenantMailboxView.vue') },
+  { path: '/admin/code-services', name: 'tenant-code-services', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: true }, component: () => import('../views/TenantCodeServicesView.vue') },
+  { path: '/admin/settings', name: 'tenant-settings', meta: { requiresAuth: true, role: 'tenant', allowMasterSupport: false }, component: () => import('../views/TenantSettingsView.vue') },
+  { path: '/admin/dashboard', redirect: '/admin/overview' },
+
+  { path: '/client/overview', name: 'client-overview', meta: { requiresAuth: true, role: 'client' }, component: () => import('../views/ClientDashboardView.vue') },
+  { path: '/client/dashboard', redirect: '/client/overview' },
+
+  { path: '/:pathMatch(.*)*', redirect: '/login' },
+]
+```
+
+Update the guard so `allowMasterSupport: false` blocks `/admin/settings` for masters even when `activeTenantId` exists.
+
+Refactor `frontend/src/components/DashboardLayout.vue` to:
+- use `getNavigationContext(authStore, route)`
+- show `Exit support` button when `mode === 'tenant-support'`
+- keep theme toggle, locale selector, and logout grouped in the shell footer / topbar
+- use shadcn `Sheet`, `Button`, `DropdownMenu`, and `Separator` instead of custom modal/backdrop markup
+
+Create minimal route files so the new route map compiles. Use this exact pattern first; later tasks will fill them in with real content:
+
+```vue
+<!-- Example: frontend/src/views/TenantClientsView.vue -->
+<script setup>
+import DashboardLayout from '@/components/DashboardLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+</script>
+
+<template>
+  <DashboardLayout>
+    <div class="space-y-6">
+      <PageHeader title="Clients" description="Manage client access." />
+    </div>
+  </DashboardLayout>
+</template>
+```
+
+- [ ] **Step 4: Re-run the shell and router tests**
+
+Run:
+- `cd frontend && npx vitest run src/router/__tests__/router.spec.js`
+- `cd frontend && npx vitest run src/components/__tests__/DashboardLayout.spec.js`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/config/navigation.js frontend/src/router/index.js frontend/src/components/DashboardLayout.vue frontend/src/components/__tests__/DashboardLayout.spec.js frontend/src/router/__tests__/router.spec.js frontend/src/views/TenantClientsView.vue frontend/src/views/TenantCatalogView.vue frontend/src/views/TenantMailboxView.vue frontend/src/views/TenantCodeServicesView.vue frontend/src/views/TenantSettingsView.vue frontend/src/views/MasterCodeServicesView.vue
+git commit -m "feat: add role-aware app shell and route map"
+```
+
+---
+
+### Task 4: Redesign LoginView on the new system
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
+
+**Files:**
+- Modify: `frontend/src/views/LoginView.vue`
+- Test: `frontend/src/views/__tests__/LoginView.spec.js`
+
+- [ ] **Step 1: Write the failing login view test**
+
+```js
+import { describe, it, expect, vi } from 'vitest'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import LoginView from '../LoginView.vue'
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    login: vi.fn().mockResolvedValue({ user: { role: 'tenant' } }),
+  }),
+}))
+
+vi.mock('@/stores/i18n', () => ({
+  useI18nStore: () => ({ loadCatalog: vi.fn(), t: key => key }),
+}))
+
+describe('LoginView', () => {
+  it('renders the form and submits to the tenant overview route', async () => {
+    const wrapper = await renderWithApp(LoginView, {
+      routes: [
+        { path: '/login', component: LoginView },
+        { path: '/admin/overview', component: { template: '<div>Tenant</div>' } },
+      ],
+      path: '/login',
+    })
+
+    await wrapper.get('#username').setValue('tenant')
+    await wrapper.get('#password').setValue('tenant-password')
+    await wrapper.get('form').trigger('submit.prevent')
+
+    expect(wrapper.html()).toContain('Trackpal')
+  })
+})
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/LoginView.spec.js`
+Expected: FAIL because the route map and login redirection target changed, and the old template is still in place.
+
+- [ ] **Step 3: Implement the new login layout while preserving auth logic**
+
+Keep the existing `handleSubmit()` flow, but replace the template with a two-zone composition built from the new primitives.
+
+Use this structure:
+
+```vue
+<script setup>
+// keep the current imports and handleSubmit logic
+</script>
+
+<template>
+  <main class="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
+    <section class="hidden border-r border-border bg-muted/40 p-10 lg:flex lg:flex-col lg:justify-between">
+      <div class="space-y-4">
+        <p class="text-sm font-medium text-muted-foreground">Trackpal</p>
+        <div class="space-y-2">
+          <h1 class="text-3xl font-semibold tracking-tight">Operational access, without dashboard noise.</h1>
+          <p class="max-w-md text-sm text-muted-foreground">Sign in to manage tenants, client access, subscriptions, and mailbox workflows.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-muted-foreground">
+        <ThemeToggle />
+        <select id="locale-select" v-model="locale" @change="setLocale(locale)" class="h-9 rounded-md border border-input bg-background px-3">
           <option value="en">English</option>
           <option value="es">Español</option>
         </select>
       </div>
-      <div class="h-4 w-[1px] bg-stone-200 dark:bg-zinc-800"></div>
-      <ThemeToggle />
-    </div>
+    </section>
 
+    <section class="flex items-center justify-center p-6">
+      <div class="w-full max-w-md space-y-6">
+        <div class="space-y-1 lg:hidden">
+          <p class="text-sm font-medium text-muted-foreground">Trackpal</p>
+          <h1 class="text-2xl font-semibold tracking-tight">{{ t('login.title') }}</h1>
+        </div>
+
+        <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <form class="space-y-4" @submit.prevent="handleSubmit">
+            <div class="space-y-2">
+              <label for="username" class="text-sm font-medium">{{ t('login.username') }}</label>
+              <input id="username" v-model="username" type="text" autocomplete="username" required class="h-10 w-full rounded-md border border-input bg-background px-3" />
+            </div>
+            <div class="space-y-2">
+              <label for="password" class="text-sm font-medium">{{ t('login.password') }}</label>
+              <input id="password" v-model="password" type="password" autocomplete="current-password" required class="h-10 w-full rounded-md border border-input bg-background px-3" />
+            </div>
+            <InlineAlert v-if="errorMessage" variant="error" :message="errorMessage" />
+            <button type="submit" :disabled="isLoading" class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+              {{ isLoading ? t('login.signing_in') : t('login.sign_in') }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
   </main>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-</style>
 ```
 
-- [x] **Step 2: Verificar la suite de pruebas del frontend**
+Also update the redirection targets in `handleSubmit()` to:
+- master → `/master/overview`
+- tenant → `/admin/overview`
+- client → `/client/overview`
 
-Ejecuta:
+- [ ] **Step 4: Run the login test and a production build**
+
+Run:
+- `cd frontend && npx vitest run src/views/__tests__/LoginView.spec.js`
+- `cd frontend && npm run build`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
 ```bash
-npm test
-```
-Expected: PASS para todas las pruebas de login preexistentes.
-
-- [x] **Step 3: Confirmar cambios**
-
-```bash
-git add frontend/src/views/LoginView.vue
-git commit -m "feat: redesign LoginView with clean Linear style and Tailwind CSS v4"
+git add frontend/src/views/LoginView.vue frontend/src/views/__tests__/LoginView.spec.js
+git commit -m "feat: redesign login on shared ui system"
 ```
 
 ---
 
-### Task 4: Implementar DashboardLayout.vue
+### Task 5: Tenant overview and settings split
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
 
 **Files:**
-- Create: `frontend/src/components/DashboardLayout.vue`
+- Modify: `frontend/src/views/TenantDashboardView.vue`
+- Modify: `frontend/src/router/index.js`
+- Modify: `frontend/src/config/navigation.js`
+- Modify: `frontend/src/views/TenantSettingsView.vue`
+- Test: `frontend/src/views/__tests__/TenantSettingsView.spec.js`
 
-- [x] **Step 1: Crear componente maestro de layout compartido**
+**Backend contract refs:**
+- `backend/tests/test_profile.py`
 
-Crea `frontend/src/components/DashboardLayout.vue` con el Sidebar de navegación adaptado a móvil/escritorio, perfil de usuario, selectores de idioma y el `ThemeToggle` centralizados:
+- [ ] **Step 1: Write the failing settings page test**
+
+```js
+import { describe, it, expect, vi } from 'vitest'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import TenantSettingsView from '../TenantSettingsView.vue'
+import api from '@/services/api'
+
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn(),
+    put: vi.fn(),
+  },
+}))
+
+vi.mock('@/stores/i18n', () => ({
+  useI18nStore: () => ({ t: key => key, loadCatalog: vi.fn() }),
+}))
+
+describe('TenantSettingsView', () => {
+  it('loads /me and saves profile data', async () => {
+    api.get.mockResolvedValueOnce({ data: { full_name: 'Active Tenant', email: 'tenant@example.com', phone: '12015550002', locale: 'en' } })
+    api.put.mockResolvedValueOnce({ data: { full_name: 'Updated Tenant', email: 'tenant@example.com', phone: '12015550002', locale: 'es' } })
+
+    const wrapper = await renderWithApp(TenantSettingsView)
+    expect(api.get).toHaveBeenCalledWith('/me')
+    await wrapper.get('#profile_locale').setValue('es')
+    await wrapper.get('form[data-testid="tenant-profile-form"]').trigger('submit.prevent')
+    expect(api.put).toHaveBeenCalledWith('/me', expect.objectContaining({ locale: 'es' }))
+  })
+})
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/TenantSettingsView.spec.js`
+Expected: FAIL because `TenantSettingsView.vue` is still a stub.
+
+- [ ] **Step 3: Turn `TenantDashboardView.vue` into the tenant overview page and implement `TenantSettingsView.vue`**
+
+Update `frontend/src/views/TenantDashboardView.vue` so it becomes the overview page, not the old tabbed container.
+
+Use this exact overview structure:
+
 ```vue
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { useI18nStore } from '../stores/i18n'
-import ThemeToggle from './ThemeToggle.vue'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import DashboardLayout from '@/components/DashboardLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const router = useRouter()
-const route = useRoute()
 const authStore = useAuthStore()
-const i18nStore = useI18nStore()
+const isSupportMode = computed(() => authStore.role === 'master' && !!authStore.activeTenantId)
 
-const isSidebarOpen = ref(false)
+const cards = computed(() => {
+  const items = [
+    { title: 'Clients', to: '/admin/clients', body: 'Create, edit, activate, and deactivate client access.' },
+    { title: 'Catalog', to: '/admin/catalog', body: 'Manage services, plans, and delete-preview flows.' },
+    { title: 'Subscriptions', to: '/admin/subscriptions', body: 'Create, renew, cancel, and reveal credentials.' },
+    { title: 'Mailbox', to: '/admin/mailbox', body: 'Configure OAuth or IMAP mailbox access.' },
+    { title: 'Code Services', to: '/admin/code-services', body: 'Choose which lookup services are active.' },
+  ]
 
-const userInitial = computed(() => {
-  return authStore.username ? authStore.username.charAt(0).toUpperCase() : 'U'
-})
-
-const menuItems = computed(() => {
-  const role = authStore.role
-  if (role === 'master') {
-    return [
-      { name: i18nStore.t('frontend.master.title') || 'Master Dashboard', path: '/master/dashboard', icon: 'M' }
-    ]
-  } else if (role === 'tenant') {
-    return [
-      { name: i18nStore.t('frontend.tenant.title') || 'Dashboard', path: '/admin/dashboard', icon: 'D' },
-      { name: i18nStore.t('frontend.subscriptions.title') || 'Subscriptions', path: '/admin/subscriptions', icon: 'S' }
-    ]
-  } else if (role === 'client') {
-    return [
-      { name: i18nStore.t('frontend.client.title') || 'Client Portal', path: '/client/dashboard', icon: 'C' }
-    ]
-  }
-  return []
-})
-
-async function handleLogout() {
-  authStore.logout()
-  await router.push('/login')
-}
-
-function setLocale(lang) {
-  i18nStore.locale = lang
-  localStorage.setItem('locale', lang)
-}
-</script>
-
-<template>
-  <div class="min-h-screen bg-stone-50 dark:bg-zinc-950 text-stone-900 dark:text-zinc-100 flex transition-colors duration-200">
-    
-    <!-- Mobile Sidebar Backdrop -->
-    <div
-      v-if="isSidebarOpen"
-      @click="isSidebarOpen = false"
-      class="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm"
-    ></div>
-
-    <!-- Sidebar -->
-    <aside
-      :class="[
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
-        'fixed md:sticky top-0 left-0 h-screen w-64 bg-white dark:bg-zinc-900 border-r border-stone-200 dark:border-zinc-800 flex flex-col z-50 transition-transform duration-200 md:translate-x-0 flex-shrink-0'
-      ]"
-    >
-      <!-- Sidebar Header -->
-      <div class="h-14 border-b border-stone-200 dark:border-zinc-800 flex items-center px-6 justify-between flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <div class="w-6 h-6 bg-indigo-600 rounded-md flex items-center justify-center text-white font-bold text-xs shadow-sm">T</div>
-          <span class="font-bold tracking-tight text-stone-900 dark:text-zinc-100">Trackpal</span>
-        </div>
-        <button @click="isSidebarOpen = false" class="md:hidden text-stone-500 hover:text-stone-700 dark:text-zinc-400 dark:hover:text-zinc-200">
-          ✕
-        </button>
-      </div>
-
-      <!-- Navigation Menu -->
-      <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
-        <router-link
-          v-for="item in menuItems"
-          :key="item.path"
-          :to="item.path"
-          :class="[
-            route.path === item.path
-              ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-950/40'
-              : 'hover:bg-stone-50 dark:hover:bg-zinc-800/50 text-stone-600 dark:text-zinc-300 border border-transparent',
-            'flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors'
-          ]"
-        >
-          <span class="w-5 h-5 flex items-center justify-center bg-stone-100 dark:bg-zinc-800 rounded font-semibold text-xs">{{ item.icon }}</span>
-          {{ item.name }}
-        </router-link>
-      </nav>
-
-      <!-- Sidebar Footer -->
-      <div class="p-4 border-t border-stone-200 dark:border-zinc-800 flex flex-col gap-3 flex-shrink-0">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <select
-              :value="i18nStore.locale"
-              @change="setLocale($event.target.value)"
-              class="text-xs text-stone-500 dark:text-zinc-400 bg-transparent border border-stone-200 dark:border-zinc-800 rounded px-1.5 py-1 focus:outline-none cursor-pointer"
-              aria-label="Language Selector"
-            >
-              <option value="en">EN</option>
-              <option value="es">ES</option>
-            </select>
-          </div>
-          <ThemeToggle />
-        </div>
-
-        <div class="flex items-center gap-3 bg-stone-50 dark:bg-zinc-950/50 border border-stone-200/50 dark:border-zinc-800/50 p-2.5 rounded-md">
-          <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center font-bold text-sm text-indigo-600 dark:text-indigo-400">
-            {{ userInitial }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-stone-800 dark:text-zinc-200 truncate">{{ authStore.username || 'User' }}</p>
-            <p class="text-[10px] text-stone-400 dark:text-zinc-500 truncate capitalize">{{ authStore.role }}</p>
-          </div>
-          <button @click="handleLogout" class="text-stone-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors" title="Log out">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Main Content wrapper -->
-    <div class="flex-1 flex flex-col min-w-0">
-      <!-- Mobile header -->
-      <header class="h-14 bg-white dark:bg-zinc-900 border-b border-stone-200 dark:border-zinc-800 px-4 flex items-center justify-between md:hidden flex-shrink-0">
-        <button @click="isSidebarOpen = true" class="p-1 text-stone-500 dark:text-zinc-400">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
-        <span class="font-bold tracking-tight">Trackpal</span>
-        <div class="w-6"></div>
-      </header>
-
-      <!-- Slot viewport -->
-      <main class="flex-1 p-6 overflow-y-auto">
-        <slot />
-      </main>
-    </div>
-
-  </div>
-</template>
-```
-
-- [x] **Step 2: Confirmar cambios**
-
-```bash
-git add frontend/src/components/DashboardLayout.vue
-git commit -m "feat: create centralized DashboardLayout component with adaptive Sidebar"
-```
-
----
-
-### Task 5: Refactorizar y Dividir SubscriptionsView.vue
-
-**Files:**
-- Create: `frontend/src/components/subscriptions/SubscriptionTable.vue`
-- Create: `frontend/src/components/subscriptions/SubscriptionModal.vue`
-- Modify: `frontend/src/views/SubscriptionsView.vue`
-
-- [x] **Step 1: Extraer la tabla de suscripciones**
-
-Crea `frontend/src/components/subscriptions/SubscriptionTable.vue` con soporte completo de Tailwind v4 y modo oscuro, abstrayendo el renderizado y revelado de claves:
-```vue
-<script setup>
-import { ref } from 'vue'
-import api from '../../services/api'
-
-const props = defineProps({
-  subscriptions: { type: Array, required: true },
-  t: { type: Function, required: true }
-})
-
-const emit = defineEmits(['edit', 'delete'])
-
-const revealedRowId = ref(null)
-const revealedCredentials = ref({})
-
-async function revealCredentials(subId) {
-  if (revealedRowId.value === subId) {
-    revealedRowId.value = null
-    return
+  if (!isSupportMode.value) {
+    items.push({ title: 'Settings', to: '/admin/settings', body: 'Update tenant profile, locale, and password.' })
   }
 
-  try {
-    const res = await api.get(`/api/v1/admin/subscriptions/${subId}/credentials`)
-    revealedCredentials.value[subId] = res.data
-    revealedRowId.value = subId
-  } catch (error) {
-    console.error('Failed to reveal credentials', error)
-  }
-}
-</script>
-
-<template>
-  <div class="overflow-x-auto border border-stone-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 shadow-sm">
-    <table class="w-full text-left text-sm border-collapse">
-      <thead>
-        <tr class="bg-stone-50 dark:bg-zinc-900/50 border-b border-stone-200 dark:border-zinc-800 text-stone-500 dark:text-zinc-400 font-medium">
-          <th class="p-3">ID</th>
-          <th class="p-3">{{ t('frontend.subscriptions.client') }}</th>
-          <th class="p-3">{{ t('frontend.subscriptions.plan') }}</th>
-          <th class="p-3">{{ t('frontend.subscriptions.streaming_credentials') }}</th>
-          <th class="p-3">{{ t('frontend.subscriptions.status') }}</th>
-          <th class="p-3 text-right">{{ t('frontend.subscriptions.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-stone-100 dark:divide-zinc-800/40">
-        <tr v-for="sub in subscriptions" :key="sub.id" class="hover:bg-stone-50/50 dark:hover:bg-zinc-800/20 text-stone-800 dark:text-zinc-200 transition-colors">
-          <td class="p-3 font-mono text-xs">{{ sub.id }}</td>
-          <td class="p-3">
-            <div class="font-medium text-stone-900 dark:text-zinc-100">{{ sub.client_name }}</div>
-            <div class="text-xs text-stone-400 dark:text-zinc-500 font-mono">{{ sub.client_phone }}</div>
-          </td>
-          <td class="p-3">
-            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-950/40">
-              {{ sub.plan_name }}
-            </span>
-          </td>
-          <td class="p-3">
-            <div v-if="sub.has_password" class="flex items-center gap-1.5">
-              <span class="font-mono text-xs bg-stone-50 dark:bg-zinc-950 px-2 py-1 rounded border border-stone-200/50 dark:border-zinc-800/50">
-                <template v-if="revealedRowId === sub.id">
-                  {{ revealedCredentials[sub.id]?.streaming_password || '***' }}
-                </template>
-                <template v-else>******</template>
-              </span>
-              <button
-                @click="revealCredentials(sub.id)"
-                class="p-1 rounded hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-400 dark:text-zinc-500 transition-colors cursor-pointer"
-                :title="revealedRowId === sub.id ? t('frontend.subscriptions.hide') : t('frontend.subscriptions.reveal')"
-              >
-                👁️
-              </button>
-            </div>
-            <span v-else class="text-xs text-stone-400 dark:text-zinc-600">—</span>
-          </td>
-          <td class="p-3">
-            <span :class="[
-              sub.status === 'active' ? 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200/30 dark:border-green-950/40' : 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/30 dark:border-red-950/40',
-              'px-2 py-0.5 text-xs font-semibold rounded border uppercase tracking-wider'
-            ]">
-              {{ sub.status }}
-            </span>
-          </td>
-          <td class="p-3 text-right">
-            <div class="flex items-center justify-end gap-1">
-              <button @click="emit('edit', sub)" class="p-1.5 rounded hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-500 dark:text-zinc-400 transition-colors cursor-pointer" title="Edit">
-                ✏️
-              </button>
-              <button @click="emit('delete', sub.id)" class="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 dark:text-red-400 transition-colors cursor-pointer" title="Delete">
-                🗑️
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="subscriptions.length === 0">
-          <td colspan="6" class="p-8 text-center text-stone-400 dark:text-zinc-600 font-medium">
-            No subscriptions found.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</template>
-```
-
-- [x] **Step 2: Extraer el formulario modal de suscripciones**
-
-Crea `frontend/src/components/subscriptions/SubscriptionModal.vue` para encapsular toda la lógica de creación/edición, simplificando drásticamente el componente de vista principal:
-```vue
-<script setup>
-import { ref, watch } from 'vue'
-import api from '../../services/api'
-
-const props = defineProps({
-  isOpen: { type: Boolean, required: true },
-  sub: { type: Object, default: null },
-  t: { type: Function, required: true }
-})
-
-const emit = defineEmits(['close', 'save'])
-
-const clients = ref([])
-const plans = ref([])
-const formData = ref({
-  client_id: '',
-  plan_id: '',
-  status: 'active',
-  profile_name: '',
-  profile_pin: '',
-  streaming_password: '',
-  expiration_override: ''
-})
-
-watch(() => props.isOpen, async (open) => {
-  if (open) {
-    try {
-      const [clientsRes, plansRes] = await Promise.all([
-        api.get('/api/v1/admin/clients'),
-        api.get('/api/v1/admin/plans')
-      ])
-      clients.value = clientsRes.data
-      plans.value = plansRes.data
-    } catch (err) {
-      console.error('Failed to load modal options', err)
-    }
-
-    if (props.sub) {
-      formData.value = { ...props.sub }
-    } else {
-      formData.value = {
-        client_id: '',
-        plan_id: '',
-        status: 'active',
-        profile_name: '',
-        profile_pin: '',
-        streaming_password: '',
-        expiration_override: ''
-      }
-    }
-  }
-})
-
-async function handleSave() {
-  try {
-    if (props.sub) {
-      await api.put(`/api/v1/admin/subscriptions/${props.sub.id}`, formData.value)
-    } else {
-      await api.post('/api/v1/admin/subscriptions', formData.value)
-    }
-    emit('save')
-  } catch (err) {
-    console.error('Failed to save subscription', err)
-  }
-}
-</script>
-
-<template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md w-full max-w-lg p-6 shadow-md transition-all">
-      <div class="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800/60 pb-3 mb-4">
-        <h3 class="text-base font-bold text-stone-900 dark:text-zinc-100">
-          {{ props.sub ? t('frontend.subscriptions.edit_title') : t('frontend.subscriptions.new_title') }}
-        </h3>
-        <button @click="emit('close')" class="text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300">✕</button>
-      </div>
-
-      <form @submit.prevent="handleSave" class="flex flex-col gap-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.client') }}</label>
-            <select v-model="formData.client_id" required class="px-3 py-2 text-sm bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md">
-              <option value="" disabled>Select Client</option>
-              <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.name }} ({{ c.phone }})</option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-stone-500 dark:text-zinc-400">{{ t('frontend.subscriptions.plan') }}</label>
-            <select v-model="formData.plan_id" required class="px-3 py-2 text-sm bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md">
-              <option value="" disabled>Select Plan</option>
-              <option v-for="p in plans" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-stone-500 dark:text-zinc-400">Password</label>
-            <input v-model="formData.streaming_password" type="text" class="px-3 py-2 text-sm bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md">
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-stone-500 dark:text-zinc-400">Status</label>
-            <select v-model="formData.status" required class="px-3 py-2 text-sm bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md">
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 border-t border-stone-100 dark:border-zinc-800/60 pt-4 mt-2">
-          <button @click="emit('close')" type="button" class="px-4 py-2 text-sm text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800/50 rounded-md transition-colors cursor-pointer">Cancel</button>
-          <button type="submit" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium rounded-md transition-colors cursor-pointer">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</template>
-```
-
-- [x] **Step 3: Reescribir SubscriptionsView.vue usando componentes y DashboardLayout**
-
-Modifica `frontend/src/views/SubscriptionsView.vue` para conectarlo con el layout centralizado y la nueva abstracción modular. Esto reduce su tamaño de 1244 LoC a **menos de 150 líneas**:
-```vue
-<script setup>
-import { onMounted, ref } from 'vue'
-import { useI18nStore } from '../stores/i18n'
-import api from '../services/api'
-import DashboardLayout from '../components/DashboardLayout.vue'
-import SubscriptionTable from '../components/subscriptions/SubscriptionTable.vue'
-import SubscriptionModal from '../components/subscriptions/SubscriptionModal.vue'
-
-const i18nStore = useI18nStore()
-const subscriptions = ref([])
-const isModalOpen = ref(false)
-const selectedSub = ref(null)
-
-async function fetchSubscriptions() {
-  try {
-    const res = await api.get('/api/v1/admin/subscriptions')
-    subscriptions.value = res.data
-  } catch (err) {
-    console.error('Failed to fetch subscriptions', err)
-  }
-}
-
-function openNewModal() {
-  selectedSub.value = null
-  isModalOpen.value = true
-}
-
-function openEditModal(sub) {
-  selectedSub.value = sub
-  isModalOpen.value = true
-}
-
-async function handleDelete(subId) {
-  if (confirm(i18nStore.t('frontend.subscriptions.delete_confirm') || 'Are you sure you want to delete this subscription?')) {
-    try {
-      await api.delete(`/api/v1/admin/subscriptions/${subId}`)
-      await fetchSubscriptions()
-    } catch (err) {
-      console.error('Failed to delete subscription', err)
-    }
-  }
-}
-
-function handleSave() {
-  isModalOpen.value = false
-  fetchSubscriptions()
-}
-
-onMounted(() => {
-  fetchSubscriptions()
+  return items
 })
 </script>
 
 <template>
   <DashboardLayout>
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <span class="text-xs font-semibold text-stone-400 dark:text-zinc-500 uppercase tracking-wider">Trackpal Console</span>
-        <h1 class="text-xl font-bold tracking-tight text-stone-900 dark:text-zinc-100 mt-0.5">
-          {{ i18nStore.t('frontend.subscriptions.title') }}
-        </h1>
+    <div class="space-y-6">
+      <PageHeader title="Overview" description="Choose the area you want to work in." />
+      <InlineAlert
+        v-if="isSupportMode"
+        variant="info"
+        message="You are browsing this tenant in support mode. Profile settings stay on the master account and are intentionally hidden here."
+      />
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <button v-for="card in cards" :key="card.to" type="button" class="rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-colors hover:bg-muted/40" @click="router.push(card.to)">
+          <div class="space-y-1">
+            <h2 class="text-base font-medium">{{ card.title }}</h2>
+            <p class="text-sm text-muted-foreground">{{ card.body }}</p>
+          </div>
+        </button>
       </div>
-      <button
-        @click="openNewModal"
-        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors cursor-pointer"
-      >
-        {{ i18nStore.t('frontend.subscriptions.new') || '+ New Subscription' }}
-      </button>
     </div>
-
-    <!-- Restructured Table Component -->
-    <SubscriptionTable
-      :subscriptions="subscriptions"
-      :t="i18nStore.t"
-      @edit="openEditModal"
-      @delete="handleDelete"
-    />
-
-    <!-- Restructured Form Modal Component -->
-    <SubscriptionModal
-      :isOpen="isModalOpen"
-      :sub="selectedSub"
-      :t="i18nStore.t"
-      @close="isModalOpen = false"
-      @save="handleSave"
-    />
   </DashboardLayout>
 </template>
 ```
 
-- [x] **Step 4: Verificar compilación e integridad de pruebas**
+Implement `frontend/src/views/TenantSettingsView.vue` by moving the current profile/password logic out of the old tabbed dashboard. Keep the existing `/me`, `/me/password`, and `i18nStore.loadCatalog()` behavior. Do **not** allow this page in support mode; the route guard from Task 3 enforces that.
 
-Ejecuta:
+- [ ] **Step 4: Run the settings test**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/TenantSettingsView.spec.js`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
 ```bash
-npm run build && npm test
-```
-Expected: PASS para todas las pruebas de vitest, y compilación final exitosa.
-
-- [x] **Step 5: Confirmar cambios**
-
-```bash
-git add frontend/src/components/subscriptions/SubscriptionTable.vue frontend/src/components/subscriptions/SubscriptionModal.vue frontend/src/views/SubscriptionsView.vue
-git commit -m "refactor: restructure SubscriptionsView and split into SubscriptionTable and SubscriptionModal (< 150 LoC)"
+git add frontend/src/views/TenantDashboardView.vue frontend/src/views/TenantSettingsView.vue frontend/src/views/__tests__/TenantSettingsView.spec.js frontend/src/router/index.js frontend/src/config/navigation.js
+git commit -m "feat: split tenant overview and settings"
 ```
 
 ---
 
-### Task 6: Adaptar las Vistas Restantes a DashboardLayout
+### Task 6: Tenant mailbox page and mailbox refresh wiring
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `superpowers:systematic-debugging`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
+
+**Files:**
+- Modify: `frontend/src/views/TenantMailboxView.vue`
+- Modify: `frontend/src/components/MailboxConfigPanel.vue`
+- Test: `frontend/src/views/__tests__/TenantMailboxView.spec.js`
+
+**Backend contract refs:**
+- `backend/tests/test_mailbox_oauth_imap.py`
+- `backend/tests/test_mailbox_persistence.py`
+
+- [ ] **Step 1: Write the failing mailbox page test for the real regression**
+
+```js
+import { describe, it, expect, vi } from 'vitest'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import TenantMailboxView from '../TenantMailboxView.vue'
+import api from '@/services/api'
+
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn(),
+  },
+}))
+
+describe('TenantMailboxView', () => {
+  it('loads mailbox config and refreshes it after the panel emits updated', async () => {
+    api.get
+      .mockResolvedValueOnce({ data: { mailbox_email: 'ops@example.com', provider: 'google', auth_method: 'oauth', status: 'connected' } })
+      .mockResolvedValueOnce({ data: { mailbox_email: 'ops@example.com', provider: 'google', auth_method: 'oauth', status: 'revoked' } })
+
+    const wrapper = await renderWithApp(TenantMailboxView)
+    expect(api.get).toHaveBeenCalledWith('/tenant/mailbox/')
+
+    wrapper.getComponent({ name: 'MailboxConfigPanel' }).vm.$emit('updated')
+    await Promise.resolve()
+
+    expect(api.get).toHaveBeenCalledTimes(2)
+  })
+})
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/TenantMailboxView.spec.js`
+Expected: FAIL because the view does not load mailbox state yet.
+
+- [ ] **Step 3: Implement `TenantMailboxView.vue` and re-skin `MailboxConfigPanel.vue`**
+
+Implement `frontend/src/views/TenantMailboxView.vue` like this:
+
+```vue
+<script setup>
+import { onMounted, ref } from 'vue'
+import api from '@/services/api'
+import DashboardLayout from '@/components/DashboardLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import InlineAlert from '@/components/InlineAlert.vue'
+import MailboxConfigPanel from '@/components/MailboxConfigPanel.vue'
+
+const mailbox = ref(null)
+const errorMessage = ref('')
+
+async function loadMailbox() {
+  errorMessage.value = ''
+  try {
+    const response = await api.get('/tenant/mailbox/')
+    mailbox.value = response.data
+  } catch (error) {
+    const detail = error.response?.data?.detail
+    errorMessage.value = Array.isArray(detail) ? detail.map(item => item.msg || item.message || String(item)).join(', ') : detail || 'Could not load mailbox configuration.'
+  }
+}
+
+onMounted(loadMailbox)
+</script>
+
+<template>
+  <DashboardLayout>
+    <div class="space-y-6">
+      <PageHeader title="Mailbox" description="Connect the mailbox used for code retrieval workflows." />
+      <InlineAlert v-if="errorMessage" variant="error" :message="errorMessage" />
+      <MailboxConfigPanel :mailbox="mailbox" @updated="loadMailbox" />
+    </div>
+  </DashboardLayout>
+</template>
+```
+
+Then refactor `frontend/src/components/MailboxConfigPanel.vue` to keep the existing save/test/oauth/disconnect logic, but replace the raw template with:
+- shadcn card-like sections
+- `InlineAlert` for errors/success
+- a stronger status display using `StatusBadge`
+- buttons and form inputs from the shared UI system
+
+Do **not** move the mutation API calls out of the component in this task. The point of this task is to fix loading/refresh and re-skin the UI without changing mailbox behavior.
+
+- [ ] **Step 4: Run the mailbox page test**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/TenantMailboxView.spec.js`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/views/TenantMailboxView.vue frontend/src/components/MailboxConfigPanel.vue frontend/src/views/__tests__/TenantMailboxView.spec.js
+git commit -m "fix: restore tenant mailbox wiring and redesign mailbox page"
+```
+
+---
+
+### Task 7: Tenant clients, catalog, and code-services sections
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
+
+**Files:**
+- Modify: `frontend/src/views/TenantClientsView.vue`
+- Modify: `frontend/src/views/TenantCatalogView.vue`
+- Modify: `frontend/src/views/TenantCodeServicesView.vue`
+- Modify: `frontend/src/components/ClientManagementPanel.vue`
+- Modify: `frontend/src/components/CatalogPanel.vue`
+- Modify: `frontend/src/components/CodeServicesTenantPanel.vue`
+- Test: `frontend/src/views/__tests__/TenantSectionViews.spec.js`
+
+**Backend contract refs:**
+- `backend/tests/test_clients.py`
+- `backend/tests/test_catalog.py`
+- `backend/tests/test_code_services.py`
+
+- [ ] **Step 1: Write the failing tenant section smoke tests**
+
+```js
+// frontend/src/views/__tests__/TenantSectionViews.spec.js
+import { describe, it, expect } from 'vitest'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import TenantClientsView from '../TenantClientsView.vue'
+import TenantCatalogView from '../TenantCatalogView.vue'
+import TenantCodeServicesView from '../TenantCodeServicesView.vue'
+
+describe('tenant section routes', () => {
+  it('renders the clients page shell', async () => {
+    const wrapper = await renderWithApp(TenantClientsView)
+    expect(wrapper.text()).toContain('Clients')
+  })
+
+  it('renders the catalog page shell', async () => {
+    const wrapper = await renderWithApp(TenantCatalogView)
+    expect(wrapper.text()).toContain('Catalog')
+  })
+
+  it('renders the code services page shell', async () => {
+    const wrapper = await renderWithApp(TenantCodeServicesView)
+    expect(wrapper.text()).toContain('Code Services')
+  })
+})
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/TenantSectionViews.spec.js`
+Expected: FAIL because the route files still contain only the minimal content from Task 3.
+
+- [ ] **Step 3: Implement the route wrappers and migrate the business panels**
+
+Implement the three route files using this pattern:
+
+```vue
+<script setup>
+import DashboardLayout from '@/components/DashboardLayout.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import ClientManagementPanel from '@/components/ClientManagementPanel.vue'
+</script>
+
+<template>
+  <DashboardLayout>
+    <div class="space-y-6">
+      <PageHeader title="Clients" description="Create, update, activate, and remove client access." />
+      <ClientManagementPanel />
+    </div>
+  </DashboardLayout>
+</template>
+```
+
+Repeat the same structure for `TenantCatalogView.vue` and `TenantCodeServicesView.vue`.
+
+Then rework the three business panels so they use the new shared system:
+- `ClientManagementPanel.vue`: keep current `loadClients`, `saveClient`, `toggleClientStatus`, `deleteClient`, and router push logic; replace only the template with shared table, inputs, buttons, inline alerts, and `StatusBadge`.
+- `CatalogPanel.vue`: keep current delete-preview logic and helper imports; replace `window.prompt` with inline edit controls or shadcn dialog, and replace the custom modal with the shared dialog primitive.
+- `CodeServicesTenantPanel.vue`: keep current fetch/save logic; replace only the template so it matches the shell.
+
+For `CatalogPanel.vue`, the confirm-delete flow must still require typed confirmation and still call the existing `?confirm=true` backend endpoints.
+
+- [ ] **Step 4: Run the smoke tests and the existing delete-preview helper test**
+
+Run:
+- `cd frontend && npx vitest run src/views/__tests__/TenantSectionViews.spec.js`
+- `cd frontend && npx vitest run src/components/__tests__/catalogDeletePreview.spec.js`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/views/TenantClientsView.vue frontend/src/views/TenantCatalogView.vue frontend/src/views/TenantCodeServicesView.vue frontend/src/components/ClientManagementPanel.vue frontend/src/components/CatalogPanel.vue frontend/src/components/CodeServicesTenantPanel.vue frontend/src/views/__tests__/TenantSectionViews.spec.js
+git commit -m "feat: migrate tenant management sections to shared shell"
+```
+
+---
+
+### Task 8: Subscriptions workspace, reminder modal, and route-query filter sync
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `superpowers:systematic-debugging`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
+
+**Files:**
+- Modify: `frontend/src/views/SubscriptionsView.vue`
+- Modify: `frontend/src/components/subscriptions/ReminderSettingsModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionFilters.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionRenewModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionReactivateModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionCancelModal.vue`
+- Modify: `frontend/src/components/subscriptions/SubscriptionTable.vue`
+- Test: `frontend/src/views/__tests__/SubscriptionsView.spec.js`
+
+**Backend contract refs:**
+- `backend/tests/test_subscriptions.py`
+
+- [ ] **Step 1: Write the failing regression tests**
+
+```js
+// frontend/src/views/__tests__/SubscriptionsView.spec.js
+import { describe, it, expect, vi } from 'vitest'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import SubscriptionsView from '../SubscriptionsView.vue'
+import api from '@/services/api'
+
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn(),
+  },
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    loadTenantSettings: vi.fn().mockResolvedValue(),
+  }),
+}))
+
+vi.mock('@/stores/i18n', () => ({
+  useI18nStore: () => ({ t: key => key }),
+}))
+
+describe('SubscriptionsView regressions', () => {
+  it('passes the current route client_id into the filter UI', async () => {
+    api.get
+      .mockResolvedValueOnce({ data: [{ id: 'c1', full_name: 'Client One' }] })
+      .mockResolvedValueOnce({ data: [{ id: 's1', name: 'Netflix' }] })
+      .mockResolvedValueOnce({ data: [{ id: 'p1', name: 'Basic' }] })
+      .mockResolvedValueOnce({ data: [] })
+
+    const wrapper = await renderWithApp(SubscriptionsView, {
+      routes: [{ path: '/admin/subscriptions', component: SubscriptionsView }],
+      path: '/admin/subscriptions?client_id=c1',
+    })
+
+    expect(wrapper.get('[data-testid="filter-client"]').element.value).toBe('c1')
+  })
+
+  it('opens the reminder settings modal when the button is clicked', async () => {
+    api.get
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] })
+
+    const wrapper = await renderWithApp(SubscriptionsView)
+    await wrapper.get('[data-testid="open-reminder-settings"]').trigger('click')
+    expect(wrapper.text()).toContain('frontend.subscriptions.reminder_settings_title')
+  })
+})
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `cd frontend && npx vitest run src/views/__tests__/SubscriptionsView.spec.js`
+Expected: FAIL because the filter component does not hydrate from route state and the reminder modal still uses the wrong prop contract.
+
+- [ ] **Step 3: Fix the prop contract and filter-state sync before re-skinning the rest**
+
+Make these exact logic changes first:
+
+1. In `frontend/src/components/subscriptions/ReminderSettingsModal.vue`, rename the prop from `show` to `isOpen` and update both the template guard and the watcher to use `props.isOpen`.
+
+```js
+const props = defineProps({
+  isOpen: { type: Boolean, default: false },
+})
+
+watch(() => props.isOpen, async (newVal) => {
+  if (!newVal) return
+  // existing load logic unchanged
+})
+```
+
+2. In `frontend/src/views/SubscriptionsView.vue`, pass the right prop and add a stable test id.
+
+```vue
+<button
+  data-testid="open-reminder-settings"
+  @click="isReminderSettingsOpen = true"
+  type="button"
+  class="inline-flex h-9 items-center rounded-md border border-border bg-card px-3 text-sm font-medium"
+>
+  {{ i18nStore.t('frontend.subscriptions.reminder_settings') || 'Reminder settings' }}
+</button>
+<ReminderSettingsModal :isOpen="isReminderSettingsOpen" @close="isReminderSettingsOpen = false" @saved="handleSave" />
+```
+
+3. In `frontend/src/components/subscriptions/SubscriptionFilters.vue`, add an `initialFilters` prop, add `data-testid="filter-client"` to the client `<select>`, and hydrate the local `filters` ref from it.
+
+```js
+const props = defineProps({
+  clients: { type: Array, required: true },
+  services: { type: Array, required: true },
+  t: { type: Function, required: true },
+  initialFilters: {
+    type: Object,
+    default: () => ({ status: '', client_id: '', service_id: '', expires_from: '', expires_to: '' }),
+  },
+})
+
+watch(
+  () => props.initialFilters,
+  (value) => {
+    filters.value = {
+      status: value?.status || '',
+      client_id: value?.client_id || '',
+      service_id: value?.service_id || '',
+      expires_from: value?.expires_from || '',
+      expires_to: value?.expires_to || '',
+    }
+  },
+  { deep: true, immediate: true },
+)
+```
+
+4. In `frontend/src/views/SubscriptionsView.vue`, pass `:initial-filters="activeFilters"` into `SubscriptionFilters`.
+
+- [ ] **Step 4: Re-skin the subscription workspace without changing business behavior**
+
+After the regression fixes pass, migrate the templates in:
+- `SubscriptionsView.vue`
+- `SubscriptionModal.vue`
+- `SubscriptionRenewModal.vue`
+- `SubscriptionReactivateModal.vue`
+- `SubscriptionCancelModal.vue`
+- `SubscriptionTable.vue`
+
+Rules for this task:
+- keep the same endpoint calls
+- keep the same emitted events (`close`, `save`, `edit`, `renew`, `reactivate`, `cancel`)
+- keep the current reveal-credentials logic in `SubscriptionTable.vue`
+- keep the reminder-settings cache behavior from `authStore`
+- remove hardcoded Spanish button text where translation props already exist; always use `t(...)`
+
+- [ ] **Step 5: Run the regression tests and the full frontend test suite**
+
+Run:
+- `cd frontend && npx vitest run src/views/__tests__/SubscriptionsView.spec.js`
+- `cd frontend && npm test`
+
+Expected: PASS.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add frontend/src/views/SubscriptionsView.vue frontend/src/components/subscriptions/ReminderSettingsModal.vue frontend/src/components/subscriptions/SubscriptionFilters.vue frontend/src/components/subscriptions/SubscriptionModal.vue frontend/src/components/subscriptions/SubscriptionRenewModal.vue frontend/src/components/subscriptions/SubscriptionReactivateModal.vue frontend/src/components/subscriptions/SubscriptionCancelModal.vue frontend/src/components/subscriptions/SubscriptionTable.vue frontend/src/views/__tests__/SubscriptionsView.spec.js
+git commit -m "fix: restore subscriptions workflow on shared ui system"
+```
+
+---
+
+### Task 9: Master and client dashboards on the new shell
+
+**Required skills:**
+- `superpowers:test-driven-development`
+- `vue-expert-js`
+- `uncodixfy`
+- `impeccable`
 
 **Files:**
 - Modify: `frontend/src/views/MasterDashboardView.vue`
-- Modify: `frontend/src/views/TenantDashboardView.vue`
+- Modify: `frontend/src/views/MasterCodeServicesView.vue`
+- Modify: `frontend/src/components/CodeServicesGlobalPanel.vue`
 - Modify: `frontend/src/views/ClientDashboardView.vue`
+- Test: `frontend/src/views/__tests__/RoleDashboards.spec.js`
 
-- [x] **Step 1: Adaptar TenantDashboardView.vue**
+**Backend contract refs:**
+- `backend/tests/test_tenants.py`
+- `backend/tests/test_code_services.py`
+- `backend/tests/test_profile.py`
+- `backend/tests/test_subscriptions.py`
 
-Modifica `frontend/src/views/TenantDashboardView.vue` para conectarla al `DashboardLayout` y aplicar clases de Tailwind v4, manteniendo intactas la integración de componentes hijos como `ClientManagementPanel` y `CatalogPanel` pero dándoles la envoltura premium de Linear:
-```vue
-<script setup>
-import { onMounted, ref } from 'vue'
-import { useI18nStore } from '../stores/i18n'
-import DashboardLayout from '../components/DashboardLayout.vue'
-import ClientManagementPanel from '../components/ClientManagementPanel.vue'
-import CatalogPanel from '../components/CatalogPanel.vue'
-import MailboxConfigPanel from '../components/MailboxConfigPanel.vue'
-import CodeServicesTenantPanel from '../components/CodeServicesTenantPanel.vue'
+- [ ] **Step 1: Write the failing dashboard smoke tests**
 
-const i18nStore = useI18nStore()
-const activeTab = ref('clients')
-</script>
+```js
+// frontend/src/views/__tests__/RoleDashboards.spec.js
+import { describe, it, expect } from 'vitest'
+import { renderWithApp } from '@/test-utils/renderWithApp'
+import MasterDashboardView from '../MasterDashboardView.vue'
+import ClientDashboardView from '../ClientDashboardView.vue'
 
-<template>
-  <DashboardLayout>
-    <div class="mb-6">
-      <span class="text-xs font-semibold text-stone-400 dark:text-zinc-500 uppercase tracking-wider">Tenant Panel</span>
-      <h1 class="text-xl font-bold tracking-tight text-stone-900 dark:text-zinc-100 mt-0.5">
-        {{ i18nStore.t('frontend.tenant.title') || 'Tenant Dashboard' }}
-      </h1>
-    </div>
+describe('role dashboards', () => {
+  it('renders the master overview page shell', async () => {
+    const wrapper = await renderWithApp(MasterDashboardView)
+    expect(wrapper.text()).toContain('Overview')
+  })
 
-    <!-- Premium Tab Selectors -->
-    <div class="flex gap-2 border-b border-stone-200 dark:border-zinc-800 mb-6">
-      <button
-        v-for="tab in ['clients', 'catalog', 'mailbox', 'codes']"
-        :key="tab"
-        @click="activeTab = tab"
-        :class="[
-          activeTab === tab
-            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-            : 'border-transparent text-stone-500 hover:text-stone-700 dark:text-zinc-400 dark:hover:text-zinc-200',
-          'px-4 py-2 text-sm font-medium border-b-2 transition-all cursor-pointer'
-        ]"
-      >
-        <span class="capitalize">{{ tab }}</span>
-      </button>
-    </div>
-
-    <!-- Inner panels rendering inside our Linear container grid -->
-    <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-6 shadow-sm">
-      <ClientManagementPanel v-if="activeTab === 'clients'" />
-      <CatalogPanel v-else-if="activeTab === 'catalog'" />
-      <MailboxConfigPanel v-else-if="activeTab === 'mailbox'" />
-      <CodeServicesTenantPanel v-else-if="activeTab === 'codes'" />
-    </div>
-  </DashboardLayout>
-</template>
+  it('renders the client overview page shell', async () => {
+    const wrapper = await renderWithApp(ClientDashboardView)
+    expect(wrapper.text()).toContain('Security')
+  })
+})
 ```
 
-- [x] **Step 2: Adaptar MasterDashboardView.vue**
+- [ ] **Step 2: Run the tests to verify they fail**
 
-Modifica `frontend/src/views/MasterDashboardView.vue` de manera idéntica para usar `DashboardLayout` y rediseñar su tabla de administración del sistema global.
+Run: `cd frontend && npx vitest run src/views/__tests__/RoleDashboards.spec.js`
+Expected: FAIL because the current pages still use the older ad-hoc layout.
 
-- [x] **Step 3: Adaptar ClientDashboardView.vue**
+- [ ] **Step 3: Migrate the master and client pages**
 
-Modifica `frontend/src/views/ClientDashboardView.vue` para heredar el layout maestro y dar a los clientes finales la misma experiencia premium.
+Implementation rules:
+- `MasterDashboardView.vue`: keep `loadTenants`, create/edit/deactivate/delete tenant flows, and `manageCatalog()` logic; rework the template to use `PageHeader`, shared tables, shared alerts, and route the code-services area out of overview.
+- `MasterCodeServicesView.vue`: render only `CodeServicesGlobalPanel` under the shared shell and header.
+- `CodeServicesGlobalPanel.vue`: keep its fetch/save logic; replace only the template and status rendering.
+- `ClientDashboardView.vue`: keep `/dashboard`, `/me`, and `/me/password`; rework the template to use `PageHeader`, `StatusBadge`, `InlineAlert`, and the shared table primitives.
 
-- [x] **Step 4: Ejecutar build definitivo y validación global**
+Important: update any hardcoded `/client/dashboard` pushes or redirects still remaining in these pages to `/client/overview`.
 
-Ejecuta en la carpeta `frontend/`:
-```bash
-npm run build && npm test
-```
-Expected: Toda la suite de tests en verde. Compilación final sin errores.
+- [ ] **Step 4: Run the dashboard smoke tests and a production build**
 
-- [x] **Step 5: Confirmar cambios**
+Run:
+- `cd frontend && npx vitest run src/views/__tests__/RoleDashboards.spec.js`
+- `cd frontend && npm run build`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add frontend/src/views/MasterDashboardView.vue frontend/src/views/TenantDashboardView.vue frontend/src/views/ClientDashboardView.vue
-git commit -m "feat: complete adaptation of remaining dashboards to shared DashboardLayout with premium Linear aesthetic"
+git add frontend/src/views/MasterDashboardView.vue frontend/src/views/MasterCodeServicesView.vue frontend/src/components/CodeServicesGlobalPanel.vue frontend/src/views/ClientDashboardView.vue frontend/src/views/__tests__/RoleDashboards.spec.js
+git commit -m "feat: migrate master and client dashboards to shared shell"
 ```
+
+---
+
+### Task 10: Documentation refresh and final verification
+
+**Required skills:**
+- `docs`
+- `superpowers:verification-before-completion`
+- `requesting-code-review`
+
+**Files:**
+- Modify: `docs/architecture/frontend-architecture.md`
+- Modify: `docs/codebase/frontend-structure.md`
+- Modify: `docs/code-standard/frontend-conventions.md`
+
+- [ ] **Step 1: Update the docs to match the new route map and component layout**
+
+Update `docs/architecture/frontend-architecture.md` so it describes:
+- the canonical routes (`/master/overview`, `/admin/*`, `/client/overview`)
+- support-mode navigation behavior
+- the split tenant workflow pages
+- shadcn-based UI primitives and shared shell
+
+Update `docs/codebase/frontend-structure.md` so it lists:
+- `src/config/navigation.js`
+- the new `src/components/ui/` directory
+- the new tenant route files
+- the new shared components (`PageHeader`, `InlineAlert`, `StatusBadge`, etc.)
+
+Update `docs/code-standard/frontend-conventions.md` so it records:
+- alias usage (`@/...`)
+- shadcn/tailwind shared-component rules
+- the “keep business logic, replace template” migration rule for future UI work
+- the expectation to write a view/component test for new shared UI work
+
+- [ ] **Step 2: Run the final verification commands**
+
+Run:
+- `cd frontend && npm test`
+- `cd frontend && npm run build`
+- `cd backend && uv run pytest tests/test_auth.py tests/test_tenants.py tests/test_profile.py tests/test_catalog.py tests/test_clients.py tests/test_subscriptions.py tests/test_code_services.py tests/test_mailbox_oauth_imap.py tests/test_mailbox_persistence.py -q`
+
+Expected:
+- Frontend Vitest: PASS
+- Frontend build: PASS
+- Backend contract suite: PASS
+
+- [ ] **Step 3: Request a code review before merge**
+
+Run the code review workflow after the tests/build pass. The review checklist must explicitly verify:
+- the three known regressions are fixed
+- support-mode navigation uses tenant routes but hides `/admin/settings`
+- login, master, tenant, subscriptions, mailbox, and client surfaces all still reach the same backend endpoints
+- the UI uses shared primitives instead of ad-hoc card/button/input markup
+
+- [ ] **Step 4: Commit the docs update**
+
+```bash
+git add docs/architecture/frontend-architecture.md docs/codebase/frontend-structure.md docs/code-standard/frontend-conventions.md
+git commit -m "docs: update frontend architecture after redesign"
+```
+
+---
+
+## Spec coverage self-check
+
+- **Goal / system-first approach:** covered by Tasks 1-3.
+- **Dual theme:** covered by Task 2.
+- **Login + app shell first slice:** covered by Tasks 3-4.
+- **Navigation rethink:** covered by Task 3 and enforced in later tasks.
+- **Cross-role consistency:** covered by Tasks 3, 5, 8, 9.
+- **State/error/loading handling:** covered by Tasks 2, 5, 6, 7, 8, 9.
+- **Accessibility + shared primitives:** covered by Tasks 2-4.
+- **Testing expectations:** covered in every task via Vitest + final verification.
+- **Docs update:** covered by Task 10.
+
+## Placeholder scan
+
+This plan intentionally contains no `TODO`, `TBD`, or “similar to Task N” instructions. Each task has:
+- exact file paths
+- exact commands
+- explicit regression or behavior goals
+- at least one concrete code block for the critical change
+
+## Type / prop consistency check
+
+- Router canonical paths use `/master/overview`, `/admin/overview`, `/client/overview` consistently.
+- Support-mode route flag is `allowMasterSupport` everywhere.
+- Reminder modal prop is standardized to `isOpen` to match the other subscription modals.
+- Shared shell navigation derives from `getNavigationContext(authStore, route)`, not raw `authStore.role` alone.
