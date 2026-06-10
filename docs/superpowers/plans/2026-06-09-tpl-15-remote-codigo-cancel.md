@@ -691,7 +691,7 @@ git commit -m "feat: handle remote codigo cancel edge cases"
 - Modify: `n8n/Trackpal WhatsApp Bot.json`
 - Test/Verify: `n8n/Trackpal WhatsApp Bot.json`
 
-- [ ] **Step 1: Write the failing guard verification**
+- [x] **Step 1: Write the failing guard verification**
 
 Before editing the workflow, prove the current node still blocks all external non-menu `from_me` traffic.
 
@@ -719,7 +719,7 @@ PY
 
 Expected: FAIL with `MISSING` because the current guard has no remote-cancel exception.
 
-- [ ] **Step 2: Implement the minimal workflow change**
+- [x] **Step 2: Implement the minimal workflow change**
 
 Edit only the code of node `Guard fromMe external non-menu`.
 
@@ -783,7 +783,7 @@ return [{ json: { ...input, skip_console_call: false } }];
 
 Do not change any other node, IDs, connections, or close-session logic.
 
-- [ ] **Step 3: Re-run the verification and JSON parse check**
+- [x] **Step 3: Re-run the verification and JSON parse check**
 
 Run:
 
@@ -803,7 +803,7 @@ PY
 
 Expected: `OK`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add "n8n/Trackpal WhatsApp Bot.json"
