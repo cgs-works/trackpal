@@ -489,7 +489,7 @@ git commit -m "fix: restart tenant codigo flow from awaiting result"
 - Test: `backend/tests/test_whatsapp_endpoint.py:932-1665`
 - Read-only reference: `backend/app/api/v1/endpoints/integrations/console.py:304-390`
 
-- [ ] **Step 1: Write the failing unauthenticated endpoint tests**
+- [x] **Step 1: Write the failing unauthenticated endpoint tests**
 
 First add this small helper near `_reach_unauth_codigo_confirm_step()` in `backend/tests/test_whatsapp_endpoint.py`:
 
@@ -697,7 +697,7 @@ async def test_unregistered_codigo_non_trigger_still_returns_still_checking(
     assert "todavia buscando" in body["reply"].lower() or "still checking" in body["reply"].lower()
 ```
 
-- [ ] **Step 2: Run the unauthenticated endpoint tests to verify they fail**
+- [x] **Step 2: Run the unauthenticated endpoint tests to verify they fail**
 
 Run:
 
@@ -712,7 +712,7 @@ cd backend && uv run pytest \
 
 Expected: FAIL because the existing unauthenticated `awaiting_result` handler still treats fresh `code|codigo|código` input as `still_checking`.
 
-- [ ] **Step 3: Implement unauthenticated restart-trigger handling**
+- [x] **Step 3: Implement unauthenticated restart-trigger handling**
 
 In `backend/app/api/v1/endpoints/integrations/console_handlers.py`, update `_handle_unauth_codigo_result()` immediately **after** the existing job lookup block and **before** the `if not job_done:` branch.
 
@@ -777,7 +777,7 @@ Insert this block:
 
 Do **not** change the existing retry (`1`), back (`2`), cancel (`0`), or unknown-message fallback behavior.
 
-- [ ] **Step 4: Run the unauthenticated endpoint tests to verify they pass**
+- [x] **Step 4: Run the unauthenticated endpoint tests to verify they pass**
 
 Run:
 
@@ -793,7 +793,7 @@ cd backend && uv run pytest \
 
 Expected: PASS for all 5 tests.
 
-- [ ] **Step 5: Commit the unauthenticated-flow fix**
+- [x] **Step 5: Commit the unauthenticated-flow fix**
 
 Run:
 

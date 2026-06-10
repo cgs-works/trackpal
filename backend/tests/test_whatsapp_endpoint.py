@@ -984,6 +984,38 @@ async def _reach_unauth_codigo_confirm_step(
     )
 
 
+async def _seed_unauth_codigo_awaiting_result(
+    fake_mgr: _FakeManager,
+    tenant_id,
+    *,
+    phone: str = "12015559999",
+    lookup_job_id: str = "",
+) -> str:
+    import json
+
+    tenant_prefix = str(tenant_id)[:8]
+    session_key = f"session:unreg:{tenant_prefix}:{phone}"
+    await fake_mgr._redis.set(
+        session_key,
+        json.dumps(
+            {
+                "phone": f"unreg:{tenant_prefix}:{phone}",
+                "flow": "codigo",
+                "step": "awaiting_result",
+                "selected_tenant_id": None,
+                "temp_data": {
+                    "lookup_job_id": lookup_job_id,
+                    "service_key": "netflix",
+                    "target_email": "user@example.com",
+                },
+                "selection_map": {},
+            }
+        ),
+        ex=300,
+    )
+    return session_key
+
+
 async def test_unregistered_identity_codigo_starts_flow(
     client, db_session, active_tenant_user
 ):
@@ -1713,6 +1745,179 @@ async def test_unregistered_codigo_email_cancel_returns_cancelled(
     assert (
         "email" not in body["reply"].lower() or "invalido" not in body["reply"].lower()
     )
+
+
+# ---------------------------------------------------------------------------
+# Unauthenticated codigo restart from awaiting_result
+# ---------------------------------------------------------------------------
+
+
+async def test_unregistered_codigo_trigger_restarts_awaiting_result_and_cancels_active_job(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    lookup_job_id = uuid4()
+    session_key = await _seed_unauth_codigo_awaiting_result(
+        fake_mgr,
+        tenant.id,
+        lookup_job_id=str(lookup_job_id),
+    )
+
+    with (
+        patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.cancel_active_job_if_present",
+            AsyncMock(return_value=True),
+        ) as cancel_job,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": " code ",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Netflix" in body["reply"]
+    assert "todavia buscando" not in body["reply"].lower()
+    assert "still checking" not in body["reply"].lower()
+
+    called = cancel_job.await_args
+    assert called.args[1] == lookup_job_id
+    assert called.kwargs["tenant_id"] == tenant.id
+
+    import json
+
+    saved = json.loads(await fake_mgr._redis.get(session_key))
+    assert saved["step"] == "service"
+    assert saved["temp_data"]["codigo_effective_keys"] == ["netflix"]
+    assert saved["temp_data"]["codigo_current_page"] == 0
+
+
+async def test_unregistered_codigo_trigger_restarts_when_cancel_helper_noops(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    lookup_job_id = uuid4()
+    session_key = await _seed_unauth_codigo_awaiting_result(
+        fake_mgr,
+        tenant.id,
+        lookup_job_id=str(lookup_job_id),
+    )
+
+    with (
+        patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.cancel_active_job_if_present",
+            AsyncMock(return_value=False),
+        ) as cancel_job,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "codigo",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Netflix" in body["reply"]
+
+    called = cancel_job.await_args
+    assert called.args[1] == lookup_job_id
+    assert called.kwargs["tenant_id"] == tenant.id
+
+    import json
+
+    saved = json.loads(await fake_mgr._redis.get(session_key))
+    assert saved["step"] == "service"
+
+
+async def test_unregistered_codigo_trigger_restarts_with_invalid_lookup_job_id(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    session_key = await _seed_unauth_codigo_awaiting_result(
+        fake_mgr,
+        tenant.id,
+        lookup_job_id="not-a-uuid",
+    )
+
+    with (
+        patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.cancel_active_job_if_present",
+            AsyncMock(),
+        ) as cancel_job,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "código",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Netflix" in body["reply"]
+    cancel_job.assert_not_called()
+
+    import json
+
+    saved = json.loads(await fake_mgr._redis.get(session_key))
+    assert saved["step"] == "service"
+
+
+async def test_unregistered_codigo_non_trigger_still_returns_still_checking(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    await _seed_unauth_codigo_awaiting_result(
+        fake_mgr,
+        tenant.id,
+        lookup_job_id="",
+    )
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "hola",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "todavia buscando" in body["reply"].lower() or "still checking" in body["reply"].lower()
 
 
 # from_me contextual routing tests
