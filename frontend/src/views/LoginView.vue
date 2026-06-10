@@ -44,7 +44,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <main class="min-h-screen flex flex-col items-center justify-center p-6 bg-stone-50 dark:bg-zinc-950 transition-colors duration-200 relative select-none">
+  <main class="min-h-screen flex flex-col items-center justify-center p-6 bg-stone-50 dark:bg-zinc-950 transition-colors duration-200 relative">
     
     <div class="w-full max-w-[360px] bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-8 shadow-sm transition-all">
       <div class="mb-6 text-center">
