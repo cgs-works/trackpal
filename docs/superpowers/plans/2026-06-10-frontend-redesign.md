@@ -94,7 +94,9 @@ git commit -m "feat: install and configure tailwind css v4 with vite plugin"
 - Create: `frontend/src/components/ThemeToggle.vue`
 - Create: `frontend/src/composables/__tests__/theme.spec.js`
 
-- [ ] **Step 1: Escribir tests de unidad para el composable de gestión de tema**
+- [x] **Task 2 completed**
+
+- [x] **Step 1: Escribir tests de unidad para el composable de gestión de tema**
 
 Crea `frontend/src/composables/__tests__/theme.spec.js`:
 ```javascript
@@ -122,7 +124,7 @@ describe('useTheme', () => {
 })
 ```
 
-- [ ] **Step 2: Verificar que el test falla**
+- [x] **Step 2: Verificar que el test falla**
 
 Ejecuta:
 ```bash
@@ -130,7 +132,7 @@ cd frontend && npm test -- src/composables/__tests__/theme.spec.js
 ```
 Expected: FAIL porque `useTheme` no está definido.
 
-- [ ] **Step 3: Implementar useTheme.js**
+- [x] **Step 3: Implementar useTheme.js**
 
 Crea `frontend/src/composables/useTheme.js`:
 ```javascript
@@ -178,7 +180,7 @@ export function useTheme() {
 }
 ```
 
-- [ ] **Step 4: Verificar que el test ahora pasa**
+- [x] **Step 4: Verificar que el test ahora pasa**
 
 Ejecuta:
 ```bash
@@ -186,7 +188,7 @@ npm test -- src/composables/__tests__/theme.spec.js
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Crear componente ThemeToggle.vue**
+- [x] **Step 5: Crear componente ThemeToggle.vue**
 
 Crea `frontend/src/components/ThemeToggle.vue`:
 ```vue
@@ -216,7 +218,7 @@ const { theme, toggleTheme } = useTheme()
 </template>
 ```
 
-- [ ] **Step 6: Confirmar cambios**
+- [x] **Step 6: Confirmar cambios**
 
 ```bash
 git add frontend/src/composables/useTheme.js frontend/src/components/ThemeToggle.vue frontend/src/composables/__tests__/theme.spec.js
