@@ -5,6 +5,9 @@ import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { useI18nStore } from './stores/i18n'
+import { applyDarkTheme } from './lib/darkTheme'
+
+applyDarkTheme()
 
 const app = createApp(App)
 
