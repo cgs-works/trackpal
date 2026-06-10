@@ -567,7 +567,7 @@ git commit -m "feat: create centralized DashboardLayout component with adaptive 
 - Create: `frontend/src/components/subscriptions/SubscriptionModal.vue`
 - Modify: `frontend/src/views/SubscriptionsView.vue`
 
-- [ ] **Step 1: Extraer la tabla de suscripciones**
+- [x] **Step 1: Extraer la tabla de suscripciones**
 
 Crea `frontend/src/components/subscriptions/SubscriptionTable.vue` con soporte completo de Tailwind v4 y modo oscuro, abstrayendo el renderizado y revelado de claves:
 ```vue
@@ -674,7 +674,7 @@ async function revealCredentials(subId) {
 </template>
 ```
 
-- [ ] **Step 2: Extraer el formulario modal de suscripciones**
+- [x] **Step 2: Extraer el formulario modal de suscripciones**
 
 Crea `frontend/src/components/subscriptions/SubscriptionModal.vue` para encapsular toda la lógica de creación/edición, simplificando drásticamente el componente de vista principal:
 ```vue
@@ -797,7 +797,7 @@ async function handleSave() {
 </template>
 ```
 
-- [ ] **Step 3: Reescribir SubscriptionsView.vue usando componentes y DashboardLayout**
+- [x] **Step 3: Reescribir SubscriptionsView.vue usando componentes y DashboardLayout**
 
 Modifica `frontend/src/views/SubscriptionsView.vue` para conectarlo con el layout centralizado y la nueva abstracción modular. Esto reduce su tamaño de 1244 LoC a **menos de 150 líneas**:
 ```vue
@@ -891,7 +891,7 @@ onMounted(() => {
 </template>
 ```
 
-- [ ] **Step 4: Verificar compilación e integridad de pruebas**
+- [x] **Step 4: Verificar compilación e integridad de pruebas**
 
 Ejecuta:
 ```bash
@@ -899,7 +899,7 @@ npm run build && npm test
 ```
 Expected: PASS para todas las pruebas de vitest, y compilación final exitosa.
 
-- [ ] **Step 5: Confirmar cambios**
+- [x] **Step 5: Confirmar cambios**
 
 ```bash
 git add frontend/src/components/subscriptions/SubscriptionTable.vue frontend/src/components/subscriptions/SubscriptionModal.vue frontend/src/views/SubscriptionsView.vue
