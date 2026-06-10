@@ -3,10 +3,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useI18nStore } from '../stores/i18n'
+import DashboardLayout from '../components/DashboardLayout.vue'
 import CodeServicesGlobalPanel from '../components/CodeServicesGlobalPanel.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const i18nStore = useI18nStore()
 
 const tenants = ref([])
 const meta = ref({ total: 0, active: 0, inactive: 0 })
@@ -26,7 +29,6 @@ const modalPrefixHint = computed(() => (
     ? 'Changing this prefix will update all client login usernames for this business.'
     : 'Leave blank to auto-generate a unique prefix.'
 ))
-const username = computed(() => authStore.username || authStore.user?.username || 'Master')
 
 function getEmptyForm() {
   return {
@@ -230,446 +232,172 @@ async function manageCatalog(tenant) {
   }
 }
 
-async function handleLogout() {
-  await authStore.logout()
-  await router.push('/login')
-}
-
 onMounted(loadTenants)
 </script>
 
 <template>
-  <main class="dashboard-page">
-    <header class="dashboard-header">
-      <div>
-        <p class="eyebrow">Master Dashboard</p>
-        <h1>Trackpal</h1>
+  <DashboardLayout>
+    <!-- Premium header -->
+    <div class="mb-6">
+      <span class="text-xs font-semibold text-stone-400 dark:text-zinc-500 uppercase tracking-wider">
+        {{ i18nStore.t('frontend.master.title') || 'Master Panel' }}
+      </span>
+      <h1 class="text-xl font-bold tracking-tight text-stone-900 dark:text-zinc-100 mt-0.5">
+        {{ i18nStore.t('frontend.master.title') || 'Master Dashboard' }}
+      </h1>
+    </div>
+
+    <!-- Alert messages -->
+    <div v-if="errorMessage" class="mb-4 text-xs font-medium text-red-500 bg-red-50 dark:bg-red-950/20 border border-red-200/30 dark:border-red-950/40 rounded px-3 py-2">{{ errorMessage }}</div>
+    <div v-if="successMessage" class="mb-4 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-950/20 border border-green-200/30 dark:border-green-950/40 rounded px-3 py-2">{{ successMessage }}</div>
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-3 gap-4 mb-6" aria-label="Business summary">
+      <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-5 shadow-sm">
+        <span class="text-xs font-medium text-stone-500 dark:text-zinc-400">Total Businesses</span>
+        <p class="text-2xl font-bold text-stone-900 dark:text-zinc-100 mt-1.5">{{ meta.total }}</p>
       </div>
-
-      <div class="user-actions">
-        <span class="username">{{ username }}</span>
-        <button class="button button-secondary" type="button" @click="handleLogout">Logout</button>
+      <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-5 shadow-sm">
+        <span class="text-xs font-medium text-stone-500 dark:text-zinc-400">Active</span>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1.5">{{ meta.active }}</p>
       </div>
-    </header>
+      <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-5 shadow-sm">
+        <span class="text-xs font-medium text-stone-500 dark:text-zinc-400">Inactive</span>
+        <p class="text-2xl font-bold text-stone-500 dark:text-zinc-400 mt-1.5">{{ meta.inactive }}</p>
+      </div>
+    </div>
 
-    <section class="summary-grid" aria-label="Business summary">
-      <article class="summary-card">
-        <span>Total Businesses</span>
-        <strong>{{ meta.total }}</strong>
-      </article>
-      <article class="summary-card">
-        <span>Active</span>
-        <strong>{{ meta.active }}</strong>
-      </article>
-      <article class="summary-card">
-        <span>Inactive</span>
-        <strong>{{ meta.inactive }}</strong>
-      </article>
-    </section>
-
-    <section class="content-card">
-      <div class="section-header">
+    <!-- Tenants table section -->
+    <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md shadow-sm mb-6">
+      <div class="flex items-center justify-between px-6 pt-5 pb-3 border-b border-stone-100 dark:border-zinc-800/60">
         <div>
-          <h2>Businesses</h2>
-          <p>Manage business accounts and Evolution instances.</p>
+          <h2 class="text-base font-bold text-stone-900 dark:text-zinc-100">Businesses</h2>
+          <p class="text-xs text-stone-500 dark:text-zinc-400 mt-0.5">Manage business accounts and Evolution instances.</p>
         </div>
-        <button class="button button-primary" type="button" @click="openCreateModal">Create Business</button>
+        <button
+          @click="openCreateModal"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors cursor-pointer"
+        >
+          Create Business
+        </button>
       </div>
 
-      <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="alert alert-success">{{ successMessage }}</p>
-
-      <div v-if="isLoading" class="empty-state">Loading businesses...</div>
-      <div v-else-if="!tenants.length" class="empty-state">No businesses registered yet</div>
-      <div v-else class="table-wrapper">
-        <table>
+      <div v-if="isLoading" class="px-6 py-10 text-center text-sm text-stone-400 dark:text-zinc-500">Loading businesses...</div>
+      <div v-else-if="!tenants.length" class="px-6 py-10 text-center text-sm text-stone-400 dark:text-zinc-500">No businesses registered yet</div>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse">
           <thead>
-            <tr>
-              <th>Full Name</th>
-              <th>Client Prefix</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Evolution Instance</th>
-              <th>Status</th>
-              <th>Actions</th>
+            <tr class="bg-stone-50 dark:bg-zinc-900/50 border-b border-stone-200 dark:border-zinc-800 text-stone-500 dark:text-zinc-400 font-medium">
+              <th class="p-3">Full Name</th>
+              <th class="p-3">Client Prefix</th>
+              <th class="p-3">Email</th>
+              <th class="p-3">Phone</th>
+              <th class="p-3">Evolution Instance</th>
+              <th class="p-3">Status</th>
+              <th class="p-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            <tr v-for="tenant in tenants" :key="tenant.id">
-              <td>{{ tenant.full_name }}</td>
-              <td>{{ tenant.client_prefix || '—' }}</td>
-              <td>{{ tenant.email }}</td>
-              <td>{{ tenant.phone }}</td>
-              <td>{{ tenant.evolution_instance_name || '—' }}</td>
-              <td>
-                <span class="status-badge" :class="isTenantActive(tenant) ? 'active' : 'inactive'">
+          <tbody class="divide-y divide-stone-100 dark:divide-zinc-800/40">
+            <tr v-for="tenant in tenants" :key="tenant.id" class="hover:bg-stone-50/50 dark:hover:bg-zinc-800/20 text-stone-800 dark:text-zinc-200 transition-colors">
+              <td class="p-3 font-medium text-stone-900 dark:text-zinc-100">{{ tenant.full_name }}</td>
+              <td class="p-3 text-stone-500 dark:text-zinc-400">{{ tenant.client_prefix || '—' }}</td>
+              <td class="p-3 font-mono text-xs">{{ tenant.email }}</td>
+              <td class="p-3">{{ tenant.phone }}</td>
+              <td class="p-3 font-mono text-xs">{{ tenant.evolution_instance_name || '—' }}</td>
+              <td class="p-3">
+                <span
+                  :class="[
+                    isTenantActive(tenant)
+                      ? 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200/30 dark:border-green-950/40'
+                      : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200/30 dark:border-zinc-800/40',
+                    'px-2 py-0.5 text-xs font-semibold rounded border uppercase tracking-wider'
+                  ]"
+                >
                   {{ isTenantActive(tenant) ? 'Active' : 'Inactive' }}
                 </span>
               </td>
-              <td>
-                <div class="row-actions">
-                  <button class="link-button" type="button" @click="openEditModal(tenant)">Edit</button>
-                  <button class="link-button" type="button" @click="manageCatalog(tenant)">Manage catalog</button>
-                  <button class="link-button" type="button" @click="toggleTenantStatus(tenant)">
+              <td class="p-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <button @click="openEditModal(tenant)" class="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded transition-colors cursor-pointer">Edit</button>
+                  <button @click="manageCatalog(tenant)" class="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded transition-colors cursor-pointer">Manage catalog</button>
+                  <button @click="toggleTenantStatus(tenant)" class="px-2 py-1 text-xs font-medium text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800/50 rounded transition-colors cursor-pointer">
                     {{ isTenantActive(tenant) ? 'Deactivate' : 'Activate' }}
                   </button>
-                  <button class="link-button danger" type="button" @click="deleteTenant(tenant)">Delete</button>
+                  <button @click="deleteTenant(tenant)" class="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors cursor-pointer">Delete</button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
 
-    <CodeServicesGlobalPanel />
+    <!-- Code Services Panel -->
+    <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md p-6 shadow-sm">
+      <CodeServicesGlobalPanel />
+    </div>
 
-    <div v-if="isModalOpen" class="modal-backdrop" @click.self="closeModal">
-      <form class="modal" @submit.prevent="handleSubmit">
-        <div class="modal-header">
-          <h2>{{ modalTitle }}</h2>
-          <button class="icon-button" type="button" aria-label="Close modal" @click="closeModal">×</button>
+    <!-- Modal -->
+    <div v-if="isModalOpen" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm" @click.self="closeModal">
+      <form @submit.prevent="handleSubmit" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-md w-full max-w-lg p-6 shadow-md">
+        <div class="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800/60 pb-3 mb-4">
+          <h3 class="text-base font-bold text-stone-900 dark:text-zinc-100">{{ modalTitle }}</h3>
+          <button @click="closeModal" type="button" class="text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300 cursor-pointer">✕</button>
         </div>
 
-        <p v-if="modalError" class="alert alert-error">{{ modalError }}</p>
+        <div v-if="modalError" class="mb-4 text-xs font-medium text-red-500 bg-red-50 dark:bg-red-950/20 border border-red-200/30 dark:border-red-950/40 rounded px-3 py-2">{{ modalError }}</div>
 
-        <label for="full_name">Full Name</label>
-        <input id="full_name" v-model.trim="form.full_name" type="text" required>
+        <div class="flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1">
+              <label for="full_name" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Full Name</label>
+              <input id="full_name" v-model.trim="form.full_name" type="text" required class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="email" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Email</label>
+              <input id="email" v-model.trim="form.email" type="email" required class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
 
-        <label for="email">Email</label>
-        <input id="email" v-model.trim="form.email" type="email" required>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1">
+              <label for="phone" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Phone</label>
+              <input id="phone" v-model.trim="form.phone" type="tel" required class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="client_prefix" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Client Prefix <span class="font-normal text-stone-400">(optional)</span></label>
+              <input id="client_prefix" v-model.trim="form.client_prefix" type="text" maxlength="5" class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
 
-        <label for="phone">Phone</label>
-        <input id="phone" v-model.trim="form.phone" type="tel" required>
+          <p class="text-xs text-stone-400 dark:text-zinc-500 -mt-2">{{ modalPrefixHint }}</p>
 
-        <label for="client_prefix">Client Prefix <span>(optional)</span></label>
-        <input id="client_prefix" v-model.trim="form.client_prefix" type="text" maxlength="5">
-        <p class="modal-hint">{{ modalPrefixHint }}</p>
+          <template v-if="!isEditMode">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1">
+                <label for="tenant_username" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Username</label>
+                <input id="tenant_username" v-model.trim="form.username" type="text" required class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label for="password" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Password <span class="font-normal text-stone-400">(optional)</span></label>
+                <input id="password" v-model="form.password" type="password" autocomplete="new-password" class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+              </div>
+            </div>
+          </template>
 
-        <template v-if="!isEditMode">
-          <label for="tenant_username">Username</label>
-          <input id="tenant_username" v-model.trim="form.username" type="text" required>
+          <div class="flex flex-col gap-1">
+            <label for="evolution_instance_name" class="text-xs font-medium text-stone-500 dark:text-zinc-400">Evolution Instance</label>
+            <input id="evolution_instance_name" v-model.trim="form.evolution_instance_name" type="text" required class="px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 rounded-md text-stone-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+          </div>
+        </div>
 
-          <label for="password">Password <span>(optional)</span></label>
-          <input id="password" v-model="form.password" type="password" autocomplete="new-password">
-        </template>
-
-        <label for="evolution_instance_name">Evolution Instance</label>
-        <input
-          id="evolution_instance_name"
-          v-model.trim="form.evolution_instance_name"
-          type="text"
-          required
-        >
-
-        <div class="modal-actions">
-          <button class="button button-secondary" type="button" @click="closeModal">Cancel</button>
-          <button class="button button-primary" type="submit" :disabled="isSaving">
+        <div class="flex justify-end gap-2 border-t border-stone-100 dark:border-zinc-800/60 pt-4 mt-4">
+          <button @click="closeModal" type="button" class="px-4 py-2 text-sm text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800/50 rounded-md transition-colors cursor-pointer">Cancel</button>
+          <button type="submit" :disabled="isSaving" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium rounded-md shadow-sm transition-colors cursor-pointer disabled:cursor-not-allowed">
             {{ isSaving ? 'Saving...' : 'Save' }}
           </button>
         </div>
       </form>
     </div>
-  </main>
+  </DashboardLayout>
 </template>
-
-<style scoped>
-:global(:root) {
-  --primary: #4f46e5;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --bg: #f8fafc;
-  --card-bg: #ffffff;
-  --text: #1e293b;
-  --text-secondary: #64748b;
-  --border: #e2e8f0;
-}
-
-.dashboard-page {
-  min-height: 100vh;
-  padding: 32px;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.dashboard-header,
-.section-header,
-.user-actions,
-.row-actions,
-.modal-header,
-.modal-actions {
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-header,
-.section-header,
-.modal-header {
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.dashboard-header {
-  margin-bottom: 24px;
-}
-
-.eyebrow,
-.section-header p,
-.summary-card span {
-  color: var(--text-secondary);
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-h1,
-h2,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 0;
-  font-size: 2rem;
-}
-
-h2 {
-  margin-bottom: 6px;
-}
-
-.user-actions {
-  gap: 12px;
-}
-
-.username {
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.summary-card,
-.content-card,
-.modal {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--card-bg);
-  box-shadow: 0 10px 25px rgb(15 23 42 / 8%);
-}
-
-.summary-card {
-  padding: 22px;
-}
-
-.summary-card strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 2rem;
-}
-
-.content-card {
-  padding: 24px;
-}
-
-.button,
-.link-button,
-.icon-button {
-  cursor: pointer;
-  border: 0;
-  font: inherit;
-}
-
-.button {
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-weight: 700;
-}
-
-.button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.button-primary {
-  background: var(--primary);
-  color: #ffffff;
-}
-
-.button-secondary {
-  border: 1px solid var(--border);
-  background: #ffffff;
-  color: var(--text);
-}
-
-.alert {
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-weight: 600;
-}
-
-.alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.alert-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.empty-state {
-  padding: 42px 16px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  white-space: nowrap;
-}
-
-th {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-tbody tr:hover {
-  background: #f1f5f9;
-}
-
-.status-badge {
-  display: inline-flex;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.status-badge.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.inactive {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.row-actions {
-  gap: 10px;
-}
-
-.link-button {
-  background: transparent;
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.link-button.danger {
-  color: var(--danger);
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(15 23 42 / 55%);
-}
-
-.modal {
-  width: min(520px, 100%);
-  padding: 24px;
-}
-
-.icon-button {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: var(--text-secondary);
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-label {
-  display: block;
-  margin: 14px 0 6px;
-  color: var(--text-secondary);
-  font-weight: 700;
-}
-
-label span {
-  font-weight: 500;
-}
-
-.modal-hint {
-  margin: 6px 0 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 11px 12px;
-  color: var(--text);
-  font: inherit;
-}
-
-input:focus {
-  border-color: var(--primary);
-  outline: 3px solid rgb(79 70 229 / 15%);
-}
-
-.modal-actions {
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 22px;
-}
-
-@media (max-width: 760px) {
-  .dashboard-page {
-    padding: 20px;
-  }
-
-  .dashboard-header,
-  .section-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

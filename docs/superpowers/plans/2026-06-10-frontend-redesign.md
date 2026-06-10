@@ -915,7 +915,7 @@ git commit -m "refactor: restructure SubscriptionsView and split into Subscripti
 - Modify: `frontend/src/views/TenantDashboardView.vue`
 - Modify: `frontend/src/views/ClientDashboardView.vue`
 
-- [ ] **Step 1: Adaptar TenantDashboardView.vue**
+- [x] **Step 1: Adaptar TenantDashboardView.vue**
 
 Modifica `frontend/src/views/TenantDashboardView.vue` para conectarla al `DashboardLayout` y aplicar clases de Tailwind v4, manteniendo intactas la integración de componentes hijos como `ClientManagementPanel` y `CatalogPanel` pero dándoles la envoltura premium de Linear:
 ```vue
@@ -969,15 +969,15 @@ const activeTab = ref('clients')
 </template>
 ```
 
-- [ ] **Step 2: Adaptar MasterDashboardView.vue**
+- [x] **Step 2: Adaptar MasterDashboardView.vue**
 
 Modifica `frontend/src/views/MasterDashboardView.vue` de manera idéntica para usar `DashboardLayout` y rediseñar su tabla de administración del sistema global.
 
-- [ ] **Step 3: Adaptar ClientDashboardView.vue**
+- [x] **Step 3: Adaptar ClientDashboardView.vue**
 
 Modifica `frontend/src/views/ClientDashboardView.vue` para heredar el layout maestro y dar a los clientes finales la misma experiencia premium.
 
-- [ ] **Step 4: Ejecutar build definitivo y validación global**
+- [x] **Step 4: Ejecutar build definitivo y validación global**
 
 Ejecuta en la carpeta `frontend/`:
 ```bash
@@ -985,7 +985,7 @@ npm run build && npm test
 ```
 Expected: Toda la suite de tests en verde. Compilación final sin errores.
 
-- [ ] **Step 5: Confirmar cambios**
+- [x] **Step 5: Confirmar cambios**
 
 ```bash
 git add frontend/src/views/MasterDashboardView.vue frontend/src/views/TenantDashboardView.vue frontend/src/views/ClientDashboardView.vue
