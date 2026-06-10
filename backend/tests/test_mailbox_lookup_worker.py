@@ -15,6 +15,7 @@ from app.services.mail_lookup_worker import (
 from app.services.mail_lookup_worker._helpers import _filter_emails_by_target_email
 from app.services.mail_lookup_worker.ephemeral_cache import purge_expired, store_result
 import app.services.mail_lookup_worker.providers as pmod
+import app.services.mail_lookup_worker.worker as worker_module
 from app.services.mail_lookup_worker.providers import (
     EmailMessage,
     NonTransientProviderError,
@@ -449,6 +450,88 @@ class TestWorkerPipeline:
 
         assert job.status == "failed"
         assert job.error_code == "auth_failed"
+
+    async def test_process_job_waits_for_email_arrival_within_timeout(
+        self, db_session, monkeypatch
+    ):
+        """Worker keeps polling until a code arrives within timeout."""
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mb.id, "spotify"
+        )
+
+        calls = 0
+
+        class DelayedStub(StubProvider):
+            async def fetch_recent(  # type: ignore[override]
+                self, mailbox, window_minutes, target_email=None, **kwargs
+            ):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    return []
+                return [_make_email()]
+
+        async def _no_sleep(_seconds: float) -> None:
+            return None
+
+        monkeypatch.setattr(worker_module, "_POLL_INTERVAL_S", 0)
+        monkeypatch.setattr(worker_module.asyncio, "sleep", _no_sleep)
+
+        provider = DelayedStub()
+        old_active = active_provider
+        try:
+            pmod.active_provider = provider
+            await process_job(db_session, job, timeout_seconds=60)
+            await db_session.commit()
+        finally:
+            pmod.active_provider = old_active
+
+        assert calls == 2
+        assert job.status == "completed"
+        assert job.result_type == "code"
+
+    async def test_process_job_stops_after_timeout_window(
+        self, db_session, monkeypatch
+    ):
+        """Worker stops polling and returns not_found once timeout elapses."""
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mb.id, "spotify"
+        )
+
+        calls = 0
+
+        class EmptyStub(StubProvider):
+            async def fetch_recent(  # type: ignore[override]
+                self, mailbox, window_minutes, target_email=None, **kwargs
+            ):
+                nonlocal calls
+                calls += 1
+                return []
+
+        async def _no_sleep(_seconds: float) -> None:
+            return None
+
+        times = iter([0.0, 1.2, 1.2])
+        monkeypatch.setattr(worker_module, "_POLL_INTERVAL_S", 0)
+        monkeypatch.setattr(worker_module.asyncio, "sleep", _no_sleep)
+        monkeypatch.setattr(worker_module.time, "monotonic", lambda: next(times, 1.2))
+
+        provider = EmptyStub()
+        old_active = active_provider
+        try:
+            pmod.active_provider = provider
+            await process_job(db_session, job, timeout_seconds=0)
+            await db_session.commit()
+        finally:
+            pmod.active_provider = old_active
+
+        assert calls == 1
+        assert job.status == "completed"
+        assert job.result_type == "not_found"
 
 
 class TestNonTransientErrorCodes:

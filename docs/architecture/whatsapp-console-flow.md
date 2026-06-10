@@ -352,7 +352,7 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 #### n8n behavior for this path
 
 - Sends immediate "buscando..."
-- Polls every 4s up to 20s on ``GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...``
+- Polls every 4s up to 60s on ``GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...``
 - Sends final result with options appended on ``not_found``:
   - English: ``1️⃣ Retry / 2️⃣ Back to services / 0️⃣ Cancel``
   - Spanish: ``1️⃣ Reintentar / 2️⃣ Volver a servicios / 0️⃣ Cancelar``

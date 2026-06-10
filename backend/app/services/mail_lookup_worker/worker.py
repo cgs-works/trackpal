@@ -20,6 +20,7 @@ from uuid import UUID
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.metrics import metrics
 from app.core.redis_client import RedisConnectionManager
@@ -181,6 +182,7 @@ async def process_job(
     db: AsyncSession,
     job: MailLookupJob,
     window_minutes: int = 5,
+    timeout_seconds: int = 0,
 ) -> None:
     """Process one lookup job through the full pipeline.
 
@@ -212,39 +214,62 @@ async def process_job(
             return
 
         target_email = job.target_email or None
-        emails = await fetch_with_retry(
-            mailbox, window_minutes, target_email=target_email, db=db
-        )
-        if emails is None:
-            await fail_job(db, job, "fetch_failed", "Email fetch failed after retries")
-            metrics.inc(
-                "lookup_job_total",
-                status="failed",
-                provider=provider_label,
-                service=job.service_key,
+        deadline = start + max(timeout_seconds, 0)
+
+        while True:
+            emails = await fetch_with_retry(
+                mailbox, window_minutes, target_email=target_email, db=db
             )
-            return
+            if emails is None:
+                await fail_job(
+                    db, job, "fetch_failed", "Email fetch failed after retries"
+                )
+                metrics.inc(
+                    "lookup_job_total",
+                    status="failed",
+                    provider=provider_label,
+                    service=job.service_key,
+                )
+                return
 
-        result = extract_from_emails(
-            emails, job.service_key, window_minutes, target_email=job.target_email
-        )
-        if result is None:
-            await complete_not_found(db, job)
-            metrics.inc(
-                "lookup_job_total",
-                status="completed",
-                provider=provider_label,
-                service=job.service_key,
-                result="not_found",
+            result = extract_from_emails(
+                emails, job.service_key, window_minutes, target_email=job.target_email
             )
-            return
+            if result is not None:
+                result_value = result.value
+                result_type = str(result.result_type)
 
-        result_value = result.value
-        result_type = str(result.result_type)
+                if job.service_key == "netflix" and result_type == "url":
+                    resolved_code = await fetch_netflix_code_from_url(result_value)
+                    if not resolved_code:
+                        result = None
+                    else:
+                        result_value = resolved_code
+                        result_type = "code"
 
-        if job.service_key == "netflix" and result_type == "url":
-            resolved_code = await fetch_netflix_code_from_url(result_value)
-            if not resolved_code:
+                if result is not None:
+                    await handle_deduped_result(
+                        db,
+                        job,
+                        mailbox,
+                        emails,
+                        result_value,
+                        result_type,
+                        job.service_key,
+                    )
+
+                    elapsed = time.monotonic() - start
+                    metrics.record("lookup_job_latency", elapsed)
+                    metrics.inc(
+                        "lookup_job_total",
+                        status="completed",
+                        provider=provider_label,
+                        service=job.service_key,
+                        result=str(job.result_type or "ok"),
+                    )
+                    return
+
+            if time.monotonic() >= deadline:
                 await complete_not_found(db, job)
                 metrics.inc(
                     "lookup_job_total",
@@ -254,28 +279,8 @@ async def process_job(
                     result="not_found",
                 )
                 return
-            result_value = resolved_code
-            result_type = "code"
 
-        await handle_deduped_result(
-            db,
-            job,
-            mailbox,
-            emails,
-            result_value,
-            result_type,
-            job.service_key,
-        )
-
-        elapsed = time.monotonic() - start
-        metrics.record("lookup_job_latency", elapsed)
-        metrics.inc(
-            "lookup_job_total",
-            status="completed",
-            provider=provider_label,
-            service=job.service_key,
-            result=str(job.result_type or "ok"),
-        )
+            await asyncio.sleep(_POLL_INTERVAL_S)
 
     except RevokedMailboxError as exc:
         logger.warning(
@@ -384,7 +389,11 @@ async def worker_loop(
                     metrics.inc("lookup_jobs_skipped", reason="not_pending")
                     continue
 
-                await process_job(db, job)
+                await process_job(
+                    db,
+                    job,
+                    timeout_seconds=settings.mailbox_lookup_timeout_seconds,
+                )
                 await db.commit()
                 logger.info("Job %s processed successfully", job_id)
 
