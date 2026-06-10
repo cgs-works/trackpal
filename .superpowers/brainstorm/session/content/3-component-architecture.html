@@ -1,0 +1,63 @@
+<h2>Arquitectura de Componentes del Dashboard</h2>
+<p class="subtitle">Propuesta de modularidad para eliminar la duplicación de código en las 5 vistas actuales.</p>
+
+<div class="options">
+  
+  <div class="option" data-choice="modular-layout" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Enfoque A: Layout Compartido Modular (Recomendado)</h3>
+      <p>Creamos un único componente principal <code>DashboardLayout.vue</code> en <code>components/</code> que renderiza la barra lateral fija (Sidebar), maneja el estado del Dark Mode, el idioma y la información del usuario logueado. Cada vista individual simplemente se envuelve en este componente, eliminando más de 500 líneas de código duplicado de navegación en los dashboards.</p>
+      
+      <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-primary);">
+        &lt;template&gt;<br>
+        &nbsp;&nbsp;&lt;DashboardLayout&gt;<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&lt;!-- Contenido específico de la vista (ej: Subscripciones) --&gt;<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&lt;div class="grid grid-cols-1 md:grid-cols-3 gap-6"&gt;...&lt;/div&gt;<br>
+        &nbsp;&nbsp;&lt;/DashboardLayout&gt;<br>
+        &lt;/template&gt;
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="view-layout" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Enfoque B: Layout en Router (Router-View)</h3>
+      <p>Configuramos el <code>router/index.js</code> para tener rutas anidadas bajo un layout común. El layout contiene la barra lateral y renderiza un componente <code>&lt;router-view /&gt;</code> en el centro para las sub-rutas.</p>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Ventajas</h4>
+          <ul>
+            <li>No es necesario importar el componente de Layout en cada vista</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Contras</h4>
+          <ul>
+            <li>Requiere reestructurar la configuración del router de forma drástica</li>
+            <li>Hace que el paso de props o eventos entre el Layout y la vista activa sea más indirecto</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <h3>Diagrama del Sistema de Componentes (Enfoque A)</h3>
+  <div class="placeholder" style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; color: var(--text-primary); text-align: left;">
+    <div style="font-family: monospace; font-size: 0.85rem; line-height: 1.6;">
+      <span style="color: var(--accent); font-weight: bold;">App.vue</span> (Punto de entrada)<br>
+      └── <span style="color: #10B981; font-weight: bold;">router-view</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── <span style="color: #F59E0B; font-weight: bold;">LoginView.vue</span> (Pantalla de acceso libre)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;└── <span style="color: #3B82F6; font-weight: bold;">Dashboard views</span> (Rutas protegidas con requiereAuth)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span style="color: #8B5CF6; font-weight: bold;">DashboardLayout</span> (Componente de Layout)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span style="font-weight: bold;">SidebarNav</span> (Navegación + Logo + Perfil)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span style="font-weight: bold;">ThemeToggle</span> (Toggle Dark/Light en LocalStorage)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span style="color: #EC4899; font-weight: bold;">&lt;slot /&gt;</span> (Contenido específico de cada rol: Master, Tenant o Cliente)
+    </div>
+  </div>
+</div>

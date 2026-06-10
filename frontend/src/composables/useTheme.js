@@ -1,11 +1,17 @@
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 const theme = ref('light')
+let isInitialized = false
 
-export function useTheme() {
+export function useTheme(forceInit = false) {
   function initTheme() {
+    if (isInitialized && !forceInit) return
+    isInitialized = true
+
+    if (typeof window === 'undefined') return
+
     const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
 
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
       theme.value = 'dark'
@@ -19,6 +25,8 @@ export function useTheme() {
   }
 
   function toggleTheme() {
+    if (typeof window === 'undefined') return
+
     if (theme.value === 'dark') {
       theme.value = 'light'
       localStorage.setItem('theme', 'light')
@@ -32,7 +40,7 @@ export function useTheme() {
     }
   }
 
-  // Inicialización única
+  // Safe single initialization
   initTheme()
 
   return {

@@ -1,0 +1,137 @@
+<h2>Elige la dirección visual de Trackpal (Moderno 2026)</h2>
+<p class="subtitle">Tenemos tres enfoques modernos con soporte de Light & Dark mode. Todos se guardarán en localStorage.</p>
+
+<div class="options">
+  
+  <div class="option" data-choice="linear-style" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Enfoque A: Consola Premium (Estilo Linear)</h3>
+      <p>Estética ultra pulida, bordes muy finos (1px), radios de curvatura pequeños (6px), y acentos sutiles de color índigo/violeta. Es el estándar moderno de SaaS premium, de aspecto limpio y sofisticado.</p>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Ventajas</h4>
+          <ul>
+            <li>Altamente profesional y familiar para usuarios técnicos</li>
+            <li>Muy limpio y fácil de jerarquizar visualmente</li>
+            <li>Excelente con animaciones sutiles</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Contras</h4>
+          <ul>
+            <li>Es un patrón muy común (puede sentirse menos único)</li>
+            <li>Los colores fríos pueden sentirse distantes para dueños de negocios locales</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="warm-tactile" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Enfoque B: Táctil Cálido (Recomendado 2026)</h3>
+      <p>Utiliza neutros inclinados hacia tonos tierra cálidos (papel crema en light, carbón cálido en dark) con acentos terracota u ocre tostado. Bordes suaves (10px-12px de radio), espaciado generoso y tipografía muy legible. Evita el "azul corporativo" frío.</p>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Ventajas</h4>
+          <ul>
+            <li>Único y con mucha personalidad (evita la "pendiente de IA slop")</li>
+            <li>Se siente humano, confiable y extremadamente agradable a la vista</li>
+            <li>Excelente contraste tanto en light como en dark mode</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Contras</h4>
+          <ul>
+            <li>Menos convencional para herramientas estrictamente técnicas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="soft-neobrutalist" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Enfoque C: Neobrutalismo Suave (Estilo Cursor / Técnico)</h3>
+      <p>Bordes oscuros más gruesos (2px), esquinas semirrectas (4px), sombras planas (sin desenfoque, estilo isométrica o "pop"), fuentes monoespaciadas para contadores y acentos en amarillo ámbar o azul eléctrico. Alta densidad de información.</p>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Ventajas</h4>
+          <ul>
+            <li>Increíble densidad de información y estructura clarísima</li>
+            <li>Muy moderno, de alta energía y aspecto técnico</li>
+            <li>Límites de contenedores ultra definidos</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Contras</h4>
+          <ul>
+            <li>Puede sentirse sobreestimulante o "ruidoso" si no se balancea</li>
+            <li>Estilo muy marcado que polariza opiniones</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <div class="mockup">
+    <div class="mockup-header">Vista Previa Interactiva de Estilos (Light Mode)</div>
+    <div class="mockup-body" style="background: #FAF7F2; border-radius: 8px; color: #1C1917; padding: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #EA580C; font-weight: 600;">Trackpal Console</span>
+          <h1 style="font-size: 1.25rem; margin: 0; font-weight: 700; color: #1C1917;">Dashboard de Gestión</h1>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button style="background: #1C1917; color: #FAF7F2; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; font-size: 0.85rem; cursor: pointer;">Nuevo Cliente</button>
+          <button style="background: transparent; border: 1px solid #E7E5E4; color: #1C1917; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; font-size: 0.85rem; cursor: pointer;">Exportar</button>
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: #FFFFFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="color: #78716C; font-size: 0.75rem; font-weight: 500;">Clientes Activos</div>
+          <div style="font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0; color: #1C1917;">142</div>
+          <span style="font-size: 0.7rem; color: #16A34A; font-weight: 600;">+12% este mes</span>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="color: #78716C; font-size: 0.75rem; font-weight: 500;">Remitentes Conectados</div>
+          <div style="font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0; color: #1C1917;">8 / 10</div>
+          <span style="font-size: 0.7rem; color: #2563EB; font-weight: 600;">Límite de plan</span>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="color: #78716C; font-size: 0.75rem; font-weight: 500;">Remesas Procesadas</div>
+          <div style="font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0; color: #1C1917;">$12,450</div>
+          <span style="font-size: 0.7rem; color: #16A34A; font-weight: 600;">Facturación mensual</span>
+        </div>
+      </div>
+      
+      <div style="background: #FFFFFF; border: 1px solid #E7E5E4; border-radius: 12px; padding: 1.25rem;">
+        <h4 style="margin: 0 0 1rem; font-size: 0.9rem; font-weight: 600; color: #1C1917;">Actividad Reciente del Bot</h4>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #FAF7F2; padding-bottom: 0.5rem; font-size: 0.8rem;">
+            <div>
+              <span style="font-weight: 600; color: #1C1917;">Cliente +54 9 11 2345...</span> cambió plan a <span style="background: #FFFAF0; color: #C2410C; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Plan Premium</span>
+            </div>
+            <span style="color: #A8A29E; font-size: 0.75rem;">Hace 2 min</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+            <div>
+              <span style="font-weight: 600; color: #1C1917;">Bot WhatsApp</span> envió recordatorio de pago a <span style="font-weight: 500;">Juan Pérez</span>
+            </div>
+            <span style="color: #A8A29E; font-size: 0.75rem;">Hace 12 min</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

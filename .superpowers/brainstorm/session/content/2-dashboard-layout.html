@@ -1,0 +1,140 @@
+<h2>Elige la estructura del Layout del Dashboard</h2>
+<p class="subtitle">¿Cómo organizamos la navegación en los dashboards de Trackpal para la versión 2026?</p>
+
+<div class="options">
+  
+  <div class="option" data-choice="sidebar-layout" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Opción A: Sidebar Lateral Fino (Estilo Linear / Stripe)</h3>
+      <p>Un menú lateral izquierdo que permanece fijo. Contiene el logotipo, selector de organización, enlaces principales (Dashboard, Subscripciones, Catálogo, WhatsApp, Configuración), perfil de usuario en la parte inferior y el toggle de Dark/Light mode. Maximiza el espacio vertical y permite navegar rápidamente entre múltiples pantallas densas.</p>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Ventajas</h4>
+          <ul>
+            <li>Permite mucha densidad de pantallas (ideal para SaaS complejo)</li>
+            <li>Es el estándar moderno de productividad y herramientas de desarrollo</li>
+            <li>Soporta submenús y secciones plegables muy bien</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Contras</h4>
+          <ul>
+            <li>Ocupa un ancho horizontal fijo (se reduce en móvil a un cajón deslizante)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="top-nav-layout" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Opción B: Menú Superior (Top-Nav) con Pestañas</h3>
+      <p>Una barra superior horizontal de navegación que contiene el logo, selector de inquilino (tenant) y los enlaces principales como pestañas de texto limpio. El contenido principal utiliza un contenedor centrado (`max-w-7xl` o similar). Muy minimalista y limpio.</p>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Ventajas</h4>
+          <ul>
+            <li>Se siente increíblemente amplio y centrado en el contenido</li>
+            <li>Muy fácil de adaptar a dispositivos móviles de manera responsive</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Contras</h4>
+          <ul>
+            <li>No escala bien si agregamos más de 5 o 6 secciones principales</li>
+            <li>Menos espacio para acciones rápidas o estados persistentes en pantalla</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="split" style="margin-top: 2.5rem;">
+  
+  <div class="mockup">
+    <div class="mockup-header">Estructura Sidebar (Opción A)</div>
+    <div class="mockup-body" style="background: #0B0A0F; color: #F3F4F6; padding: 1.25rem; font-family: sans-serif; border-radius: 8px;">
+      <div style="display: flex; min-height: 200px;">
+        <!-- Sidebar -->
+        <div style="width: 85px; background: #13121A; border-right: 1px solid #23222A; padding: 1rem 0.5rem; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+          <div style="width: 28px; height: 28px; background: #6366F1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;">T</div>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%; margin-top: 1rem;">
+            <div style="height: 6px; background: #6366F1; border-radius: 2px; width: 60%; margin: 0 auto;"></div>
+            <div style="height: 6px; background: #33323B; border-radius: 2px; width: 70%; margin: 0 auto;"></div>
+            <div style="height: 6px; background: #33323B; border-radius: 2px; width: 50%; margin: 0 auto;"></div>
+          </div>
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+            <div style="width: 20px; height: 20px; border-radius: 50%; background: #4B5563;"></div>
+            <div style="font-size: 0.7rem; color: #9CA3AF;">☀️</div>
+          </div>
+        </div>
+        <!-- Content -->
+        <div style="flex: 1; padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #1E1D24; padding-bottom: 0.5rem;">
+            <div style="height: 12px; background: #374151; border-radius: 4px; width: 30%;"></div>
+            <div style="height: 24px; background: #6366F1; border-radius: 6px; width: 20%;"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div style="background: #13121A; border: 1px solid #1E1D24; border-radius: 8px; height: 60px; padding: 0.75rem;">
+              <div style="height: 6px; background: #374151; border-radius: 2px; width: 40%; margin-bottom: 0.5rem;"></div>
+              <div style="height: 14px; background: #F3F4F6; border-radius: 3px; width: 60%;"></div>
+            </div>
+            <div style="background: #13121A; border: 1px solid #1E1D24; border-radius: 8px; height: 60px; padding: 0.75rem;">
+              <div style="height: 6px; background: #374151; border-radius: 2px; width: 30%; margin-bottom: 0.5rem;"></div>
+              <div style="height: 14px; background: #F3F4F6; border-radius: 3px; width: 50%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Estructura Top-Nav (Opción B)</div>
+    <div class="mockup-body" style="background: #0B0A0F; color: #F3F4F6; padding: 1.25rem; font-family: sans-serif; border-radius: 8px;">
+      <div style="min-height: 200px; display: flex; flex-direction: column;">
+        <!-- Top Nav -->
+        <div style="height: 45px; background: #13121A; border-bottom: 1px solid #1E1D24; padding: 0 1.25rem; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 20px; height: 20px; background: #6366F1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.65rem;">T</div>
+            <div style="display: flex; gap: 0.75rem;">
+              <div style="height: 6px; background: #6366F1; border-radius: 2px; width: 30px;"></div>
+              <div style="height: 6px; background: #33323B; border-radius: 2px; width: 40px;"></div>
+              <div style="height: 6px; background: #33323B; border-radius: 2px; width: 35px;"></div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="font-size: 0.7rem;">☀️</div>
+            <div style="width: 18px; height: 18px; border-radius: 50%; background: #4B5563;"></div>
+          </div>
+        </div>
+        <!-- Content -->
+        <div style="flex: 1; padding: 1.25rem; display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 100%; max-width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #1E1D24; padding-bottom: 0.5rem;">
+              <div style="height: 12px; background: #374151; border-radius: 4px; width: 30%;"></div>
+              <div style="height: 24px; background: #6366F1; border-radius: 6px; width: 20%;"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div style="background: #13121A; border: 1px solid #1E1D24; border-radius: 8px; height: 60px; padding: 0.75rem;">
+                <div style="height: 6px; background: #374151; border-radius: 2px; width: 40%; margin-bottom: 0.5rem;"></div>
+                <div style="height: 14px; background: #F3F4F6; border-radius: 3px; width: 60%;"></div>
+              </div>
+              <div style="background: #13121A; border: 1px solid #1E1D24; border-radius: 8px; height: 60px; padding: 0.75rem;">
+                <div style="height: 6px; background: #374151; border-radius: 2px; width: 30%; margin-bottom: 0.5rem;"></div>
+                <div style="height: 14px; background: #F3F4F6; border-radius: 3px; width: 50%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
