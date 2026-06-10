@@ -333,7 +333,7 @@ git commit -m "chore: add shadcn frontend foundation"
 - Test: `frontend/src/components/__tests__/StatusBadge.spec.js`
 - Test: `frontend/src/composables/__tests__/theme.spec.js`
 
-- [ ] **Step 1: Write the failing shared-component tests**
+- [x] **Step 1: Write the failing shared-component tests**
 
 ```js
 // frontend/src/components/__tests__/PageHeader.spec.js
@@ -373,7 +373,7 @@ describe('StatusBadge', () => {
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run:
 - `cd frontend && npx vitest run src/components/__tests__/PageHeader.spec.js`
@@ -381,7 +381,7 @@ Run:
 
 Expected: FAIL because the components do not exist yet.
 
-- [ ] **Step 3: Implement the global token system and shared components**
+- [x] **Step 3: Implement the global token system and shared components**
 
 Modify `frontend/src/style.css` to establish the theme contract:
 
@@ -549,7 +549,7 @@ Create `frontend/src/components/EmptyState.vue` and `frontend/src/components/Loa
 
 Modify `frontend/src/components/ThemeToggle.vue` to use the shadcn button primitive instead of ad-hoc classes.
 
-- [ ] **Step 4: Run the new shared-component tests and the existing theme tests**
+- [x] **Step 4: Run the new shared-component tests and the existing theme tests**
 
 Run:
 - `cd frontend && npx vitest run src/components/__tests__/PageHeader.spec.js src/components/__tests__/StatusBadge.spec.js`
@@ -557,7 +557,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/style.css frontend/src/components/ThemeToggle.vue frontend/src/composables/useTheme.js frontend/src/components/InlineAlert.vue frontend/src/components/EmptyState.vue frontend/src/components/LoadingBlock.vue frontend/src/components/PageHeader.vue frontend/src/components/StatusBadge.vue frontend/src/components/__tests__/PageHeader.spec.js frontend/src/components/__tests__/StatusBadge.spec.js
