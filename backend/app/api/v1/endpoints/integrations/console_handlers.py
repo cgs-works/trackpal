@@ -154,8 +154,12 @@ async def _cancel_target_codigo_flow(
         dict.fromkeys(
             key
             for key in (
-                _unauth_session_key(target_phone, None, str(tenant_id)) if target_phone else None,
-                _unauth_session_key("", target_lid, str(tenant_id)) if target_lid else None,
+                _unauth_session_key(target_phone, None, str(tenant_id))
+                if target_phone
+                else None,
+                _unauth_session_key("", target_lid, str(tenant_id))
+                if target_lid
+                else None,
             )
             if key
         )
@@ -171,10 +175,12 @@ async def _cancel_target_codigo_flow(
         lookup_job_id = (session.temp_data or {}).get("lookup_job_id")
         if lookup_job_id:
             try:
-                cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
-                    db,
-                    UUID(lookup_job_id),
-                    tenant_id=tenant_id,
+                cancelled = (
+                    await mailbox_lookup_repository.cancel_active_job_if_present(
+                        db,
+                        UUID(lookup_job_id),
+                        tenant_id=tenant_id,
+                    )
                 )
                 if cancelled:
                     await db.commit()
@@ -816,7 +822,9 @@ async def _handle_unauth_codigo_email_confirm(
         session.step = _UNAUTH_CODIGO_STEP_EMAIL
         await session_service.save_session(session)
         return WhatsAppConsoleResponse(
-            reply=_i18n_t(locale, "wa.tenant.codigo.email_prompt", service_label=service_label)
+            reply=_i18n_t(
+                locale, "wa.tenant.codigo.email_prompt", service_label=service_label
+            )
         )
 
     if raw == "9":
@@ -963,10 +971,12 @@ async def _handle_unauth_codigo_result(
     if restart_trigger:
         if lookup_job_id:
             try:
-                cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
-                    db,
-                    UUID(lookup_job_id),
-                    tenant_id=tenant.id,
+                cancelled = (
+                    await mailbox_lookup_repository.cancel_active_job_if_present(
+                        db,
+                        UUID(lookup_job_id),
+                        tenant_id=tenant.id,
+                    )
                 )
                 if cancelled:
                     await db.commit()

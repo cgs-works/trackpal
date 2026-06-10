@@ -1103,8 +1103,7 @@ async def test_unregistered_identity_codigo_multistep(
         assert resp3.status_code == 200
         body3 = resp3.json()
         assert (
-            "confirm" in body3["reply"].lower()
-            or "confirmar" in body3["reply"].lower()
+            "confirm" in body3["reply"].lower() or "confirmar" in body3["reply"].lower()
         )
         assert "user@example.com" in body3["reply"]
         assert "lookup_job_id" not in body3
@@ -1217,12 +1216,19 @@ async def test_unregistered_identity_codigo_confirm_invalid_option_does_not_crea
 
         resp = await client.post(
             ENDPOINT,
-            json={"phone": "+12015559999", "message": "cancelar", "instance": TEST_INSTANCE},
+            json={
+                "phone": "+12015559999",
+                "message": "cancelar",
+                "instance": TEST_INSTANCE,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
 
     body = resp.json()
-    assert "opción inválida" in body["reply"].lower() or "invalid option" in body["reply"].lower()
+    assert (
+        "opción inválida" in body["reply"].lower()
+        or "invalid option" in body["reply"].lower()
+    )
     assert "lookup_job_id" not in body
 
 
@@ -1919,7 +1925,10 @@ async def test_unregistered_codigo_non_trigger_still_returns_still_checking(
 
     assert response.status_code == 200
     body = response.json()
-    assert "todavia buscando" in body["reply"].lower() or "still checking" in body["reply"].lower()
+    assert (
+        "todavia buscando" in body["reply"].lower()
+        or "still checking" in body["reply"].lower()
+    )
 
 
 # from_me contextual routing tests
@@ -2501,7 +2510,15 @@ async def test_from_me_remote_zero_does_not_clear_admin_session(
     await _seed_unauth_codigo_awaiting_result(fake_mgr, tenant.id)
     await fake_mgr._redis.set(
         "session:admin:12015550002",
-        json.dumps({"phone": "12015550002", "flow": "", "step": "", "temp_data": {}, "selection_map": {}}),
+        json.dumps(
+            {
+                "phone": "12015550002",
+                "flow": "",
+                "step": "",
+                "temp_data": {},
+                "selection_map": {},
+            }
+        ),
         ex=300,
     )
 
@@ -2543,7 +2560,10 @@ async def test_from_me_remote_zero_cancels_target_codigo_by_lid(
                 "flow": "codigo",
                 "step": "awaiting_result",
                 "selected_tenant_id": None,
-                "temp_data": {"service_key": "netflix", "target_email": "user@example.com"},
+                "temp_data": {
+                    "service_key": "netflix",
+                    "target_email": "user@example.com",
+                },
                 "selection_map": {},
             }
         ),
