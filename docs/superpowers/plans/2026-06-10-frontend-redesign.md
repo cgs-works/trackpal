@@ -128,24 +128,7 @@
 
 ---
 
-### Task 1: Tooling, aliases, shadcn foundation, and test harness
-
-**Required skills:**
-- `superpowers:test-driven-development`
-- `vue-expert-js`
-- `uncodixfy`
-
-**Files:**
-- Create: `frontend/jsconfig.json`
-- Create: `frontend/components.json`
-- Create: `frontend/src/lib/utils.js`
-- Create: `frontend/src/lib/__tests__/utils.spec.js`
-- Create: `frontend/src/test-utils/renderWithApp.js`
-- Modify: `frontend/package.json`
-- Modify: `frontend/vite.config.js`
-- Modify: `frontend/src/App.vue`
-
-- [ ] **Step 1: Write the failing `cn()` helper test**
+- [x] **Step 1: Write the failing `cn()` helper test**
 
 ```js
 // frontend/src/lib/__tests__/utils.spec.js
@@ -159,12 +142,12 @@ describe('cn', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/lib/__tests__/utils.spec.js`
 Expected: FAIL with `Cannot find module '../utils'` or equivalent import error.
 
-- [ ] **Step 3: Install the missing dependencies and create the project scaffolding**
+- [x] **Step 3: Install the missing dependencies and create the project scaffolding**
 
 Run:
 
@@ -310,7 +293,7 @@ import { Toaster } from '@/components/ui/sonner'
 </template>
 ```
 
-- [ ] **Step 4: Run the helper test and a production build**
+- [x] **Step 4: Run the helper test and a production build**
 
 Run:
 - `cd frontend && npx vitest run src/lib/__tests__/utils.spec.js`
@@ -320,7 +303,7 @@ Expected:
 - Vitest PASS
 - Vite build PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/package.json frontend/package-lock.json frontend/jsconfig.json frontend/components.json frontend/vite.config.js frontend/src/App.vue frontend/src/lib/utils.js frontend/src/lib/__tests__/utils.spec.js frontend/src/test-utils/renderWithApp.js frontend/src/components/ui
