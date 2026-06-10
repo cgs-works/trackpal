@@ -1037,7 +1037,7 @@ Implement `frontend/src/views/TenantSettingsView.vue` by moving the current prof
 Run: `cd frontend && npx vitest run src/views/__tests__/TenantSettingsView.spec.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/TenantDashboardView.vue frontend/src/views/TenantSettingsView.vue frontend/src/views/__tests__/TenantSettingsView.spec.js frontend/src/router/index.js frontend/src/config/navigation.js
