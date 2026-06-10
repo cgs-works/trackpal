@@ -396,7 +396,7 @@ git commit -m "feat: redesign LoginView with clean Linear style and Tailwind CSS
 **Files:**
 - Create: `frontend/src/components/DashboardLayout.vue`
 
-- [ ] **Step 1: Crear componente maestro de layout compartido**
+- [x] **Step 1: Crear componente maestro de layout compartido**
 
 Crea `frontend/src/components/DashboardLayout.vue` con el Sidebar de navegación adaptado a móvil/escritorio, perfil de usuario, selectores de idioma y el `ThemeToggle` centralizados:
 ```vue
@@ -551,7 +551,7 @@ function setLocale(lang) {
 </template>
 ```
 
-- [ ] **Step 2: Confirmar cambios**
+- [x] **Step 2: Confirmar cambios**
 
 ```bash
 git add frontend/src/components/DashboardLayout.vue
