@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+  --dark-mode: selector;
+}
+
 @layer base {
   html, body {
     @apply min-h-screen bg-stone-50 text-stone-900 transition-colors duration-200 antialiased;
