@@ -795,7 +795,7 @@ git commit -m "feat: add role-aware app shell and route map"
 - Modify: `frontend/src/views/LoginView.vue`
 - Test: `frontend/src/views/__tests__/LoginView.spec.js`
 
-- [ ] **Step 1: Write the failing login view test**
+- [x] **Step 1: Write the failing login view test**
 
 ```js
 import { describe, it, expect, vi } from 'vitest'
@@ -831,12 +831,12 @@ describe('LoginView', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/LoginView.spec.js`
 Expected: FAIL because the route map and login redirection target changed, and the old template is still in place.
 
-- [ ] **Step 3: Implement the new login layout while preserving auth logic**
+- [x] **Step 3: Implement the new login layout while preserving auth logic**
 
 Keep the existing `handleSubmit()` flow, but replace the template with a two-zone composition built from the new primitives.
 
@@ -900,7 +900,7 @@ Also update the redirection targets in `handleSubmit()` to:
 - tenant → `/admin/overview`
 - client → `/client/overview`
 
-- [ ] **Step 4: Run the login test and a production build**
+- [x] **Step 4: Run the login test and a production build**
 
 Run:
 - `cd frontend && npx vitest run src/views/__tests__/LoginView.spec.js`
@@ -908,7 +908,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/LoginView.vue frontend/src/views/__tests__/LoginView.spec.js
