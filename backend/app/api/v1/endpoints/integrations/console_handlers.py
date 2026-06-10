@@ -889,6 +889,62 @@ async def _handle_unauth_codigo_result(
 
     job_done = job is not None and job.status in ("completed", "failed", "timeout")
 
+    # ── Restart trigger: codigo/código/code restarts the flow ──────────────
+    restart_trigger = msg.strip().lower() in ("codigo", "código", "code")
+    if restart_trigger:
+        if lookup_job_id:
+            try:
+                cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
+                    db,
+                    UUID(lookup_job_id),
+                    tenant_id=tenant.id,
+                )
+                if cancelled:
+                    await db.commit()
+            except ValueError:
+                logger.warning(
+                    "Ignoring invalid lookup job id during unauth codigo restart: %s",
+                    lookup_job_id,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to cancel lookup job %s during unauth codigo restart",
+                    lookup_job_id,
+                )
+                try:
+                    await db.rollback()
+                except Exception:
+                    logger.exception(
+                        "Failed to rollback after unauth codigo restart cancellation error"
+                    )
+
+        await session_service.clear_session(session_key)
+        effective_keys = await code_services_repository.get_effective_service_keys(
+            db,
+            tenant.id,
+        )
+        if not effective_keys:
+            return WhatsAppConsoleResponse(
+                reply=_i18n_t(locale, "wa.tenant.codigo.no_code_services_client")
+            )
+
+        service_list = _build_unauth_service_page(effective_keys, 0, locale)
+        new_session = await session_service.create_session(session_key)
+        new_session.flow = _UNAUTH_CODIGO_FLOW
+        new_session.step = _UNAUTH_CODIGO_STEP_SERVICE
+        new_session.temp_data = {
+            "codigo_effective_keys": effective_keys,
+            "codigo_current_page": 0,
+        }
+        await session_service.save_session(new_session)
+        return WhatsAppConsoleResponse(
+            reply=_i18n_t(
+                locale,
+                "wa.tenant.codigo.service_prompt",
+                service_list=service_list,
+            )
+        )
+
     if not job_done:
         # Still waiting — redirect to back/cancel prompt
         if msg.strip() == "2":

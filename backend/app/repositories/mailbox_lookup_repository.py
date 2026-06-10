@@ -51,6 +51,34 @@ async def get_job(
     return result.scalar_one_or_none()
 
 
+async def cancel_active_job_if_present(
+    db: AsyncSession,
+    job_id: UUID,
+    tenant_id: UUID | None = None,
+) -> bool:
+    """Best-effort cancel for a session-linked active lookup job.
+
+    Returns ``True`` only when an active job (``pending`` or ``processing``)
+    was mutated to ``failed``. Returns ``False`` for missing jobs and for jobs
+    that are already terminal.
+
+    The helper does not commit; callers keep transaction control.
+    """
+    job = await get_job(db, job_id, tenant_id=tenant_id)
+    if job is None:
+        return False
+
+    if job.status not in {"pending", "processing"}:
+        return False
+
+    job.status = "failed"
+    job.completed_at = datetime.now(timezone.utc)
+    job.error_code = "user_cancelled"
+    job.error_detail_safe = "User restarted codigo flow"
+    await db.flush()
+    return True
+
+
 async def list_pending_jobs(db: AsyncSession, limit: int = 10) -> list[MailLookupJob]:
     """List pending jobs ready for processing, ordered by creation."""
     result = await db.execute(
@@ -148,6 +176,7 @@ async def delete_expired_jobs(db: AsyncSession, before: datetime | None = None) 
 __all__ = [
     "create_job",
     "get_job",
+    "cancel_active_job_if_present",
     "list_pending_jobs",
     "transition_status",
     "expire_stale_jobs",
