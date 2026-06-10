@@ -17,14 +17,14 @@
 - Modify: `frontend/vite.config.js`
 - Modify: `frontend/src/style.css`
 
-- [ ] **Step 1: Instalar dependencias de Tailwind CSS v4**
+- [x] **Step 1: Instalar dependencias de Tailwind CSS v4**
 
 Ejecuta en la carpeta `frontend/`:
 ```bash
 cd frontend && npm install tailwindcss @tailwindcss/vite
 ```
 
-- [ ] **Step 2: Configurar Vite para integrar el plugin de Tailwind CSS v4**
+- [x] **Step 2: Configurar Vite para integrar el plugin de Tailwind CSS v4**
 
 Modifica `frontend/vite.config.js` para añadir el plugin oficial:
 ```javascript
@@ -52,7 +52,7 @@ export default defineConfig({
 })
 ```
 
-- [ ] **Step 3: Inyectar directiva de Tailwind CSS v4 en style.css**
+- [x] **Step 3: Inyectar directiva de Tailwind CSS v4 en style.css**
 
 Reemplaza los contenidos de `frontend/src/style.css` con el import de Tailwind v4 y variables base:
 ```css
@@ -70,7 +70,7 @@ Reemplaza los contenidos de `frontend/src/style.css` con el import de Tailwind v
 }
 ```
 
-- [ ] **Step 4: Verificar que la compilación funciona correctamente**
+- [x] **Step 4: Verificar que la compilación funciona correctamente**
 
 Ejecuta en la carpeta `frontend/`:
 ```bash
@@ -78,7 +78,7 @@ npm run build
 ```
 Expected: Compilación exitosa sin errores de sintaxis CSS ni advertencias de Vite.
 
-- [ ] **Step 5: Confirmar cambios**
+- [x] **Step 5: Confirmar cambios**
 
 ```bash
 git add frontend/package.json frontend/vite.config.js frontend/src/style.css
