@@ -232,7 +232,7 @@ git commit -m "feat: implement theme toggle and core theme manager composable"
 **Files:**
 - Modify: `frontend/src/views/LoginView.vue`
 
-- [ ] **Step 1: Escribir LoginView con Tailwind CSS v4**
+- [x] **Step 1: Escribir LoginView con Tailwind CSS v4**
 
 Modifica `frontend/src/views/LoginView.vue` integrando clases utilitarias de Tailwind, la transición de error, y agregando `ThemeToggle` en el footer:
 ```vue
@@ -374,7 +374,7 @@ async function handleSubmit() {
 </style>
 ```
 
-- [ ] **Step 2: Verificar la suite de pruebas del frontend**
+- [x] **Step 2: Verificar la suite de pruebas del frontend**
 
 Ejecuta:
 ```bash
@@ -382,7 +382,7 @@ npm test
 ```
 Expected: PASS para todas las pruebas de login preexistentes.
 
-- [ ] **Step 3: Confirmar cambios**
+- [x] **Step 3: Confirmar cambios**
 
 ```bash
 git add frontend/src/views/LoginView.vue
