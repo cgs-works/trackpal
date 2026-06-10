@@ -209,6 +209,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.client.codigo.redirect": "🔑 Para buscar codigo de acceso, escribe *code*, *codigo* o *codigo*.\n\nTe llevare al flujo de busqueda.",
     # ── WhatsApp codigo lookup flow ────────────────────────────────
     "wa.tenant.codigo.menu": "🔑 *Buscar Codigo de Acceso*",
+    "wa.tenant.codigo.remote_cancelled_by_admin": "Operación cancelada por el administrador.",
     "wa.tenant.codigo.still_checking": "🔍 *Todavia buscando...*\n\nLa busqueda del codigo aun esta en progreso. Espera un momento.\n\nResponde *1* para reintentar, *2* para volver a servicios, o *0* para cancelar.\n\n⏳ Los resultados suelen llegar en unos segundos.",
     "wa.tenant.codigo.cancel": "Volver al menu principal",
     "wa.tenant.codigo.cancel_direct": "Cancelar",

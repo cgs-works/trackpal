@@ -552,8 +552,7 @@ async def _handle_from_me_routing(
             or target_jid
         )
         return WhatsAppConsoleResponse(
-            reply="",
-            no_reply=True,
+            reply=t(_tl(tenant), "wa.tenant.codigo.remote_cancelled_by_admin"),
             status="closed",
             close_jid=target_close_jid,
         )

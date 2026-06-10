@@ -2457,8 +2457,7 @@ async def test_from_me_remote_zero_cancels_target_codigo_by_phone(
 
     assert response.status_code == 200
     assert response.json() == {
-        "reply": "",
-        "no_reply": True,
+        "reply": "Operación cancelada por el administrador.",
         "status": "closed",
         "close_jid": "12015559999@s.whatsapp.net",
     }
@@ -2591,8 +2590,7 @@ async def test_from_me_remote_zero_cancels_target_codigo_by_lid(
 
     assert response.status_code == 200
     assert response.json() == {
-        "reply": "",
-        "no_reply": True,
+        "reply": "Operación cancelada por el administrador.",
         "status": "closed",
         "close_jid": "998877665544332211@lid",
     }
@@ -2677,8 +2675,7 @@ async def test_from_me_remote_zero_without_target_session_still_closes(
 
     assert response.status_code == 200
     assert response.json() == {
-        "reply": "",
-        "no_reply": True,
+        "reply": "Operación cancelada por el administrador.",
         "status": "closed",
         "close_jid": "12015559999@s.whatsapp.net",
     }
@@ -2712,8 +2709,46 @@ async def test_from_me_remote_zero_keeps_active_context_session(
         )
 
     assert response.status_code == 200
+    assert response.json()["reply"] == "Operación cancelada por el administrador."
     # The remote cancel should NOT clear the admin's active context session
     assert await fake_mgr._redis.get("wa:client_ctx:12015550002") is not None
+
+
+async def test_from_me_remote_zero_uses_tenant_locale_for_cancel_message(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    tenant.locale = "en"
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    await _seed_unauth_codigo_awaiting_result(fake_mgr, tenant.id)
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": tenant.whatsapp_phone,
+                "message": "0",
+                "instance": TEST_INSTANCE,
+                "from_me": True,
+                "admin_phone": tenant.whatsapp_phone,
+                "admin_jid": "12015550002@s.whatsapp.net",
+                "target_jid": "12015559999@s.whatsapp.net",
+                "target_phone": "12015559999",
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": "Operation cancelled by the administrator.",
+        "status": "closed",
+        "close_jid": "12015559999@s.whatsapp.net",
+    }
 
 
 # ---------------------------------------------------------------------------
