@@ -2,18 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useI18nStore } from '../../stores/i18n'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 
 const emit = defineEmits(['close', 'saved'])
 const props = defineProps({
-  isOpen: { type: Boolean, default: false },
+  show: { type: Boolean, default: false },
 })
 
 const authStore = useAuthStore()
@@ -92,7 +84,7 @@ function close() {
 }
 
 watch(
-  () => props.isOpen,
+  () => props.show,
   async (newVal) => {
     if (newVal) {
       errorMessage.value = ''
@@ -130,83 +122,398 @@ watch(
 </script>
 
 <template>
-  <Dialog :open="isOpen" @update:open="(v) => !v && close()">
-    <DialogContent class="sm:max-w-lg">
-      <DialogHeader>
-        <DialogTitle>{{ i18nStore.t('frontend.subscriptions.reminder_settings_title') }}</DialogTitle>
-      </DialogHeader>
-
-      <p v-if="errorMessage" class="text-sm text-red-400 bg-red-950/20 border border-red-900/40 rounded px-3 py-2">{{ errorMessage }}</p>
-
-      <!-- Inline loading: shown when modal opens before cache is ready -->
-      <div v-if="isLoading" class="flex flex-col items-center justify-center py-10">
-        <span class="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></span>
-        <p class="text-sm text-muted-foreground mt-3">{{ i18nStore.t('frontend.subscriptions.loading_settings') }}</p>
+  <div v-if="show" class="modal-overlay" @click.self="close">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>{{ i18nStore.t('frontend.subscriptions.reminder_settings_title') }}</h2>
+        <button class="modal-close" type="button" @click="close">✕</button>
       </div>
 
-      <!-- Load failure blocks save -->
-      <p v-else-if="loadError" class="text-sm text-red-400 bg-red-950/20 border border-red-900/40 rounded px-3 py-2">{{ loadError }}</p>
+      <div class="modal-body">
+        <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
 
-      <!-- Settings form (shown only when not loading and no error) -->
-      <div v-if="!isLoading && !loadError" class="flex flex-col gap-4">
-        <div class="flex items-center justify-between gap-3">
-          <span class="text-sm font-semibold text-foreground">{{ i18nStore.t('frontend.subscriptions.reminders_enabled') }}</span>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" v-model="settings.reminders_enabled" class="sr-only peer" />
-            <div class="w-11 h-6 bg-muted-foreground/30 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-foreground after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-          </label>
+        <!-- Inline loading: shown when modal opens before cache is ready -->
+        <div v-if="isLoading" class="empty-state">
+          <span class="spinner" aria-hidden="true"></span>
+          <p>{{ i18nStore.t('frontend.subscriptions.loading_settings') }}</p>
         </div>
 
-        <template v-if="settings.reminders_enabled">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold text-muted-foreground">{{ i18nStore.t('frontend.subscriptions.timezone') }}</label>
-            <select v-model="settings.timezone" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
-              <option v-if="tzLoadingError" value="" disabled>{{ i18nStore.t('frontend.subscriptions.timezone_loading_error') }}</option>
-              <option v-else-if="!timezoneOptions.length" value="UTC">UTC</option>
-              <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">{{ tz.label }}</option>
-            </select>
+        <!-- Load failure blocks save -->
+        <p v-else-if="loadError" class="alert alert-error">{{ loadError }}</p>
+
+        <!-- Settings form (shown only when not loading and no error) -->
+        <template v-if="!isLoading && !loadError">
+          <div class="toggle-wrapper">
+            <span class="toggle-label-text">{{ i18nStore.t('frontend.subscriptions.reminders_enabled') }}</span>
+            <label class="switch">
+              <input type="checkbox" v-model="settings.reminders_enabled" />
+              <span class="slider"></span>
+            </label>
           </div>
 
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold text-muted-foreground">{{ i18nStore.t('frontend.subscriptions.warning_days') }}</label>
-            <div class="flex flex-wrap gap-3 items-center">
-              <label class="inline-flex items-center gap-1.5 text-sm" v-for="day in [7, 3, 1]" :key="day">
-                <input type="checkbox" :checked="settings.warning_days.includes(day)" @change="toggleWarningDay(day)" class="accent-primary" />
-                {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
-              </label>
-              <div class="flex gap-1 items-center">
-                <input v-model="customDay" type="number" min="1" :placeholder="i18nStore.t('frontend.subscriptions.placeholder_custom_day')" class="h-8 w-20 rounded-md border border-input bg-transparent px-2 text-sm" @keyup.enter="addCustomWarningDay" />
-                <Button variant="outline" size="sm" type="button" @click="addCustomWarningDay" :disabled="!customDay">+</Button>
+          <template v-if="settings.reminders_enabled">
+            <label>
+              {{ i18nStore.t('frontend.subscriptions.timezone') }}
+              <select v-model="settings.timezone">
+                <option v-if="tzLoadingError" value="" disabled>{{ i18nStore.t('frontend.subscriptions.timezone_loading_error') }}</option>
+                <option v-else-if="!timezoneOptions.length" value="UTC">UTC</option>
+                <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">{{ tz.label }}</option>
+              </select>
+            </label>
+
+            <label>
+              {{ i18nStore.t('frontend.subscriptions.warning_days') }}
+              <div class="warning-days-container">
+                <label class="day-check" v-for="day in [7, 3, 1]" :key="day">
+                  <input type="checkbox" :checked="settings.warning_days.includes(day)" @change="toggleWarningDay(day)" />
+                  {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
+                </label>
+                <div class="custom-day-input">
+                  <input v-model="customDay" type="number" min="1" :placeholder="i18nStore.t('frontend.subscriptions.placeholder_custom_day')" @keyup.enter="addCustomWarningDay" />
+                  <button class="button button-sm" type="button" @click="addCustomWarningDay" :disabled="!customDay">+</button>
+                </div>
               </div>
-            </div>
-            <div v-if="settings.warning_days.length" class="flex flex-wrap gap-1.5 mt-1">
-              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold" v-for="day in settings.warning_days" :key="day">
-                {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
-                <button type="button" @click="removeWarningDay(day)" class="hover:text-red-500 transition-colors">✕</button>
-              </span>
-            </div>
-          </div>
+              <div v-if="settings.warning_days.length" class="warning-days-tags">
+                <span class="tag" v-for="day in settings.warning_days" :key="day">
+                  {{ day }} {{ day === 1 ? i18nStore.t('frontend.subscriptions.day') : i18nStore.t('frontend.subscriptions.day') + 's' }}
+                  <button class="tag-remove" type="button" @click="removeWarningDay(day)">✕</button>
+                </span>
+              </div>
+            </label>
 
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold text-muted-foreground">{{ i18nStore.t('frontend.subscriptions.reminder_time') }}</label>
-            <input v-model="settings.reminder_time" type="time" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none" />
-          </div>
+            <label>
+              {{ i18nStore.t('frontend.subscriptions.reminder_time') }}
+              <input v-model="settings.reminder_time" type="time" />
+              <span class="field-help">{{ i18nStore.t('frontend.subscriptions.reminder_time_help') }}</span>
+            </label>
 
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold text-muted-foreground">{{ i18nStore.t('frontend.subscriptions.recipient') }}</label>
-            <select v-model="settings.recipient_mode" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 outline-none">
-              <option v-for="opt in recipientModeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
-          </div>
+            <label>
+              {{ i18nStore.t('frontend.subscriptions.recipient') }}
+              <select v-model="settings.recipient_mode">
+                <option v-for="opt in recipientModeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </label>
+          </template>
         </template>
       </div>
 
-      <DialogFooter class="gap-2">
-        <Button variant="outline" type="button" @click="close">{{ i18nStore.t('frontend.subscriptions.cancel_action') }}</Button>
-        <Button type="button" @click="saveSettings" :disabled="isSaving || isLoading || !!loadError">
+      <div class="modal-footer">
+        <button class="button button-secondary" type="button" @click="close">{{ i18nStore.t('frontend.subscriptions.cancel_action') }}</button>
+        <button class="button button-primary" type="button" @click="saveSettings" :disabled="isSaving || isLoading || !!loadError">
           {{ isSaving ? i18nStore.t('frontend.subscriptions.saving') : i18nStore.t('frontend.subscriptions.save') }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--card-bg, #ffffff);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text, #1e293b);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  color: var(--text-secondary, #64748b);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.modal-close:hover {
+  background: var(--border, #e2e8f0);
+}
+
+.modal-body {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+/* Toggle switch wrapper (replaces nested label) */
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text, #1e293b);
+  font-weight: 700;
+}
+
+.toggle-label-text {
+  flex: 1;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--border, #e2e8f0);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.slider::before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #ffffff;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background: var(--primary, #4f46e5);
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
+}
+
+/* Inline loading state */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 0;
+  color: var(--text-secondary, #64748b);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--border, #e2e8f0);
+  border-top-color: var(--primary, #4f46e5);
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Existing field styles */
+label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text, #1e293b);
+  font: inherit;
+  background: var(--card-bg, #ffffff);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--primary, #4f46e5);
+  outline: 3px solid rgb(79 70 229 / 15%);
+}
+
+.field-help {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-secondary, #64748b);
+  margin-top: -4px;
+}
+
+/* Warning days */
+.warning-days-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.day-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  color: var(--text, #1e293b);
+  cursor: pointer;
+}
+
+.day-check input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
+}
+
+.custom-day-input {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.custom-day-input input {
+  width: 120px;
+  padding: 6px 8px;
+}
+
+.custom-day-input .button-sm {
+  padding: 6px 10px;
+}
+
+.warning-days-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: var(--primary, #4f46e5);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--primary, #4f46e5);
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.tag-remove:hover {
+  color: var(--danger, #ef4444);
+}
+
+/* Alert */
+.alert {
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+
+.alert-error {
+  border: 1px solid rgb(239 68 68 / 30%);
+  background: rgb(239 68 68 / 10%);
+  color: #b91c1c;
+}
+
+/* Button styles */
+.button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.button-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #1e293b);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button-primary {
+  background: var(--primary, #4f46e5);
+  color: #ffffff;
+}
+
+.button-secondary {
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #1e293b);
+}
+
+@media (max-width: 720px) {
+  .modal {
+    width: 95%;
+    max-width: 100%;
+  }
+
+  .modal-footer .button {
+    width: 100%;
+  }
+}
+</style>

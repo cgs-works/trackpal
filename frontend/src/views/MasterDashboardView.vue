@@ -1,38 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
-import { useAuthStore } from '@/stores/auth'
-import { useI18nStore } from '@/stores/i18n'
-import DashboardLayout from '@/components/DashboardLayout.vue'
-import PageHeader from '@/components/PageHeader.vue'
-import InlineAlert from '@/components/InlineAlert.vue'
-import StatusBadge from '@/components/StatusBadge.vue'
-import SummaryMetric from '@/components/SummaryMetric.vue'
-import EntityInspector from '@/components/EntityInspector.vue'
-import ImpactConfirmDialog from '@/components/ImpactConfirmDialog.vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import api from '../services/api'
+import { useAuthStore } from '../stores/auth'
+import CodeServicesGlobalPanel from '../components/CodeServicesGlobalPanel.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const i18nStore = useI18nStore()
 
 const tenants = ref([])
 const meta = ref({ total: 0, active: 0, inactive: 0 })
@@ -41,20 +15,18 @@ const isSaving = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const modalError = ref('')
-const isTenantDialogOpen = ref(false)
-const tenantDialogMode = ref('create')
-const selectedTenant = ref(null)
-const deleteDialogOpen = ref(false)
-const deleteTarget = ref(null)
+const isModalOpen = ref(false)
+const modalMode = ref('create')
 const form = ref(getEmptyForm())
 
-const isEditMode = computed(() => tenantDialogMode.value === 'edit')
+const isEditMode = computed(() => modalMode.value === 'edit')
 const modalTitle = computed(() => (isEditMode.value ? 'Edit Business' : 'Create Business'))
 const modalPrefixHint = computed(() => (
   isEditMode.value
     ? 'Changing this prefix will update all client login usernames for this business.'
     : 'Leave blank to auto-generate a unique prefix.'
 ))
+const username = computed(() => authStore.username || authStore.user?.username || 'Master')
 
 function getEmptyForm() {
   return {
@@ -106,26 +78,16 @@ async function loadTenants() {
   }
 }
 
-function clearMessages() {
-  errorMessage.value = ''
-  successMessage.value = ''
-  modalError.value = ''
-}
-
-function selectTenant(tenant) {
-  selectedTenant.value = tenant
-}
-
-function openCreateTenantDialog() {
+function openCreateModal() {
   clearMessages()
-  tenantDialogMode.value = 'create'
+  modalMode.value = 'create'
   form.value = getEmptyForm()
-  isTenantDialogOpen.value = true
+  isModalOpen.value = true
 }
 
-function openEditTenantDialog(tenant) {
+function openEditModal(tenant) {
   clearMessages()
-  tenantDialogMode.value = 'edit'
+  modalMode.value = 'edit'
   form.value = {
     ...getEmptyForm(),
     id: tenant.id,
@@ -135,12 +97,18 @@ function openEditTenantDialog(tenant) {
     client_prefix: tenant.client_prefix || '',
     evolution_instance_name: tenant.evolution_instance_name || '',
   }
-  isTenantDialogOpen.value = true
+  isModalOpen.value = true
 }
 
 function closeModal() {
   if (isSaving.value) return
-  isTenantDialogOpen.value = false
+  isModalOpen.value = false
+  modalError.value = ''
+}
+
+function clearMessages() {
+  errorMessage.value = ''
+  successMessage.value = ''
   modalError.value = ''
 }
 
@@ -208,7 +176,7 @@ async function handleSubmit() {
         : 'Business created successfully.'
     }
 
-    isTenantDialogOpen.value = false
+    isModalOpen.value = false
     await loadTenants()
   } catch (error) {
     modalError.value = getApiError(error, 'Unable to save business')
@@ -231,28 +199,21 @@ async function toggleTenantStatus(tenant) {
   }
 }
 
-function openDeleteTenantDialog(tenant) {
+async function deleteTenant(tenant) {
   clearMessages()
-  deleteTarget.value = tenant
-  deleteDialogOpen.value = true
-}
-
-async function confirmTenantDelete() {
-  const tenant = deleteTarget.value
-  if (!tenant) return
 
   if (isTenantActive(tenant)) {
     errorMessage.value = 'Cannot delete active business. Deactivate first.'
-    deleteDialogOpen.value = false
+    return
+  }
+
+  if (!window.confirm(`Delete business ${tenant.full_name}? This action cannot be undone.`)) {
     return
   }
 
   try {
     await api.delete(`/tenants/${tenant.id}`)
     successMessage.value = 'Business deleted successfully.'
-    deleteDialogOpen.value = false
-    deleteTarget.value = null
-    if (selectedTenant.value?.id === tenant.id) selectedTenant.value = null
     await loadTenants()
   } catch (error) {
     errorMessage.value = getApiError(error, 'Unable to delete business')
@@ -263,165 +224,452 @@ async function manageCatalog(tenant) {
   clearMessages()
   try {
     await authStore.switchTenant(tenant.id)
-    await router.push('/admin/overview')
+    await router.push('/admin/dashboard')
   } catch (error) {
     errorMessage.value = getApiError(error, 'Unable to switch business context')
   }
+}
+
+async function handleLogout() {
+  await authStore.logout()
+  await router.push('/login')
 }
 
 onMounted(loadTenants)
 </script>
 
 <template>
-  <DashboardLayout>
-    <div class="space-y-6">
-      <PageHeader title="Overview">
-        <template #actions>
-          <Button @click="openCreateTenantDialog">Create Business</Button>
+  <main class="dashboard-page">
+    <header class="dashboard-header">
+      <div>
+        <p class="eyebrow">Master Dashboard</p>
+        <h1>Trackpal</h1>
+      </div>
+
+      <div class="user-actions">
+        <span class="username">{{ username }}</span>
+        <button class="button button-secondary" type="button" @click="handleLogout">Logout</button>
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Business summary">
+      <article class="summary-card">
+        <span>Total Businesses</span>
+        <strong>{{ meta.total }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Active</span>
+        <strong>{{ meta.active }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Inactive</span>
+        <strong>{{ meta.inactive }}</strong>
+      </article>
+    </section>
+
+    <section class="content-card">
+      <div class="section-header">
+        <div>
+          <h2>Businesses</h2>
+          <p>Manage business accounts and Evolution instances.</p>
+        </div>
+        <button class="button button-primary" type="button" @click="openCreateModal">Create Business</button>
+      </div>
+
+      <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
+      <p v-if="successMessage" class="alert alert-success">{{ successMessage }}</p>
+
+      <div v-if="isLoading" class="empty-state">Loading businesses...</div>
+      <div v-else-if="!tenants.length" class="empty-state">No businesses registered yet</div>
+      <div v-else class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Full Name</th>
+              <th>Client Prefix</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Evolution Instance</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="tenant in tenants" :key="tenant.id">
+              <td>{{ tenant.full_name }}</td>
+              <td>{{ tenant.client_prefix || '—' }}</td>
+              <td>{{ tenant.email }}</td>
+              <td>{{ tenant.phone }}</td>
+              <td>{{ tenant.evolution_instance_name || '—' }}</td>
+              <td>
+                <span class="status-badge" :class="isTenantActive(tenant) ? 'active' : 'inactive'">
+                  {{ isTenantActive(tenant) ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="link-button" type="button" @click="openEditModal(tenant)">Edit</button>
+                  <button class="link-button" type="button" @click="manageCatalog(tenant)">Manage catalog</button>
+                  <button class="link-button" type="button" @click="toggleTenantStatus(tenant)">
+                    {{ isTenantActive(tenant) ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button class="link-button danger" type="button" @click="deleteTenant(tenant)">Delete</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <CodeServicesGlobalPanel />
+
+    <div v-if="isModalOpen" class="modal-backdrop" @click.self="closeModal">
+      <form class="modal" @submit.prevent="handleSubmit">
+        <div class="modal-header">
+          <h2>{{ modalTitle }}</h2>
+          <button class="icon-button" type="button" aria-label="Close modal" @click="closeModal">×</button>
+        </div>
+
+        <p v-if="modalError" class="alert alert-error">{{ modalError }}</p>
+
+        <label for="full_name">Full Name</label>
+        <input id="full_name" v-model.trim="form.full_name" type="text" required>
+
+        <label for="email">Email</label>
+        <input id="email" v-model.trim="form.email" type="email" required>
+
+        <label for="phone">Phone</label>
+        <input id="phone" v-model.trim="form.phone" type="tel" required>
+
+        <label for="client_prefix">Client Prefix <span>(optional)</span></label>
+        <input id="client_prefix" v-model.trim="form.client_prefix" type="text" maxlength="5">
+        <p class="modal-hint">{{ modalPrefixHint }}</p>
+
+        <template v-if="!isEditMode">
+          <label for="tenant_username">Username</label>
+          <input id="tenant_username" v-model.trim="form.username" type="text" required>
+
+          <label for="password">Password <span>(optional)</span></label>
+          <input id="password" v-model="form.password" type="password" autocomplete="new-password">
         </template>
-      </PageHeader>
 
-      <InlineAlert v-if="errorMessage" variant="error" :message="errorMessage" />
-      <InlineAlert v-if="successMessage" variant="success" :message="successMessage" />
+        <label for="evolution_instance_name">Evolution Instance</label>
+        <input
+          id="evolution_instance_name"
+          v-model.trim="form.evolution_instance_name"
+          type="text"
+          required
+        >
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Business summary">
-        <SummaryMetric label="Total Businesses" :value="meta.total" />
-        <SummaryMetric label="Active" :value="meta.active" tone="success" />
-        <SummaryMetric label="Inactive" :value="meta.inactive" tone="warning" />
-      </div>
-
-      <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section class="rounded-xl border border-border bg-card">
-          <div v-if="isLoading" class="flex items-center justify-center py-10 text-sm text-muted-foreground">
-            Loading businesses...
-          </div>
-
-          <Table v-else-if="tenants.length">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Full Name</TableHead>
-                <TableHead>Client Prefix</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead class="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow
-                v-for="tenant in tenants"
-                :key="tenant.id"
-                :data-testid="`tenant-row-${tenant.id}`"
-                :class="selectedTenant?.id === tenant.id ? 'bg-accent border-ring' : 'hover:bg-accent'"
-                class="cursor-pointer"
-                @click="selectTenant(tenant)"
-              >
-                <TableCell class="font-medium">{{ tenant.full_name }}</TableCell>
-                <TableCell class="text-muted-foreground">{{ tenant.client_prefix || '—' }}</TableCell>
-                <TableCell class="font-mono text-xs">{{ tenant.email }}</TableCell>
-                <TableCell>{{ tenant.phone }}</TableCell>
-                <TableCell>
-                  <StatusBadge
-                    :variant="isTenantActive(tenant) ? 'active' : 'inactive'"
-                    :label="isTenantActive(tenant) ? 'Active' : 'Inactive'"
-                  />
-                </TableCell>
-                <TableCell class="text-right">
-                  <div class="flex flex-wrap items-center justify-end gap-2">
-                    <Button :data-testid="`tenant-edit-${tenant.id}`" size="sm" variant="outline" @click.stop="openEditTenantDialog(tenant)">Edit</Button>
-                    <Button size="sm" variant="outline" @click.stop="manageCatalog(tenant)">Catalog</Button>
-                    <Button size="sm" variant="outline" @click.stop="toggleTenantStatus(tenant)">{{ isTenantActive(tenant) ? 'Deactivate' : 'Activate' }}</Button>
-                    <Button size="sm" variant="destructive" @click.stop="openDeleteTenantDialog(tenant)">Delete</Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-
-          <div v-else class="flex items-center justify-center py-10 text-sm text-muted-foreground">
-            No businesses registered yet
-          </div>
-        </section>
-
-        <EntityInspector
-          v-if="selectedTenant"
-          data-testid="tenant-inspector"
-          title="Tenant detail"
-          :description="selectedTenant.full_name"
-          :fields="[
-            { label: 'Email', value: selectedTenant.email },
-            { label: 'Phone', value: selectedTenant.phone },
-            { label: 'Client prefix', value: selectedTenant.client_prefix },
-            { label: 'Status', value: isTenantActive(selectedTenant) ? 'Active' : 'Inactive' },
-          ]"
-          @edit="openEditTenantDialog(selectedTenant)"
-        />
-      </div>
-
-      <Dialog :open="isTenantDialogOpen" @update:open="isTenantDialogOpen = $event">
-        <DialogContent data-testid="tenant-form-dialog" class="sm:max-w-2xl">
-          <form class="space-y-4" @submit.prevent="handleSubmit">
-            <DialogHeader>
-              <DialogTitle>{{ modalTitle }}</DialogTitle>
-              <DialogDescription>{{ modalPrefixHint }}</DialogDescription>
-            </DialogHeader>
-
-            <InlineAlert v-if="modalError" variant="error" :message="modalError" />
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div class="space-y-1.5">
-                <label for="full_name" class="text-sm font-medium">Full Name</label>
-                <Input id="full_name" v-model.trim="form.full_name" type="text" required />
-              </div>
-              <div class="space-y-1.5">
-                <label for="email" class="text-sm font-medium">Email</label>
-                <Input id="email" v-model.trim="form.email" type="email" required />
-              </div>
-              <div class="space-y-1.5">
-                <label for="phone" class="text-sm font-medium">Phone</label>
-                <Input id="phone" v-model.trim="form.phone" type="tel" required />
-              </div>
-              <div class="space-y-1.5">
-                <label for="client_prefix" class="text-sm font-medium">Client Prefix</label>
-                <Input id="client_prefix" v-model.trim="form.client_prefix" type="text" maxlength="5" />
-              </div>
-              <template v-if="!isEditMode">
-                <div class="space-y-1.5">
-                  <label for="tenant_username" class="text-sm font-medium">Username</label>
-                  <Input id="tenant_username" v-model.trim="form.username" type="text" required />
-                </div>
-                <div class="space-y-1.5">
-                  <label for="password" class="text-sm font-medium">Password</label>
-                  <Input id="password" v-model="form.password" type="password" autocomplete="new-password" />
-                </div>
-              </template>
-              <div class="space-y-1.5 sm:col-span-2">
-                <label for="evolution_instance_name" class="text-sm font-medium">Evolution Instance</label>
-                <Input id="evolution_instance_name" v-model.trim="form.evolution_instance_name" type="text" required />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" :disabled="isSaving" @click="closeModal">Cancel</Button>
-              <Button type="submit" :disabled="isSaving">{{ isSaving ? 'Saving...' : 'Save' }}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <ImpactConfirmDialog
-        :open="deleteDialogOpen"
-        title="Delete business"
-        description="This action cannot be undone. Active businesses must be deactivated first."
-        :target-name="deleteTarget?.full_name || ''"
-        :impacts="[
-          { label: 'Tenant account', value: 'Will be permanently removed' },
-          { label: 'Status', value: deleteTarget && isTenantActive(deleteTarget) ? 'Deactivate first' : 'Ready to delete' },
-        ]"
-        confirm-label="Delete"
-        @update:open="deleteDialogOpen = $event"
-        @confirm="confirmTenantDelete"
-      />
+        <div class="modal-actions">
+          <button class="button button-secondary" type="button" @click="closeModal">Cancel</button>
+          <button class="button button-primary" type="submit" :disabled="isSaving">
+            {{ isSaving ? 'Saving...' : 'Save' }}
+          </button>
+        </div>
+      </form>
     </div>
-  </DashboardLayout>
+  </main>
 </template>
+
+<style scoped>
+:global(:root) {
+  --primary: #4f46e5;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+}
+
+.dashboard-page {
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.dashboard-header,
+.section-header,
+.user-actions,
+.row-actions,
+.modal-header,
+.modal-actions {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-header,
+.section-header,
+.modal-header {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+}
+
+.eyebrow,
+.section-header p,
+.summary-card span {
+  color: var(--text-secondary);
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 2rem;
+}
+
+h2 {
+  margin-bottom: 6px;
+}
+
+.user-actions {
+  gap: 12px;
+}
+
+.username {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card,
+.content-card,
+.modal {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: 0 10px 25px rgb(15 23 42 / 8%);
+}
+
+.summary-card {
+  padding: 22px;
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 2rem;
+}
+
+.content-card {
+  padding: 24px;
+}
+
+.button,
+.link-button,
+.icon-button {
+  cursor: pointer;
+  border: 0;
+  font: inherit;
+}
+
+.button {
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.button-secondary {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-weight: 600;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.alert-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.empty-state {
+  padding: 42px 16px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.status-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.row-actions {
+  gap: 10px;
+}
+
+.link-button {
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.link-button.danger {
+  color: var(--danger);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 55%);
+}
+
+.modal {
+  width: min(520px, 100%);
+  padding: 24px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+label {
+  display: block;
+  margin: 14px 0 6px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+label span {
+  font-weight: 500;
+}
+
+.modal-hint {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus {
+  border-color: var(--primary);
+  outline: 3px solid rgb(79 70 229 / 15%);
+}
+
+.modal-actions {
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+@media (max-width: 760px) {
+  .dashboard-page {
+    padding: 20px;
+  }
+
+  .dashboard-header,
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

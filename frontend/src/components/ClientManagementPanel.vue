@@ -1,33 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
-import { useI18nStore } from '@/stores/i18n'
-import InlineAlert from '@/components/InlineAlert.vue'
-import StatusBadge from '@/components/StatusBadge.vue'
-import EmptyState from '@/components/EmptyState.vue'
-import LoadingBlock from '@/components/LoadingBlock.vue'
-import SummaryMetric from '@/components/SummaryMetric.vue'
-import EntityInspector from '@/components/EntityInspector.vue'
-import ImpactConfirmDialog from '@/components/ImpactConfirmDialog.vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import api from '../services/api'
+import { useI18nStore } from '../stores/i18n'
 
 const router = useRouter()
 const i18nStore = useI18nStore()
@@ -38,15 +13,7 @@ const clientMessage = ref('')
 const clientError = ref('')
 const isSavingClient = ref(false)
 const isLoadingClients = ref(false)
-const selectedClient = ref(null)
-const isClientDialogOpen = ref(false)
-const clientDialogMode = ref('create')
-const deleteDialogOpen = ref(false)
-const deleteTarget = ref(null)
-
-const isEditingClient = computed(() => clientDialogMode.value === 'edit')
-const activeCount = computed(() => clients.value.filter((client) => client.is_active).length)
-const inactiveCount = computed(() => clients.value.length - activeCount.value)
+const isEditingClient = computed(() => !!clientForm.value.id)
 
 function getApiError(error, fallback) {
   const detail = error.response?.data?.detail
@@ -83,41 +50,21 @@ async function loadClients() {
   }
 }
 
-function selectClient(client) {
-  selectedClient.value = client
-}
-
 function editClient(client) {
   clientError.value = ''
   clientMessage.value = ''
   clientForm.value = {
     id: client.id,
     full_name: client.full_name || '',
-    local_username: client.local_username || client.username || '',
+    local_username: client.local_username || '',
     phone: client.phone || '',
     password: '',
   }
 }
 
-function openCreateClientDialog() {
-  clientDialogMode.value = 'create'
+function cancelClientEdit() {
   resetClientForm()
   clientError.value = ''
-  clientMessage.value = ''
-  isClientDialogOpen.value = true
-}
-
-function openEditClientDialog(client) {
-  clientDialogMode.value = 'edit'
-  editClient(client)
-  isClientDialogOpen.value = true
-}
-
-function openDeleteClientDialog(client) {
-  clientError.value = ''
-  clientMessage.value = ''
-  deleteTarget.value = client
-  deleteDialogOpen.value = true
 }
 
 async function saveClient() {
@@ -142,7 +89,6 @@ async function saveClient() {
       clientMessage.value = i18nStore.t('frontend.clients.created', { login: response.data.username })
     }
     resetClientForm()
-    isClientDialogOpen.value = false
     await loadClients()
   } catch (error) {
     clientError.value = getApiError(error, i18nStore.t('frontend.clients.error_save'))
@@ -168,22 +114,17 @@ async function toggleClientStatus(client) {
   }
 }
 
-async function confirmDeleteClient() {
-  const client = deleteTarget.value
-  if (!client) return
-
+async function deleteClient(client) {
+  clientError.value = ''
+  clientMessage.value = ''
   if (client.is_active) {
     clientError.value = i18nStore.t('frontend.clients.cannot_delete_active')
-    deleteDialogOpen.value = false
     return
   }
-
+  if (!window.confirm(i18nStore.t('frontend.clients.confirm_delete', { name: client.full_name }))) return
   try {
     await api.delete(`/clients/${client.id}`)
     clientMessage.value = i18nStore.t('frontend.clients.deleted')
-    deleteDialogOpen.value = false
-    deleteTarget.value = null
-    if (selectedClient.value?.id === client.id) selectedClient.value = null
     await loadClients()
   } catch (error) {
     clientError.value = getApiError(error, i18nStore.t('frontend.clients.error_delete'))
@@ -194,135 +135,78 @@ onMounted(loadClients)
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-end">
-      <Button @click="openCreateClientDialog">{{ i18nStore.t('frontend.clients.create') }}</Button>
+  <section class="content-card profile-card">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">{{ i18nStore.t('frontend.clients.section_title') }}</p>
+        <h2>{{ i18nStore.t('frontend.clients.section_heading') }}</h2>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <SummaryMetric :label="i18nStore.t('frontend.clients.section_heading')" :value="clients.length" />
-      <SummaryMetric :label="i18nStore.t('frontend.dashboard.client.status_active')" :value="activeCount" tone="success" />
-      <SummaryMetric :label="i18nStore.t('frontend.dashboard.client.status_inactive')" :value="inactiveCount" tone="warning" />
+    <p v-if="clientError" class="alert alert-error">{{ clientError }}</p>
+    <p v-if="clientMessage" class="alert alert-success">{{ clientMessage }}</p>
+
+    <form class="form-grid" @submit.prevent="saveClient">
+      <label>
+        {{ i18nStore.t('frontend.profile.full_name') }}
+        <input v-model.trim="clientForm.full_name" type="text" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.dashboard.client.local_user') }}
+        <input v-model.trim="clientForm.local_username" type="text" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.profile.phone') }}
+        <input v-model.trim="clientForm.phone" type="tel" />
+      </label>
+      <label v-if="!isEditingClient">
+        {{ i18nStore.t('frontend.clients.password') }}
+        <input v-model="clientForm.password" type="password" autocomplete="new-password" required />
+      </label>
+      <div class="form-actions">
+        <button class="button button-secondary" type="button" @click="cancelClientEdit">{{ i18nStore.t('frontend.clients.clear') }}</button>
+        <button class="button button-primary" type="submit" :disabled="isSavingClient">
+          {{ isSavingClient ? i18nStore.t('frontend.clients.saving') : (isEditingClient ? i18nStore.t('frontend.clients.update') : i18nStore.t('frontend.clients.create')) }}
+        </button>
+      </div>
+    </form>
+
+    <div v-if="isLoadingClients" class="empty-state">{{ i18nStore.t('frontend.clients.loading') }}</div>
+    <div v-else-if="!clients.length" class="empty-state">{{ i18nStore.t('frontend.clients.no_clients') }}</div>
+    <div v-else class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ i18nStore.t('frontend.profile.full_name') }}</th>
+            <th>{{ i18nStore.t('frontend.dashboard.client.local_user') }}</th>
+            <th>{{ i18nStore.t('frontend.profile.phone') }}</th>
+            <th>{{ i18nStore.t('frontend.subscriptions.status') }}</th>
+            <th>{{ i18nStore.t('frontend.subscriptions.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="client in clients" :key="client.id">
+            <td>{{ client.full_name }}</td>
+            <td>{{ client.username }}</td>
+            <td>{{ client.phone || '—' }}</td>
+            <td>
+              <span class="status-badge" :class="client.is_active ? 'active' : 'inactive'">
+                {{ client.is_active ? i18nStore.t('frontend.dashboard.client.status_active') : i18nStore.t('frontend.dashboard.client.status_inactive') }}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="link-button" type="button" @click="editClient(client)">{{ i18nStore.t('frontend.clients.edit') }}</button>
+                <button class="link-button" type="button" @click="toggleClientStatus(client)">
+                  {{ client.is_active ? i18nStore.t('frontend.clients.deactivate') : i18nStore.t('frontend.clients.activate') }}
+                </button>
+                <button class="link-button" type="button" @click="router.push('/admin/subscriptions?client_id=' + client.id)">{{ i18nStore.t('frontend.clients.subscriptions') }}</button>
+                <button class="link-button danger" type="button" @click="deleteClient(client)">{{ i18nStore.t('frontend.clients.delete') }}</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
-    <InlineAlert v-if="clientError" variant="error" :message="clientError" />
-    <InlineAlert v-if="clientMessage" variant="success" :message="clientMessage" />
-
-    <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <section class="rounded-xl border border-border bg-card">
-        <LoadingBlock v-if="isLoadingClients" />
-
-        <EmptyState
-          v-else-if="!clients.length"
-          :title="i18nStore.t('frontend.clients.no_clients')"
-        />
-
-        <Table v-else>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{{ i18nStore.t('frontend.profile.full_name') }}</TableHead>
-              <TableHead>{{ i18nStore.t('frontend.dashboard.client.local_user') }}</TableHead>
-              <TableHead>{{ i18nStore.t('frontend.profile.phone') }}</TableHead>
-              <TableHead>{{ i18nStore.t('frontend.subscriptions.status') }}</TableHead>
-              <TableHead class="text-right">{{ i18nStore.t('frontend.subscriptions.actions') }}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow
-              v-for="client in clients"
-              :key="client.id"
-              :data-testid="`client-row-${client.id}`"
-              :class="selectedClient?.id === client.id ? 'bg-accent border-ring' : 'hover:bg-accent'"
-              class="cursor-pointer"
-              @click="selectClient(client)"
-            >
-              <TableCell class="font-medium">{{ client.full_name }}</TableCell>
-              <TableCell>{{ client.username || client.local_username }}</TableCell>
-              <TableCell>{{ client.phone || '—' }}</TableCell>
-              <TableCell>
-                <StatusBadge
-                  :variant="client.is_active ? 'active' : 'inactive'"
-                  :label="client.is_active ? i18nStore.t('frontend.dashboard.client.status_active') : i18nStore.t('frontend.dashboard.client.status_inactive')"
-                />
-              </TableCell>
-              <TableCell class="text-right">
-                <div class="flex flex-wrap items-center justify-end gap-2">
-                  <Button :data-testid="`client-edit-${client.id}`" variant="outline" size="sm" @click.stop="openEditClientDialog(client)">{{ i18nStore.t('frontend.clients.edit') }}</Button>
-                  <Button variant="outline" size="sm" @click.stop="toggleClientStatus(client)">
-                    {{ client.is_active ? i18nStore.t('frontend.clients.deactivate') : i18nStore.t('frontend.clients.activate') }}
-                  </Button>
-                  <Button variant="outline" size="sm" @click.stop="router.push('/admin/subscriptions?client_id=' + client.id)">{{ i18nStore.t('frontend.clients.subscriptions') }}</Button>
-                  <Button variant="destructive" size="sm" @click.stop="openDeleteClientDialog(client)">{{ i18nStore.t('frontend.clients.delete') }}</Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </section>
-
-      <EntityInspector
-        v-if="selectedClient"
-        data-testid="client-inspector"
-        title="Client detail"
-        :description="selectedClient.full_name"
-        :edit-label="i18nStore.t('frontend.clients.edit')"
-        :fields="[
-          { label: i18nStore.t('frontend.dashboard.client.local_user'), value: selectedClient.username || selectedClient.local_username },
-          { label: i18nStore.t('frontend.profile.phone'), value: selectedClient.phone },
-          { label: i18nStore.t('frontend.subscriptions.status'), value: selectedClient.is_active ? i18nStore.t('frontend.dashboard.client.status_active') : i18nStore.t('frontend.dashboard.client.status_inactive') },
-        ]"
-        @edit="openEditClientDialog(selectedClient)"
-      />
-    </div>
-
-    <Dialog :open="isClientDialogOpen" @update:open="isClientDialogOpen = $event">
-      <DialogContent data-testid="client-form-dialog" class="sm:max-w-2xl">
-        <form class="space-y-4" @submit.prevent="saveClient">
-          <DialogHeader>
-            <DialogTitle>{{ isEditingClient ? i18nStore.t('frontend.clients.edit') : i18nStore.t('frontend.clients.create') }}</DialogTitle>
-            <DialogDescription>Manage client access and contact details.</DialogDescription>
-          </DialogHeader>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="space-y-1.5">
-              <label class="text-sm font-medium">{{ i18nStore.t('frontend.profile.full_name') }}</label>
-              <Input v-model.trim="clientForm.full_name" type="text" required />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-sm font-medium">{{ i18nStore.t('frontend.dashboard.client.local_user') }}</label>
-              <Input v-model.trim="clientForm.local_username" type="text" required />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-sm font-medium">{{ i18nStore.t('frontend.profile.phone') }}</label>
-              <Input v-model.trim="clientForm.phone" type="tel" />
-            </div>
-            <div v-if="!isEditingClient" class="space-y-1.5">
-              <label class="text-sm font-medium">{{ i18nStore.t('frontend.clients.password') }}</label>
-              <Input v-model="clientForm.password" type="password" autocomplete="new-password" required />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" @click="isClientDialogOpen = false">{{ i18nStore.t('frontend.common.cancel') }}</Button>
-            <Button type="submit" :disabled="isSavingClient">
-              {{ isSavingClient ? i18nStore.t('frontend.clients.saving') : (isEditingClient ? i18nStore.t('frontend.clients.update') : i18nStore.t('frontend.clients.create')) }}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-
-    <ImpactConfirmDialog
-      :open="deleteDialogOpen"
-      :title="i18nStore.t('frontend.clients.delete')"
-      :description="i18nStore.t('frontend.clients.confirm_delete', { name: deleteTarget?.full_name || '' })"
-      :target-name="deleteTarget?.full_name || ''"
-      :impacts="[
-        { label: i18nStore.t('frontend.subscriptions.status'), value: deleteTarget?.is_active ? i18nStore.t('frontend.clients.cannot_delete_active') : i18nStore.t('frontend.clients.deleted') },
-      ]"
-      :confirm-label="i18nStore.t('frontend.clients.delete')"
-      @update:open="deleteDialogOpen = $event"
-      @confirm="confirmDeleteClient"
-    />
-  </div>
+  </section>
 </template>

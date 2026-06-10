@@ -2,8 +2,6 @@
 import { computed, ref } from 'vue'
 import api from '../services/api'
 import { useI18nStore } from '../stores/i18n'
-import InlineAlert from './InlineAlert.vue'
-import StatusBadge from './StatusBadge.vue'
 
 const i18nStore = useI18nStore()
 
@@ -149,230 +147,365 @@ function cancelImapSetup() {
   showImapForm.value = false
   imapForm.value = { mailbox_email: '', imap_host: '', imap_port: 993, imap_ssl: true, imap_password: '' }
 }
-
-const statusVariant = computed(() => {
-  const s = props.mailbox?.status
-  if (s === 'connected') return 'active'
-  if (s === 'revoked') return 'expired'
-  if (s === 'error') return 'cancelled'
-  return 'inactive'
-})
-
-const providerLabel = computed(() => {
-  const p = props.mailbox?.provider
-  if (p === 'google') return 'Gmail'
-  if (p === 'microsoft') return 'Outlook'
-  return 'IMAP'
-})
-
-const authMethodLabel = computed(() => {
-  return props.mailbox?.auth_method === 'oauth' ? 'OAuth 2.0' : 'IMAP App Password'
-})
-
-const statusLabel = computed(() => {
-  const s = props.mailbox?.status
-  if (s === 'connected') return i18nStore.t('frontend.mailbox.status_connected')
-  if (s === 'disconnected') return i18nStore.t('frontend.mailbox.status_disconnected')
-  if (s === 'revoked') return i18nStore.t('frontend.mailbox.status_revoked')
-  return i18nStore.t('frontend.mailbox.status_error')
-})
 </script>
 
 <template>
-  <section class="max-w-xl">
-    <!-- Section heading -->
-    <div class="border-b border-border pb-3 mb-4">
-      <p class="text-xs font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.section_title') }}</p>
-      <h2 class="text-sm font-bold text-foreground">{{ i18nStore.t('frontend.mailbox.section_heading') }}</h2>
+  <section class="content-card mailbox-card">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">{{ i18nStore.t('frontend.mailbox.section_title') }}</p>
+        <h2>{{ i18nStore.t('frontend.mailbox.section_heading') }}</h2>
+      </div>
     </div>
 
-    <!-- Alerts -->
-    <InlineAlert v-if="mailboxError" variant="error" :message="mailboxError" />
-    <InlineAlert v-if="mailboxSuccess" variant="success" :message="mailboxSuccess" />
+    <p v-if="mailboxError" class="alert alert-error">{{ mailboxError }}</p>
+    <p v-if="mailboxSuccess" class="alert alert-success">{{ mailboxSuccess }}</p>
 
-    <!-- Not configured placeholder -->
-    <p v-if="!mailbox" data-testid="mailbox-empty-state" class="text-xs text-muted-foreground">{{ i18nStore.t('frontend.mailbox.not_configured') }}</p>
+    <p v-if="!mailbox" class="placeholder-message">{{ i18nStore.t('frontend.mailbox.not_configured') }}</p>
 
-    <!-- Connection options when no mailbox or not connected -->
     <template v-if="showConnectActions && !showImapForm">
-      <!-- OAuth providers -->
-      <div class="border border-border rounded-md p-4 mb-4">
-        <h3 class="text-xs font-bold text-foreground mb-1">{{ i18nStore.t('frontend.mailbox.oauth_title') }}</h3>
-        <p class="text-xs text-muted-foreground mb-1">{{ i18nStore.t('frontend.mailbox.oauth_description') }}</p>
-        <p class="text-xs text-muted-foreground mb-3">{{ i18nStore.t('frontend.mailbox.oauth_note') }}</p>
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            :disabled="isStartingOAuth"
-            class="inline-flex items-center gap-1.5 px-3 py-2 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:border-primary hover:shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            @click="startOAuth('google')"
-          >
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-secondary text-[10px] font-extrabold">G</span>
-            {{ i18nStore.t('frontend.mailbox.connect_google') }}
-          </button>
-          <button
-            type="button"
-            :disabled="isStartingOAuth"
-            class="inline-flex items-center gap-1.5 px-3 py-2 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:border-primary hover:shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            @click="startOAuth('microsoft')"
-          >
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-secondary text-[10px] font-extrabold">M</span>
-            {{ i18nStore.t('frontend.mailbox.connect_microsoft') }}
-          </button>
+      <div class="connection-sections">
+        <div class="connection-card">
+          <h3>{{ i18nStore.t('frontend.mailbox.oauth_title') }}</h3>
+          <p>{{ i18nStore.t('frontend.mailbox.oauth_description') }}</p>
+          <p class="helper-note">{{ i18nStore.t('frontend.mailbox.oauth_note') }}</p>
+          <div class="provider-grid">
+            <button class="provider-btn" type="button" :disabled="isStartingOAuth" @click="startOAuth('google')">
+              <span class="provider-icon">G</span>
+              {{ i18nStore.t('frontend.mailbox.connect_google') }}
+            </button>
+            <button class="provider-btn" type="button" :disabled="isStartingOAuth" @click="startOAuth('microsoft')">
+              <span class="provider-icon">M</span>
+              {{ i18nStore.t('frontend.mailbox.connect_microsoft') }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- IMAP templates -->
-      <div class="border border-primary/40 rounded-md p-4 shadow-sm">
-        <h3 class="text-xs font-bold text-foreground mb-1">{{ i18nStore.t('frontend.mailbox.imap_title') }}</h3>
-        <p class="text-xs text-muted-foreground mb-1">{{ i18nStore.t('frontend.mailbox.imap_description') }}</p>
-        <p class="text-xs text-muted-foreground mb-3">{{ i18nStore.t('frontend.mailbox.imap_note') }}</p>
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-2 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:border-primary hover:shadow-sm transition-colors cursor-pointer"
-            @click="openImapSetup('gmail')"
-          >
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-secondary text-[10px] font-extrabold">G</span>
-            <div class="flex flex-col items-start gap-0">
-              <span>{{ i18nStore.t('frontend.mailbox.template_gmail') }}</span>
-              <small class="font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.template_gmail_hint') }}</small>
-            </div>
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-2 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:border-primary hover:shadow-sm transition-colors cursor-pointer"
-            @click="openImapSetup('outlook')"
-          >
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-secondary text-[10px] font-extrabold">M</span>
-            <div class="flex flex-col items-start gap-0">
-              <span>{{ i18nStore.t('frontend.mailbox.template_outlook') }}</span>
-              <small class="font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.template_outlook_hint') }}</small>
-            </div>
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-2 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:border-primary hover:shadow-sm transition-colors cursor-pointer"
-            @click="openImapSetup('custom')"
-          >
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-secondary text-[10px] font-extrabold">IMAP</span>
-            <div class="flex flex-col items-start gap-0">
-              <span>{{ i18nStore.t('frontend.mailbox.template_custom') }}</span>
-              <small class="font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.template_custom_hint') }}</small>
-            </div>
-          </button>
+        <div class="connection-card recommended-card">
+          <h3>{{ i18nStore.t('frontend.mailbox.imap_title') }}</h3>
+          <p>{{ i18nStore.t('frontend.mailbox.imap_description') }}</p>
+          <p class="helper-note">{{ i18nStore.t('frontend.mailbox.imap_note') }}</p>
+          <div class="provider-grid">
+            <button class="provider-btn" type="button" @click="openImapSetup('gmail')">
+              <span class="provider-icon">G</span>
+              {{ i18nStore.t('frontend.mailbox.template_gmail') }}
+              <small>{{ i18nStore.t('frontend.mailbox.template_gmail_hint') }}</small>
+            </button>
+            <button class="provider-btn" type="button" @click="openImapSetup('outlook')">
+              <span class="provider-icon">M</span>
+              {{ i18nStore.t('frontend.mailbox.template_outlook') }}
+              <small>{{ i18nStore.t('frontend.mailbox.template_outlook_hint') }}</small>
+            </button>
+            <button class="provider-btn" type="button" @click="openImapSetup('custom')">
+              <span class="provider-icon">IMAP</span>
+              {{ i18nStore.t('frontend.mailbox.template_custom') }}
+              <small>{{ i18nStore.t('frontend.mailbox.template_custom_hint') }}</small>
+            </button>
+          </div>
         </div>
       </div>
     </template>
 
-    <!-- IMAP configuration form -->
-    <form v-if="showImapForm" class="flex flex-col gap-4 mt-4 border border-border rounded-md p-4" @submit.prevent="saveImapConfig">
-      <p class="text-xs text-muted-foreground">{{ i18nStore.t('frontend.mailbox.imap_form_help') }}</p>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1.5">
-          <label for="imap_email" class="text-xs font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.email') }}</label>
-          <input id="imap_email" v-model.trim="imapForm.mailbox_email" type="email" required
-            class="px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label for="imap_host" class="text-xs font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.imap_host') }}</label>
-          <input id="imap_host" v-model.trim="imapForm.imap_host" type="text" required
-            class="px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1.5">
-          <label for="imap_port" class="text-xs font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.imap_port') }}</label>
-          <input id="imap_port" v-model.number="imapForm.imap_port" type="number" min="1" max="65535" required
-            class="px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label for="imap_password" class="text-xs font-medium text-muted-foreground">{{ i18nStore.t('frontend.mailbox.imap_password') }}</label>
-          <input id="imap_password" v-model="imapForm.imap_password" type="password" required
-            class="px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-        </div>
-      </div>
-
-      <label class="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
-        <input v-model="imapForm.imap_ssl" type="checkbox"
-          class="rounded border-border text-primary focus:ring-primary">
+    <form v-if="showImapForm" class="form-grid" @submit.prevent="saveImapConfig">
+      <p class="form-guidance">{{ i18nStore.t('frontend.mailbox.imap_form_help') }}</p>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.email') }}
+        <input v-model.trim="imapForm.mailbox_email" type="email" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.imap_host') }}
+        <input v-model.trim="imapForm.imap_host" type="text" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.imap_port') }}
+        <input v-model.number="imapForm.imap_port" type="number" min="1" max="65535" required />
+      </label>
+      <label>
+        {{ i18nStore.t('frontend.mailbox.imap_password') }}
+        <input v-model="imapForm.imap_password" type="password" required />
+      </label>
+      <label class="checkbox-label">
+        <input v-model="imapForm.imap_ssl" type="checkbox" />
         {{ i18nStore.t('frontend.mailbox.imap_ssl') }}
       </label>
-
-      <div class="flex justify-end gap-2">
-        <button type="button"
-          class="px-3 py-1.5 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:hover:bg-accent transition-colors cursor-pointer"
-          @click="cancelImapSetup">
+      <div class="form-actions">
+        <button class="button button-secondary" type="button" @click="cancelImapSetup">
           {{ i18nStore.t('frontend.clients.clear') }}
         </button>
-        <button type="submit" :disabled="isSavingImap"
-          class="px-3 py-1.5 bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-primary/50 text-primary-foreground text-xs font-semibold rounded-md shadow-sm transition-colors cursor-pointer disabled:cursor-not-allowed">
+        <button class="button button-primary" type="submit" :disabled="isSavingImap">
           {{ isSavingImap ? i18nStore.t('frontend.mailbox.saving') : i18nStore.t('frontend.mailbox.save_imap') }}
         </button>
       </div>
     </form>
 
-    <!-- Mailbox info when configured -->
     <template v-if="mailbox">
-      <div class="flex flex-col gap-3 mt-4">
-        <div class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.mailbox.email') }}</span>
-          <span class="text-xs font-semibold text-foreground">{{ mailbox.mailbox_email }}</span>
+      <div class="mailbox-info">
+        <div class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.mailbox.email') }}</span>
+          <span class="field-value">{{ mailbox.mailbox_email }}</span>
         </div>
-        <div class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.mailbox.provider') }}</span>
-          <span class="text-xs font-semibold text-foreground capitalize">{{ providerLabel }}</span>
+        <div class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.mailbox.provider') }}</span>
+          <span class="field-value provider-name">{{ mailbox.provider === 'google' ? 'Gmail' : mailbox.provider === 'microsoft' ? 'Outlook' : 'IMAP' }}</span>
         </div>
-        <div class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.mailbox.method') }}</span>
-          <span class="text-xs font-semibold text-foreground">{{ authMethodLabel }}</span>
+        <div class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.mailbox.method') }}</span>
+          <span class="field-value">{{ mailbox.auth_method === 'oauth' ? 'OAuth 2.0' : 'IMAP App Password' }}</span>
         </div>
-        <div class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.mailbox.status') }}</span>
-          <StatusBadge :variant="statusVariant" :label="statusLabel" />
+        <div class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.mailbox.status') }}</span>
+          <span class="status-badge" :class="mailbox.status">{{
+            mailbox.status === 'connected' ? i18nStore.t('frontend.mailbox.status_connected') :
+            mailbox.status === 'disconnected' ? i18nStore.t('frontend.mailbox.status_disconnected') :
+            mailbox.status === 'revoked' ? i18nStore.t('frontend.mailbox.status_revoked') :
+            i18nStore.t('frontend.mailbox.status_error')
+          }}</span>
         </div>
-        <div v-if="mailbox.oauth_provider_email" class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.mailbox.oauth_provider_email') }}</span>
-          <span class="text-xs font-semibold text-foreground">{{ mailbox.oauth_provider_email }}</span>
+        <div v-if="mailbox.oauth_provider_email" class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.mailbox.oauth_provider_email') }}</span>
+          <span class="field-value">{{ mailbox.oauth_provider_email }}</span>
         </div>
-        <div v-if="mailbox.imap_host" class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.mailbox.imap_host') }}</span>
-          <span class="text-xs font-semibold text-foreground">{{ mailbox.imap_host }}:{{ mailbox.imap_port }}</span>
+        <div v-if="mailbox.imap_host" class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.mailbox.imap_host') }}</span>
+          <span class="field-value">{{ mailbox.imap_host }}:{{ mailbox.imap_port }}</span>
         </div>
-        <div v-if="mailbox.last_connection_error" class="flex items-center gap-2.5">
-          <span class="text-xs font-bold text-muted-foreground min-w-[130px]">{{ i18nStore.t('frontend.subscriptions.status') }}</span>
-          <span class="text-xs font-semibold text-red-400">{{ mailbox.last_connection_error }}</span>
+        <div v-if="mailbox.last_connection_error" class="mailbox-field">
+          <span class="field-label">{{ i18nStore.t('frontend.subscriptions.status') }}</span>
+          <span class="field-value error-text">{{ mailbox.last_connection_error }}</span>
         </div>
       </div>
 
-      <!-- Action buttons -->
-      <div class="flex gap-2 mt-5">
+      <div class="mailbox-actions">
         <button
           v-if="mailbox.auth_method !== 'oauth'"
+          class="button button-secondary"
           type="button"
           :disabled="isTestingMailbox"
-          class="px-3 py-1.5 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:hover:bg-accent transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          @click="testMailbox">
+          @click="testMailbox"
+        >
           {{ isTestingMailbox ? i18nStore.t('frontend.mailbox.testing') : i18nStore.t('frontend.mailbox.test') }}
         </button>
-        <button
-          v-if="showConnectActions"
-          type="button"
-          class="px-3 py-1.5 bg-background border border-border rounded-md text-xs font-semibold text-foreground hover:hover:bg-accent transition-colors cursor-pointer"
-          @click="openImapSetup('custom')">
+        <button v-if="showConnectActions" class="button button-secondary" type="button" @click="openImapSetup('custom')">
           {{ i18nStore.t('frontend.mailbox.setup_imap') }}
         </button>
-        <button
-          v-if="isConnected"
-          type="button"
-          :disabled="isDisconnectingMailbox"
-          class="px-3 py-1.5 bg-background border border-red-900/50 rounded-md text-xs font-semibold text-red-400 hover:bg-red-950/20 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          @click="disconnectMailbox">
+        <button v-if="isConnected" class="button button-secondary" type="button" :disabled="isDisconnectingMailbox" @click="disconnectMailbox">
           {{ isDisconnectingMailbox ? i18nStore.t('frontend.mailbox.disconnecting') : i18nStore.t('frontend.mailbox.disconnect') }}
         </button>
       </div>
     </template>
   </section>
 </template>
+
+<style scoped>
+.button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button-primary {
+  background: var(--primary, #4f46e5);
+  color: #ffffff;
+}
+
+.button-secondary {
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #1e293b);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text, #1e293b);
+  font: inherit;
+}
+
+input:focus {
+  border-color: var(--primary, #4f46e5);
+  outline: 3px solid rgb(79 70 229 / 15%);
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.connection-sections {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.connection-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.connection-card h3 {
+  margin: 0;
+}
+
+.connection-card p {
+  margin: 8px 0 0;
+  color: var(--text-secondary, #64748b);
+}
+
+.helper-note {
+  font-size: 0.85rem;
+}
+
+.recommended-card {
+  border-color: var(--primary, #4f46e5);
+  box-shadow: 0 1px 6px rgb(79 70 229 / 8%);
+}
+
+.provider-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.provider-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px 20px;
+  background: var(--card-bg, #fff);
+  color: var(--text, #1e293b);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.provider-btn:hover {
+  border-color: var(--primary, #4f46e5);
+  box-shadow: 0 2px 8px rgb(79 70 229 / 12%);
+}
+
+.provider-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg, #f8fafc);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.provider-btn small {
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.form-guidance {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.9rem;
+}
+
+.mailbox-info {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.mailbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mailbox-field .field-label {
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 130px;
+}
+
+.mailbox-field .field-value {
+  font-weight: 600;
+}
+
+.mailbox-field .error-text {
+  color: var(--danger, #ef4444);
+}
+
+.provider-name {
+  text-transform: capitalize;
+}
+
+.status-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-badge.connected {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.revoked {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.error {
+  background: rgb(239 68 68 / 10%);
+  color: #b91c1c;
+}
+
+.mailbox-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.checkbox-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+}
+</style>

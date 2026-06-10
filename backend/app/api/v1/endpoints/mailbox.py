@@ -34,7 +34,7 @@ def _frontend_dashboard_url() -> str:
         item.strip() for item in settings.cors_origins.split(",") if item.strip()
     ]
     base_url = origins[0] if origins else "http://localhost:5173"
-    return f"{base_url.rstrip('/')}/admin/mailbox"
+    return f"{base_url.rstrip('/')}/admin/dashboard"
 
 
 def _oauth_callback_html(status_value: str) -> str:

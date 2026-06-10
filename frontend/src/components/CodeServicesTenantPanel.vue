@@ -2,10 +2,6 @@
 import { onMounted, ref, computed } from 'vue'
 import api from '../services/api'
 import { useI18nStore } from '../stores/i18n'
-import InlineAlert from './InlineAlert.vue'
-import LoadingBlock from './LoadingBlock.vue'
-import { Button } from './ui/button'
-import { Checkbox } from './ui/checkbox'
 
 const i18nStore = useI18nStore()
 
@@ -79,64 +75,120 @@ onMounted(loadServices)
 </script>
 
 <template>
-  <div class="rounded-xl border border-border bg-card shadow-sm">
-    <!-- Section header -->
-    <div class="border-b border-border px-6 py-4">
-      <h2 class="text-sm font-semibold text-foreground">{{ i18nStore.t('frontend.code_services.tenant_section_heading') }}</h2>
-      <p class="mt-1 text-xs text-muted-foreground">{{ i18nStore.t('frontend.code_services.tenant_description') }}</p>
+  <section class="content-card code-services-card">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">{{ i18nStore.t('frontend.code_services.tenant_section_title') }}</p>
+        <h2>{{ i18nStore.t('frontend.code_services.tenant_section_heading') }}</h2>
+      </div>
     </div>
+    <p class="code-services-description">{{ i18nStore.t('frontend.code_services.tenant_description') }}</p>
 
-    <!-- Alerts -->
-    <div class="px-6 pt-4 space-y-2">
-      <InlineAlert v-if="errorMessage" variant="error" :message="errorMessage" />
-      <InlineAlert v-if="successMessage" variant="success" :message="successMessage" />
-    </div>
+    <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
+    <p v-if="successMessage" class="alert alert-success">{{ successMessage }}</p>
 
-    <!-- Loading -->
-    <LoadingBlock v-if="isLoading" />
+    <div v-if="isLoading" class="empty-state">{{ i18nStore.t('frontend.code_services.loading') }}</div>
 
     <template v-else-if="services.length">
-      <!-- Select All / Deselect All -->
-      <div class="px-6 pt-4 flex gap-2">
-        <Button variant="ghost" size="sm" @click="selectAll">{{ i18nStore.t('frontend.code_services.tenant_select_all') }}</Button>
-        <Button variant="ghost" size="sm" @click="deselectAll">{{ i18nStore.t('frontend.code_services.tenant_deselect_all') }}</Button>
+      <div class="code-services-actions-inline">
+        <button class="link-button" type="button" @click="selectAll">
+          {{ i18nStore.t('frontend.code_services.tenant_select_all') }}
+        </button>
+        <button class="link-button" type="button" @click="deselectAll">
+          {{ i18nStore.t('frontend.code_services.tenant_deselect_all') }}
+        </button>
       </div>
 
-      <!-- Services list -->
-      <div class="px-6 py-4 space-y-2">
+      <div class="code-services-list">
         <div
           v-for="service in services"
           :key="service.service_key"
-          class="flex items-center justify-between rounded-md border border-border px-3 py-2.5 transition-colors"
-          :class="service.is_globally_active ? 'hover:bg-muted/30' : 'opacity-60'"
+          class="code-service-row"
+          :class="{ disabled: !service.is_globally_active }"
         >
-          <label class="flex items-center gap-3 cursor-pointer">
-            <Checkbox
+          <label class="code-service-toggle">
+            <input
+              type="checkbox"
               :checked="selectedKeys.has(service.service_key)"
               :disabled="!service.is_globally_active"
-              @update:checked="toggleService(service.service_key)"
+              @change="toggleService(service.service_key)"
             />
-            <span class="text-sm font-medium text-foreground">{{ service.label }}</span>
+            <span class="code-service-label">{{ service.label }}</span>
           </label>
           <span
             v-if="!service.is_globally_active"
-            class="text-xs italic text-muted-foreground"
+            class="globally-inactive-badge"
           >
             {{ i18nStore.t('frontend.code_services.tenant_globally_inactive') }}
           </span>
         </div>
       </div>
 
-      <!-- Save -->
-      <div class="border-t border-border px-6 py-4 flex justify-end">
-        <Button variant="default" :disabled="isSaving" @click="saveSelection">
+      <div class="code-services-actions">
+        <button
+          class="button button-primary"
+          type="button"
+          :disabled="isSaving"
+          @click="saveSelection"
+        >
           {{ isSaving ? i18nStore.t('frontend.code_services.tenant_saving') : i18nStore.t('frontend.code_services.tenant_save') }}
-        </Button>
+        </button>
       </div>
     </template>
-
-    <div v-else class="px-6 py-8 text-center text-sm text-muted-foreground">
-      {{ i18nStore.t('frontend.code_services.no_services') }}
-    </div>
-  </div>
+  </section>
 </template>
+
+<style scoped>
+.code-services-description {
+  margin-bottom: 16px;
+  color: var(--text-secondary, #666);
+}
+.code-services-actions-inline {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.code-services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.code-service-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+}
+.code-service-row.disabled {
+  opacity: 0.6;
+}
+.code-service-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.code-service-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.code-service-toggle input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+.code-service-label {
+  font-weight: 500;
+}
+.globally-inactive-badge {
+  font-size: 0.8em;
+  color: var(--text-muted, #999);
+  font-style: italic;
+}
+.code-services-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+</style>
