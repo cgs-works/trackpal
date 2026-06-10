@@ -1,120 +1,305 @@
-# Especificación de Diseño: Rediseño Premium del Frontend (Trackpal 2026)
+# Frontend Redesign Design
 
-## Metadatos
-* **Fecha**: 2026-06-10
-* **Tema**: Rediseño del Frontend, Integración de Tailwind CSS v4, Sistema de Temas Light/Dark e Reestructuración de Componentes
-* **Registro de Diseño**: `product`
-* **Dirección Visual**: Consola Premium (Estilo Linear)
+Date: 2026-06-10
+Status: Draft for review
+Scope: Frontend redesign from zero for Trackpal using Tailwind CSS v4 and shadcn-based UI primitives
 
----
+## 1. Goal
 
-## 1. Contexto y Objetivos
+Redesign the Trackpal frontend from zero around a compact, operational product UI.
 
-Trackpal es una plataforma SaaS multi-tenant que permite a operadores y administradores gestionar flujos de entrega de servicios basados en WhatsApp. Con el fin de elevar el producto al estándar de diseño de **2026**, se reestructura el frontend completo para adoptar una estética de alto nivel de acabado, gran velocidad de interacción y excelente legibilidad.
+The redesign should:
+- replace the current mixed raw-CSS UI direction with a cohesive system
+- adopt shadcn-style primitives across the application UI
+- preserve business flows while rethinking navigation and screen structure
+- support real dual-theme operation from the system layer
+- create a reusable base that works for master, tenant, and client roles
 
-### Objetivos Principales:
-1. **Adopción de Tailwind CSS v4** en el proyecto frontend para una estilización ágil, moderna y sin archivos de configuración sobrecargados.
-2. **Soporte Completo de Light/Dark Mode** persistente en `localStorage` con transiciones suaves y detección automática de preferencias del sistema.
-3. **Estructura de Layout con Sidebar Lateral Fino** (Estilo Linear/Stripe), optimizando la densidad de información y reduciendo la duplicación de código de navegación.
-4. **Modularización y Simplificación de Vistas** masivas (ej. `SubscriptionsView.vue` que cuenta con 1244 líneas de código), dividiendo las responsabilidades en componentes pequeños de menos de 501 líneas de código para cumplir con las directrices de `AGENTS.md`.
+This is a product UI redesign, not a marketing site refresh.
 
----
+## 2. Product direction
 
-## 2. Sistema de Diseño Visual (Linear Theme)
+The target feel is:
+- compact
+- precise
+- fast
+- high-clarity
+- identity-aware, but not decorative
 
-### Colores (Tailwind v4 Core Classes)
+Reference character:
+- closest to Raycast-like product polish
+- grounded by the restraint of serious operational software
 
-| Variable de Tema | Modo Claro (Light) | Modo Oscuro (Dark) | Uso Principal |
-|---|---|---|---|
-| `--color-bg` | `#fafaf9` (`bg-stone-50`) | `#09090b` (`bg-zinc-950`) | Fondo principal de la página |
-| `--color-surface` | `#ffffff` (`bg-white`) | `#18181b` (`bg-zinc-900`) | Fondo de tarjetas, modales y formularios |
-| `--color-text` | `#1c1917` (`text-stone-900`) | `#f4f4f5` (`text-zinc-100`) | Texto principal y encabezados |
-| `--color-text-muted` | `#78716c` (`text-stone-500`) | `#a1a1aa` (`text-zinc-400`) | Textos secundarios y leyendas |
-| `--color-border` | `#e7e5e4` (`border-stone-200`) | `#27272a` (`border-zinc-800`) | Bordes finos de separación de 1px |
-| `--color-accent` | `#6366f1` (`text-indigo-500`) | `#6366f1` (`text-indigo-500`) | Color primario para botones, enlaces y focos |
+Rejected directions:
+- hero-style dashboards
+- generic dark SaaS gradients
+- floating glass panels
+- ornamental metric cards as the default layout
+- landing-page copy inside authenticated views
 
-### Bordes y Sombras
-* **Radio de curvatura (`border-radius`)**: Estilo fino con un valor estándar de `rounded-md` (`6px`) para botones, tarjetas y campos de formulario.
-* **Bordes**: Grosor fijo de `1px` (`border`) para mantener un aspecto nítido y preciso de consola.
-* **Sombras (`box-shadow`)**:
-  * *Modo Claro*: Sombra sutil y difusa (`shadow-sm` para rest, `shadow-md` para elevados como modales).
-  * *Modo Oscuro*: Sin sombras de color gris; en su lugar, se utilizan bordes nítidos (`border-zinc-800`) y un fondo sutilmente más claro (`bg-zinc-900/50`) para crear jerarquía y profundidad.
+## 3. Primary design slice
 
----
+The first design slice is:
+- Login
+- App shell
 
-## 3. Arquitectura de Componentes
+This slice will define the visual and structural rules for the rest of the product.
 
-Para evitar duplicar la navegación, el selector de idioma y el toggle de temas en cada una de las 5 vistas de la aplicación, reestructuraremos el sistema bajo un layout compartido.
+## 4. Chosen design approach
 
-### 3.1 `DashboardLayout.vue`
-Este componente actuará como contenedor maestro para todas las vistas que requieran autenticación (`MasterDashboardView`, `TenantDashboardView`, `SubscriptionsView`, `ClientDashboardView`).
+Selected approach: **System-first**
 
-```
-+--------------------------------------------------------+
-|  Sidebar Fino (Ancho: 240px / 64px colapsado)          |
-|  [Logo Trackpal]                                      |
-|                                                        |
-|  [Sección Operador: Selector de Tenant (si es Master)]|
-|                                                        |
-|  [Menú de Navegación]                                  |
-|   - Dashboard (Principal)                              |
-|   - Subscripciones                                     |
-|   - Catálogo                                           |
-|   - Ajustes WhatsApp                                   |
-|                                                        |
-|  [Sección Inferior]                                    |
-|   - Selector de Idioma (ES / EN)                       |
-|   - Botón ThemeToggle (Sol/Luna)                       |
-|   - Información de Perfil + Botón Salir                |
-+--------------------------------------------------------+
-```
+We will redesign from the system outward:
+1. define tokens, theming, shell rules, and component rules
+2. build the new login and app shell on top of that base
+3. migrate role-specific screens into the new shell and component system
 
-### 3.2 División de `SubscriptionsView.vue` (De 1244 LoC a < 450 LoC)
-La vista de subscripciones se dividirá en sub-componentes independientes:
-1. **`SubscriptionTable.vue`**: Renderizado de la lista de subscripciones con su estado de credenciales, botón para revelar contraseñas y acciones de administración de perfiles.
-2. **`SubscriptionModal.vue`**: Formulario popup de creación y edición de subscripciones, encapsulando las más de 300 líneas de código que actualmente ocupa el formulario en el archivo original.
+Why this approach:
+- it makes shadcn a real foundation instead of a cosmetic add-on
+- it gives consistent behavior across all roles
+- it reduces visual drift between views
+- it supports a proper dual-theme system
 
----
+## 5. Architecture of the new UI
 
-## 4. Mecánica del Sistema de Temas (Doble Capa)
+### 5.1 Foundation
 
-La preferencia de tema se gestionará a través de un script ligero insertado en `main.js` o en el componente principal `App.vue` para evitar destellos blancos (*flash of light mode*) durante la carga de la página.
+The new frontend UI will be built on:
+- Vue 3
+- Tailwind CSS v4
+- a Vue-compatible shadcn implementation for primitives and patterns
 
-### Lógica de Inicialización:
-```javascript
-const savedTheme = localStorage.getItem('theme')
-const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+shadcn will supply the base primitives for interaction patterns, but Trackpal will define its own:
+- tokens
+- component variants
+- spacing rules
+- navigation patterns
+- page composition rules
 
-if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-  document.documentElement.classList.add('dark')
-  document.documentElement.style.colorScheme = 'dark'
-} else {
-  document.documentElement.classList.remove('dark')
-  document.documentElement.style.colorScheme = 'light'
-}
-```
+The result should feel like one product system, not a collection of stock shadcn demos.
 
----
+### 5.2 Shell
 
-## 5. Directrices de Implementación y Código
+The primary shell will be a compact command-workspace layout:
+- fixed left sidebar in desktop contexts
+- thin topbar for page context and global actions
+- central content area optimized for dense operational work
 
-### Do's:
-* **Hacer**: Mantener todos los componentes por debajo de las 501 líneas de código.
-* **Hacer**: Usar exclusivamente clases utilitarias de Tailwind CSS v4 para la estilización.
-* **Hacer**: Asegurar que cada entrada interactiva (`input`, `select`, `button`) tenga un estado `:focus-visible` con anillo de color índigo (`focus-visible:ring-2 focus-visible:ring-indigo-500`).
-* **Hacer**: Incluir transiciones de transición de color suaves para todos los elementos interactivos (`transition-all duration-200 ease-in-out`).
+The shell should avoid oversized headers and decorative framing. Pages should start close to the work.
 
-### Don'ts:
-* **No hacer**: Usar sombras pesadas ni degradados de colores múltiples en el fondo.
-* **No hacer**: Duplicar la barra lateral de navegación en cada vista individual.
-* **No hacer**: Ignorar la preferencia del sistema operativo del usuario.
+### 5.3 Navigation
 
----
+Navigation will be rethought from the current structure, but core routes and business capabilities remain intact.
 
-## 6. Estrategia de Pruebas (Test Plan)
+Primary grouping should follow user tasks, not old page boundaries:
+- Overview
+- Clients
+- Catalog
+- Subscriptions
+- Settings
 
-Se verificarán los siguientes casos mediante `vitest` en la suite de pruebas del frontend:
-1. El store de autenticación redirige correctamente a los dashboards según el rol (`master`, `tenant`, `client`).
-2. El selector de idioma actualiza correctamente el store de `i18n`.
-3. El sistema de cambio de temas escribe correctamente en `localStorage` y actualiza las clases en la etiqueta `html`.
-4. El proceso de compilación (`npm run build`) se ejecuta exitosamente sin errores de sintaxis de CSS ni advertencias de importación de Tailwind.
+This grouping is the desired target for tenant-facing navigation and should also inform master/client adaptations where applicable.
+
+## 6. Visual language
+
+### 6.1 Tone
+
+The interface should feel:
+- controlled
+- modern
+- dense without being cramped
+- calm in color
+- explicit in hierarchy
+
+### 6.2 Shape and surfaces
+
+- border radii should stay restrained
+- surfaces should be clean and stable
+- panels should look anchored, not floating
+- cards should be used only when they improve structure
+- nested card stacks should be avoided
+
+### 6.3 Color strategy
+
+The redesign must support **dual theme from the start**.
+
+#### Light theme
+- clean and productive
+- not beige, not marketing-like
+- enough contrast for long operational sessions
+
+#### Dark theme
+- serious and stable
+- no neon accents
+- no blue-black gradient clichés
+
+Color should be token-driven and implemented once at the system level, then inherited by components and screens.
+
+### 6.4 Typography
+
+- hierarchy should come from size, weight, spacing, and placement
+- avoid theatrical display headings
+- prefer short, direct page titles
+- labels and table text must stay highly readable
+
+## 7. Login design
+
+The login should carry more identity than the rest of the product, but still belong to the same system.
+
+Target composition:
+- two-zone layout
+- one zone for controlled brand/context presence
+- one zone for the authentication form
+
+Rules:
+- no landing-page storytelling
+- no decorative filler blocks
+- no oversized welcome section
+- fast path to authentication
+
+The login should feel like the front door to a serious product, not a separate microsite.
+
+## 8. App shell design
+
+### 8.1 Desktop
+
+- sidebar is the main navigation anchor
+- topbar is thin and functional
+- content headers are short
+- primary actions sit close to page content
+- spacing is tighter than the current UI, but still readable
+
+### 8.2 Tablet and mobile
+
+- sidebar becomes a sheet/drawer
+- topbar gains importance as the control surface
+- tables and forms adapt without collapsing into meaningless long stacks
+- the redesign must keep structural clarity on smaller screens
+
+### 8.3 Cross-role consistency
+
+Master, tenant, and client experiences should share the same shell language.
+
+What changes by role:
+- available navigation items
+- visible tools
+- permissions
+- domain content
+
+What should not change by role:
+- shell DNA
+- component behavior
+- visual hierarchy principles
+- theming model
+
+## 9. Component system scope
+
+The redesign should standardize these core UI pieces first:
+- buttons
+- text inputs
+- textareas
+- selects
+- checkboxes / switches / radios as needed
+- dialogs
+- drawers / sheets
+- dropdown menus
+- tabs
+- table wrappers
+- badges for state
+- page headers
+- sidebar navigation items
+- empty states
+- loading states
+- error states
+
+Each component should have Trackpal-specific styling and consistent states for:
+- default
+- hover
+- focus
+- active
+- disabled
+- error, when applicable
+
+## 10. Screen composition rules
+
+Pages should be structured for work, not presentation.
+
+Preferred patterns:
+- short page header
+- local actions near the relevant block
+- filters near the table or collection they affect
+- dialogs only for destructive or high-risk confirmations
+- inline validation and inline feedback wherever possible
+
+Avoid:
+- large decorative summary banners
+- repeated explanation copy under every heading
+- excessive empty spacing
+- visual wrappers that exist only to feel premium
+
+## 11. States and feedback
+
+Every redesigned screen must explicitly handle:
+- loading
+- empty
+- error
+- success
+- disabled
+
+Rules:
+- no ambiguous blank states
+- no isolated spinner without context
+- inline errors near the failed action
+- toast messages for short confirmations only
+- richer error explanation should stay in context, not be hidden in a toast
+
+The redesign must respect the existing i18n model from the start.
+
+## 12. Accessibility requirements
+
+The redesign should include these as baseline expectations:
+- visible focus states in both themes
+- keyboard-friendly navigation for sidebar, menus, dialogs, and forms
+- contrast that remains dependable in light and dark modes
+- status communication that does not rely on color alone
+
+## 13. Testing expectations for the redesign
+
+The redesign should improve frontend testability instead of reducing it.
+
+Initial test priorities:
+- login render and interaction flow
+- app shell render and navigation structure
+- theme switching behavior
+- core component states for critical primitives
+- baseline form states and feedback behavior
+
+Testing should verify the structural behavior of the new foundation before large-scale screen migration.
+
+## 14. Rollout intent
+
+The redesign should be implemented in layers:
+1. foundation and theme system
+2. login and shell
+3. shared components
+4. screen-by-screen migration for role-specific views
+
+This sequencing keeps the redesign controlled and reduces one-off styling decisions.
+
+## 15. Out of scope for this design
+
+This design does not include:
+- backend changes
+- new product features unrelated to the redesign
+- route/business-flow rewrites that change core product capabilities
+- speculative design-system expansion beyond the components needed for the first migration wave
+
+## 16. Success criteria
+
+The redesign is successful when:
+- the frontend has one coherent visual system
+- shadcn-based primitives are used consistently across the UI
+- login and app shell define a strong reusable base
+- light and dark themes both feel native
+- master, tenant, and client views feel like one product family
+- the UI becomes cleaner, faster to scan, and easier to extend
