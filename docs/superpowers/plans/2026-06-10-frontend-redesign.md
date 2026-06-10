@@ -1463,34 +1463,83 @@ git commit -m "fix: restore subscriptions workflow on shared ui system"
 - `backend/tests/test_profile.py`
 - `backend/tests/test_subscriptions.py`
 
-- [ ] **Step 1: Write the failing dashboard smoke tests**
+- [x] **Step 1: Write the failing dashboard smoke tests**
 
 ```js
 // frontend/src/views/__tests__/RoleDashboards.spec.js
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { renderWithApp } from '@/test-utils/renderWithApp'
 import MasterDashboardView from '../MasterDashboardView.vue'
 import ClientDashboardView from '../ClientDashboardView.vue'
 
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn().mockImplementation((url) => {
+      if (url === '/dashboard') {
+        return Promise.resolve({ data: { id: 'client-1', full_name: 'Client User', username: 'client', is_active: true, tenant_name: 'TestCorp', client_prefix: 'TC', subscriptions: [] } })
+      }
+      if (url === '/me') {
+        return Promise.resolve({ data: { id: 'client-1', full_name: 'Client User', username: 'client', is_active: true, tenant_name: 'TestCorp', client_prefix: 'TC' } })
+      }
+      return Promise.resolve({ data: { data: [] } })
+    }),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
+    patch: vi.fn().mockResolvedValue({ data: {} }),
+    delete: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    username: 'Master',
+    role: 'master',
+    isAuthenticated: true,
+    activeTenantId: null,
+    switchTenant: vi.fn().mockResolvedValue({}),
+  }),
+}))
+
+vi.mock('@/stores/i18n', () => ({
+  useI18nStore: () => ({
+    t: (key) => key,
+    loadCatalog: vi.fn(),
+    locale: 'en',
+  }),
+}))
+
+vi.mock('@/config/navigation', () => ({
+  getNavigationContext: () => ({
+    mode: 'master',
+    items: [
+      { label: 'Overview', to: '/master/overview' },
+      { label: 'Code Services', to: '/master/code-services' },
+    ],
+  }),
+}))
+
 describe('role dashboards', () => {
   it('renders the master overview page shell', async () => {
     const wrapper = await renderWithApp(MasterDashboardView)
+    await flushPromises()
     expect(wrapper.text()).toContain('Overview')
   })
 
   it('renders the client overview page shell', async () => {
     const wrapper = await renderWithApp(ClientDashboardView)
+    await flushPromises()
     expect(wrapper.text()).toContain('Security')
   })
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd frontend && npx vitest run src/views/__tests__/RoleDashboards.spec.js`
 Expected: FAIL because the current pages still use the older ad-hoc layout.
 
-- [ ] **Step 3: Migrate the master and client pages**
+- [x] **Step 3: Migrate the master and client pages**
 
 Implementation rules:
 - `MasterDashboardView.vue`: keep `loadTenants`, create/edit/deactivate/delete tenant flows, and `manageCatalog()` logic; rework the template to use `PageHeader`, shared tables, shared alerts, and route the code-services area out of overview.
@@ -1500,7 +1549,7 @@ Implementation rules:
 
 Important: update any hardcoded `/client/dashboard` pushes or redirects still remaining in these pages to `/client/overview`.
 
-- [ ] **Step 4: Run the dashboard smoke tests and a production build**
+- [x] **Step 4: Run the dashboard smoke tests and a production build**
 
 Run:
 - `cd frontend && npx vitest run src/views/__tests__/RoleDashboards.spec.js`
@@ -1508,7 +1557,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/MasterDashboardView.vue frontend/src/views/MasterCodeServicesView.vue frontend/src/components/CodeServicesGlobalPanel.vue frontend/src/views/ClientDashboardView.vue frontend/src/views/__tests__/RoleDashboards.spec.js
