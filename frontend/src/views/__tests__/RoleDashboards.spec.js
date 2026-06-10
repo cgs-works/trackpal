@@ -60,6 +60,6 @@ describe('role dashboards', () => {
   it('renders the client overview page shell', async () => {
     const wrapper = await renderWithApp(ClientDashboardView)
     await flushPromises()
-    expect(wrapper.text()).toContain('Security')
+    expect(wrapper.text()).toContain('frontend.dashboard.client.security')
   })
 })

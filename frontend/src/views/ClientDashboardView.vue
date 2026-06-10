@@ -197,8 +197,8 @@ onMounted(loadDashboard)
         <!-- Security / Change Password -->
         <div class="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
           <div class="border-b border-border pb-3 mb-4">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Security</span>
-            <h2 class="text-base font-bold text-foreground mt-0.5">Security</h2>
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{{ i18nStore.t('frontend.dashboard.client.security') }}</span>
+            <h2 class="text-base font-bold text-foreground mt-0.5">{{ i18nStore.t('frontend.dashboard.client.security') }}</h2>
           </div>
 
           <form @submit.prevent="changePassword" class="flex flex-col gap-4 max-w-md">
