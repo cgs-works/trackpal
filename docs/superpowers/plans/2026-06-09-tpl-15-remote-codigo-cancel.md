@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**GitHub Issue:** [#59](https://github.com/wilfredocamacho/trackpal/issues/59)
+**GitHub PR:** [#60](https://github.com/wilfredocamacho/trackpal/pull/60)
+**Linear:** [TPL-15](https://linear.app/trackpal/issue/TPL-15/allow-tenant-admin-to-cancel-a-target-users-active-whatsapp-flow-from) → Done
+
 **Goal:** Permitir que un tenant admin cancele silenciosamente el flujo activo `codigo` de un usuario objetivo enviando exactamente `0` en el chat objetivo, cerrando además la sesión chatbot de Evolution para ese chat.
 
 **Architecture:** La implementación toca tres capas ya existentes: registro de webhook Evolution, transporte n8n y routing backend `from_me`. El backend agregará una rama temprana para `from_me=true` + target no-self + `message.strip() == "0"`, reutilizando el modelo actual de sesiones `session:unreg:{tenant_prefix}:{identity}` y cancelando el `MailLookupJob` asociado cuando exista; n8n dejará de bloquear únicamente ese caso exacto y seguirá cerrando sesiones vía `status="closed"` + `close_jid`.
