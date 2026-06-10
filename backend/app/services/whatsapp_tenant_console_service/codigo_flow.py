@@ -387,6 +387,44 @@ async def _handle_codigo_awaiting_result(
             )
             job_done = True  # treat error as done so we don't loop
 
+    restart_trigger = msg.strip().lower() in ("codigo", "código", "code")
+    if restart_trigger:
+        if lookup_job_id and db is not None:
+            try:
+                cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
+                    db,
+                    UUID(lookup_job_id),
+                    tenant_id=tenant_id,
+                )
+                if cancelled:
+                    await db.commit()
+            except ValueError:
+                logger.warning(
+                    "Ignoring invalid lookup job id during codigo restart: %s",
+                    lookup_job_id,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to cancel lookup job %s during codigo restart",
+                    lookup_job_id,
+                )
+                try:
+                    await db.rollback()
+                except Exception:
+                    logger.exception(
+                        "Failed to rollback after codigo restart cancellation error"
+                    )
+
+        await session_service.clear_session(f"admin:{phone}")
+        return await self._start_codigo_flow(
+            phone,
+            session_service,
+            tenant_id,
+            db,
+            started_from_menu=False,
+            role="tenant",
+        )
+
     if msg.strip() == "1":
         service_key = session.temp_data.get("service_key", "")
         target_email = session.temp_data.get("target_email", "")

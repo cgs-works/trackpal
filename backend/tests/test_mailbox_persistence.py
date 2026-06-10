@@ -194,6 +194,69 @@ class TestMailboxLookupRepository:
         )
         assert not_found is None
 
+    async def test_cancel_active_job_if_present_marks_pending_job_failed(self, db_session):
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session,
+            tenant.id,
+            mb.id,
+            "netflix",
+        )
+
+        cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
+            db_session,
+            job.id,
+            tenant_id=tenant.id,
+        )
+
+        assert cancelled is True
+        assert job.status == "failed"
+        assert job.error_code == "user_cancelled"
+        assert job.error_detail_safe == "User restarted codigo flow"
+        assert job.completed_at is not None
+
+    async def test_cancel_active_job_if_present_leaves_completed_job_unchanged(self, db_session):
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session,
+            tenant.id,
+            mb.id,
+            "netflix",
+        )
+        await mailbox_lookup_repository.transition_status(db_session, job, "processing")
+        await mailbox_lookup_repository.transition_status(
+            db_session,
+            job,
+            "completed",
+            result_type="code",
+            result_value_encrypted=encrypt_value("227597"),
+        )
+        original_completed_at = job.completed_at
+
+        cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
+            db_session,
+            job.id,
+            tenant_id=tenant.id,
+        )
+
+        assert cancelled is False
+        assert job.status == "completed"
+        assert job.error_code is None
+        assert job.completed_at == original_completed_at
+
+    async def test_cancel_active_job_if_present_returns_false_for_missing_job(self, db_session):
+        tenant = await _seed_tenant(db_session)
+
+        cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
+            db_session,
+            uuid.uuid4(),
+            tenant_id=tenant.id,
+        )
+
+        assert cancelled is False
+
     async def test_transition_status_valid(self, db_session):
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)

@@ -333,6 +333,7 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 | ``1`` | **Retry** — re-set ``pending_lookup_intent`` with same service_key/target_email. Backend creates a new lookup job. Returns "buscando...". |
 | ``2`` | **Back to services** — clear session, show codigo service list again (page 0). |
 | ``0`` | **Cancel** — clear session, return goodbye, n8n closes Evolution session. |
+| ``code`` / ``codigo`` / ``código`` | **Restart** — best-effort cancel the active lookup job referenced by the current Redis session, clear the session, and start codigo again from service selection. |
 | Other | **Still checking** — keep session alive, return "Still searching..." with retry/back/cancel options. |
 
 When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
@@ -344,7 +345,7 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 3. Service selection and email input follow the same pattern as the tenant self-target flow.
 4. Email is validated and normalised via centralised ``validate_email()``, stored as ``target_email`` in session, and the step advances to **email confirmation** (``email_confirm``).
 5. In the ``email_confirm`` step, only ``1``, ``2``, ``9``, and ``0`` are accepted; all other inputs (including textual cancel/reset aliases) are rejected as invalid options. ``1`` confirms and the backend creates the ``MailLookupJob``, enqueues it, and transitions to ``awaiting_result``. ``2`` returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session.
-6. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel.
+6. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel, and ``code|codigo|código`` Restart (best-effort cancelling only the session-linked ``lookup_job_id`` before rebuilding the service list).
 
 #### n8n behavior for this path
 
