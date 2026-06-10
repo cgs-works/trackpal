@@ -815,7 +815,7 @@ git commit -m "fix: restart unauth codigo flow from awaiting result"
 - Modify: `docs/architecture/whatsapp-console-flow.md:329-360`
 - Verify: `backend/tests/test_mailbox_persistence.py`, `backend/tests/test_tenant_console_service.py`, `backend/tests/test_whatsapp_endpoint.py`
 
-- [ ] **Step 1: Update the architecture doc**
+- [x] **Step 1: Update the architecture doc**
 
 In `docs/architecture/whatsapp-console-flow.md`, update the tenant post-result table row and the unauthenticated flow description.
 
@@ -839,7 +839,7 @@ Then replace the last sentence of the unauthenticated step 6 with this version:
 6. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel, and ``code|codigo|código`` Restart (best-effort cancelling only the session-linked ``lookup_job_id`` before rebuilding the service list).
 ```
 
-- [ ] **Step 2: Run the focused regression suite**
+- [x] **Step 2: Run the focused regression suite**
 
 Run:
 
@@ -853,7 +853,7 @@ cd backend && uv run pytest \
 
 Expected: PASS for the repository tests, tenant codigo tests, and codigo-related endpoint tests.
 
-- [ ] **Step 3: Run the full backend test suite**
+- [x] **Step 3: Run the full backend test suite**
 
 Run:
 
@@ -863,7 +863,7 @@ cd backend && uv run pytest
 
 Expected: PASS for the full backend suite.
 
-- [ ] **Step 4: Commit docs and verified finish state**
+- [x] **Step 4: Commit docs and verified finish state**
 
 Run:
 
@@ -872,7 +872,7 @@ git add docs/architecture/whatsapp-console-flow.md
 git commit -m "docs: describe codigo restart from awaiting result"
 ```
 
-- [ ] **Step 5: Request review before claiming completion**
+- [x] **Step 5: Request review before claiming completion**
 
 Use the review workflow after tests are green:
 
@@ -889,14 +889,14 @@ Ask for review only after attaching the exact verification evidence:
 
 ## Final verification checklist
 
-- [ ] `cancel_active_job_if_present()` exists and is exported.
-- [ ] The helper only mutates `pending` / `processing` jobs.
-- [ ] Tenant `awaiting_result` treats `code|codigo|código` as restart.
-- [ ] Unauth `awaiting_result` treats `code|codigo|código` as restart.
-- [ ] Malformed `lookup_job_id` does not block restart.
-- [ ] Unknown non-trigger messages still return `still_checking`.
-- [ ] Docs explain the new restart behavior and the session-linked cancellation scope.
-- [ ] `cd backend && uv run pytest` passed.
+- [x] `cancel_active_job_if_present()` exists and is exported.
+- [x] The helper only mutates `pending` / `processing` jobs.
+- [x] Tenant `awaiting_result` treats `code|codigo|código` as restart.
+- [x] Unauth `awaiting_result` treats `code|codigo|código` as restart.
+- [x] Malformed `lookup_job_id` does not block restart.
+- [x] Unknown non-trigger messages still return `still_checking`.
+- [x] Docs explain the new restart behavior and the session-linked cancellation scope.
+- [x] `cd backend && uv run pytest` passed.
 
 ## Self-review
 
