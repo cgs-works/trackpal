@@ -587,7 +587,7 @@ git commit -m "feat: add frontend theme tokens and shared feedback components"
 - Modify: `frontend/src/router/index.js`
 - Modify: `frontend/src/components/DashboardLayout.vue`
 
-- [ ] **Step 1: Write the failing shell and router tests**
+- [x] **Step 1: Write the failing shell and router tests**
 
 ```js
 // frontend/src/router/__tests__/router.spec.js
@@ -652,7 +652,7 @@ describe('DashboardLayout', () => {
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run:
 - `cd frontend && npx vitest run src/router/__tests__/router.spec.js`
@@ -660,7 +660,7 @@ Run:
 
 Expected: FAIL because the new routes and support-mode shell behavior do not exist yet.
 
-- [ ] **Step 3: Implement the navigation model, route map, and shell**
+- [x] **Step 3: Implement the navigation model, route map, and shell**
 
 Create `frontend/src/config/navigation.js`:
 
@@ -766,7 +766,7 @@ import PageHeader from '@/components/PageHeader.vue'
 </template>
 ```
 
-- [ ] **Step 4: Re-run the shell and router tests**
+- [x] **Step 4: Re-run the shell and router tests**
 
 Run:
 - `cd frontend && npx vitest run src/router/__tests__/router.spec.js`
@@ -774,7 +774,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/config/navigation.js frontend/src/router/index.js frontend/src/components/DashboardLayout.vue frontend/src/components/__tests__/DashboardLayout.spec.js frontend/src/router/__tests__/router.spec.js frontend/src/views/TenantClientsView.vue frontend/src/views/TenantCatalogView.vue frontend/src/views/TenantMailboxView.vue frontend/src/views/TenantCodeServicesView.vue frontend/src/views/TenantSettingsView.vue frontend/src/views/MasterCodeServicesView.vue
