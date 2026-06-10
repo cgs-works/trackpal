@@ -232,7 +232,7 @@ git commit -m "feat: add codigo lookup cancellation helper"
 - Test: `backend/tests/test_tenant_console_service.py:2523-2590`
 - Read-only reference: `backend/app/services/whatsapp_tenant_console_service/service.py:197-255`
 
-- [ ] **Step 1: Write the failing tenant-flow tests**
+- [x] **Step 1: Write the failing tenant-flow tests**
 
 Add these tests near the existing `_handle_codigo_awaiting_result` tests in `backend/tests/test_tenant_console_service.py`:
 
@@ -385,7 +385,7 @@ Add these tests near the existing `_handle_codigo_awaiting_result` tests in `bac
         assert "todavia buscando" in reply.lower() or "still" in reply.lower()
 ```
 
-- [ ] **Step 2: Run the tenant-flow tests to verify they fail**
+- [x] **Step 2: Run the tenant-flow tests to verify they fail**
 
 Run:
 
@@ -400,7 +400,7 @@ cd backend && uv run pytest \
 
 Expected: FAIL because `_handle_codigo_awaiting_result()` still falls through to `wa.tenant.codigo.still_checking` for fresh `code|codigo|código` input.
 
-- [ ] **Step 3: Implement tenant restart-trigger handling**
+- [x] **Step 3: Implement tenant restart-trigger handling**
 
 In `backend/app/services/whatsapp_tenant_console_service/codigo_flow.py`, update `_handle_codigo_awaiting_result()` immediately **after** the existing lookup-job status read and **before** the `msg.strip() == "1"` branch.
 
@@ -448,7 +448,7 @@ Insert this block:
 
 Do **not** change the existing `1`, `2`, `0`, or fallback semantics outside this new trigger branch.
 
-- [ ] **Step 4: Run the tenant-flow tests to verify they pass**
+- [x] **Step 4: Run the tenant-flow tests to verify they pass**
 
 Run:
 
@@ -465,14 +465,14 @@ cd backend && uv run pytest \
 
 Expected: PASS for all 6 tests.
 
-- [ ] **Step 5: Commit the tenant-flow fix**
+- [x] **Step 5: Commit the tenant-flow fix**
 
 Run:
 
 ```bash
 git add backend/app/services/whatsapp_tenant_console_service/codigo_flow.py backend/tests/test_tenant_console_service.py
 git commit -m "fix: restart tenant codigo flow from awaiting result"
-```
+
 
 ---
 

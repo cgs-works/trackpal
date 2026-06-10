@@ -2589,6 +2589,165 @@ class TestConsoleHandlersCodigoScope:
         assert new_session.flow == console_service.CODIGO_FLOW
         assert new_session.step == console_service.CODIGO_STEP_SERVICE
 
+    async def test_codigo_awaiting_result_trigger_restarts_flow_and_cancels_active_job(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+
+        mock_db = AsyncMock()
+        tenant_id = uuid4()
+        lookup_job_id = uuid4()
+        mock_session_service = AsyncMock()
+        mock_session = SimpleNamespace(
+            temp_data={
+                "lookup_job_id": str(lookup_job_id),
+                "service_key": "netflix",
+                "target_email": "user@example.com",
+            }
+        )
+        restart_reply = "📩 Buscar código\n\n[1] Netflix\n\n0️⃣ Cancelar"
+
+        with (
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow.mailbox_lookup_repository.cancel_active_job_if_present",
+                AsyncMock(return_value=True),
+            ) as cancel_job,
+            patch.object(
+                console_service,
+                "_start_codigo_flow",
+                AsyncMock(return_value=restart_reply),
+            ) as start_flow,
+        ):
+            reply = await console_service._handle_codigo_awaiting_result(
+                phone="+10000000000",
+                msg=" code ",
+                session=mock_session,
+                session_service=mock_session_service,
+                tenant_id=tenant_id,
+                db=mock_db,
+            )
+
+        assert reply == restart_reply
+        cancel_job.assert_awaited_once_with(
+            mock_db,
+            lookup_job_id,
+            tenant_id=tenant_id,
+        )
+        mock_db.commit.assert_awaited_once()
+        mock_session_service.clear_session.assert_awaited_once_with("admin:+10000000000")
+        start_flow.assert_awaited_once_with(
+            "+10000000000",
+            mock_session_service,
+            tenant_id,
+            mock_db,
+            started_from_menu=False,
+            role="tenant",
+        )
+
+    async def test_codigo_awaiting_result_trigger_restarts_when_cancel_helper_noops(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+
+        mock_db = AsyncMock()
+        tenant_id = uuid4()
+        lookup_job_id = uuid4()
+        mock_session_service = AsyncMock()
+        mock_session = SimpleNamespace(temp_data={"lookup_job_id": str(lookup_job_id)})
+        restart_reply = "📩 Buscar código\n\n[1] Netflix\n\n0️⃣ Cancelar"
+
+        with (
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow.mailbox_lookup_repository.cancel_active_job_if_present",
+                AsyncMock(return_value=False),
+            ) as cancel_job,
+            patch.object(
+                console_service,
+                "_start_codigo_flow",
+                AsyncMock(return_value=restart_reply),
+            ) as start_flow,
+        ):
+            reply = await console_service._handle_codigo_awaiting_result(
+                phone="+10000000000",
+                msg="código",
+                session=mock_session,
+                session_service=mock_session_service,
+                tenant_id=tenant_id,
+                db=mock_db,
+            )
+
+        assert reply == restart_reply
+        cancel_job.assert_awaited_once_with(
+            mock_db,
+            lookup_job_id,
+            tenant_id=tenant_id,
+        )
+        mock_db.commit.assert_not_awaited()
+        start_flow.assert_awaited_once()
+
+    async def test_codigo_awaiting_result_trigger_restarts_with_invalid_lookup_job_id(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+
+        mock_db = AsyncMock()
+        tenant_id = uuid4()
+        mock_session_service = AsyncMock()
+        mock_session = SimpleNamespace(temp_data={"lookup_job_id": "not-a-uuid"})
+        restart_reply = "📩 Buscar código\n\n[1] Netflix\n\n0️⃣ Cancelar"
+
+        with (
+            patch(
+                "app.services.whatsapp_tenant_console_service.codigo_flow.mailbox_lookup_repository.cancel_active_job_if_present",
+                AsyncMock(),
+            ) as cancel_job,
+            patch.object(
+                console_service,
+                "_start_codigo_flow",
+                AsyncMock(return_value=restart_reply),
+            ) as start_flow,
+        ):
+            reply = await console_service._handle_codigo_awaiting_result(
+                phone="+10000000000",
+                msg="codigo",
+                session=mock_session,
+                session_service=mock_session_service,
+                tenant_id=tenant_id,
+                db=mock_db,
+            )
+
+        assert reply == restart_reply
+        cancel_job.assert_not_called()
+        mock_db.commit.assert_not_awaited()
+        start_flow.assert_awaited_once()
+
+    async def test_codigo_awaiting_result_non_trigger_still_returns_still_checking(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        mock_session_service = AsyncMock()
+        mock_session = SimpleNamespace(temp_data={})
+
+        reply = await console_service._handle_codigo_awaiting_result(
+            phone="+10000000000",
+            msg="hola",
+            session=mock_session,
+            session_service=mock_session_service,
+            tenant_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        assert "todavia buscando" in reply.lower() or "still" in reply.lower()
+
 
 # ===================================================================
 # Bug 02 — Navigation contract: 9=back, 0=exit
