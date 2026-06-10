@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useI18nStore } from '../stores/i18n'
+import api from '../services/api'
 import ThemeToggle from './ThemeToggle.vue'
 
 const router = useRouter()
@@ -36,13 +37,21 @@ const menuItems = computed(() => {
 })
 
 async function handleLogout() {
-  authStore.logout()
+  await authStore.logout()
   await router.push('/login')
 }
 
-function setLocale(lang) {
+async function setLocale(lang) {
+  if (authStore.role === 'tenant') {
+    try {
+      await api.put('/me', { locale: lang })
+    } catch (err) {
+      console.error('Failed to save language selection:', err)
+    }
+  }
   i18nStore.locale = lang
   localStorage.setItem('locale', lang)
+  await i18nStore.loadCatalog()
 }
 </script>
 
