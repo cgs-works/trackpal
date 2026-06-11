@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-11T00:00:00.000Z",
+  "title": "Design System: Trackpal",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Porcelain Surface",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.25 0 0)", "oklch(0.37 0 0)", "oklch(0.56 0 0)", "oklch(0.71 0 0)", "oklch(0.88 0 0)", "oklch(0.97 0 0)", "oklch(1 0 0)"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Operator Ink",
+        "canonical": "oklch(0.145 0 0)",
+        "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.439 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.922 0 0)"]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Ledger Ink",
+        "canonical": "oklch(0.205 0 0)",
+        "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.439 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.922 0 0)"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Panel",
+        "canonical": "oklch(0.97 0 0)",
+        "tonalRamp": ["oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)", "oklch(0.985 0 0)"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Soft Divider",
+        "canonical": "oklch(0.922 0 0)",
+        "tonalRamp": ["oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.439 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.87 0 0)", "oklch(0.922 0 0)", "oklch(0.97 0 0)"]
+      },
+      "destructive": {
+        "role": "risk",
+        "displayName": "Risk Red",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": ["oklch(0.25 0.12 27.325)", "oklch(0.35 0.16 27.325)", "oklch(0.45 0.21 27.325)", "oklch(0.577 0.245 27.325)", "oklch(0.68 0.18 27.325)", "oklch(0.78 0.12 27.325)", "oklch(0.9 0.06 27.325)", "oklch(0.96 0.03 27.325)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Rare product-level headings and temporary scaffold pages." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles, modal titles, and major dashboard sections." },
+      "title": { "displayName": "Title", "purpose": "Card titles, panel headings, and compact section heads." },
+      "body": { "displayName": "Body", "purpose": "Descriptions, prose, validation, and ordinary UI copy." },
+      "label": { "displayName": "Label", "purpose": "Form labels, buttons, nav items, and table headers." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "state-standard", "value": "150ms-250ms ease-out", "purpose": "Hover, focus, loading, expansion, and state feedback only." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact primary action using Ledger Ink and a visible focus ring.",
+      "html": "<button class=\"ds-button-primary\">Guardar cambios</button>",
+      "css": ".ds-button-primary { height: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius, 0.625rem); background: var(--primary); color: var(--primary-foreground); font: 500 0.875rem/1 'Geist Variable', sans-serif; transition: background-color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-primary:hover { background: color-mix(in oklch, var(--primary), var(--background) 15%); } .ds-button-primary:active { transform: translateY(1px); } .ds-button-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action for adjacent but lower-priority operations.",
+      "html": "<button class=\"ds-button-outline\">Cancelar</button>",
+      "css": ".ds-button-outline { height: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid var(--border); border-radius: var(--radius, 0.625rem); background: var(--background); color: var(--foreground); font: 500 0.875rem/1 'Geist Variable', sans-serif; transition: background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-outline:hover { background: var(--muted); } .ds-button-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact field with tokenized border, readable placeholder, and strong focus treatment.",
+      "html": "<input class=\"ds-input\" placeholder=\"cliente@correo.com\" />",
+      "css": ".ds-input { width: 100%; height: 2rem; min-width: 0; border: 1px solid var(--input); border-radius: var(--radius, 0.625rem); background: transparent; color: var(--foreground); padding: 0.25rem 0.625rem; font: 400 0.875rem/1.4 'Geist Variable', sans-serif; transition: border-color 180ms ease-out, box-shadow 180ms ease-out; } .ds-input::placeholder { color: var(--muted-foreground); opacity: 1; } .ds-input:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); } .ds-input[aria-invalid='true'] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive), transparent 80%); }"
+    },
+    {
+      "name": "Operational Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Rounded container with tonal separation, not decorative shadow.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-header\"><h3>Mailbox status</h3><p>Última prueba correcta hace 4 minutos.</p></div><div class=\"ds-card-body\">Conexión activa</div></section>",
+      "css": ".ds-card { overflow: hidden; border-radius: calc(var(--radius, 0.625rem) * 1.4); background: var(--card); color: var(--card-foreground); box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 90%); font-family: 'Geist Variable', sans-serif; } .ds-card-header { display: grid; gap: 0.25rem; padding: 1rem; } .ds-card-header h3 { margin: 0; font-size: 1rem; line-height: 1.375; font-weight: 500; } .ds-card-header p { margin: 0; color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.4; } .ds-card-body { border-top: 1px solid var(--border); background: color-mix(in oklch, var(--muted), transparent 50%); padding: 1rem; font-size: 0.875rem; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-indicator",
+      "description": "Small state label that pairs tone with readable text; color is never the only cue.",
+      "html": "<span class=\"ds-status-badge\">Activo</span>",
+      "css": ".ds-status-badge { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 999px; border: 1px solid var(--border); background: var(--muted); color: var(--foreground); padding: 0.125rem 0.5rem; font: 500 0.75rem/1.2 'Geist Variable', sans-serif; } .ds-status-badge::before { content: ''; width: 0.375rem; height: 0.375rem; border-radius: 999px; background: var(--primary); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operations Ledger",
+    "overview": "Trackpal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings. This system is product-first. Familiar controls are an asset. Future screens should look trustworthy to operators who manage tenants, clients, subscriptions, mailbox connections, and access-code workflows in Spanish-first contexts.",
+    "keyCharacteristics": [
+      "Restrained neutral surfaces with near-black primary actions.",
+      "Comfortable and calm density: not sparse marketing, not cramped infrastructure UI.",
+      "Role-aware layouts where master, tenant, and client capabilities are unmistakable.",
+      "Bilingual-ready labels, forms, tables, and validation messages.",
+      "State vocabulary that uses text, shape, iconography, and tone rather than color alone."
+    ],
+    "rules": [
+      { "name": "The ≤10% Ink Rule", "body": "Primary ink is for action and selection. If a screen is mostly primary color, the hierarchy has failed.", "section": "colors" },
+      { "name": "The No Decorative Accent Rule", "body": "Do not introduce indigo, gradients, or arbitrary success colors as ornament. Every non-neutral color must represent state, risk, selection, or a documented data role.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Product UI uses Geist for everything until a real data-display need proves otherwise. No display fonts in controls, labels, tables, or form fields.", "section": "typography" },
+      { "name": "The No Gradient Text Rule", "body": "Gradient text is prohibited. Emphasis comes from hierarchy, not background-clip decoration.", "section": "typography" },
+      { "name": "The Border-Before-Shadow Rule", "body": "Start with ring-foreground/10, border-border, muted footers, and spacing. Add shadow only when a surface must float above another surface.", "section": "elevation" },
+      { "name": "The State-Only Motion Rule", "body": "Motion is 150–250ms and explains state: hover, focus, loading, expansion, or route feedback. No choreographed page-load sequences.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do preserve the shadcn/base-nova token system in frontend/src/index.css; extend tokens there instead of scattering raw colors.",
+      "Do keep product screens comfortable and calm: compact enough for repeat operators, spacious enough for Spanish labels and validation text.",
+      "Do make role boundaries obvious through navigation, copy, permissions, and page structure.",
+      "Do use visible focus rings, keyboard-reachable controls, and non-color-only status cues.",
+      "Do use cards only when they clarify containment; tables, panels, sections, and inline flows are often better for operational work."
+    ],
+    "donts": [
+      "Don't use generic SaaS-card aesthetics: gradient hero text, repeated metric-card scaffolds, decorative dashboards, startup-template polish, or visual effects that do not improve operator confidence.",
+      "Don't use background-clip: text gradients. The current scaffold pattern should be removed, not expanded.",
+      "Don't add colored side-stripe borders, glassmorphism, decorative blur cards, or arbitrary high z-index values.",
+      "Don't use muted gray for required labels, important data, or core body copy.",
+      "Don't hardcode raw Tailwind colors for component variants when semantic tokens or installed shadcn variants exist."
+    ]
+  }
+}
