@@ -12,9 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Save } from "lucide-react"
 
 interface Service {
-  name: string
+  service_key: string
   label: string
-  description: string
   is_active: boolean
 }
 
@@ -44,10 +43,10 @@ export function CodeServicesSidebar({
     setServices(initialServices)
   }
 
-  function toggleService(name: string) {
+  function toggleService(key: string) {
     setServices((prev) =>
       prev.map((svc) =>
-        svc.name === name ? { ...svc, is_active: !svc.is_active } : svc
+        svc.service_key === key ? { ...svc, is_active: !svc.is_active } : svc
       )
     )
   }
@@ -88,7 +87,7 @@ export function CodeServicesSidebar({
             <div className="space-y-1">
               {services.map((svc) => (
                 <div
-                  key={svc.name}
+                  key={svc.service_key}
                   className="flex items-center justify-between gap-3 rounded-lg p-3 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
@@ -105,15 +104,10 @@ export function CodeServicesSidebar({
                         {svc.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </div>
-                    {svc.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {svc.description}
-                      </p>
-                    )}
                   </div>
                   <Switch
                     checked={svc.is_active}
-                    onCheckedChange={() => toggleService(svc.name)}
+                    onCheckedChange={() => toggleService(svc.service_key)}
                   />
                 </div>
               ))}
