@@ -97,6 +97,8 @@ class SubscriptionReminderSettingsUpdate(BaseModel):
     reminder_time: Optional[str] = None
     recipient_mode: Optional[str] = None
     reminders_enabled: Optional[bool] = None
+    custom_message_tenant: Optional[str] = None
+    custom_message_client: Optional[str] = None
 
     @field_validator("timezone")
     @classmethod

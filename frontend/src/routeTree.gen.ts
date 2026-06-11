@@ -11,10 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MasterRouteImport } from './routes/master'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MasterDashboardRouteImport } from './routes/master/dashboard'
 import { Route as ClientDashboardRouteImport } from './routes/client/dashboard'
+import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminClientsRouteImport } from './routes/admin/clients'
+import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
 
 const MasterRoute = MasterRouteImport.update({
   id: '/master',
@@ -24,6 +29,11 @@ const MasterRoute = MasterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -41,34 +51,69 @@ const ClientDashboardRoute = ClientDashboardRouteImport.update({
   path: '/client/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
-  id: '/admin/dashboard',
-  path: '/admin/dashboard',
-  getParentRoute: () => rootRouteImport,
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClientsRoute = AdminClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCatalogRoute = AdminCatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
+  getParentRoute: () => AdminRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
+  '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
+  '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
+  '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
@@ -76,34 +121,49 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/login'
     | '/master'
+    | '/admin/catalog'
+    | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/settings'
+    | '/admin/subscriptions'
     | '/client/dashboard'
     | '/master/dashboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/login'
     | '/master'
+    | '/admin/catalog'
+    | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/settings'
+    | '/admin/subscriptions'
     | '/client/dashboard'
     | '/master/dashboard'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/login'
     | '/master'
+    | '/admin/catalog'
+    | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/settings'
+    | '/admin/subscriptions'
     | '/client/dashboard'
     | '/master/dashboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
-  AdminDashboardRoute: typeof AdminDashboardRoute
   ClientDashboardRoute: typeof ClientDashboardRoute
 }
 
@@ -121,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -144,15 +211,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/subscriptions': {
+      id: '/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminSubscriptionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
-      path: '/admin/dashboard'
+      path: '/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AdminDashboardRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/clients': {
+      id: '/admin/clients'
+      path: '/clients'
+      fullPath: '/admin/clients'
+      preLoaderRoute: typeof AdminClientsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/catalog': {
+      id: '/admin/catalog'
+      path: '/catalog'
+      fullPath: '/admin/catalog'
+      preLoaderRoute: typeof AdminCatalogRouteImport
+      parentRoute: typeof AdminRoute
     }
   }
 }
+
+interface AdminRouteChildren {
+  AdminCatalogRoute: typeof AdminCatalogRoute
+  AdminClientsRoute: typeof AdminClientsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminCatalogRoute: AdminCatalogRoute,
+  AdminClientsRoute: AdminClientsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminSubscriptionsRoute: AdminSubscriptionsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface MasterRouteChildren {
   MasterDashboardRoute: typeof MasterDashboardRoute
@@ -167,9 +280,9 @@ const MasterRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
-  AdminDashboardRoute: AdminDashboardRoute,
   ClientDashboardRoute: ClientDashboardRoute,
 }
 export const routeTree = rootRouteImport

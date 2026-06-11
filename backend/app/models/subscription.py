@@ -159,5 +159,11 @@ class SubscriptionReminderSettings(Base, TimestampMixin):
     reminders_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=sa.text("false"), nullable=False
     )
+    custom_message_tenant: Mapped[Optional[str]] = mapped_column(
+        String(2000), nullable=True
+    )
+    custom_message_client: Mapped[Optional[str]] = mapped_column(
+        String(2000), nullable=True
+    )
 
     tenant = relationship("Tenant")

@@ -54,6 +54,10 @@ async def update_reminder_settings(
         settings.recipient_mode = update_data["recipient_mode"]
     if "reminders_enabled" in update_data:
         settings.reminders_enabled = update_data["reminders_enabled"]
+    if "custom_message_tenant" in update_data:
+        settings.custom_message_tenant = update_data["custom_message_tenant"]
+    if "custom_message_client" in update_data:
+        settings.custom_message_client = update_data["custom_message_client"]
 
     await commit_change(db, "subscription_reminder_settings_failed")
     await restore_rls_context(db)

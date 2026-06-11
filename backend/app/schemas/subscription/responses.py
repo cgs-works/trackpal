@@ -97,6 +97,8 @@ class SubscriptionReminderSettingsResponse(BaseModel):
     reminder_time: str
     recipient_mode: str
     reminders_enabled: bool
+    custom_message_tenant: Optional[str] = None
+    custom_message_client: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
