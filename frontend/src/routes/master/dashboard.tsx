@@ -4,52 +4,18 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SummaryCards } from "@/components/dashboard/summary-cards";
+import { BusinessTable } from "@/components/dashboard/business-table";
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  Power,
-  Settings,
-  Search,
-  CheckCircle2,
-  XCircle,
-  Building2,
-} from "lucide-react";
+  BusinessFormDialog,
+  getEmptyForm,
+  type BusinessForm,
+} from "@/components/dashboard/business-form-dialog";
+import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { Plus, Search } from "lucide-react";
 
 export const Route = createFileRoute("/master/dashboard")({
   component: MasterDashboard,
@@ -58,181 +24,117 @@ export const Route = createFileRoute("/master/dashboard")({
 /* ── Types ─────────────────────────────────────────────────────── */
 
 interface Tenant {
-  id: string;
-  full_name: string;
-  client_prefix: string;
-  email: string | null;
-  phone: string | null;
-  evolution_instance_name: string | null;
-  is_active: boolean;
-  username: string;
-  created_at: string;
+  id: string
+  full_name: string
+  client_prefix: string
+  email: string | null
+  phone: string | null
+  evolution_instance_name: string | null
+  is_active: boolean
+  username: string
+  created_at: string
 }
 
 interface TenantMeta {
-  total: number;
-  active: number;
-  inactive: number;
+  total: number
+  active: number
+  inactive: number
 }
 
 interface TenantListResponse {
-  data: Tenant[];
-  meta: TenantMeta;
-}
-
-interface EmptyForm {
-  id: string | null;
-  full_name: string;
-  email: string;
-  phone: string;
-  client_prefix: string;
-  username: string;
-  password: string;
-  evolution_instance_name: string;
+  data: Tenant[]
+  meta: TenantMeta
 }
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
-function getEmptyForm(): EmptyForm {
-  return {
-    id: null,
-    full_name: "",
-    email: "",
-    phone: "",
-    client_prefix: "",
-    username: "",
-    password: "",
-    evolution_instance_name: "",
-  };
-}
-
 function getApiError(error: unknown, fallback: string): string {
   const err = error as {
-    response?: { data?: { detail?: string | Array<{ msg?: string }> } };
-  };
-  const detail = err.response?.data?.detail;
-  if (Array.isArray(detail)) {
-    return detail.map((item) => item.msg || String(item)).join(", ");
+    response?: { data?: { detail?: string | Array<{ msg?: string }> } }
   }
-  return (typeof detail === "string" ? detail : null) || fallback;
-}
-
-function isTenantActive(tenant: Tenant): boolean {
-  return tenant.is_active;
+  const detail = err.response?.data?.detail
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || String(item)).join(", ")
+  }
+  return (typeof detail === "string" ? detail : null) || fallback
 }
 
 function getGeneratedPassword(data: unknown): string {
-  const d = data as Record<string, unknown>;
+  const d = data as Record<string, unknown>
   return (
     (d?.generated_password as string) ||
     (d?.password as string) ||
     (d?.temporary_password as string) ||
     (d?.plain_password as string) ||
     ""
-  );
-}
-
-/* ── Summary Card ──────────────────────────────────────────────── */
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  )
 }
 
 /* ── Component ─────────────────────────────────────────────────── */
 
 function MasterDashboard() {
-  const { switchTenant } = useAuthStore();
+  const { switchTenant } = useAuthStore()
 
-  /* Tenant state */
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [meta, setMeta] = useState<TenantMeta>({ total: 0, active: 0, inactive: 0 });
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [meta, setMeta] = useState<TenantMeta>({ total: 0, active: 0, inactive: 0 })
+  const [isLoading, setIsLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  /* Modal state */
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [form, setForm] = useState<EmptyForm>(getEmptyForm());
-  const [isSaving, setIsSaving] = useState(false);
-  const [modalError, setModalError] = useState("");
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<"create" | "edit">("create")
+  const [form, setForm] = useState<BusinessForm>(getEmptyForm())
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState("")
 
-  /* Delete confirm */
-  const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null)
 
-  const isEditMode = modalMode === "edit";
-  const modalTitle = isEditMode ? "Edit Business" : "Create Business";
-  const modalPrefixHint = isEditMode
-    ? "Changing this prefix will update all client login usernames for this business."
-    : "Leave blank to auto-generate a unique prefix.";
-
-  /* ── Data loading ──────────────────────────────────────────────── */
+  /* ── Data loading ─────────────────────────────────────────────── */
 
   const loadTenants = useCallback(async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      const response = await api.get<TenantListResponse>("/tenants");
-      const result = response.data;
-      setTenants(result.data || []);
+      const res = await api.get<TenantListResponse>("/tenants")
+      setTenants(res.data.data || [])
       setMeta(
-        result.meta || {
-          total: (result.data || []).length,
-          active: (result.data || []).filter((t) => isTenantActive(t)).length,
-          inactive: (result.data || []).filter((t) => !isTenantActive(t)).length,
+        res.data.meta || {
+          total: (res.data.data || []).length,
+          active: (res.data.data || []).filter((t) => t.is_active).length,
+          inactive: (res.data.data || []).filter((t) => !t.is_active).length,
         }
-      );
+      )
     } catch (error) {
-      toast.error(getApiError(error, "Unable to load businesses"));
+      toast.error(getApiError(error, "Unable to load businesses"))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    loadTenants();
-  }, [loadTenants]);
+    loadTenants()
+  }, [loadTenants])
 
   /* ── Filtered tenants ─────────────────────────────────────────── */
 
-  const filteredTenants = tenants.filter((tenant) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+  const filteredTenants = tenants.filter((t) => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
     return (
-      tenant.full_name.toLowerCase().includes(q) ||
-      tenant.email?.toLowerCase().includes(q) ||
-      tenant.client_prefix?.toLowerCase().includes(q)
-    );
-  });
+      t.full_name.toLowerCase().includes(q) ||
+      t.email?.toLowerCase().includes(q) ||
+      t.client_prefix?.toLowerCase().includes(q)
+    )
+  })
 
-  /* ── Modal helpers ─────────────────────────────────────────────── */
+  /* ── Form handlers ────────────────────────────────────────────── */
 
-  function openCreateModal() {
-    setModalMode("create");
-    setForm(getEmptyForm());
-    setIsModalOpen(true);
+  function openCreate() {
+    setFormMode("create")
+    setForm(getEmptyForm())
+    setFormOpen(true)
   }
 
-  function openEditModal(tenant: Tenant) {
-    setModalMode("edit");
+  function openEdit(tenant: Tenant) {
+    setFormMode("edit")
     setForm({
       ...getEmptyForm(),
       id: tenant.id,
@@ -241,51 +143,43 @@ function MasterDashboard() {
       phone: tenant.phone || "",
       client_prefix: tenant.client_prefix || "",
       evolution_instance_name: tenant.evolution_instance_name || "",
-    });
-    setIsModalOpen(true);
+    })
+    setFormOpen(true)
   }
 
-  function closeModal() {
-    if (isSaving) return;
-    setIsModalOpen(false);
-    setModalError("");
-  }
-
-  function validateForm(): boolean {
-    if (!form.full_name || !form.email || !form.phone) {
-      setModalError("Full name, email, and phone are required.");
-      return false;
-    }
-    if (!isEditMode && !form.username) {
-      setModalError("Username is required.");
-      return false;
-    }
-    if (!form.evolution_instance_name) {
-      setModalError("Evolution instance name is required.");
-      return false;
-    }
-    return true;
+  function updateForm(key: keyof BusinessForm, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setModalError("");
-    if (!validateForm()) return;
+    e.preventDefault()
+    setFormError("")
 
-    setIsSaving(true);
+    if (!form.full_name || !form.email || !form.phone) {
+      setFormError("Full name, email, and phone are required.")
+      return
+    }
+    if (formMode === "create" && !form.username) {
+      setFormError("Username is required.")
+      return
+    }
+    if (!form.evolution_instance_name) {
+      setFormError("Evolution instance name is required.")
+      return
+    }
+
+    setIsSaving(true)
     try {
-      if (isEditMode) {
+      if (formMode === "edit") {
         const payload: Record<string, unknown> = {
           full_name: form.full_name,
           email: form.email,
           phone: form.phone,
           evolution_instance_name: form.evolution_instance_name,
-        };
-        if (form.client_prefix.trim()) {
-          payload.client_prefix = form.client_prefix;
         }
-        await api.put(`/tenants/${form.id}`, payload);
-        toast.success("Business updated");
+        if (form.client_prefix.trim()) payload.client_prefix = form.client_prefix
+        await api.put(`/tenants/${form.id}`, payload)
+        toast.success("Business updated")
       } else {
         const payload: Record<string, unknown> = {
           full_name: form.full_name,
@@ -293,70 +187,56 @@ function MasterDashboard() {
           phone: form.phone,
           username: form.username,
           evolution_instance_name: form.evolution_instance_name,
-        };
-        if (form.client_prefix.trim()) {
-          payload.client_prefix = form.client_prefix;
         }
-        if (form.password) {
-          payload.password = form.password;
-        }
-        const res = await api.post("/tenants", payload);
-        const generatedPassword = getGeneratedPassword(res.data);
-        toast.success(
-          generatedPassword
-            ? `Business created. Password: ${generatedPassword}`
-            : "Business created"
-        );
+        if (form.client_prefix.trim()) payload.client_prefix = form.client_prefix
+        if (form.password) payload.password = form.password
+        const res = await api.post("/tenants", payload)
+        const pw = getGeneratedPassword(res.data)
+        toast.success(pw ? `Business created. Password: ${pw}` : "Business created")
       }
-      setIsModalOpen(false);
-      await loadTenants();
+      setFormOpen(false)
+      await loadTenants()
     } catch (error) {
-      setModalError(getApiError(error, "Unable to save business"));
+      setFormError(getApiError(error, "Unable to save business"))
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  }
-
-  function updateForm<K extends keyof EmptyForm>(key: K, value: EmptyForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   /* ── Actions ───────────────────────────────────────────────────── */
 
-  async function toggleTenantStatus(tenant: Tenant) {
-    const active = isTenantActive(tenant);
-    const endpoint = active
+  async function toggleStatus(tenant: Tenant) {
+    const endpoint = tenant.is_active
       ? `/tenants/${tenant.id}/deactivate`
-      : `/tenants/${tenant.id}/activate`;
+      : `/tenants/${tenant.id}/activate`
     try {
-      await api.patch(endpoint);
-      toast.success(active ? "Business deactivated" : "Business activated");
-      await loadTenants();
+      await api.patch(endpoint)
+      toast.success(tenant.is_active ? "Business deactivated" : "Business activated")
+      await loadTenants()
     } catch (error) {
-      toast.error(getApiError(error, "Unable to update business status"));
+      toast.error(getApiError(error, "Unable to update business status"))
     }
   }
 
   async function confirmDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget) return
     try {
-      await api.delete(`/tenants/${deleteTarget.id}`);
-      toast.success("Business deleted");
-      setDeleteTarget(null);
-      await loadTenants();
+      await api.delete(`/tenants/${deleteTarget.id}`)
+      toast.success("Business deleted")
+      setDeleteTarget(null)
+      await loadTenants()
     } catch (error) {
-      toast.error(getApiError(error, "Unable to delete business"));
-      setDeleteTarget(null);
+      toast.error(getApiError(error, "Unable to delete business"))
+      setDeleteTarget(null)
     }
   }
 
   async function manageCatalog(tenant: Tenant) {
     try {
-      await switchTenant(tenant.id);
-      // TODO: navigate to /admin/dashboard after tenant dashboard is built
-      toast.success(`Switched to ${tenant.full_name}`);
+      await switchTenant(tenant.id)
+      toast.success(`Switched to ${tenant.full_name}`)
     } catch (error) {
-      toast.error(getApiError(error, "Unable to switch business context"));
+      toast.error(getApiError(error, "Unable to switch business context"))
     }
   }
 
@@ -364,32 +244,12 @@ function MasterDashboard() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Summary cards */}
-        <section aria-label="Business summary">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <SummaryCard
-              icon={<Building2 className="h-5 w-5 text-muted-foreground" />}
-              label="Total Businesses"
-              value={meta.total}
-            />
-            <SummaryCard
-              icon={<CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
-              label="Active"
-              value={meta.active}
-            />
-            <SummaryCard
-              icon={<XCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
-              label="Inactive"
-              value={meta.inactive}
-            />
-          </div>
-        </section>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+        <SummaryCards total={meta.total} active={meta.active} inactive={meta.inactive} />
 
-        {/* Search and actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search businesses..."
               value={searchQuery}
@@ -397,370 +257,53 @@ function MasterDashboard() {
               className="pl-9"
             />
           </div>
-          <Button size="sm" onClick={openCreateModal}>
-            <Plus className="h-4 w-4 mr-1.5" />
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="size-4 mr-1.5" />
             Create Business
           </Button>
         </div>
 
-        {/* Businesses table */}
         <div className="border rounded-lg">
           {isLoading ? (
-            <div className="p-4 space-y-3">
+            <div className="p-4 flex flex-col gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full rounded-lg" />
               ))}
             </div>
           ) : filteredTenants.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Plus className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery
-                  ? "No businesses match your search"
-                  : "No businesses yet"}
-              </p>
-              {!searchQuery && (
-                <Button size="sm" onClick={openCreateModal}>
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  Create your first business
-                </Button>
-              )}
-            </div>
+            <EmptyState
+              isSearch={!!searchQuery}
+              onAction={openCreate}
+            />
           ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Business</TableHead>
-                      <TableHead>Prefix</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Instance</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTenants.map((tenant) => (
-                      <TableRow
-                        key={tenant.id}
-                        className="hover:bg-muted/50 transition-colors"
-                      >
-                        <TableCell className="font-medium">
-                          {tenant.full_name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-mono">
-                            {tenant.client_prefix || "—"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{tenant.email}</div>
-                            {tenant.phone && (
-                              <div className="text-muted-foreground">
-                                {tenant.phone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {tenant.evolution_instance_name || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              isTenantActive(tenant) ? "default" : "secondary"
-                            }
-                            className={
-                              isTenantActive(tenant)
-                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-300"
-                                : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300"
-                            }
-                          >
-                            {isTenantActive(tenant) ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditModal(tenant)}
-                              title="Edit"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => manageCatalog(tenant)}
-                              title="Manage catalog"
-                            >
-                              <Settings className="h-3.5 w-3.5" />
-                              <span className="sr-only">Manage catalog</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleTenantStatus(tenant)}
-                              title={
-                                isTenantActive(tenant)
-                                  ? "Deactivate"
-                                  : "Activate"
-                              }
-                            >
-                              <Power className="h-3.5 w-3.5" />
-                              <span className="sr-only">
-                                {isTenantActive(tenant)
-                                  ? "Deactivate"
-                                  : "Activate"}
-                              </span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeleteTarget(tenant)}
-                              disabled={isTenantActive(tenant)}
-                              title={
-                                isTenantActive(tenant)
-                                  ? "Deactivate first to delete"
-                                  : "Delete"
-                              }
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile card list */}
-              <div className="md:hidden divide-y">
-                {filteredTenants.map((tenant) => (
-                  <div key={tenant.id} className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium">{tenant.full_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {tenant.email}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          isTenantActive(tenant) ? "default" : "secondary"
-                        }
-                        className={
-                          isTenantActive(tenant)
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
-                        }
-                      >
-                        {isTenantActive(tenant) ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-0.5">
-                      <p>Prefix: {tenant.client_prefix || "—"}</p>
-                      <p>Phone: {tenant.phone || "—"}</p>
-                      <p>Instance: {tenant.evolution_instance_name || "—"}</p>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditModal(tenant)}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => manageCatalog(tenant)}
-                      >
-                        <Settings className="h-3.5 w-3.5 mr-1" />
-                        Catalog
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleTenantStatus(tenant)}
-                      >
-                        <Power className="h-3.5 w-3.5 mr-1" />
-                        {isTenantActive(tenant) ? "Deactivate" : "Activate"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteTarget(tenant)}
-                        disabled={isTenantActive(tenant)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
+            <BusinessTable
+              tenants={filteredTenants}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
+              onToggleStatus={toggleStatus}
+              onManageCatalog={manageCatalog}
+            />
           )}
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
-      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{modalTitle}</DialogTitle>
-            <DialogDescription>
-              {isEditMode
-                ? "Update business details and configuration."
-                : "Register a new business with an Evolution instance."}
-            </DialogDescription>
-          </DialogHeader>
+      <BusinessFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        mode={formMode}
+        form={form}
+        onFormChange={updateForm}
+        onSubmit={handleSubmit}
+        saving={isSaving}
+        error={formError}
+      />
 
-          {modalError && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-              {modalError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                required
-                value={form.full_name}
-                onChange={(e) => updateForm("full_name", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => updateForm("email", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                required
-                value={form.phone}
-                onChange={(e) => updateForm("phone", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="client_prefix">
-                Client Prefix <span className="text-muted-foreground font-normal">(optional)</span>
-              </Label>
-              <Input
-                id="client_prefix"
-                maxLength={5}
-                value={form.client_prefix}
-                onChange={(e) => updateForm("client_prefix", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">{modalPrefixHint}</p>
-            </div>
-
-            {!isEditMode && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="tenant_username">Username</Label>
-                  <Input
-                    id="tenant_username"
-                    required
-                    value={form.username}
-                    onChange={(e) => updateForm("username", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    Password <span className="text-muted-foreground font-normal">(optional)</span>
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={form.password}
-                    onChange={(e) => updateForm("password", e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="evolution_instance_name">Evolution Instance</Label>
-              <Input
-                id="evolution_instance_name"
-                required
-                value={form.evolution_instance_name}
-                onChange={(e) =>
-                  updateForm("evolution_instance_name", e.target.value)
-                }
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeModal}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirmation */}
-      <AlertDialog
+      <DeleteConfirmDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete business?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete <strong>{deleteTarget?.full_name}</strong>.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null) }}
+        businessName={deleteTarget?.full_name || ""}
+        onConfirm={confirmDelete}
+      />
     </div>
-  );
+  )
 }
