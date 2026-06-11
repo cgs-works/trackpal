@@ -1,0 +1,377 @@
+import { useState, useEffect, useCallback } from "react";
+import { useSearch } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CreditCard, Plus, Search, X } from "lucide-react";
+import { toast } from "sonner";
+import {
+  listSubscriptions,
+  createSubscription,
+  updateSubscription,
+  revealCredentials,
+  getDropdownData,
+  getPlansForService,
+  type Subscription,
+  type Client,
+  type Service,
+  type Plan,
+  type SubscriptionCreate,
+  type SubscriptionFilters,
+} from "../services/subscription-api";
+import {
+  SubscriptionTable,
+  RevealCredentialsDialog,
+} from "./subscription-table";
+import { SubscriptionFormDialog } from "./subscription-form-dialog";
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "expired", label: "Expired" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export function SubscriptionsPage() {
+  // URL search params for client_id filter
+  let urlClientId: string | undefined;
+  try {
+    const search = useSearch({ strict: false });
+    urlClientId = search?.client_id;
+  } catch {
+    // not on a route with search params
+  }
+
+  // Data
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [serviceFilter, setServiceFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [clientIdFilter, setClientIdFilter] = useState(urlClientId || "");
+
+  // Form state
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [selectedSub, setSelectedSub] = useState<Subscription | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  // Reveal state
+  const [revealOpen, setRevealOpen] = useState(false);
+  const [revealEmail, setRevealEmail] = useState("");
+  const [revealPassword, setRevealPassword] = useState<string | null>(null);
+  const [revealPin, setRevealPin] = useState<string | null>(null);
+
+  // ── Load data ──────────────────────────────────────────────
+  const loadDropdowns = useCallback(async () => {
+    try {
+      const { clients: c, services: s } = await getDropdownData();
+      setClients(c);
+      setServices(s);
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
+  const loadSubscriptions = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const filters: SubscriptionFilters = {};
+      if (statusFilter !== "all") filters.status = statusFilter;
+      if (serviceFilter !== "all") filters.service_id = serviceFilter;
+      if (clientIdFilter) filters.client_id = clientIdFilter;
+      const data = await listSubscriptions(filters);
+      setSubscriptions(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load subscriptions"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [statusFilter, serviceFilter, clientIdFilter]);
+
+  useEffect(() => {
+    loadDropdowns();
+  }, [loadDropdowns]);
+
+  useEffect(() => {
+    loadSubscriptions();
+  }, [loadSubscriptions]);
+
+  // ── Load plans when service changes for form ───────────────
+  async function handleServiceChange(serviceId: string) {
+    setLoadingPlans(true);
+    try {
+      const data = await getPlansForService(serviceId);
+      setPlans(data);
+    } catch {
+      setPlans([]);
+    } finally {
+      setLoadingPlans(false);
+    }
+  }
+
+  // ── Filter clients by search ───────────────────────────────
+  const filteredClients = clients.filter((c) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      c.full_name.toLowerCase().includes(q) ||
+      c.username.toLowerCase().includes(q)
+    );
+  });
+
+  // ── Build lookup maps ──────────────────────────────────────
+  const clientMap = Object.fromEntries(
+    clients.map((c) => [c.id, c.full_name])
+  );
+  const serviceMap = Object.fromEntries(
+    services.map((s) => [s.id, s.name])
+  );
+  // Load all plans for plan name lookup
+  const [allPlans, setAllPlans] = useState<Plan[]>([]);
+  useEffect(() => {
+    async function loadAllPlans() {
+      try {
+        const all: Plan[] = [];
+        for (const s of services) {
+          const p = await getPlansForService(s.id);
+          all.push(...p);
+        }
+        setAllPlans(all);
+      } catch {
+        // Non-critical
+      }
+    }
+    if (services.length > 0) loadAllPlans();
+  }, [services]);
+  const planMap = Object.fromEntries(allPlans.map((p) => [p.id, p.name]));
+
+  // ── Create ─────────────────────────────────────────────────
+  function openCreate() {
+    setFormMode("create");
+    setSelectedSub(null);
+    setFormError("");
+    setPlans([]);
+    setFormOpen(true);
+  }
+
+  // ── Edit ───────────────────────────────────────────────────
+  function openEdit(sub: Subscription) {
+    setFormMode("edit");
+    setSelectedSub(sub);
+    setFormError("");
+    // Load plans for the subscription's service
+    handleServiceChange(sub.service_id);
+    setFormOpen(true);
+  }
+
+  async function handleSubmit(payload: SubscriptionCreate) {
+    setSaving(true);
+    setFormError("");
+    try {
+      if (formMode === "create") {
+        await createSubscription(payload);
+        toast.success("Subscription created");
+      } else {
+        await updateSubscription(selectedSub!.id, payload);
+        toast.success("Subscription updated");
+      }
+      setFormOpen(false);
+      await loadSubscriptions();
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : "Failed to save subscription"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Reveal credentials ─────────────────────────────────────
+  async function handleReveal(sub: Subscription) {
+    try {
+      const creds = await revealCredentials(sub.id);
+      setRevealEmail(sub.streaming_email);
+      setRevealPassword(creds.streaming_password);
+      setRevealPin(creds.profile_pin);
+      setRevealOpen(true);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to reveal credentials"
+      );
+    }
+  }
+
+  // ── Clear filters ──────────────────────────────────────────
+  const hasFilters =
+    statusFilter !== "all" || serviceFilter !== "all" || clientIdFilter || search;
+
+  return (
+    <div className="flex-1 p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Subscriptions</h1>
+            <p className="text-muted-foreground">
+              Manage client subscriptions and credentials
+            </p>
+          </div>
+          <Button onClick={openCreate}>
+            <Plus className="size-4 mr-2" />
+            New Subscription
+          </Button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search clients..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={serviceFilter} onValueChange={setServiceFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All Services" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Services</SelectItem>
+              {services.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStatusFilter("all");
+                setServiceFilter("all");
+                setClientIdFilter("");
+                setSearch("");
+              }}
+            >
+              <X className="size-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* Content */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <div className="size-5 border-2 border-border border-t-primary rounded-full animate-spin" />
+              Loading subscriptions...
+            </div>
+          </div>
+        ) : subscriptions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <CreditCard className="size-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium">
+              {hasFilters ? "No subscriptions found" : "No subscriptions yet"}
+            </h3>
+            <p className="text-muted-foreground mt-1">
+              {hasFilters
+                ? "Try adjusting your filters"
+                : "Create your first subscription to get started"}
+            </p>
+            {!hasFilters && (
+              <Button onClick={openCreate} className="mt-4">
+                <Plus className="size-4 mr-2" />
+                New Subscription
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="text-sm text-muted-foreground">
+              {subscriptions.length} subscription
+              {subscriptions.length !== 1 ? "s" : ""}
+            </div>
+            <SubscriptionTable
+              subscriptions={subscriptions}
+              clients={clientMap}
+              services={serviceMap}
+              plans={planMap}
+              onEdit={openEdit}
+              onReveal={handleReveal}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Form dialog */}
+      <SubscriptionFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        mode={formMode}
+        subscription={selectedSub}
+        clients={clients}
+        services={services}
+        plans={plans}
+        loadingPlans={loadingPlans}
+        onSubmit={handleSubmit}
+        saving={saving}
+        error={formError}
+      />
+
+      {/* Reveal credentials dialog */}
+      <RevealCredentialsDialog
+        open={revealOpen}
+        onOpenChange={setRevealOpen}
+        email={revealEmail}
+        password={revealPassword}
+        pin={revealPin}
+      />
+    </div>
+  );
+}
