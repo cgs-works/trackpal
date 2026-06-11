@@ -172,12 +172,14 @@ interface RevealCredentialsDialogProps {
 }
 
 export function RevealCredentialsDialog({
-  open: _open,
+  open,
   onOpenChange,
   email,
   password,
   pin,
 }: RevealCredentialsDialogProps) {
+  if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
@@ -190,14 +192,13 @@ export function RevealCredentialsDialog({
         <div className="relative bg-card border rounded-lg shadow-lg w-full max-w-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">{t("frontend.dashboard.client.access_info")}</h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6"
+            <button
+              type="button"
+              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
               onClick={() => onOpenChange(false)}
             >
               ×
-            </Button>
+            </button>
           </div>
           <div className="space-y-3">
             <div>
