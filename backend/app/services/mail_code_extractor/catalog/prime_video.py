@@ -21,6 +21,11 @@ SERVICE: ServiceEntry = {
             "desc": "6-digit in coloured background (HTML)",
         },
         {
+            "regex": r"(?is)your verification code is:\s*(\d{6})",
+            "type": "code",
+            "desc": "6-digit after 'your verification code is:' (EN)",
+        },
+        {
             "regex": r"(?m)^\s*(\d{6})\s*$",
             "type": "code",
             "desc": "6-digit standalone line",

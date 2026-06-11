@@ -407,6 +407,23 @@ class TestExtractPrimeVideo:
         assert result.value == CODE_6
         assert result.result_type == "code"
 
+    def test_verification_text_en(self):
+        body = f"your verification code is: {CODE_6}"
+        result = extract_from_body(body, "prime_video")
+        assert result is not None
+        assert result.value == CODE_6
+        assert result.result_type == "code"
+
+    def test_verification_text_en_inline(self):
+        body = (
+            "If this was you, your verification code is:"
+            f" {CODE_6_ALT} If you didn&#39;t request it"
+        )
+        result = extract_from_body(body, "prime_video")
+        assert result is not None
+        assert result.value == CODE_6_ALT
+        assert result.result_type == "code"
+
     def test_background_color_pattern(self):
         body = (
             '<table><tr><td style="background-color: #D3D3D3;">'
@@ -683,6 +700,8 @@ class TestLegacyCompatibility:
             ],
             "prime_video": [
                 f"Tu código de verificación es: {CODE_6}",
+                f"your verification code is: {CODE_6}",
+                f"If this was you, your verification code is: {CODE_6}",
                 f'<td style="background-color: #D3D3D3;"> {CODE_6} </td>',
                 f"\n{CODE_6}\n",
             ],
