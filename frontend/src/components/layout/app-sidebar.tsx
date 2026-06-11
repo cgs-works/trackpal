@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import api from "@/lib/api";
+import { NavItem } from "./sidebar-nav";
+import { fetchCodeServices, saveCodeServices, type CodeService } from "@/features/master/services/tenant-api";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -27,53 +28,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/* ── Types ─────────────────────────────────────────────────────── */
-
-interface CodeService {
-  service_key: string;
-  label: string;
-  is_active: boolean;
-}
-
-/* ── Nav Item ──────────────────────────────────────────────────── */
-
-function NavItem({
-  icon,
-  label,
-  collapsed,
-  active,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  collapsed?: boolean;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-left",
-        active
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-      )}
-    >
-      {icon}
-      {!collapsed && <span>{label}</span>}
-    </button>
-  );
-}
-
 /* ── Code Services Dialog ──────────────────────────────────────── */
 
 function CodeServicesDialog({
   open,
   onOpenChange,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
   const [services, setServices] = useState<CodeService[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,10 +44,8 @@ function CodeServicesDialog({
   const loadServices = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ services: CodeService[] }>(
-        "/code-services/global"
-      );
-      setServices(res.data.services || []);
+      const data = await fetchCodeServices();
+      setServices(data);
     } catch {
       toast.error("Unable to load code services");
     } finally {
@@ -112,7 +72,7 @@ function CodeServicesDialog({
       for (const svc of services) {
         payload[svc.service_key] = svc.is_active;
       }
-      await api.put("/code-services/global", { services: payload });
+      await saveCodeServices(payload);
       toast.success("Code services saved");
       onOpenChange(false);
     } catch {
@@ -194,13 +154,13 @@ function CodeServicesDialog({
 /* ── Sidebar Content ───────────────────────────────────────────── */
 
 interface SidebarContentProps {
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
-  onCodeServices?: () => void;
-  onCloseMobile?: () => void;
+  collapsed?: boolean
+  onToggleCollapse?: () => void
+  onCodeServices?: () => void
+  onCloseMobile?: () => void
 }
 
-function SidebarContent({
+export function SidebarContent({
   collapsed,
   onToggleCollapse,
   onCodeServices,

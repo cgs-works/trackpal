@@ -21,17 +21,6 @@ export interface BusinessForm {
   evolution_instance_name: string
 }
 
-interface BusinessFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  mode: "create" | "edit"
-  form: BusinessForm
-  onFormChange: (key: keyof BusinessForm, value: string) => void
-  onSubmit: (e: React.FormEvent) => void
-  saving: boolean
-  error: string
-}
-
 export function getEmptyForm(): BusinessForm {
   return {
     id: null,
@@ -45,6 +34,17 @@ export function getEmptyForm(): BusinessForm {
   }
 }
 
+interface BusinessFormDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  mode: "create" | "edit"
+  form: BusinessForm
+  onFormChange: (key: keyof BusinessForm, value: string) => void
+  onSubmit: (e: React.FormEvent) => void
+  saving: boolean
+  error: string
+}
+
 export function BusinessFormDialog({
   open,
   onOpenChange,
@@ -55,11 +55,11 @@ export function BusinessFormDialog({
   saving,
   error,
 }: BusinessFormDialogProps) {
-  const isEdit = mode === "edit"
-  const title = isEdit ? "Edit Business" : "Create Business"
+  const isEdit = mode === "edit";
+  const title = isEdit ? "Edit Business" : "Create Business";
   const prefixHint = isEdit
     ? "Changing this prefix will update all client login usernames for this business."
-    : "Leave blank to auto-generate a unique prefix."
+    : "Leave blank to auto-generate a unique prefix.";
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onOpenChange(o) }}>

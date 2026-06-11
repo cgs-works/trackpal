@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Pencil, Trash2, Power, Settings } from "lucide-react";
-import type { Tenant } from "@/types/tenant";
+import type { Tenant } from "../services/tenant-api";
 
 interface BusinessTableProps {
   tenants: Tenant[]
