@@ -45,6 +45,13 @@ class Settings(BaseSettings):
         "http://localhost:8000/api/v1/tenant/mailbox/oauth/microsoft/callback"
     )
 
+    # R2 / S3 for debug uploads
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = "trackpal-debug"
+    r2_endpoint_url: str = ""
+    r2_public_url: str = ""
+
     # Mailbox lookup defaults
     mailbox_lookup_timeout_seconds: int = 60
     mailbox_lookup_window_minutes: int = 5

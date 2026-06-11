@@ -7,8 +7,10 @@ SERVICE: ServiceEntry = {
     "subject_patterns": [
         "Tu código de acceso temporal de Netflix",
         "Your Netflix temporary access code",
+        "您的 Netflix 临时访问代码",
         "Tu código de inicio de sesión",
         "Netflix: Tu código de inicio de sesión",
+        "Netflix：您的登录代码",
         "Netflix: Your sign-in code",
         "Tu código de verificación",
         "Your verification code",
@@ -39,6 +41,11 @@ SERVICE: ServiceEntry = {
             "regex": r"Enter this code to sign in(?:\r?\n\s*){1,3}(?:Enter this code to sign in(?:\r?\n\s*){1,3})?(\d{4})",
             "type": "code",
             "desc": "4-digit sign-in (EN)",
+        },
+        {
+            "regex": r"输入此代码登录(?:\r?\n\s*){1,3}(?:输入此代码登录(?:\r?\n\s*){1,3})?(\d{4})",
+            "type": "code",
+            "desc": "4-digit sign-in (ZH)",
         },
         {
             "regex": r'font-size: 28px; line-height: 32px; letter-spacing: 6px; font-family: NetflixSans-Regular, Helvetica, Roboto, Segoe UI, sans-serif; font-weight: 400; padding-top: 20px; color: #221f1f;">\s*(\d{4})\s*</td>',

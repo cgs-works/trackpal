@@ -501,7 +501,7 @@ class TestExtractNewestFromEmails:
                 ago_minutes=10,  # outside 5-min window
             ),
         ]
-        result = extract_newest_from_emails(emails, "spotify")
+        result = extract_newest_from_emails(emails, "spotify", max_age_minutes=5)
         assert result is None
 
     def test_no_valid_emails_returns_none(self):
@@ -649,6 +649,7 @@ class TestLegacyCompatibility:
                 f"Escribe este código para iniciar sesión\n\n{CODE_4}",
                 f"Ingresa este código para iniciar sesión\n\n{CODE_4}",
                 f"Enter this code to sign in\n\n{CODE_4}",
+                f"输入此代码登录\n\n输入此代码登录\n\n{CODE_4}\n\n",
                 f'<td style="font-size: 28px; line-height: 32px; letter-spacing: 6px; font-family: NetflixSans-Regular, Helvetica, Roboto, Segoe UI, sans-serif; font-weight: 400; padding-top: 20px; color: #221f1f;">{CODE_4}</td>',
                 f"Confirma el cambio en tu cuenta con este código:\n\n{CODE_6}",
                 f"Confirma el cambio de cuenta con este código:\n\n{CODE_6}",
@@ -662,6 +663,7 @@ class TestLegacyCompatibility:
             "hbo_max": [
                 f"Tu código de un solo uso - {CODE_6}",
                 f"Utiliza este código para iniciar sesión en tu cuenta de Max. Tu código de un solo uso: {CODE_6}",
+                f"Your one-time code ----- {CODE_6}",
                 f"\n\n{CODE_6}\n\n",
             ],
             "spotify": [

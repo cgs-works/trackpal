@@ -39,6 +39,7 @@ from app.services.mail_lookup_worker.providers import (
     NonTransientProviderError,
     RevokedMailboxError,
 )
+from app.services.mail_lookup_worker.r2_upload import upload_netflix_diagnostic
 from app.services.mail_lookup_worker.redis_queue import dequeue_job
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,10 @@ _DESKTOP_CHROME_UA = (
 
 
 async def fetch_netflix_code_from_url(full_url: str) -> str | None:
-    """Resolve Netflix travel verify URL to OTP code (4-6 digits)."""
+    """Resolve Netflix travel verify URL to OTP code (4-6 digits).
+
+    When extraction fails, uploads the raw HTML to Cloudflare R2 for debugging.
+    """
     if "netflix.com/account/travel/verify" not in full_url:
         return None
 
@@ -68,7 +72,23 @@ async def fetch_netflix_code_from_url(full_url: str) -> str | None:
     if html_text is None:
         return None
 
-    return _extract_netflix_verify_code(html_text)
+    code = _extract_netflix_verify_code(html_text)
+    if code is not None:
+        return code
+
+    # Diagnostic upload on failure — fire-and-forget via executor
+    nftoken_match = re.search(r"nftoken=([^&]+)", full_url)
+    nftoken_prefix = nftoken_match.group(1) if nftoken_match else ""
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(
+        None,
+        upload_netflix_diagnostic,
+        html_text,
+        nftoken_prefix,
+    )
+
+    return None
 
 
 async def _fetch_netflix_verify_html(url: str) -> str | None:
@@ -101,7 +121,11 @@ def _extract_netflix_verify_code(html_text: str) -> str | None:
     def looks_like_placeholder(code: str) -> bool:
         if len(set(code)) == 1:
             return True
-        return code in {"0000", "000000", "1234", "123456"}
+        return code in {
+            "0000", "000000", "1234", "123456",
+            "1111", "2222", "3333", "4444", "5555",
+            "6666", "7777", "8888", "9999",
+        }
 
     def digit_windows(digits_only: str):
         for size in (6, 5, 4):
@@ -142,7 +166,7 @@ def _extract_netflix_verify_code(html_text: str) -> str | None:
         digits = re.sub(r"\D+", "", html.unescape(inner))
         for d in digit_windows(digits):
             if not looks_like_placeholder(d):
-                candidates.append((6 if len(d) == 6 else 5, d))
+                candidates.append((5 + (3 if len(d) == 6 else 0), d))
 
     for m in re.finditer(
         r'(?is)<(span|div)[^>]+class="[^"]*(?:challenge-code|code|otp|pin)[^"]*"[^>]*>(.*?)</\1>',
@@ -152,7 +176,7 @@ def _extract_netflix_verify_code(html_text: str) -> str | None:
         digits = re.sub(r"\D+", "", html.unescape(inner))
         for d in digit_windows(digits):
             if not looks_like_placeholder(d):
-                candidates.append((4 if len(d) == 6 else 3, d))
+                candidates.append((4 + (3 if len(d) == 6 else 0), d))
 
     if candidates:
         candidates.sort(key=lambda x: x[0], reverse=True)
