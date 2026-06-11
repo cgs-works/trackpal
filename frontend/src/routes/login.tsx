@@ -8,19 +8,97 @@ import {
   t,
 } from "@/i18n/public";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Sun, Moon, Globe } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   component: LoginComponent,
 });
+
+/* ── Atmospheric Panel ─────────────────────────────────────────── */
+
+function AtmosphericPanel() {
+  return (
+    <div className="relative hidden md:flex flex-1 items-center justify-center overflow-hidden bg-[oklch(0.11_0_0)]">
+      {/* Grid overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
+
+      {/* Radial glow */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 50% at 50% 50%, oklch(0.55_0.12_260 / 0.15), transparent 70%)",
+        }}
+      />
+
+      {/* Secondary glow — lower */}
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(ellipse 40% 30% at 50% 70%, oklch(0.50_0.08_300 / 0.12), transparent 60%)",
+        }}
+      />
+
+      {/* Brand content */}
+      <div className="relative z-10 flex flex-col items-center gap-6 px-8 text-center">
+        {/* Accent line */}
+        <div className="h-px w-16 bg-gradient-to-r from-transparent via-[oklch(0.7_0.1_260)] to-transparent opacity-40" />
+
+        <h1 className="text-4xl font-extrabold tracking-tight text-white">
+          TrackPal
+        </h1>
+
+        <p className="max-w-xs text-sm leading-relaxed text-white/40">
+          Operations platform for WhatsApp-based service delivery and subscription management.
+        </p>
+
+        {/* Decorative dots */}
+        <div className="flex gap-2 mt-4">
+          {[0.3, 0.5, 0.3].map((opacity, i) => (
+            <div
+              key={i}
+              className="h-1 rounded-full bg-white"
+              style={{ opacity, width: i === 1 ? 24 : 8 }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Theme Toggle ──────────────────────────────────────────────── */
+
+function ThemeToggle({
+  isDark,
+  onToggle,
+}: {
+  isDark: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
+
+/* ── Login ─────────────────────────────────────────────────────── */
 
 function LoginComponent() {
   const navigate = useNavigate();
@@ -31,6 +109,25 @@ function LoginComponent() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [, setTick] = useState(0);
+
+  // Theme state — default dark
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("theme");
+    if (stored) return stored === "dark";
+    return true; // default dark
+  });
+
+  // Sync theme to <html> class + localStorage
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   useEffect(() => subscribeLocale(() => setTick((n) => n + 1)), []);
 
@@ -65,30 +162,48 @@ function LoginComponent() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-muted/30">
-      <Card className="w-full max-w-sm shadow-md border">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {t("login.title")}
-          </CardTitle>
-          <CardDescription className="text-center">
-            TrackPal
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+    <div className="flex h-screen bg-background text-foreground">
+      {/* Left: atmospheric panel */}
+      <AtmosphericPanel />
+
+      {/* Right: form panel */}
+      <div className="flex w-full items-center justify-center p-6 sm:p-10 md:w-[480px] lg:w-[520px]">
+        <div className="w-full max-w-sm space-y-8">
+          {/* Mobile brand header */}
+          <div className="flex flex-col items-center gap-2 md:hidden">
+            <h1 className="text-2xl font-bold tracking-tight">TrackPal</h1>
+            <p className="text-xs text-muted-foreground">
+              Operations platform
+            </p>
+          </div>
+
+          {/* Header row: heading + controls */}
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {t("login.title")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("login.welcome")}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <ThemeToggle
+                isDark={isDark}
+                onToggle={() => setIsDark((d) => !d)}
+              />
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Locale selector */}
-            <div className="flex items-center justify-end gap-2">
-              <Label htmlFor="locale-select" className="text-xs text-muted-foreground">
-                {t("login.language")}:
-              </Label>
+            <div className="flex items-center gap-2">
+              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
               <select
-                id="locale-select"
                 value={getLocale()}
-                onChange={(e) =>
-                  setLocale(e.target.value as "en" | "es")
-                }
-                className="text-xs border border-input rounded-md bg-background px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
+                onChange={(e) => setLocale(e.target.value as "en" | "es")}
+                className="h-8 rounded-lg border border-input bg-transparent px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="en">English</option>
                 <option value="es">Español</option>
@@ -97,7 +212,9 @@ function LoginComponent() {
 
             {/* Username */}
             <div className="space-y-2">
-              <Label htmlFor="username">{t("login.username")}</Label>
+              <Label htmlFor="username" className="text-sm font-medium">
+                {t("login.username")}
+              </Label>
               <Input
                 id="username"
                 type="text"
@@ -105,12 +222,15 @@ function LoginComponent() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                className="h-10 transition-[box-shadow] duration-200 focus-visible:ring-[oklch(0.65_0.15_260/0.4)] focus-visible:border-[oklch(0.65_0.15_260)]"
               />
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password">{t("login.password")}</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                {t("login.password")}
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -118,6 +238,7 @@ function LoginComponent() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="h-10 transition-[box-shadow] duration-200 focus-visible:ring-[oklch(0.65_0.15_260/0.4)] focus-visible:border-[oklch(0.65_0.15_260)]"
               />
             </div>
 
@@ -127,19 +248,18 @@ function LoginComponent() {
                 {errorMessage}
               </p>
             )}
-          </CardContent>
 
-          <div className="px-6 pb-6">
+            {/* Submit */}
             <Button
-              className="w-full"
+              className="w-full h-10"
               type="submit"
               disabled={isLoading}
             >
               {isLoading ? t("login.signing_in") : t("login.sign_in")}
             </Button>
-          </div>
-        </form>
-      </Card>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
