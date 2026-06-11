@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -35,8 +39,6 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBar } from "@/components/status-bar";
-import { CodeServicesSidebar } from "@/components/code-services-sidebar";
 import {
   Plus,
   Pencil,
@@ -44,6 +46,9 @@ import {
   Power,
   Settings,
   Search,
+  CheckCircle2,
+  XCircle,
+  Building2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/master/dashboard")({
@@ -73,12 +78,6 @@ interface TenantMeta {
 interface TenantListResponse {
   data: Tenant[];
   meta: TenantMeta;
-}
-
-interface CodeService {
-  service_key: string;
-  label: string;
-  is_active: boolean;
 }
 
 interface EmptyForm {
@@ -133,6 +132,32 @@ function getGeneratedPassword(data: unknown): string {
   );
 }
 
+/* ── Summary Card ──────────────────────────────────────────────── */
+
+function SummaryCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+          {icon}
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold tracking-tight">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ── Component ─────────────────────────────────────────────────── */
 
 function MasterDashboard() {
@@ -153,11 +178,6 @@ function MasterDashboard() {
 
   /* Delete confirm */
   const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
-
-  /* Code Services sidebar */
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [services, setServices] = useState<CodeService[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
 
   const isEditMode = modalMode === "edit";
   const modalTitle = isEditMode ? "Edit Business" : "Create Business";
@@ -190,39 +210,6 @@ function MasterDashboard() {
   useEffect(() => {
     loadTenants();
   }, [loadTenants]);
-
-  /* ── Code services ─────────────────────────────────────────────── */
-
-  const loadServices = useCallback(async () => {
-    setServicesLoading(true);
-    try {
-      const res = await api.get<{ services: CodeService[] }>("/code-services/global");
-      setServices(res.data.services || []);
-    } catch {
-      toast.error("Unable to load code services");
-    } finally {
-      setServicesLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadServices();
-  }, [loadServices]);
-
-  async function saveServices(updatedServices: CodeService[]) {
-    try {
-      const payload: Record<string, boolean> = {};
-      for (const svc of updatedServices) {
-        payload[svc.service_key] = svc.is_active;
-      }
-      await api.put("/code-services/global", { services: payload });
-      setServices(updatedServices);
-      toast.success("Code services saved");
-    } catch (error) {
-      toast.error(getApiError(error, "Unable to save code services"));
-      throw error; // Re-throw so sidebar can handle it
-    }
-  }
 
   /* ── Filtered tenants ─────────────────────────────────────────── */
 
@@ -376,41 +363,44 @@ function MasterDashboard() {
   /* ── Render ────────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Status bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <StatusBar
-            total={meta.total}
-            active={meta.active}
-            inactive={meta.inactive}
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSidebarOpen(true)}
-              className="hidden sm:flex"
-            >
-              <Settings className="h-4 w-4 mr-1.5" />
-              Code Services
-            </Button>
-            <Button size="sm" onClick={openCreateModal}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Create Business
-            </Button>
+        {/* Summary cards */}
+        <section aria-label="Business summary">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <SummaryCard
+              icon={<Building2 className="h-5 w-5 text-muted-foreground" />}
+              label="Total Businesses"
+              value={meta.total}
+            />
+            <SummaryCard
+              icon={<CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
+              label="Active"
+              value={meta.active}
+            />
+            <SummaryCard
+              icon={<XCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
+              label="Inactive"
+              value={meta.inactive}
+            />
           </div>
-        </div>
+        </section>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search businesses..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        {/* Search and actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search businesses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button size="sm" onClick={openCreateModal}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Create Business
+          </Button>
         </div>
 
         {/* Businesses table */}
@@ -626,26 +616,7 @@ function MasterDashboard() {
             </>
           )}
         </div>
-
-        {/* Mobile Code Services button */}
-        <Button
-          variant="outline"
-          className="sm:hidden w-full"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <Settings className="h-4 w-4 mr-1.5" />
-          Code Services
-        </Button>
       </div>
-
-      {/* Code Services Sidebar */}
-      <CodeServicesSidebar
-        open={sidebarOpen}
-        onOpenChange={setSidebarOpen}
-        services={services}
-        loading={servicesLoading}
-        onSave={saveServices}
-      />
 
       {/* Create / Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
