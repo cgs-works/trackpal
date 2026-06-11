@@ -14,7 +14,7 @@ function RootComponent() {
 
   // Load i18n catalog if authenticated
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem("token");
     if (token) {
       loadCatalog();
     }
