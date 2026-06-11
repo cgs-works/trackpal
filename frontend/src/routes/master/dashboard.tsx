@@ -434,14 +434,14 @@ function MasterDashboard() {
       {/* Businesses section */}
       <section>
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
               <CardTitle className="text-lg">Businesses</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Manage business accounts and Evolution instances.
               </p>
             </div>
-            <Button size="sm" onClick={openCreateModal}>
+            <Button size="sm" onClick={openCreateModal} className="shrink-0">
               <Plus className="h-4 w-4 mr-1.5" />
               Create Business
             </Button>
