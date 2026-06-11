@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,6 @@ function getGeneratedPassword(data: unknown): string {
 /* ── Dashboard Page ─────────────────────────────────────────────── */
 
 export function DashboardPage() {
-  const navigate = useNavigate();
   const { switchTenant } = useAuthStore();
 
   const [tenants, setTenants] = useState<Tenant[]>([]);

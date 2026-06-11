@@ -153,12 +153,14 @@ export function MobileSidebar({
   return (
     <div className="md:hidden flex items-center gap-3 h-14 px-4 border-b">
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <Menu className="size-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
-        </SheetTrigger>
+        <SheetTrigger
+          render={
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <Menu className="size-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          }
+        />
         <SheetContent side="left" className="w-[240px] p-0">
           <SidebarContent
             brandName={brandName}
