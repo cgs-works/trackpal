@@ -13,6 +13,8 @@ import { Route as MasterRouteImport } from './routes/master'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MasterDashboardRouteImport } from './routes/master/dashboard'
+import { Route as ClientDashboardRouteImport } from './routes/client/dashboard'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 
 const MasterRoute = MasterRouteImport.update({
   id: '/master',
@@ -34,17 +36,31 @@ const MasterDashboardRoute = MasterDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => MasterRoute,
 } as any)
+const ClientDashboardRoute = ClientDashboardRouteImport.update({
+  id: '/client/dashboard',
+  path: '/client/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/client/dashboard': typeof ClientDashboardRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/client/dashboard': typeof ClientDashboardRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesById {
@@ -52,20 +68,43 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/client/dashboard': typeof ClientDashboardRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/master' | '/master/dashboard'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/master'
+    | '/admin/dashboard'
+    | '/client/dashboard'
+    | '/master/dashboard'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/master' | '/master/dashboard'
-  id: '__root__' | '/' | '/login' | '/master' | '/master/dashboard'
+  to:
+    | '/'
+    | '/login'
+    | '/master'
+    | '/admin/dashboard'
+    | '/client/dashboard'
+    | '/master/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/master'
+    | '/admin/dashboard'
+    | '/client/dashboard'
+    | '/master/dashboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  ClientDashboardRoute: typeof ClientDashboardRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -98,6 +137,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MasterDashboardRouteImport
       parentRoute: typeof MasterRoute
     }
+    '/client/dashboard': {
+      id: '/client/dashboard'
+      path: '/client/dashboard'
+      fullPath: '/client/dashboard'
+      preLoaderRoute: typeof ClientDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -116,6 +169,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
+  AdminDashboardRoute: AdminDashboardRoute,
+  ClientDashboardRoute: ClientDashboardRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
