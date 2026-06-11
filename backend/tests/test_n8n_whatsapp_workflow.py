@@ -41,15 +41,6 @@ def test_build_result_message_keeps_retry_options_for_failed_timeout() -> None:
     assert "0️⃣ Cancelar" in js
 
 
-def test_lookup_polling_window_extends_to_one_minute() -> None:
-    wait_amount = _workflow_nodes()["Wait 4s"]["parameters"]["amount"]
-    js = _workflow_nodes()["Check retry"]["parameters"]["jsCode"]
-
-    assert wait_amount == 4
-    assert "const maxAttempts = 15;" in js
-    assert "status: 'timeout'" in js
-
-
 def test_check_close_session_reads_close_after_send_from_upstream_result() -> None:
     js = _workflow_nodes()["Check close session"]["parameters"]["jsCode"]
 

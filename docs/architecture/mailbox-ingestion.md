@@ -13,7 +13,7 @@ on-demand when n8n requests a code lookup.
 |-----------|---------------|
 | **Tenant Dashboard (frontend)** | Mailbox config, OAuth connect/disconnect, connection tests |
 | **Backend API (FastAPI)** | Mailbox config CRUD, OAuth start/callback, lookup job create/poll |
-| **Mailbox Lookup Worker** | Background asyncio task — processes pending jobs, polls the mailbox for up to 60s, extracts codes, dedupes |
+| **Mailbox Lookup Worker** | Background asyncio task — processes pending jobs, fetches emails, extracts codes, dedupes |
 | **Mailbox Cleanup** | Periodic background task — expires stale jobs, hard-deletes expired data |
 | **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log` |
 | **Redis** | Queue (`mailbox:lookup:queue`) for job dispatch + ephemeral result cache |
@@ -56,13 +56,12 @@ on-demand when n8n requests a code lookup.
 1. Status `pending -> processing`.
 2. Load mailbox config (scoped to tenant).
 3. Fetch recent emails (window: `now-5min..now`, configurable via `settings.mailbox_lookup_window_minutes`).
-4. If no valid code is found yet, repeat the mailbox fetch/extract cycle until a code arrives or `settings.mailbox_lookup_timeout_seconds` elapses (default 60s).
-5. Run extractor against catalog of per-service regex patterns (`app/services/mail_code_extractor/catalog_v1.py`).
-6. Pick newest valid candidate.
-7. Compute fingerprint. Check dedupe log.
+4. Run extractor against catalog of per-service regex patterns (`app/services/mail_code_extractor/catalog_v1.py`).
+5. Pick newest valid candidate.
+6. Compute fingerprint. Check dedupe log.
    - New → record delivery, store ephemeral result, complete `code`/`url`.
    - Duplicate → complete `duplicate_suppressed`.
-   - Timeout with no extraction → complete `not_found`.
+   - No extraction → complete `not_found`.
 
 ### Retries
 
