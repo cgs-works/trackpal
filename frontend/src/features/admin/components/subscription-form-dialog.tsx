@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { t } from "@/i18n";
 import {
   type Subscription,
   type Client,
@@ -26,12 +27,12 @@ import {
 } from "../services/subscription-api";
 
 const DURATION_OPTIONS = [
-  { value: "1_month", label: "1 Month" },
-  { value: "3_months", label: "3 Months" },
-  { value: "6_months", label: "6 Months" },
-  { value: "9_months", label: "9 Months" },
-  { value: "1_year", label: "1 Year" },
-  { value: "custom", label: "Custom" },
+  { value: "1_month", label: t("frontend.subscriptions.duration_1_month") },
+  { value: "3_months", label: t("frontend.subscriptions.duration_3_months") },
+  { value: "6_months", label: t("frontend.subscriptions.duration_6_months") },
+  { value: "9_months", label: t("frontend.subscriptions.duration_9_months") },
+  { value: "1_year", label: t("frontend.subscriptions.duration_1_year") },
+  { value: "custom", label: t("frontend.subscriptions.duration_custom") },
 ];
 
 function getDefaultStartsAt(): string {
@@ -158,7 +159,7 @@ export function SubscriptionFormDialog({
     await onSubmit(payload);
   }
 
-  const title = isEdit ? "Edit Subscription" : "New Subscription";
+  const title = isEdit ? t("frontend.subscriptions.edit_title") : t("frontend.subscriptions.new_title");
   const hasProfile = profileName.trim().length > 0;
 
   return (
@@ -182,10 +183,10 @@ export function SubscriptionFormDialog({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Client */}
           <div className="flex flex-col gap-2">
-            <Label>Client</Label>
+            <Label>{t("frontend.subscriptions.client")}</Label>
             <Select value={clientId} onValueChange={setClientId} disabled={isEdit}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a client" />
+                <SelectValue placeholder={t("frontend.subscriptions.select_client")} />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
@@ -199,10 +200,10 @@ export function SubscriptionFormDialog({
 
           {/* Service */}
           <div className="flex flex-col gap-2">
-            <Label>Service</Label>
+            <Label>{t("frontend.subscriptions.service")}</Label>
             <Select value={serviceId} onValueChange={(v) => { setServiceId(v); setPlanId(""); }} disabled={isEdit}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a service" />
+                <SelectValue placeholder={t("frontend.subscriptions.select_service")} />
               </SelectTrigger>
               <SelectContent>
                 {services.map((s) => (
@@ -216,10 +217,10 @@ export function SubscriptionFormDialog({
 
           {/* Plan */}
           <div className="flex flex-col gap-2">
-            <Label>Plan</Label>
+            <Label>{t("frontend.subscriptions.plan")}</Label>
             <Select value={planId} onValueChange={setPlanId} disabled={isEdit || !serviceId || loadingPlans}>
               <SelectTrigger>
-                <SelectValue placeholder={loadingPlans ? "Loading plans..." : "Select a plan"} />
+                <SelectValue placeholder={loadingPlans ? t("frontend.subscriptions.loading") : t("frontend.subscriptions.select_plan")} />
               </SelectTrigger>
               <SelectContent>
                 {plans.map((p) => (
@@ -233,7 +234,7 @@ export function SubscriptionFormDialog({
 
           {/* Streaming Email */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="streaming_email">Streaming Email</Label>
+            <Label htmlFor="streaming_email">{t("frontend.subscriptions.email")}</Label>
             <Input
               id="streaming_email"
               type="email"
@@ -246,7 +247,7 @@ export function SubscriptionFormDialog({
           {/* Password */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="streaming_password">
-              Streaming Password
+              {t("frontend.subscriptions.streaming_password")}
               {isEdit && subscription?.has_password && (
                 <span className="text-muted-foreground text-xs ml-2">
                   (leave blank to keep current)
@@ -265,7 +266,7 @@ export function SubscriptionFormDialog({
 
           {/* Profile Name */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="profile_name">Profile Name (optional)</Label>
+            <Label htmlFor="profile_name">{t("frontend.subscriptions.profile_name")} {t("frontend.subscriptions.optional")}</Label>
             <Input
               id="profile_name"
               value={profileName}
@@ -276,7 +277,7 @@ export function SubscriptionFormDialog({
           {/* Profile PIN */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="profile_pin">
-              Profile PIN
+              {t("frontend.subscriptions.pin")}
               {isEdit && subscription?.has_pin && (
                 <span className="text-muted-foreground text-xs ml-2">
                   (leave blank to keep current)
@@ -295,7 +296,7 @@ export function SubscriptionFormDialog({
 
           {/* Duration */}
           <div className="flex flex-col gap-2">
-            <Label>Duration</Label>
+            <Label>{t("frontend.subscriptions.duration")}</Label>
             <Select value={durationType} onValueChange={setDurationType}>
               <SelectTrigger>
                 <SelectValue />
@@ -313,7 +314,7 @@ export function SubscriptionFormDialog({
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="starts_at">Starts At</Label>
+              <Label htmlFor="starts_at">{t("frontend.subscriptions.start_date")}</Label>
               <Input
                 id="starts_at"
                 type="datetime-local"
@@ -323,7 +324,7 @@ export function SubscriptionFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="expires_at">Expires At</Label>
+              <Label htmlFor="expires_at">{t("frontend.subscriptions.end_date")}</Label>
               <Input
                 id="expires_at"
                 type="datetime-local"
@@ -342,13 +343,13 @@ export function SubscriptionFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              Cancel
+              {t("frontend.common.cancel")}
             </Button>
             <Button
               type="submit"
               disabled={saving || !clientId || !serviceId || !planId}
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("frontend.subscriptions.saving") : t("frontend.subscriptions.save")}
             </Button>
           </DialogFooter>
         </form>

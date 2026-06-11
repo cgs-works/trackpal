@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { CreditCard, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import {
   listSubscriptions,
   createSubscription,
@@ -33,11 +34,11 @@ import {
 import { SubscriptionFormDialog } from "./subscription-form-dialog";
 
 const STATUS_OPTIONS = [
-  { value: "all", label: "All Statuses" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "expired", label: "Expired" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: t("frontend.subscriptions.all_statuses") },
+  { value: "active", label: t("frontend.subscriptions.status_active") },
+  { value: "inactive", label: t("frontend.dashboard.client.status_inactive") },
+  { value: "expired", label: t("frontend.subscriptions.status_expired") },
+  { value: "cancelled", label: t("frontend.subscriptions.status_cancelled") },
 ];
 
 export function SubscriptionsPage() {
@@ -101,7 +102,7 @@ export function SubscriptionsPage() {
       setSubscriptions(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load subscriptions"
+        err instanceof Error ? err.message : t("frontend.subscriptions.error_load")
       );
     } finally {
       setIsLoading(false);
@@ -190,16 +191,16 @@ export function SubscriptionsPage() {
     try {
       if (formMode === "create") {
         await createSubscription(payload);
-        toast.success("Subscription created");
+        toast.success(t("frontend.subscriptions.created"));
       } else {
         await updateSubscription(selectedSub!.id, payload);
-        toast.success("Subscription updated");
+        toast.success(t("frontend.subscriptions.updated"));
       }
       setFormOpen(false);
       await loadSubscriptions();
     } catch (err) {
       setFormError(
-        err instanceof Error ? err.message : "Failed to save subscription"
+        err instanceof Error ? err.message : t("frontend.subscriptions.error_save")
       );
     } finally {
       setSaving(false);
@@ -216,7 +217,7 @@ export function SubscriptionsPage() {
       setRevealOpen(true);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to reveal credentials"
+        err instanceof Error ? err.message : t("frontend.subscriptions.error_reveal")
       );
     }
   }
@@ -231,14 +232,14 @@ export function SubscriptionsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Subscriptions</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("frontend.subscriptions.title")}</h1>
             <p className="text-muted-foreground">
               Manage client subscriptions and credentials
             </p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="size-4 mr-2" />
-            New Subscription
+            {t("frontend.subscriptions.new")}
           </Button>
         </div>
 
@@ -247,7 +248,7 @@ export function SubscriptionsPage() {
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder="Search clients..."
+              placeholder={t("frontend.subscriptions.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -269,10 +270,10 @@ export function SubscriptionsPage() {
 
           <Select value={serviceFilter} onValueChange={setServiceFilter}>
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Services" />
+              <SelectValue placeholder={t("frontend.subscriptions.all_services")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Services</SelectItem>
+              <SelectItem value="all">{t("frontend.subscriptions.all_services")}</SelectItem>
               {services.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.name}
@@ -293,7 +294,7 @@ export function SubscriptionsPage() {
               }}
             >
               <X className="size-3.5 mr-1" />
-              Clear
+              {t("frontend.subscriptions.clear_filters")}
             </Button>
           )}
         </div>
@@ -310,14 +311,14 @@ export function SubscriptionsPage() {
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             <div className="flex items-center gap-3">
               <div className="size-5 border-2 border-border border-t-primary rounded-full animate-spin" />
-              Loading subscriptions...
+              {t("frontend.subscriptions.loading")}
             </div>
           </div>
         ) : subscriptions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <CreditCard className="size-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">
-              {hasFilters ? "No subscriptions found" : "No subscriptions yet"}
+              {hasFilters ? t("frontend.subscriptions.no_results") : t("frontend.subscriptions.no_results")}
             </h3>
             <p className="text-muted-foreground mt-1">
               {hasFilters

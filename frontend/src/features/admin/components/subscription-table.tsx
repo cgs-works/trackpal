@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Eye, EyeOff } from "lucide-react";
+import { t } from "@/i18n";
 import { type Subscription } from "../services/subscription-api";
 
 interface SubscriptionTableProps {
@@ -48,14 +49,14 @@ export function SubscriptionTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
-              <th className="text-left p-3 font-medium">Client</th>
-              <th className="text-left p-3 font-medium">Service</th>
-              <th className="text-left p-3 font-medium">Plan</th>
-              <th className="text-left p-3 font-medium">Email</th>
-              <th className="text-left p-3 font-medium">Status</th>
-              <th className="text-left p-3 font-medium">Starts</th>
-              <th className="text-left p-3 font-medium">Expires</th>
-              <th className="text-right p-3 font-medium">Actions</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.client")}</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.service")}</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.plan")}</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.email")}</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.status")}</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.start")}</th>
+              <th className="text-left p-3 font-medium">{t("frontend.subscriptions.end")}</th>
+              <th className="text-right p-3 font-medium">{t("frontend.subscriptions.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -91,7 +92,7 @@ export function SubscriptionTable({
                       variant="ghost"
                       size="icon"
                       className="size-8"
-                      title="Reveal credentials"
+                      title={t("frontend.subscriptions.reveal")}
                       onClick={() => onReveal(sub)}
                     >
                       <Eye className="size-4" />
@@ -100,7 +101,7 @@ export function SubscriptionTable({
                       variant="ghost"
                       size="icon"
                       className="size-8"
-                      title="Edit"
+                      title={t("frontend.common.edit")}
                       onClick={() => onEdit(sub)}
                     >
                       <Pencil className="size-4" />
@@ -142,7 +143,7 @@ export function SubscriptionTable({
                 onClick={() => onReveal(sub)}
               >
                 <Eye className="size-3.5 mr-1" />
-                Reveal
+                {t("frontend.subscriptions.reveal")}
               </Button>
               <Button
                 variant="outline"
@@ -151,7 +152,7 @@ export function SubscriptionTable({
                 onClick={() => onEdit(sub)}
               >
                 <Pencil className="size-3.5 mr-1" />
-                Edit
+                {t("frontend.common.edit")}
               </Button>
             </div>
           </div>
@@ -188,7 +189,7 @@ export function RevealCredentialsDialog({
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="relative bg-card border rounded-lg shadow-lg w-full max-w-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Credentials</h3>
+            <h3 className="font-semibold">{t("frontend.dashboard.client.access_info")}</h3>
             <Button
               variant="ghost"
               size="icon"
@@ -200,18 +201,18 @@ export function RevealCredentialsDialog({
           </div>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Email</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("frontend.profile.email")}</p>
               <p className="font-mono text-sm bg-muted p-2 rounded">{email}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Password</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("frontend.subscriptions.password")}</p>
               <p className="font-mono text-sm bg-muted p-2 rounded">
                 {password || "—"}
               </p>
             </div>
             {pin && (
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Profile PIN</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("frontend.subscriptions.pin")}</p>
                 <p className="font-mono text-sm bg-muted p-2 rounded">{pin}</p>
               </div>
             )}
