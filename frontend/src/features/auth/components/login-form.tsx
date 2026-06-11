@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { loginApi } from "@/features/auth/services/auth-api";
 import { useAuthStore } from "@/store/auth";
 import {
   getLocale,
@@ -120,16 +119,8 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      const data = await loginApi(username, password);
+      const data = await login(username, password);
       const role = data.user?.role;
-
-      // Update auth store
-      useAuthStore.setState({
-        token: data.access_token,
-        username: data.user?.username || username,
-        role: data.user?.role || null,
-        tenantId: data.user?.tenant_id || null,
-      });
 
       if (role === "master") {
         await navigate({ to: "/master/dashboard" });

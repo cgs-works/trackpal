@@ -1,33 +1,24 @@
 import { create } from "zustand";
-import axios from "axios";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-
-export interface UserInfo {
-  id: string;
-  role: string;
-  username: string;
-}
-
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  user: UserInfo;
-  active_tenant_id: string | null;
-}
+import {
+  loginApi,
+  logoutApi,
+  switchTenantApi,
+  type TokenResponse,
+  type UserInfo,
+} from "@/features/auth/services/auth-api";
 
 interface AuthState {
-  token: string | null;
-  refreshToken: string | null;
-  user: UserInfo | null;
-  activeTenantId: string | null;
-  isAuthenticated: boolean;
-  role: string | null;
-  username: string;
+  token: string | null
+  refreshToken: string | null
+  user: UserInfo | null
+  activeTenantId: string | null
+  isAuthenticated: boolean
+  role: string | null
+  username: string
 
-  login: (username: string, password: string) => Promise<TokenResponse>;
-  logout: () => Promise<void>;
-  switchTenant: (tenantId: string | null) => Promise<TokenResponse>;
+  login: (username: string, password: string) => Promise<TokenResponse>
+  logout: () => Promise<void>
+  switchTenant: (tenantId: string | null) => Promise<TokenResponse>
 }
 
 function loadFromStorage() {
@@ -69,11 +60,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   username: initial.user?.username || "",
 
   login: async (username, password) => {
-    const response = await axios.post<TokenResponse>(`${API_URL}/auth/login`, {
-      username,
-      password,
-    });
-    const data = response.data;
+    const data = await loginApi(username, password);
     saveTokenData(data);
     set({
       token: data.access_token,
@@ -89,13 +76,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     const currentRefresh = localStorage.getItem("refreshToken");
-    const currentToken = localStorage.getItem("token");
     try {
-      await axios.post(
-        `${API_URL}/auth/logout`,
-        { refresh_token: currentRefresh },
-        { headers: { Authorization: `Bearer ${currentToken}` } }
-      );
+      await logoutApi(currentRefresh);
     } catch {
       // Ignore errors on logout
     }
@@ -112,13 +94,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   switchTenant: async (tenantId) => {
-    const currentToken = localStorage.getItem("token");
-    const response = await axios.post<TokenResponse>(
-      `${API_URL}/auth/switch-tenant`,
-      { tenant_id: tenantId },
-      { headers: { Authorization: `Bearer ${currentToken}` } }
-    );
-    const data = response.data;
+    const data = await switchTenantApi(tenantId);
     saveTokenData(data);
     set({
       token: data.access_token,

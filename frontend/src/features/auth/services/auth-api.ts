@@ -1,36 +1,39 @@
 import api from "@/lib/api";
 
-export interface LoginResponse {
+export interface UserInfo {
+  id: string
+  role: string
+  username: string
+}
+
+export interface TokenResponse {
   access_token: string
+  refresh_token: string
   token_type: string
-  user: {
-    id: string
-    username: string
-    role: string
-    tenant_id?: string
-  }
+  user: UserInfo
+  active_tenant_id: string | null
 }
 
 export async function loginApi(
   username: string,
   password: string
-): Promise<LoginResponse> {
-  const res = await api.post<LoginResponse>("/auth/login", {
+): Promise<TokenResponse> {
+  const res = await api.post<TokenResponse>("/auth/login", {
     username,
     password,
-  })
-  return res.data
+  });
+  return res.data;
 }
 
-export async function logoutApi(): Promise<void> {
-  await api.post("/auth/logout")
+export async function logoutApi(refreshToken: string | null): Promise<void> {
+  await api.post("/auth/logout", { refresh_token: refreshToken });
 }
 
 export async function switchTenantApi(
-  tenantId: string
-): Promise<LoginResponse> {
-  const res = await api.post<LoginResponse>("/auth/switch-tenant", {
+  tenantId: string | null
+): Promise<TokenResponse> {
+  const res = await api.post<TokenResponse>("/auth/switch-tenant", {
     tenant_id: tenantId,
-  })
-  return res.data
+  });
+  return res.data;
 }
