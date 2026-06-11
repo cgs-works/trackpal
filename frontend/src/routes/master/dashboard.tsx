@@ -23,28 +23,7 @@ export const Route = createFileRoute("/master/dashboard")({
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
-interface Tenant {
-  id: string
-  full_name: string
-  client_prefix: string
-  email: string | null
-  phone: string | null
-  evolution_instance_name: string | null
-  is_active: boolean
-  username: string
-  created_at: string
-}
-
-interface TenantMeta {
-  total: number
-  active: number
-  inactive: number
-}
-
-interface TenantListResponse {
-  data: Tenant[]
-  meta: TenantMeta
-}
+import type { Tenant, TenantMeta, TenantListResponse } from "@/types/tenant"
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 

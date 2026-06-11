@@ -10,16 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Pencil, Trash2, Power, Settings } from "lucide-react";
-
-interface Tenant {
-  id: string
-  full_name: string
-  client_prefix: string
-  email: string | null
-  phone: string | null
-  evolution_instance_name: string | null
-  is_active: boolean
-}
+import type { Tenant } from "@/types/tenant";
 
 interface BusinessTableProps {
   tenants: Tenant[]
