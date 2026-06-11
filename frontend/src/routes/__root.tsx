@@ -1,10 +1,12 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { loadCatalog } from "@/i18n";
+import { loadCatalog, isCatalogReady } from "@/i18n";
 
 function RootComponent() {
+  const [catalogLoaded, setCatalogLoaded] = useState(isCatalogReady());
+
   // Initialize theme from localStorage before first paint
   useEffect(() => {
     const stored = localStorage.getItem("theme");
@@ -12,13 +14,24 @@ function RootComponent() {
     document.documentElement.classList.toggle("dark", shouldBeDark);
   }, []);
 
-  // Load i18n catalog if authenticated
+  // Load i18n catalog if authenticated, block rendering until done
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      loadCatalog();
+    if (!token || isCatalogReady()) {
+      setCatalogLoaded(true);
+      return;
     }
+    loadCatalog().then(() => setCatalogLoaded(true));
   }, []);
+
+  // Don't render children until catalog is loaded (prevents raw key flash)
+  if (!catalogLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased font-sans">

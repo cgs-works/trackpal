@@ -72,8 +72,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       role: data.user.role,
       username: data.user.username,
     });
-    // Load i18n catalog after login
-    loadCatalog();
+    // Load i18n catalog after login (await so catalog is ready before navigate)
+    await loadCatalog();
     return data;
   },
 
