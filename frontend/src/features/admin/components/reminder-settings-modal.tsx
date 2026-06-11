@@ -27,7 +27,6 @@ import {
   getReminderSettings,
   updateReminderSettings,
   getTimezones,
-  type ReminderSettings,
   type TimezoneOption,
 } from "../services/reminder-api";
 
@@ -271,7 +270,7 @@ export function ReminderSettingsModal({
                       onValueChange={(value) =>
                         setSettings((prev) => ({
                           ...prev,
-                          timezone: value,
+                          timezone: value ?? "",
                         }))
                       }
                     >
@@ -284,7 +283,7 @@ export function ReminderSettingsModal({
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(timezoneGroups).map(
-                          ([group, tzs]) => (
+                          ([group, _tzs]) => (
                             <SelectItem key={`group-${group}`} value={group} disabled>
                               <span className="font-semibold text-muted-foreground">
                                 {group}

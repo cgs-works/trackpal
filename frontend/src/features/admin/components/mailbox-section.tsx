@@ -216,7 +216,7 @@ export function MailboxSection() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>{t("frontend.mailbox.provider")}</Label>
-            <Select value={provider} onValueChange={setProvider}>
+            <Select value={provider} onValueChange={(v) => setProvider(v ?? "")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

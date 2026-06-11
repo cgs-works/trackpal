@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Eye, EyeOff } from "lucide-react";
+import { Pencil, Eye } from "lucide-react";
 import { t } from "@/i18n";
 import { type Subscription } from "../services/subscription-api";
 
@@ -172,7 +172,7 @@ interface RevealCredentialsDialogProps {
 }
 
 export function RevealCredentialsDialog({
-  open,
+  open: _open,
   onOpenChange,
   email,
   password,

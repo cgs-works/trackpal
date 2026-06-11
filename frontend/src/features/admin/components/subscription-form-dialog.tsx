@@ -184,7 +184,7 @@ export function SubscriptionFormDialog({
           {/* Client */}
           <div className="flex flex-col gap-2">
             <Label>{t("frontend.subscriptions.client")}</Label>
-            <Select value={clientId} onValueChange={setClientId} disabled={isEdit}>
+            <Select value={clientId} onValueChange={(v) => setClientId(v ?? "")} disabled={isEdit}>
               <SelectTrigger>
                 <SelectValue placeholder={t("frontend.subscriptions.select_client")} />
               </SelectTrigger>
@@ -201,7 +201,7 @@ export function SubscriptionFormDialog({
           {/* Service */}
           <div className="flex flex-col gap-2">
             <Label>{t("frontend.subscriptions.service")}</Label>
-            <Select value={serviceId} onValueChange={(v) => { setServiceId(v); setPlanId(""); }} disabled={isEdit}>
+            <Select value={serviceId} onValueChange={(v) => { setServiceId(v ?? ""); setPlanId(""); }} disabled={isEdit}>
               <SelectTrigger>
                 <SelectValue placeholder={t("frontend.subscriptions.select_service")} />
               </SelectTrigger>
@@ -218,7 +218,7 @@ export function SubscriptionFormDialog({
           {/* Plan */}
           <div className="flex flex-col gap-2">
             <Label>{t("frontend.subscriptions.plan")}</Label>
-            <Select value={planId} onValueChange={setPlanId} disabled={isEdit || !serviceId || loadingPlans}>
+            <Select value={planId} onValueChange={(v) => setPlanId(v ?? "")} disabled={isEdit || !serviceId || loadingPlans}>
               <SelectTrigger>
                 <SelectValue placeholder={loadingPlans ? t("frontend.subscriptions.loading") : t("frontend.subscriptions.select_plan")} />
               </SelectTrigger>
@@ -297,7 +297,7 @@ export function SubscriptionFormDialog({
           {/* Duration */}
           <div className="flex flex-col gap-2">
             <Label>{t("frontend.subscriptions.duration")}</Label>
-            <Select value={durationType} onValueChange={setDurationType}>
+            <Select value={durationType} onValueChange={(v) => setDurationType(v ?? "")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

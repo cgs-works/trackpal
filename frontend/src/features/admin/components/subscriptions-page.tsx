@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -45,7 +44,7 @@ export function SubscriptionsPage() {
   // URL search params for client_id filter
   let urlClientId: string | undefined;
   try {
-    const search = useSearch({ strict: false });
+    const search = useSearch({ strict: false }) as { client_id?: string };
     urlClientId = search?.client_id;
   } catch {
     // not on a route with search params
@@ -129,16 +128,6 @@ export function SubscriptionsPage() {
       setLoadingPlans(false);
     }
   }
-
-  // ── Filter clients by search ───────────────────────────────
-  const filteredClients = clients.filter((c) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      c.full_name.toLowerCase().includes(q) ||
-      c.username.toLowerCase().includes(q)
-    );
-  });
 
   // ── Build lookup maps ──────────────────────────────────────
   const clientMap = Object.fromEntries(
@@ -255,7 +244,7 @@ export function SubscriptionsPage() {
             />
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "")}>
             <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
@@ -268,7 +257,7 @@ export function SubscriptionsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={serviceFilter} onValueChange={setServiceFilter}>
+          <Select value={serviceFilter} onValueChange={(v) => setServiceFilter(v ?? "")}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder={t("frontend.subscriptions.all_services")} />
             </SelectTrigger>

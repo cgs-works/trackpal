@@ -17,7 +17,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  ChevronRight,
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";

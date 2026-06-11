@@ -93,7 +93,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
         </div>
         <div className="space-y-2">
           <Label>{t("frontend.profile.language")}</Label>
-          <Select value={locale} onValueChange={setLocale}>
+          <Select value={locale} onValueChange={(v) => setLocale(v ?? "")}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
