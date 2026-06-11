@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,19 +27,18 @@ export function DeleteConfirmDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete client?</AlertDialogTitle>
+          <AlertDialogTitle>{t("frontend.clients.confirm_delete", { name: clientName })}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete <strong>{clientName}</strong>. This
-            action cannot be undone.
+            {t("frontend.clients.delete_warning", { name: clientName })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("frontend.common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Delete
+            {t("frontend.clients.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

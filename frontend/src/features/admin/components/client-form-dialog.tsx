@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +51,7 @@ export function ClientFormDialog({
   error,
 }: ClientFormDialogProps) {
   const isEdit = mode === "edit";
-  const title = isEdit ? "Edit Client" : "Create Client";
+  const title = isEdit ? t("frontend.clients.update") : t("frontend.clients.create");
 
   return (
     <Dialog
@@ -64,8 +65,8 @@ export function ClientFormDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update client details and contact information."
-              : "Register a new client for your business."}
+              ? t("frontend.clients.update_desc")
+              : t("frontend.clients.create_desc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -77,7 +78,7 @@ export function ClientFormDialog({
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="full_name">Full Name</Label>
+            <Label htmlFor="full_name">{t("frontend.profile.full_name")}</Label>
             <Input
               id="full_name"
               required
@@ -87,7 +88,7 @@ export function ClientFormDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="local_username">Username</Label>
+            <Label htmlFor="local_username">{t("frontend.dashboard.client.local_user")}</Label>
             <Input
               id="local_username"
               required
@@ -95,12 +96,12 @@ export function ClientFormDialog({
               onChange={(e) => onFormChange("local_username", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Unique identifier for client login
+              {t("frontend.clients.username_help")}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t("frontend.profile.phone")}</Label>
             <Input
               id="phone"
               type="tel"
@@ -111,7 +112,7 @@ export function ClientFormDialog({
 
           {!isEdit && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("frontend.clients.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -130,10 +131,10 @@ export function ClientFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              Cancel
+              {t("frontend.common.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("frontend.clients.saving") : t("frontend.common.save")}
             </Button>
           </DialogFooter>
         </form>

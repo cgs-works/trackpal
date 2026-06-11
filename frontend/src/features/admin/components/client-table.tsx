@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Pencil, Trash2, Power, CreditCard } from "lucide-react";
+import { t } from "@/i18n";
 import type { Client } from "../services/client-api";
 
 interface ClientTableProps {
@@ -30,7 +31,7 @@ function StatusBadge({ active }: { active: boolean }) {
           : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300"
       }
     >
-      {active ? "Active" : "Inactive"}
+      {t(active ? "frontend.dashboard.client.status_active" : "frontend.dashboard.client.status_inactive")}
     </Badge>
   );
 }
@@ -49,11 +50,11 @@ export function ClientTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t("frontend.profile.full_name")}</TableHead>
+              <TableHead>{t("frontend.dashboard.client.local_user")}</TableHead>
+              <TableHead>{t("frontend.profile.phone")}</TableHead>
+              <TableHead>{t("frontend.common.status")}</TableHead>
+              <TableHead className="text-right">{t("frontend.common.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -82,29 +83,29 @@ export function ClientTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onEdit(client)}
-                      title="Edit"
+                      title={t("frontend.clients.edit")}
                     >
                       <Pencil className="size-3.5" />
-                      <span className="sr-only">Edit</span>
+                      <span className="sr-only">{t("frontend.clients.edit")}</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewSubscriptions(client)}
-                      title="Subscriptions"
+                      title={t("frontend.clients.subscriptions_link")}
                     >
                       <CreditCard className="size-3.5" />
-                      <span className="sr-only">Subscriptions</span>
+                      <span className="sr-only">{t("frontend.clients.subscriptions_link")}</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onToggleStatus(client)}
-                      title={client.is_active ? "Deactivate" : "Activate"}
+                      title={t(client.is_active ? "frontend.clients.deactivate" : "frontend.clients.activate")}
                     >
                       <Power className="size-3.5" />
                       <span className="sr-only">
-                        {client.is_active ? "Deactivate" : "Activate"}
+                        {t(client.is_active ? "frontend.clients.deactivate" : "frontend.clients.activate")}
                       </span>
                     </Button>
                     <Button
@@ -115,12 +116,12 @@ export function ClientTable({
                       disabled={client.is_active}
                       title={
                         client.is_active
-                          ? "Deactivate first to delete"
-                          : "Delete"
+                          ? t("frontend.clients.cannot_delete_active")
+                          : t("frontend.clients.delete")
                       }
                     >
                       <Trash2 className="size-3.5" />
-                      <span className="sr-only">Delete</span>
+                      <span className="sr-only">{t("frontend.clients.delete")}</span>
                     </Button>
                   </div>
                 </TableCell>
@@ -144,13 +145,13 @@ export function ClientTable({
               <StatusBadge active={client.is_active} />
             </div>
             <div className="text-sm text-muted-foreground">
-              <p>Phone: {client.phone || "—"}</p>
+              <p>{t("frontend.profile.phone")}: {client.phone || "—"}</p>
             </div>
             <Separator />
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" onClick={() => onEdit(client)}>
                 <Pencil className="size-3.5 mr-1" />
-                Edit
+                {t("frontend.clients.edit")}
               </Button>
               <Button
                 variant="ghost"
@@ -158,7 +159,7 @@ export function ClientTable({
                 onClick={() => onViewSubscriptions(client)}
               >
                 <CreditCard className="size-3.5 mr-1" />
-                Subscriptions
+                {t("frontend.clients.subscriptions_link")}
               </Button>
               <Button
                 variant="ghost"
@@ -166,7 +167,7 @@ export function ClientTable({
                 onClick={() => onToggleStatus(client)}
               >
                 <Power className="size-3.5 mr-1" />
-                {client.is_active ? "Deactivate" : "Activate"}
+                {t(client.is_active ? "frontend.clients.deactivate" : "frontend.clients.activate")}
               </Button>
               <Button
                 variant="ghost"
@@ -176,7 +177,7 @@ export function ClientTable({
                 disabled={client.is_active}
               >
                 <Trash2 className="size-3.5 mr-1" />
-                Delete
+                {t("frontend.clients.delete")}
               </Button>
             </div>
           </div>

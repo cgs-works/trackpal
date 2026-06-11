@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import {
   listClients,
   createClient,
@@ -51,7 +52,7 @@ export function ClientsPage() {
       setFilteredClients(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load clients"
+        err instanceof Error ? err.message : t("frontend.clients.error_load")
       );
     } finally {
       setIsLoading(false);
@@ -117,14 +118,14 @@ export function ClientsPage() {
           phone: form.phone || undefined,
           password: form.password,
         });
-        toast.success("Client created");
+        toast.success(t("frontend.clients.created"));
       } else {
         await updateClient(form.id!, {
           full_name: form.full_name,
           local_username: form.local_username,
           phone: form.phone || undefined,
         });
-        toast.success("Client updated");
+        toast.success(t("frontend.clients.updated"));
       }
       setFormOpen(false);
       await loadClients();
@@ -132,7 +133,7 @@ export function ClientsPage() {
       const detail =
         err instanceof Error
           ? err.message
-          : "Failed to save client";
+          : t("frontend.clients.error_save");
       setFormError(detail);
     } finally {
       setSaving(false);
@@ -144,15 +145,15 @@ export function ClientsPage() {
     try {
       if (client.is_active) {
         await deactivateClient(client.id);
-        toast.success(`${client.full_name} deactivated`);
+        toast.success(t("frontend.clients.deactivated", { name: client.full_name }));
       } else {
         await activateClient(client.id);
-        toast.success(`${client.full_name} activated`);
+        toast.success(t("frontend.clients.activated", { name: client.full_name }));
       }
       await loadClients();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to toggle status"
+        err instanceof Error ? err.message : t("frontend.clients.error_toggle_status")
       );
     }
   }
@@ -167,13 +168,13 @@ export function ClientsPage() {
     if (!deleteTarget) return;
     try {
       await deleteClient(deleteTarget.id);
-      toast.success(`${deleteTarget.full_name} deleted`);
+      toast.success(t("frontend.clients.deleted", { name: deleteTarget.full_name }));
       setDeleteOpen(false);
       setDeleteTarget(null);
       await loadClients();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete client"
+        err instanceof Error ? err.message : t("frontend.clients.error_delete")
       );
     }
   }
@@ -192,14 +193,14 @@ export function ClientsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("frontend.clients.section_title")}</h1>
             <p className="text-muted-foreground">
-              Manage your clients and their accounts
+              {t("frontend.clients.section_heading")}
             </p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="size-4 mr-2" />
-            Add Client
+            {t("frontend.clients.create")}
           </Button>
         </div>
 
@@ -207,7 +208,7 @@ export function ClientsPage() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search clients..."
+            placeholder={t("frontend.clients.search_placeholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -226,24 +227,24 @@ export function ClientsPage() {
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             <div className="flex items-center gap-3">
               <div className="size-5 border-2 border-border border-t-primary rounded-full animate-spin" />
-              Loading clients...
+              {t("frontend.clients.loading")}
             </div>
           </div>
         ) : filteredClients.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Users className="size-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">
-              {search ? "No clients found" : "No clients yet"}
+              {t("frontend.clients.no_clients")}
             </h3>
             <p className="text-muted-foreground mt-1">
               {search
-                ? "Try adjusting your search"
-                : "Create your first client to get started"}
+                ? t("frontend.clients.search_no_results")
+                : t("frontend.clients.create_first")}
             </p>
             {!search && (
               <Button onClick={openCreate} className="mt-4">
                 <Plus className="size-4 mr-2" />
-                Add Client
+                {t("frontend.clients.create")}
               </Button>
             )}
           </div>
