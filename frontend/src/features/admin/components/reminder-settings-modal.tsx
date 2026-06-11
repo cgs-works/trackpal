@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import {
   getReminderSettings,
   updateReminderSettings,
@@ -119,7 +120,7 @@ export function ReminderSettingsModal({
       setTimezones(timezonesData);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load settings"
+        err instanceof Error ? err.message : t("frontend.subscriptions.error_reminder_settings")
       );
     } finally {
       setIsLoading(false);
@@ -136,16 +137,16 @@ export function ReminderSettingsModal({
 
     if (settings.reminders_enabled) {
       if (!settings.timezone) {
-        errors.timezone = "Timezone is required";
+        errors.timezone = t("frontend.subscriptions.error_timezone_required");
       }
       if (settings.warning_days.length === 0) {
-        errors.warning_days = "Select at least one warning day";
+        errors.warning_days = t("frontend.subscriptions.error_warning_days_required");
       }
       if (
         !/^\d{2}:\d{2}$/.test(settings.reminder_time) ||
         !/^([01]\d|2[0-3]):[0-5]\d$/.test(settings.reminder_time)
       ) {
-        errors.reminder_time = "Time must be in HH:MM format (00:00-23:59)";
+        errors.reminder_time = t("frontend.subscriptions.error_invalid_time");
       }
     }
 
@@ -194,11 +195,11 @@ export function ReminderSettingsModal({
 
     try {
       await updateReminderSettings(settings);
-      toast.success("Reminder settings saved");
+      toast.success(t("frontend.subscriptions.reminder_saved"));
       onOpenChange(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to save settings"
+        err instanceof Error ? err.message : t("frontend.subscriptions.error_reminder_settings")
       );
     } finally {
       setIsSaving(false);
@@ -215,7 +216,7 @@ export function ReminderSettingsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[560px] max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle>Reminder Settings</DialogTitle>
+          <DialogTitle>{t("frontend.subscriptions.reminder_settings_title")}</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-6">
@@ -238,9 +239,9 @@ export function ReminderSettingsModal({
               {/* ── Enable toggle ────────────────────────────── */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Enable reminders</Label>
+                  <Label className="text-base">{t("frontend.subscriptions.reminders_enabled")}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Send WhatsApp messages before subscriptions expire
+                    {t("frontend.subscriptions.reminders_desc")}
                   </p>
                 </div>
                 <Switch
@@ -263,7 +264,7 @@ export function ReminderSettingsModal({
                     <Label
                       className={hasTimezoneError ? "text-destructive" : ""}
                     >
-                      Timezone
+                      {t("frontend.subscriptions.timezone")}
                     </Label>
                     <Select
                       value={settings.timezone}
@@ -279,7 +280,7 @@ export function ReminderSettingsModal({
                           hasTimezoneError ? "border-destructive" : ""
                         }
                       >
-                        <SelectValue placeholder="Select timezone" />
+                        <SelectValue placeholder={t("frontend.subscriptions.timezone")} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(timezoneGroups).map(
@@ -311,10 +312,10 @@ export function ReminderSettingsModal({
                     <Label
                       className={hasWarningDaysError ? "text-destructive" : ""}
                     >
-                      Warning days
+                      {t("frontend.subscriptions.warning_days")}
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      How many days before expiry to send reminders
+                      {t("frontend.subscriptions.reminders_desc")}
                     </p>
 
                     <div className="flex flex-wrap gap-2">
@@ -330,7 +331,7 @@ export function ReminderSettingsModal({
                             className="rounded"
                           />
                           <span className="text-sm">
-                            {day} {day === 1 ? "day" : "days"}
+                            {day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.day")}
                           </span>
                         </label>
                       ))}
@@ -341,7 +342,7 @@ export function ReminderSettingsModal({
                           min={1}
                           value={customDay}
                           onChange={(e) => setCustomDay(e.target.value)}
-                          placeholder="Custom"
+                          placeholder={t("frontend.subscriptions.duration_custom")}
                           className="w-20 h-8 text-sm"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
@@ -370,7 +371,7 @@ export function ReminderSettingsModal({
                             key={day}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
                           >
-                            {day} {day === 1 ? "day" : "days"}
+                            {day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.day")}
                             <button
                               type="button"
                               onClick={() => removeWarningDay(day)}
@@ -395,10 +396,10 @@ export function ReminderSettingsModal({
                     <Label
                       className={hasTimeError ? "text-destructive" : ""}
                     >
-                      Reminder time
+                      {t("frontend.subscriptions.reminder_time")}
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Time of day to send reminders (in selected timezone)
+                      {t("frontend.subscriptions.reminder_time_help")}
                     </p>
                     <Input
                       type="time"
@@ -422,25 +423,25 @@ export function ReminderSettingsModal({
 
                   {/* ── Recipient mode ────────────────────────── */}
                   <div className="space-y-2">
-                    <Label>Recipients</Label>
+                    <Label>{t("frontend.subscriptions.recipients")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Who receives the reminder messages
+                      {t("frontend.subscriptions.reminders_desc")}
                     </p>
                     <div className="space-y-2">
                       {[
                         {
                           value: "tenant_only",
-                          label: "Tenant only",
+                          label: t("frontend.subscriptions.recipient_mode_tenant_only"),
                           desc: "Only you (the business owner) receives reminders",
                         },
                         {
                           value: "client_only",
-                          label: "Client only",
+                          label: t("frontend.subscriptions.recipient_mode_client_only"),
                           desc: "Only the client receives reminders",
                         },
                         {
                           value: "both",
-                          label: "Both",
+                          label: t("frontend.subscriptions.recipient_mode_both"),
                           desc: "Both tenant and client receive reminders",
                         },
                       ].map((opt) => (
@@ -571,13 +572,13 @@ export function ReminderSettingsModal({
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
-            Cancel
+            {t("frontend.common.cancel")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving || isLoading || Object.keys(validationErrors).length > 0}
           >
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("frontend.common.save") : t("frontend.common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

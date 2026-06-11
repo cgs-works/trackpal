@@ -6,6 +6,7 @@ import {
   type TokenResponse,
   type UserInfo,
 } from "@/features/auth/services/auth-api";
+import { loadCatalog } from "@/i18n";
 
 interface AuthState {
   token: string | null
@@ -71,6 +72,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       role: data.user.role,
       username: data.user.username,
     });
+    // Load i18n catalog after login
+    loadCatalog();
     return data;
   },
 

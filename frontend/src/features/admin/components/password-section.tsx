@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import { changePassword } from "../services/settings-api";
 
 export function PasswordSection() {
@@ -18,20 +19,20 @@ export function PasswordSection() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("frontend.profile.passwords_dont_match"));
       return;
     }
     setSaving(true);
     setError("");
     try {
       await changePassword({ old_password: oldPassword, new_password: newPassword });
-      toast.success("Password updated");
+      toast.success(t("frontend.profile.password_updated"));
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to change password"
+        err instanceof Error ? err.message : t("frontend.profile.error_password")
       );
     } finally {
       setSaving(false);
@@ -47,7 +48,7 @@ export function PasswordSection() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="old_password">Current Password</Label>
+        <Label htmlFor="old_password">{t("frontend.dashboard.client.current_password")}</Label>
         <Input
           id="old_password"
           type="password"
@@ -59,7 +60,7 @@ export function PasswordSection() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="new_password">New Password</Label>
+        <Label htmlFor="new_password">{t("frontend.dashboard.client.new_password")}</Label>
         <Input
           id="new_password"
           type="password"
@@ -70,12 +71,12 @@ export function PasswordSection() {
           onChange={(e) => setNewPassword(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          Minimum 8 characters
+          {t("frontend.profile.password_min_length")}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirm_password">Confirm New Password</Label>
+        <Label htmlFor="confirm_password">{t("frontend.profile.confirm_password")}</Label>
         <Input
           id="confirm_password"
           type="password"
@@ -85,13 +86,13 @@ export function PasswordSection() {
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
         {!passwordsMatch && (
-          <p className="text-xs text-destructive">Passwords do not match</p>
+          <p className="text-xs text-destructive">{t("frontend.profile.passwords_dont_match")}</p>
         )}
       </div>
 
       <div className="flex justify-end">
         <Button type="submit" disabled={saving || !canSubmit}>
-          {saving ? "Changing..." : "Change Password"}
+          {saving ? t("frontend.dashboard.client.updating") : t("frontend.dashboard.client.change_password")}
         </Button>
       </div>
     </form>

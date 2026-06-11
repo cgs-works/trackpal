@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import {
   type TenantCodeService,
   getTenantCodeServices,
@@ -23,7 +24,7 @@ export function CodeServicesSection() {
       setServices(data.services);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load code services"
+        err instanceof Error ? err.message : t("frontend.code_services.tenant_error_load")
       );
     } finally {
       setIsLoading(false);
@@ -50,10 +51,10 @@ export function CodeServicesSection() {
         .map((s) => s.service_key);
       const data = await updateTenantCodeServices(selectedKeys);
       setServices(data.services);
-      toast.success("Code services updated");
+      toast.success(t("frontend.code_services.tenant_saved"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save code services"
+        err instanceof Error ? err.message : t("frontend.code_services.tenant_error_save")
       );
     } finally {
       setSaving(false);
@@ -81,8 +82,7 @@ export function CodeServicesSection() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Select which code services are enabled for your business. Only globally
-        active services can be enabled.
+        {t("frontend.code_services.tenant_description")}
       </p>
 
       <div className="space-y-1">
@@ -97,7 +97,7 @@ export function CodeServicesSection() {
                   </p>
                   {disabled && (
                     <p className="text-xs text-muted-foreground">
-                      Currently unavailable (globally disabled)
+                      {t("frontend.code_services.tenant_globally_inactive")}
                     </p>
                   )}
                 </div>
@@ -115,7 +115,7 @@ export function CodeServicesSection() {
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t("frontend.code_services.tenant_saving") : t("frontend.code_services.tenant_save")}
         </Button>
       </div>
     </div>

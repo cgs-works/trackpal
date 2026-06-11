@@ -21,6 +21,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import {
   listServices,
   createService,
@@ -76,7 +77,7 @@ function RenameDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="rename-input">Name</Label>
+            <Label htmlFor="rename-input">{t("frontend.common.name")}</Label>
             <Input
               id="rename-input"
               value={name}
@@ -91,10 +92,10 @@ function RenameDialog({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              Cancel
+              {t("frontend.common.cancel")}
             </Button>
             <Button type="submit" disabled={saving || !name.trim()}>
-              {saving ? "Saving..." : "Rename"}
+              {saving ? t("frontend.catalog.saving") : t("frontend.catalog.rename")}
             </Button>
           </DialogFooter>
         </form>
@@ -135,10 +136,12 @@ function DeletePreviewDialog({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            Delete {preview?.target_type || "item"}?
+            {preview?.target_type === "service"
+              ? t("frontend.catalog.delete_preview_title_service")
+              : t("frontend.catalog.delete_preview_title_plan")}
           </DialogTitle>
           <DialogDescription>
-            This action will affect active subscriptions
+            {t("frontend.catalog.delete_preview_note")}
           </DialogDescription>
         </DialogHeader>
 
@@ -153,7 +156,7 @@ function DeletePreviewDialog({
           <div className="flex items-center justify-center py-8 text-muted-foreground">
             <div className="flex items-center gap-3">
               <div className="size-5 border-2 border-border border-t-primary rounded-full animate-spin" />
-              Loading preview...
+              {t("frontend.catalog.delete_preview_loading")}
             </div>
           </div>
         ) : preview ? (
@@ -169,7 +172,7 @@ function DeletePreviewDialog({
                     {preview.affected_plan_count}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Affected plans
+                    {t("frontend.catalog.affected_plans")}
                   </p>
                 </div>
               )}
@@ -178,26 +181,26 @@ function DeletePreviewDialog({
                   {preview.active_subscription_count}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Active subscriptions
+                  {t("frontend.catalog.active_subscriptions")}
                 </p>
               </div>
               <div className="rounded-lg bg-muted p-3">
                 <p className="text-2xl font-bold">
                   {preview.historical_subscription_count}
                 </p>
-                <p className="text-sm text-muted-foreground">Historical</p>
+                <p className="text-sm text-muted-foreground">{t("frontend.catalog.historical_subscriptions")}</p>
               </div>
               <div className="rounded-lg bg-muted p-3">
                 <p className="text-2xl font-bold">
                   {preview.total_subscription_count}
                 </p>
-                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-sm text-muted-foreground">{t("frontend.catalog.total_subscriptions")}</p>
               </div>
             </div>
 
             {preview.active_subscriptions.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Active subscriptions:</p>
+                <p className="text-sm font-medium">{t("frontend.catalog.active_subscriptions")}:</p>
                 <div className="max-h-40 overflow-y-auto space-y-1">
                   {preview.active_subscriptions.map((sub) => (
                     <div
@@ -226,11 +229,11 @@ function DeletePreviewDialog({
 
             <div className="space-y-2">
               <Label htmlFor="confirm-delete">
-                Type <strong>delete</strong> to confirm
+                {t("frontend.catalog.confirm_label")}
               </Label>
               <Input
                 id="confirm-delete"
-                placeholder="delete"
+                placeholder={t("frontend.catalog.confirm_placeholder")}
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
               />
@@ -251,14 +254,14 @@ function DeletePreviewDialog({
             onClick={() => onOpenChange(false)}
             disabled={deleting}
           >
-            Cancel
+            {t("frontend.common.cancel")}
           </Button>
           <Button
             variant="destructive"
             onClick={onConfirm}
             disabled={!canDelete || deleting || loading}
           >
-            {deleting ? "Deleting..." : "Delete"}
+            {deleting ? t("frontend.catalog.deleting") : t("frontend.catalog.confirm_delete")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -313,7 +316,7 @@ export function CatalogPage() {
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load services"
+        err instanceof Error ? err.message : t("frontend.catalog.error_load_services")
       );
     } finally {
       setIsLoading(false);
@@ -354,10 +357,10 @@ export function CatalogPage() {
       setNewServiceName("");
       setSelectedServiceId(service.id);
       await loadServices();
-      toast.success("Service created");
+      toast.success(t("frontend.catalog.service_created"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create service"
+        err instanceof Error ? err.message : t("frontend.catalog.error_create_service")
       );
     } finally {
       setCreatingService(false);
@@ -373,10 +376,10 @@ export function CatalogPage() {
       await createPlan(selectedServiceId, { name: newPlanName.trim() });
       setNewPlanName("");
       await loadPlans();
-      toast.success("Plan created");
+      toast.success(t("frontend.catalog.plan_created"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create plan"
+        err instanceof Error ? err.message : t("frontend.catalog.error_create_plan")
       );
     } finally {
       setCreatingPlan(false);
@@ -385,18 +388,18 @@ export function CatalogPage() {
 
   // ── Rename service ─────────────────────────────────────────
   function openRenameService(service: Service) {
-    setRenameTitle("Rename Service");
+    setRenameTitle(t("frontend.catalog.rename_service_prompt"));
     setRenameCurrentName(service.name);
     setRenameCallback(() => async (name: string) => {
       setRenameSaving(true);
       try {
         await updateService(service.id, { name });
         await loadServices();
-        toast.success("Service renamed");
+        toast.success(t("frontend.catalog.service_renamed"));
         setRenameOpen(false);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to rename service"
+          err instanceof Error ? err.message : t("frontend.catalog.error_update_service")
         );
       } finally {
         setRenameSaving(false);
@@ -407,18 +410,18 @@ export function CatalogPage() {
 
   // ── Rename plan ────────────────────────────────────────────
   function openRenamePlan(plan: Plan) {
-    setRenameTitle("Rename Plan");
+    setRenameTitle(t("frontend.catalog.rename_plan_prompt"));
     setRenameCurrentName(plan.name);
     setRenameCallback(() => async (name: string) => {
       setRenameSaving(true);
       try {
         await updatePlan(selectedServiceId, plan.id, { name });
         await loadPlans();
-        toast.success("Plan renamed");
+        toast.success(t("frontend.catalog.plan_renamed"));
         setRenameOpen(false);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to rename plan"
+          err instanceof Error ? err.message : t("frontend.catalog.error_update_plan")
         );
       } finally {
         setRenameSaving(false);
@@ -444,11 +447,11 @@ export function CatalogPage() {
             setSelectedServiceId("");
           }
           await loadServices();
-          toast.success("Service deleted");
+          toast.success(t("frontend.catalog.service_deleted"));
           setDeleteOpen(false);
         } catch (err) {
           setDeleteError(
-            err instanceof Error ? err.message : "Failed to delete service"
+            err instanceof Error ? err.message : t("frontend.catalog.error_delete_service")
           );
         } finally {
           setDeleting(false);
@@ -456,7 +459,7 @@ export function CatalogPage() {
       });
     } catch (err) {
       setDeleteError(
-        err instanceof Error ? err.message : "Failed to load preview"
+        err instanceof Error ? err.message : t("frontend.catalog.delete_preview_error")
       );
     } finally {
       setDeleteLoading(false);
@@ -477,11 +480,11 @@ export function CatalogPage() {
         try {
           await deletePlan(selectedServiceId, plan.id);
           await loadPlans();
-          toast.success("Plan deleted");
+          toast.success(t("frontend.catalog.plan_deleted"));
           setDeleteOpen(false);
         } catch (err) {
           setDeleteError(
-            err instanceof Error ? err.message : "Failed to delete plan"
+            err instanceof Error ? err.message : t("frontend.catalog.error_delete_plan")
           );
         } finally {
           setDeleting(false);
@@ -489,7 +492,7 @@ export function CatalogPage() {
       });
     } catch (err) {
       setDeleteError(
-        err instanceof Error ? err.message : "Failed to load preview"
+        err instanceof Error ? err.message : t("frontend.catalog.delete_preview_error")
       );
     } finally {
       setDeleteLoading(false);
@@ -501,9 +504,9 @@ export function CatalogPage() {
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catalog</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("frontend.catalog.section_title")}</h1>
           <p className="text-muted-foreground">
-            Manage your services and subscription plans
+            {t("frontend.catalog.section_heading")}
           </p>
         </div>
 
@@ -520,11 +523,11 @@ export function CatalogPage() {
           <div className="space-y-4">
             <div>
               <h2 className="text-sm font-medium text-muted-foreground mb-2">
-                Services
+                {t("frontend.catalog.services")}
               </h2>
               <form onSubmit={handleCreateService} className="flex gap-2">
                 <Input
-                  placeholder="New service..."
+                  placeholder={t("frontend.catalog.new_service_placeholder")}
                   value={newServiceName}
                   onChange={(e) => setNewServiceName(e.target.value)}
                   className="flex-1"
@@ -548,8 +551,8 @@ export function CatalogPage() {
             ) : services.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="size-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No services yet</p>
-                <p className="text-xs">Create one to get started</p>
+                <p className="text-sm">{t("frontend.catalog.no_services")}</p>
+                <p className="text-xs">{t("frontend.catalog.create_service_help")}</p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -600,11 +603,11 @@ export function CatalogPage() {
               <>
                 <div>
                   <h2 className="text-sm font-medium text-muted-foreground mb-2">
-                    Plans
+                    {t("frontend.catalog.plans")}
                   </h2>
                   <form onSubmit={handleCreatePlan} className="flex gap-2">
                     <Input
-                      placeholder="New plan..."
+                      placeholder={t("frontend.catalog.new_plan_placeholder")}
                       value={newPlanName}
                       onChange={(e) => setNewPlanName(e.target.value)}
                       className="flex-1"
@@ -622,8 +625,8 @@ export function CatalogPage() {
                 {plans.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground border rounded-lg">
                     <Package className="size-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No plans for this service</p>
-                    <p className="text-xs">Create a plan to get started</p>
+                    <p className="text-sm">{t("frontend.catalog.no_plans")}</p>
+                    <p className="text-xs">{t("frontend.catalog.create_plan_help")}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -649,7 +652,7 @@ export function CatalogPage() {
                             onClick={() => openRenamePlan(plan)}
                           >
                             <Pencil className="size-3.5 mr-1" />
-                            Rename
+                            {t("frontend.catalog.rename")}
                           </Button>
                           <Button
                             variant="ghost"
@@ -658,7 +661,7 @@ export function CatalogPage() {
                             onClick={() => openDeletePlan(plan)}
                           >
                             <Trash2 className="size-3.5 mr-1" />
-                            Delete
+                            {t("frontend.catalog.delete")}
                           </Button>
                         </div>
                       </div>
@@ -669,7 +672,7 @@ export function CatalogPage() {
             ) : (
               <div className="text-center py-12 text-muted-foreground border rounded-lg">
                 <Package className="size-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Select a service to view plans</p>
+                <p className="text-sm">{t("frontend.catalog.select_service_help")}</p>
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { loadCatalog } from "@/i18n";
 
 function RootComponent() {
   // Initialize theme from localStorage before first paint
@@ -9,6 +10,14 @@ function RootComponent() {
     const stored = localStorage.getItem("theme");
     const shouldBeDark = stored ? stored === "dark" : true;
     document.documentElement.classList.toggle("dark", shouldBeDark);
+  }, []);
+
+  // Load i18n catalog if authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      loadCatalog();
+    }
   }, []);
 
   return (

@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 import { type Profile, type ProfileUpdate, updateProfile } from "../services/settings-api";
 
 const LOCALE_OPTIONS = [
@@ -48,10 +49,10 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
       };
       const updated = await updateProfile(payload);
       onProfileUpdate(updated);
-      toast.success("Profile updated");
+      toast.success(t("frontend.profile.saved"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to update profile"
+        err instanceof Error ? err.message : t("frontend.profile.error_update")
       );
     } finally {
       setSaving(false);
@@ -62,7 +63,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="full_name">Full Name</Label>
+          <Label htmlFor="full_name">{t("frontend.profile.full_name")}</Label>
           <Input
             id="full_name"
             value={fullName}
@@ -70,7 +71,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("frontend.profile.email")}</Label>
           <Input
             id="email"
             type="email"
@@ -82,7 +83,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
+          <Label htmlFor="phone">{t("frontend.profile.phone")}</Label>
           <Input
             id="phone"
             type="tel"
@@ -91,7 +92,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
           />
         </div>
         <div className="space-y-2">
-          <Label>Locale</Label>
+          <Label>{t("frontend.profile.language")}</Label>
           <Select value={locale} onValueChange={setLocale}>
             <SelectTrigger>
               <SelectValue />
@@ -109,7 +110,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
 
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t("frontend.profile.saving") : t("frontend.profile.save")}
         </Button>
       </div>
     </form>

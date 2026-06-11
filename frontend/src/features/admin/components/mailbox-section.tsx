@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Mail, CheckCircle2, AlertCircle, Unplug } from "lucide-react";
+import { t } from "@/i18n";
 import {
   type Mailbox,
   getMailbox,
@@ -23,25 +24,25 @@ import {
 } from "../services/settings-api";
 
 const PROVIDER_OPTIONS = [
-  { value: "google", label: "Google (OAuth)" },
-  { value: "microsoft", label: "Microsoft (OAuth)" },
-  { value: "imap_custom", label: "Custom IMAP" },
+  { value: "google", label: t("frontend.mailbox.connect_google") },
+  { value: "microsoft", label: t("frontend.mailbox.connect_microsoft") },
+  { value: "imap_custom", label: t("frontend.mailbox.template_custom") },
 ];
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
     connected: {
-      label: "Connected",
+      label: t("frontend.mailbox.status_connected"),
       icon: CheckCircle2,
       className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     },
     error: {
-      label: "Error",
+      label: t("frontend.mailbox.status_error"),
       icon: AlertCircle,
       className: "bg-destructive/10 text-destructive",
     },
     disconnected: {
-      label: "Disconnected",
+      label: t("frontend.mailbox.status_disconnected"),
       icon: AlertCircle,
       className: "bg-muted text-muted-foreground",
     },
@@ -86,7 +87,7 @@ export function MailboxSection() {
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load mailbox config"
+        err instanceof Error ? err.message : t("frontend.mailbox.error_load")
       );
     } finally {
       setIsLoading(false);
@@ -102,10 +103,10 @@ export function MailboxSection() {
     try {
       const { auth_url } = await startOAuth(prov);
       window.open(auth_url, "_blank", "width=500,height=600");
-      toast.info(`Opening ${prov} authorization...`);
+      toast.info(t("frontend.mailbox.oauth_started"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to start OAuth"
+        err instanceof Error ? err.message : t("frontend.mailbox.error_oauth")
       );
     }
   }
@@ -124,10 +125,10 @@ export function MailboxSection() {
         imap_password: imapPassword,
       });
       setMailbox(data);
-      toast.success("Mailbox configured");
+      toast.success(t("frontend.mailbox.success_saved"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save mailbox config"
+        err instanceof Error ? err.message : t("frontend.mailbox.error_save")
       );
     } finally {
       setSaving(false);
@@ -147,7 +148,7 @@ export function MailboxSection() {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to test connection"
+        err instanceof Error ? err.message : t("frontend.mailbox.error_test")
       );
     } finally {
       setTesting(false);
@@ -159,10 +160,10 @@ export function MailboxSection() {
     try {
       await disconnectMailbox();
       setMailbox(null);
-      toast.success("Mailbox disconnected");
+      toast.success(t("frontend.mailbox.success_disconnected"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to disconnect mailbox"
+        err instanceof Error ? err.message : t("frontend.mailbox.error_disconnect")
       );
     }
   }
@@ -197,7 +198,7 @@ export function MailboxSection() {
             <StatusBadge status={mailbox.status} />
             <Button variant="ghost" size="sm" onClick={handleDisconnect}>
               <Unplug className="size-3.5 mr-1" />
-              Disconnect
+              {t("frontend.mailbox.disconnect")}
             </Button>
           </div>
         </div>
@@ -206,7 +207,7 @@ export function MailboxSection() {
       {/* Error */}
       {error && !mailbox && (
         <div className="text-sm text-muted-foreground text-center py-4">
-          No mailbox configured. Choose a provider below to get started.
+          {t("frontend.mailbox.not_configured")}
         </div>
       )}
 
@@ -214,7 +215,7 @@ export function MailboxSection() {
       {!mailbox && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Provider</Label>
+            <Label>{t("frontend.mailbox.provider")}</Label>
             <Select value={provider} onValueChange={setProvider}>
               <SelectTrigger>
                 <SelectValue />
@@ -233,12 +234,12 @@ export function MailboxSection() {
           {provider !== "imap_custom" && (
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="oauth_email">Email address</Label>
+                <Label htmlFor="oauth_email">{t("frontend.mailbox.email")}</Label>
                 <Input
                   id="oauth_email"
                   type="email"
                   required
-                  placeholder="you@example.com"
+                  placeholder={t("frontend.subscriptions.placeholder_email")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -250,7 +251,7 @@ export function MailboxSection() {
                 disabled={!email}
                 className="w-full"
               >
-                Connect with {provider === "google" ? "Google" : "Microsoft"}
+                {t("frontend.mailbox.connect_oauth")}
               </Button>
             </div>
           )}
@@ -259,7 +260,7 @@ export function MailboxSection() {
           {provider === "imap_custom" && (
             <form onSubmit={handleSaveImap} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="imap_email">Email address</Label>
+                <Label htmlFor="imap_email">{t("frontend.mailbox.email")}</Label>
                 <Input
                   id="imap_email"
                   type="email"
@@ -271,7 +272,7 @@ export function MailboxSection() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="imap_host">IMAP Host</Label>
+                  <Label htmlFor="imap_host">{t("frontend.mailbox.imap_host")}</Label>
                   <Input
                     id="imap_host"
                     required
@@ -281,7 +282,7 @@ export function MailboxSection() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="imap_port">IMAP Port</Label>
+                  <Label htmlFor="imap_port">{t("frontend.mailbox.imap_port")}</Label>
                   <Input
                     id="imap_port"
                     type="number"
@@ -299,12 +300,12 @@ export function MailboxSection() {
                   onCheckedChange={setImapSsl}
                 />
                 <Label htmlFor="imap_ssl" className="cursor-pointer">
-                  Use SSL/TLS
+                  {t("frontend.mailbox.imap_ssl")}
                 </Label>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imap_password">IMAP Password / App Password</Label>
+                <Label htmlFor="imap_password">{t("frontend.mailbox.imap_password")}</Label>
                 <Input
                   id="imap_password"
                   type="password"
@@ -314,13 +315,13 @@ export function MailboxSection() {
                   onChange={(e) => setImapPassword(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  For Gmail, use an App Password instead of your regular password
+                  {t("frontend.mailbox.imap_form_help")}
                 </p>
               </div>
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={saving}>
-                  {saving ? "Saving..." : "Save Configuration"}
+                  {saving ? t("frontend.mailbox.saving") : t("frontend.mailbox.save_imap")}
                 </Button>
               </div>
             </form>
@@ -336,7 +337,7 @@ export function MailboxSection() {
             onClick={handleTest}
             disabled={testing}
           >
-            {testing ? "Testing..." : "Test Connection"}
+            {testing ? t("frontend.mailbox.testing") : t("frontend.mailbox.test")}
           </Button>
         </div>
       )}

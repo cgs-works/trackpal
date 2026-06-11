@@ -12,16 +12,16 @@ import {
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
-
-const NAV_ITEMS = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/clients", label: "Clients", icon: Users },
-  { to: "/admin/catalog", label: "Catalog", icon: Package },
-  { to: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
-];
+import { t } from "@/i18n";
 
 export function AdminLayout() {
+  const NAV_ITEMS = [
+    { to: "/admin/dashboard", label: t("frontend.dashboard.tenant.title"), icon: LayoutDashboard },
+    { to: "/admin/clients", label: t("frontend.clients.section_title"), icon: Users },
+    { to: "/admin/catalog", label: t("frontend.catalog.section_title"), icon: Package },
+    { to: "/admin/subscriptions", label: t("frontend.subscriptions.title"), icon: CreditCard },
+    { to: "/admin/settings", label: t("frontend.settings.section_title"), icon: Settings },
+  ];
   const { username, logout } = useAuthStore();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -87,7 +87,7 @@ export function AdminLayout() {
             onClick={() => logout()}
           >
             <LogOut className="size-4 shrink-0" />
-            {!collapsed && <span>Logout</span>}
+            {!collapsed && <span>{t("frontend.dashboard.tenant.logout")}</span>}
           </Button>
         </div>
       </aside>
