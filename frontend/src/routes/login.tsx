@@ -203,7 +203,7 @@ function LoginComponent() {
               <select
                 value={getLocale()}
                 onChange={(e) => setLocale(e.target.value as "en" | "es")}
-                className="h-8 rounded-lg border border-input bg-transparent px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-8 rounded-lg border border-input bg-transparent dark:bg-transparent px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="en">English</option>
                 <option value="es">Español</option>
@@ -222,7 +222,7 @@ function LoginComponent() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="h-10 transition-[box-shadow] duration-200 focus-visible:ring-[oklch(0.65_0.15_260/0.4)] focus-visible:border-[oklch(0.65_0.15_260)]"
+                className="h-10 transition-[box-shadow] duration-200 focus-visible:ring-ring focus-visible:border-ring"
               />
             </div>
 
@@ -238,7 +238,7 @@ function LoginComponent() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 transition-[box-shadow] duration-200 focus-visible:ring-[oklch(0.65_0.15_260/0.4)] focus-visible:border-[oklch(0.65_0.15_260)]"
+                className="h-10 transition-[box-shadow] duration-200 focus-visible:ring-ring focus-visible:border-ring"
               />
             </div>
 

@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { useEffect } from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 function RootComponent() {
   // Initialize theme from localStorage before first paint
@@ -13,6 +14,7 @@ function RootComponent() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased font-sans">
       <Outlet />
+      <Toaster richColors position="top-right" />
       {import.meta.env.DEV && (
         <TanStackRouterDevtools position="bottom-right" />
       )}

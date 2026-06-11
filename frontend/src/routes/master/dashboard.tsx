@@ -1,18 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -41,15 +35,15 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBar } from "@/components/status-bar";
+import { CodeServicesSidebar } from "@/components/code-services-sidebar";
 import {
-  Building2,
-  CheckCircle2,
-  XCircle,
   Plus,
   Pencil,
   Trash2,
   Power,
   Settings,
+  Search,
 } from "lucide-react";
 
 export const Route = createFileRoute("/master/dashboard")({
@@ -97,6 +91,8 @@ interface EmptyForm {
   password: string;
   evolution_instance_name: string;
 }
+
+/* ── Helpers ────────────────────────────────────────────────────── */
 
 function getEmptyForm(): EmptyForm {
   return {
@@ -146,8 +142,7 @@ function MasterDashboard() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [meta, setMeta] = useState<TenantMeta>({ total: 0, active: 0, inactive: 0 });
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   /* Modal state */
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -159,6 +154,11 @@ function MasterDashboard() {
   /* Delete confirm */
   const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
 
+  /* Code Services sidebar */
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [services, setServices] = useState<CodeService[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+
   const isEditMode = modalMode === "edit";
   const modalTitle = isEditMode ? "Edit Business" : "Create Business";
   const modalPrefixHint = isEditMode
@@ -168,7 +168,6 @@ function MasterDashboard() {
   /* ── Data loading ──────────────────────────────────────────────── */
 
   const loadTenants = useCallback(async () => {
-    setErrorMessage("");
     setIsLoading(true);
     try {
       const response = await api.get<TenantListResponse>("/tenants");
@@ -182,7 +181,7 @@ function MasterDashboard() {
         }
       );
     } catch (error) {
-      setErrorMessage(getApiError(error, "Unable to load businesses"));
+      toast.error(getApiError(error, "Unable to load businesses"));
     } finally {
       setIsLoading(false);
     }
@@ -194,72 +193,58 @@ function MasterDashboard() {
 
   /* ── Code services ─────────────────────────────────────────────── */
 
-  const [services, setServices] = useState<CodeService[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
-  const [servicesSaving, setServicesSaving] = useState(false);
-  const [servicesError, setServicesError] = useState("");
-  const [servicesSuccess, setServicesSuccess] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setServicesLoading(true);
-      try {
-        const res = await api.get<{ services: CodeService[] }>("/code-services/global");
-        if (!cancelled) setServices(res.data.services || []);
-      } catch {
-        if (!cancelled) setServicesError("Unable to load code services");
-      } finally {
-        if (!cancelled) setServicesLoading(false);
-      }
+  const loadServices = useCallback(async () => {
+    setServicesLoading(true);
+    try {
+      const res = await api.get<{ services: CodeService[] }>("/code-services/global");
+      setServices(res.data.services || []);
+    } catch {
+      toast.error("Unable to load code services");
+    } finally {
+      setServicesLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
   }, []);
 
-  function toggleService(key: string) {
-    setServices((prev) =>
-      prev.map((s) =>
-        s.service_key === key ? { ...s, is_active: !s.is_active } : s
-      )
-    );
-  }
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
 
-  async function saveServices() {
-    setServicesError("");
-    setServicesSuccess("");
-    setServicesSaving(true);
+  async function saveServices(updatedServices: CodeService[]) {
     try {
       const payload: Record<string, boolean> = {};
-      for (const svc of services) {
+      for (const svc of updatedServices) {
         payload[svc.service_key] = svc.is_active;
       }
       await api.put("/code-services/global", { services: payload });
-      setServicesSuccess("Code services saved successfully.");
-    } catch {
-      setServicesError("Unable to save code services");
-    } finally {
-      setServicesSaving(false);
+      setServices(updatedServices);
+      toast.success("Code services saved");
+    } catch (error) {
+      toast.error(getApiError(error, "Unable to save code services"));
+      throw error; // Re-throw so sidebar can handle it
     }
   }
 
+  /* ── Filtered tenants ─────────────────────────────────────────── */
+
+  const filteredTenants = tenants.filter((tenant) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      tenant.full_name.toLowerCase().includes(q) ||
+      tenant.email?.toLowerCase().includes(q) ||
+      tenant.client_prefix?.toLowerCase().includes(q)
+    );
+  });
+
   /* ── Modal helpers ─────────────────────────────────────────────── */
 
-  function clearMessages() {
-    setErrorMessage("");
-    setSuccessMessage("");
-    setModalError("");
-  }
-
   function openCreateModal() {
-    clearMessages();
     setModalMode("create");
     setForm(getEmptyForm());
     setIsModalOpen(true);
   }
 
   function openEditModal(tenant: Tenant) {
-    clearMessages();
     setModalMode("edit");
     setForm({
       ...getEmptyForm(),
@@ -298,7 +283,6 @@ function MasterDashboard() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setModalError("");
-    setSuccessMessage("");
     if (!validateForm()) return;
 
     setIsSaving(true);
@@ -314,7 +298,7 @@ function MasterDashboard() {
           payload.client_prefix = form.client_prefix;
         }
         await api.put(`/tenants/${form.id}`, payload);
-        setSuccessMessage("Business updated successfully.");
+        toast.success("Business updated");
       } else {
         const payload: Record<string, unknown> = {
           full_name: form.full_name,
@@ -331,10 +315,10 @@ function MasterDashboard() {
         }
         const res = await api.post("/tenants", payload);
         const generatedPassword = getGeneratedPassword(res.data);
-        setSuccessMessage(
+        toast.success(
           generatedPassword
-            ? `Business created successfully. Generated password: ${generatedPassword}`
-            : "Business created successfully."
+            ? `Business created. Password: ${generatedPassword}`
+            : "Business created"
         );
       }
       setIsModalOpen(false);
@@ -353,365 +337,315 @@ function MasterDashboard() {
   /* ── Actions ───────────────────────────────────────────────────── */
 
   async function toggleTenantStatus(tenant: Tenant) {
-    clearMessages();
     const active = isTenantActive(tenant);
     const endpoint = active
       ? `/tenants/${tenant.id}/deactivate`
       : `/tenants/${tenant.id}/activate`;
     try {
       await api.patch(endpoint);
-      setSuccessMessage(
-        active ? "Business deactivated successfully." : "Business activated successfully."
-      );
+      toast.success(active ? "Business deactivated" : "Business activated");
       await loadTenants();
     } catch (error) {
-      setErrorMessage(getApiError(error, "Unable to update business status"));
+      toast.error(getApiError(error, "Unable to update business status"));
     }
   }
 
   async function confirmDelete() {
     if (!deleteTarget) return;
-    clearMessages();
     try {
       await api.delete(`/tenants/${deleteTarget.id}`);
-      setSuccessMessage("Business deleted successfully.");
+      toast.success("Business deleted");
       setDeleteTarget(null);
       await loadTenants();
     } catch (error) {
-      setErrorMessage(getApiError(error, "Unable to delete business"));
+      toast.error(getApiError(error, "Unable to delete business"));
       setDeleteTarget(null);
     }
   }
 
   async function manageCatalog(tenant: Tenant) {
-    clearMessages();
     try {
       await switchTenant(tenant.id);
       // TODO: navigate to /admin/dashboard after tenant dashboard is built
-      setSuccessMessage(`Switched to ${tenant.full_name} context.`);
+      toast.success(`Switched to ${tenant.full_name}`);
     } catch (error) {
-      setErrorMessage(getApiError(error, "Unable to switch business context"));
+      toast.error(getApiError(error, "Unable to switch business context"));
     }
   }
 
   /* ── Render ────────────────────────────────────────────────────── */
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-      {/* Summary cards */}
-      <section aria-label="Business summary">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard
-            icon={<Building2 className="h-5 w-5 text-muted-foreground" />}
-            label="Total Businesses"
-            value={meta.total}
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Status bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <StatusBar
+            total={meta.total}
+            active={meta.active}
+            inactive={meta.inactive}
           />
-          <SummaryCard
-            icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
-            label="Active"
-            value={meta.active}
-          />
-          <SummaryCard
-            icon={<XCircle className="h-5 w-5 text-amber-600" />}
-            label="Inactive"
-            value={meta.inactive}
-          />
-        </div>
-      </section>
-
-      {/* Alerts */}
-      {errorMessage && (
-        <Alert variant="destructive">
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-      {successMessage && (
-        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Businesses section */}
-      <section>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg">Businesses</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage business accounts and Evolution instances.
-              </p>
-            </div>
-            <Button size="sm" onClick={openCreateModal} className="shrink-0">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSidebarOpen(true)}
+              className="hidden sm:flex"
+            >
+              <Settings className="h-4 w-4 mr-1.5" />
+              Code Services
+            </Button>
+            <Button size="sm" onClick={openCreateModal}>
               <Plus className="h-4 w-4 mr-1.5" />
               Create Business
             </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
-                ))}
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search businesses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Businesses table */}
+        <div className="border rounded-lg">
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : filteredTenants.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Plus className="h-6 w-6 text-muted-foreground" />
               </div>
-            ) : tenants.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">
-                No businesses registered yet
+              <p className="text-muted-foreground mb-4">
+                {searchQuery
+                  ? "No businesses match your search"
+                  : "No businesses yet"}
               </p>
-            ) : (
-              <>
-                {/* Desktop table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Full Name</TableHead>
-                        <TableHead>Prefix</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Evolution Instance</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tenants.map((tenant) => (
-                        <TableRow key={tenant.id}>
-                          <TableCell className="font-medium">
-                            {tenant.full_name}
-                          </TableCell>
-                          <TableCell>
+              {!searchQuery && (
+                <Button size="sm" onClick={openCreateModal}>
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Create your first business
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Business</TableHead>
+                      <TableHead>Prefix</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Instance</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTenants.map((tenant) => (
+                      <TableRow
+                        key={tenant.id}
+                        className="hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell className="font-medium">
+                          {tenant.full_name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
                             {tenant.client_prefix || "—"}
-                          </TableCell>
-                          <TableCell>{tenant.email}</TableCell>
-                          <TableCell>{tenant.phone}</TableCell>
-                          <TableCell>
-                            {tenant.evolution_instance_name || "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                isTenantActive(tenant) ? "default" : "secondary"
-                              }
-                              className={
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{tenant.email}</div>
+                            {tenant.phone && (
+                              <div className="text-muted-foreground">
+                                {tenant.phone}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {tenant.evolution_instance_name || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              isTenantActive(tenant) ? "default" : "secondary"
+                            }
+                            className={
+                              isTenantActive(tenant)
+                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-300"
+                                : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300"
+                            }
+                          >
+                            {isTenantActive(tenant) ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(tenant)}
+                              title="Edit"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => manageCatalog(tenant)}
+                              title="Manage catalog"
+                            >
+                              <Settings className="h-3.5 w-3.5" />
+                              <span className="sr-only">Manage catalog</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleTenantStatus(tenant)}
+                              title={
                                 isTenantActive(tenant)
-                                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-300"
-                                  : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300"
+                                  ? "Deactivate"
+                                  : "Activate"
                               }
                             >
-                              {isTenantActive(tenant) ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openEditModal(tenant)}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => manageCatalog(tenant)}
-                                title="Manage catalog"
-                              >
-                                <Settings className="h-3.5 w-3.5" />
-                                <span className="sr-only">Manage catalog</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleTenantStatus(tenant)}
-                                title={
-                                  isTenantActive(tenant)
-                                    ? "Deactivate"
-                                    : "Activate"
-                                }
-                              >
-                                <Power className="h-3.5 w-3.5" />
-                                <span className="sr-only">
-                                  {isTenantActive(tenant)
-                                    ? "Deactivate"
-                                    : "Activate"}
-                                </span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setDeleteTarget(tenant)}
-                                disabled={isTenantActive(tenant)}
-                                title={
-                                  isTenantActive(tenant)
-                                    ? "Deactivate first to delete"
-                                    : "Delete"
-                                }
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Mobile card list */}
-                <div className="md:hidden space-y-3">
-                  {tenants.map((tenant) => (
-                    <div
-                      key={tenant.id}
-                      className="border rounded-lg p-4 space-y-2"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium">{tenant.full_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {tenant.email}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            isTenantActive(tenant) ? "default" : "secondary"
-                          }
-                          className={
-                            isTenantActive(tenant)
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-amber-100 text-amber-800"
-                          }
-                        >
-                          {isTenantActive(tenant) ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-0.5">
-                        <p>Prefix: {tenant.client_prefix || "—"}</p>
-                        <p>Phone: {tenant.phone || "—"}</p>
-                        <p>Instance: {tenant.evolution_instance_name || "—"}</p>
-                      </div>
-                      <Separator />
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditModal(tenant)}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => manageCatalog(tenant)}
-                        >
-                          <Settings className="h-3.5 w-3.5 mr-1" />
-                          Catalog
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleTenantStatus(tenant)}
-                        >
-                          <Power className="h-3.5 w-3.5 mr-1" />
-                          {isTenantActive(tenant) ? "Deactivate" : "Activate"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(tenant)}
-                          disabled={isTenantActive(tenant)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Code Services */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Code Services</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Manage globally enabled code services for all businesses.
-            </p>
-          </CardHeader>
-          <CardContent>
-            {servicesError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{servicesError}</AlertDescription>
-              </Alert>
-            )}
-            {servicesSuccess && (
-              <Alert className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-800">
-                <AlertDescription>{servicesSuccess}</AlertDescription>
-              </Alert>
-            )}
-            {servicesLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
-                ))}
+                              <Power className="h-3.5 w-3.5" />
+                              <span className="sr-only">
+                                {isTenantActive(tenant)
+                                  ? "Deactivate"
+                                  : "Activate"}
+                              </span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(tenant)}
+                              disabled={isTenantActive(tenant)}
+                              title={
+                                isTenantActive(tenant)
+                                  ? "Deactivate first to delete"
+                                  : "Delete"
+                              }
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            ) : services.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No code services configured
-              </p>
-            ) : (
-              <>
-                <div className="space-y-2 mb-4">
-                  {services.map((svc) => (
-                    <div
-                      key={svc.service_key}
-                      className="flex items-center justify-between border rounded-lg px-4 py-3"
-                    >
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={svc.is_active}
-                          onChange={() => toggleService(svc.service_key)}
-                          className="h-4 w-4 rounded border-input accent-primary"
-                        />
-                        <span className="font-medium text-sm">{svc.label}</span>
-                      </label>
+
+              {/* Mobile card list */}
+              <div className="md:hidden divide-y">
+                {filteredTenants.map((tenant) => (
+                  <div key={tenant.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium">{tenant.full_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {tenant.email}
+                        </p>
+                      </div>
                       <Badge
-                        variant={svc.is_active ? "default" : "secondary"}
+                        variant={
+                          isTenantActive(tenant) ? "default" : "secondary"
+                        }
                         className={
-                          svc.is_active
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-muted text-muted-foreground"
+                          isTenantActive(tenant)
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
                         }
                       >
-                        {svc.is_active ? "Active" : "Inactive"}
+                        {isTenantActive(tenant) ? "Active" : "Inactive"}
                       </Badge>
                     </div>
-                  ))}
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    onClick={saveServices}
-                    disabled={servicesSaving}
-                  >
-                    {servicesSaving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+                    <div className="text-sm text-muted-foreground space-y-0.5">
+                      <p>Prefix: {tenant.client_prefix || "—"}</p>
+                      <p>Phone: {tenant.phone || "—"}</p>
+                      <p>Instance: {tenant.evolution_instance_name || "—"}</p>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(tenant)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => manageCatalog(tenant)}
+                      >
+                        <Settings className="h-3.5 w-3.5 mr-1" />
+                        Catalog
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleTenantStatus(tenant)}
+                      >
+                        <Power className="h-3.5 w-3.5 mr-1" />
+                        {isTenantActive(tenant) ? "Deactivate" : "Activate"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteTarget(tenant)}
+                        disabled={isTenantActive(tenant)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Code Services button */}
+        <Button
+          variant="outline"
+          className="sm:hidden w-full"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <Settings className="h-4 w-4 mr-1.5" />
+          Code Services
+        </Button>
+      </div>
+
+      {/* Code Services Sidebar */}
+      <CodeServicesSidebar
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        services={services}
+        loading={servicesLoading}
+        onSave={saveServices}
+      />
 
       {/* Create / Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
@@ -726,9 +660,9 @@ function MasterDashboard() {
           </DialogHeader>
 
           {modalError && (
-            <Alert variant="destructive">
-              <AlertDescription>{modalError}</AlertDescription>
-            </Alert>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              {modalError}
+            </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -857,31 +791,5 @@ function MasterDashboard() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-/* ── Sub-components ─────────────────────────────────────────────── */
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
