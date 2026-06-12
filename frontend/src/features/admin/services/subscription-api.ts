@@ -110,9 +110,12 @@ export async function cancelSubscription(
 }
 
 export async function renewSubscription(
-  id: string
+  id: string,
+  durationType: string
 ): Promise<Subscription> {
-  const { data } = await api.post(`/subscriptions/${id}/renew`);
+  const { data } = await api.post(`/subscriptions/${id}/renew`, {
+    duration_type: durationType,
+  });
   return data;
 }
 

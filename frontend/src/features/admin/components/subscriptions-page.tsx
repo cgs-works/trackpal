@@ -38,6 +38,7 @@ import {
   SubscriptionLifecycleDialog,
   type LifecycleAction,
 } from "./subscription-lifecycle-dialog";
+import { SubscriptionRenewDialog } from "./subscription-renew-dialog";
 
 export function SubscriptionsPage() {
   const STATUS_OPTIONS = [
@@ -89,6 +90,11 @@ export function SubscriptionsPage() {
   const [lifecycleAction, setLifecycleAction] = useState<LifecycleAction>("cancel");
   const [lifecycleSub, setLifecycleSub] = useState<Subscription | null>(null);
   const [lifecycleLoading, setLifecycleLoading] = useState(false);
+
+  // Renew state
+  const [renewOpen, setRenewOpen] = useState(false);
+  const [renewSub, setRenewSub] = useState<Subscription | null>(null);
+  const [renewLoading, setRenewLoading] = useState(false);
 
   // ── Load data ──────────────────────────────────────────────
   const loadDropdowns = useCallback(async () => {
@@ -247,9 +253,6 @@ export function SubscriptionsPage() {
       if (lifecycleAction === "cancel") {
         await cancelSubscription(lifecycleSub.id);
         toast.success(t("frontend.subscriptions.cancelled") || "Subscription cancelled.");
-      } else if (lifecycleAction === "renew") {
-        await renewSubscription(lifecycleSub.id);
-        toast.success(t("frontend.subscriptions.renewed") || "Subscription renewed.");
       } else if (lifecycleAction === "reactivate") {
         await reactivateSubscription(lifecycleSub.id);
         toast.success(t("frontend.subscriptions.reactivated") || "Subscription reactivated.");
@@ -263,6 +266,29 @@ export function SubscriptionsPage() {
       );
     } finally {
       setLifecycleLoading(false);
+    }
+  }
+
+  // ── Renew actions ──────────────────────────────────────────
+  function openRenew(sub: Subscription) {
+    setRenewSub(sub);
+    setRenewOpen(true);
+  }
+
+  async function handleRenewConfirm(durationType: string) {
+    if (!renewSub) return;
+    setRenewLoading(true);
+    try {
+      await renewSubscription(renewSub.id, durationType);
+      toast.success(t("frontend.subscriptions.renewed") || "Subscription renewed.");
+      setRenewOpen(false);
+      await loadSubscriptions();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : t("frontend.subscriptions.error_renew")
+      );
+    } finally {
+      setRenewLoading(false);
     }
   }
 
@@ -390,7 +416,7 @@ export function SubscriptionsPage() {
               onEdit={openEdit}
               onReveal={handleReveal}
               onCancel={(sub) => openLifecycle("cancel", sub)}
-              onRenew={(sub) => openLifecycle("renew", sub)}
+              onRenew={openRenew}
               onReactivate={(sub) => openLifecycle("reactivate", sub)}
             />
           </>
@@ -429,6 +455,15 @@ export function SubscriptionsPage() {
         action={lifecycleAction}
         onConfirm={handleLifecycleConfirm}
         loading={lifecycleLoading}
+      />
+
+      {/* Renew dialog with duration selection */}
+      <SubscriptionRenewDialog
+        open={renewOpen}
+        onOpenChange={setRenewOpen}
+        subscription={renewSub}
+        onConfirm={handleRenewConfirm}
+        loading={renewLoading}
       />
     </div>
   );
