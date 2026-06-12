@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import update as sa_update
-
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import LOCALE_NAMES, t as _i18n_t
-from app.models import Tenant
+from app.repositories import tenants_repository
+from app.schemas.tenant_settings import TenantSettingsUpdate
+from app.services.tenant_settings_service import TenantSettingsService
 from app.services.whatsapp_navigation import is_back
 
 from . import _context as ctx
@@ -226,12 +226,14 @@ async def _handle_profile_change_locale_select(
     new_locale = "en" if msg == "1" else "es"
 
     if user_id is not None and db is not None:
-        await db.execute(
-            sa_update(Tenant)
-            .where(Tenant.owner_user_id == user_id)
-            .values(locale=new_locale)
-        )
-        await db.commit()
+        tenant = await tenants_repository.get_by_owner(db, user_id)
+        if tenant is not None:
+            service = TenantSettingsService()
+            await service.update_settings(
+                db,
+                tenant.id,
+                TenantSettingsUpdate(locale=new_locale),
+            )
 
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")

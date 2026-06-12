@@ -4088,3 +4088,54 @@ class TestCatalogFlow:
         assert "1\ufe0f\u20e3 PH" in reply
         assert "2\ufe0f\u20e3 PI" in reply
         assert "8\ufe0f\u20e3 Siguiente" not in reply
+
+
+@pytest.mark.asyncio
+async def test_tenant_console_profile_locale_updates_tenant_settings(
+    db_session, active_tenant_user
+):
+    """Profile locale change via WhatsApp updates TenantSettings (not Tenant)."""
+    from sqlalchemy import select
+
+    from app.models import Tenant, TenantSettings
+    from app.services.whatsapp_session_service import WhatsAppSessionService
+    from app.services.whatsapp_tenant_console_service import (
+        WhatsAppTenantConsoleService,
+    )
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    assert settings.locale == "en"
+
+    service = WhatsAppTenantConsoleService()
+    session_service = WhatsAppSessionService(FakeManager())
+    session = await session_service.create_session("admin:12015550002")
+    session.flow = service.PROFILE_FLOW
+    session.step = service.PROFILE_STEP_CHANGE_LOCALE_SELECT
+    await session_service.save_session(session)
+
+    response = await service.process_message(
+        phone="12015550002",
+        message="2",
+        tenant_id=tenant.id,
+        user_id=active_tenant_user.id,
+        db=db_session,
+        session_service=session_service,
+        locale="en",
+    )
+
+    refreshed = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    assert refreshed.locale == "es"
+    assert "Español" in response

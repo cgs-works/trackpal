@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from zoneinfo import ZoneInfo
 
 from app.core.database import restore_rls_context
 from app.models.subscription import (
@@ -44,8 +45,20 @@ async def _get_tenant_end_of_day(
     db: AsyncSession, tenant_id: uuid.UUID, now: datetime, today: date
 ) -> datetime:
     tz_map = await _get_tenant_timezone_map(db)
-    _tenant_tz_str = tz_map.get(tenant_id, "UTC")
-    return datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc)
+    tz_str = tz_map.get(tenant_id, "UTC")
+    try:
+        tz = ZoneInfo(tz_str)
+    except (KeyError, TypeError, ValueError):
+        tz = ZoneInfo("UTC")
+    # Get local date from the current UTC time in tenant's timezone
+    local_now = now.astimezone(tz)
+    local_today = local_now.date()
+    # Local end-of-day converted to UTC
+    local_eod = datetime(
+        local_today.year, local_today.month, local_today.day,
+        23, 59, 59, tzinfo=tz,
+    )
+    return local_eod.astimezone(timezone.utc)
 
 
 async def _expire_active_subs(

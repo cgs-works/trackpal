@@ -22,6 +22,7 @@ from app.models import (
     Tenant,
     TenantCodeServiceSelection,
     TenantMailbox,
+    TenantSettings,
     User,
 )
 from app.repositories import mailbox_lookup_repository
@@ -939,7 +940,15 @@ async def _setup_tenant_for_codigo(db_session, active_tenant_user) -> Tenant:
     tenant = result.scalar_one_or_none()
     assert tenant is not None
     tenant.evolution_instance_name = TEST_INSTANCE
-    tenant.locale = "es"
+    await db_session.flush()
+    # Locale is now stored in TenantSettings
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one_or_none()
+    if settings is not None:
+        settings.locale = "es"
     await db_session.flush()
 
     # Create connected mailbox
@@ -1943,7 +1952,15 @@ async def _setup_tenant_with_instance(db_session, active_tenant_user):
     tenant = result.scalar_one_or_none()
     assert tenant is not None
     tenant.evolution_instance_name = TEST_INSTANCE
-    tenant.locale = "es"
+    await db_session.flush()
+    # Locale is now stored in TenantSettings
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one_or_none()
+    if settings is not None:
+        settings.locale = "es"
     await db_session.commit()
     return tenant
 

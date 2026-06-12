@@ -150,8 +150,8 @@ async def generate_reminder_payloads(
     if not subs:
         return {"items": [], "next_cursor": None}
 
-    # Batch-load settings and tenants — eliminates N+1 queries
-    settings_map, tenants_map = await load_batched_reminder_data(db, subs)
+    # Batch-load settings, tenants, and tenant settings — eliminates N+1 queries
+    settings_map, tenants_map, tenant_settings_map = await load_batched_reminder_data(db, subs)
 
     items: list[dict[str, Any]] = []
 
@@ -159,6 +159,7 @@ async def generate_reminder_payloads(
         try:
             settings = settings_map.get(sub.tenant_id)
             tenant = tenants_map.get(sub.tenant_id)
+            tenant_settings = tenant_settings_map.get(sub.tenant_id)
 
             # Skip if tenant or settings are missing
             if not tenant or not settings:
@@ -168,9 +169,8 @@ async def generate_reminder_payloads(
             if not settings.reminders_enabled:
                 continue
 
-            # Timezone is now managed in TenantSettings; default to UTC
-            # for reminder scheduling until TenantSettings are batched here.
-            tz_name = "UTC"
+            # Timezone from TenantSettings; default to UTC if not set
+            tz_name = getattr(tenant_settings, "timezone", None) or "UTC"
             if not is_valid_timezone(tz_name):
                 # Skip the invalid-timezone tenant, not the whole batch
                 continue
@@ -210,7 +210,7 @@ async def generate_reminder_payloads(
                     # Render message and decrypt token BEFORE persisting
                     # the log — if render/decrypt/payload fails, no log
                     # is created.
-                    locale = getattr(tenant, "locale", "en") or "en"
+                    locale = getattr(tenant_settings, "locale", None) or "en"
                     message = _render_reminder_message(
                         service_name=service_name,
                         client_name=client_name,

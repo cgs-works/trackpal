@@ -18,6 +18,7 @@ from app.models.client import Client
 from app.models.service import Service
 from app.models.plan import Plan
 from app.models.tenant import Tenant
+from app.models.tenant_settings import TenantSettings
 from app.models.user import User
 from app.core.errors import UserFacingError
 from app.core.security import get_password_hash
@@ -1746,3 +1747,126 @@ async def test_reminder_pending_malformed_cursor_returns_200(
     )
     assert resp3.status_code == 200, resp3.text
     # Empty string is falsy, so treated as no cursor — dedup may return empty
+
+
+@pytest.mark.asyncio
+async def test_reminder_payload_uses_tenant_settings_timezone_and_locale(
+    db_session, active_tenant_user
+):
+    """Reminder payload uses timezone/locale from TenantSettings (not Tenant)."""
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+
+    from sqlalchemy import select
+
+    from app.core.encryption import encrypt_value
+    from app.services.subscription_job_service import reminder_payloads
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings.locale = "es"
+    settings.timezone = "America/Santo_Domingo"
+
+    # Create subscription dependencies
+    client_user = User(
+        username="ts_locale_client",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(client_user)
+    await db_session.flush()
+    client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=client_user.id,
+        full_name="Locale Test Client",
+        username=client_user.username,
+        phone="+12015559999",
+        is_active=True,
+    )
+    db_session.add(client)
+    service = Service(tenant_id=tenant.id, name="Test Service")
+    db_session.add(service)
+    await db_session.flush()
+    plan = Plan(tenant_id=tenant.id, service_id=service.id, name="Test Plan")
+    db_session.add(plan)
+    await db_session.flush()
+
+    now = datetime(2026, 7, 8, 14, 0, tzinfo=timezone.utc)
+    sub = Subscription(
+        tenant_id=tenant.id,
+        client_id=client.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="test@example.com",
+        streaming_password_encrypted=encrypt_value("secret"),
+        profile_name="Profile",
+        duration_type="custom",
+        starts_at=now - timedelta(days=30),
+        expires_at=now + timedelta(days=3),
+        status="active",
+    )
+    db_session.add(sub)
+    await db_session.flush()
+
+    # Create SubscriptionReminderSettings
+    reminder_settings = SubscriptionReminderSettings(
+        tenant_id=tenant.id,
+        reminders_enabled=True,
+        reminder_time="09:00",
+        warning_days=[7, 3, 1],
+        recipient_mode="tenant_only",
+    )
+    db_session.add(reminder_settings)
+    await db_session.commit()
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 7, 8, 14, 0, tzinfo=timezone.utc)
+
+    with patch.object(reminder_payloads, "datetime", FixedDateTime):
+        result = await reminder_payloads.generate_reminder_payloads(db_session)
+
+    assert len(result["items"]) == 1, (
+        f"Expected 1 item, got {len(result['items'])}: {result}"
+    )
+    assert "días" in result["items"][0]["message"]
+    assert result["items"][0]["tenant_id"] == str(tenant.id)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_uses_tenant_settings_timezone_for_end_of_day(
+    db_session, active_tenant_user
+):
+    """Cleanup EOD respects tenant timezone (not hardcoded UTC)."""
+    from datetime import date, datetime, timezone
+
+    from sqlalchemy import select
+
+    from app.services.subscription_job_service.cleanup import _get_tenant_end_of_day
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings.timezone = "America/New_York"
+    await db_session.commit()
+
+    now = datetime(2026, 1, 2, 15, 0, tzinfo=timezone.utc)
+    today = date(2026, 1, 2)
+    eod = await _get_tenant_end_of_day(db_session, tenant.id, now, today)
+    assert eod == datetime(2026, 1, 3, 4, 59, 59, tzinfo=timezone.utc)
