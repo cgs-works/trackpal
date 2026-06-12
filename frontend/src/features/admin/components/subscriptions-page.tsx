@@ -275,11 +275,11 @@ export function SubscriptionsPage() {
     setRenewOpen(true);
   }
 
-  async function handleRenewConfirm(durationType: string) {
+  async function handleRenewConfirm(durationType: string, expiresAt?: string) {
     if (!renewSub) return;
     setRenewLoading(true);
     try {
-      await renewSubscription(renewSub.id, durationType);
+      await renewSubscription(renewSub.id, durationType, expiresAt);
       toast.success(t("frontend.subscriptions.renewed") || "Subscription renewed.");
       setRenewOpen(false);
       await loadSubscriptions();

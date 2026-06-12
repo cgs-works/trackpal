@@ -111,11 +111,12 @@ export async function cancelSubscription(
 
 export async function renewSubscription(
   id: string,
-  durationType: string
+  durationType: string,
+  expiresAt?: string
 ): Promise<Subscription> {
-  const { data } = await api.post(`/subscriptions/${id}/renew`, {
-    duration_type: durationType,
-  });
+  const payload: Record<string, string> = { duration_type: durationType };
+  if (expiresAt) payload.expires_at = expiresAt;
+  const { data } = await api.post(`/subscriptions/${id}/renew`, payload);
   return data;
 }
 

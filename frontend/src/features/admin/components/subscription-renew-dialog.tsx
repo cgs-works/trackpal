@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { t } from "@/i18n";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +18,7 @@ interface SubscriptionRenewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subscription: Subscription | null;
-  onConfirm: (durationType: string) => void;
+  onConfirm: (durationType: string, expiresAt?: string) => void;
   loading?: boolean;
 }
 
@@ -25,6 +27,7 @@ const DURATION_OPTIONS = [
   { value: "3_months", label: "3 months", days: 90 },
   { value: "9_months", label: "9 months", days: 270 },
   { value: "1_year", label: "1 year", days: 365 },
+  { value: "custom", label: "Custom", days: 0 },
 ];
 
 function addDays(dateStr: string, days: number): string {
@@ -37,6 +40,16 @@ function addDays(dateStr: string, days: number): string {
   });
 }
 
+function toDateString(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function minDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return toDateString(d);
+}
+
 export function SubscriptionRenewDialog({
   open,
   onOpenChange,
@@ -46,29 +59,52 @@ export function SubscriptionRenewDialog({
 }: SubscriptionRenewDialogProps) {
   const [step, setStep] = useState<"duration" | "confirm">("duration");
   const [selectedDuration, setSelectedDuration] = useState("1_month");
+  const [customDate, setCustomDate] = useState("");
 
   if (!subscription) return null;
+
+  const isCustom = selectedDuration === "custom";
+  const minExpiry = minDate(subscription.expires_at);
 
   function handleOpenChange(value: boolean) {
     if (!value) {
       setStep("duration");
       setSelectedDuration("1_month");
+      setCustomDate("");
     }
     onOpenChange(value);
   }
 
   function handleNext() {
+    if (isCustom && !customDate) return;
     setStep("confirm");
   }
 
   function handleConfirm() {
-    onConfirm(selectedDuration);
+    if (isCustom) {
+      onConfirm("custom", customDate);
+    } else {
+      onConfirm(selectedDuration);
+    }
   }
 
   const selectedOption = DURATION_OPTIONS.find((o) => o.value === selectedDuration);
-  const newExpiry = selectedOption
-    ? addDays(subscription.expires_at, selectedOption.days)
-    : "";
+  let newExpiry = "";
+  if (isCustom && customDate) {
+    newExpiry = new Date(customDate + "T00:00:00").toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } else if (selectedOption && selectedOption.days > 0) {
+    newExpiry = addDays(subscription.expires_at, selectedOption.days);
+  }
+
+  const currentExpiry = new Date(subscription.expires_at).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -86,8 +122,16 @@ export function SubscriptionRenewDialog({
 
             <div className="grid grid-cols-2 gap-2 py-4">
               {DURATION_OPTIONS.map((opt) => {
-                const newDate = addDays(subscription.expires_at, opt.days);
+                const isCustomOpt = opt.value === "custom";
                 const isSelected = selectedDuration === opt.value;
+                let preview = "";
+                if (!isCustomOpt) {
+                  preview = `→ ${addDays(subscription.expires_at, opt.days)}`;
+                } else if (isCustom && customDate) {
+                  preview = `→ ${newExpiry}`;
+                } else {
+                  preview = "Pick a date";
+                }
                 return (
                   <button
                     key={opt.value}
@@ -100,15 +144,30 @@ export function SubscriptionRenewDialog({
                     }`}
                   >
                     <span className="font-medium text-sm">{opt.label}</span>
-                    <span className="text-xs text-muted-foreground">→ {newDate}</span>
+                    <span className="text-xs text-muted-foreground">{preview}</span>
                   </button>
                 );
               })}
             </div>
 
+            {isCustom && (
+              <div className="px-1 pb-2">
+                <Label className="text-sm mb-1.5 block">Expiry date</Label>
+                <Input
+                  type="date"
+                  value={customDate}
+                  min={minExpiry}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                />
+              </div>
+            )}
+
             <AlertDialogFooter>
               <AlertDialogCancel>{t("frontend.common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={handleNext}>
+              <AlertDialogAction
+                onClick={handleNext}
+                disabled={isCustom && !customDate}
+              >
                 Next
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -121,17 +180,11 @@ export function SubscriptionRenewDialog({
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Are you sure you want to renew this subscription for{" "}
-                <strong>{selectedOption?.label}</strong>?
+                <strong>{isCustom ? "custom duration" : selectedOption?.label}</strong>?
                 <br />
                 <br />
                 Current expiry:{" "}
-                <span className="font-mono">
-                  {new Date(subscription.expires_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
+                <span className="font-mono">{currentExpiry}</span>
                 <br />
                 New expiry:{" "}
                 <span className="font-mono text-green-500">{newExpiry}</span>
