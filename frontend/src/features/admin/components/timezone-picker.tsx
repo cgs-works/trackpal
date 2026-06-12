@@ -34,6 +34,7 @@ const CONTINENTS: Record<string, { label: string; emoji: string }> = {
 };
 
 function getContinent(group: string): string {
+  if (!group) return "Other";
   if (group === "UTC") return "UTC";
   // Extract continent from group like "America/Argentina" -> "America"
   const parts = group.split("/");
