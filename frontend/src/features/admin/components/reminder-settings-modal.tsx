@@ -25,12 +25,7 @@ import { Alert } from "@/components/ui/alert";
 import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { t, getLocale } from "@/i18n";
-import {
-  getReminderSettings,
-  updateReminderSettings,
-  getTimezones,
-  type TimezoneOption,
-} from "../services/reminder-api";
+import { useSettingsStore } from "@/store/settings";
 
 // ── Placeholder values for preview ──────────────────────────────
 const PREVIEW_PLACEHOLDERS = {
@@ -58,8 +53,8 @@ function getDefaultMessages(locale: string) {
 }
 
 // ── Timezone groups ─────────────────────────────────────────────
-function groupTimezones(timezones: TimezoneOption[]) {
-  const groups: Record<string, TimezoneOption[]> = {};
+function groupTimezones(timezones: { value: string; label: string; group: string }[]) {
+  const groups: Record<string, { value: string; label: string; group: string }[]> = {};
   for (const tz of timezones) {
     const group = tz.group || "Other";
     if (!groups[group]) groups[group] = [];
@@ -90,10 +85,19 @@ export function ReminderSettingsModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [timezones, setTimezones] = useState<TimezoneOption[]>([]);
   const [locale, setLocale] = useState(getLocale());
 
   const defaults = getDefaultMessages(locale);
+
+  // Use settings store
+  const {
+    reminderSettings,
+    timezoneOptions,
+    settingsLoaded,
+    timezonesLoaded,
+    loadTenantSettings,
+    updateReminderSettings,
+  } = useSettingsStore();
 
   const [settings, setSettings] = useState({
     reminders_enabled: false,
@@ -110,7 +114,7 @@ export function ReminderSettingsModal({
     Record<string, string>
   >({});
 
-  // ── Load data ───────────────────────────────────────────────
+  // ── Load data from cache or API ─────────────────────────────
   const loadData = useCallback(async () => {
     if (!open) return;
     setError("");
@@ -118,21 +122,7 @@ export function ReminderSettingsModal({
     setLocale(getLocale());
 
     try {
-      const [settingsData, timezonesData] = await Promise.all([
-        getReminderSettings(),
-        getTimezones(),
-      ]);
-
-      setSettings({
-        reminders_enabled: settingsData.reminders_enabled,
-        timezone: settingsData.timezone || "UTC",
-        warning_days: settingsData.warning_days || [7, 3, 1],
-        reminder_time: settingsData.reminder_time || "09:00",
-        recipient_mode: settingsData.recipient_mode || "tenant_only",
-        custom_message_tenant: settingsData.custom_message_tenant,
-        custom_message_client: settingsData.custom_message_client,
-      });
-      setTimezones(timezonesData);
+      await loadTenantSettings();
     } catch (err: unknown) {
       const apiErr = err as {
         response?: { data?: { detail?: string | Array<{ msg?: string }> } }
@@ -150,7 +140,22 @@ export function ReminderSettingsModal({
     } finally {
       setIsLoading(false);
     }
-  }, [open]);
+  }, [open, loadTenantSettings]);
+
+  // Sync store data to local state when cache loads
+  useEffect(() => {
+    if (settingsLoaded && reminderSettings) {
+      setSettings({
+        reminders_enabled: reminderSettings.reminders_enabled,
+        timezone: reminderSettings.timezone || "UTC",
+        warning_days: reminderSettings.warning_days || [7, 3, 1],
+        reminder_time: reminderSettings.reminder_time || "09:00",
+        recipient_mode: reminderSettings.recipient_mode || "tenant_only",
+        custom_message_tenant: reminderSettings.custom_message_tenant,
+        custom_message_client: reminderSettings.custom_message_client,
+      });
+    }
+  }, [settingsLoaded, reminderSettings]);
 
   useEffect(() => {
     loadData();
@@ -242,7 +247,7 @@ export function ReminderSettingsModal({
   }
 
   // ── Timezone groups ─────────────────────────────────────────
-  const timezoneGroups = groupTimezones(timezones);
+  const timezoneGroups = groupTimezones(timezoneOptions);
   const hasTimezoneError = !!(validationErrors.timezone && settings.reminders_enabled);
   const hasWarningDaysError = !!(validationErrors.warning_days && settings.reminders_enabled);
   const hasTimeError = !!(validationErrors.reminder_time && settings.reminders_enabled);

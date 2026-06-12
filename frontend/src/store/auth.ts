@@ -7,6 +7,7 @@ import {
   type UserInfo,
 } from "@/features/auth/services/auth-api";
 import { loadCatalog } from "@/i18n";
+import { useSettingsStore } from "@/store/settings";
 
 interface AuthState {
   token: string | null
@@ -63,6 +64,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (username, password) => {
     const data = await loginApi(username, password);
     saveTokenData(data);
+    // Clear settings cache on new login
+    useSettingsStore.getState().clearSettingsCache();
     set({
       token: data.access_token,
       refreshToken: data.refresh_token,
@@ -85,6 +88,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Ignore errors on logout
     }
     clearTokenData();
+    // Clear settings cache on logout
+    useSettingsStore.getState().clearSettingsCache();
     set({
       token: null,
       refreshToken: null,
@@ -99,6 +104,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   switchTenant: async (tenantId) => {
     const data = await switchTenantApi(tenantId);
     saveTokenData(data);
+    // Clear settings cache on tenant switch
+    useSettingsStore.getState().clearSettingsCache();
     set({
       token: data.access_token,
       refreshToken: data.refresh_token,
