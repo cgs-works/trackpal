@@ -235,21 +235,21 @@ export function ReminderSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[560px] max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>{t("frontend.subscriptions.reminder_settings_title")}</DialogTitle>
+      <DialogContent className="max-w-[680px] w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-8 pt-6 pb-4 border-b">
+          <DialogTitle className="text-lg">{t("frontend.subscriptions.reminder_settings_title")}</DialogTitle>
         </DialogHeader>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-10 w-full" />
+            <div className="space-y-5">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : (
-            <>
+            <div className="space-y-7">
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -259,8 +259,8 @@ export function ReminderSettingsModal({
 
               {/* ── Enable toggle ────────────────────────────── */}
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base">{t("frontend.subscriptions.reminders_enabled")}</Label>
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">{t("frontend.subscriptions.reminders_enabled")}</Label>
                   <p className="text-sm text-muted-foreground">
                     {t("frontend.subscriptions.reminders_desc")}
                   </p>
@@ -281,9 +281,9 @@ export function ReminderSettingsModal({
                   <Separator />
 
                   {/* ── Timezone ──────────────────────────────── */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <Label
-                      className={hasTimezoneError ? "text-destructive" : ""}
+                      className={`text-sm font-medium ${hasTimezoneError ? "text-destructive" : ""}`}
                     >
                       {t("frontend.subscriptions.timezone")}
                     </Label>
@@ -297,9 +297,7 @@ export function ReminderSettingsModal({
                       }
                     >
                       <SelectTrigger
-                        className={
-                          hasTimezoneError ? "border-destructive" : ""
-                        }
+                        className={`w-full ${hasTimezoneError ? "border-destructive" : ""}`}
                       >
                         <SelectValue placeholder={t("frontend.subscriptions.timezone")} />
                       </SelectTrigger>
@@ -332,21 +330,18 @@ export function ReminderSettingsModal({
                   </div>
 
                   {/* ── Warning days ──────────────────────────── */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <Label
-                      className={hasWarningDaysError ? "text-destructive" : ""}
+                      className={`text-sm font-medium ${hasWarningDaysError ? "text-destructive" : ""}`}
                     >
                       {t("frontend.subscriptions.warning_days")}
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {t("frontend.subscriptions.reminders_desc")}
-                    </p>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {[7, 3, 1].map((day) => (
                         <label
                           key={day}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer hover:bg-accent"
+                          className="flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer hover:bg-accent transition-colors"
                         >
                           <input
                             type="checkbox"
@@ -355,19 +350,19 @@ export function ReminderSettingsModal({
                             className="rounded"
                           />
                           <span className="text-sm">
-                            {day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.day")}
+                            {day} {day === 1 ? "day" : "days"}
                           </span>
                         </label>
                       ))}
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Input
                           type="number"
                           min={1}
                           value={customDay}
                           onChange={(e) => setCustomDay(e.target.value)}
-                          placeholder={t("frontend.subscriptions.duration_custom")}
-                          className="w-20 h-8 text-sm"
+                          placeholder="Custom"
+                          className="w-20 h-9 text-sm"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -379,29 +374,29 @@ export function ReminderSettingsModal({
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8 shrink-0"
+                          className="h-9 w-9 shrink-0"
                           onClick={addCustomDay}
                           disabled={!customDay}
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
 
                     {settings.warning_days.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-3">
                         {settings.warning_days.map((day) => (
                           <span
                             key={day}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
                           >
-                            {day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.day")}
+                            {day} {day === 1 ? "day" : "days"}
                             <button
                               type="button"
                               onClick={() => removeWarningDay(day)}
-                              className="hover:text-destructive"
+                              className="hover:text-destructive transition-colors"
                             >
-                              <X className="h-3 w-3" />
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </span>
                         ))}
@@ -416,9 +411,9 @@ export function ReminderSettingsModal({
                   </div>
 
                   {/* ── Reminder time ─────────────────────────── */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <Label
-                      className={hasTimeError ? "text-destructive" : ""}
+                      className={`text-sm font-medium ${hasTimeError ? "text-destructive" : ""}`}
                     >
                       {t("frontend.subscriptions.reminder_time")}
                     </Label>
@@ -435,7 +430,7 @@ export function ReminderSettingsModal({
                         }))
                       }
                       className={
-                        hasTimeError ? "border-destructive" : "w-32"
+                        hasTimeError ? "border-destructive w-40" : "w-40"
                       }
                     />
                     {hasTimeError && (
@@ -446,40 +441,39 @@ export function ReminderSettingsModal({
                   </div>
 
                   {/* ── Recipient mode ────────────────────────── */}
-                  <div className="space-y-2">
-                    <Label>{t("frontend.subscriptions.recipients")}</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {t("frontend.subscriptions.reminders_desc")}
-                    </p>
-                    <div className="space-y-2">
+                  <div className="space-y-2.5">
+                    <Label className="text-sm font-medium">{t("frontend.subscriptions.recipients")}</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
                         {
                           value: "tenant_only",
                           label: t("frontend.subscriptions.recipient_mode_tenant_only"),
-                          desc: "Only you (the business owner) receives reminders",
+                          desc: "Admin only",
                         },
                         {
                           value: "client_only",
                           label: t("frontend.subscriptions.recipient_mode_client_only"),
-                          desc: "Only the client receives reminders",
+                          desc: "Client only",
                         },
                         {
                           value: "both",
                           label: t("frontend.subscriptions.recipient_mode_both"),
-                          desc: "Both tenant and client receive reminders",
+                          desc: "Both",
                         },
                       ].map((opt) => (
                         <label
                           key={opt.value}
-                          className="flex items-start gap-3 p-3 rounded-md border cursor-pointer hover:bg-accent"
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            settings.recipient_mode === opt.value
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-accent"
+                          }`}
                         >
                           <input
                             type="radio"
                             name="recipient_mode"
                             value={opt.value}
-                            checked={
-                              settings.recipient_mode === opt.value
-                            }
+                            checked={settings.recipient_mode === opt.value}
                             onChange={(e) =>
                               setSettings((prev) => ({
                                 ...prev,
@@ -489,16 +483,10 @@ export function ReminderSettingsModal({
                                   | "both",
                               }))
                             }
-                            className="mt-0.5"
+                            className="sr-only"
                           />
-                          <div>
-                            <span className="text-sm font-medium">
-                              {opt.label}
-                            </span>
-                            <p className="text-xs text-muted-foreground">
-                              {opt.desc}
-                            </p>
-                          </div>
+                          <span className="text-sm font-medium">{opt.desc}</span>
+                          <span className="text-xs text-muted-foreground text-center">{opt.label}</span>
                         </label>
                       ))}
                     </div>
@@ -509,66 +497,60 @@ export function ReminderSettingsModal({
                   {/* ── Custom messages ───────────────────────── */}
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-base">
+                      <Label className="text-sm font-medium">
                         Custom messages
                       </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Write your own reminder message. Use{" "}
-                        <code className="px-1 py-0.5 rounded bg-muted text-xs">
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Use{" "}
+                        <code className="px-1.5 py-0.5 rounded bg-muted text-xs">
                           {"{{placeholder}}"}
                         </code>{" "}
-                        for dynamic values.
+                        for dynamic values: client_name, service_name, days, streaming_email, expires_at
                       </p>
                     </div>
 
-                    {/* Tenant message */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">
-                        Message to tenant (you)
-                      </Label>
-                      <textarea
-                        value={
-                          settings.custom_message_tenant ||
-                          DEFAULT_TENANT_MESSAGE
-                        }
-                        onChange={(e) =>
-                          setSettings((prev) => ({
-                            ...prev,
-                            custom_message_tenant: e.target.value,
-                          }))
-                        }
-                        rows={3}
-                        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-                      />
-                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Tenant message */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          Message to admin
+                        </Label>
+                        <textarea
+                          value={
+                            settings.custom_message_tenant ||
+                            DEFAULT_TENANT_MESSAGE
+                          }
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              custom_message_tenant: e.target.value,
+                            }))
+                          }
+                          rows={4}
+                          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                        />
+                      </div>
 
-                    {/* Client message */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">
-                        Message to client
-                      </Label>
-                      <textarea
-                        value={
-                          settings.custom_message_client ||
-                          DEFAULT_CLIENT_MESSAGE
-                        }
-                        onChange={(e) =>
-                          setSettings((prev) => ({
-                            ...prev,
-                            custom_message_client: e.target.value,
-                          }))
-                        }
-                        rows={3}
-                        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-                      />
-                    </div>
-
-                    {/* Placeholders reference */}
-                    <div className="text-xs text-muted-foreground">
-                      <span className="font-medium">Available:</span>{" "}
-                      {"{{client_name}}"}, {"{{service_name}}"},{" "}
-                      {"{{days}}"}, {"{{streaming_email}}"},{" "}
-                      {"{{expires_at}}"}
+                      {/* Client message */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          Message to client
+                        </Label>
+                        <textarea
+                          value={
+                            settings.custom_message_client ||
+                            DEFAULT_CLIENT_MESSAGE
+                          }
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              custom_message_client: e.target.value,
+                            }))
+                          }
+                          rows={4}
+                          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                        />
+                      </div>
                     </div>
 
                     {/* Live preview */}
@@ -576,7 +558,7 @@ export function ReminderSettingsModal({
                       <Label className="text-sm text-muted-foreground">
                         Preview
                       </Label>
-                      <div className="rounded-md bg-muted p-3 text-sm">
+                      <div className="rounded-lg bg-muted/50 p-4 text-sm leading-relaxed">
                         {renderPreview(
                           settings.custom_message_tenant ||
                             DEFAULT_TENANT_MESSAGE
@@ -586,11 +568,11 @@ export function ReminderSettingsModal({
                   </div>
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        <DialogFooter className="p-6 pt-0">
+        <DialogFooter className="px-8 py-4 border-t bg-muted/30">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
