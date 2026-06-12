@@ -10,15 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectGroup,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
@@ -26,6 +17,7 @@ import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { t, getLocale } from "@/i18n";
 import { useSettingsStore } from "@/store/settings";
+import { TimezonePicker } from "./timezone-picker";
 
 // ── Placeholder values for preview ──────────────────────────────
 const PREVIEW_PLACEHOLDERS = {
@@ -52,16 +44,7 @@ function getDefaultMessages(locale: string) {
   return DEFAULT_MESSAGES[locale] || DEFAULT_MESSAGES.en;
 }
 
-// ── Timezone groups ─────────────────────────────────────────────
-function groupTimezones(timezones: { value: string; label: string; group: string }[]) {
-  const groups: Record<string, { value: string; label: string; group: string }[]> = {};
-  for (const tz of timezones) {
-    const group = tz.group || "Other";
-    if (!groups[group]) groups[group] = [];
-    groups[group].push(tz);
-  }
-  return groups;
-}
+
 
 // ── Preview renderer ────────────────────────────────────────────
 function renderPreview(template: string): string {
@@ -245,8 +228,6 @@ export function ReminderSettingsModal({
     }
   }
 
-  // ── Timezone groups ─────────────────────────────────────────
-  const timezoneGroups = groupTimezones(timezoneOptions);
   const hasTimezoneError = !!(validationErrors.timezone && settings.reminders_enabled);
   const hasWarningDaysError = !!(validationErrors.warning_days && settings.reminders_enabled);
   const hasTimeError = !!(validationErrors.reminder_time && settings.reminders_enabled);
@@ -305,35 +286,17 @@ export function ReminderSettingsModal({
                     >
                       {t("frontend.subscriptions.timezone")}
                     </Label>
-                    <Select
+                    <TimezonePicker
                       value={settings.timezone}
-                      onValueChange={(value) =>
+                      onChange={(value) =>
                         setSettings((prev) => ({
                           ...prev,
                           timezone: value ?? "",
                         }))
                       }
-                    >
-                      <SelectTrigger
-                        className={`w-full ${hasTimezoneError ? "border-destructive" : ""}`}
-                      >
-                        <SelectValue placeholder={t("frontend.subscriptions.timezone")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(timezoneGroups).map(
-                          ([group, tzs]) => (
-                            <SelectGroup key={group}>
-                              <SelectLabel>{group}</SelectLabel>
-                              {tzs.map((tz) => (
-                                <SelectItem key={tz.value} value={tz.value}>
-                                  {tz.label}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
+                      timezones={timezoneOptions}
+                      error={hasTimezoneError}
+                    />
                     {settings.timezone === "UTC" && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
                         ⚠️ Reminders will be sent in UTC. Consider selecting
