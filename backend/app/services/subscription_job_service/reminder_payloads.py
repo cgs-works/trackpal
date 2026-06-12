@@ -168,8 +168,9 @@ async def generate_reminder_payloads(
             if not settings.reminders_enabled:
                 continue
 
-            # Resolve timezone for this tenant
-            tz_name = settings.timezone or "UTC"
+            # Timezone is now managed in TenantSettings; default to UTC
+            # for reminder scheduling until TenantSettings are batched here.
+            tz_name = "UTC"
             if not is_valid_timezone(tz_name):
                 # Skip the invalid-timezone tenant, not the whole batch
                 continue

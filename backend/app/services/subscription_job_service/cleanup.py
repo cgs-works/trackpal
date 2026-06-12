@@ -15,8 +15,8 @@ from app.models.subscription import (
     Subscription,
     SubscriptionEvent,
     SubscriptionReminderLog,
-    SubscriptionReminderSettings,
 )
+from app.models.tenant_settings import TenantSettings
 
 
 def _ensure_aware(dt: datetime) -> datetime:
@@ -29,8 +29,8 @@ def _ensure_aware(dt: datetime) -> datetime:
 async def _get_tenant_timezone_map(db: AsyncSession) -> dict[uuid.UUID, str]:
     res = await db.execute(
         select(
-            SubscriptionReminderSettings.tenant_id,
-            SubscriptionReminderSettings.timezone,
+            TenantSettings.tenant_id,
+            TenantSettings.timezone,
         )
     )
     rows = res.all()

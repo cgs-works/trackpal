@@ -92,7 +92,6 @@ class SubscriptionReminderSettingsResponse(BaseModel):
 
     id: uuid.UUID
     tenant_id: uuid.UUID
-    timezone: str
     warning_days: list[int]
     reminder_time: str
     recipient_mode: str
