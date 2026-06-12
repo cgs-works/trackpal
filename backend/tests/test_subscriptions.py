@@ -289,7 +289,6 @@ async def test_subscription_reminder_settings(db_session, active_tenant_user):
     await db_session.refresh(settings_obj)
     assert settings_obj.id is not None
     assert settings_obj.tenant_id == tenant.id
-    assert settings_obj.timezone == "UTC"
     assert settings_obj.warning_days == [7, 3, 1]
     assert settings_obj.reminder_time == "09:00"
     assert settings_obj.recipient_mode == "tenant_only"

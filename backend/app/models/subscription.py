@@ -144,9 +144,6 @@ class SubscriptionReminderSettings(Base, TimestampMixin):
         unique=True,
         nullable=False,
     )
-    timezone: Mapped[str] = mapped_column(
-        String(100), default="UTC", server_default="UTC", nullable=False
-    )
     warning_days: Mapped[Any] = mapped_column(
         JSON, default=lambda: [7, 3, 1], server_default="[7, 3, 1]", nullable=False
     )
