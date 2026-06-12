@@ -321,7 +321,7 @@ export function SubscriptionsPage() {
             <p className="text-muted-foreground mt-1">
               {hasFilters
                 ? t("frontend.subscriptions.filter_hint")
-                : t("frontend.subscriptions.create_first")}}
+                : t("frontend.subscriptions.create_first")}
             </p>
             {!hasFilters && (
               <Button onClick={openCreate} className="mt-4">
