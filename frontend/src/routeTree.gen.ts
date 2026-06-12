@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MasterRouteImport } from './routes/master'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ClientRouteImport } from './routes/client'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MasterDashboardRouteImport } from './routes/master/dashboard'
+import { Route as ClientPasswordRouteImport } from './routes/client/password'
 import { Route as ClientDashboardRouteImport } from './routes/client/dashboard'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
@@ -31,6 +33,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientRoute = ClientRouteImport.update({
+  id: '/client',
+  path: '/client',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -46,10 +53,15 @@ const MasterDashboardRoute = MasterDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => MasterRoute,
 } as any)
+const ClientPasswordRoute = ClientPasswordRouteImport.update({
+  id: '/password',
+  path: '/password',
+  getParentRoute: () => ClientRoute,
+} as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
-  id: '/client/dashboard',
-  path: '/client/dashboard',
-  getParentRoute: () => rootRouteImport,
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => ClientRoute,
 } as any)
 const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
   id: '/subscriptions',
@@ -80,6 +92,7 @@ const AdminCatalogRoute = AdminCatalogRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/client': typeof ClientRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -88,11 +101,13 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/password': typeof ClientPasswordRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/client': typeof ClientRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -101,12 +116,14 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/password': typeof ClientPasswordRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/client': typeof ClientRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -115,6 +132,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/password': typeof ClientPasswordRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRouteTypes {
@@ -122,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/client'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -130,11 +149,13 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
+    | '/client/password'
     | '/master/dashboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/client'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -143,11 +164,13 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
+    | '/client/password'
     | '/master/dashboard'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/client'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -156,15 +179,16 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
+    | '/client/password'
     | '/master/dashboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  ClientRoute: typeof ClientRouteWithChildren
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
-  ClientDashboardRoute: typeof ClientDashboardRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -181,6 +205,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/client': {
+      id: '/client'
+      path: '/client'
+      fullPath: '/client'
+      preLoaderRoute: typeof ClientRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -204,12 +235,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MasterDashboardRouteImport
       parentRoute: typeof MasterRoute
     }
+    '/client/password': {
+      id: '/client/password'
+      path: '/password'
+      fullPath: '/client/password'
+      preLoaderRoute: typeof ClientPasswordRouteImport
+      parentRoute: typeof ClientRoute
+    }
     '/client/dashboard': {
       id: '/client/dashboard'
-      path: '/client/dashboard'
+      path: '/dashboard'
       fullPath: '/client/dashboard'
       preLoaderRoute: typeof ClientDashboardRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ClientRoute
     }
     '/admin/subscriptions': {
       id: '/admin/subscriptions'
@@ -267,6 +305,19 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ClientRouteChildren {
+  ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientPasswordRoute: typeof ClientPasswordRoute
+}
+
+const ClientRouteChildren: ClientRouteChildren = {
+  ClientDashboardRoute: ClientDashboardRoute,
+  ClientPasswordRoute: ClientPasswordRoute,
+}
+
+const ClientRouteWithChildren =
+  ClientRoute._addFileChildren(ClientRouteChildren)
+
 interface MasterRouteChildren {
   MasterDashboardRoute: typeof MasterDashboardRoute
 }
@@ -281,9 +332,9 @@ const MasterRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  ClientRoute: ClientRouteWithChildren,
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
-  ClientDashboardRoute: ClientDashboardRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
