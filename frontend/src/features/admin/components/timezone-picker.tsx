@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface TimezoneOption {
   value: string;
   label: string;
-  group: string;
+  group?: string;
 }
 
 interface TimezonePickerProps {
@@ -33,11 +33,11 @@ const CONTINENTS: Record<string, { label: string; emoji: string }> = {
   UTC: { label: "UTC", emoji: "🕐" },
 };
 
-function getContinent(group: string): string {
-  if (!group) return "Other";
-  if (group === "UTC") return "UTC";
-  // Extract continent from group like "America/Argentina" -> "America"
-  const parts = group.split("/");
+function getContinent(timezone: string): string {
+  if (!timezone) return "Other";
+  if (timezone === "UTC") return "UTC";
+  // Extract continent from IANA timezone like "America/Argentina/Buenos_Aires" -> "America"
+  const parts = timezone.split("/");
   return parts[0] || "Other";
 }
 
@@ -63,7 +63,7 @@ export function TimezonePicker({
   const availableContinents = useMemo(() => {
     const continents = new Set<string>();
     timezones.forEach((tz) => {
-      continents.add(getContinent(tz.group));
+      continents.add(getContinent(tz.value));
     });
     return Array.from(continents).sort();
   }, [timezones]);
@@ -75,7 +75,7 @@ export function TimezonePicker({
     // Filter by continent if selected
     if (activeContinent) {
       result = result.filter(
-        (tz) => getContinent(tz.group) === activeContinent
+        (tz) => getContinent(tz.value) === activeContinent
       );
     }
 
@@ -85,8 +85,7 @@ export function TimezonePicker({
       result = result.filter(
         (tz) =>
           tz.label.toLowerCase().includes(query) ||
-          tz.value.toLowerCase().includes(query) ||
-          tz.group.toLowerCase().includes(query)
+          tz.value.toLowerCase().includes(query)
       );
     }
 
@@ -97,7 +96,7 @@ export function TimezonePicker({
   const groupedTimezones = useMemo(() => {
     const groups: Record<string, TimezoneOption[]> = {};
     filteredTimezones.forEach((tz) => {
-      const continent = getContinent(tz.group);
+      const continent = getContinent(tz.value);
       if (!groups[continent]) groups[continent] = [];
       groups[continent].push(tz);
     });
@@ -128,12 +127,9 @@ export function TimezonePicker({
   // Set initial active continent based on selected value
   useEffect(() => {
     if (value && !activeContinent) {
-      const selected = timezones.find((tz) => tz.value === value);
-      if (selected) {
-        setActiveContinent(getContinent(selected.group));
-      }
+      setActiveContinent(getContinent(value));
     }
-  }, [value, timezones, activeContinent]);
+  }, [value, activeContinent]);
 
   return (
     <div className="relative" ref={dropdownRef}>
