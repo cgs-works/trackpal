@@ -31,18 +31,18 @@ export interface ReminderSettingsUpdate {
 }
 
 export async function getReminderSettings(): Promise<ReminderSettings> {
-  const { data } = await api.get("/subscriptions/settings");
+  const { data } = await api.get("/subscription-settings");
   return data;
 }
 
 export async function updateReminderSettings(
   payload: ReminderSettingsUpdate
 ): Promise<ReminderSettings> {
-  const { data } = await api.put("/subscriptions/settings", payload);
+  const { data } = await api.put("/subscription-settings", payload);
   return data;
 }
 
 export async function getTimezones(): Promise<TimezoneOption[]> {
-  const { data } = await api.get("/subscriptions/settings/timezones");
+  const { data } = await api.get("/subscription-settings/timezones");
   return data;
 }
