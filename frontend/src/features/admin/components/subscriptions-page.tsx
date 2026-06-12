@@ -35,7 +35,6 @@ import { SubscriptionFormDialog } from "./subscription-form-dialog";
 const STATUS_OPTIONS = [
   { value: "all", label: t("frontend.subscriptions.all_statuses") },
   { value: "active", label: t("frontend.subscriptions.status_active") },
-  { value: "inactive", label: t("frontend.dashboard.client.status_inactive") },
   { value: "expired", label: t("frontend.subscriptions.status_expired") },
   { value: "cancelled", label: t("frontend.subscriptions.status_cancelled") },
 ];
@@ -187,10 +186,20 @@ export function SubscriptionsPage() {
       }
       setFormOpen(false);
       await loadSubscriptions();
-    } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : t("frontend.subscriptions.error_save")
-      );
+    } catch (err: unknown) {
+      const apiErr = err as {
+        response?: { data?: { detail?: string | Array<{ msg?: string }> } }
+      };
+      const detail = apiErr.response?.data?.detail;
+      let msg = t("frontend.subscriptions.error_save");
+      if (typeof detail === "string") {
+        msg = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d) => d.msg || "Unknown error").join("; ");
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setFormError(msg);
     } finally {
       setSaving(false);
     }

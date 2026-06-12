@@ -14,6 +14,8 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -117,10 +119,20 @@ export function ReminderSettingsModal({
         custom_message_client: settingsData.custom_message_client,
       });
       setTimezones(timezonesData);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("frontend.subscriptions.error_reminder_settings")
-      );
+    } catch (err: unknown) {
+      const apiErr = err as {
+        response?: { data?: { detail?: string | Array<{ msg?: string }> } }
+      };
+      const detail = apiErr.response?.data?.detail;
+      let msg = t("frontend.subscriptions.error_reminder_settings");
+      if (typeof detail === "string") {
+        msg = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d) => d.msg || "Unknown error").join("; ");
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -196,10 +208,20 @@ export function ReminderSettingsModal({
       await updateReminderSettings(settings);
       toast.success(t("frontend.subscriptions.reminder_saved"));
       onOpenChange(false);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("frontend.subscriptions.error_reminder_settings")
-      );
+    } catch (err: unknown) {
+      const apiErr = err as {
+        response?: { data?: { detail?: string | Array<{ msg?: string }> } }
+      };
+      const detail = apiErr.response?.data?.detail;
+      let msg = t("frontend.subscriptions.error_reminder_settings");
+      if (typeof detail === "string") {
+        msg = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d) => d.msg || "Unknown error").join("; ");
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setError(msg);
     } finally {
       setIsSaving(false);
     }
@@ -283,12 +305,15 @@ export function ReminderSettingsModal({
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(timezoneGroups).map(
-                          ([group, _tzs]) => (
-                            <SelectItem key={`group-${group}`} value={group} disabled>
-                              <span className="font-semibold text-muted-foreground">
-                                {group}
-                              </span>
-                            </SelectItem>
+                          ([group, tzs]) => (
+                            <SelectGroup key={group}>
+                              <SelectLabel>{group}</SelectLabel>
+                              {tzs.map((tz) => (
+                                <SelectItem key={tz.value} value={tz.value}>
+                                  {tz.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
                           )
                         )}
                       </SelectContent>
