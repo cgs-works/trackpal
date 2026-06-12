@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { t } from "@/i18n";
+import { t, getLocale } from "@/i18n";
 import {
   getReminderSettings,
   updateReminderSettings,
@@ -41,11 +41,21 @@ const PREVIEW_PLACEHOLDERS = {
   expires_at: "2026-07-15",
 };
 
-// ── Default messages ────────────────────────────────────────────
-const DEFAULT_TENANT_MESSAGE =
-  "Recordatorio: La suscripción de {{client_name}} para {{service_name}} vence en {{days}} días. Email: {{streaming_email}}.";
-const DEFAULT_CLIENT_MESSAGE =
-  "Hola {{client_name}}, tu suscripción a {{service_name}} vence en {{days}} días. Renueva para continuar disfrutando del servicio.";
+// ── Default messages by locale ──────────────────────────────────
+const DEFAULT_MESSAGES: Record<string, { tenant: string; client: string }> = {
+  en: {
+    tenant: "Reminder: {{client_name}}'s subscription for {{service_name}} expires in {{days}} days. Email: {{streaming_email}}.",
+    client: "Hi {{client_name}}, your subscription to {{service_name}} expires in {{days}} days. Renew to continue enjoying the service.",
+  },
+  es: {
+    tenant: "Recordatorio: La suscripción de {{client_name}} para {{service_name}} vence en {{days}} días. Email: {{streaming_email}}.",
+    client: "Hola {{client_name}}, tu suscripción a {{service_name}} vence en {{days}} días. Renueva para continuar disfrutando del servicio.",
+  },
+};
+
+function getDefaultMessages(locale: string) {
+  return DEFAULT_MESSAGES[locale] || DEFAULT_MESSAGES.en;
+}
 
 // ── Timezone groups ─────────────────────────────────────────────
 function groupTimezones(timezones: TimezoneOption[]) {
@@ -81,6 +91,9 @@ export function ReminderSettingsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [timezones, setTimezones] = useState<TimezoneOption[]>([]);
+  const [locale, setLocale] = useState(getLocale());
+
+  const defaults = getDefaultMessages(locale);
 
   const [settings, setSettings] = useState({
     reminders_enabled: false,
@@ -102,6 +115,7 @@ export function ReminderSettingsModal({
     if (!open) return;
     setError("");
     setIsLoading(true);
+    setLocale(getLocale());
 
     try {
       const [settingsData, timezonesData] = await Promise.all([
@@ -518,12 +532,12 @@ export function ReminderSettingsModal({
                         <textarea
                           value={
                             settings.custom_message_tenant ||
-                            DEFAULT_TENANT_MESSAGE
+                            defaults.tenant
                           }
                           onChange={(e) =>
                             setSettings((prev) => ({
                               ...prev,
-                              custom_message_tenant: e.target.value,
+                              custom_message_tenant: e.target.value || null,
                             }))
                           }
                           rows={4}
@@ -539,12 +553,12 @@ export function ReminderSettingsModal({
                         <textarea
                           value={
                             settings.custom_message_client ||
-                            DEFAULT_CLIENT_MESSAGE
+                            defaults.client
                           }
                           onChange={(e) =>
                             setSettings((prev) => ({
                               ...prev,
-                              custom_message_client: e.target.value,
+                              custom_message_client: e.target.value || null,
                             }))
                           }
                           rows={4}
@@ -561,7 +575,7 @@ export function ReminderSettingsModal({
                       <div className="rounded-lg bg-muted/50 p-4 text-sm leading-relaxed">
                         {renderPreview(
                           settings.custom_message_tenant ||
-                            DEFAULT_TENANT_MESSAGE
+                            defaults.tenant
                         )}
                       </div>
                     </div>
