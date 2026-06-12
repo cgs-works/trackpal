@@ -235,7 +235,7 @@ export function ReminderSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[680px] w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[780px] sm:max-w-[780px] w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-8 pt-6 pb-4 border-b">
           <DialogTitle className="text-lg">{t("frontend.subscriptions.reminder_settings_title")}</DialogTitle>
         </DialogHeader>
