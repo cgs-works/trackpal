@@ -129,12 +129,21 @@ export function ClientsPage() {
       }
       setFormOpen(false);
       await loadClients();
-    } catch (err) {
-      const detail =
-        err instanceof Error
-          ? err.message
-          : t("frontend.clients.error_save");
-      setFormError(detail);
+    } catch (err: unknown) {
+      // Extract validation detail from API response
+      const apiErr = err as {
+        response?: { data?: { detail?: string | Array<{ msg?: string }> } }
+      };
+      const detail = apiErr.response?.data?.detail;
+      let msg = t("frontend.clients.error_save");
+      if (typeof detail === "string") {
+        msg = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d) => d.msg || "Unknown error").join("; ");
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setFormError(msg);
     } finally {
       setSaving(false);
     }
