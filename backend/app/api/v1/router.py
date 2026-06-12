@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     mailbox,
     me,
     tenants,
+    tenant_settings,
     subscriptions,
 )
 
@@ -19,6 +20,7 @@ api_router.include_router(auth.router)
 api_router.include_router(integrations.router)
 api_router.include_router(mailbox.router)
 api_router.include_router(tenants.router)
+api_router.include_router(tenant_settings.router)
 api_router.include_router(clients.router)
 api_router.include_router(catalog.router)
 api_router.include_router(code_services.router)

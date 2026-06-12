@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models import Tenant, TenantSettings
+from app.repositories import tenant_settings_repository
 
 pytestmark = pytest.mark.asyncio
 
@@ -45,3 +46,91 @@ async def test_tenant_settings_can_store_locale_and_timezone(db_session, active_
     persisted = result.scalar_one()
     assert persisted.locale == "es"
     assert persisted.timezone == "America/Santo_Domingo"
+
+
+async def _login(client, username: str, password: str) -> dict[str, str]:
+    response = await client.post(
+        "/api/v1/auth/login", json={"username": username, "password": password}
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def test_get_tenant_settings_returns_defaults(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/tenant-settings", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["locale"] == "en"
+    assert data["timezone"] == "UTC"
+    assert data["tenant_id"] is not None
+    assert data["created_at"] is not None
+    assert data["updated_at"] is not None
+
+
+async def test_put_tenant_settings_updates_locale_and_timezone(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.put(
+        "/api/v1/tenant-settings",
+        json={"locale": "es", "timezone": "America/Santo_Domingo"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["locale"] == "es"
+    assert data["timezone"] == "America/Santo_Domingo"
+
+
+async def test_put_tenant_settings_rejects_invalid_locale(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.put(
+        "/api/v1/tenant-settings",
+        json={"locale": "fr"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("Locale must be one of" in str(err.get("msg", "")) for err in detail)
+
+
+async def test_put_tenant_settings_rejects_invalid_timezone(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.put(
+        "/api/v1/tenant-settings",
+        json={"timezone": "Not/AZone"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("valid IANA timezone" in str(err.get("msg", "")) for err in detail)
+
+
+async def test_tenant_settings_timezones_endpoint(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/tenant-settings/timezones", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert any(item["value"] == "UTC" for item in data)
+
+
+async def test_tenant_settings_repository_resolves_defaults_when_missing(
+    db_session, active_tenant_user
+):
+    tenant = await _tenant_for_user(db_session, active_tenant_user.id)
+    settings = await tenant_settings_repository.get_by_tenant_id(db_session, tenant.id)
+    await db_session.delete(settings)
+    await db_session.commit()
+
+    resolved = await tenant_settings_repository.resolve_timezone(db_session, tenant.id)
+
+    assert resolved == "UTC"
