@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Search, ChevronDown, Check, Globe } from "lucide-react";
@@ -163,12 +162,13 @@ export function TimezonePicker({
           <div className="p-2 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <input
                 ref={searchInputRef}
+                type="text"
                 placeholder="Search timezone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-sm"
+                className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
             </div>
           </div>
