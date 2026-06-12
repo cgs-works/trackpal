@@ -7,16 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, set_internal_rls_context, set_rls_context
 from app.core.security import decode_token, verify_n8n_api_key
-from app.repositories import clients_repository, tenants_repository, users_repository
+from app.repositories import clients_repository, tenants_repository, tenant_settings_repository, users_repository
 from app.models import User
 
 
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
-    """Resolve locale string for a tenant.
-
-    Returns the tenant's stored locale or ``"en"`` as fallback.
-    """
-    return await tenants_repository.resolve_locale(db, tenant_id)
+    return await tenant_settings_repository.resolve_locale(db, tenant_id)
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")

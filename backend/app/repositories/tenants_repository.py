@@ -9,13 +9,11 @@ from sqlalchemy.orm import selectinload
 
 from app.core.phone import normalize_phone
 from app.models import Client, Tenant
+from app.repositories import tenant_settings_repository
 
 
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
-    """Resolve tenant locale, defaulting to ``"en"``."""
-    result = await db.execute(select(Tenant.locale).where(Tenant.id == tenant_id))
-    row = result.scalar_one_or_none()
-    return row if row else "en"
+    return await tenant_settings_repository.resolve_locale(db, tenant_id)
 
 
 async def get(db: AsyncSession, tenant_id: UUID) -> Tenant | None:
@@ -90,24 +88,11 @@ async def get_stats(db: AsyncSession) -> dict:
 
 
 async def resolve_locale_by_owner(db: AsyncSession, owner_user_id: UUID) -> str:
-    """Resolve tenant locale by owner user id, defaulting to ``"en"``."""
-    result = await db.execute(
-        select(Tenant.locale).where(Tenant.owner_user_id == owner_user_id)
-    )
-    row = result.scalar_one_or_none()
-    return row if row else "en"
+    return await tenant_settings_repository.resolve_locale_by_owner(db, owner_user_id)
 
 
 async def resolve_locale_by_client(db: AsyncSession, client_owner_user_id: UUID) -> str:
-    """Resolve tenant locale from a client owner user id."""
-    result = await db.execute(
-        select(Tenant.locale)
-        .select_from(Client)
-        .join(Tenant, Client.tenant_id == Tenant.id)
-        .where(Client.owner_user_id == client_owner_user_id)
-    )
-    row = result.scalar_one_or_none()
-    return row if row else "en"
+    return await tenant_settings_repository.resolve_locale_by_client(db, client_owner_user_id)
 
 
 def _instance_aliases(instance_name: str) -> tuple[str, ...]:
