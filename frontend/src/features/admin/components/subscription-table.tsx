@@ -1,6 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Eye } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Pencil, Eye, MoreHorizontal, Ban, RotateCcw, RefreshCw } from "lucide-react";
 import { t } from "@/i18n";
 import { type Subscription } from "../services/subscription-api";
 
@@ -11,6 +18,9 @@ interface SubscriptionTableProps {
   plans: Record<string, string>;
   onEdit: (sub: Subscription) => void;
   onReveal: (sub: Subscription) => void;
+  onCancel: (sub: Subscription) => void;
+  onRenew: (sub: Subscription) => void;
+  onReactivate: (sub: Subscription) => void;
 }
 
 function formatDate(iso: string): string {
@@ -41,6 +51,9 @@ export function SubscriptionTable({
   plans,
   onEdit,
   onReveal,
+  onCancel,
+  onRenew,
+  onReactivate,
 }: SubscriptionTableProps) {
   return (
     <>
@@ -106,6 +119,46 @@ export function SubscriptionTable({
                     >
                       <Pencil className="size-4" />
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            title={t("frontend.subscriptions.more_actions")}
+                          />
+                        }
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {(sub.status === "active" || sub.status === "expired") && (
+                          <DropdownMenuItem onClick={() => onRenew(sub)}>
+                            <RefreshCw className="size-4" />
+                            {t("frontend.subscriptions.renew")}
+                          </DropdownMenuItem>
+                        )}
+                        {(sub.status === "cancelled" || sub.status === "expired") && (
+                          <DropdownMenuItem onClick={() => onReactivate(sub)}>
+                            <RotateCcw className="size-4" />
+                            {t("frontend.subscriptions.reactivate")}
+                          </DropdownMenuItem>
+                        )}
+                        {sub.status === "active" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => onCancel(sub)}
+                            >
+                              <Ban className="size-4" />
+                              {t("frontend.subscriptions.cancel_action")}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>
@@ -154,6 +207,44 @@ export function SubscriptionTable({
                 <Pencil className="size-3.5 mr-1" />
                 {t("frontend.common.edit")}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    />
+                  }
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {(sub.status === "active" || sub.status === "expired") && (
+                    <DropdownMenuItem onClick={() => onRenew(sub)}>
+                      <RefreshCw className="size-4" />
+                      {t("frontend.subscriptions.renew")}
+                    </DropdownMenuItem>
+                  )}
+                  {(sub.status === "cancelled" || sub.status === "expired") && (
+                    <DropdownMenuItem onClick={() => onReactivate(sub)}>
+                      <RotateCcw className="size-4" />
+                      {t("frontend.subscriptions.reactivate")}
+                    </DropdownMenuItem>
+                  )}
+                  {sub.status === "active" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => onCancel(sub)}
+                      >
+                        <Ban className="size-4" />
+                        {t("frontend.subscriptions.cancel_action")}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         ))}

@@ -17,6 +17,9 @@ import {
   createSubscription,
   updateSubscription,
   revealCredentials,
+  cancelSubscription,
+  renewSubscription,
+  reactivateSubscription,
   getDropdownData,
   getPlansForService,
   type Subscription,
@@ -31,6 +34,10 @@ import {
   RevealCredentialsDialog,
 } from "./subscription-table";
 import { SubscriptionFormDialog } from "./subscription-form-dialog";
+import {
+  SubscriptionLifecycleDialog,
+  type LifecycleAction,
+} from "./subscription-lifecycle-dialog";
 
 export function SubscriptionsPage() {
   const STATUS_OPTIONS = [
@@ -76,6 +83,12 @@ export function SubscriptionsPage() {
   const [revealEmail, setRevealEmail] = useState("");
   const [revealPassword, setRevealPassword] = useState<string | null>(null);
   const [revealPin, setRevealPin] = useState<string | null>(null);
+
+  // Lifecycle state
+  const [lifecycleOpen, setLifecycleOpen] = useState(false);
+  const [lifecycleAction, setLifecycleAction] = useState<LifecycleAction>("cancel");
+  const [lifecycleSub, setLifecycleSub] = useState<Subscription | null>(null);
+  const [lifecycleLoading, setLifecycleLoading] = useState(false);
 
   // ── Load data ──────────────────────────────────────────────
   const loadDropdowns = useCallback(async () => {
@@ -220,6 +233,39 @@ export function SubscriptionsPage() {
     }
   }
 
+  // ── Lifecycle actions ──────────────────────────────────────
+  function openLifecycle(action: LifecycleAction, sub: Subscription) {
+    setLifecycleAction(action);
+    setLifecycleSub(sub);
+    setLifecycleOpen(true);
+  }
+
+  async function handleLifecycleConfirm() {
+    if (!lifecycleSub) return;
+    setLifecycleLoading(true);
+    try {
+      if (lifecycleAction === "cancel") {
+        await cancelSubscription(lifecycleSub.id);
+        toast.success(t("frontend.subscriptions.cancelled") || "Subscription cancelled.");
+      } else if (lifecycleAction === "renew") {
+        await renewSubscription(lifecycleSub.id);
+        toast.success(t("frontend.subscriptions.renewed") || "Subscription renewed.");
+      } else if (lifecycleAction === "reactivate") {
+        await reactivateSubscription(lifecycleSub.id);
+        toast.success(t("frontend.subscriptions.reactivated") || "Subscription reactivated.");
+      }
+      setLifecycleOpen(false);
+      await loadSubscriptions();
+    } catch (err) {
+      const errorKey = `frontend.subscriptions.error_${lifecycleAction}`;
+      toast.error(
+        err instanceof Error ? err.message : t(errorKey)
+      );
+    } finally {
+      setLifecycleLoading(false);
+    }
+  }
+
   // ── Clear filters ──────────────────────────────────────────
   const hasFilters =
     statusFilter !== "all" || serviceFilter !== "all" || clientIdFilter || search;
@@ -343,6 +389,9 @@ export function SubscriptionsPage() {
               plans={planMap}
               onEdit={openEdit}
               onReveal={handleReveal}
+              onCancel={(sub) => openLifecycle("cancel", sub)}
+              onRenew={(sub) => openLifecycle("renew", sub)}
+              onReactivate={(sub) => openLifecycle("reactivate", sub)}
             />
           </>
         )}
@@ -371,6 +420,15 @@ export function SubscriptionsPage() {
         email={revealEmail}
         password={revealPassword}
         pin={revealPin}
+      />
+
+      {/* Lifecycle confirmation dialog */}
+      <SubscriptionLifecycleDialog
+        open={lifecycleOpen}
+        onOpenChange={setLifecycleOpen}
+        action={lifecycleAction}
+        onConfirm={handleLifecycleConfirm}
+        loading={lifecycleLoading}
       />
     </div>
   );

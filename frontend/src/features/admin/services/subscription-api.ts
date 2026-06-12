@@ -101,6 +101,28 @@ export async function revealCredentials(
   return data;
 }
 
+// ── Lifecycle mutations ──────────────────────────────────────
+export async function cancelSubscription(
+  id: string
+): Promise<Subscription> {
+  const { data } = await api.post(`/subscriptions/${id}/cancel`);
+  return data;
+}
+
+export async function renewSubscription(
+  id: string
+): Promise<Subscription> {
+  const { data } = await api.post(`/subscriptions/${id}/renew`);
+  return data;
+}
+
+export async function reactivateSubscription(
+  id: string
+): Promise<Subscription> {
+  const { data } = await api.post(`/subscriptions/${id}/reactivate`);
+  return data;
+}
+
 // ── Related data for dropdowns ────────────────────────────────
 import { listClients, type Client } from "./client-api";
 import { listServices, listPlans, type Service, type Plan } from "./catalog-api";
