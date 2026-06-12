@@ -94,7 +94,6 @@ export function ReminderSettingsModal({
     reminderSettings,
     timezoneOptions,
     settingsLoaded,
-    timezonesLoaded,
     loadTenantSettings,
     updateReminderSettings,
   } = useSettingsStore();
