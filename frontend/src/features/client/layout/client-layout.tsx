@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  Lock,
+  User,
   LogOut,
   PanelLeftClose,
   PanelLeft,
@@ -14,7 +14,7 @@ import { t } from "@/i18n";
 export function ClientLayout() {
   const NAV_ITEMS = [
     { to: "/client/dashboard", label: t("frontend.dashboard.client.title"), icon: LayoutDashboard },
-    { to: "/client/password", label: t("frontend.dashboard.client.change_password"), icon: Lock },
+    { to: "/client/profile", label: t("frontend.dashboard.client.profile"), icon: User },
   ];
   const { username, logout } = useAuthStore();
   const location = useLocation();

@@ -15,7 +15,7 @@ import { Route as ClientRouteImport } from './routes/client'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MasterDashboardRouteImport } from './routes/master/dashboard'
-import { Route as ClientPasswordRouteImport } from './routes/client/password'
+import { Route as ClientProfileRouteImport } from './routes/client/profile'
 import { Route as ClientDashboardRouteImport } from './routes/client/dashboard'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
@@ -53,9 +53,9 @@ const MasterDashboardRoute = MasterDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => MasterRoute,
 } as any)
-const ClientPasswordRoute = ClientPasswordRouteImport.update({
-  id: '/password',
-  path: '/password',
+const ClientProfileRoute = ClientProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => ClientRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
@@ -101,7 +101,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
-  '/client/password': typeof ClientPasswordRoute
+  '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesByTo {
@@ -116,7 +116,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
-  '/client/password': typeof ClientPasswordRoute
+  '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRoutesById {
@@ -132,7 +132,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
-  '/client/password': typeof ClientPasswordRoute
+  '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
 export interface FileRouteTypes {
@@ -149,7 +149,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
-    | '/client/password'
+    | '/client/profile'
     | '/master/dashboard'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -164,7 +164,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
-    | '/client/password'
+    | '/client/profile'
     | '/master/dashboard'
   id:
     | '__root__'
@@ -179,7 +179,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
-    | '/client/password'
+    | '/client/profile'
     | '/master/dashboard'
   fileRoutesById: FileRoutesById
 }
@@ -235,11 +235,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MasterDashboardRouteImport
       parentRoute: typeof MasterRoute
     }
-    '/client/password': {
-      id: '/client/password'
-      path: '/password'
-      fullPath: '/client/password'
-      preLoaderRoute: typeof ClientPasswordRouteImport
+    '/client/profile': {
+      id: '/client/profile'
+      path: '/profile'
+      fullPath: '/client/profile'
+      preLoaderRoute: typeof ClientProfileRouteImport
       parentRoute: typeof ClientRoute
     }
     '/client/dashboard': {
@@ -307,12 +307,12 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ClientRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
-  ClientPasswordRoute: typeof ClientPasswordRoute
+  ClientProfileRoute: typeof ClientProfileRoute
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
-  ClientPasswordRoute: ClientPasswordRoute,
+  ClientProfileRoute: ClientProfileRoute,
 }
 
 const ClientRouteWithChildren =

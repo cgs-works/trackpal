@@ -9,8 +9,6 @@ import {
   User,
   CreditCard,
   LogOut,
-  Mail,
-  Phone,
   Building2,
   AlertCircle,
 } from "lucide-react";
@@ -34,21 +32,6 @@ function formatDate(iso: string): string {
 function daysUntil(iso: string): number {
   const diff = new Date(iso).getTime() - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
-function StatusBadge({ active }: { active: boolean }) {
-  return (
-    <Badge
-      variant={active ? "default" : "secondary"}
-      className={
-        active
-          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-300"
-          : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300"
-      }
-    >
-      {t(active ? "frontend.dashboard.client.status_active" : "frontend.dashboard.client.status_inactive")}
-    </Badge>
-  );
 }
 
 function SubscriptionStatusBadge({ status }: { status: string }) {
@@ -300,21 +283,6 @@ export function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Info strip */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Mail className="size-4" />
-                <span>{dashboard.username}</span>
-              </div>
-              {dashboard.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="size-4" />
-                  <span>{dashboard.phone}</span>
-                </div>
-              )}
-              <StatusBadge active={dashboard.is_active} />
             </div>
 
             {/* Subscriptions */}
