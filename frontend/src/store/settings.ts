@@ -2,136 +2,160 @@ import { create } from "zustand";
 import {
   getReminderSettings,
   updateReminderSettings as apiUpdateReminderSettings,
-  getTimezones,
   type ReminderSettings,
   type ReminderSettingsUpdate,
-  type TimezoneOption,
 } from "@/features/admin/services/reminder-api";
+import {
+  getTenantSettings,
+  updateTenantSettings as apiUpdateTenantSettings,
+  getTimezones,
+  type TenantSettings,
+  type TenantSettingsUpdate,
+  type TimezoneOption,
+} from "@/features/admin/services/settings-api";
 
 interface SettingsState {
-  // Cache state
   reminderSettings: ReminderSettings | null;
+  tenantSettings: TenantSettings | null;
   timezoneOptions: TimezoneOption[];
-  settingsLoaded: boolean;
+  reminderSettingsLoaded: boolean;
+  tenantSettingsLoaded: boolean;
   timezonesLoaded: boolean;
-  settingsInFlight: Promise<ReminderSettings | null> | null;
+  reminderSettingsInFlight: Promise<ReminderSettings | null> | null;
+  tenantSettingsInFlight: Promise<TenantSettings | null> | null;
   timezonesInFlight: Promise<TimezoneOption[]> | null;
   settingsLoadError: string | null;
 
-  // Actions
-  loadTenantSettings: () => Promise<{
-    reminderSettings: ReminderSettings | null;
-    timezoneOptions: TimezoneOption[];
-  }>;
+  loadReminderSettings: () => Promise<ReminderSettings | null>;
+  loadTenantSettings: () => Promise<TenantSettings | null>;
+  loadTimezoneOptions: () => Promise<TimezoneOption[]>;
   updateReminderSettings: (
     settings: ReminderSettingsUpdate
   ) => Promise<ReminderSettings>;
+  updateTenantSettings: (
+    settings: TenantSettingsUpdate
+  ) => Promise<TenantSettings>;
   clearSettingsCache: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  // Initial state
   reminderSettings: null,
+  tenantSettings: null,
   timezoneOptions: [],
-  settingsLoaded: false,
+  reminderSettingsLoaded: false,
+  tenantSettingsLoaded: false,
   timezonesLoaded: false,
-  settingsInFlight: null,
+  reminderSettingsInFlight: null,
+  tenantSettingsInFlight: null,
   timezonesInFlight: null,
   settingsLoadError: null,
 
-  // Load settings with caching and deduplication
-  loadTenantSettings: async () => {
+  loadReminderSettings: async () => {
     const state = get();
-
-    // Already fully loaded — return cached data
-    if (state.settingsLoaded && state.timezonesLoaded) {
-      return {
-        reminderSettings: state.reminderSettings,
-        timezoneOptions: state.timezoneOptions,
-      };
+    if (state.reminderSettingsLoaded) return state.reminderSettings;
+    const promise = state.reminderSettingsInFlight || loadReminderSettings(set);
+    if (!state.reminderSettingsInFlight) {
+      set({ reminderSettingsInFlight: promise });
     }
-
-    // Deduplicate: reuse in-flight promises
-    const settingsPromise = state.settingsInFlight || loadSettings(set);
-    const timezonesPromise = state.timezonesInFlight || loadTimezones(set);
-
-    // Set in-flight promises if not already set
-    if (!state.settingsInFlight) {
-      set({ settingsInFlight: settingsPromise });
-    }
-    if (!state.timezonesInFlight) {
-      set({ timezonesInFlight: timezonesPromise });
-    }
-
-    try {
-      const [settings, timezones] = await Promise.all([
-        settingsPromise,
-        timezonesPromise,
-      ]);
-
-      return {
-        reminderSettings: settings,
-        timezoneOptions: timezones,
-      };
-    } catch (error) {
-      console.error("[settings] Failed to load tenant settings:", error);
-      throw error;
-    }
+    return promise;
   },
 
-  // Update settings and cache
+  loadTenantSettings: async () => {
+    const state = get();
+    if (state.tenantSettingsLoaded) return state.tenantSettings;
+    const promise = state.tenantSettingsInFlight || loadTenantSettings(set);
+    if (!state.tenantSettingsInFlight) {
+      set({ tenantSettingsInFlight: promise });
+    }
+    return promise;
+  },
+
+  loadTimezoneOptions: async () => {
+    const state = get();
+    if (state.timezonesLoaded) return state.timezoneOptions;
+    const promise = state.timezonesInFlight || loadTimezones(set);
+    if (!state.timezonesInFlight) {
+      set({ timezonesInFlight: promise });
+    }
+    return promise;
+  },
+
   updateReminderSettings: async (payload) => {
     const data = await apiUpdateReminderSettings(payload);
-
-    // Update cache from successful response
-    set({
-      reminderSettings: data,
-      settingsLoaded: true,
-    });
-
+    set({ reminderSettings: data, reminderSettingsLoaded: true });
     return data;
   },
 
-  // Clear cache (on logout, tenant switch)
+  updateTenantSettings: async (payload) => {
+    const data = await apiUpdateTenantSettings(payload);
+    set({ tenantSettings: data, tenantSettingsLoaded: true });
+    return data;
+  },
+
   clearSettingsCache: () => {
     set({
       reminderSettings: null,
+      tenantSettings: null,
       timezoneOptions: [],
-      settingsLoaded: false,
+      reminderSettingsLoaded: false,
+      tenantSettingsLoaded: false,
       timezonesLoaded: false,
-      settingsInFlight: null,
+      reminderSettingsInFlight: null,
+      tenantSettingsInFlight: null,
       timezonesInFlight: null,
       settingsLoadError: null,
     });
   },
 }));
 
-// Internal helpers
-async function loadSettings(
+async function loadReminderSettings(
   set: (partial: Partial<SettingsState>) => void
 ): Promise<ReminderSettings | null> {
   try {
     const data = await getReminderSettings();
     set({
       reminderSettings: data,
-      settingsLoaded: true,
+      reminderSettingsLoaded: true,
       settingsLoadError: null,
-      settingsInFlight: null,
+      reminderSettingsInFlight: null,
     });
     return data;
-  } catch (error: any) {
-    const detail = error?.response?.data?.detail;
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
+    const detail = err?.response?.data?.detail;
     const msg =
       typeof detail === "string"
         ? detail
         : Array.isArray(detail)
-          ? detail.map((d: any) => d.msg || "Unknown error").join("; ")
-          : "Failed to load settings";
+          ? detail.map((d) => d.msg || "Unknown error").join("; ")
+          : "Failed to load reminder settings";
+    set({ settingsLoadError: msg, reminderSettingsInFlight: null });
+    throw error;
+  }
+}
 
+async function loadTenantSettings(
+  set: (partial: Partial<SettingsState>) => void
+): Promise<TenantSettings | null> {
+  try {
+    const data = await getTenantSettings();
     set({
-      settingsLoadError: msg,
-      settingsInFlight: null,
+      tenantSettings: data,
+      tenantSettingsLoaded: true,
+      settingsLoadError: null,
+      tenantSettingsInFlight: null,
     });
+    return data;
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
+    const detail = err?.response?.data?.detail;
+    const msg =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d) => d.msg || "Unknown error").join("; ")
+          : "Failed to load tenant settings";
+    set({ settingsLoadError: msg, tenantSettingsInFlight: null });
     throw error;
   }
 }
@@ -148,7 +172,6 @@ async function loadTimezones(
     });
     return data;
   } catch (error) {
-    // Timezone failure is non-fatal
     console.warn("[settings] Failed to load timezone options:", error);
     set({
       timezoneOptions: [],
