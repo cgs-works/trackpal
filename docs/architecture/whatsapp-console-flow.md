@@ -377,10 +377,10 @@ Package: `backend/app/services/whatsapp_tenant_console_facade/`. Submodules: `fa
 
 ### Locale Handling
 
-- `WhatsAppTenantConsoleFacade` resolves `tenant.locale` from DB per message
+- `WhatsAppTenantConsoleFacade` resolves locale from `TenantSettings` (via `tenant_settings_repository.resolve_locale_by_owner()`) per message
 - `WhatsAppTenantConsoleService` sets a module-level `_current_locale` ContextVar at `process_message()` entry, resets in `finally`
 - All handler methods call `self._t(key, **params)` which reads `_current_locale.get()` automatically — avoids threading locale through 40+ methods
-- Locale switch in profile section updates `Tenant.locale` in DB, then immediately sets ContextVar for fresh locale on next reply
+- Locale switch in settings section updates `TenantSettings.locale` through `PUT /api/v1/tenant-settings`, then immediately sets ContextVar for fresh locale on next reply
 - Missing keys fall back to English; warning logged at 1st, 10th, 100th, 1000th occurrence
 - Master console stays hardcoded Spanish (out of i18n scope)
 

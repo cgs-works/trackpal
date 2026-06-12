@@ -5,18 +5,18 @@ Trackpal uses a Python-centered i18n system. Backend is translation source-of-tr
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────┐
 │ Backend i18n Engine (app/core/i18n/)               │
 │  _CATALOG_EN, _CATALOG_ES → _MERGED[locale]        │
 │  t(locale, key, **params) → str                    │
 │  get_merged_catalog(locale) → dict                 │
-└──────────┬─────────────────────────────────────────┘
+└──────────┬────────────────────────────────────────┘
            │
            │  resolve_locale() from tenant DB record
            │  ContextVar per-message in WhatsApp console
            ▼
 ┌─────────────────────────┬──────────────────────────┐
-│ REST API Endpoints      │ WhatsApp Console Service   │
+│ REST API Endpoints      │ WhatsApp Console Service  │
 │  UserFacingError →      │  _t() reads _current_locale│
 │   translate_error()     │  ContextVar per message    │
 │  /i18n/catalog →        │                           │
@@ -25,11 +25,11 @@ Trackpal uses a Python-centered i18n system. Backend is translation source-of-tr
 └──────────┬──────────────┴──────────┬────────────────┘
            │                         │
            ▼                         ▼
-┌─────────────────┐    ┌─────────────────────────────┐
-│ Frontend Vue SPA│    │ n8n (pure transport,        │
-│  i18n Pinia     │    │  no translation logic)      │
-│  store → t()    │    │  Backend renders messages   │
-└─────────────────┘    └─────────────────────────────┘
+┌──────────────────────┐  ┌──────────────────────────┐
+│ Frontend             │  │ n8n (pure transport,     │
+│  (React + Zustand)   │  │  no translation logic)   │
+│  i18n store → t()    │  │  Backend renders messages│
+└──────────────────────┘  └──────────────────────────┘
 ```
 
 ## Locales
@@ -47,13 +47,14 @@ VALID_LOCALES: tuple[str, ...] = ("en", "es")
 
 ## Tenant Locale Persistence
 
-Column `tenants.locale` stores per-tenant locale. Migration `cd8efe74caa1`:
+Locale is stored in the `tenant_settings` table. Each tenant has a single row in this table, with `tenant_id` as primary key and foreign key to `tenants.id`. Migration `d011fe74cab0` created the table, backfilled locale values from the previous `tenants.locale` column and legacy `subscription_reminder_settings.timezone`, then dropped both obsolete columns.
 
-1. Add nullable column
-2. Backfill existing rows to `es` (preserve Spanish experience)
-3. Set not-null with server default `en`
+Exposed via:
+- `GET /api/v1/tenant-settings` — Read-write endpoint for locale (and timezone)
+- `PUT /api/v1/tenant-settings` — Update locale (and timezone)
+- `GET /api/v1/me` → `ProfileResponse.locale` — Read-only projection for convenience (locale is not writable through `/me`)
 
-Exposed via `GET /api/v1/me` → `ProfileResponse.locale`. Updated via `PUT /api/v1/me` with `ProfileUpdate.locale` validated against `VALID_LOCALES`.
+Refer to [database-schema.md](database-schema.md#tenantsettings--tenant_settings-table) for the table definition.
 
 ## Backend i18n Engine (`app/core/i18n/`)
 
@@ -75,7 +76,7 @@ Organized by prefix:
 | `wa.tenant.client_context.*` | WhatsApp tenant console — client context shortcut | `wa.tenant.client_context.menu.unregistered_unblocked`, `wa.tenant.client_context.closed` |
 | `wa.nav.*` | Shared navigation labels across all WhatsApp consoles | `wa.nav.next`, `wa.nav.back`, `wa.nav.cancel`, `wa.nav.invalid_option` |
 | `wa.tenant.subscriptions.*` | WhatsApp tenant console — subscriptions | `wa.tenant.subscriptions.list.header`, `wa.tenant.subscriptions.status.active`, `wa.tenant.subscriptions.list.page_prev` |
-| `frontend.*` | Vue SPA web UI | `frontend.login.title`, `frontend.clients.password` |
+| `frontend.*` | Frontend web UI | `frontend.login.title`, `frontend.clients.password` |
 
 Total: ~890 string entries across both catalogs.
 
@@ -139,13 +140,15 @@ Services raise `UserFacingError("client_not_found")` with a machine-readable cod
 
 ### REST API Endpoints
 
-`resolve_locale(db, tenant_id)` in `app/api/dependencies.py`:
+`resolve_locale(db, tenant_id)` in `app/repositories/tenant_settings_repository.py`:
 
 ```python
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
-    result = await db.execute(select(Tenant.locale).where(Tenant.id == tenant_id))
+    result = await db.execute(
+        select(TenantSettings.locale).where(TenantSettings.tenant_id == tenant_id)
+    )
     row = result.scalar_one_or_none()
-    return row if row else "en"
+    return row or "en"
 ```
 
 **Critical**: `resolve_locale()` must be called *before* mutating service calls. Post-rollback RLS context loss means the tenant row may not be accessible after a failed transaction. Pattern:
@@ -160,11 +163,11 @@ except UserFacingError as exc:
 
 ### WhatsApp Tenant Console
 
-The facade resolves locale once per message from `tenant.locale` and passes it to `WhatsAppTenantConsoleService.process_message()`.
+The facade resolves locale once per message from `TenantSettings.locale` (via `tenant_settings_repository.resolve_locale_by_owner()`) and passes it to `WhatsAppTenantConsoleService.process_message()`.
 
 ### n8n / Background Flows
 
-Subscription job service resolves locale per reminder batch from tenant record using the existing DB session + RLS context.
+Subscription job service resolves locale per reminder batch from `TenantSettings` (via `tenant_settings_repository`) using the existing DB session + RLS context.
 
 ## WhatsApp Console ContextVar
 
@@ -202,38 +205,35 @@ Convenience helper `_t(key, **params)` reads `_current_locale.get()` automatical
 
 Role resolution:
 
-- `tenant` role: reads `Tenant.locale` via `owner_user_id`
-- `client` role: reads `Tenant.locale` via `Client → Tenant` join
+- `tenant` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_owner()`
+- `client` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_client()` (joins `Client → TenantSettings` through `client.tenant_id`)
 - Master/unknown: returns English catalog
 
 ## Frontend I18n Store
 
-File: `frontend/src/stores/i18n.js`. Pinia store:
+File: `frontend/src/stores/i18nStore.ts`. Zustand store:
 
-```javascript
-const useI18nStore = defineStore('i18n', () => {
-  const locale = ref('en')
-  const strings = ref({})
-  const isLoaded = ref(false)
-
-  async function loadCatalog() {
+```typescript
+const useI18nStore = create<{ locale: string; strings: Record<string, string>; isLoaded: boolean }>((set) => ({
+  locale: 'en',
+  strings: {},
+  isLoaded: false,
+  loadCatalog: async () => {
     const response = await api.get('/i18n/catalog')
-    locale.value = data.locale
-    strings.value = data.catalog
-  }
-
-  function t(key, params) {
+    set({ locale: response.data.locale, strings: response.data.catalog, isLoaded: true })
+  },
+  t: (key: string, params?: Record<string, string>) => {
     // Lookup key, warn in dev if missing
     // Apply params via string replace
-  }
-})
+  },
+}))
 ```
 
 Catalog loaded on authenticated lifecycle:
 
 - **After login success**: authenticated app loads `/i18n/catalog`
-- **Page refresh**: `main.js` checks `authStore.isAuthenticated` and preloads catalog
-- **Locale change**: Tenant profile save triggers catalog refetch for immediate UI update
+- **Page refresh**: `main.ts` checks `authStore.isAuthenticated` and preloads catalog
+- **Locale change**: Tenant settings save through `PUT /api/v1/tenant-settings` triggers catalog refetch for immediate UI update
 
 ### Pre-auth public i18n (frontend-only)
 
@@ -246,7 +246,7 @@ Login and future unauthenticated routes use local frontend catalog files, indepe
 
 Boundary:
 - Pre-auth views do **not** call backend i18n endpoint.
-- Authenticated views continue using backend catalog through Pinia `i18n` store.
+- Authenticated views continue using backend catalog through `i18nStore`.
 
 ## N8n Integration
 

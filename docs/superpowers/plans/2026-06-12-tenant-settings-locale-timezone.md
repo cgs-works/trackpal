@@ -2294,7 +2294,7 @@ git commit -m "refactor: move timezone UI to tenant settings"
 
 ---
 
-## Task 9: Documentation updates
+## Task 9: Documentation updates [x]
 
 **Required skills:** `stop-slop` if editing prose heavily, `superpowers:verification-before-completion`.
 
@@ -2306,7 +2306,7 @@ git commit -m "refactor: move timezone UI to tenant settings"
 - Modify: `docs/architecture/frontend-architecture.md`
 - Modify: `docs/SUMMARY.md` only if current entries become misleading
 
-- [ ] **Step 1: Update database schema docs**
+- [x] **Step 1: Update database schema docs**
 
 In `docs/architecture/database-schema.md`:
 
@@ -2315,7 +2315,7 @@ In `docs/architecture/database-schema.md`:
 - Remove `SubscriptionReminderSettings.timezone` from reminder settings fields.
 - State that `tenant_settings.tenant_id` is the primary key and FK to `tenants.id`.
 
-- [ ] **Step 2: Update i18n docs**
+- [x] **Step 2: Update i18n docs**
 
 In `docs/architecture/i18n-system.md`:
 
@@ -2324,7 +2324,7 @@ In `docs/architecture/i18n-system.md`:
 - Document `/me` as a read-only projection for tenant/client locale.
 - Document WhatsApp tenant console locale resolution from tenant settings.
 
-- [ ] **Step 3: Update subscription docs**
+- [x] **Step 3: Update subscription docs**
 
 In `docs/architecture/subscriptions.md`:
 
@@ -2333,7 +2333,7 @@ In `docs/architecture/subscriptions.md`:
 - Remove timezone from `/subscription-settings` request/response examples.
 - Add `/tenant-settings/timezones` as the timezone catalog path.
 
-- [ ] **Step 4: Update API layer docs**
+- [x] **Step 4: Update API layer docs**
 
 In `docs/architecture/api-layer.md`:
 
@@ -2341,7 +2341,7 @@ In `docs/architecture/api-layer.md`:
 - Update `/api/v1/me` docs: locale/timezone are projections, not write-owned fields.
 - Update `/api/v1/subscription-settings` docs to omit timezone.
 
-- [ ] **Step 5: Update frontend architecture docs**
+- [x] **Step 5: Update frontend architecture docs**
 
 In `docs/architecture/frontend-architecture.md`:
 
@@ -2349,7 +2349,7 @@ In `docs/architecture/frontend-architecture.md`:
 - State that Profile section saves identity through `/me` and locale/timezone through `/tenant-settings`.
 - State that reminder modal no longer owns timezone edits.
 
-- [ ] **Step 6: Verify docs contain no old owner claims**
+- [x] **Step 6: Verify docs contain no old owner claims**
 
 Run:
 
@@ -2359,7 +2359,7 @@ rg -n "Tenant\.locale|tenants\.locale|subscription_reminder_settings\.timezone|/
 
 Expected: No stale ownership claims. Vue/Pinia may remain only if a doc intentionally describes old historical state; prefer updating stale current-architecture references.
 
-- [ ] **Step 7: Commit docs**
+- [x] **Step 7: Commit docs**
 
 ```bash
 git add docs/architecture/database-schema.md docs/architecture/i18n-system.md docs/architecture/subscriptions.md docs/architecture/api-layer.md docs/architecture/frontend-architecture.md docs/SUMMARY.md
