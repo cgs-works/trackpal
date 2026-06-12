@@ -350,6 +350,9 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     # Subscriptions (new keys)
     "frontend.subscriptions.all_statuses": "Todos los estados",
     "frontend.subscriptions.all_services": "Todos los servicios",
+    "frontend.subscriptions.section_heading": "Gestionar suscripciones y credenciales de clientes",
+    "frontend.subscriptions.filter_hint": "Intenta ajustar los filtros",
+    "frontend.subscriptions.create_first": "Crea tu primera suscripci\u00f3n para comenzar",
     "frontend.subscriptions.created": "Suscripción creada.",
     "frontend.subscriptions.updated": "Suscripción actualizada.",
     "frontend.subscriptions.error_timezone_required": "La zona horaria es obligatoria",

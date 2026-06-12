@@ -32,14 +32,14 @@ import {
 } from "./subscription-table";
 import { SubscriptionFormDialog } from "./subscription-form-dialog";
 
-const STATUS_OPTIONS = [
-  { value: "all", label: t("frontend.subscriptions.all_statuses") },
-  { value: "active", label: t("frontend.subscriptions.status_active") },
-  { value: "expired", label: t("frontend.subscriptions.status_expired") },
-  { value: "cancelled", label: t("frontend.subscriptions.status_cancelled") },
-];
-
 export function SubscriptionsPage() {
+  const STATUS_OPTIONS = [
+    { value: "all", label: t("frontend.subscriptions.all_statuses") },
+    { value: "active", label: t("frontend.subscriptions.status_active") },
+    { value: "expired", label: t("frontend.subscriptions.status_expired") },
+    { value: "cancelled", label: t("frontend.subscriptions.status_cancelled") },
+  ];
+
   // URL search params for client_id filter
   let urlClientId: string | undefined;
   try {
@@ -232,7 +232,7 @@ export function SubscriptionsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{t("frontend.subscriptions.title")}</h1>
             <p className="text-muted-foreground">
-              Manage client subscriptions and credentials
+              {t("frontend.subscriptions.section_heading")}
             </p>
           </div>
           <Button onClick={openCreate}>
@@ -320,13 +320,13 @@ export function SubscriptionsPage() {
             </h3>
             <p className="text-muted-foreground mt-1">
               {hasFilters
-                ? "Try adjusting your filters"
-                : "Create your first subscription to get started"}
+                ? t("frontend.subscriptions.filter_hint")
+                : t("frontend.subscriptions.create_first")}}
             </p>
             {!hasFilters && (
               <Button onClick={openCreate} className="mt-4">
                 <Plus className="size-4 mr-2" />
-                New Subscription
+                {t("frontend.subscriptions.new")}
               </Button>
             )}
           </div>
