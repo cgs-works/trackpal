@@ -15,7 +15,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { t } from "@/i18n";
 import {
@@ -188,12 +187,9 @@ export function SubscriptionFormDialog({
             <Label>{t("frontend.subscriptions.client")}</Label>
             <Select value={clientId} onValueChange={(v) => setClientId(v ?? "")} disabled={isEdit}>
               <SelectTrigger>
-                <SelectValue placeholder={t("frontend.subscriptions.select_client")}>
-                  {(v) => {
-                    const c = clients.find((cl) => cl.id === v);
-                    return c?.full_name || t("frontend.subscriptions.select_client");
-                  }}
-                </SelectValue>
+                {clientId
+                  ? clients.find((c) => c.id === clientId)?.full_name
+                  : t("frontend.subscriptions.select_client")}
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
@@ -210,12 +206,9 @@ export function SubscriptionFormDialog({
             <Label>{t("frontend.subscriptions.service")}</Label>
             <Select value={serviceId} onValueChange={(v) => { setServiceId(v ?? ""); setPlanId(""); onServiceChange(v ?? ""); }} disabled={isEdit}>
               <SelectTrigger>
-                <SelectValue placeholder={t("frontend.subscriptions.select_service")}>
-                  {(v) => {
-                    const s = services.find((sv) => sv.id === v);
-                    return s?.name || t("frontend.subscriptions.select_service");
-                  }}
-                </SelectValue>
+                {serviceId
+                  ? services.find((s) => s.id === serviceId)?.name
+                  : t("frontend.subscriptions.select_service")}
               </SelectTrigger>
               <SelectContent>
                 {services.map((s) => (
@@ -232,12 +225,11 @@ export function SubscriptionFormDialog({
             <Label>{t("frontend.subscriptions.plan")}</Label>
             <Select value={planId} onValueChange={(v) => setPlanId(v ?? "")} disabled={isEdit || !serviceId || loadingPlans}>
               <SelectTrigger>
-                <SelectValue placeholder={loadingPlans ? t("frontend.subscriptions.loading") : t("frontend.subscriptions.select_plan")}>
-                  {(v) => {
-                    const p = plans.find((pl) => pl.id === v);
-                    return p?.name || (loadingPlans ? t("frontend.subscriptions.loading") : t("frontend.subscriptions.select_plan"));
-                  }}
-                </SelectValue>
+                {loadingPlans
+                  ? t("frontend.subscriptions.loading")
+                  : planId
+                    ? plans.find((p) => p.id === planId)?.name
+                    : t("frontend.subscriptions.select_plan")}
               </SelectTrigger>
               <SelectContent>
                 {plans.map((p) => (
@@ -316,7 +308,7 @@ export function SubscriptionFormDialog({
             <Label>{t("frontend.subscriptions.duration")}</Label>
             <Select value={durationType} onValueChange={(v) => setDurationType(v ?? "")}>
               <SelectTrigger>
-                <SelectValue />
+                {DURATION_OPTIONS.find((o) => o.value === durationType)?.label || durationType}
               </SelectTrigger>
               <SelectContent>
                 {DURATION_OPTIONS.map((opt) => (
