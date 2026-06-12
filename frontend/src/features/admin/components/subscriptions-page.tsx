@@ -358,6 +358,7 @@ export function SubscriptionsPage() {
         services={services}
         plans={plans}
         loadingPlans={loadingPlans}
+        onServiceChange={handleServiceChange}
         onSubmit={handleSubmit}
         saving={saving}
         error={formError}
