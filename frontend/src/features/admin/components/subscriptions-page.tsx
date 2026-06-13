@@ -322,7 +322,7 @@ export function SubscriptionsPage() {
 
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "")}>
             <SelectTrigger className="w-[140px]">
-              <SelectValue />
+              <SelectValue placeholder={t("frontend.subscriptions.all_statuses")} />
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map((opt) => (
