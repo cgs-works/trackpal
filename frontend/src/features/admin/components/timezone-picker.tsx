@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Search, ChevronDown, Check, Globe } from "lucide-react";
@@ -26,7 +27,8 @@ export function TimezonePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedTimezone = timezones.find((tz) => tz.value === value);
   const selectedLabel = selectedTimezone
@@ -43,51 +45,65 @@ export function TimezonePicker({
     );
   }, [timezones, search]);
 
-  useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+  const updatePosition = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
     }
-  }, [isOpen]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <Button
-        type="button"
-        variant="outline"
-        className={cn(
-          "w-full justify-between h-auto min-h-[40px] py-2 font-normal",
-          error && "border-destructive",
-          !value && "text-muted-foreground"
-        )}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="flex items-center gap-2 truncate">
-          <Globe className="h-4 w-4 shrink-0 opacity-50" />
-          <span className="truncate">{selectedLabel}</span>
-        </span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 opacity-50 transition-transform",
-            isOpen && "rotate-180"
-          )}
-        />
-      </Button>
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    }
+  }, [isOpen, updatePosition]);
 
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden">
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleScroll() {
+      updatePosition();
+    }
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      // Check if click is inside the trigger or the portal dropdown
+      if (
+        containerRef.current &&
+        containerRef.current.contains(target)
+      ) {
+        return;
+      }
+      const dropdown = document.getElementById("tz-picker-dropdown");
+      if (dropdown && dropdown.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+      setSearch("");
+    }
+    window.addEventListener("scroll", handleScroll, true);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("scroll", handleScroll, true);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, updatePosition]);
+
+  const dropdown = isOpen
+    ? createPortal(
+        <div
+          id="tz-picker-dropdown"
+          className="fixed z-[9999] bg-popover border rounded-lg shadow-xl overflow-hidden"
+          style={{
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            maxHeight: "320px",
+          }}
+        >
           <div className="p-2 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -102,7 +118,7 @@ export function TimezonePicker({
             </div>
           </div>
 
-          <div className="max-h-[240px] overflow-y-auto">
+          <div className="overflow-y-auto" style={{ maxHeight: "260px" }}>
             {filteredTimezones.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No timezones found
@@ -155,8 +171,36 @@ export function TimezonePicker({
               )}
             </Button>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <Button
+        type="button"
+        variant="outline"
+        className={cn(
+          "w-full justify-between h-auto min-h-[40px] py-2 font-normal",
+          error && "border-destructive",
+          !value && "text-muted-foreground"
+        )}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="flex items-center gap-2 truncate">
+          <Globe className="h-4 w-4 shrink-0 opacity-50" />
+          <span className="truncate">{selectedLabel}</span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 opacity-50 transition-transform",
+            isOpen && "rotate-180"
+          )}
+        />
+      </Button>
+
+      {dropdown}
     </div>
   );
 }
