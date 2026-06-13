@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth";
 import { Navigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubscriptionStatusBadge } from "@/components/subscription-status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   User,
@@ -32,20 +32,6 @@ function formatDate(iso: string): string {
 function daysUntil(iso: string): number {
   const diff = new Date(iso).getTime() - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
-function SubscriptionStatusBadge({ status }: { status: string }) {
-  const variants: Record<string, string> = {
-    active: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-300",
-    expired: "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300",
-    cancelled: "bg-destructive/10 text-destructive hover:bg-destructive/10",
-  };
-
-  return (
-    <Badge variant="secondary" className={variants[status] || "bg-muted text-muted-foreground"}>
-      {status}
-    </Badge>
-  );
 }
 
 /* ── Subscription Table ─────────────────────────────────────── */
