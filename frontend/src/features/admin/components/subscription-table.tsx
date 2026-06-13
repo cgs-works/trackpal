@@ -31,17 +31,36 @@ function formatDate(iso: string): string {
   });
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === "active"
-      ? "default"
-      : status === "inactive"
-        ? "secondary"
-        : status === "expired"
-          ? "outline"
-          : "destructive";
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
+  active: {
+    label: "Active",
+    className:
+      "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400",
+  },
+  inactive: {
+    label: "Inactive",
+    className:
+      "border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400",
+  },
+  expired: {
+    label: "Expired",
+    className:
+      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400",
+  },
+  cancelled: {
+    label: "Cancelled",
+    className:
+      "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400",
+  },
+};
 
-  return <Badge variant={variant}>{status}</Badge>;
+function StatusBadge({ status }: { status: string }) {
+  const style = STATUS_STYLES[status];
+  return (
+    <Badge variant="outline" className={style?.className}>
+      {style?.label || status}
+    </Badge>
+  );
 }
 
 export function SubscriptionTable({
