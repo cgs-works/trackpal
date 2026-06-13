@@ -13,13 +13,19 @@ profile_service = ProfileService()
 
 async def _resolve_profile_locale(db: DbDep, current_user) -> str:
     if current_user.role == "tenant":
-        return await tenant_settings_repository.resolve_locale_by_owner(db, current_user.id)
+        return await tenant_settings_repository.resolve_locale_by_owner(
+            db, current_user.id
+        )
     if current_user.role == "client":
-        return await tenant_settings_repository.resolve_locale_by_client(db, current_user.id)
+        return await tenant_settings_repository.resolve_locale_by_client(
+            db, current_user.id
+        )
     return "en"
 
 
-def _profile_response(user, profile, *, locale: str | None = None, timezone: str | None = None) -> ProfileResponse:
+def _profile_response(
+    user, profile, *, locale: str | None = None, timezone: str | None = None
+) -> ProfileResponse:
     tenant = getattr(profile, "tenant", None)
     tenant_id = getattr(profile, "tenant_id", None)
     if user.role == "tenant":
@@ -43,11 +49,14 @@ def _profile_response(user, profile, *, locale: str | None = None, timezone: str
     )
 
 
-async def _resolve_profile_settings(db: DbDep, current_user, profile) -> tuple[str | None, str | None]:
+async def _resolve_profile_settings(
+    db: DbDep, current_user, profile
+) -> tuple[str | None, str | None]:
     if current_user.role == "tenant":
-        settings, _created = await tenant_settings_repository.get_or_create_by_tenant_id(
-            db, profile.id
-        )
+        (
+            settings,
+            _created,
+        ) = await tenant_settings_repository.get_or_create_by_tenant_id(db, profile.id)
         if _created:
             await db.commit()
             await db.refresh(settings)

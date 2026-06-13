@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.i18n import t
-from app.models import Client, Service, Tenant, User
+from app.models import Client, Service, Tenant, TenantSettings, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -99,7 +99,11 @@ async def _setup_tenant_with_instance(db_session, active_tenant_user) -> Tenant:
     tenant = result.scalar_one_or_none()
     assert tenant is not None
     tenant.evolution_instance_name = TEST_INSTANCE
-    tenant.locale = "es"
+    result_settings = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    ts = result_settings.scalar_one()
+    ts.locale = "es"
     await db_session.commit()
     return tenant
 
@@ -342,7 +346,7 @@ async def test_from_me_self_menu_routes_to_tenant_console(
 ):
     """from_me /menu in admin's own chat must route to Tenant console."""
     from app.core.config import settings
-    from app.models import Tenant
+    from app.models import Tenant, TenantSettings
     from sqlalchemy import select
 
     result = await db_session.execute(
@@ -351,7 +355,11 @@ async def test_from_me_self_menu_routes_to_tenant_console(
     tenant = result.scalar_one_or_none()
     assert tenant is not None
     tenant.evolution_instance_name = "test-tenant-instance"
-    tenant.locale = "es"
+    ts_result = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    ts = ts_result.scalar_one()
+    ts.locale = "es"
     await db_session.commit()
 
     admin_phone = tenant.whatsapp_phone
@@ -565,7 +573,7 @@ async def test_active_context_invalid_input_uses_i18n(
 ):
     """Invalid input in context menu must use i18n key."""
     from app.core.config import settings
-    from app.models import Tenant
+    from app.models import Tenant, TenantSettings
     from sqlalchemy import select
     from unittest.mock import patch
 
@@ -575,7 +583,11 @@ async def test_active_context_invalid_input_uses_i18n(
     tenant = result.scalar_one_or_none()
     assert tenant is not None
     tenant.evolution_instance_name = "test-tenant-instance"
-    tenant.locale = "es"
+    ts_result = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    ts = ts_result.scalar_one()
+    ts.locale = "es"
     await db_session.commit()
 
     admin_phone = tenant.whatsapp_phone

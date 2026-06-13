@@ -116,8 +116,8 @@ async def load_batched_reminder_data(
 
     tenant_settings_map: dict[Any, TenantSettings | None] = {}
     if tenant_ids:
-        tenant_settings_map = await tenant_settings_repository.get_settings_for_tenant_ids(
-            db, tenant_ids
+        tenant_settings_map = (
+            await tenant_settings_repository.get_settings_for_tenant_ids(db, tenant_ids)
         )
 
     return settings_map, tenants_map, tenant_settings_map

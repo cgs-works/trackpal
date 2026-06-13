@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, set_internal_rls_context, set_rls_context
 from app.core.security import decode_token, verify_n8n_api_key
-from app.repositories import clients_repository, tenants_repository, tenant_settings_repository, users_repository
+from app.repositories import (
+    clients_repository,
+    tenants_repository,
+    tenant_settings_repository,
+    users_repository,
+)
 from app.models import User
 
 

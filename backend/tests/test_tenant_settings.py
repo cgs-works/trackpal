@@ -29,7 +29,9 @@ async def test_tenant_settings_model_defaults_persist(db_session, active_tenant_
     assert settings.updated_at is not None
 
 
-async def test_tenant_settings_can_store_locale_and_timezone(db_session, active_tenant_user):
+async def test_tenant_settings_can_store_locale_and_timezone(
+    db_session, active_tenant_user
+):
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     result = await db_session.execute(
         select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
@@ -70,7 +72,9 @@ async def test_get_tenant_settings_returns_defaults(client, active_tenant_user):
     assert data["updated_at"] is not None
 
 
-async def test_put_tenant_settings_updates_locale_and_timezone(client, active_tenant_user):
+async def test_put_tenant_settings_updates_locale_and_timezone(
+    client, active_tenant_user
+):
     headers = await _login(client, "tenant", "tenant-password")
 
     response = await client.put(

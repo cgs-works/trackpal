@@ -92,7 +92,9 @@ async def resolve_locale_by_owner(db: AsyncSession, owner_user_id: UUID) -> str:
 
 
 async def resolve_locale_by_client(db: AsyncSession, client_owner_user_id: UUID) -> str:
-    return await tenant_settings_repository.resolve_locale_by_client(db, client_owner_user_id)
+    return await tenant_settings_repository.resolve_locale_by_client(
+        db, client_owner_user_id
+    )
 
 
 def _instance_aliases(instance_name: str) -> tuple[str, ...]:

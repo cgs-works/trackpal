@@ -88,7 +88,9 @@ async def get_settings_for_tenant_ids(
     db: AsyncSession, tenant_ids: Iterable[uuid.UUID]
 ) -> dict[uuid.UUID, TenantSettings | None]:
     ids = list(set(tenant_ids))
-    settings_map: dict[uuid.UUID, TenantSettings | None] = {tenant_id: None for tenant_id in ids}
+    settings_map: dict[uuid.UUID, TenantSettings | None] = {
+        tenant_id: None for tenant_id in ids
+    }
     if not ids:
         return settings_map
 

@@ -44,6 +44,3 @@ async def update_reminder_settings(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
-
-
-

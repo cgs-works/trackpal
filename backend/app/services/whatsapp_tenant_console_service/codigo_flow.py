@@ -391,10 +391,12 @@ async def _handle_codigo_awaiting_result(
     if restart_trigger:
         if lookup_job_id and db is not None:
             try:
-                cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(
-                    db,
-                    UUID(lookup_job_id),
-                    tenant_id=tenant_id,
+                cancelled = (
+                    await mailbox_lookup_repository.cancel_active_job_if_present(
+                        db,
+                        UUID(lookup_job_id),
+                        tenant_id=tenant_id,
+                    )
                 )
                 if cancelled:
                     await db.commit()

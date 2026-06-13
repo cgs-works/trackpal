@@ -142,7 +142,9 @@ async def test_change_password_client(client, active_client_user):
 
 async def test_change_password_client_uses_tenant_locale(client, active_client_user):
     tenant_headers = await _login(client, "tenant", "tenant-password")
-    await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=tenant_headers)
+    await client.put(
+        "/api/v1/tenant-settings", json={"locale": "es"}, headers=tenant_headers
+    )
 
     headers = await _login(client, active_client_user.username, "client-password")
     response = await client.put(

@@ -8,6 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+
 class SubscriptionCreate(BaseModel):
     model_config = ConfigDict()
 

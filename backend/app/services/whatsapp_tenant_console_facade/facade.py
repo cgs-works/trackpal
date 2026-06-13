@@ -104,8 +104,10 @@ class WhatsAppTenantConsoleFacade:
             if tenant is None:
                 return _t("es", "wa.tenant.facade.tenant_not_found")
             if not tenant.is_active:
+                settings_obj = getattr(tenant, "settings", None)
+                inactive_locale = getattr(settings_obj, "locale", None) or "es"
                 return _t(
-                    getattr(tenant, "locale", "es") or "es",
+                    inactive_locale,
                     "wa.tenant.facade.inactive_tenant",
                 )
             tenant_id = tenant.id

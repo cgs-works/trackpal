@@ -515,9 +515,7 @@ async def test_subscription_api_settings_defaults_include_toggle(
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_settings_update_persists(
-    client, active_tenant_user
-):
+async def test_subscription_api_settings_update_persists(client, active_tenant_user):
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     # Update all fields
@@ -578,7 +576,9 @@ async def test_subscription_api_settings_accepts_both_recipient_mode(
 
 
 @pytest.mark.asyncio
-async def test_get_subscription_settings_does_not_return_timezone(client, active_tenant_user):
+async def test_get_subscription_settings_does_not_return_timezone(
+    client, active_tenant_user
+):
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     response = await client.get("/api/v1/subscription-settings", headers=headers)
@@ -588,7 +588,9 @@ async def test_get_subscription_settings_does_not_return_timezone(client, active
 
 
 @pytest.mark.asyncio
-async def test_put_subscription_settings_ignores_timezone_field(client, active_tenant_user):
+async def test_put_subscription_settings_ignores_timezone_field(
+    client, active_tenant_user
+):
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     response = await client.put(
@@ -604,10 +606,14 @@ async def test_put_subscription_settings_ignores_timezone_field(client, active_t
 
 
 @pytest.mark.asyncio
-async def test_old_subscription_timezones_endpoint_is_removed(client, active_tenant_user):
+async def test_old_subscription_timezones_endpoint_is_removed(
+    client, active_tenant_user
+):
     headers = await _login_headers(client, "tenant", "tenant-password")
 
-    response = await client.get("/api/v1/subscription-settings/timezones", headers=headers)
+    response = await client.get(
+        "/api/v1/subscription-settings/timezones", headers=headers
+    )
 
     assert response.status_code == 405 or response.status_code == 404
 

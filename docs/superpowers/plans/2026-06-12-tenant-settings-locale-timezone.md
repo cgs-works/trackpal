@@ -1,6 +1,6 @@
 # Tenant Settings Locale Timezone Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Move tenant-global `locale` and `timezone` into a dedicated `tenant_settings` table and make `/api/v1/tenant-settings` the only write owner for both settings.
 
@@ -291,7 +291,7 @@ git commit -m "feat: add tenant settings model"
 - Create: `backend/alembic/versions/d011fe74cab0_create_tenant_settings.py`
 - Modify: `backend/tests/test_rls_policy_sql.py`
 
-- [ ] **Step 1: Write failing RLS/migration SQL tests**
+- [x] **Step 1: Write failing RLS/migration SQL tests**
 
 Append to `backend/tests/test_rls_policy_sql.py`:
 
@@ -325,7 +325,7 @@ Also add `Path("alembic/versions/d011fe74cab0_create_tenant_settings.py").read_t
     assert "tenant_settings_update" in text
 ```
 
-- [ ] **Step 2: Run RLS tests to verify RED**
+- [x] **Step 2: Run RLS tests to verify RED**
 
 Run:
 
@@ -335,7 +335,7 @@ cd backend && uv run pytest tests/test_rls_policy_sql.py -q
 
 Expected: FAIL because the migration file does not exist.
 
-- [ ] **Step 3: Create migration**
+- [x] **Step 3: Create migration**
 
 Create `backend/alembic/versions/d011fe74cab0_create_tenant_settings.py`:
 
@@ -518,7 +518,7 @@ def downgrade() -> None:
     op.drop_table("tenant_settings")
 ```
 
-- [ ] **Step 4: Run RLS tests to verify GREEN**
+- [x] **Step 4: Run RLS tests to verify GREEN**
 
 Run:
 
@@ -528,7 +528,7 @@ cd backend && uv run pytest tests/test_rls_policy_sql.py -q
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/alembic/versions/d011fe74cab0_create_tenant_settings.py backend/tests/test_rls_policy_sql.py
@@ -550,7 +550,7 @@ git commit -m "feat: migrate tenant settings"
 - Modify: `backend/app/services/tenant_service/mutations.py`
 - Modify: `backend/tests/test_tenant_settings.py`
 
-- [ ] **Step 1: Add failing API/service tests**
+- [x] **Step 1: Add failing API/service tests**
 
 Append to `backend/tests/test_tenant_settings.py`:
 
@@ -646,7 +646,7 @@ async def test_tenant_settings_repository_resolves_defaults_when_missing(
     assert resolved == "UTC"
 ```
 
-- [ ] **Step 2: Run API tests to verify RED**
+- [x] **Step 2: Run API tests to verify RED**
 
 Run:
 
@@ -656,7 +656,7 @@ cd backend && uv run pytest tests/test_tenant_settings.py -q
 
 Expected: FAIL because `/tenant-settings` API, schemas, service, and repository do not exist.
 
-- [ ] **Step 3: Add schemas**
+- [x] **Step 3: Add schemas**
 
 Create `backend/app/schemas/tenant_settings.py`:
 
@@ -706,7 +706,7 @@ class TenantSettingsUpdate(BaseModel):
         return value
 ```
 
-- [ ] **Step 4: Add repository**
+- [x] **Step 4: Add repository**
 
 Create `backend/app/repositories/tenant_settings_repository.py`:
 
@@ -811,7 +811,7 @@ async def get_settings_for_tenant_ids(
     return settings_map
 ```
 
-- [ ] **Step 5: Add service**
+- [x] **Step 5: Add service**
 
 Create `backend/app/services/tenant_settings_service.py`:
 
@@ -866,7 +866,7 @@ class TenantSettingsService:
         return settings
 ```
 
-- [ ] **Step 6: Add API endpoint**
+- [x] **Step 6: Add API endpoint**
 
 Create `backend/app/api/v1/endpoints/tenant_settings.py`:
 
@@ -915,7 +915,7 @@ async def list_supported_timezones(current_user: CurrentUser):
     return await list_timezones()
 ```
 
-- [ ] **Step 7: Include router**
+- [x] **Step 7: Include router**
 
 Modify `backend/app/api/v1/router.py` imports to include `tenant_settings`:
 
@@ -942,7 +942,7 @@ Add this before subscription routers:
 api_router.include_router(tenant_settings.router)
 ```
 
-- [ ] **Step 8: Create default settings during tenant creation**
+- [x] **Step 8: Create default settings during tenant creation**
 
 Modify `backend/app/services/tenant_service/mutations.py` imports:
 
@@ -957,7 +957,7 @@ After adding/flushing `profile`, add:
     await db.flush()
 ```
 
-- [ ] **Step 9: Run tests to verify GREEN**
+- [x] **Step 9: Run tests to verify GREEN**
 
 Run:
 
@@ -967,7 +967,7 @@ cd backend && uv run pytest tests/test_tenant_settings.py tests/test_tenants.py 
 
 Expected: PASS.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add backend/app/schemas/tenant_settings.py backend/app/repositories/tenant_settings_repository.py backend/app/services/tenant_settings_service.py backend/app/api/v1/endpoints/tenant_settings.py backend/app/api/v1/router.py backend/app/services/tenant_service/mutations.py backend/tests/test_tenant_settings.py
@@ -990,7 +990,7 @@ git commit -m "feat: add tenant settings API"
 - Modify: `backend/tests/test_i18n.py`
 - Modify: `backend/tests/test_profile.py`
 
-- [ ] **Step 1: Update locale tests to use `/tenant-settings` as write owner**
+- [x] **Step 1: Update locale tests to use `/tenant-settings` as write owner**
 
 In `backend/tests/test_i18n.py`, replace every locale mutation like:
 
@@ -1068,7 +1068,7 @@ async def test_get_profile_tenant_projects_tenant_settings(client, active_tenant
     assert data["timezone"] == "America/Santo_Domingo"
 ```
 
-- [ ] **Step 2: Run locale/profile tests to verify RED**
+- [x] **Step 2: Run locale/profile tests to verify RED**
 
 Run:
 
@@ -1078,7 +1078,7 @@ cd backend && uv run pytest tests/test_i18n.py tests/test_profile.py -q
 
 Expected: FAIL because `/me` still reads/writes `Tenant.locale` and `ProfileResponse` has no `timezone`.
 
-- [ ] **Step 3: Delegate locale helpers from tenants repository**
+- [x] **Step 3: Delegate locale helpers from tenants repository**
 
 Modify `backend/app/repositories/tenants_repository.py` imports:
 
@@ -1108,7 +1108,7 @@ async def resolve_locale_by_client(db: AsyncSession, client_owner_user_id: UUID)
 
 Remove the old `select(Tenant.locale)` queries.
 
-- [ ] **Step 4: Update dependency and i18n imports**
+- [x] **Step 4: Update dependency and i18n imports**
 
 In `backend/app/api/dependencies.py`, change imports:
 
@@ -1133,7 +1133,7 @@ In `backend/app/api/v1/endpoints/i18n.py`, import `tenant_settings_repository` i
         locale = await tenant_settings_repository.resolve_locale_by_client(db, current_user.id)
 ```
 
-- [ ] **Step 5: Update `/me` schemas and service**
+- [x] **Step 5: Update `/me` schemas and service**
 
 In `backend/app/schemas/me.py`, add `timezone` to `ProfileResponse`:
 
@@ -1159,7 +1159,7 @@ In `backend/app/services/profile_service/service.py`, change allowed tenant fiel
         )
 ```
 
-- [ ] **Step 6: Update `/me` endpoint projection**
+- [x] **Step 6: Update `/me` endpoint projection**
 
 In `backend/app/api/v1/endpoints/me.py`, import:
 
@@ -1232,7 +1232,7 @@ In `update_profile`, before returning:
     return _profile_response(current_user, profile, locale=locale, timezone=timezone)
 ```
 
-- [ ] **Step 7: Run tests to verify GREEN**
+- [x] **Step 7: Run tests to verify GREEN**
 
 Run:
 
@@ -1242,7 +1242,7 @@ cd backend && uv run pytest tests/test_i18n.py tests/test_profile.py tests/test_
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/app/api/dependencies.py backend/app/api/v1/endpoints/i18n.py backend/app/api/v1/endpoints/me.py backend/app/repositories/tenants_repository.py backend/app/schemas/me.py backend/app/services/profile_service/service.py backend/tests/test_i18n.py backend/tests/test_profile.py
@@ -1262,7 +1262,7 @@ git commit -m "refactor: move locale writes to tenant settings"
 - Modify: `backend/app/services/subscription_service/reminder_settings.py`
 - Modify: `backend/tests/test_subscriptions.py`
 
-- [ ] **Step 1: Add/update failing subscription settings contract tests**
+- [x] **Step 1: Add/update failing subscription settings contract tests**
 
 In `backend/tests/test_subscriptions.py`, update reminder settings API tests so expected payloads omit `timezone`. Add these tests near existing subscription reminder settings endpoint tests:
 
@@ -1302,7 +1302,7 @@ async def test_old_subscription_timezones_endpoint_is_removed(client, active_ten
     assert response.status_code == 405 or response.status_code == 404
 ```
 
-- [ ] **Step 2: Run subscription tests to verify RED**
+- [x] **Step 2: Run subscription tests to verify RED**
 
 Run:
 
@@ -1312,7 +1312,7 @@ cd backend && uv run pytest tests/test_subscriptions.py -q
 
 Expected: FAIL because subscription settings still return and accept `timezone`, and old timezones endpoint still exists.
 
-- [ ] **Step 3: Remove timezone from schemas**
+- [x] **Step 3: Remove timezone from schemas**
 
 In `backend/app/schemas/subscription/create_update.py`, remove:
 
@@ -1334,7 +1334,7 @@ In `backend/app/schemas/subscription/responses.py`, remove this from `Subscripti
     timezone: str
 ```
 
-- [ ] **Step 4: Remove timezone from reminder settings service**
+- [x] **Step 4: Remove timezone from reminder settings service**
 
 In `backend/app/services/subscription_service/reminder_settings.py`, remove `timezone="UTC"` from the `SubscriptionReminderSettings(...)` constructor.
 
@@ -1345,7 +1345,7 @@ Remove this update block:
         settings.timezone = update_data["timezone"]
 ```
 
-- [ ] **Step 5: Remove old timezone catalog endpoint**
+- [x] **Step 5: Remove old timezone catalog endpoint**
 
 In `backend/app/api/v1/endpoints/subscriptions/settings.py`, remove:
 
@@ -1361,7 +1361,7 @@ async def list_supported_timezones(...):
     ...
 ```
 
-- [ ] **Step 6: Run tests to verify GREEN**
+- [x] **Step 6: Run tests to verify GREEN**
 
 Run:
 
@@ -1371,7 +1371,7 @@ cd backend && uv run pytest tests/test_subscriptions.py tests/test_tenant_settin
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/api/v1/endpoints/subscriptions/settings.py backend/app/schemas/subscription/create_update.py backend/app/schemas/subscription/responses.py backend/app/services/subscription_service/reminder_settings.py backend/tests/test_subscriptions.py
@@ -1393,7 +1393,7 @@ git commit -m "refactor: remove timezone from reminder settings"
 - Modify: `backend/tests/test_subscriptions.py`
 - Modify: `backend/tests/test_tenant_console_service.py`
 
-- [ ] **Step 1: Add failing reminder payload tests for tenant settings timezone/locale**
+- [x] **Step 1: Add failing reminder payload tests for tenant settings timezone/locale**
 
 In `backend/tests/test_subscriptions.py`, update existing reminder payload setup so tenant timezone/locale are set through `TenantSettings`, not `SubscriptionReminderSettings`. Add this test near reminder payload generation tests:
 
@@ -1451,7 +1451,7 @@ async def test_reminder_payload_uses_tenant_settings_timezone_and_locale(
 
 If `_create_subscription_fixture` does not exist, extract the existing repeated setup in `test_subscriptions.py` into a helper before adding this test. The helper must return a persisted `Subscription` with client/service/plan relationships populated.
 
-- [ ] **Step 2: Add failing cleanup timezone boundary test**
+- [x] **Step 2: Add failing cleanup timezone boundary test**
 
 Append to `backend/tests/test_subscriptions.py` near cleanup tests:
 
@@ -1484,7 +1484,7 @@ async def test_cleanup_uses_tenant_settings_timezone_for_end_of_day(
     assert eod == datetime(2026, 1, 3, 4, 59, 59, tzinfo=timezone.utc)
 ```
 
-- [ ] **Step 3: Add failing WhatsApp locale update test**
+- [x] **Step 3: Add failing WhatsApp locale update test**
 
 In `backend/tests/test_tenant_console_service.py`, add a focused test for profile locale flow persistence:
 
@@ -1533,7 +1533,7 @@ async def test_tenant_console_profile_locale_updates_tenant_settings(db_session,
     assert "Español" in response
 ```
 
-- [ ] **Step 4: Run targeted tests to verify RED**
+- [x] **Step 4: Run targeted tests to verify RED**
 
 Run:
 
@@ -1543,7 +1543,7 @@ cd backend && uv run pytest tests/test_subscriptions.py tests/test_tenant_consol
 
 Expected: FAIL because reminder jobs, cleanup, and WhatsApp still use old fields.
 
-- [ ] **Step 5: Batch-load tenant settings in reminder schedule**
+- [x] **Step 5: Batch-load tenant settings in reminder schedule**
 
 Modify `backend/app/services/subscription_job_service/reminder_schedule.py` imports:
 
@@ -1574,7 +1574,7 @@ Before `return`, add:
 
 Remove the old two-map return.
 
-- [ ] **Step 6: Use tenant settings in reminder payloads**
+- [x] **Step 6: Use tenant settings in reminder payloads**
 
 In `backend/app/services/subscription_job_service/reminder_payloads.py`, change:
 
@@ -1620,7 +1620,7 @@ with:
 
 Do not skip reminder generation only because `tenant_settings` is missing. The fallback is `locale='en'`, `timezone='UTC'`.
 
-- [ ] **Step 7: Use tenant settings timezone in cleanup**
+- [x] **Step 7: Use tenant settings timezone in cleanup**
 
 In `backend/app/services/subscription_job_service/cleanup.py`, import:
 
@@ -1672,7 +1672,7 @@ Update caller in `_expire_active_subs`:
             eod = await _get_tenant_end_of_day(db, sub.tenant_id, now)
 ```
 
-- [ ] **Step 8: Update WhatsApp facade locale resolution**
+- [x] **Step 8: Update WhatsApp facade locale resolution**
 
 In `backend/app/services/whatsapp_tenant_console_facade/facade.py`, import:
 
@@ -1693,7 +1693,7 @@ Replace inactive/active locale resolution block with:
 
 This keeps inactive-account responses localized from `tenant_settings`.
 
-- [ ] **Step 9: Update WhatsApp profile locale flow**
+- [x] **Step 9: Update WhatsApp profile locale flow**
 
 In `backend/app/services/whatsapp_tenant_console_service/profile_flow.py`, remove:
 
@@ -1736,7 +1736,7 @@ with:
             )
 ```
 
-- [ ] **Step 10: Run targeted tests to verify GREEN**
+- [x] **Step 10: Run targeted tests to verify GREEN**
 
 Run:
 
@@ -1746,7 +1746,7 @@ cd backend && uv run pytest tests/test_subscriptions.py tests/test_tenant_consol
 
 Expected: PASS.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add backend/app/services/subscription_job_service/reminder_schedule.py backend/app/services/subscription_job_service/reminder_payloads.py backend/app/services/subscription_job_service/cleanup.py backend/app/services/whatsapp_tenant_console_facade/facade.py backend/app/services/whatsapp_tenant_console_service/profile_flow.py backend/tests/test_subscriptions.py backend/tests/test_tenant_console_service.py
@@ -1764,7 +1764,7 @@ git commit -m "refactor: use tenant settings in jobs and whatsapp"
 - Modify: `frontend/src/features/admin/services/reminder-api.ts`
 - Modify: `frontend/src/store/settings.ts`
 
-- [ ] **Step 1: Run frontend baseline typecheck/build**
+- [x] **Step 1: Run frontend baseline typecheck/build**
 
 Run:
 
@@ -1774,7 +1774,7 @@ cd frontend && npm run build
 
 Expected: PASS before frontend changes. If it fails, stop and record the pre-existing error before editing.
 
-- [ ] **Step 2: Update settings API types/functions**
+- [x] **Step 2: Update settings API types/functions**
 
 Modify `frontend/src/features/admin/services/settings-api.ts`.
 
@@ -1830,7 +1830,7 @@ export async function getTimezones(): Promise<TimezoneOption[]> {
 }
 ```
 
-- [ ] **Step 3: Update reminder API types/functions**
+- [x] **Step 3: Update reminder API types/functions**
 
 Modify `frontend/src/features/admin/services/reminder-api.ts`:
 
@@ -1849,7 +1849,7 @@ export async function getReminderSettings(): Promise<ReminderSettings> { ... }
 export async function updateReminderSettings(payload: ReminderSettingsUpdate): Promise<ReminderSettings> { ... }
 ```
 
-- [ ] **Step 4: Replace Zustand store with separated caches**
+- [x] **Step 4: Replace Zustand store with separated caches**
 
 Rewrite `frontend/src/store/settings.ts` to this structure:
 
@@ -2037,7 +2037,7 @@ async function loadTimezones(
 }
 ```
 
-- [ ] **Step 5: Run frontend build to verify GREEN for API/store**
+- [x] **Step 5: Run frontend build to verify GREEN for API/store**
 
 Run:
 
@@ -2059,7 +2059,7 @@ Expected: FAIL for components still using the old store shape. This is acceptabl
 - Modify: `frontend/src/features/admin/components/settings-page.tsx`
 - Modify: `frontend/src/store/settings.ts` if Task 7 build exposed missed types
 
-- [ ] **Step 1: Update ProfileSection imports and state**
+- [x] **Step 1: Update ProfileSection imports and state**
 
 In `frontend/src/features/admin/components/profile-section.tsx`, update imports:
 
@@ -2096,7 +2096,7 @@ Add timezone state:
   const [timezone, setTimezone] = useState(profile.timezone || "UTC");
 ```
 
-- [ ] **Step 2: Load tenant settings/timezones from ProfileSection**
+- [x] **Step 2: Load tenant settings/timezones from ProfileSection**
 
 Add after state declarations:
 
@@ -2124,7 +2124,7 @@ Update the existing `useEffect` that syncs profile state:
   }, [profile, tenantSettings]);
 ```
 
-- [ ] **Step 3: Save identity and tenant settings through separate APIs**
+- [x] **Step 3: Save identity and tenant settings through separate APIs**
 
 Replace `handleSubmit` body with:
 
@@ -2170,7 +2170,7 @@ Replace `handleSubmit` body with:
   }
 ```
 
-- [ ] **Step 4: Render TimezonePicker in profile section**
+- [x] **Step 4: Render TimezonePicker in profile section**
 
 In the second grid of `profile-section.tsx`, keep phone and language fields. Add a third field below that grid:
 
@@ -2187,7 +2187,7 @@ In the second grid of `profile-section.tsx`, keep phone and language fields. Add
 
 Do not add decorative cards, gradients, or hero text. Keep the existing simple form style.
 
-- [ ] **Step 5: Update ReminderSettingsModal store usage and local state**
+- [x] **Step 5: Update ReminderSettingsModal store usage and local state**
 
 In `frontend/src/features/admin/components/reminder-settings-modal.tsx`, remove:
 
@@ -2246,7 +2246,7 @@ Change sync effect condition:
   }, [reminderSettingsLoaded, reminderSettings]);
 ```
 
-- [ ] **Step 6: Remove timezone validation and picker from reminder modal**
+- [x] **Step 6: Remove timezone validation and picker from reminder modal**
 
 In `validate`, remove this block:
 
@@ -2270,11 +2270,11 @@ In its place, add a read-only note:
 
 Do not send `timezone` in `updateReminderSettings(settings)` because `settings` no longer contains it.
 
-- [ ] **Step 7: Check SettingsPage does not need visual redesign**
+- [x] **Step 7: Check SettingsPage does not need visual redesign**
 
 Open `frontend/src/features/admin/components/settings-page.tsx`. No layout redesign is required. Only adjust imports/types if `Profile` now requires `timezone` and the build reports an error.
 
-- [ ] **Step 8: Run frontend verification**
+- [x] **Step 8: Run frontend verification**
 
 Run:
 
@@ -2285,7 +2285,7 @@ cd frontend && npm run lint
 
 Expected: both PASS. If `npm run lint` reports pre-existing style issues unrelated to touched files, record them in the execution report and still fix all lint errors in touched files.
 
-- [ ] **Step 9: Commit frontend changes**
+- [x] **Step 9: Commit frontend changes**
 
 ```bash
 git add frontend/src/features/admin/services/settings-api.ts frontend/src/features/admin/services/reminder-api.ts frontend/src/store/settings.ts frontend/src/features/admin/components/profile-section.tsx frontend/src/features/admin/components/reminder-settings-modal.tsx frontend/src/features/admin/components/settings-page.tsx
@@ -2376,7 +2376,7 @@ git commit -m "docs: document tenant settings ownership"
 - Inspect all modified files.
 - No new feature files unless prior tasks required them.
 
-- [ ] **Step 1: Check for forbidden stale code references**
+- [x] **Step 1: Check for forbidden stale code references**
 
 Run:
 
@@ -2391,7 +2391,7 @@ Expected:
 - No reminder settings API type has `timezone`.
 - `settings.timezone` may appear only when the variable is tenant settings, not reminder settings. Inspect every hit.
 
-- [ ] **Step 2: Run backend tests**
+- [x] **Step 2: Run backend tests**
 
 Run:
 
@@ -2401,7 +2401,7 @@ cd backend && uv run pytest
 
 Expected: PASS.
 
-- [ ] **Step 3: Run backend lint/format checks**
+- [x] **Step 3: Run backend lint/format checks**
 
 Run:
 
@@ -2412,7 +2412,7 @@ cd backend && uv run ruff format . --check
 
 Expected: PASS. If `ruff format . --check` fails only because files need formatting, run `uv run ruff format .`, review diff, then rerun both commands.
 
-- [ ] **Step 4: Run frontend verification**
+- [x] **Step 4: Run frontend verification**
 
 Run:
 
@@ -2425,7 +2425,7 @@ Expected: PASS.
 
 Do not run `npm test` unless a `test` script is added later. Current `frontend/package.json` has no `test` script.
 
-- [ ] **Step 5: Inspect git diff**
+- [x] **Step 5: Inspect git diff**
 
 Run:
 
@@ -2441,7 +2441,7 @@ Expected:
 - No n8n workflow changes.
 - No broad cleanup outside touched files.
 
-- [ ] **Step 6: Request code review**
+- [x] **Step 6: Request code review**
 
 Use `superpowers:requesting-code-review` or a `code-reviewer` subagent. Ask the reviewer to check:
 
@@ -2452,7 +2452,7 @@ Use `superpowers:requesting-code-review` or a `code-reviewer` subagent. Ask the 
 - reminder timezone/locale behavior;
 - frontend store/component ownership split.
 
-- [ ] **Step 7: Final commit if verification changed formatting/docs**
+- [x] **Step 7: Final commit if verification changed formatting/docs**
 
 If Step 3 formatting or Step 6 review fixes changed files, commit them:
 

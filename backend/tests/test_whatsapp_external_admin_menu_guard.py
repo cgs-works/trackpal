@@ -10,6 +10,7 @@ from app.models import (
     Tenant,
     TenantCodeServiceSelection,
     TenantMailbox,
+    TenantSettings,
     User,
 )
 
@@ -79,7 +80,11 @@ async def _setup_tenant_with_instance(db_session, active_tenant_user) -> Tenant:
     tenant = result.scalar_one_or_none()
     assert tenant is not None
     tenant.evolution_instance_name = TEST_INSTANCE
-    tenant.locale = "es"
+    ts_result = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    ts = ts_result.scalar_one()
+    ts.locale = "es"
     await db_session.commit()
     return tenant
 

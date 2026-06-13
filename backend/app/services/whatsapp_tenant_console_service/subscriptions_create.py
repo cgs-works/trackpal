@@ -9,7 +9,6 @@ import math
 from app.services.whatsapp_navigation import is_next
 
 
-
 PAGE_SIZE = 7
 
 
@@ -28,12 +27,12 @@ async def _start_subscriptions_create(
         return self._t(self.KEY_SUBSCRIPTIONS_CLIENT_REQUIRED)
     # Determine tenant timezone for subscription start date
     _tz = timezone.utc
-    if self._subscription_service is not None:
+    if db is not None:
+        from app.repositories import tenant_settings_repository
+
         try:
-            _settings = await self._subscription_service.get_reminder_settings(
-                db, tenant_id
-            )
-            _tz = ZoneInfo(_settings.timezone)
+            _tz_name = await tenant_settings_repository.resolve_timezone(db, tenant_id)
+            _tz = ZoneInfo(_tz_name)
         except Exception:
             pass
 

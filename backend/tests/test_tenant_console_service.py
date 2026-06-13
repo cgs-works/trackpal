@@ -2636,7 +2636,9 @@ class TestConsoleHandlersCodigoScope:
             tenant_id=tenant_id,
         )
         mock_db.commit.assert_awaited_once()
-        mock_session_service.clear_session.assert_awaited_once_with("admin:+10000000000")
+        mock_session_service.clear_session.assert_awaited_once_with(
+            "admin:+10000000000"
+        )
         start_flow.assert_awaited_once_with(
             "+10000000000",
             mock_session_service,

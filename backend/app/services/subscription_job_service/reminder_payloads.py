@@ -151,7 +151,9 @@ async def generate_reminder_payloads(
         return {"items": [], "next_cursor": None}
 
     # Batch-load settings, tenants, and tenant settings — eliminates N+1 queries
-    settings_map, tenants_map, tenant_settings_map = await load_batched_reminder_data(db, subs)
+    settings_map, tenants_map, tenant_settings_map = await load_batched_reminder_data(
+        db, subs
+    )
 
     items: list[dict[str, Any]] = []
 

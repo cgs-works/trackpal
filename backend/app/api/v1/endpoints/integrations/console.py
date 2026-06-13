@@ -41,7 +41,8 @@ logger = logging.getLogger(__name__)
 
 
 def _tl(tenant: object) -> str:
-    return getattr(tenant, "locale", "es") or "es"
+    settings = getattr(tenant, "settings", None)
+    return getattr(settings, "locale", None) or "es"
 
 
 def _phone_close_jid(phone_digits: str | None) -> str | None:
@@ -578,7 +579,8 @@ async def _handle_from_me_routing(
                 context_data.get("temp_data", {}), resolved_admin_jid
             )
             await manager.execute("clear_context", _del_ctx)
-            locale = getattr(tenant, "locale", "es") or "es"
+            settings_obj = getattr(tenant, "settings", None)
+            locale = getattr(settings_obj, "locale", None) or "es"
             return WhatsAppConsoleResponse(
                 reply=t(locale, "wa.tenant.client_context.closed"),
                 status="closed",

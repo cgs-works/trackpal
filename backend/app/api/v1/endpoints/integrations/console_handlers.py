@@ -544,7 +544,7 @@ async def _handle_unauthenticated_codigo(
     ``session:unreg:...`` so that subsequent messages continue the
     dialog rather than being treated as fresh requests.
     """
-    locale = getattr(tenant, "locale", "es") or "es"
+    locale = getattr(getattr(tenant, "settings", None), "locale", None) or "es"
     msg = message.strip()
     session_key = _unauth_session_key(phone_digits, sender_lid, str(tenant.id))
 
@@ -1416,7 +1416,11 @@ async def _handle_active_client_context(
 
     # ── Handle 0 / cerrar at any step (close context) ─────────────
     if is_cancel(msg_lower):
-        locale = temp_data.get("locale") or getattr(tenant, "locale", "es") or "es"
+        locale = (
+            temp_data.get("locale")
+            or getattr(getattr(tenant, "settings", None), "locale", None)
+            or "es"
+        )
         await _clear_ctx()
         close_jids = _client_context_close_jids(temp_data, admin_jid)
         return WhatsAppConsoleResponse(
@@ -1474,7 +1478,7 @@ async def _handle_active_client_context(
             await _clear_ctx()
             locale = (
                 data.get("temp_data", {}).get("locale")
-                or getattr(tenant, "locale", "es")
+                or getattr(getattr(tenant, "settings", None), "locale", None)
                 or "es"
             )
             return WhatsAppConsoleResponse(
@@ -1492,7 +1496,7 @@ async def _handle_active_client_context(
             await _clear_ctx()
             locale = (
                 data.get("temp_data", {}).get("locale")
-                or getattr(tenant, "locale", "es")
+                or getattr(getattr(tenant, "settings", None), "locale", None)
                 or "es"
             )
             return WhatsAppConsoleResponse(
@@ -1510,7 +1514,7 @@ async def _handle_active_client_context(
             await _clear_ctx()
             locale = (
                 data.get("temp_data", {}).get("locale")
-                or getattr(tenant, "locale", "es")
+                or getattr(getattr(tenant, "settings", None), "locale", None)
                 or "es"
             )
             return WhatsAppConsoleResponse(
@@ -1529,7 +1533,7 @@ async def _handle_active_client_context(
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(
                     data.get("temp_data", {}).get("locale")
-                    or getattr(tenant, "locale", "es")
+                    or getattr(getattr(tenant, "settings", None), "locale", None)
                     or "es",
                     "wa.tenant.client_context.create.cancelled",
                 ),
@@ -1547,7 +1551,7 @@ async def _handle_active_client_context(
             return WhatsAppConsoleResponse(
                 reply=_i18n_t(
                     data.get("temp_data", {}).get("locale")
-                    or getattr(tenant, "locale", "es")
+                    or getattr(getattr(tenant, "settings", None), "locale", None)
                     or "es",
                     "wa.tenant.client_context.create.cancelled",
                 ),
@@ -1575,7 +1579,7 @@ async def _handle_active_client_context(
     if step == "post_create_menu":
         locale = (
             data.get("temp_data", {}).get("locale")
-            or getattr(tenant, "locale", "es")
+            or getattr(getattr(tenant, "settings", None), "locale", None)
             or "es"
         )
         if msg_lower == "1":
@@ -1674,7 +1678,7 @@ async def _handle_active_client_context(
             return resp
         locale = (
             data.get("temp_data", {}).get("locale")
-            or getattr(tenant, "locale", "es")
+            or getattr(getattr(tenant, "settings", None), "locale", None)
             or "es"
         )
         return WhatsAppConsoleResponse(
@@ -1798,7 +1802,7 @@ async def _handle_active_client_context(
             return resp
         locale = (
             data.get("temp_data", {}).get("locale")
-            or getattr(tenant, "locale", "es")
+            or getattr(getattr(tenant, "settings", None), "locale", None)
             or "es"
         )
         return WhatsAppConsoleResponse(
@@ -1835,7 +1839,7 @@ async def _handle_ctx_unblocked_menu(
     """Handle a message in the unblocked unregistered target menu."""
     locale = (
         data.get("temp_data", {}).get("locale")
-        or getattr(tenant, "locale", "es")
+        or getattr(getattr(tenant, "settings", None), "locale", None)
         or "es"
     )
 
@@ -1876,7 +1880,7 @@ async def _handle_ctx_unblocked_menu(
     if is_cancel(msg_lower):
         locale = (
             data.get("temp_data", {}).get("locale")
-            or getattr(tenant, "locale", "es")
+            or getattr(getattr(tenant, "settings", None), "locale", None)
             or "es"
         )
         await clear_ctx()
@@ -1892,7 +1896,7 @@ async def _handle_ctx_unblocked_menu(
     # Invalid input — do NOT refresh TTL
     locale = (
         data.get("temp_data", {}).get("locale")
-        or getattr(tenant, "locale", "es")
+        or getattr(getattr(tenant, "settings", None), "locale", None)
         or "es"
     )
     await save_ctx(refresh_ttl=False)
@@ -1916,7 +1920,7 @@ async def _handle_ctx_blocked_menu(
     """Handle a message in the blocked target menu."""
     locale = (
         data.get("temp_data", {}).get("locale")
-        or getattr(tenant, "locale", "es")
+        or getattr(getattr(tenant, "settings", None), "locale", None)
         or "es"
     )
 
@@ -1952,7 +1956,7 @@ async def _handle_ctx_blocked_menu(
     if is_cancel(msg_lower):
         locale = (
             data.get("temp_data", {}).get("locale")
-            or getattr(tenant, "locale", "es")
+            or getattr(getattr(tenant, "settings", None), "locale", None)
             or "es"
         )
         await clear_ctx()
@@ -1968,7 +1972,7 @@ async def _handle_ctx_blocked_menu(
     # Invalid input — do NOT refresh TTL
     locale = (
         data.get("temp_data", {}).get("locale")
-        or getattr(tenant, "locale", "es")
+        or getattr(getattr(tenant, "settings", None), "locale", None)
         or "es"
     )
     await save_ctx(refresh_ttl=False)

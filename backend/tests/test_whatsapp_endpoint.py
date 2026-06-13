@@ -21,8 +21,8 @@ from app.models import (
     MasterProfile,
     Tenant,
     TenantCodeServiceSelection,
-    TenantMailbox,
     TenantSettings,
+    TenantMailbox,
     User,
 )
 from app.repositories import mailbox_lookup_repository
@@ -2735,7 +2735,11 @@ async def test_from_me_remote_zero_uses_tenant_locale_for_cancel_message(
     client, db_session, active_tenant_user
 ):
     tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
-    tenant.locale = "en"
+    ts_result = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    ts = ts_result.scalar_one()
+    ts.locale = "en"
     await db_session.commit()
 
     fake_mgr = _FakeManager(used_backup=False)

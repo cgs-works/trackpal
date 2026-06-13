@@ -55,8 +55,13 @@ async def _get_tenant_end_of_day(
     local_today = local_now.date()
     # Local end-of-day converted to UTC
     local_eod = datetime(
-        local_today.year, local_today.month, local_today.day,
-        23, 59, 59, tzinfo=tz,
+        local_today.year,
+        local_today.month,
+        local_today.day,
+        23,
+        59,
+        59,
+        tzinfo=tz,
     )
     return local_eod.astimezone(timezone.utc)
 
