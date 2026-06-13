@@ -15,13 +15,12 @@ import { toast } from "sonner";
 import { Mail, CheckCircle2, AlertCircle, Unplug } from "lucide-react";
 import { t } from "@/i18n";
 import {
-  type Mailbox,
-  getMailbox,
   upsertMailbox,
   testMailbox,
   startOAuth,
   disconnectMailbox,
 } from "../services/settings-api";
+import { useSettingsStore } from "@/store/settings";
 
 const PROVIDER_OPTIONS = [
   { value: "google", label: t("frontend.mailbox.connect_google") },
@@ -58,8 +57,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function MailboxSection() {
-  const [mailbox, setMailbox] = useState<Mailbox | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { mailbox, mailboxLoaded, loadMailbox } = useSettingsStore();
+  const [isLoading, setIsLoading] = useState(!mailboxLoaded);
   const [error, setError] = useState("");
 
   // Form state
@@ -72,12 +71,11 @@ export function MailboxSection() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
-  const loadMailbox = useCallback(async () => {
+  const loadMailboxData = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
-      const data = await getMailbox();
-      setMailbox(data);
+      const data = await loadMailbox();
       if (data) {
         setProvider(data.provider);
         setEmail(data.mailbox_email);
@@ -92,11 +90,11 @@ export function MailboxSection() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadMailbox]);
 
   useEffect(() => {
-    loadMailbox();
-  }, [loadMailbox]);
+    loadMailboxData();
+  }, [loadMailboxData]);
 
   // ── OAuth connect ─────────────────────────────────────────
   async function handleOAuthConnect(prov: "google" | "microsoft") {
@@ -116,7 +114,7 @@ export function MailboxSection() {
     e.preventDefault();
     setSaving(true);
     try {
-      const data = await upsertMailbox({
+      await upsertMailbox({
         provider: "imap_custom",
         mailbox_email: email,
         imap_host: imapHost,
@@ -124,7 +122,8 @@ export function MailboxSection() {
         imap_ssl: imapSsl,
         imap_password: imapPassword,
       });
-      setMailbox(data);
+      useSettingsStore.getState().clearSettingsCache();
+      await loadMailboxData();
       toast.success(t("frontend.mailbox.success_saved"));
     } catch (err) {
       toast.error(
@@ -142,7 +141,8 @@ export function MailboxSection() {
       const result = await testMailbox();
       if (result.success) {
         toast.success(result.message);
-        await loadMailbox();
+        useSettingsStore.getState().clearSettingsCache();
+        await loadMailboxData();
       } else {
         toast.error(result.message);
       }
@@ -159,7 +159,8 @@ export function MailboxSection() {
   async function handleDisconnect() {
     try {
       await disconnectMailbox();
-      setMailbox(null);
+      useSettingsStore.getState().clearSettingsCache();
+      await loadMailboxData();
       toast.success(t("frontend.mailbox.success_disconnected"));
     } catch (err) {
       toast.error(

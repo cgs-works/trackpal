@@ -9,27 +9,33 @@ import {
   getTenantSettings,
   updateTenantSettings as apiUpdateTenantSettings,
   getTimezones,
+  getMailbox as apiGetMailbox,
   type TenantSettings,
   type TenantSettingsUpdate,
   type TimezoneOption,
+  type Mailbox,
 } from "@/features/admin/services/settings-api";
 
 interface SettingsState {
   reminderSettings: ReminderSettings | null;
   tenantSettings: TenantSettings | null;
   timezoneOptions: TimezoneOption[];
+  mailbox: Mailbox | null;
   reminderSettingsLoaded: boolean;
   tenantSettingsLoaded: boolean;
   timezonesLoaded: boolean;
+  mailboxLoaded: boolean;
   reminderSettingsInFlight: Promise<ReminderSettings | null> | null;
   tenantSettingsInFlight: Promise<TenantSettings | null> | null;
   timezonesInFlight: Promise<TimezoneOption[]> | null;
+  mailboxInFlight: Promise<Mailbox | null> | null;
   settingsLoadError: string | null;
   _settingsEpoch: number;
 
   loadReminderSettings: () => Promise<ReminderSettings | null>;
   loadTenantSettings: () => Promise<TenantSettings | null>;
   loadTimezoneOptions: () => Promise<TimezoneOption[]>;
+  loadMailbox: () => Promise<Mailbox | null>;
   updateReminderSettings: (
     settings: ReminderSettingsUpdate
   ) => Promise<ReminderSettings>;
@@ -43,12 +49,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   reminderSettings: null,
   tenantSettings: null,
   timezoneOptions: [],
+  mailbox: null,
   reminderSettingsLoaded: false,
   tenantSettingsLoaded: false,
   timezonesLoaded: false,
+  mailboxLoaded: false,
   reminderSettingsInFlight: null,
   tenantSettingsInFlight: null,
   timezonesInFlight: null,
+  mailboxInFlight: null,
   settingsLoadError: null,
   _settingsEpoch: 0,
 
@@ -82,6 +91,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return promise;
   },
 
+  loadMailbox: async () => {
+    const state = get();
+    if (state.mailboxLoaded) return state.mailbox;
+    const promise = state.mailboxInFlight || loadMailbox(set, get);
+    if (!state.mailboxInFlight) {
+      set({ mailboxInFlight: promise });
+    }
+    return promise;
+  },
+
   updateReminderSettings: async (payload) => {
     const data = await apiUpdateReminderSettings(payload);
     set({ reminderSettings: data, reminderSettingsLoaded: true });
@@ -99,12 +118,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       reminderSettings: null,
       tenantSettings: null,
       timezoneOptions: [],
+      mailbox: null,
       reminderSettingsLoaded: false,
       tenantSettingsLoaded: false,
       timezonesLoaded: false,
+      mailboxLoaded: false,
       reminderSettingsInFlight: null,
       tenantSettingsInFlight: null,
       timezonesInFlight: null,
+      mailboxInFlight: null,
       settingsLoadError: null,
       _settingsEpoch: get()._settingsEpoch + 1,
     });
@@ -191,5 +213,30 @@ async function loadTimezones(
       timezonesInFlight: null,
     });
     return [];
+  }
+}
+
+async function loadMailbox(
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
+): Promise<Mailbox | null> {
+  const epoch = get()._settingsEpoch;
+  try {
+    const data = await apiGetMailbox();
+    if (get()._settingsEpoch !== epoch) return null;
+    set({
+      mailbox: data,
+      mailboxLoaded: true,
+      mailboxInFlight: null,
+    });
+    return data;
+  } catch (error) {
+    console.warn("[settings] Failed to load mailbox:", error);
+    set({
+      mailbox: null,
+      mailboxLoaded: false,
+      mailboxInFlight: null,
+    });
+    return null;
   }
 }
