@@ -604,9 +604,9 @@ async def test_put_tenant_settings_rejects_invalid_locale(client, active_tenant_
         headers=headers,
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 409
     detail = response.json()["detail"]
-    assert any("Locale must be one of" in str(err.get("msg", "")) for err in detail)
+    assert "Locale must be one of" in detail
 
 
 async def test_put_tenant_settings_rejects_invalid_timezone(client, active_tenant_user):
@@ -618,9 +618,9 @@ async def test_put_tenant_settings_rejects_invalid_timezone(client, active_tenan
         headers=headers,
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 409
     detail = response.json()["detail"]
-    assert any("valid IANA timezone" in str(err.get("msg", "")) for err in detail)
+    assert "valid IANA timezone" in detail
 
 
 async def test_tenant_settings_timezones_endpoint(client, active_tenant_user):

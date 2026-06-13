@@ -78,19 +78,28 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
       };
       const previousLocale = tenantSettings?.locale || profile.locale || "en";
 
-      const [updatedProfile, updatedSettings] = await Promise.all([
+      const [profileResult, settingsResult] = await Promise.allSettled([
         updateProfile(profilePayload),
         updateTenantSettings(settingsPayload),
       ]);
 
-      onProfileUpdate({
-        ...updatedProfile,
-        locale: updatedSettings.locale,
-        timezone: updatedSettings.timezone,
-      });
+      if (profileResult.status === "rejected") {
+        throw profileResult.reason;
+      }
+      const updatedProfile = profileResult.value;
 
-      if (updatedSettings.locale !== previousLocale) {
-        await loadCatalog();
+      if (settingsResult.status === "fulfilled") {
+        const updatedSettings = settingsResult.value;
+        onProfileUpdate({
+          ...updatedProfile,
+          locale: updatedSettings.locale,
+          timezone: updatedSettings.timezone,
+        });
+        if (updatedSettings.locale !== previousLocale) {
+          await loadCatalog();
+        }
+      } else {
+        onProfileUpdate(updatedProfile);
       }
 
       toast.success(t("frontend.profile.saved"));

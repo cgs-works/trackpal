@@ -227,13 +227,14 @@ async def _handle_profile_change_locale_select(
 
     if user_id is not None and db is not None:
         tenant = await tenants_repository.get_by_owner(db, user_id)
-        if tenant is not None:
-            service = TenantSettingsService()
-            await service.update_settings(
-                db,
-                tenant.id,
-                TenantSettingsUpdate(locale=new_locale),
-            )
+        if tenant is None:
+            return self._t(self.KEY_FALLBACK_NO_FLOW)
+        service = TenantSettingsService()
+        await service.update_settings(
+            db,
+            tenant.id,
+            TenantSettingsUpdate(locale=new_locale),
+        )
 
     if session_service is not None:
         await session_service.clear_session(f"admin:{phone}")

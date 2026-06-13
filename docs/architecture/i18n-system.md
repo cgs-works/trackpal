@@ -50,7 +50,7 @@ VALID_LOCALES: tuple[str, ...] = ("en", "es")
 Locale is stored in the `tenant_settings` table. Each tenant has a single row in this table, with `tenant_id` as primary key and foreign key to `tenants.id`. Migration `d011fe74cab0` created the table, backfilled locale values from the previous `tenants.locale` column and legacy `subscription_reminder_settings.timezone`, then dropped both obsolete columns.
 
 Exposed via:
-- `GET /api/v1/tenant-settings` — Read-write endpoint for locale (and timezone)
+- `GET /api/v1/tenant-settings` — Read-only endpoint for locale (and timezone)
 - `PUT /api/v1/tenant-settings` — Update locale (and timezone)
 - `GET /api/v1/me` → `ProfileResponse.locale` — Read-only projection for convenience (locale is not writable through `/me`)
 
@@ -211,22 +211,29 @@ Role resolution:
 
 ## Frontend I18n Store
 
-File: `frontend/src/stores/i18nStore.ts`. Zustand store:
+File: `frontend/src/i18n/index.ts`. Plain module (not Zustand):
 
 ```typescript
-const useI18nStore = create<{ locale: string; strings: Record<string, string>; isLoaded: boolean }>((set) => ({
-  locale: 'en',
-  strings: {},
-  isLoaded: false,
-  loadCatalog: async () => {
-    const response = await api.get('/i18n/catalog')
-    set({ locale: response.data.locale, strings: response.data.catalog, isLoaded: true })
-  },
-  t: (key: string, params?: Record<string, string>) => {
-    // Lookup key, warn in dev if missing
-    // Apply params via string replace
-  },
-}))
+let currentLocale = 'en';
+let catalog: Record<string, string> = {};
+
+export async function loadCatalog() {
+  const response = await api.get('/i18n/catalog')
+  currentLocale = response.data.locale
+  catalog = response.data.catalog
+}
+
+export function t(key: string, params?: Record<string, string>) {
+  let value = catalog[key] ?? key
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      value = value.replace(new RegExp(`\\{${k}\\}`, 'g'), v)
+    }
+  }
+  return value
+}
+
+export function getLocale() { return currentLocale }
 ```
 
 Catalog loaded on authenticated lifecycle:
@@ -246,7 +253,7 @@ Login and future unauthenticated routes use local frontend catalog files, indepe
 
 Boundary:
 - Pre-auth views do **not** call backend i18n endpoint.
-- Authenticated views continue using backend catalog through `i18nStore`.
+- Authenticated views continue using backend catalog through `frontend/src/i18n/index.ts`.
 
 ## N8n Integration
 

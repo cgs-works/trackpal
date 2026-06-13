@@ -25,6 +25,7 @@ interface SettingsState {
   tenantSettingsInFlight: Promise<TenantSettings | null> | null;
   timezonesInFlight: Promise<TimezoneOption[]> | null;
   settingsLoadError: string | null;
+  _settingsEpoch: number;
 
   loadReminderSettings: () => Promise<ReminderSettings | null>;
   loadTenantSettings: () => Promise<TenantSettings | null>;
@@ -49,11 +50,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   tenantSettingsInFlight: null,
   timezonesInFlight: null,
   settingsLoadError: null,
+  _settingsEpoch: 0,
 
   loadReminderSettings: async () => {
     const state = get();
     if (state.reminderSettingsLoaded) return state.reminderSettings;
-    const promise = state.reminderSettingsInFlight || loadReminderSettings(set);
+    const promise = state.reminderSettingsInFlight || loadReminderSettings(set, get);
     if (!state.reminderSettingsInFlight) {
       set({ reminderSettingsInFlight: promise });
     }
@@ -63,7 +65,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   loadTenantSettings: async () => {
     const state = get();
     if (state.tenantSettingsLoaded) return state.tenantSettings;
-    const promise = state.tenantSettingsInFlight || loadTenantSettings(set);
+    const promise = state.tenantSettingsInFlight || loadTenantSettings(set, get);
     if (!state.tenantSettingsInFlight) {
       set({ tenantSettingsInFlight: promise });
     }
@@ -73,7 +75,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   loadTimezoneOptions: async () => {
     const state = get();
     if (state.timezonesLoaded) return state.timezoneOptions;
-    const promise = state.timezonesInFlight || loadTimezones(set);
+    const promise = state.timezonesInFlight || loadTimezones(set, get);
     if (!state.timezonesInFlight) {
       set({ timezonesInFlight: promise });
     }
@@ -104,15 +106,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       tenantSettingsInFlight: null,
       timezonesInFlight: null,
       settingsLoadError: null,
+      _settingsEpoch: get()._settingsEpoch + 1,
     });
   },
 }));
 
 async function loadReminderSettings(
-  set: (partial: Partial<SettingsState>) => void
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
 ): Promise<ReminderSettings | null> {
+  const epoch = get()._settingsEpoch;
   try {
     const data = await getReminderSettings();
+    if (get()._settingsEpoch !== epoch) return null;
     set({
       reminderSettings: data,
       reminderSettingsLoaded: true,
@@ -135,10 +141,13 @@ async function loadReminderSettings(
 }
 
 async function loadTenantSettings(
-  set: (partial: Partial<SettingsState>) => void
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
 ): Promise<TenantSettings | null> {
+  const epoch = get()._settingsEpoch;
   try {
     const data = await getTenantSettings();
+    if (get()._settingsEpoch !== epoch) return null;
     set({
       tenantSettings: data,
       tenantSettingsLoaded: true,
@@ -161,10 +170,13 @@ async function loadTenantSettings(
 }
 
 async function loadTimezones(
-  set: (partial: Partial<SettingsState>) => void
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
 ): Promise<TimezoneOption[]> {
+  const epoch = get()._settingsEpoch;
   try {
     const data = await getTimezones();
+    if (get()._settingsEpoch !== epoch) return [];
     set({
       timezoneOptions: data,
       timezonesLoaded: true,

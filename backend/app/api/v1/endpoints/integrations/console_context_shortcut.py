@@ -1785,8 +1785,12 @@ async def _start_context_subscription(
 
         _tz_name = await tenant_settings_repository.resolve_timezone(db, tenant.id)
         _tz = ZoneInfo(_tz_name)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(
+            "Failed to resolve tenant %s timezone, falling back to UTC: %s",
+            tenant.id,
+            exc,
+        )
 
     phone = data.get("phone", "")
     session = await session_service.create_session(f"admin:{phone}")

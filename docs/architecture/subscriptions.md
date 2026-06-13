@@ -183,7 +183,7 @@ File: `frontend/src/views/SubscriptionsView.vue` (1,440 LOC). Route: `/admin/sub
 - Cancel with confirmation dialog
 - Reveal with eye icon per row; empty password shows "Sin contraseña"
 - Linked from dashboard and client detail rows
-- Reminder settings panel: timezone dropdown (from `GET /api/v1/tenant-settings/timezones`), warning days, reminder time, recipient mode, reminders_enabled toggle
+- Reminder settings panel: timezone read-only display (from `GET /api/v1/tenant-settings`, edits via `PUT /api/v1/tenant-settings`), warning days, reminder time, recipient mode, reminders_enabled toggle
 - Timezone edits are handled via `GET/PUT /api/v1/tenant-settings`, no longer owned by the reminder modal
 
 ## Migration

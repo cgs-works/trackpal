@@ -56,7 +56,7 @@ TanStack Router uses `beforeLoad` hooks for route guards:
 
 ## State Management (Zustand)
 
-Key stores in `src/stores/`:
+Key stores in `frontend/src/store/`:
 
 ### `authStore`
 
@@ -87,7 +87,7 @@ Note: The frontend was migrated from Vue 3 + Pinia to React 19 + TypeScript + Zu
 
 ## API Integration (Axios)
 
-Singleton Axios instance in `src/services/api.ts`:
+Singleton Axios instance in `@/lib/api`:
 
 - Base URL from `VITE_API_URL` env var or fallback `http://localhost:8000/api/v1`
 - **Request interceptor**: Attaches `Authorization: Bearer <token>` header from localStorage

@@ -42,9 +42,14 @@ async def _get_tenant_timezone_map(db: AsyncSession) -> dict[uuid.UUID, str]:
 
 
 async def _get_tenant_end_of_day(
-    db: AsyncSession, tenant_id: uuid.UUID, now: datetime, today: date
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    now: datetime,
+    today: date,
+    tz_map: dict[uuid.UUID, str] | None = None,
 ) -> datetime:
-    tz_map = await _get_tenant_timezone_map(db)
+    if tz_map is None:
+        tz_map = await _get_tenant_timezone_map(db)
     tz_str = tz_map.get(tenant_id, "UTC")
     try:
         tz = ZoneInfo(tz_str)
@@ -67,8 +72,13 @@ async def _get_tenant_end_of_day(
 
 
 async def _expire_active_subs(
-    db: AsyncSession, now: datetime, today: date
+    db: AsyncSession,
+    now: datetime,
+    today: date,
+    tz_map: dict[uuid.UUID, str] | None = None,
 ) -> list[dict[str, Any]]:
+    if tz_map is None:
+        tz_map = await _get_tenant_timezone_map(db)
     results: list[dict[str, Any]] = []
     res = await db.execute(
         select(Subscription).where(
@@ -87,7 +97,7 @@ async def _expire_active_subs(
         }
         try:
             expires_at = _ensure_aware(sub.expires_at)
-            eod = await _get_tenant_end_of_day(db, sub.tenant_id, now, today)
+            eod = await _get_tenant_end_of_day(db, sub.tenant_id, now, today, tz_map)
             if expires_at > eod:
                 continue
             sub.status = "expired"
@@ -220,7 +230,9 @@ async def run_cleanup(db: AsyncSession) -> list[dict[str, Any]]:
     now = datetime.now(timezone.utc)
     today = now.date()
 
-    results += await _expire_active_subs(db, now, today)
+    results += await _expire_active_subs(
+        db, now, today, tz_map=await _get_tenant_timezone_map(db)
+    )
     results += await _cancel_long_expired_subs(db, now)
     results += await _delete_old_cancelled_subs(db, now)
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import CurrentUser, DbDep
+from app.core.database import restore_rls_context
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
 from app.repositories import tenant_settings_repository
@@ -59,6 +60,7 @@ async def _resolve_profile_settings(
         ) = await tenant_settings_repository.get_or_create_by_tenant_id(db, profile.id)
         if _created:
             await db.commit()
+            await restore_rls_context(db)
             await db.refresh(settings)
         return settings.locale, settings.timezone
 

@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Iterable
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Client, Tenant, TenantSettings
@@ -27,7 +28,14 @@ async def get_or_create_by_tenant_id(
 
     settings = TenantSettings(tenant_id=tenant_id, locale="en", timezone="UTC")
     db.add(settings)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        existing = await get_by_tenant_id(db, tenant_id)
+        if existing is None:
+            raise
+        return existing, False
     return settings, True
 
 
@@ -88,9 +96,7 @@ async def get_settings_for_tenant_ids(
     db: AsyncSession, tenant_ids: Iterable[uuid.UUID]
 ) -> dict[uuid.UUID, TenantSettings | None]:
     ids = list(set(tenant_ids))
-    settings_map: dict[uuid.UUID, TenantSettings | None] = {
-        tenant_id: None for tenant_id in ids
-    }
+    settings_map: dict[uuid.UUID, TenantSettings | None] = dict.fromkeys(ids, None)
     if not ids:
         return settings_map
 

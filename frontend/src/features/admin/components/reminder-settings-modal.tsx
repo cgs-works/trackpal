@@ -121,9 +121,9 @@ export function ReminderSettingsModal({
     }
   }, [open, loadReminderSettings, loadTenantSettings]);
 
-  // Sync store data to local state when cache loads
+  // Sync store data to local state when modal opens
   useEffect(() => {
-    if (reminderSettingsLoaded && reminderSettings) {
+    if (open && reminderSettingsLoaded && reminderSettings) {
       setSettings({
         reminders_enabled: reminderSettings.reminders_enabled,
         warning_days: reminderSettings.warning_days || [7, 3, 1],
@@ -133,7 +133,7 @@ export function ReminderSettingsModal({
         custom_message_client: reminderSettings.custom_message_client,
       });
     }
-  }, [reminderSettingsLoaded, reminderSettings]);
+  }, [open, reminderSettingsLoaded, reminderSettings]);
 
   useEffect(() => {
     loadData();
