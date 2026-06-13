@@ -6,6 +6,7 @@ SERVICE: ServiceEntry = {
     "service_name": "Disney+",
     "subject_patterns": [
         "Tu código de acceso único para Disney+",
+        "Tu código de acceso único para MyDisney",
         "¿Vas a actualizar tu Hogar de Disney+",
         "Your one-time passcode for My Disney",
         "Your one-time passcode for Disney+",
