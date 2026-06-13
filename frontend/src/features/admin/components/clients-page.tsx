@@ -6,7 +6,6 @@ import { Users, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import {
-  listClients,
   createClient,
   updateClient,
   deactivateClient,
@@ -14,6 +13,7 @@ import {
   deleteClient,
   type Client,
 } from "../services/client-api";
+import { useCatalogStore } from "@/store/catalog";
 import { ClientTable } from "./client-table";
 import {
   ClientFormDialog,
@@ -25,10 +25,10 @@ import { DeleteConfirmDialog } from "./client-delete-dialog";
 export function ClientsPage() {
   const navigate = useNavigate();
 
-  const [clients, setClients] = useState<Client[]>([]);
+  const { clients, loadClients, invalidateClients } = useCatalogStore();
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!useCatalogStore.getState().clientsLoaded);
   const [error, setError] = useState("");
 
   // Form state
@@ -43,13 +43,11 @@ export function ClientsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
 
   // ── Load clients ────────────────────────────────────────────
-  const loadClients = useCallback(async () => {
+  const loadClientsData = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
-      const data = await listClients();
-      setClients(data);
-      setFilteredClients(data);
+      await loadClients();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("frontend.clients.error_load")
@@ -57,11 +55,11 @@ export function ClientsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadClients]);
 
   useEffect(() => {
-    loadClients();
-  }, [loadClients]);
+    loadClientsData();
+  }, [loadClientsData]);
 
   // ── Search filter ───────────────────────────────────────────
   useEffect(() => {
@@ -128,7 +126,8 @@ export function ClientsPage() {
         toast.success(t("frontend.clients.updated"));
       }
       setFormOpen(false);
-      await loadClients();
+      invalidateClients();
+      await loadClientsData();
     } catch (err: unknown) {
       // Extract validation detail from API response
       const apiErr = err as {
@@ -159,7 +158,8 @@ export function ClientsPage() {
         await activateClient(client.id);
         toast.success(t("frontend.clients.activated", { name: client.full_name }));
       }
-      await loadClients();
+      invalidateClients();
+      await loadClientsData();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : t("frontend.clients.error_toggle_status")
@@ -180,7 +180,8 @@ export function ClientsPage() {
       toast.success(t("frontend.clients.deleted", { name: deleteTarget.full_name }));
       setDeleteOpen(false);
       setDeleteTarget(null);
-      await loadClients();
+      invalidateClients();
+      await loadClientsData();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : t("frontend.clients.error_delete")

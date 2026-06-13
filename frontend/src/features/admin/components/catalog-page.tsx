@@ -22,12 +22,10 @@ import {
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import {
-  listServices,
   createService,
   updateService,
   getServiceDeletePreview,
   deleteService,
-  listPlans,
   createPlan,
   updatePlan,
   getPlanDeletePreview,
@@ -36,6 +34,7 @@ import {
   type Plan,
   type DeletePreview,
 } from "../services/catalog-api";
+import { useCatalogStore } from "@/store/catalog";
 
 // ── Rename Dialog ──────────────────────────────────────────────
 interface RenameDialogProps {
@@ -270,10 +269,16 @@ function DeletePreviewDialog({
 
 // ── Main Catalog Page ──────────────────────────────────────────
 export function CatalogPage() {
-  const [services, setServices] = useState<Service[]>([]);
+  const {
+    services,
+    loadServices,
+    loadPlans,
+    invalidateServices,
+    invalidatePlans,
+  } = useCatalogStore();
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!useCatalogStore.getState().servicesLoaded);
   const [error, setError] = useState("");
 
   // Create forms
@@ -304,12 +309,11 @@ export function CatalogPage() {
   >(null);
 
   // ── Load services ──────────────────────────────────────────
-  const loadServices = useCallback(async () => {
+  const loadServicesData = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
-      const data = await listServices();
-      setServices(data);
+      const data = await loadServices();
       if (!selectedServiceId && data.length > 0) {
         setSelectedServiceId(data[0].id);
       }
@@ -320,31 +324,31 @@ export function CatalogPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedServiceId]);
+  }, [loadServices, selectedServiceId]);
 
   useEffect(() => {
-    loadServices();
+    loadServicesData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load plans when service changes ────────────────────────
-  const loadPlans = useCallback(async () => {
+  const loadPlansData = useCallback(async () => {
     if (!selectedServiceId) {
       setPlans([]);
       return;
     }
     try {
-      const data = await listPlans(selectedServiceId);
+      const data = await loadPlans(selectedServiceId);
       setPlans(data);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load plans"
       );
     }
-  }, [selectedServiceId]);
+  }, [selectedServiceId, loadPlans]);
 
   useEffect(() => {
-    loadPlans();
-  }, [loadPlans]);
+    loadPlansData();
+  }, [loadPlansData]);
 
   // ── Create service ─────────────────────────────────────────
   async function handleCreateService(e: React.FormEvent) {
@@ -355,7 +359,8 @@ export function CatalogPage() {
       const service = await createService({ name: newServiceName.trim() });
       setNewServiceName("");
       setSelectedServiceId(service.id);
-      await loadServices();
+      invalidateServices();
+      await loadServicesData();
       toast.success(t("frontend.catalog.service_created"));
     } catch (err) {
       toast.error(
@@ -374,7 +379,8 @@ export function CatalogPage() {
     try {
       await createPlan(selectedServiceId, { name: newPlanName.trim() });
       setNewPlanName("");
-      await loadPlans();
+      invalidatePlans(selectedServiceId);
+      await loadPlansData();
       toast.success(t("frontend.catalog.plan_created"));
     } catch (err) {
       toast.error(
@@ -393,7 +399,8 @@ export function CatalogPage() {
       setRenameSaving(true);
       try {
         await updateService(service.id, { name });
-        await loadServices();
+        invalidateServices();
+        await loadServicesData();
         toast.success(t("frontend.catalog.service_renamed"));
         setRenameOpen(false);
       } catch (err) {
@@ -415,7 +422,8 @@ export function CatalogPage() {
       setRenameSaving(true);
       try {
         await updatePlan(selectedServiceId, plan.id, { name });
-        await loadPlans();
+        invalidatePlans(selectedServiceId);
+        await loadPlansData();
         toast.success(t("frontend.catalog.plan_renamed"));
         setRenameOpen(false);
       } catch (err) {
@@ -445,7 +453,8 @@ export function CatalogPage() {
           if (selectedServiceId === service.id) {
             setSelectedServiceId("");
           }
-          await loadServices();
+          invalidateServices();
+          await loadServicesData();
           toast.success(t("frontend.catalog.service_deleted"));
           setDeleteOpen(false);
         } catch (err) {
@@ -478,7 +487,8 @@ export function CatalogPage() {
         setDeleting(true);
         try {
           await deletePlan(selectedServiceId, plan.id);
-          await loadPlans();
+          invalidatePlans(selectedServiceId);
+          await loadPlansData();
           toast.success(t("frontend.catalog.plan_deleted"));
           setDeleteOpen(false);
         } catch (err) {

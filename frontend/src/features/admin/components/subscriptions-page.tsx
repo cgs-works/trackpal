@@ -20,15 +20,13 @@ import {
   cancelSubscription,
   renewSubscription,
   reactivateSubscription,
-  getDropdownData,
   getPlansForService,
   type Subscription,
-  type Client,
-  type Service,
   type Plan,
   type SubscriptionCreate,
   type SubscriptionFilters,
 } from "../services/subscription-api";
+import { useCatalogStore } from "@/store/catalog";
 import {
   SubscriptionTable,
   RevealCredentialsDialog,
@@ -59,8 +57,7 @@ export function SubscriptionsPage() {
 
   // Data
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const { clients, services, loadClients, loadServices } = useCatalogStore();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -99,13 +96,11 @@ export function SubscriptionsPage() {
   // ── Load data ──────────────────────────────────────────────
   const loadDropdowns = useCallback(async () => {
     try {
-      const { clients: c, services: s } = await getDropdownData();
-      setClients(c);
-      setServices(s);
+      await Promise.all([loadClients(), loadServices()]);
     } catch {
       // Non-critical
     }
-  }, []);
+  }, [loadClients, loadServices]);
 
   const loadSubscriptions = useCallback(async () => {
     setIsLoading(true);
