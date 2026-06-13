@@ -1,18 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Mail, Shield, User, Lock } from "lucide-react";
+import { Bell, Globe, Clock, Mail, Shield, User, Lock } from "lucide-react";
 import { t } from "@/i18n";
 import { ReminderSettingsModal } from "../components/reminder-settings-modal";
 import { ProfileSection } from "../components/profile-section";
 import { PasswordSection } from "../components/password-section";
 import { MailboxSection } from "../components/mailbox-section";
 import { CodeServicesSection } from "../components/code-services-section";
+import { LocaleSection } from "../components/locale-section";
+import { TimezoneSection } from "../components/timezone-section";
 import { getProfile, type Profile } from "../services/settings-api";
 
 export function SettingsPage() {
   const SECTIONS = [
     { id: "reminders", title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell },
+    { id: "locale", title: t("frontend.profile.language"), description: "Choose your display language", icon: Globe },
+    { id: "timezone", title: t("frontend.subscriptions.timezone"), description: "Set your tenant timezone for subscriptions and reminders", icon: Clock },
     { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.tenant_description"), icon: Shield },
     { id: "mailbox", title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
     { id: "profile", title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User },
@@ -79,6 +83,16 @@ export function SettingsPage() {
                   </p>
 
                   {/* Expanded sections */}
+                  {section.id === "locale" && isOpen && (
+                    <div className="mt-4">
+                      <LocaleSection />
+                    </div>
+                  )}
+                  {section.id === "timezone" && isOpen && (
+                    <div className="mt-4">
+                      <TimezoneSection />
+                    </div>
+                  )}
                   {section.id === "profile" && isOpen && profile && (
                     <div className="mt-4">
                       <ProfileSection
