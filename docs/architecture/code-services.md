@@ -106,8 +106,7 @@ Auth: JWT + master role.
 
 Two panels under `frontend/src/components/`:
 
-- `CodeServicesGlobalPanel.vue` — master dashboard panel for global toggles
-- `CodeServicesTenantPanel.vue` — tenant dashboard panel for per-tenant selection
+- `CodeServicesSection` (`features/admin/components/code-services-section.tsx`) — tenant settings panel for per-tenant selection
 
 Empty-state: when global catalog has zero services, show `frontend.code_services.none` message. Tenant panel reloads latest state before showing success confirmation.
 

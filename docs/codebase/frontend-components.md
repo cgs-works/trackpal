@@ -1,76 +1,185 @@
 # Frontend Components
 
-Reusable Vue 3 panels extracted from dashboard views for modularity. All components use `<script setup>` Composition API and `useI18nStore()` for translated strings.
+React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organized by feature module.
 
-## Component List
+## Admin Feature Components
 
-| Component | Integrated In | Purpose |
-|-----------|---------------|---------|
-| `CatalogPanel.vue` | MasterDashboardView, TenantDashboardView | Service and plan CRUD |
-| `ClientManagementPanel.vue` | TenantDashboardView | Client CRUD with forms |
-| `CodeServicesGlobalPanel.vue` | MasterDashboardView | Global code-service activation toggles |
-| `CodeServicesTenantPanel.vue` | TenantDashboardView | Per-tenant code-service multi-select |
-| `MailboxConfigPanel.vue` | TenantDashboardView | Mailbox configuration (IMAP, OAuth) |
+### SettingsPage (`features/admin/components/settings-page.tsx`)
 
-## CatalogPanel
+Settings hub with 7 expandable card sections. Uses `useSettingsStore` and `useCatalogStore` for cached data.
 
-Manages the tenant catalog: services and their plans.
+| Section | Component | Data Source |
+|---------|-----------|-------------|
+| Reminder Settings | `ReminderSettingsModal` (dialog) | `settingsStore.reminderSettings` |
+| Language | `LocaleSection` | `settingsStore.tenantSettings` |
+| Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
+| Code Services | `CodeServicesSection` | API direct |
+| Code Mailbox | `MailboxSection` | `settingsStore.mailbox` |
+| Profile | `ProfileSection` | `getProfile()` API |
+| Password | `PasswordSection` | API direct |
 
-- Loads services via `GET /api/v1/catalog/services`
-- Loads plans via `GET /api/v1/catalog/services/{id}/plans`
-- Creates and renames services and plans.
-- Deletes services/plans through REST preview + typed confirmation modal (`CONFIRMAR` or `CONFIRM`).
-- Preview modal shows affected plan count, active/historical/total subscription counts, and active subscription rows paginated at 10/page.
-- Handles duplicate name errors (409) from backend
-- Shows user-facing errors with locale-aware messages via `i18nStore`
+### ProfileSection (`features/admin/components/profile-section.tsx`)
 
-## ClientManagementPanel
+Identity fields only (name, email, phone). Locale and timezone removed — now in dedicated sections.
 
-Full client lifecycle management for tenant admins.
+- Loads profile via `getProfile()` on mount
+- Saves via `updateProfile()` (identity only)
+- No locale/timezone fields
 
-- Loads clients via `GET /api/v1/clients`
-- Create form: `full_name`, `local_username`, `phone`, `password` (label uses `frontend.clients.password` i18n key)
-- Edit form: `full_name`, `username`, `phone` (password hidden on edit)
-- Activate / deactivate with confirmation
-- Delete inactive clients
-- Subscriptions link per client row (routes to `/admin/subscriptions?client={id}`)
+### LocaleSection (`features/admin/components/locale-section.tsx`)
 
-## CodeServicesGlobalPanel
+Standalone locale selector with save button.
 
-Master-only panel for controlling which code-extraction services are globally active.
+- Reads `tenantSettings.locale` from `settingsStore`
+- Dropdown with `en`/`es` options
+- Saves via `updateTenantSettings({ locale })`
+- On locale change, calls `loadCatalog()` for immediate UI update
 
-- Loads status via `GET /api/v1/code-services/global`
-- Toggle switches per service key
-- Save calls `PUT /api/v1/code-services/global`
-- Empty-state: shows `frontend.code_services.none` when catalog empty
+### TimezoneSection (`features/admin/components/timezone-section.tsx`)
 
-## CodeServicesTenantPanel
+Standalone timezone picker with save button.
 
-Tenant panel for selecting which services appear in their WhatsApp code flow.
+- Reads `tenantSettings.timezone` from `settingsStore`
+- Uses `TimezonePicker` component (portal-based dropdown)
+- Saves via `updateTenantSettings({ timezone })`
 
-- Loads selection via `GET /api/v1/code-services/tenants/current`
-- Multi-select checkboxes per service
-- Disabled services show greyed out (globally inactive)
-- Save calls `PUT /api/v1/code-services/tenants/current`
-- Loads fresh data before showing success confirmation to avoid stale state
+### TimezonePicker (`features/admin/components/timezone-picker.tsx`)
 
-## MailboxConfigPanel
+Searchable timezone dropdown using `createPortal` to escape parent overflow containers.
 
-Tenant panel for mailbox configuration used in code extraction.
+- Renders dropdown in `document.body` via portal
+- Search input filters by timezone label and IANA name
+- Quick UTC button at bottom
+- Positioned relative to trigger button using `getBoundingClientRect()`
+- Closes on click outside (checks both trigger and portal element)
 
-- Shows current mailbox status: `disconnected`, `connected`, `error`, `revoked`
-- IMAP configure: `mailbox_email`, `imap_host`, `imap_port`, `imap_ssl`, `imap_password`
-- OAuth connect: buttons for Google and Microsoft, open provider auth URL
-- Test connection via `POST /api/v1/tenant/mailbox/test`
-- Disconnect via `POST /api/v1/tenant/mailbox/disconnect`
-- Handles 404 as "not configured" (not a global error)
+### ReminderSettingsModal (`features/admin/components/reminder-settings-modal.tsx`)
+
+Dialog for reminder configuration (warning days, reminder time, recipient mode, enabled toggle).
+
+- Timezone displayed as read-only (edited via TimezoneSection)
+- Loads via `loadReminderSettings()` + `loadTenantSettings()` on open
+- Saves via `updateReminderSettings()`
+- Resets local state on modal open via `useEffect([open])`
+
+### MailboxSection (`features/admin/components/mailbox-section.tsx`)
+
+IMAP/OAuth mailbox configuration.
+
+- Cached in `settingsStore.mailbox`
+- Provider selection: Google, Microsoft, IMAP custom
+- OAuth flow: opens provider auth URL in popup
+- IMAP form: host, port, SSL toggle, password
+- Test connection, disconnect actions
+- After mutations: `clearSettingsCache()` + reload
+
+### ClientsPage (`features/admin/components/clients-page.tsx`)
+
+Client management with search, CRUD, and status toggle.
+
+- Cached in `catalogStore.clients`
+- Search filters client-side (no API call)
+- After mutations: `invalidateClients()` + reload
+- Links to subscriptions per client (`?client_id=`)
+
+### CatalogPage (`features/admin/components/catalog-page.tsx`)
+
+Service + plan CRUD with sidebar/panel layout.
+
+- Cached in `catalogStore.services` + `catalogStore.plans`
+- Services sidebar: create, rename, delete with preview
+- Plans panel: create, rename, delete with preview
+- After mutations: `invalidateServices()` or `invalidatePlans(id)` + reload
+- Delete preview shows affected subscriptions count
+
+### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
+
+Full subscription management with filters and modals.
+
+- Subscriptions NOT cached (frequent changes, filter-dependent)
+- Dropdown data (clients, services) cached via `catalogStore`
+- Filters: status, client, service
+- Actions: create, edit, renew, reactivate, cancel, reveal credentials
+
+### SubscriptionTable (`features/admin/components/subscription-table.tsx`)
+
+Table component for subscription list display.
+
+- Columns: client, service, email, profile, duration, dates, status, actions
+- Reveal credentials eye icon per row
+- Status badges with color coding
+
+## Master Feature Components
+
+### MasterDashboard (`features/master/components/dashboard-page.tsx`)
+
+Master admin dashboard with tenant management.
+
+- Summary cards: total, active, inactive counts
+- Business table with CRUD
+- Code services dialog for global activation
+- Tenant support context switch
+
+### BusinessTable (`features/master/components/business-table.tsx`)
+
+Tenant list table with actions (edit, activate/deactivate, delete, manage catalog).
+
+### BusinessFormDialog (`features/master/components/business-form-dialog.tsx`)
+
+Create/edit tenant form dialog.
+
+### CodeServicesDialog (`features/master/components/code-services-dialog.tsx`)
+
+Global code-service activation toggles for master.
+
+## Client Feature Components
+
+### ClientDashboard (`features/client/components/dashboard-page.tsx`)
+
+Read-only client dashboard showing subscription info and profile.
+
+### ProfilePage (`features/client/components/profile-page.tsx`)
+
+Client profile view with password change.
+
+## Shared UI Components
+
+### shadcn/ui (`components/ui/`)
+
+Radix-based primitives generated via shadcn CLI:
+
+| Component | Purpose |
+|-----------|---------|
+| `alert.tsx` | Alert banners |
+| `alert-dialog.tsx` | Confirmation dialogs |
+| `badge.tsx` | Status badges |
+| `button.tsx` | Button with variants (default, outline, ghost, destructive) |
+| `card.tsx` | Card container with header/content |
+| `dialog.tsx` | Modal dialog |
+| `dropdown-menu.tsx` | Dropdown menus |
+| `input.tsx` | Text input |
+| `label.tsx` | Form labels |
+| `select.tsx` | Select dropdown |
+| `separator.tsx` | Visual separator |
+| `sheet.tsx` | Slide-out panel (mobile sidebar) |
+| `skeleton.tsx` | Loading skeleton |
+| `sonner.tsx` | Toast notification provider |
+| `switch.tsx` | Toggle switch |
+| `table.tsx` | Data table |
+
+### Layout Components (`components/layout/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `app-sidebar.tsx` | Reusable sidebar with collapse, mobile sheet variant |
+| `sidebar-nav.tsx` | Individual nav item with icon + label |
 
 ## Patterns
 
-All components follow these conventions:
-
-- API calls through `api` instance from `services/api.js`
-- Error messages from `getApiError(error, fallback)` helper
-- i18n text via `i18nStore.t(key)` imported from `stores/i18n.js`
-- Props for parent-view integration (e.g., `mailbox` prop on MailboxConfigPanel)
-- Events emitted (`updated`) for parent coordination
+- **Styling**: Tailwind CSS classes, `cn()` utility for conditional classes
+- **Icons**: Lucide React (`lucide-react`)
+- **Toasts**: `toast.success()` / `toast.error()` from Sonner
+- **Forms**: Controlled inputs with `useState`, form submission via `onSubmit`
+- **API calls**: Direct Axios via `@/lib/api` or store actions
+- **Error handling**: try/catch with `err.response?.data?.detail` extraction
+- **Loading states**: Boolean state flags, skeleton/spinner UI

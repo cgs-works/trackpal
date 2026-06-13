@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-React 19 + TypeScript SPA consuming the Trackpal REST API. Hosted on Cloudflare Pages, built with Vite.
+React 19 + TypeScript SPA consuming the TrackPal REST API. Hosted on Cloudflare Pages, built with Vite.
 
 ## High-Level Design
 
@@ -14,187 +14,243 @@ React 19 + TypeScript SPA consuming the Trackpal REST API. Hosted on Cloudflare 
               ┌─────────┼─────────┐
               │         │         │
           Router   Zustand    Axios
-        (tanstack) (stores)  (services/api.ts)
+       (tanstack) (stores)  (lib/api.ts)
               │         │         │
               └─────────┼─────────┘
                         │
               Single-Page Application
               ┌───────────────────────┐
               │  App.tsx              │
-              │  └─ <Outlet>          │
+              │  └─ <RouterProvider>  │
               ├───────────────────────┤
-              │  LoginPage            │
-              │  MasterDashboard      │
-              │  TenantDashboard      │
-              │  SubscriptionsPage    │
-              │  ClientDashboard      │
+              │  RootRoute            │
+              │  ├─ LoginPage         │
+              │  ├─ MasterLayout      │
+              │  ├─ AdminLayout       │
+              │  └─ ClientLayout      │
               └───────────────────────┘
 ```
 
 ## Routing (TanStack Router)
 
-Router lives in `src/router.ts` with the following routes:
+File-based routing via `@tanstack/router-plugin`. Route tree auto-generated at `src/routeTree.gen.ts`.
 
-| Path | Component | Auth | Role |
-|------|-----------|------|------|
-| `/login` | `LoginView` | Public | — |
-| `/master/dashboard` | `MasterDashboardView` | Required | `master` |
-| `/admin/dashboard` | `TenantDashboardView` | Required | `tenant` |
-| `/admin/subscriptions` | `SubscriptionsView` | Required | `tenant` |
-| `/client/dashboard` | `ClientDashboardView` | Required | `client` |
-| `/:pathMatch(.*)*` | Redirect → `/login` | — | — |
+Routes defined in `src/routes/`:
+
+| File | Path | Component | Auth | Role |
+|------|------|-----------|------|------|
+| `login.tsx` | `/login` | `LoginForm` | Public | — |
+| `index.tsx` | `/` | Redirect by role | Required | any |
+| `master.tsx` → `master/dashboard.tsx` | `/master/dashboard` | `MasterDashboard` | Required | `master` |
+| `admin.tsx` → `admin/dashboard.tsx` | `/admin/dashboard` | `DashboardPage` | Required | `tenant` |
+| `admin.tsx` → `admin/clients.tsx` | `/admin/clients` | `ClientsPage` | Required | `tenant` |
+| `admin.tsx` → `admin/catalog.tsx` | `/admin/catalog` | `CatalogPage` | Required | `tenant` |
+| `admin.tsx` → `admin/subscriptions.tsx` | `/admin/subscriptions` | `SubscriptionsPage` | Required | `tenant` |
+| `admin.tsx` → `admin/settings.tsx` | `/admin/settings` | `SettingsPage` | Required | `tenant` |
+| `client.tsx` → `client/dashboard.tsx` | `/client/dashboard` | `ClientDashboard` | Required | `client` |
+| `client.tsx` → `client/profile.tsx` | `/client/profile` | `ProfilePage` | Required | `client` |
+
+### Route Layouts
+
+- `__root.tsx` — Root layout: loads i18n catalog before rendering, renders `<Outlet>` + `<Toaster>` + devtools
+- `master.tsx` — Master layout with sidebar nav
+- `admin.tsx` — Admin layout with collapsible sidebar
+- `client.tsx` — Client layout with sidebar nav
 
 ### Navigation Guard
 
-TanStack Router uses `beforeLoad` hooks for route guards:
+Root route (`__root.tsx`) handles auth initialization:
+1. Checks `localStorage` for token
+2. If authenticated, loads i18n catalog (blocks rendering until loaded to prevent raw key flash)
+3. If not authenticated, renders immediately (login page has its own public i18n)
 
-1. **Authentication check**: If route requires auth and no token exists, redirect to `/login`
-2. **Role check**: If route requires a specific role and user's role mismatches, redirect to the correct dashboard for their role (or `/login` if no role)
-3. **Login redirect**: If already authenticated and navigating to `/login`, redirect to the appropriate dashboard based on role
-
-`LoginPage` is eagerly loaded. Dashboard pages use lazy loading.
+Index route (`/`) redirects by role:
+- `master` → `/master/dashboard`
+- `tenant` → `/admin/dashboard`
+- `client` → `/client/dashboard`
+- unauthenticated → `/login`
 
 ## State Management (Zustand)
 
-Key stores in `frontend/src/store/`:
+Three Zustand stores in `src/store/`:
 
-### `authStore`
+### `authStore` (`store/auth.ts`)
 
-- **State**: `token`, `refreshToken`, `user`, `activeTenantId` — all persisted to `localStorage`
+- **State**: `token`, `refreshToken`, `user`, `activeTenantId` — persisted to `localStorage`
 - **Selectors**: `isAuthenticated`, `role`, `username`
-- **Actions**: `login(username, password)` — POST to `/auth/login`, stores tokens + user; `switchTenant(tenantId)` — Master support context; `exitTenantContext()` — exits support context through `/auth/switch-tenant` with `tenant_id: null`; `logout()` — POST to `/auth/logout`, clears localStorage
+- **Actions**:
+  - `login(username, password)` — POST to `/auth/login`, stores tokens + user, clears all caches, loads i18n catalog
+  - `switchTenant(tenantId)` — Master support context switch, clears all caches
+  - `logout()` — POST to `/auth/logout`, clears localStorage + all caches
 
-Client users land on `/client/dashboard`, which shows readonly client profile data and password change only.
+### `settingsStore` (`store/settings.ts`)
 
-Token and user data are read from `localStorage` on store initialization, surviving page reloads.
+Caches tenant settings, reminder settings, timezone options, and mailbox configuration:
 
-### `i18nStore`
+- **State**: `reminderSettings`, `tenantSettings`, `timezoneOptions`, `mailbox` + loaded/in-flight flags
+- **Dedup**: In-flight promise deduplication prevents concurrent duplicate API calls
+- **Epoch guard**: `_settingsEpoch` counter prevents stale responses from setting state after cache clear
+- **Actions**: `loadReminderSettings()`, `loadTenantSettings()`, `loadTimezoneOptions()`, `loadMailbox()`, `updateReminderSettings()`, `updateTenantSettings()`, `clearSettingsCache()`
 
-Zustand i18n store that holds the merged translation catalog fetched from the backend:
+### `catalogStore` (`store/catalog.ts`)
 
-- **State**: `locale`, `strings` (catalog dict), `isLoaded`
-- **Actions**: `loadCatalog()` — fetches `GET /api/v1/i18n/catalog`, stores locale + merged strings
-- **Helpers**: `t(key, params)` — looks up key in catalog, applies named params via string replace. Warns in dev if key missing.
+Caches reference data (services, plans, clients):
 
-Catalog loaded:
-- On successful login (called from `LoginView`)
-- On page refresh if already authenticated (`main.ts` checks `authStore.isAuthenticated`)
-- After locale change through `PUT /api/v1/tenant-settings` (immediate refetch for UI update)
+- **State**: `services`, `plans` (keyed by serviceId), `clients` + loaded/in-flight flags
+- **Dedup**: In-flight promise deduplication
+- **Actions**: `loadServices()`, `loadPlans(serviceId)`, `loadClients()`, `invalidateServices()`, `invalidatePlans(serviceId?)`, `invalidateClients()`, `clearAll()`
 
-Frontend holds zero source-of-truth translation strings. All strings come from backend catalog.
+### Cache Invalidation Pattern
 
-Note: The frontend was migrated from Vue 3 + Pinia to React 19 + TypeScript + Zustand + TanStack Router. The i18n patterns remain conceptually the same (backend-sourced catalog, post-auth load, locale refetch on change) but use Zustand instead of Pinia.
+All stores are invalidated on:
+- `login()` — clears settings + catalog stores
+- `logout()` — clears settings + catalog stores
+- `switchTenant()` — clears settings + catalog stores
+
+Individual CRUD operations invalidate their specific cache:
+- Client create/update/delete → `invalidateClients()`
+- Service create/rename/delete → `invalidateServices()`
+- Plan create/rename/delete → `invalidatePlans(serviceId)`
+- Mailbox save/test/disconnect → `clearSettingsCache()` (full reset)
+- Timezone/locale save → `updateTenantSettings()` (updates cache directly)
+
+## I18n System
+
+### Backend-sourced catalog
+
+- `src/i18n/index.ts` — plain module (not a store)
+- `loadCatalog()` fetches `GET /api/v1/i18n/catalog`, stores merged strings
+- `t(key, params?)` — looks up key, applies named params via regex replace. Missing keys return the key itself.
+- `getLocale()` — returns current locale string
+- `isCatalogReady()` / `waitForCatalog()` — async initialization helpers
+
+### Public i18n (pre-auth)
+
+- `src/i18n/public.json` — local JSON catalog with `en`/`es` entries for `login.*` keys
+- `src/i18n/public.ts` — `usePublicI18n()` hook returns reactive `locale`, `setLocale()`, `t(key)`
+- Selected locale persisted to `localStorage` under key `publicLocale`
+- After successful login, switches to backend-sourced i18n
+
+### Catalog loading sequence
+
+1. On page refresh: root route checks token → if exists, `loadCatalog()` → blocks rendering until loaded
+2. On login: `login()` action calls `loadCatalog()` after storing tokens
+3. On locale change: `updateTenantSettings()` triggers `loadCatalog()` in the calling component
 
 ## API Integration (Axios)
 
-Singleton Axios instance in `@/lib/api`:
+Singleton Axios instance in `src/lib/api.ts`:
 
 - Base URL from `VITE_API_URL` env var or fallback `http://localhost:8000/api/v1`
-- **Request interceptor**: Attaches `Authorization: Bearer <token>` header from localStorage
-- **Response interceptor**: On HTTP 401, clears all auth state from localStorage and redirects to `/login`
+- **Request interceptor**: Attaches `Authorization: Bearer <token>` from `localStorage`
+- **Response interceptor**: On HTTP 401, clears all auth state from `localStorage` and redirects to `/login`
 
-The login action uses a direct Axios call (not the api instance) to avoid the auth interceptor loop during login.
+Path alias: `@/` maps to `src/` (configured in `tsconfig.json` + `vite.config.ts`).
 
 ## Auth Flow
 
 ```
-Login Page
+Login Page (LoginForm)
   │
   ├─ POST /api/v1/auth/login (username, password)
   │
   ├─ Success → Store tokens + user in Zustand + localStorage
   │              │
   │              ├─ role === "master"  → /master/dashboard
-  │              └─ role === "tenant"  → /admin/dashboard
+  │              ├─ role === "tenant"  → /admin/dashboard
   │              └─ role === "client"  → /client/dashboard
   │
-  └─ Failure → Show error message (Spanish: "No se pudo iniciar sesión")
+  └─ Failure → Show error message
 ```
 
 Logout:
 - POST /api/v1/auth/logout with refresh token
 - Clear Zustand state + localStorage
+- Clear all caches (settings + catalog)
 - Redirect to /login
+
+## UI Framework
+
+- **Styling**: Tailwind CSS v4 via `@tailwindcss/vite` plugin
+- **Components**: shadcn/ui (Radix-based) — `src/components/ui/`
+- **Icons**: Lucide React
+- **Toasts**: Sonner
+- **Theme**: `next-themes` with dark mode default
 
 ## Build & Dev
 
 Defined in `vite.config.ts`:
 
-- **Plugin**: `@vitejs/plugin-react`
-- **Dev server proxy**: `/api` → `http://localhost:8000` (targets backend, changes origin)
+- **Plugins**: `@vitejs/plugin-react`, `@tailwindcss/vite`, `@tanstack/router-plugin/vite`
+- **Path alias**: `@` → `./src`
 - **Build output**: `dist/` directory
-- **Env prefix**: `VITE_` variables passed to client
+- **TypeScript**: strict mode via `tsconfig.app.json`
+
+### Scripts
+
+| Command | Action |
+|---------|--------|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | `tsc -b && vite build` — type check + production build |
+| `npm run lint` | ESLint |
+| `npm run preview` | Preview production build locally |
 
 ### Cloudflare Pages Deployment
 
 - `_redirects` file: SPA fallback `/* /index.html 200` — all paths serve index.html
 - Favicon: `favicon.svg` (purple Trackpal logo)
-- `Icons.svg`: Social media icon sprite (Bluesky, Discord, GitHub, X)
+- `Icons.svg`: Social media icon sprite
 
 ## Views Overview
 
-### LoginPage
+### LoginPage (`features/auth/components/login-form.tsx`)
 
-Login form with i18n-backed UI strings from `i18nStore.t()`. Uses translated labels for title, username, password, sign-in button, loading state, and error message. Calls `i18nStore.loadCatalog()` after successful auth.
+Login form with pre-auth i18n via `usePublicI18n()`. Uses translated labels for title, username, password, sign-in button, loading state, and error message. After successful auth, catalog switches to backend-sourced.
 
-### MasterDashboard
+### AdminLayout (`features/admin/layout/admin-layout.tsx`)
 
-Full tenant management dashboard accessible only to `master` role:
+Collapsible sidebar layout for tenant admin pages:
+- Sidebar: brand, nav items (Dashboard, Clients, Catalog, Subscriptions, Settings), username, logout
+- Mobile: header bar with brand + logout
+- Content: `<Outlet>` renders child routes
+
+### MasterLayout (`features/master/layout/master-layout.tsx`)
+
+Sidebar layout for master pages:
 - Summary cards: total, active, inactive tenant counts
-- Tenant table with CRUD actions
-- Manage catalog action switches Master into tenant support context
-- Visible `Salir de tenant` action clears support context
-- Create/Edit modal form
-- Activate/deactivate/delete operations
-- Logout button
+- Business table with CRUD actions
+- Manage catalog action switches into tenant support context
 
-### TenantDashboard
+### SettingsPage (`features/admin/components/settings-page.tsx`)
 
-Self-service dashboard accessible only to `tenant` role:
-- Welcome message + profile display
-- Profile edit form (name, email, phone) — identity fields saved through `PUT /api/v1/me`
-- **Locale and timezone** settings — saved through `PUT /api/v1/tenant-settings` (separate from profile identity)
-- Password change form (old + new password)
-- Catalog management: services CRUD and per-service plans CRUD
-- Client management: table with CRUD actions; create-client form uses i18n label `frontend.clients.password` (`Contraseña` / `Password`)
-- Link to subscriptions page
-- Duplicate/validation API errors shown in user's locale
-- Locale/timezone `<select>` or dropdowns in settings section; on locale save, refetches i18n catalog for immediate UI update
-- Logout button
+7 expandable card sections:
+1. **Reminder Settings** — opens modal for reminder configuration
+2. **Language** — locale selector (en/es) with save
+3. **Timezone** — searchable timezone picker with save
+4. **Code Services** — per-tenant service selection
+5. **Code Mailbox** — IMAP/OAuth configuration
+6. **Profile** — name, email, phone (identity fields only)
+7. **Password** — password change form
 
-### SubscriptionsPage
+### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 
-Full subscription management page at `/admin/subscriptions` accessible only to `tenant` role:
+Full subscription management:
 - Table with columns: client, service, email, profile, duration, dates, status badges, actions
-- Filters: status, client, service, quick expiry ranges, custom date range
-- Create/Edit/Renew/Reactivate modals with all subscription fields
-- Cancel with confirmation dialog
-- Reveal credential eye icon per row -- decrypts password and PIN on demand
-- Reminder settings panel: timezone dropdown (from `GET /api/v1/tenant-settings/timezones`), warning days, reminder time, recipient mode, reminders_enabled toggle; timezone edits no longer owned by reminder modal — handled at tenant level through `/tenant-settings`
+- Filters: status, client, service
+- Create/Edit/Renew/Reactivate/Cancel modals
+- Reveal credential per row
 
-Dashboard data is loaded from `GET /api/v1/dashboard` and `GET /api/v1/me` on mount.
+### ClientsPage (`features/admin/components/clients-page.tsx`)
 
-## Reusable Components
+Client management with cached data from `catalogStore`:
+- Client table with search
+- Create/Edit/Delete dialogs
+- Activate/deactivate toggle
+- Link to subscriptions per client
 
-Five panel components in `src/components/` extracted from views for maintainability:
+### CatalogPage (`features/admin/components/catalog-page.tsx`)
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `CatalogPanel.tsx` | Master & Tenant dashboards | Service + plan CRUD operations |
-| `ClientManagementPanel.tsx` | Tenant dashboard | Client CRUD with forms, activation toggle |
-| `CodeServicesGlobalPanel.tsx` | Master dashboard | Global code-service activation toggles |
-| `CodeServicesTenantPanel.tsx` | Tenant dashboard | Per-tenant code-service selection |
-| `MailboxConfigPanel.tsx` | Tenant dashboard | Mailbox config (IMAP, OAuth), connect, test, disconnect |
-
-## Public I18n (pre-auth)
-
-System for translating the login page and any unauthenticated views without backend access.
-
-**Files**: `src/i18n/public.json` + `src/i18n/usePublicI18n.ts`
-
-- Local JSON catalog with `en` / `es` entries for `login.*` keys.
-- `usePublicI18n()` hook returns reactive `locale`, `setLocale()`, and `t(key, params?)`.
-- Selected locale persisted to `localStorage` under key `publicLocale`.
-- First visit defaults to `en`. Missing keys return the key itself (no crash).
-- Imported in `LoginPage.tsx` for all login-form text.
-- After successful login, switches to backend-sourced `i18nStore`.
+Service + plan CRUD with cached data from `catalogStore`:
+- Services sidebar with create/rename/delete
+- Plans panel with create/rename/delete
+- Delete preview dialog with confirmation

@@ -2,142 +2,266 @@
 
 ## Language & Runtime
 
-- JavaScript (ES modules) — no TypeScript currently
-- Vue 3 Composition API with `<script setup>` syntax
-- Node.js (managed via `package.json`, lockfile `package-lock.json`)
+- **TypeScript** (strict mode via `tsconfig.app.json`)
+- **React 19** with hooks (no class components)
+- **Node.js** managed via `package.json`, lockfile `package-lock.json`
 
 ## Project Structure
 
-- `src/router/` — route definitions and navigation guards
-- `src/stores/` — Pinia stores (one file per store)
-- `src/services/` — API client and other service modules
-- `src/views/` — page-level components, one per route
-- No `components/` directory yet — reusable UI components are co-located in views or extracted as needed
+- `src/routes/` — TanStack Router file-based routes (auto-generated tree)
+- `src/store/` — Zustand stores (one file per domain)
+- `src/lib/` — Shared utilities (api client, cn helper)
+- `src/i18n/` — Internationalization module
+- `src/components/ui/` — shadcn/ui primitives
+- `src/components/layout/` — Shared layout components
+- `src/features/` — Feature modules organized by role/domain
 
 ## Naming
 
 | Artifact | Convention | Example |
 |----------|-----------|---------|
-| Files | camelCase | `auth.js`, `LoginView.vue` |
-| Vue components (single-file) | PascalCase | `LoginView.vue`, `MasterDashboardView.vue` |
-| Pinia stores | camelCase, `use<Name>Store` | `useAuthStore` |
-| Route names | kebab-case | `master-dashboard`, `tenant-dashboard` |
-| Axios instance | lowercase | `api` |
+| Files (components) | kebab-case | `clients-page.tsx`, `timezone-picker.tsx` |
+| Files (services/utils) | kebab-case | `client-api.ts`, `auth-api.ts` |
+| Files (stores) | kebab-case | `auth.ts`, `catalog.ts`, `settings.ts` |
+| React components | PascalCase | `ClientsPage`, `TimezonePicker` |
+| Zustand stores | `use<Name>Store` | `useAuthStore`, `useCatalogStore` |
+| Route files | kebab-case | `admin/dashboard.tsx`, `client/profile.tsx` |
+| API service functions | camelCase | `listClients()`, `getMailbox()` |
+| Types/interfaces | PascalCase | `Client`, `SubscriptionFilters` |
+| Path alias | `@/` | `@/store/auth`, `@/lib/api` |
 | Environment variables | `VITE_UPPER_SNAKE_CASE` | `VITE_API_URL` |
 
-## Vue Component Patterns
+## React Component Patterns
 
-## I18n Conventions
+### Functional components only
 
-- **No hardcoded translated strings** in frontend source. All UI text comes from backend catalog fetched via `GET /api/v1/i18n/catalog`.
-- **I18n Pinia store** at `src/stores/i18n.js`. Import via `useI18nStore()`.
-- **`t(key, params)`** — lookup function on the i18n store. Params are named placeholders replaced via string replace. Missing keys return the key itself and warn in dev console.
-- **Catalog loading**: on login success (`LoginView`), on page refresh if authenticated (`main.js`), and after locale change (profile save triggers refetch).
-- **Locale selector**: Tenant profile section provides `<select>` with `en`/`es` options. On save, refetch catalog for immediate UI update.
+All components are functional with hooks. No class components.
 
-### Script Setup with i18n
+### File organization
 
-```vue
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../services/api'
-import { useAuthStore } from '../stores/auth'
-import { useI18nStore } from '../stores/i18n'
+Each feature component is a single file exporting one component:
 
-const router = useRouter()
-const authStore = useAuthStore()
-const i18nStore = useI18nStore()
-
-// Use in template: {{ i18nStore.t('frontend.login.title') }}
-// Or with params: {{ i18nStore.t('frontend.clients.created', { login: client.login }) }}
-</script>
-```
-
-### Template Usage
-
-```vue
-<template>
-  <h1>{{ i18nStore.t('frontend.login.title') }}</h1>
-  <button>{{ isLoading ? i18nStore.t('frontend.login.signing_in') : i18nStore.t('frontend.login.sign_in') }}</button>
-</template>
-```
-
-### Standard Script Setup
-
-All components use `<script setup>` with explicit imports:
-
-```vue
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../services/api'
-import { useAuthStore } from '../stores/auth'
-
-const router = useRouter()
-const authStore = useAuthStore()
-</script>
-```
-
-### Template
-
-- Scoped styles via `<style scoped>`
-- No Renderless components or slots currently
-- Event handlers use `@submit.prevent` for forms
-- Error messages use `v-if`, not `v-show`
-
-### Styling
-
-- CSS custom properties defined in `:global(:root)` inside scoped blocks
-- CSS class naming: kebab-case
-- Layout: flexbox and CSS Grid
-- Responsive breakpoints via `@media (max-width: 760px)` or `720px`
-- No CSS framework (Tailwind, Bootstrap) — raw CSS
-
-## State Management (Pinia)
-
-- Store created with `defineStore('name', () => { ... })` — composition API style
-- State variables use `ref()`, getters use `computed()`
-- Actions are async functions that directly mutate refs
-- Auth state persisted to `localStorage` manually (no pinia-persistedstate plugin)
-
-## API Patterns
-
-- Axios interceptors handle token injection and 401 responses globally
-- Login action uses a direct `axios.post()` call (not the `api` instance) to avoid interceptor recursion
-- Error handling: try/catch in views, extract `error.response?.data?.detail` for user-facing messages
-- API error helper pattern:
-
-```js
-function getApiError(error, fallback) {
-  const detail = error.response?.data?.detail
-  if (Array.isArray(detail)) {
-    return detail.map((item) => item.msg || item.message || String(item)).join(', ')
-  }
-  return detail || error.response?.data?.message || fallback
+```tsx
+// features/admin/components/locale-section.tsx
+export function LocaleSection() {
+  // ...
 }
 ```
 
-## Router Patterns
+### Hooks ordering
 
-- Routes with `meta.requiresAuth` and `meta.role` for access control
-- Lazy loading: `component: () => import('...')` for all views except LoginView
-- Navigation guard in `router/index.js` handles:
-  - Redirect to `/login` when unauthenticated
-  - Role mismatch redirect to correct dashboard
-  - Redirect to dashboard from `/login` when already authenticated
-- Catch-all route `/:pathMatch(.*)*` redirects unknown paths to `/login`
+1. Store hooks (`useAuthStore`, `useSettingsStore`, etc.)
+2. Local state (`useState`)
+3. Derived state (`useMemo`, `computed`)
+4. Side effects (`useEffect`)
+5. Callbacks (`useCallback`)
+6. Event handlers
 
-## Environment Variables
+### Controlled forms
 
-| Variable | Required | Default | Purpose |
-|----------|----------|---------|---------|
-| `VITE_API_URL` | No | `http://localhost:8000/api/v1` | Backend API base URL |
+Forms use controlled inputs with `useState`:
+
+```tsx
+const [email, setEmail] = useState("");
+
+<Input
+  id="email"
+  type="email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+/>
+```
+
+## I18n Conventions
+
+### No hardcoded translated strings
+
+All UI text comes from the backend catalog via `t(key)` from `@/i18n`.
+
+### Usage
+
+```tsx
+import { t } from "@/i18n";
+
+// Simple key
+<h1>{t("frontend.settings.title")}</h1>
+
+// With params
+<p>{t("frontend.clients.activated", { name: client.full_name })}</p>
+```
+
+### Pre-auth i18n
+
+Login page uses `usePublicI18n()` from `@/i18n/public` (local JSON catalog):
+
+```tsx
+import { usePublicI18n } from "@/i18n/public";
+const { t } = usePublicI18n();
+```
+
+### Catalog loading
+
+- On page refresh: root route loads catalog before rendering
+- On login: `login()` action loads catalog
+- On locale change: component calls `loadCatalog()` after save
+
+## State Management (Zustand)
+
+### Store creation
+
+```ts
+import { create } from "zustand";
+
+interface MyState {
+  data: Data[];
+  loaded: boolean;
+  inFlight: Promise<Data[]> | null;
+  loadData: () => Promise<Data[]>;
+}
+
+export const useMyStore = create<MyState>((set, get) => ({
+  data: [],
+  loaded: false,
+  inFlight: null,
+  loadData: async () => {
+    const state = get();
+    if (state.loaded) return state.data;
+    if (state.inFlight) return state.inFlight;
+    const promise = fetchData();
+    set({ inFlight: promise });
+    const data = await promise;
+    set({ data, loaded: true, inFlight: null });
+    return data;
+  },
+}));
+```
+
+### In-flight deduplication
+
+Prevents concurrent duplicate API calls:
+
+```ts
+loadData: async () => {
+  const state = get();
+  if (state.loaded) return state.data;
+  if (state.inFlight) return state.inFlight;
+  const promise = apiCall();
+  set({ inFlight: promise });
+  // ...
+}
+```
+
+### Cache invalidation
+
+After mutations, invalidate + reload:
+
+```ts
+await createClient(payload);
+invalidateClients();
+await loadClientsData();
+```
+
+### Store clearing
+
+On logout/tenant switch, clear all stores:
+
+```ts
+useSettingsStore.getState().clearSettingsCache();
+useCatalogStore.getState().clearAll();
+```
+
+## API Patterns
+
+### Axios singleton
+
+`@/lib/api.ts` — handles token injection and 401 redirect globally.
+
+### Error extraction
+
+```ts
+try {
+  await apiCall();
+} catch (err) {
+  const apiErr = err as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
+  const detail = apiErr.response?.data?.detail;
+  const msg = typeof detail === "string"
+    ? detail
+    : Array.isArray(detail)
+      ? detail.map((d) => d.msg || "Unknown").join("; ")
+      : "Fallback message";
+}
+```
+
+### Service functions
+
+Each feature has a service file with typed API functions:
+
+```ts
+// features/admin/services/client-api.ts
+import api from "@/lib/api";
+
+export async function listClients(): Promise<Client[]> {
+  const { data } = await api.get("/clients");
+  return data;
+}
+```
+
+## Styling
+
+### Tailwind CSS v4
+
+All styling via Tailwind utility classes. No custom CSS files (except `index.css` for globals).
+
+### cn() utility
+
+Conditional class merging via `clsx` + `tailwind-merge`:
+
+```tsx
+import { cn } from "@/lib/utils";
+
+<div className={cn("base classes", isActive && "active classes", className)} />
+```
+
+### shadcn/ui components
+
+Use shadcn/ui primitives from `@/components/ui/`. Customization via className props, not style overrides.
+
+### Responsive design
+
+- Mobile-first with `md:` breakpoint for sidebar
+- Admin layout: sidebar hidden on mobile, header bar shown instead
+- Sheet component for mobile navigation
+
+## File Structure Rules
+
+### Feature modules
+
+Each feature under `src/features/` follows:
+
+```
+features/<role>/
+├── layout/       # Layout wrapper component
+├── components/   # Page and section components
+└── services/     # API service functions + types
+```
+
+### Component files
+
+- One component per file
+- File name matches component name in kebab-case
+- Export as named export: `export function ComponentName() {}`
+
+### Service files
+
+- One domain per file (client-api.ts, catalog-api.ts)
+- Export typed async functions
+- Import `api` from `@/lib/api`
+- Types co-located in the service file or imported from shared types
 
 ## No Tests
 
-No test files exist in the frontend directory. Tests are not part of the current frontend setup.
+No frontend test files exist. Tests are not part of the current frontend setup. Backend has pytest coverage.
 
-## Dev Server
+## Linting
 
-Vite dev server proxies `/api` requests to `http://localhost:8000` (configured in `vite.config.js`). This avoids CORS issues during development.
+ESLint with `eslint-plugin-react-hooks` and `eslint-plugin-react-refresh`. Run via `npm run lint`.

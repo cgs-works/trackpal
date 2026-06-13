@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master manages tenant lifecycle; Tenant admins manage clients, catalog, profile, and subscriptions. Backend is Python/FastAPI with PostgreSQL and Redis HA. Frontend is Vue 3 SPA.
+TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master manages tenant lifecycle; Tenant admins manage clients, catalog, profile, and subscriptions. Backend is Python/FastAPI with PostgreSQL and Redis HA. Frontend is React 19 + TypeScript SPA with Zustand, TanStack Router, and Tailwind CSS.
 
 ## Agent Context Guide
 
@@ -22,7 +22,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [WhatsApp Console Flow](architecture/whatsapp-console-flow.md) | Master/Tenant/Client WhatsApp console orchestration, instance-first routing, LID fallback, from_me contextual routing, Client Context Shortcut, and Blocked Clients |
 | [Input Validation Policy](architecture/input-validation-policy.md) | Validation and normalization rules |
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
-| [Frontend Architecture](architecture/frontend-architecture.md) | Vue routing, state, API integration, and views |
+| [Frontend Architecture](architecture/frontend-architecture.md) | React 19 routing, state, API integration, and views |
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract), contextual payload routing, reply_to / no_reply handling, and subscription reminders workflows |
 | [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Multi-OAuth + IMAP mailbox ingestion, lookup worker, metrics, cleanup |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
@@ -44,7 +44,7 @@ Trackpal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Backend Conventions](code-standard/backend-conventions.md) | Python conventions, testing, security, Redis, and n8n patterns |
 | [Error Handling](code-standard/error-handling.md) | Error types, propagation, i18n-aware exception mapping |
 | [Logging Guidelines](code-standard/logging-guidelines.md) | Log levels, structured context, secrets policy |
-| [Frontend Conventions](code-standard/frontend-conventions.md) | Vue 3, Pinia, routing, API, i18n store, and styling conventions |
+| [Frontend Conventions](code-standard/frontend-conventions.md) | React 19, Zustand, TanStack Router, Tailwind CSS, and i18n conventions |
 
 ## Project PDR
 

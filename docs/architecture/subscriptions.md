@@ -175,7 +175,7 @@ Loop: SplitInBatches[loop] -> Wait -> Evolution -> Evaluate -> IF -> Sent/Failed
 
 ## Frontend
 
-File: `frontend/src/views/SubscriptionsView.vue` (1,440 LOC). Route: `/admin/subscriptions`.
+File: `frontend/src/features/admin/components/subscriptions-page.tsx`. Route: `/admin/subscriptions`.
 
 - Table with client, service, email, profile, duration, dates, status badges, actions
 - Filters: status, client, service, quick expiry ranges, custom date range

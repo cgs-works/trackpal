@@ -14,7 +14,7 @@ Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery
                                      [WhatsApp]
 ```
 
-- **Frontend**: Vue 3 + Vite SPA hosted on Cloudflare Pages
+- **Frontend**: React 19 + TypeScript SPA with Zustand, TanStack Router, Tailwind CSS hosted on Cloudflare Pages
 - **Backend**: Python FastAPI hosted on Render (free tier)
 - **Database**: PostgreSQL with asyncpg driver, managed via Alembic
 - **Redis**: Active-passive HA with circuit-breaker failover for ephemeral WhatsApp session state (Master + Tenant consoles)
