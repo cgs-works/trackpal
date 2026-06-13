@@ -8,7 +8,7 @@ from fastapi import APIRouter
 
 from app.api.dependencies import CurrentUser, DbDep
 from app.core.i18n import get_merged_catalog, LOCALE_NAMES
-from app.repositories import tenants_repository
+from app.repositories import tenant_settings_repository
 
 router = APIRouter(prefix="/i18n", tags=["i18n"])
 
@@ -26,9 +26,13 @@ async def get_catalog(
     locale = "en"  # default fallback
 
     if current_user.role == "tenant":
-        locale = await tenants_repository.resolve_locale_by_owner(db, current_user.id)
+        locale = await tenant_settings_repository.resolve_locale_by_owner(
+            db, current_user.id
+        )
     elif current_user.role == "client":
-        locale = await tenants_repository.resolve_locale_by_client(db, current_user.id)
+        locale = await tenant_settings_repository.resolve_locale_by_client(
+            db, current_user.id
+        )
 
     catalog = get_merged_catalog(locale)
     locale_name = LOCALE_NAMES.get(locale, locale)

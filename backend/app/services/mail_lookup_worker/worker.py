@@ -52,9 +52,7 @@ _NON_TRANSIENT_SAFE_DETAIL: dict[str, str] = {
     "permission_denied": "Access denied by email provider — check permissions",
 }
 
-_DESKTOP_CHROME_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
-)
+_DESKTOP_CHROME_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
 
 
 async def fetch_netflix_code_from_url(full_url: str) -> str | None:
@@ -119,9 +117,19 @@ def _extract_netflix_verify_code(html_text: str) -> str | None:
         if len(set(code)) == 1:
             return True
         return code in {
-            "0000", "000000", "1234", "123456",
-            "1111", "2222", "3333", "4444", "5555",
-            "6666", "7777", "8888", "9999",
+            "0000",
+            "000000",
+            "1234",
+            "123456",
+            "1111",
+            "2222",
+            "3333",
+            "4444",
+            "5555",
+            "6666",
+            "7777",
+            "8888",
+            "9999",
         }
 
     def digit_windows(digits_only: str):

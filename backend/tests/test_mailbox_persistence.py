@@ -194,7 +194,9 @@ class TestMailboxLookupRepository:
         )
         assert not_found is None
 
-    async def test_cancel_active_job_if_present_marks_pending_job_failed(self, db_session):
+    async def test_cancel_active_job_if_present_marks_pending_job_failed(
+        self, db_session
+    ):
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)
         job = await mailbox_lookup_repository.create_job(
@@ -216,7 +218,9 @@ class TestMailboxLookupRepository:
         assert job.error_detail_safe == "User restarted codigo flow"
         assert job.completed_at is not None
 
-    async def test_cancel_active_job_if_present_leaves_completed_job_unchanged(self, db_session):
+    async def test_cancel_active_job_if_present_leaves_completed_job_unchanged(
+        self, db_session
+    ):
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)
         job = await mailbox_lookup_repository.create_job(
@@ -246,7 +250,9 @@ class TestMailboxLookupRepository:
         assert job.error_code is None
         assert job.completed_at == original_completed_at
 
-    async def test_cancel_active_job_if_present_returns_false_for_missing_job(self, db_session):
+    async def test_cancel_active_job_if_present_returns_false_for_missing_job(
+        self, db_session
+    ):
         tenant = await _seed_tenant(db_session)
 
         cancelled = await mailbox_lookup_repository.cancel_active_job_if_present(

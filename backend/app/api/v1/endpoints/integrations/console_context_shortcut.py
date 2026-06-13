@@ -47,7 +47,8 @@ def _ctx_locale(tenant: _TenantModel, data: dict | None = None) -> str:
         temp_data = data.get("temp_data", {})
         if temp_data.get("locale"):
             return temp_data["locale"]
-    return getattr(tenant, "locale", "es") or "es"
+    settings = getattr(tenant, "settings", None)
+    return getattr(settings, "locale", None) or "es"
 
 
 def _ctx_t(tenant: _TenantModel, data: dict, key: str, **kwargs) -> str:
@@ -1780,14 +1781,16 @@ async def _start_context_subscription(
     # Determine tenant timezone for subscription start date
     _tz = timezone.utc
     try:
-        from app.services.subscription_service.reminder_settings import (
-            get_reminder_settings,
-        )
+        from app.repositories import tenant_settings_repository
 
-        _settings = await get_reminder_settings(db, tenant.id)
-        _tz = ZoneInfo(_settings.timezone)
-    except Exception:
-        pass
+        _tz_name = await tenant_settings_repository.resolve_timezone(db, tenant.id)
+        _tz = ZoneInfo(_tz_name)
+    except Exception as exc:
+        logger.warning(
+            "Failed to resolve tenant %s timezone, falling back to UTC: %s",
+            tenant.id,
+            exc,
+        )
 
     phone = data.get("phone", "")
     session = await session_service.create_session(f"admin:{phone}")
@@ -2028,7 +2031,8 @@ async def render_initial_context_menu(
 
     Returns ``(rendered_text, metadata_dict)``.
     """
-    locale = getattr(tenant, "locale", None) or "es"
+    settings = getattr(tenant, "settings", None)
+    locale = getattr(settings, "locale", None) or "es"
     identity = _phone_label(target_phone)
 
     # ── Check if target is an existing client ────────────────────────

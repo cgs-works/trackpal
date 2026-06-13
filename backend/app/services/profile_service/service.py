@@ -52,7 +52,7 @@ class ProfileService:
         allowed_fields: set[str] = (
             {"name", "phone"}
             if user.role == "master"
-            else {"full_name", "email", "phone", "locale"}
+            else {"full_name", "email", "phone"}
         )
 
         # Duplicate check using normalized phone

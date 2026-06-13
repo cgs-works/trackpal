@@ -3,7 +3,6 @@ import api from "@/lib/api";
 export interface ReminderSettings {
   id: string;
   tenant_id: string;
-  timezone: string;
   warning_days: number[];
   reminder_time: string;
   recipient_mode: "tenant_only" | "client_only" | "both";
@@ -14,14 +13,7 @@ export interface ReminderSettings {
   updated_at: string;
 }
 
-export interface TimezoneOption {
-  value: string;
-  label: string;
-  group: string;
-}
-
 export interface ReminderSettingsUpdate {
-  timezone?: string;
   warning_days?: number[];
   reminder_time?: string;
   recipient_mode?: "tenant_only" | "client_only" | "both";
@@ -42,7 +34,4 @@ export async function updateReminderSettings(
   return data;
 }
 
-export async function getTimezones(): Promise<TimezoneOption[]> {
-  const { data } = await api.get("/subscription-settings/timezones");
-  return data;
-}
+

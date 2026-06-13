@@ -15,6 +15,7 @@ from app.models.subscription import (
     SubscriptionReminderSettings,
 )
 from app.models.tenant import Tenant
+from app.models.tenant_settings import TenantSettings
 from app.models.tenant_code_service_selection import TenantCodeServiceSelection
 from app.models.tenant_mailbox import TenantMailbox
 from app.models.user import User
@@ -31,6 +32,7 @@ __all__ = [
     "RefreshSession",
     "Service",
     "Tenant",
+    "TenantSettings",
     "TenantCodeServiceSelection",
     "TenantMailbox",
     "User",

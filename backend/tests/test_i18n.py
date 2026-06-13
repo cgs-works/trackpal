@@ -38,46 +38,44 @@ async def test_get_profile_master_locale_is_none(client, master_user):
     assert data.get("locale") is None
 
 
-async def test_update_profile_locale_valid(client, active_tenant_user):
+async def test_update_profile_locale_is_ignored_by_me(client, active_tenant_user):
     headers = await _login(client, "tenant", "tenant-password")
 
     response = await client.put(
         "/api/v1/me",
-        json={"locale": "es"},
+        json={"locale": "es", "full_name": "Tenant Updated"},
         headers=headers,
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["locale"] == "es"
+    assert data["full_name"] == "Tenant Updated"
+    assert data["locale"] == "en"
 
 
-async def test_update_profile_locale_invalid(client, active_tenant_user):
+async def test_update_tenant_settings_locale_valid(client, active_tenant_user):
     headers = await _login(client, "tenant", "tenant-password")
 
     response = await client.put(
-        "/api/v1/me",
-        json={"locale": "fr"},
-        headers=headers,
-    )
-
-    assert response.status_code == 422
-    detail = response.json()["detail"]
-    assert any("Locale must be one of" in str(err.get("msg", "")) for err in detail)
-
-
-async def test_update_profile_locale_case_insensitive(client, active_tenant_user):
-    headers = await _login(client, "tenant", "tenant-password")
-
-    response = await client.put(
-        "/api/v1/me",
+        "/api/v1/tenant-settings",
         json={"locale": "ES"},
         headers=headers,
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["locale"] == "es"
+    assert response.json()["locale"] == "es"
+
+
+async def test_update_tenant_settings_locale_invalid(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.put(
+        "/api/v1/tenant-settings",
+        json={"locale": "fr"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
 
 
 async def test_update_profile_locale_persistence(
@@ -86,15 +84,15 @@ async def test_update_profile_locale_persistence(
     """Locale change persists across requests."""
     headers = await _login(client, "tenant", "tenant-password")
 
-    # Set to Spanish
-    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
+    # Set to Spanish via tenant-settings
+    await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
 
     # Fetch again
     response = await client.get("/api/v1/me", headers=headers)
     assert response.json()["locale"] == "es"
 
     # Set back to English
-    await client.put("/api/v1/me", json={"locale": "en"}, headers=headers)
+    await client.put("/api/v1/tenant-settings", json={"locale": "en"}, headers=headers)
 
     response = await client.get("/api/v1/me", headers=headers)
     assert response.json()["locale"] == "en"
@@ -139,7 +137,7 @@ async def test_catalog_endpoint_returns_spanish(client, active_tenant_user):
     headers = await _login(client, "tenant", "tenant-password")
 
     # Switch to Spanish
-    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
+    await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
 
     response = await client.get("/api/v1/i18n/catalog", headers=headers)
 
@@ -160,7 +158,7 @@ async def test_catalog_endpoint_spanish_falls_back_to_english(
     headers = await _login(client, "tenant", "tenant-password")
 
     # Switch to Spanish
-    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
+    await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
 
     response = await client.get("/api/v1/i18n/catalog", headers=headers)
 
@@ -181,7 +179,7 @@ async def test_catalog_endpoint_locale_refetch_after_change(client, active_tenan
     assert resp_en.json()["locale"] == "en"
 
     # Change locale
-    await client.put("/api/v1/me", json={"locale": "es"}, headers=headers)
+    await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
 
     # Fetch again
     resp_es = await client.get("/api/v1/i18n/catalog", headers=headers)

@@ -142,7 +142,9 @@ async def test_change_password_client(client, active_client_user):
 
 async def test_change_password_client_uses_tenant_locale(client, active_client_user):
     tenant_headers = await _login(client, "tenant", "tenant-password")
-    await client.put("/api/v1/me", json={"locale": "es"}, headers=tenant_headers)
+    await client.put(
+        "/api/v1/tenant-settings", json={"locale": "es"}, headers=tenant_headers
+    )
 
     headers = await _login(client, active_client_user.username, "client-password")
     response = await client.put(
@@ -510,3 +512,19 @@ async def test_update_profile_service_rejects_invalid_email_direct(
     service = ProfileService()
     with pytest.raises(ValueError):
         await service.update_profile(db_session, active_tenant_user, payload)
+
+
+async def test_get_profile_tenant_projects_tenant_settings(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+    await client.put(
+        "/api/v1/tenant-settings",
+        json={"locale": "es", "timezone": "America/Santo_Domingo"},
+        headers=headers,
+    )
+
+    response = await client.get("/api/v1/me", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["locale"] == "es"
+    assert data["timezone"] == "America/Santo_Domingo"

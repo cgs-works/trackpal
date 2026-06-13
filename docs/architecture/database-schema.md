@@ -164,10 +164,30 @@ Unique index: (subscription_id, recipient_type, days_before_expiry, sent_for_dat
 |--------|------|-------|
 | id | UUID | PK |
 | tenant_id | UUID | Unique FK -> tenants.id CASCADE |
-| timezone | VARCHAR(50) | Default UTC |
 | warning_days | JSON | Default [7, 3, 1] |
 | reminder_time | VARCHAR(5) | Default 09:00 (HH:MM) |
 | recipient_mode | VARCHAR(20) | tenant_only, client_only, tenant_client, tenant_and_client |
+| reminders_enabled | BOOLEAN | Default false; master toggle to opt in/out of automated reminders |
+| custom_message_tenant | VARCHAR(2000) | Nullable, custom reminder message for tenant |
+| custom_message_client | VARCHAR(2000) | Nullable, custom reminder message for client |
+
+Note: Timezone is no longer stored here. It is managed centrally in `TenantSettings.timezone`.
+
+### `TenantSettings` — `tenant_settings` table
+
+Single-row-per-tenant settings for locale and timezone. The `tenant_id` column is the primary key and foreign key to `tenants.id`.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| tenant_id | UUID | PK, FK → tenants.id CASCADE |
+| locale | VARCHAR(10) | Default `en` (server default `en`); one of `"en"`, `"es"` |
+| timezone | VARCHAR(100) | IANA timezone identifier, default `UTC` (server default `UTC`) |
+| created_at | TIMESTAMPTZ | Server default now() |
+| updated_at | TIMESTAMPTZ | Server default now(), onupdate now() |
+
+Managed via `GET/PUT /api/v1/tenant-settings`. Locale and timezone are exposed as read-only projections on `GET /api/v1/me`.
+
+RLS policies restrict access to the owning tenant and master role.
 
 ### `TenantMailbox` -- `tenant_mailboxes`
 
@@ -291,8 +311,12 @@ Alembic migrations:
 13. `cdbfefe74caa6` — Add `mail_lookup_jobs.target_email` and replace dedupe uniqueness with partial indexes for nullable `message_id`
 14. `cdbfefe74caa7` — Enable/force RLS on core auth and mailbox tables (`users`, `refresh_sessions`, `master_profiles`, `mail_lookup_jobs`, `mail_code_delivery_log`, `alembic_version`)
 15. `cdc0fe74caa8` — Add `code_service_global_status` and `tenant_code_service_selections` with RLS policies and seeded default service keys
-16. `ce10fe74caa10` — Add `client_messaging_blocks` table with tenant-scoped indexes
-17. `ce10fe74caa11` — Rename `client_messaging_blocks` to `blocked_clients`, update indexes and constraints
+16. `ce10fe74caa9` — Add `reminders_enabled` column to `subscription_reminder_settings`
+17. `ce10fe74caa10` — Add `client_messaging_blocks` table with tenant-scoped indexes
+18. `cf10fe74caa0` — Add `custom_message_tenant` and `custom_message_client` columns to `subscription_reminder_settings`
+19. `ce10fe74caa11` — Rename `client_messaging_blocks` to `blocked_clients`, update indexes and constraints
+20. `07fa809c3ab3` — Merge branch heads (`ce10fe74caa11` + `cf10fe74caa0`)
+21. `d011fe74cab0` — Create `tenant_settings` table, backfill locale/timezone from `tenants` and `subscription_reminder_settings`, drop `tenants.locale` and `subscription_reminder_settings.timezone`, enable RLS
 
 ## Key Constraints
 

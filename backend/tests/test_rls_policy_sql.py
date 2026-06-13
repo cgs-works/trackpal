@@ -20,6 +20,7 @@ def test_rls_policy_sql_uses_required_context_settings():
         "alembic/versions/cd6efe74cae9_add_client_prefix_and_clients.py"
     ).read_text()
     text += Path("alembic/versions/cd7efe74caa0_add_subscriptions.py").read_text()
+    text += Path("alembic/versions/d011fe74cab0_create_tenant_settings.py").read_text()
     assert "ENABLE ROW LEVEL SECURITY" in text
     assert "FORCE ROW LEVEL SECURITY" in text
     assert "WITH CHECK" in text
@@ -35,6 +36,31 @@ def test_rls_policy_sql_uses_required_context_settings():
     assert "subscription_reminder_logs_tenant_isolation" in text
     assert "subscription_reminder_settings_tenant_isolation" in text
     assert "current_setting('app.current_role', true) = 'master'" in text
+    assert "tenant_settings_select" in text
+    assert "tenant_settings_update" in text
+
+
+def test_tenant_settings_migration_moves_locale_and_timezone_with_rls():
+    text = Path("alembic/versions/d011fe74cab0_create_tenant_settings.py").read_text()
+
+    assert "CREATE TABLE" in text or "op.create_table" in text
+    assert "tenant_settings" in text
+    assert "INSERT INTO tenant_settings" in text
+    assert "COALESCE(t.locale, 'en')" in text
+    assert "COALESCE(srs.timezone, 'UTC')" in text
+    assert 'op.drop_column("subscription_reminder_settings", "timezone")' in text
+    assert 'op.drop_column("tenants", "locale")' in text
+    assert "ALTER TABLE tenant_settings ENABLE ROW LEVEL SECURITY" in text
+    assert "ALTER TABLE tenant_settings FORCE ROW LEVEL SECURITY" in text
+    assert "CREATE POLICY tenant_settings_select" in text
+    assert "CREATE POLICY tenant_settings_insert" in text
+    assert "CREATE POLICY tenant_settings_update" in text
+    assert "CREATE POLICY tenant_settings_delete" in text
+    assert (
+        "owner_user_id::text = NULLIF(current_setting('app.current_user_id', true), '')"
+        in text
+    )
+    assert "AND t.is_active" in text
 
 
 def test_tenants_policy_allows_master_management_without_active_tenant_context():

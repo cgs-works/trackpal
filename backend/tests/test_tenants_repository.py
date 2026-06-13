@@ -88,7 +88,9 @@ async def test_get_active_by_whatsapp_identity_ignores_inactive_tenant(db_sessio
     assert found is None
 
 
-async def test_get_active_by_whatsapp_identity_returns_none_without_identity(db_session):
+async def test_get_active_by_whatsapp_identity_returns_none_without_identity(
+    db_session,
+):
     found = await tenants_repository.get_active_by_whatsapp_identity(
         db_session,
         phone_digits=None,

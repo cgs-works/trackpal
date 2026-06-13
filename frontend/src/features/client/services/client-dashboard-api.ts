@@ -44,7 +44,6 @@ export interface ProfileUpdate {
   full_name?: string;
   email?: string;
   phone?: string;
-  locale?: string;
 }
 
 export interface PasswordChange {

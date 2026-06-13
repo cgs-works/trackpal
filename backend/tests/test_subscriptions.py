@@ -18,6 +18,7 @@ from app.models.client import Client
 from app.models.service import Service
 from app.models.plan import Plan
 from app.models.tenant import Tenant
+from app.models.tenant_settings import TenantSettings
 from app.models.user import User
 from app.core.errors import UserFacingError
 from app.core.security import get_password_hash
@@ -289,7 +290,6 @@ async def test_subscription_reminder_settings(db_session, active_tenant_user):
     await db_session.refresh(settings_obj)
     assert settings_obj.id is not None
     assert settings_obj.tenant_id == tenant.id
-    assert settings_obj.timezone == "UTC"
     assert settings_obj.warning_days == [7, 3, 1]
     assert settings_obj.reminder_time == "09:00"
     assert settings_obj.recipient_mode == "tenant_only"
@@ -493,7 +493,6 @@ async def test_subscription_api_settings_defaults(client, active_tenant_user):
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["timezone"] == "UTC"
     assert body["warning_days"] == [7, 3, 1]
     assert body["reminder_time"] == "09:00"
     assert body["recipient_mode"] == "tenant_only"
@@ -509,7 +508,6 @@ async def test_subscription_api_settings_defaults_include_toggle(
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["timezone"] == "UTC"
     assert body["warning_days"] == [7, 3, 1]
     assert body["reminder_time"] == "09:00"
     assert body["recipient_mode"] == "tenant_only"
@@ -517,14 +515,11 @@ async def test_subscription_api_settings_defaults_include_toggle(
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_settings_update_persists_toggle_and_timezone(
-    client, active_tenant_user
-):
+async def test_subscription_api_settings_update_persists(client, active_tenant_user):
     headers = await _login_headers(client, "tenant", "tenant-password")
 
-    # Update all fields including reminders_enabled
+    # Update all fields
     update_payload = {
-        "timezone": "America/Argentina/Buenos_Aires",
         "warning_days": [5, 2, 1],
         "reminder_time": "10:30",
         "reminders_enabled": True,
@@ -535,7 +530,6 @@ async def test_subscription_api_settings_update_persists_toggle_and_timezone(
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["timezone"] == "America/Argentina/Buenos_Aires"
     assert body["warning_days"] == [5, 2, 1]
     assert body["reminder_time"] == "10:30"
     assert body["reminders_enabled"] is True
@@ -544,7 +538,6 @@ async def test_subscription_api_settings_update_persists_toggle_and_timezone(
     get_response = await client.get("/api/v1/subscription-settings", headers=headers)
     assert get_response.status_code == 200, get_response.text
     get_body = get_response.json()
-    assert get_body["timezone"] == "America/Argentina/Buenos_Aires"
     assert get_body["warning_days"] == [5, 2, 1]
     assert get_body["reminder_time"] == "10:30"
     assert get_body["reminders_enabled"] is True
@@ -578,278 +571,51 @@ async def test_subscription_api_settings_accepts_both_recipient_mode(
 
 
 # ===================================================================
-# Timezone validation & catalog endpoint tests
+# Subscription settings contract tests (timezone removed from this API)
 # ===================================================================
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_settings_rejects_invalid_timezone(
+async def test_get_subscription_settings_does_not_return_timezone(
     client, active_tenant_user
 ):
-    """PUT with invalid IANA timezone returns 422."""
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    response = await client.get("/api/v1/subscription-settings", headers=headers)
+
+    assert response.status_code == 200
+    assert "timezone" not in response.json()
+
+
+@pytest.mark.asyncio
+async def test_put_subscription_settings_ignores_timezone_field(
+    client, active_tenant_user
+):
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     response = await client.put(
         "/api/v1/subscription-settings",
-        json={"timezone": "Invalid/Timezone"},
+        json={"timezone": "America/Santo_Domingo", "reminder_time": "10:30"},
         headers=headers,
     )
-    assert response.status_code == 422
-    detail = response.json()["detail"]
-    # Should mention timezone validation error
-    assert any("timezone" in str(err).lower() for err in detail)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reminder_time"] == "10:30"
+    assert "timezone" not in data
 
 
 @pytest.mark.asyncio
-async def test_subscription_api_settings_rejects_empty_timezone(
+async def test_old_subscription_timezones_endpoint_is_removed(
     client, active_tenant_user
 ):
-    """PUT with empty string timezone returns 422."""
-    headers = await _login_headers(client, "tenant", "tenant-password")
-
-    response = await client.put(
-        "/api/v1/subscription-settings",
-        json={"timezone": ""},
-        headers=headers,
-    )
-    assert response.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_subscription_api_timezones_endpoint_returns_list(
-    client, active_tenant_user
-):
-    """GET /subscription-settings/timezones returns a list of timezone objects with value and label."""
     headers = await _login_headers(client, "tenant", "tenant-password")
 
     response = await client.get(
         "/api/v1/subscription-settings/timezones", headers=headers
     )
 
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) > 0
-
-    # Each item must have value and label
-    for item in data:
-        assert "value" in item
-        assert "label" in item
-
-    # Must include common timezones
-    values = {item["value"] for item in data}
-    assert "UTC" in values
-    assert "America/Bogota" in values
-    assert "Europe/Madrid" in values
-
-
-@pytest.mark.asyncio
-async def test_subscription_api_timezones_endpoint_fallback(
-    client, active_tenant_user, monkeypatch
-):
-    """When primary timezone provider raises, fallback is served transparently."""
-    headers = await _login_headers(client, "tenant", "tenant-password")
-
-    # Simulate failure of the external timezone provider
-    async def _raising(*args, **kwargs):
-        raise RuntimeError("Provider unavailable")
-
-    monkeypatch.setattr(
-        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
-        _raising,
-    )
-
-    # Also simulate backend cache unavailable to force bundled fallback
-    monkeypatch.setattr(
-        "app.services.subscription_service.timezone_catalog._load_backend_timezones",
-        lambda: None,
-    )
-
-    response = await client.get(
-        "/api/v1/subscription-settings/timezones", headers=headers
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) > 0
-
-    # Must still include common timezones via fallback
-    values = {item["value"] for item in data}
-    assert "UTC" in values
-    assert "America/Bogota" in values
-    assert "Europe/Madrid" in values
-
-
-@pytest.mark.asyncio
-async def test_subscription_api_timezones_endpoint_uses_provider_data(
-    client, active_tenant_user, monkeypatch
-):
-    """When external provider returns data, that data is served to the client."""
-    headers = await _login_headers(client, "tenant", "tenant-password")
-
-    provider_data = [
-        {"value": "America/New_York", "label": "America/New_York (UTC-05:00)"},
-        {"value": "Europe/London", "label": "Europe/London (UTC+00:00)"},
-        {"value": "Asia/Tokyo", "label": "Asia/Tokyo (UTC+09:00)"},
-    ]
-
-    async def _mock_provider(*args, **kwargs):
-        return provider_data
-
-    monkeypatch.setattr(
-        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
-        _mock_provider,
-    )
-
-    response = await client.get(
-        "/api/v1/subscription-settings/timezones", headers=headers
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-    # All provider values are valid IANA, so all should be present
-    returned_values = {item["value"] for item in data}
-    assert "America/New_York" in returned_values
-    assert "Europe/London" in returned_values
-    assert "Asia/Tokyo" in returned_values
-
-
-@pytest.mark.asyncio
-async def test_subscription_api_timezones_endpoint_uses_backend_cache(
-    client, active_tenant_user, monkeypatch
-):
-    """When provider returns None, backend zoneinfo cache is used instead of bundled fallback."""
-    headers = await _login_headers(client, "tenant", "tenant-password")
-
-    # Ensure provider returns None
-    async def _no_provider(*args, **kwargs):
-        return None
-
-    monkeypatch.setattr(
-        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
-        _no_provider,
-    )
-
-    response = await client.get(
-        "/api/v1/subscription-settings/timezones", headers=headers
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) > 0
-
-    # Must include timezones from zoneinfo that are NOT in the curated fallback list
-    values = {item["value"] for item in data}
-
-    # America/Adak is in zoneinfo but not in bundled fallback — proves cache path was used
-    assert "America/Adak" in values, (
-        "Expected backend cache data, got fallback (missing America/Adak)"
-    )
-
-    # Must still include the common ones
-    assert "UTC" in values
-    assert "America/Bogota" in values
-    assert "Europe/Madrid" in values
-
-
-@pytest.mark.asyncio
-async def test_subscription_api_timezones_endpoint_filters_non_iana_provider_data(
-    client, active_tenant_user, monkeypatch
-):
-    """Provider data with non-IANA timezone values is filtered; only valid IANA values remain."""
-    headers = await _login_headers(client, "tenant", "tenant-password")
-
-    async def _mock_provider(*args, **kwargs):
-        return [
-            {"value": "America/New_York", "label": "America/New_York (UTC-05:00)"},
-            {"value": "Not/A-Timezone", "label": "Not/A-Timezone (UTC+00:00)"},
-            {"value": "Europe/Madrid", "label": "Europe/Madrid (UTC+01:00)"},
-            {"value": "Invalid", "label": "Invalid (UTC+00:00)"},
-        ]
-
-    monkeypatch.setattr(
-        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
-        _mock_provider,
-    )
-
-    response = await client.get(
-        "/api/v1/subscription-settings/timezones", headers=headers
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-
-    values = {item["value"] for item in data}
-    assert "America/New_York" in values
-    assert "Europe/Madrid" in values
-    assert "Not/A-Timezone" not in values
-    assert "Invalid" not in values
-
-
-@pytest.mark.asyncio
-async def test_subscription_api_timezones_all_invalid_provider_falls_through(
-    client, active_tenant_user, monkeypatch
-):
-    """When provider returns data but all values are non-IANA, data from lower tiers is served."""
-    headers = await _login_headers(client, "tenant", "tenant-password")
-
-    async def _all_invalid_provider(*args, **kwargs):
-        return [
-            {"value": "Not/A-Timezone", "label": "Not/A-Timezone (UTC+00:00)"},
-            {"value": "Invalid", "label": "Invalid (UTC+00:00)"},
-            {"value": "Foo/Bar", "label": "Foo/Bar (UTC+00:00)"},
-        ]
-
-    monkeypatch.setattr(
-        "app.services.subscription_service.timezone_catalog._fetch_external_provider",
-        _all_invalid_provider,
-    )
-
-    response = await client.get(
-        "/api/v1/subscription-settings/timezones", headers=headers
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) > 0, (
-        "Should not return empty when normalization yields [] — must fall through to cache/fallback"
-    )
-
-    # Must still include common timezones from backend cache or fallback
-    values = {item["value"] for item in data}
-    assert "UTC" in values
-    assert "America/Bogota" in values
-    assert "Europe/Madrid" in values
-
-    # The invalid provider values must be filtered out
-    assert "Not/A-Timezone" not in values
-    assert "Invalid" not in values
-    assert "Foo/Bar" not in values
-
-
-@pytest.mark.asyncio
-async def test_fallback_timezones_labels_are_dynamically_computed():
-    """Fallback timezone labels must be dynamically computed, not hardcoded DST-sensitive offsets."""
-    from app.services.subscription_service.timezone_catalog_fallback import (
-        get_fallback_timezones,
-    )
-    from app.services.subscription_service.timezone_catalog import compute_utc_offset
-
-    fallback = get_fallback_timezones()
-    assert len(fallback) > 0
-
-    for entry in fallback:
-        assert "value" in entry
-        assert "label" in entry
-        # Label must be dynamically computed (not matching a hardcoded DST-sensitive value)
-        expected_offset = compute_utc_offset(entry["value"])
-        expected_label = (
-            f"{entry['value']} ({expected_offset})"
-            if expected_offset
-            else entry["value"]
-        )
-        assert entry["label"] == expected_label, (
-            f"Fallback label for {entry['value']} is '{entry['label']}' but expected '{expected_label}'. "
-            f"Hardcoded DST-sensitive offset in fallback."
-        )
+    assert response.status_code == 405 or response.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -1987,3 +1753,126 @@ async def test_reminder_pending_malformed_cursor_returns_200(
     )
     assert resp3.status_code == 200, resp3.text
     # Empty string is falsy, so treated as no cursor — dedup may return empty
+
+
+@pytest.mark.asyncio
+async def test_reminder_payload_uses_tenant_settings_timezone_and_locale(
+    db_session, active_tenant_user
+):
+    """Reminder payload uses timezone/locale from TenantSettings (not Tenant)."""
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+
+    from sqlalchemy import select
+
+    from app.core.encryption import encrypt_value
+    from app.services.subscription_job_service import reminder_payloads
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings.locale = "es"
+    settings.timezone = "America/Santo_Domingo"
+
+    # Create subscription dependencies
+    client_user = User(
+        username="ts_locale_client",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(client_user)
+    await db_session.flush()
+    client = Client(
+        tenant_id=tenant.id,
+        owner_user_id=client_user.id,
+        full_name="Locale Test Client",
+        username=client_user.username,
+        phone="+12015559999",
+        is_active=True,
+    )
+    db_session.add(client)
+    service = Service(tenant_id=tenant.id, name="Test Service")
+    db_session.add(service)
+    await db_session.flush()
+    plan = Plan(tenant_id=tenant.id, service_id=service.id, name="Test Plan")
+    db_session.add(plan)
+    await db_session.flush()
+
+    now = datetime(2026, 7, 8, 14, 0, tzinfo=timezone.utc)
+    sub = Subscription(
+        tenant_id=tenant.id,
+        client_id=client.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="test@example.com",
+        streaming_password_encrypted=encrypt_value("secret"),
+        profile_name="Profile",
+        duration_type="custom",
+        starts_at=now - timedelta(days=30),
+        expires_at=now + timedelta(days=3),
+        status="active",
+    )
+    db_session.add(sub)
+    await db_session.flush()
+
+    # Create SubscriptionReminderSettings
+    reminder_settings = SubscriptionReminderSettings(
+        tenant_id=tenant.id,
+        reminders_enabled=True,
+        reminder_time="09:00",
+        warning_days=[7, 3, 1],
+        recipient_mode="tenant_only",
+    )
+    db_session.add(reminder_settings)
+    await db_session.commit()
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 7, 8, 14, 0, tzinfo=timezone.utc)
+
+    with patch.object(reminder_payloads, "datetime", FixedDateTime):
+        result = await reminder_payloads.generate_reminder_payloads(db_session)
+
+    assert len(result["items"]) == 1, (
+        f"Expected 1 item, got {len(result['items'])}: {result}"
+    )
+    assert "días" in result["items"][0]["message"]
+    assert result["items"][0]["tenant_id"] == str(tenant.id)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_uses_tenant_settings_timezone_for_end_of_day(
+    db_session, active_tenant_user
+):
+    """Cleanup EOD respects tenant timezone (not hardcoded UTC)."""
+    from datetime import date, datetime, timezone
+
+    from sqlalchemy import select
+
+    from app.services.subscription_job_service.cleanup import _get_tenant_end_of_day
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings.timezone = "America/New_York"
+    await db_session.commit()
+
+    now = datetime(2026, 1, 2, 15, 0, tzinfo=timezone.utc)
+    today = date(2026, 1, 2)
+    eod = await _get_tenant_end_of_day(db_session, tenant.id, now, today)
+    assert eod == datetime(2026, 1, 3, 4, 59, 59, tzinfo=timezone.utc)

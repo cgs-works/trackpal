@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.main import app
-from app.models import Base, Client, MasterProfile, Tenant, User
+from app.models import Base, Client, MasterProfile, Tenant, TenantSettings, User
 from app.services.evolution_client import evolution_client
 
 
@@ -82,15 +82,16 @@ async def active_tenant_user(db_session):
     )
     db_session.add(user)
     await db_session.flush()
-    db_session.add(
-        Tenant(
-            owner_user_id=user.id,
-            client_prefix="tna01",
-            name="Active Tenant",
-            whatsapp_phone="+12015550002",
-            is_active=True,
-        )
+    tenant = Tenant(
+        owner_user_id=user.id,
+        client_prefix="tna01",
+        name="Active Tenant",
+        whatsapp_phone="+12015550002",
+        is_active=True,
     )
+    db_session.add(tenant)
+    await db_session.flush()
+    db_session.add(TenantSettings(tenant_id=tenant.id))
     await db_session.commit()
     return user
 
@@ -104,15 +105,16 @@ async def deactivated_tenant_user(db_session):
     )
     db_session.add(user)
     await db_session.flush()
-    db_session.add(
-        Tenant(
-            owner_user_id=user.id,
-            client_prefix="tnb01",
-            name="Inactive Tenant",
-            whatsapp_phone="+12015550003",
-            is_active=False,
-        )
+    tenant = Tenant(
+        owner_user_id=user.id,
+        client_prefix="tnb01",
+        name="Inactive Tenant",
+        whatsapp_phone="+12015550003",
+        is_active=False,
     )
+    db_session.add(tenant)
+    await db_session.flush()
+    db_session.add(TenantSettings(tenant_id=tenant.id))
     await db_session.commit()
     return user
 

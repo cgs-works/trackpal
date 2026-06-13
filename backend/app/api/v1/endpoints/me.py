@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import CurrentUser, DbDep
+from app.core.database import restore_rls_context
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
-from app.repositories import tenants_repository
+from app.repositories import tenant_settings_repository
 from app.schemas.me import PasswordChange, ProfileResponse, ProfileUpdate
 from app.services.profile_service import ProfileService
 
@@ -13,29 +14,65 @@ profile_service = ProfileService()
 
 async def _resolve_profile_locale(db: DbDep, current_user) -> str:
     if current_user.role == "tenant":
-        return await tenants_repository.resolve_locale_by_owner(db, current_user.id)
+        return await tenant_settings_repository.resolve_locale_by_owner(
+            db, current_user.id
+        )
     if current_user.role == "client":
-        return await tenants_repository.resolve_locale_by_client(db, current_user.id)
+        return await tenant_settings_repository.resolve_locale_by_client(
+            db, current_user.id
+        )
     return "en"
 
 
-def _profile_response(user, profile) -> ProfileResponse:
+def _profile_response(
+    user, profile, *, locale: str | None = None, timezone: str | None = None
+) -> ProfileResponse:
     tenant = getattr(profile, "tenant", None)
+    tenant_id = getattr(profile, "tenant_id", None)
+    if user.role == "tenant":
+        tenant_id = getattr(profile, "id", None)
+
     return ProfileResponse(
         role=user.role,
         username=user.username,
         name=getattr(profile, "name", None),
         full_name=getattr(profile, "full_name", None),
-        tenant_id=getattr(profile, "tenant_id", None),
+        tenant_id=tenant_id,
         tenant_name=getattr(tenant, "name", None),
         client_prefix=getattr(tenant, "client_prefix", None),
-        locale=getattr(tenant, "locale", None) or getattr(profile, "locale", None),
+        locale=locale,
+        timezone=timezone,
         email=getattr(profile, "email", None),
         phone=getattr(profile, "phone", None),
         is_active=getattr(profile, "is_active", None),
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
+
+
+async def _resolve_profile_settings(
+    db: DbDep, current_user, profile
+) -> tuple[str | None, str | None]:
+    if current_user.role == "tenant":
+        (
+            settings,
+            _created,
+        ) = await tenant_settings_repository.get_or_create_by_tenant_id(db, profile.id)
+        if _created:
+            await db.commit()
+            await restore_rls_context(db)
+            await db.refresh(settings)
+        return settings.locale, settings.timezone
+
+    if current_user.role == "client":
+        tenant_id = getattr(profile, "tenant_id", None)
+        if tenant_id is None:
+            return "en", "UTC"
+        locale = await tenant_settings_repository.resolve_locale(db, tenant_id)
+        timezone = await tenant_settings_repository.resolve_timezone(db, tenant_id)
+        return locale, timezone
+
+    return None, None
 
 
 @router.get("", response_model=ProfileResponse)
@@ -47,7 +84,8 @@ async def get_profile(db: DbDep, current_user: CurrentUser):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=_t(locale, "errors.profile_not_found"),
         )
-    return _profile_response(current_user, profile)
+    locale, timezone = await _resolve_profile_settings(db, current_user, profile)
+    return _profile_response(current_user, profile, locale=locale, timezone=timezone)
 
 
 @router.put("", response_model=ProfileResponse)
@@ -74,7 +112,8 @@ async def update_profile(payload: ProfileUpdate, db: DbDep, current_user: Curren
             status_code=status.HTTP_404_NOT_FOUND,
             detail=_t(locale, "errors.profile_not_found"),
         )
-    return _profile_response(current_user, profile)
+    locale, timezone = await _resolve_profile_settings(db, current_user, profile)
+    return _profile_response(current_user, profile, locale=locale, timezone=timezone)
 
 
 @router.put("/password", response_model=dict)

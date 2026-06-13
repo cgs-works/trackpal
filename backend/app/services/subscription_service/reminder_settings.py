@@ -23,7 +23,6 @@ async def get_reminder_settings(
     if not settings:
         settings = SubscriptionReminderSettings(
             tenant_id=tenant_id,
-            timezone="UTC",
             warning_days=[7, 3, 1],
             reminder_time="09:00",
             recipient_mode="tenant_only",
@@ -44,8 +43,6 @@ async def update_reminder_settings(
     settings = await get_reminder_settings(db, tenant_id)
 
     update_data = payload.model_dump(exclude_unset=True)
-    if "timezone" in update_data:
-        settings.timezone = update_data["timezone"]
     if "warning_days" in update_data:
         settings.warning_days = update_data["warning_days"]
     if "reminder_time" in update_data:

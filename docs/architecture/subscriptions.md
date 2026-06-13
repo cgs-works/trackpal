@@ -62,15 +62,18 @@ Unique: (subscription_id, recipient_type, days_before_expiry, sent_for_date).
 |--------|------|-------|
 | id | UUID | PK |
 | tenant_id | UUID | Unique FK -> tenants.id CASCADE |
-| timezone | VARCHAR(50) | IANA timezone identifier, default UTC |
 | warning_days | JSON | Default [7, 3, 1] |
 | reminder_time | VARCHAR(5) | Tenant-local time threshold ("starting at"), default 09:00 |
 | recipient_mode | VARCHAR(20) | Default tenant_only |
 | reminders_enabled | Boolean | Default false; master toggle to opt in/out of automated reminders |
+| custom_message_tenant | VARCHAR(2000) | Nullable, custom WhatsApp reminder text for the tenant |
+| custom_message_client | VARCHAR(2000) | Nullable, custom WhatsApp reminder text for the client |
 
-The `reminder_time` field is a tenant-local threshold. The backend checks if the current time in the tenant's configured timezone is at or past the threshold before generating reminders for that tenant. This means a tenant with timezone `America/Bogota` and `reminder_time=09:00` will have reminders generated starting at 09:00 Bogota time, regardless of the workflow's polling time.
+The `reminder_time` field is a tenant-local threshold. The backend checks if the current time in the tenant's configured timezone (from `TenantSettings.timezone`) is at or past the threshold before generating reminders for that tenant. This means a tenant with timezone `America/Bogota` and `reminder_time=09:00` will have reminders generated starting at 09:00 Bogota time, regardless of the workflow's polling time.
 
 The `reminders_enabled` field serves as a global opt-in toggle per tenant. When false (the default), no reminders are generated for that tenant regardless of other settings.
+
+**Timezone ownership**: The `timezone` field was removed from this table in migration `d011fe74cab0`. Timezone is now managed centrally in `TenantSettings.timezone` at `GET/PUT /api/v1/tenant-settings`. The timezone catalog is served at `GET /api/v1/tenant-settings/timezones`.
 
 ## Encryption
 
@@ -107,11 +110,12 @@ Auth: tenant or master + ActiveTenantId.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | /subscription-settings | Get reminder settings (includes reminders_enabled) |
-| PUT | /subscription-settings | Update reminder settings (all fields including reminders_enabled) |
-| GET | /subscription-settings/timezones | Return supported IANA timezone catalog with UTC offset labels |
+| GET | /subscription-settings | Get reminder settings (warning_days, reminder_time, recipient_mode, reminders_enabled, custom messages) |
+| PUT | /subscription-settings | Update reminder settings (all fields except timezone which is managed via /tenant-settings) |
 
-Auth for GET/PUT: tenant or master + ActiveTenantId. Auth for /timezones: JWT bearer (tenant or master).
+Auth: tenant or master + ActiveTenantId.
+
+Note: The timezone catalog moved to `GET /api/v1/tenant-settings/timezones`. The `/subscription-settings/timezones` endpoint was removed.
 
 ### Jobs (/api/v1/subscriptions/jobs)
 
@@ -134,16 +138,16 @@ Submodules: `queries.py`, `mutations.py`, `updater.py`, `validation.py`, `helper
 - Reactivate recalculates from new starts_at.
 - Renew extends from current expires_at.
 - Reveal decrypts, creates no event.
-- Reminder settings CRUD with defaults (timezone=UTC, warning_days=[7,3,1], reminder_time=09:00, recipient_mode=tenant_only, reminders_enabled=false).
-- Timezone catalog sourced from three-tier strategy: external provider → system zoneinfo → bundled fallback.
+- Reminder settings CRUD with defaults (warning_days=[7,3,1], reminder_time=09:00, recipient_mode=tenant_only, reminders_enabled=false).
+- Timezone catalog sourced from three-tier strategy: external provider → system zoneinfo → bundled fallback, served at `GET /api/v1/tenant-settings/timezones`.
 
 ### subscription_job_service/ (package)
 
 Submodules: `cleanup.py`, `reminder_log.py`, `reminder_payloads.py`, `reminder_schedule.py`.
 
-**Cleanup**: expire -> auto-cancel (7d) -> delete (30d). Uses tenant timezone.
+**Cleanup**: expire -> auto-cancel (7d) -> delete (30d). Uses tenant timezone resolved from `TenantSettings.timezone`.
 
-**Reminders**: timezone-gated (tenant-local reminder_time threshold), Spanish message rendered, unique constraint dedup, batched pending lookup, reminders_enabled check per tenant.
+**Reminders**: timezone-gated (tenant-local `reminder_time` threshold, timezone resolved from `TenantSettings`), Spanish message rendered, unique constraint dedup, batched pending lookup, `reminders_enabled` check per tenant.
 
 **mark-sent**: status=sent, sent_at=now. **mark-failed**: increments attempt, fails permanently after 3.
 
@@ -179,13 +183,16 @@ File: `frontend/src/views/SubscriptionsView.vue` (1,440 LOC). Route: `/admin/sub
 - Cancel with confirmation dialog
 - Reveal with eye icon per row; empty password shows "Sin contraseña"
 - Linked from dashboard and client detail rows
-- Reminder settings panel: timezone dropdown (from GET /subscription-settings/timezones), warning days, reminder time, recipient mode, reminders_enabled toggle
+- Reminder settings panel: timezone read-only display (from `GET /api/v1/tenant-settings`, edits via `PUT /api/v1/tenant-settings`), warning days, reminder time, recipient mode, reminders_enabled toggle
+- Timezone edits are handled via `GET/PUT /api/v1/tenant-settings`, no longer owned by the reminder modal
 
 ## Migration
 
 `backend/alembic/versions/`:
 - `cd7efe74caa0_add_subscriptions.py` - creates 4 tables with RLS policies.
 - `ce10fe74caa9_subscription_reminders_timezone_toggle.py` - adds `reminders_enabled` column to `subscription_reminder_settings`.
+- `cf10fe74caa0_add_custom_reminder_messages.py` - adds `custom_message_tenant` and `custom_message_client` columns.
+- `d011fe74cab0_create_tenant_settings.py` - creates `tenant_settings` table, removes `timezone` from `subscription_reminder_settings` (moved to `TenantSettings.timezone`).
 
 ## Config
 

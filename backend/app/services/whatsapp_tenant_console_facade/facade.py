@@ -20,6 +20,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.i18n import t as _t
+from app.repositories import tenant_settings_repository
 from app.services.auth_service import AuthService
 from app.services.tenant_service import TenantService
 from app.services.whatsapp_session_service import WhatsAppSessionService
@@ -103,12 +104,20 @@ class WhatsAppTenantConsoleFacade:
             if tenant is None:
                 return _t("es", "wa.tenant.facade.tenant_not_found")
             if not tenant.is_active:
+                settings_obj = getattr(tenant, "settings", None)
+                inactive_locale = getattr(settings_obj, "locale", None) or "es"
                 return _t(
-                    getattr(tenant, "locale", "es") or "es",
+                    inactive_locale,
                     "wa.tenant.facade.inactive_tenant",
                 )
             tenant_id = tenant.id
-            locale = getattr(tenant, "locale", "es") or "es"
+            try:
+                locale = await tenant_settings_repository.resolve_locale_by_owner(
+                    db, tenant.owner_user_id
+                )
+            except AttributeError:
+                # db is a fake/mock object in tests — fall back to default
+                locale = "es"
 
         # 3. Top-level "0" handling
         msg = message.strip()

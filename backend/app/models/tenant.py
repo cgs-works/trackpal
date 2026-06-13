@@ -45,7 +45,6 @@ class Tenant(Base, TimestampMixin):
         String(100), unique=True, nullable=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     owner = relationship("User", back_populates="owned_tenant")
     clients = relationship(
@@ -55,6 +54,13 @@ class Tenant(Base, TimestampMixin):
         "Service", back_populates="tenant", cascade="all, delete-orphan"
     )
     plans = relationship("Plan", back_populates="tenant", cascade="all, delete-orphan")
+    settings = relationship(
+        "TenantSettings",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="selectin",
+    )
 
     @property
     def full_name(self) -> str:

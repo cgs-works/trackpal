@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { t } from "@/i18n";
-import { type Profile, type ProfileUpdate, updateProfile } from "../services/settings-api";
+import { t, loadCatalog } from "@/i18n";
+import { useSettingsStore } from "@/store/settings";
+import {
+  type Profile,
+  type ProfileUpdate,
+  updateProfile,
+} from "../services/settings-api";
+import { TimezonePicker } from "./timezone-picker";
 
 const LOCALE_OPTIONS = [
   { value: "en", label: "English" },
@@ -24,31 +30,78 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps) {
+  const {
+    tenantSettings,
+    timezoneOptions,
+    loadTenantSettings,
+    loadTimezoneOptions,
+    updateTenantSettings,
+  } = useSettingsStore();
+
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [email, setEmail] = useState(profile.email || "");
   const [phone, setPhone] = useState(profile.phone || "");
   const [locale, setLocale] = useState(profile.locale || "en");
+  const [timezone, setTimezone] = useState(profile.timezone || "UTC");
   const [saving, setSaving] = useState(false);
+
+  const loadSettings = useCallback(async () => {
+    await Promise.all([loadTenantSettings(), loadTimezoneOptions()]);
+  }, [loadTenantSettings, loadTimezoneOptions]);
+
+  useEffect(() => {
+    loadSettings().catch(() => {
+      toast.error(t("frontend.profile.error_update"));
+    });
+  }, [loadSettings]);
 
   useEffect(() => {
     setFullName(profile.full_name || "");
     setEmail(profile.email || "");
     setPhone(profile.phone || "");
-    setLocale(profile.locale || "en");
-  }, [profile]);
+    setLocale(tenantSettings?.locale || profile.locale || "en");
+    setTimezone(tenantSettings?.timezone || profile.timezone || "UTC");
+  }, [profile, tenantSettings]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload: ProfileUpdate = {
+      const profilePayload: ProfileUpdate = {
         full_name: fullName || undefined,
         email: email || undefined,
         phone: phone || undefined,
-        locale: locale || undefined,
       };
-      const updated = await updateProfile(payload);
-      onProfileUpdate(updated);
+      const settingsPayload = {
+        locale: locale || undefined,
+        timezone: timezone || undefined,
+      };
+      const previousLocale = tenantSettings?.locale || profile.locale || "en";
+
+      const [profileResult, settingsResult] = await Promise.allSettled([
+        updateProfile(profilePayload),
+        updateTenantSettings(settingsPayload),
+      ]);
+
+      if (profileResult.status === "rejected") {
+        throw profileResult.reason;
+      }
+      const updatedProfile = profileResult.value;
+
+      if (settingsResult.status === "fulfilled") {
+        const updatedSettings = settingsResult.value;
+        onProfileUpdate({
+          ...updatedProfile,
+          locale: updatedSettings.locale,
+          timezone: updatedSettings.timezone,
+        });
+        if (updatedSettings.locale !== previousLocale) {
+          await loadCatalog();
+        }
+      } else {
+        onProfileUpdate(updatedProfile);
+      }
+
       toast.success(t("frontend.profile.saved"));
     } catch (err) {
       toast.error(
@@ -106,6 +159,15 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t("frontend.subscriptions.timezone")}</Label>
+        <TimezonePicker
+          value={timezone}
+          onChange={(value) => setTimezone(value ?? "")}
+          timezones={timezoneOptions}
+        />
       </div>
 
       <div className="flex justify-end">

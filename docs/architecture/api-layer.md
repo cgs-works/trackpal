@@ -14,6 +14,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 
 | Prefix | Module | Tags | Auth |
 |--------|--------|------|------|
+| `/api/v1/tenant-settings` | `app.api.v1.endpoints.tenant_settings` | tenant-settings | JWT + tenant or master context |
 | `/api/v1/auth/*` | `app.api.v1.endpoints.auth` | auth | None (public) |
 | `/api/v1/catalog/*` | `app.api.v1.endpoints.catalog` | catalog | JWT + active tenant context |
 | `/api/v1/clients/*` | `app.api.v1.endpoints.clients` | clients | JWT + tenant context |
@@ -24,7 +25,6 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/i18n/*` | `app.api.v1.endpoints.i18n` | i18n | JWT bearer |
 | `/api/v1/subscriptions/*` | `app.api.v1.endpoints.subscriptions` | subscriptions | JWT + active tenant context |
 | `/api/v1/subscription-settings` | `app.api.v1.endpoints.subscriptions` | subscription-settings | JWT + active tenant context |
-| `/api/v1/subscription-settings/timezones` | `app.api.v1.endpoints.subscriptions` | subscription-settings | JWT bearer (tenant or master) |
 | `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions-jobs | X-API-Key header |
 | `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions-reminders | X-API-Key header |
 | `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
@@ -49,7 +49,7 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 
 ### I18n Endpoints
 
-- `GET /api/v1/i18n/catalog` — Returns merged translation catalog for current user's tenant locale. Tenant reads locale from `Tenant.locale`; client reads from parent tenant; master/unknown returns English. Catalog includes all English keys as fallback.
+- `GET /api/v1/i18n/catalog` — Returns merged translation catalog for current user's tenant locale. Tenant reads locale from `TenantSettings` via `tenant_settings_repository.resolve_locale_by_owner()`; client reads from parent tenant via `resolve_locale_by_client()`; master/unknown returns English. Catalog includes all English keys as fallback.
 
 ### Auth Endpoints
 
@@ -60,11 +60,13 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 
 ### Me Endpoints (self-profile)
 
-- `GET /api/v1/me` — Get current user profile
-- `PUT /api/v1/me` — Update own profile fields
+- `GET /api/v1/me` — Get current user profile, includes `locale` and `timezone` read-only projections from `TenantSettings`
+- `PUT /api/v1/me` — Update own profile fields (identity fields only: name, email, phone; **not** locale or timezone)
 - `PUT /api/v1/me/password` — Change password
 
 Client role receives readonly profile data from `GET /api/v1/me`; profile edits are rejected, but password change remains allowed.
+
+**Locale and timezone** are read-only projections on `/me`. To update locale/timezone, use `PUT /api/v1/tenant-settings`.
 
 ### Tenants Endpoints (master-only)
 
@@ -130,9 +132,16 @@ Duplicate service/plan names return 409. Cross-tenant resources return 404.
 
 ### Subscription Reminder Settings Endpoints
 
-- `GET /api/v1/subscription-settings` — Get current tenant's reminder settings (timezone, warning_days, reminder_time, recipient_mode, reminders_enabled). Auth: JWT + tenant or master.
-- `PUT /api/v1/subscription-settings` — Update reminder settings. Auth: JWT + tenant or master.
-- `GET /api/v1/subscription-settings/timezones` — Return a list of supported IANA timezones with labels. The backend serves this catalog using a three-tier strategy: external provider → system zoneinfo data → bundled fallback. Auth: JWT bearer (tenant or master).
+- `GET /api/v1/subscription-settings` — Get current tenant's reminder settings (warning_days, reminder_time, recipient_mode, reminders_enabled, custom messages). Auth: JWT + tenant or master.
+- `PUT /api/v1/subscription-settings` — Update reminder settings (warning_days, reminder_time, recipient_mode, reminders_enabled, custom messages). Auth: JWT + tenant or master.
+
+Note: Timezone is no longer part of subscription-settings. Timezone is managed via `TenantSettings` at `/api/v1/tenant-settings`. The timezone catalog moved to `GET /api/v1/tenant-settings/timezones`.
+
+### Tenant Settings Endpoints
+
+- `GET /api/v1/tenant-settings` — Get current tenant's locale and timezone settings. Auth: JWT + tenant or master + ActiveTenantId.
+- `PUT /api/v1/tenant-settings` — Update locale and/or timezone. Auth: JWT + tenant or master + ActiveTenantId.
+- `GET /api/v1/tenant-settings/timezones` — Return a list of supported IANA timezones with labels. The backend serves this catalog using a three-tier strategy: external provider → system zoneinfo data → bundled fallback. Auth: JWT bearer (tenant or master).
 
 ## Dependency Injection
 
@@ -141,5 +150,5 @@ Defined in `app/api/dependencies.py`:
 - `get_active_tenant_id` / tenant context helpers — Resolve `active_tenant_id` for tenant users and switched Master users; set RLS context for tenant-scoped work
 - `require_role(role)` — Returns a dependency that checks `current_user.role`
 - `verify_n8n_api_key_header` — Validates `X-API-Key` header against `settings.n8n_api_key`
-- `resolve_locale(db, tenant_id)` — Fetches `Tenant.locale` from DB, returns `"en"` fallback. Used before mutating service calls to translate `UserFacingError` responses. Must be called *before* the mutating call to avoid post-rollback RLS context loss.
+- `resolve_locale(db, tenant_id)` — Fetches `TenantSettings.locale` from DB via `tenant_settings_repository`, returns `"en"` fallback. Used before mutating service calls to translate `UserFacingError` responses. Must be called *before* the mutating call to avoid post-rollback RLS context loss.
 - Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`

@@ -22,7 +22,7 @@ from app.core.input_validation import (
 from app.core.encryption import encrypt_value
 from app.core.security import get_password_hash
 from app.repositories import clients_repository, tenants_repository, users_repository
-from app.models import Tenant, User
+from app.models import Tenant, TenantSettings, User
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.services.client_service import ClientService
 from app.services.evolution_client import evolution_client
@@ -76,6 +76,9 @@ async def create_tenant(
         is_active=True,
     )
     db.add(profile)
+    await db.flush()
+
+    db.add(TenantSettings(tenant_id=profile.id, locale="en", timezone="UTC"))
     await db.flush()
 
     try:

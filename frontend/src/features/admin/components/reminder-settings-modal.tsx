@@ -17,7 +17,6 @@ import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { t, getLocale } from "@/i18n";
 import { useSettingsStore } from "@/store/settings";
-import { TimezonePicker } from "./timezone-picker";
 
 // ── Placeholder values for preview ──────────────────────────────
 const PREVIEW_PLACEHOLDERS = {
@@ -43,8 +42,6 @@ const DEFAULT_MESSAGES: Record<string, { tenant: string; client: string }> = {
 function getDefaultMessages(locale: string) {
   return DEFAULT_MESSAGES[locale] || DEFAULT_MESSAGES.en;
 }
-
-
 
 // ── Preview renderer ────────────────────────────────────────────
 function renderPreview(template: string): string {
@@ -75,15 +72,15 @@ export function ReminderSettingsModal({
   // Use settings store
   const {
     reminderSettings,
-    timezoneOptions,
-    settingsLoaded,
+    tenantSettings,
+    reminderSettingsLoaded,
+    loadReminderSettings,
     loadTenantSettings,
     updateReminderSettings,
   } = useSettingsStore();
 
   const [settings, setSettings] = useState({
     reminders_enabled: false,
-    timezone: "UTC",
     warning_days: [7, 3, 1] as number[],
     reminder_time: "09:00",
     recipient_mode: "tenant_only" as "tenant_only" | "client_only" | "both",
@@ -104,7 +101,7 @@ export function ReminderSettingsModal({
     setLocale(getLocale());
 
     try {
-      await loadTenantSettings();
+      await Promise.all([loadReminderSettings(), loadTenantSettings()]);
     } catch (err: unknown) {
       const apiErr = err as {
         response?: { data?: { detail?: string | Array<{ msg?: string }> } }
@@ -122,14 +119,13 @@ export function ReminderSettingsModal({
     } finally {
       setIsLoading(false);
     }
-  }, [open, loadTenantSettings]);
+  }, [open, loadReminderSettings, loadTenantSettings]);
 
-  // Sync store data to local state when cache loads
+  // Sync store data to local state when modal opens
   useEffect(() => {
-    if (settingsLoaded && reminderSettings) {
+    if (open && reminderSettingsLoaded && reminderSettings) {
       setSettings({
         reminders_enabled: reminderSettings.reminders_enabled,
-        timezone: reminderSettings.timezone || "UTC",
         warning_days: reminderSettings.warning_days || [7, 3, 1],
         reminder_time: reminderSettings.reminder_time || "09:00",
         recipient_mode: reminderSettings.recipient_mode || "tenant_only",
@@ -137,7 +133,7 @@ export function ReminderSettingsModal({
         custom_message_client: reminderSettings.custom_message_client,
       });
     }
-  }, [settingsLoaded, reminderSettings]);
+  }, [open, reminderSettingsLoaded, reminderSettings]);
 
   useEffect(() => {
     loadData();
@@ -148,9 +144,6 @@ export function ReminderSettingsModal({
     const errors: Record<string, string> = {};
 
     if (settings.reminders_enabled) {
-      if (!settings.timezone) {
-        errors.timezone = t("frontend.subscriptions.error_timezone_required");
-      }
       if (settings.warning_days.length === 0) {
         errors.warning_days = t("frontend.subscriptions.error_warning_days_required");
       }
@@ -228,7 +221,6 @@ export function ReminderSettingsModal({
     }
   }
 
-  const hasTimezoneError = !!(validationErrors.timezone && settings.reminders_enabled);
   const hasWarningDaysError = !!(validationErrors.warning_days && settings.reminders_enabled);
   const hasTimeError = !!(validationErrors.reminder_time && settings.reminders_enabled);
 
@@ -279,35 +271,14 @@ export function ReminderSettingsModal({
                 <>
                   <Separator />
 
-                  {/* ── Timezone ──────────────────────────────── */}
+                  {/* ── Timezone (read-only from tenant settings) ── */}
                   <div className="space-y-2.5">
-                    <Label
-                      className={`text-sm font-medium ${hasTimezoneError ? "text-destructive" : ""}`}
-                    >
+                    <Label className="text-sm font-medium">
                       {t("frontend.subscriptions.timezone")}
                     </Label>
-                    <TimezonePicker
-                      value={settings.timezone}
-                      onChange={(value) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          timezone: value ?? "",
-                        }))
-                      }
-                      timezones={timezoneOptions}
-                      error={hasTimezoneError}
-                    />
-                    {settings.timezone === "UTC" && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        ⚠️ Reminders will be sent in UTC. Consider selecting
-                        your local timezone.
-                      </p>
-                    )}
-                    {hasTimezoneError && (
-                      <p className="text-xs text-destructive">
-                        {validationErrors.timezone}
-                      </p>
-                    )}
+                    <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                      {t("frontend.subscriptions.reminder_time_help")} {tenantSettings?.timezone || "UTC"}
+                    </div>
                   </div>
 
                   {/* ── Warning days ──────────────────────────── */}

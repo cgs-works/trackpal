@@ -207,7 +207,9 @@ KEY_CODIGO_MENU = "wa.tenant.codigo.menu"
 KEY_CODIGO_SERVICE_PROMPT = "wa.tenant.codigo.service_prompt"
 KEY_CODIGO_EMAIL_PROMPT = "wa.tenant.codigo.email_prompt"
 KEY_CODIGO_EMAIL_CONFIRM_PROMPT = "wa.tenant.codigo.email_confirm_prompt"
-KEY_CODIGO_INVALID_EMAIL_CONFIRM_OPTION = "wa.tenant.codigo.invalid_email_confirm_option"
+KEY_CODIGO_INVALID_EMAIL_CONFIRM_OPTION = (
+    "wa.tenant.codigo.invalid_email_confirm_option"
+)
 KEY_CODIGO_BUSCANDO = "wa.tenant.codigo.buscando"
 KEY_CODIGO_FOUND_CODE = "wa.tenant.codigo.found_code"
 KEY_CODIGO_FOUND_URL = "wa.tenant.codigo.found_url"

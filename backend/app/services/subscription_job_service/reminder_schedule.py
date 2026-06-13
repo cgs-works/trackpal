@@ -16,6 +16,8 @@ from app.models.subscription import (
     SubscriptionReminderSettings,
 )
 from app.models.tenant import Tenant
+from app.models.tenant_settings import TenantSettings
+from app.repositories import tenant_settings_repository
 
 
 def is_valid_timezone(tz_name: str) -> bool:
@@ -82,12 +84,13 @@ async def load_batched_reminder_data(
 ) -> tuple[
     dict[Any, SubscriptionReminderSettings | None],
     dict[Any, Tenant | None],
+    dict[Any, TenantSettings | None],
 ]:
-    """Load reminder settings and tenants for a batch of subscriptions.
+    """Load reminder settings, tenants, and tenant settings for a batch.
 
-    Returns ``(settings_by_tenant_id, tenants_by_tenant_id)`` lookup maps.
-    Missing records are stored as ``None`` so callers can distinguish
-    "not loaded" from "didn't exist".
+    Returns ``(settings_by_tenant_id, tenants_by_tenant_id, tenant_settings_by_tenant_id)``
+    lookup maps.  Missing records are stored as ``None`` so callers can
+    distinguish "not loaded" from "didn't exist".
     """
     tenant_ids = list({sub.tenant_id for sub in subscriptions})
 
@@ -111,4 +114,10 @@ async def load_batched_reminder_data(
         for tid in tenant_ids:
             tenants_map.setdefault(tid, None)
 
-    return settings_map, tenants_map
+    tenant_settings_map: dict[Any, TenantSettings | None] = {}
+    if tenant_ids:
+        tenant_settings_map = (
+            await tenant_settings_repository.get_settings_for_tenant_ids(db, tenant_ids)
+        )
+
+    return settings_map, tenants_map, tenant_settings_map

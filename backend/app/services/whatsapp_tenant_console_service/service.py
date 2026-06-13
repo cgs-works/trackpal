@@ -220,7 +220,9 @@ class WhatsAppTenantConsoleService(
                     )
 
                 if not strict_codigo_confirm and (
-                    is_cancel(msg) or msg.lower() in (
+                    is_cancel(msg)
+                    or msg.lower()
+                    in (
                         "menu",
                         "menú",
                         "/menu",

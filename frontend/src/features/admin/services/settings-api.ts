@@ -10,6 +10,7 @@ export interface Profile {
   tenant_name: string | null;
   client_prefix: string | null;
   locale: string | null;
+  timezone: string | null;
   email: string | null;
   phone: string | null;
   is_active: boolean | null;
@@ -22,7 +23,6 @@ export interface ProfileUpdate {
   email?: string;
   phone?: string;
   name?: string;
-  locale?: string;
 }
 
 export interface PasswordChange {
@@ -86,6 +86,43 @@ export async function updateProfile(payload: ProfileUpdate): Promise<Profile> {
 
 export async function changePassword(payload: PasswordChange): Promise<void> {
   await api.put("/me/password", payload);
+}
+
+// ── Tenant Settings ───────────────────────────────────────────
+export interface TenantSettings {
+  tenant_id: string;
+  locale: string;
+  timezone: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantSettingsUpdate {
+  locale?: string;
+  timezone?: string;
+}
+
+export interface TimezoneOption {
+  value: string;
+  label: string;
+  group: string;
+}
+
+export async function getTenantSettings(): Promise<TenantSettings> {
+  const { data } = await api.get("/tenant-settings");
+  return data;
+}
+
+export async function updateTenantSettings(
+  payload: TenantSettingsUpdate
+): Promise<TenantSettings> {
+  const { data } = await api.put("/tenant-settings", payload);
+  return data;
+}
+
+export async function getTimezones(): Promise<TimezoneOption[]> {
+  const { data } = await api.get("/tenant-settings/timezones");
+  return data;
 }
 
 // Mailbox

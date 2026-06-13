@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-Vue 3 SPA consuming the Trackpal REST API. Hosted on Cloudflare Pages, built with Vite.
+React 19 + TypeScript SPA consuming the Trackpal REST API. Hosted on Cloudflare Pages, built with Vite.
 
 ## High-Level Design
 
@@ -13,27 +13,27 @@ Vue 3 SPA consuming the Trackpal REST API. Hosted on Cloudflare Pages, built wit
                         │
               ┌─────────┼─────────┐
               │         │         │
-           Router    Pinia     Axios
-         (vue-router) (stores) (services/api.js)
+          Router   Zustand    Axios
+        (tanstack) (stores)  (services/api.ts)
               │         │         │
               └─────────┼─────────┘
                         │
               Single-Page Application
-              ┌───────────────────┐
-              │  App.vue          │
-              │  └─ <router-view> │
-              ├───────────────────┤
-              │  LoginView        │
-              │  MasterDashboard  │
-              │  TenantDashboard  │
-              │  Subscriptions    │
-              │  ClientDashboard  │
-              └───────────────────┘
+              ┌───────────────────────┐
+              │  App.tsx              │
+              │  └─ <Outlet>          │
+              ├───────────────────────┤
+              │  LoginPage            │
+              │  MasterDashboard      │
+              │  TenantDashboard      │
+              │  SubscriptionsPage    │
+              │  ClientDashboard      │
+              └───────────────────────┘
 ```
 
-## Routing (vue-router)
+## Routing (TanStack Router)
 
-Router lives in `src/router/index.js` with five routes:
+Router lives in `src/router.ts` with the following routes:
 
 | Path | Component | Auth | Role |
 |------|-----------|------|------|
@@ -46,31 +46,31 @@ Router lives in `src/router/index.js` with five routes:
 
 ### Navigation Guard
 
-`router.beforeEach` enforces two rules:
+TanStack Router uses `beforeLoad` hooks for route guards:
 
 1. **Authentication check**: If route requires auth and no token exists, redirect to `/login`
 2. **Role check**: If route requires a specific role and user's role mismatches, redirect to the correct dashboard for their role (or `/login` if no role)
 3. **Login redirect**: If already authenticated and navigating to `/login`, redirect to the appropriate dashboard based on role
 
-No lazy loading is used for `LoginView` (eager import). `MasterDashboardView` and `TenantDashboardView` are lazy-loaded via dynamic imports.
+`LoginPage` is eagerly loaded. Dashboard pages use lazy loading.
 
-## State Management (Pinia)
+## State Management (Zustand)
 
-Three stores in `src/stores/`:
+Key stores in `frontend/src/store/`:
 
-### `auth.js`
+### `authStore`
 
 - **State**: `token`, `refreshToken`, `user`, `activeTenantId` — all persisted to `localStorage`
-- **Getters (computed)**: `isAuthenticated`, `role`, `username`
+- **Selectors**: `isAuthenticated`, `role`, `username`
 - **Actions**: `login(username, password)` — POST to `/auth/login`, stores tokens + user; `switchTenant(tenantId)` — Master support context; `exitTenantContext()` — exits support context through `/auth/switch-tenant` with `tenant_id: null`; `logout()` — POST to `/auth/logout`, clears localStorage
 
 Client users land on `/client/dashboard`, which shows readonly client profile data and password change only.
 
 Token and user data are read from `localStorage` on store initialization, surviving page reloads.
 
-### `i18n.js`
+### `i18nStore`
 
-Pinia i18n store that holds the merged translation catalog fetched from the backend:
+Zustand i18n store that holds the merged translation catalog fetched from the backend:
 
 - **State**: `locale`, `strings` (catalog dict), `isLoaded`
 - **Actions**: `loadCatalog()` — fetches `GET /api/v1/i18n/catalog`, stores locale + merged strings
@@ -78,14 +78,16 @@ Pinia i18n store that holds the merged translation catalog fetched from the back
 
 Catalog loaded:
 - On successful login (called from `LoginView`)
-- On page refresh if already authenticated (`main.js` checks `authStore.isAuthenticated`)
-- After locale change in profile section (immediate refetch for UI update)
+- On page refresh if already authenticated (`main.ts` checks `authStore.isAuthenticated`)
+- After locale change through `PUT /api/v1/tenant-settings` (immediate refetch for UI update)
 
 Frontend holds zero source-of-truth translation strings. All strings come from backend catalog.
 
+Note: The frontend was migrated from Vue 3 + Pinia to React 19 + TypeScript + Zustand + TanStack Router. The i18n patterns remain conceptually the same (backend-sourced catalog, post-auth load, locale refetch on change) but use Zustand instead of Pinia.
+
 ## API Integration (Axios)
 
-Singleton Axios instance in `src/services/api.js`:
+Singleton Axios instance in `@/lib/api`:
 
 - Base URL from `VITE_API_URL` env var or fallback `http://localhost:8000/api/v1`
 - **Request interceptor**: Attaches `Authorization: Bearer <token>` header from localStorage
@@ -100,7 +102,7 @@ Login Page
   │
   ├─ POST /api/v1/auth/login (username, password)
   │
-  ├─ Success → Store tokens + user in Pinia + localStorage
+  ├─ Success → Store tokens + user in Zustand + localStorage
   │              │
   │              ├─ role === "master"  → /master/dashboard
   │              └─ role === "tenant"  → /admin/dashboard
@@ -111,14 +113,14 @@ Login Page
 
 Logout:
 - POST /api/v1/auth/logout with refresh token
-- Clear Pinia state + localStorage
+- Clear Zustand state + localStorage
 - Redirect to /login
 
 ## Build & Dev
 
-Defined in `vite.config.js`:
+Defined in `vite.config.ts`:
 
-- **Plugin**: `@vitejs/plugin-vue`
+- **Plugin**: `@vitejs/plugin-react`
 - **Dev server proxy**: `/api` → `http://localhost:8000` (targets backend, changes origin)
 - **Build output**: `dist/` directory
 - **Env prefix**: `VITE_` variables passed to client
@@ -131,11 +133,11 @@ Defined in `vite.config.js`:
 
 ## Views Overview
 
-### LoginView
+### LoginPage
 
 Login form with i18n-backed UI strings from `i18nStore.t()`. Uses translated labels for title, username, password, sign-in button, loading state, and error message. Calls `i18nStore.loadCatalog()` after successful auth.
 
-### MasterDashboardView
+### MasterDashboard
 
 Full tenant management dashboard accessible only to `master` role:
 - Summary cards: total, active, inactive tenant counts
@@ -146,20 +148,21 @@ Full tenant management dashboard accessible only to `master` role:
 - Activate/deactivate/delete operations
 - Logout button
 
-### TenantDashboardView
+### TenantDashboard
 
 Self-service dashboard accessible only to `tenant` role:
 - Welcome message + profile display
-- Profile edit form (name, email, phone, **locale**)
+- Profile edit form (name, email, phone) — identity fields saved through `PUT /api/v1/me`
+- **Locale and timezone** settings — saved through `PUT /api/v1/tenant-settings` (separate from profile identity)
 - Password change form (old + new password)
 - Catalog management: services CRUD and per-service plans CRUD
 - Client management: table with CRUD actions; create-client form uses i18n label `frontend.clients.password` (`Contraseña` / `Password`)
 - Link to subscriptions page
 - Duplicate/validation API errors shown in user's locale
-- Locale `<select>` in profile section (en/es); on save, refetches i18n catalog for immediate UI update
+- Locale/timezone `<select>` or dropdowns in settings section; on locale save, refetches i18n catalog for immediate UI update
 - Logout button
 
-### SubscriptionsView
+### SubscriptionsPage
 
 Full subscription management page at `/admin/subscriptions` accessible only to `tenant` role:
 - Table with columns: client, service, email, profile, duration, dates, status badges, actions
@@ -167,6 +170,7 @@ Full subscription management page at `/admin/subscriptions` accessible only to `
 - Create/Edit/Renew/Reactivate modals with all subscription fields
 - Cancel with confirmation dialog
 - Reveal credential eye icon per row -- decrypts password and PIN on demand
+- Reminder settings panel: timezone dropdown (from `GET /api/v1/tenant-settings/timezones`), warning days, reminder time, recipient mode, reminders_enabled toggle; timezone edits no longer owned by reminder modal — handled at tenant level through `/tenant-settings`
 
 Dashboard data is loaded from `GET /api/v1/dashboard` and `GET /api/v1/me` on mount.
 
@@ -176,21 +180,21 @@ Five panel components in `src/components/` extracted from views for maintainabil
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `CatalogPanel.vue` | Master & Tenant dashboards | Service + plan CRUD operations |
-| `ClientManagementPanel.vue` | Tenant dashboard | Client CRUD with forms, activation toggle |
-| `CodeServicesGlobalPanel.vue` | Master dashboard | Global code-service activation toggles |
-| `CodeServicesTenantPanel.vue` | Tenant dashboard | Per-tenant code-service selection |
-| `MailboxConfigPanel.vue` | Tenant dashboard | Mailbox config (IMAP, OAuth), connect, test, disconnect |
+| `CatalogPanel.tsx` | Master & Tenant dashboards | Service + plan CRUD operations |
+| `ClientManagementPanel.tsx` | Tenant dashboard | Client CRUD with forms, activation toggle |
+| `CodeServicesGlobalPanel.tsx` | Master dashboard | Global code-service activation toggles |
+| `CodeServicesTenantPanel.tsx` | Tenant dashboard | Per-tenant code-service selection |
+| `MailboxConfigPanel.tsx` | Tenant dashboard | Mailbox config (IMAP, OAuth), connect, test, disconnect |
 
 ## Public I18n (pre-auth)
 
 System for translating the login page and any unauthenticated views without backend access.
 
-**Files**: `src/i18n/public.json` + `src/i18n/usePublicI18n.js`
+**Files**: `src/i18n/public.json` + `src/i18n/usePublicI18n.ts`
 
 - Local JSON catalog with `en` / `es` entries for `login.*` keys.
-- `usePublicI18n()` composable returns reactive `locale`, `setLocale()`, and `t(key, params?)`.
+- `usePublicI18n()` hook returns reactive `locale`, `setLocale()`, and `t(key, params?)`.
 - Selected locale persisted to `localStorage` under key `publicLocale`.
 - First visit defaults to `en`. Missing keys return the key itself (no crash).
-- Imported in `LoginView.vue` for all login-form text.
+- Imported in `LoginPage.tsx` for all login-form text.
 - After successful login, switches to backend-sourced `i18nStore`.
