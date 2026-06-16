@@ -52,32 +52,31 @@ def test_check_close_session_reads_close_after_send_from_upstream_result() -> No
     assert "const isLogout = shouldCloseAfterSend" in js
 
 
-def test_guard_from_me_external_non_menu_sets_skip_and_close_contract() -> None:
+def test_guard_from_me_external_non_menu_skips_without_close_contract() -> None:
     js = _workflow_nodes()["Guard fromMe external non-menu"]["parameters"]["jsCode"]
 
     assert "const canonicalJid = (value) => {" in js
     assert "const isMenuCommand = message === '/menu' || message === 'menu';" in js
+    assert "const isRemoteCancel = message === '0';" in js
     assert "const shouldSkipBackend = Boolean(" in js
     assert "fromMe &&" in js
     assert "!isSelfTarget" in js
     assert "!isMenuCommand" in js
+    assert "!isRemoteCancel" in js
     assert "skip_console_call: true" in js
     assert "no_reply: true" in js
-    assert "status: 'closed'" in js
-    assert "const targetPhoneJid" in js
-    assert "const closeJid = targetPhoneJid || targetJid" in js
-    assert "close_jid: closeJid" in js
-    assert "close_jids: [closeJid]" in js
+    assert "status: 'closed'" not in js
+    assert "close_jid: closeJid" not in js
+    assert "close_jids: [closeJid]" not in js
     assert "guard_reason: 'from_me_external_non_menu'" in js
 
 
-def test_guard_close_jid_prefers_target_phone_over_lid() -> None:
+def test_guard_remote_cancel_reaches_backend_instead_of_skip_path() -> None:
     js = _workflow_nodes()["Guard fromMe external non-menu"]["parameters"]["jsCode"]
 
-    assert "const targetPhoneJid" in js
-    assert "targetPhone" in js
-    assert "targetPhoneJid || targetJid" in js
-    assert "close_jid: closeJid" in js
+    assert "const isRemoteCancel = message === '0';" in js
+    assert "!isRemoteCancel" in js
+    assert "return [{ json: { ...input, skip_console_call: false } }];" in js
 
 
 def test_guard_keeps_menu_self_target_and_missing_target_on_backend_path() -> None:
@@ -90,14 +89,15 @@ def test_guard_keeps_menu_self_target_and_missing_target_on_backend_path() -> No
     assert "return [{ json: { ...input, skip_console_call: false } }];" in js
 
 
-def test_if_skip_console_call_routes_guarded_items_to_close_path() -> None:
+def test_if_skip_console_call_true_branch_terminates_silently() -> None:
     node = _workflow_nodes()["IF skip console call"]
     condition = node["parameters"]["conditions"]["conditions"][0]
+    connections = _workflow_connections()
 
     assert condition["leftValue"] == "={{ $json.skip_console_call }}"
     assert condition["operator"]["type"] == "boolean"
     assert condition["operator"]["operation"] == "true"
-
+    assert connections["IF skip console call"]["main"][0] == []
 
 def test_guard_connections_bypass_console_call_on_true_branch() -> None:
     connections = _workflow_connections()
@@ -109,10 +109,7 @@ def test_guard_connections_bypass_console_call_on_true_branch() -> None:
         connections["Guard fromMe external non-menu"]["main"][0][0]["node"]
         == "IF skip console call"
     )
-    assert (
-        connections["IF skip console call"]["main"][0][0]["node"]
-        == "Check close session"
-    )
+    assert connections["IF skip console call"]["main"][0] == []
     assert connections["IF skip console call"]["main"][1][0]["node"] == "Console call"
 
 
@@ -133,3 +130,15 @@ def test_parse_input_filters_not_registered_bot_echoes_without_dropping_from_me(
     assert "no tienes una cuenta registrada" in js
     assert "you do not have a registered account" in js
     assert "if (!fromMe && looksLikeTrackpalGeneratedReply)" in js
+
+
+def test_parse_input_filters_trackpal_menu_and_cancel_echoes() -> None:
+    js = _workflow_nodes()["Parse input"]["parameters"]["jsCode"]
+
+    assert "buscar codigo de acceso" in js
+    assert "buscar código de acceso" in js
+    assert "client console" in js
+    assert "operacion cancelada" in js
+    assert "operación cancelada" in js
+    assert "operation cancelled" in js
+    assert "find access code" in js

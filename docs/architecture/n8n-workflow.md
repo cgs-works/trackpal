@@ -77,7 +77,7 @@ JavaScript code that normalises the raw Evolution Go payload into a consistent s
 - **Extracts contextual fields** from multiple Evolution shapes: `fromMe`, `adminJid`, `targetJid`, `targetPhone`, `targetLid`.
 - For outgoing `fromMe=true` messages, treats `remoteJid` as the target chat and derives `targetPhone` or `targetLid` from it when explicit target fields are missing.
 - Suppresses known Trackpal-generated access-denied/fallback replies when they re-enter the webhook as bot echoes, preventing recursive “access denied” loops.
-- Suppresses known Trackpal-generated not-registered replies (`no tienes una cuenta registrada` / `you do not have a registered account`) when they re-enter the webhook as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
+- Suppresses known Trackpal-generated menu/cancel/not-registered replies (`Buscar Codigo de Acceso`, `Client Console`, `Operacion cancelada`, `no tienes una cuenta registrada`, and English equivalents) when they re-enter another tenant instance as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
 - **Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid, raw }`
 ### 3. Config (Set Node)
 
@@ -105,26 +105,23 @@ A Code node that runs after `Config` and before `Console call`.
 - allow `/menu` and `menu` to continue
 - allow self-target traffic to continue
 - allow missing-`targetJid` traffic to continue defensively
-- when `fromMe=true`, `targetJid` is external, and the message is not `/menu` or `menu`, emit:
+- when `fromMe=true`, `targetJid` is external, and the message is not `/menu`, `menu`, or the explicit cancel command `0`, emit:
 
 ```json
 {
   "reply": "",
   "no_reply": true,
-  "status": "closed",
-  "close_jid": "<targetJid>",
-  "close_jids": ["<targetJid>"],
   "skip_console_call": true,
   "guard_reason": "from_me_external_non_menu"
 }
 ```
 
-This keeps the fix text-agnostic and closes the accidental Evolution session immediately.
+This keeps tenant-owner manual messages from cancelling the client's active code flow. A tenant can still cancel the client's code flow from any code step by sending exactly `0`; that event is not skipped and reaches the backend remote-cancel path.
 
 ### 3b. IF skip console call (IF Node)
 
 Routes the guard output:
-- **true branch** → `Check close session`
+- **true branch** → terminate silently (no backend call, no send, no close)
 - **false branch** → existing `Console call` path
 
 This means guarded items skip both backend traffic and all Evolution send nodes.
@@ -194,18 +191,14 @@ Code node that constructs the final lookup result message after polling complete
 
 JavaScript that conditionally triggers session close.
 
-**Logic**: `Check Close Session` now tolerates two upstream shapes:
-1. the normal backend path (`Merge & lookup data`, optionally `Build result message`), and
-2. the guarded path where `Guard fromMe external non-menu` sends the item directly here and `Merge & lookup data` never ran.
-
-The node closes when either:
-1. `status === "closed"` from backend or guard output,
+**Logic**: `Check Close Session` closes when either:
+1. `status === "closed"` from backend,
 2. lookup result flow has `close_after_send === true`, or
 3. message is logout command (`0`/`salir`) and reply text matches close semantic.
 
 When `close_jids` is present, the node emits one item per JID so `Close session` processes each one.
 
-The existing ``IF no reply -> Check Close Session -> Close Session`` path still handles real close responses (for example ``status="closed"`` plus ``close_jid``), but the silent external-admin ``/menu`` guard now returns only ``reply=""`` and ``no_reply=true`` so the workflow does not close the admin chat.
+The existing ``IF no reply -> Check Close Session`` path still handles real close responses from backend paths (for example ``status="closed"`` plus ``close_jid``). The external-admin non-menu guard now terminates at `IF skip console call`, so manual tenant chatter never reaches close-session logic.
 
 ### 8. Close Session (HTTP Request Node)
 
