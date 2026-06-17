@@ -4,8 +4,6 @@ sections blank, contain multiple unrelated changes, or show no evidence
 of human involvement will be closed without review.
 -->
 
-> **This PR MUST target the `main` branch.**
-
 ## Who is submitting this PR? (required)
 <!-- Required. PRs that omit this will be closed. We assume an agent wrote
      this PR — tell us which one and where it ran. We weigh contributions by

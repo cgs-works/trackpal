@@ -1965,6 +1965,39 @@ async def _setup_tenant_with_instance(db_session, active_tenant_user):
     return tenant
 
 
+async def test_inactivity_timeout_reply_uses_tenant_locale(
+    client, db_session, active_tenant_user
+):
+    tenant = await _setup_tenant_with_instance(db_session, active_tenant_user)
+    settings_row = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings_row.locale = "en"
+    await db_session.commit()
+
+    fake_mgr = _FakeManager(used_backup=False)
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "__trackpal_session_timeout__",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert "Session closed due to inactivity" in reply
+    assert "Sesión cerrada" not in reply
+
+
 async def test_from_me_code_to_non_self_target_is_silent_and_no_context(
     client, db_session, active_tenant_user
 ):

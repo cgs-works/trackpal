@@ -39,6 +39,8 @@ from app.services.whatsapp_session_service import WhatsAppSessionService
 
 logger = logging.getLogger(__name__)
 
+INACTIVITY_TIMEOUT_MESSAGE = "__trackpal_session_timeout__"
+
 
 def _tl(tenant: object) -> str:
     settings = getattr(tenant, "settings", None)
@@ -213,6 +215,11 @@ async def _route_by_instance(
 
     if not tenant.is_active:
         return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))
+
+    if message.strip().lower() == INACTIVITY_TIMEOUT_MESSAGE:
+        return WhatsAppConsoleResponse(
+            reply=t(_tl(tenant), "wa.session.inactivity_closed")
+        )
 
     # ── from_me contextual routing ────────────────────────────────
     if from_me:

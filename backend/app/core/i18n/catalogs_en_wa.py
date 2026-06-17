@@ -253,6 +253,7 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.tenant.client_context.subscriptions.deactivate_success": "✅ Subscription deactivated successfully.",
     "wa.tenant.client_context.menu.inactive": "📌 *Client management*\n\nYou are managing this client from your private panel.\nThe client cannot see this menu.\n\nClient: {client_name}\n{phone_line}Status: {status}\n\nChoose an option:\n1️⃣ View details\n2️⃣ Edit client\n3️⃣ Reactivate client\n4️⃣ Delete client\n0️⃣ Cancel",
     "wa.tenant.client_context.closed": "✅ Client management cancelled.",
+    "wa.session.inactivity_closed": "⏰ *The session was closed due to inactivity.*",
     "wa.tenant.client_context.collision": "⚠️ You already have a client management session open. Send *0* in your private admin chat before opening another one.",
     "wa.tenant.client_context.invalid_option": "❌ Invalid option. Reply with one of the menu numbers or *0* to cancel.",
     "wa.tenant.client_context.create.phone_prefilled": "Phone prefilled: {identity}\n\nType the client's *full name* or *0* to cancel:",
