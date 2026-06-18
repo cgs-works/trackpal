@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es" data-lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackPal — Gestión de Streaming por WhatsApp</title>
+  <meta name="description" content="TrackPal gestiona tus servicios de streaming y entrega códigos de acceso a tus clientes por WhatsApp.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       TOKENS
+       ======================================== */
+    :root {
+      --bg: oklch(0.10 0 0);
+      --surface: oklch(0.15 0 0);
+      --border: oklch(0.22 0 0);
+      --cyan: oklch(0.82 0.16 195);
+      --cyan-dim: oklch(0.65 0.10 195);
+      --cyan-glow: oklch(0.82 0.16 195 / 0.15);
+      --text: oklch(0.97 0 0);
+      --text-secondary: oklch(0.65 0 0);
+      --text-muted: oklch(0.45 0 0);
+
+      --font-display: 'Space Grotesk', system-ui, sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ========================================
+       RESET & BASE
+       ======================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+    ul { list-style: none; }
+
+    /* ========================================
+       STARFIELD
+       ======================================== */
+    .starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #fff;
+      border-radius: 50%;
+      animation: drift linear infinite, twinkle ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      from { transform: translateY(0); }
+      to { transform: translateY(-100vh); }
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0.2; }
+      to { opacity: 1; }
+    }
+
+    /* ========================================
+       LAYOUT
+       ======================================== */
+    .container {
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 2rem);
+    }
+
+    section {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ========================================
+       NAV
+       ======================================== */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1rem 0;
+      background: oklch(0.10 0 0 / 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-logo .logo-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--cyan);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav-links a {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 200ms var(--ease-out-quart);
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .lang-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .lang-toggle button {
+      padding: 0.35rem 0.6rem;
+      transition: background 200ms, color 200ms;
+      color: var(--text-secondary);
+    }
+
+    .lang-toggle button.active {
+      background: var(--cyan);
+      color: var(--bg);
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      background: var(--cyan);
+      color: var(--bg);
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: opacity 200ms var(--ease-out-quart), transform 200ms var(--ease-out-quart);
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: border-color 200ms, color 200ms;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--cyan-dim);
+      color: var(--cyan);
+    }
+
+    /* ========================================
+       HERO
+       ======================================== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 6rem;
+      padding-bottom: 4rem;
+    }
+
+    .hero .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .hero-content { position: relative; z-index: 2; }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--cyan);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-eyebrow .pulse {
+      width: 6px;
+      height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+      max-width: 600px;
+      min-height: 3.5em;
+    }
+
+    .hero h1 .cursor {
+      display: inline-block;
+      width: 3px;
+      height: 1em;
+      background: var(--cyan);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 1.5vw, 1.125rem);
+      color: var(--text-secondary);
+      max-width: 480px;
+      line-height: 1.65;
+      margin-bottom: 2rem;
+    }
+
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    /* ========================================
+       PHONE MOCKUP
+       ======================================== */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .phone-glow {
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      background: var(--cyan-glow);
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+    }
+
+    .phone {
+      position: relative;
+      z-index: 1;
+      width: 280px;
+      background: var(--surface);
+      border-radius: 32px;
+      border: 2px solid var(--border);
+      padding: 12px;
+      box-shadow: 0 0 60px oklch(0.82 0.16 195 / 0.08);
+    }
+
+    .phone-notch {
+      width: 100px;
+      height: 24px;
+      background: var(--bg);
+      border-radius: 0 0 14px 14px;
+      margin: 0 auto 8px;
+    }
+
+    .phone-screen {
+      background: oklch(0.12 0 0);
+      border-radius: 20px;
+      overflow: hidden;
+      min-height: 460px;
+    }
+
+    .wa-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.75rem 0.875rem;
+      background: oklch(0.16 0 0);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wa-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--bg);
+    }
+
+    .wa-header-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .wa-header-sub {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+    }
+
+    .wa-messages {
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .wa-msg {
+      max-width: 85%;
+      padding: 0.5rem 0.7rem;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      line-height: 1.45;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: msg-in 400ms var(--ease-out-expo) forwards;
+    }
+
+    .wa-msg.user {
+      align-self: flex-end;
+      background: oklch(0.20 0.02 160);
+      border-bottom-right-radius: 2px;
+    }
+
+    .wa-msg.bot {
+      align-self: flex-start;
+      background: oklch(0.18 0 0);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 2px;
+    }
+
+    .wa-msg .time {
+      display: block;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 0.25rem;
+    }
+
+    .wa-typing {
+      align-self: flex-start;
+      padding: 0.5rem 0.875rem;
+      background: oklch(0.18 0 0);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+    }
+
+    .wa-typing span {
+      width: 5px;
+      height: 5px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: typing-bounce 1.2s ease-in-out infinite;
+    }
+
+    .wa-typing span:nth-child(2) { animation-delay: 0.15s; }
+    .wa-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes typing-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    @keyframes msg-in {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========================================
+       FEATURES
+       ======================================== */
+    .features {
+      padding: 6rem 0;
+    }
+
+    .section-label {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--cyan);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      max-width: 560px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin-bottom: 3.5rem;
+      line-height: 1.6;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      padding: 2.5rem 2rem;
+      transition: background 300ms var(--ease-out-quart);
+    }
+
+    .feature-card:hover {
+      background: var(--surface);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+      font-size: 1.25rem;
+    }
+
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ========================================
+       HOW IT WORKS
+       ======================================== */
+    .how-it-works {
+      padding: 6rem 0;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step::after {
+      content: '';
+      position: absolute;
+      top: 28px;
+      right: -1rem;
+      width: calc(2rem - 16px);
+      height: 1px;
+      background: var(--border);
+    }
+
+    .step:last-child::after { display: none; }
+
+    .step-num {
+      width: 56px;
+      height: 56px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      font-family: var(--font-display);
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--cyan);
+      transition: border-color 300ms, background 300ms;
+    }
+
+    .step:hover .step-num {
+      border-color: var(--cyan);
+      background: var(--cyan-glow);
+    }
+
+    .step h4 {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .step p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ========================================
+       PRICING
+       ======================================== */
+    .pricing {
+      padding: 6rem 0;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      max-width: 700px;
+    }
+
+    .price-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 300ms;
+    }
+
+    .price-card:hover {
+      border-color: var(--cyan-dim);
+    }
+
+    .price-card.featured {
+      border-color: var(--cyan);
+      background: oklch(0.12 0 0);
+    }
+
+    .price-card-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .price-tier {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .price-amount {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .price-amount span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    .price-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 0.35rem;
+    }
+
+    .price-features {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .price-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .price-features li::before {
+      content: '✓';
+      color: var(--cyan);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .price-card .btn-primary,
+    .price-card .btn-ghost {
+      width: 100%;
+    }
+
+    /* ========================================
+       CTA / CONTACT
+       ======================================== */
+    .cta-section {
+      padding: 6rem 0;
+    }
+
+    .cta-box {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: clamp(2.5rem, 5vw, 4rem);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      height: 240px;
+      background: var(--cyan-glow);
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    .cta-box h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+
+    .cta-box p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+
+    .cta-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .social-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 2rem;
+      position: relative;
+    }
+
+    .social-links a {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      transition: color 200ms;
+    }
+
+    .social-links a:hover { color: var(--cyan); }
+
+    .social-links svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* ========================================
+       FOOTER
+       ======================================== */
+    .footer {
+      padding: 3rem 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .footer-logo {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer-links a {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      transition: color 200ms;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    /* ========================================
+       RESPONSIVE
+       ======================================== */
+    @media (max-width: 900px) {
+      .hero .container {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .hero-content { order: 1; }
+      .hero-visual { order: 2; margin-top: 2rem; }
+
+      .hero h1 { margin-left: auto; margin-right: auto; }
+      .hero-sub { margin-left: auto; margin-right: auto; }
+      .hero-ctas { justify-content: center; }
+      .hero-eyebrow { margin-left: auto; margin-right: auto; }
+
+      .steps {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .step::after { display: none; }
+
+      .pricing-grid {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .nav-links { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .footer .container {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .footer-left {
+        flex-direction: column;
+      }
+
+      .phone {
+        width: 250px;
+      }
+
+      .phone-screen { min-height: 400px; }
+    }
+
+    /* ========================================
+       REDUCED MOTION
+       ======================================== */
+    @media (prefers-reduced-motion: reduce) {
+      .star { animation: none; opacity: 0.3; }
+      .wa-msg { animation: none; opacity: 1; transform: none; }
+      .wa-typing { animation: none; opacity: 1; }
+      .hero h1 .cursor { animation: none; }
+      .hero-eyebrow .pulse { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    /* ========================================
+       SCROLL REVEAL
+       ======================================== */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 600ms var(--ease-out-expo), transform 600ms var(--ease-out-expo);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- STARFIELD -->
+  <div class="starfield" id="starfield" aria-hidden="true"></div>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="container">
+      <a href="#" class="nav-logo">
+        <span class="logo-dot"></span>
+        TrackPal
+      </a>
+
+      <div class="nav-links">
+        <a href="#features" data-es="Características" data-en="Features">Características</a>
+        <a href="#como-funciona" data-es="Cómo funciona" data-en="How it works">Cómo funciona</a>
+        <a href="#precios" data-es="Precios" data-en="Pricing">Precios</a>
+        <a href="#contacto" data-es="Contacto" data-en="Contact">Contacto</a>
+      </div>
+
+      <div class="nav-actions">
+        <div class="lang-toggle">
+          <button class="active" data-lang="es" onclick="setLang('es')">ES</button>
+          <button data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+        <a href="#contacto" class="btn-primary" data-es="Empezar" data-en="Get Started">Empezar</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-eyebrow">
+          <span class="pulse"></span>
+          <span data-es="WhatsApp + Streaming + SaaS" data-en="WhatsApp + Streaming + SaaS">WhatsApp + Streaming + SaaS</span>
+        </div>
+
+        <h1>
+          <span id="typewriter"></span><span class="cursor"></span>
+        </h1>
+
+        <p class="hero-sub" data-es="Gestiona servicios de streaming, suscripciones y entrega de códigos de acceso — todo automatizado por WhatsApp para ti y tus clientes." data-en="Manage streaming services, subscriptions and access code delivery — all automated via WhatsApp for you and your clients.">Gestiona servicios de streaming, suscripciones y entrega de códigos de acceso — todo automatizado por WhatsApp para ti y tus clientes.</p>
+
+        <div class="hero-ctas">
+          <a href="#contacto" class="btn-primary" data-es="Empezar Gratis" data-en="Start Free">Empezar Gratis</a>
+          <a href="#como-funciona" class="btn-ghost" data-es="Ver Demo" data-en="Watch Demo">Ver Demo</a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="phone-glow"></div>
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="wa-header">
+              <div class="wa-avatar">TP</div>
+              <div>
+                <div class="wa-header-text">TrackPal Bot</div>
+                <div class="wa-header-sub" data-es="en línea" data-en="online">en línea</div>
+              </div>
+            </div>
+            <div class="wa-messages" id="wa-messages">
+              <!-- Messages injected by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-label" data-es="Plataforma" data-en="Platform">Plataforma</div>
+        <h2 class="section-title" data-es="Todo lo que necesitas para gestionar streaming" data-en="Everything you need to manage streaming">Todo lo que necesitas para gestionar streaming</h2>
+        <p class="section-desc" data-es="Un panel centralizado para administrar clientes, servicios, planes y códigos de acceso — con WhatsApp como canal de entrega." data-en="A centralized panel to manage clients, services, plans and access codes — with WhatsApp as the delivery channel.">Un panel centralizado para administrar clientes, servicios, planes y códigos de acceso — con WhatsApp como canal de entrega.</p>
+      </div>
+
+      <div class="features-grid reveal">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3 data-es="Códigos por WhatsApp" data-en="WhatsApp Codes">Códigos por WhatsApp</h3>
+          <p data-es="Tus clientes envían un mensaje y reciben sus códigos de acceso al instante. Sin apps, sin portales, sin fricción." data-en="Your clients send a message and receive their access codes instantly. No apps, no portals, no friction.">Tus clientes envían un mensaje y reciben sus códigos de acceso al instante. Sin apps, sin portales, sin fricción.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3 data-es="Gestión de Servicios" data-en="Service Management">Gestión de Servicios</h3>
+          <p data-es="Administra catálogo de servicios, planes, precios y suscripciones de cada tenant desde un solo panel." data-en="Manage service catalogs, plans, pricing and subscriptions for each tenant from a single panel.">Administra catálogo de servicios, planes, precios y suscripciones de cada tenant desde un solo panel.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3 data-es="Multi-Tenant Seguro" data-en="Secure Multi-Tenant">Multi-Tenant Seguro</h3>
+          <p data-es="Cada tenant opera de forma aislada con sus propios clientes, credenciales y flujos de WhatsApp." data-en="Each tenant operates independently with their own clients, credentials and WhatsApp flows.">Cada tenant opera de forma aislada con sus propios clientes, credenciales y flujos de WhatsApp.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="como-funciona">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-label" data-es="Cómo funciona" data-en="How it works">Cómo funciona</div>
+        <h2 class="section-title" data-es="De cliente a código en 4 pasos" data-en="From client to code in 4 steps">De cliente a código en 4 pasos</h2>
+        <p class="section-desc" data-es="El flujo completo de WhatsApp: tu cliente pide, TrackPal entrega." data-en="The complete WhatsApp flow: your client asks, TrackPal delivers.">El flujo completo de WhatsApp: tu cliente pide, TrackPal entrega.</p>
+      </div>
+
+      <div class="steps reveal">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4 data-es="Envía el código" data-en="Send the code">Envía el código</h4>
+          <p data-es="El cliente envía «code», «código» o «codigo» por WhatsApp." data-en='The client sends "code", "código" or "codigo" via WhatsApp.'>El cliente envía «code», «código» o «codigo» por WhatsApp.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4 data-es="Elige el servicio" data-en="Choose service">Elige el servicio</h4>
+          <p data-es="TrackPal pregunta qué servicio de streaming necesita y el cliente selecciona." data-en="TrackPal asks which streaming service they need and the client selects.">TrackPal pregunta qué servicio de streaming necesita y el cliente selecciona.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4 data-es="Confirma el email" data-en="Confirm email">Confirma el email</h4>
+          <p data-es="Se verifica el email asociado a la suscripción del servicio." data-en="The email associated with the service subscription is verified.">Se verifica el email asociado a la suscripción del servicio.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h4 data-es="Recibe el código" data-en="Get the code">Recibe el código</h4>
+          <p data-es="TrackPal busca y entrega el código de acceso al instante." data-en="TrackPal looks up and delivers the access code instantly.">TrackPal busca y entrega el código de acceso al instante.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing" id="precios">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-label" data-es="Precios" data-en="Pricing">Precios</div>
+        <h2 class="section-title" data-es="Simple, sin sorpresas" data-en="Simple, no surprises">Simple, sin sorpresas</h2>
+        <p class="section-desc" data-es="Elige el plan que se adapte a tu negocio. Todos incluyen soporte por WhatsApp." data-en="Choose the plan that fits your business. All plans include WhatsApp support.">Elige el plan que se adapte a tu negocio. Todos incluyen soporte por WhatsApp.</p>
+      </div>
+
+      <div class="pricing-grid reveal">
+        <div class="price-card">
+          <div class="price-card-header">
+            <div class="price-tier" data-es="Starter" data-en="Starter">Starter</div>
+            <div class="price-amount">$29 <span data-es="/mes" data-en="/mo">/mes</span></div>
+            <div class="price-desc" data-es="Para operadores pequeños" data-en="For small operators">Para operadores pequeños</div>
+          </div>
+          <ul class="price-features">
+            <li data-es="Hasta 5 servicios de streaming" data-en="Up to 5 streaming services">Hasta 5 servicios de streaming</li>
+            <li data-es="Hasta 100 clientes" data-en="Up to 100 clients">Hasta 100 clientes</li>
+            <li data-es="Entrega por WhatsApp" data-en="WhatsApp delivery">Entrega por WhatsApp</li>
+            <li data-es="Panel de administración" data-en="Admin dashboard">Panel de administración</li>
+          </ul>
+          <a href="#contacto" class="btn-ghost" data-es="Empezar" data-en="Get Started">Empezar</a>
+        </div>
+
+        <div class="price-card featured">
+          <div class="price-card-header">
+            <div class="price-tier" data-es="Pro" data-en="Pro">Pro</div>
+            <div class="price-amount">$79 <span data-es="/mes" data-en="/mo">/mes</span></div>
+            <div class="price-desc" data-es="Para operadores en crecimiento" data-en="For growing operators">Para operadores en crecimiento</div>
+          </div>
+          <ul class="price-features">
+            <li data-es="Servicios ilimitados" data-en="Unlimited services">Servicios ilimitados</li>
+            <li data-es="Clientes ilimitados" data-en="Unlimited clients">Clientes ilimitados</li>
+            <li data-es="Entrega por WhatsApp" data-en="WhatsApp delivery">Entrega por WhatsApp</li>
+            <li data-es="Multi-tenant" data-en="Multi-tenant">Multi-tenant</li>
+            <li data-es="Soporte prioritario" data-en="Priority support">Soporte prioritario</li>
+          </ul>
+          <a href="#contacto" class="btn-primary" data-es="Empezar" data-en="Get Started">Empezar</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA / CONTACT -->
+  <section class="cta-section" id="contacto">
+    <div class="container">
+      <div class="cta-box reveal">
+        <h2 data-es="¿Listo para empezar?" data-en="Ready to get started?">¿Listo para empezar?</h2>
+        <p data-es="Únete a los operadores que ya confían en TrackPal para gestionar sus servicios de streaming." data-en="Join the operators already trusting TrackPal to manage their streaming services.">Únete a los operadores que ya confían en TrackPal para gestionar sus servicios de streaming.</p>
+        <div class="cta-buttons">
+          <a href="mailto:hola@trackpal.io" class="btn-primary" data-es="Contactar por Email" data-en="Contact via Email">Contactar por Email</a>
+        </div>
+        <div class="social-links">
+          <a href="#" aria-label="Discord">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z"/></svg>
+            Discord
+          </a>
+          <a href="#" aria-label="Telegram">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+            Telegram
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-left">
+        <div class="footer-logo">
+          <span class="logo-dot" style="width:6px;height:6px;background:var(--cyan);border-radius:50%;display:inline-block;"></span>
+          TrackPal
+        </div>
+        <span class="footer-copy">© 2026 TrackPal. <span data-es="Todos los derechos reservados." data-en="All rights reserved.">Todos los derechos reservados.</span></span>
+      </div>
+      <div class="footer-links">
+        <a href="#features" data-es="Características" data-en="Features">Características</a>
+        <a href="#precios" data-es="Precios" data-en="Pricing">Precios</a>
+        <a href="#contacto" data-es="Contacto" data-en="Contact">Contacto</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* ========================================
+       STARFIELD GENERATOR
+       ======================================== */
+    (function() {
+      const field = document.getElementById('starfield');
+      const count = 80;
+      for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        const size = Math.random() * 2 + 1;
+        star.style.width = size + 'px';
+        star.style.height = size + 'px';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDuration = (Math.random() * 40 + 30) + 's, ' + (Math.random() * 3 + 2) + 's';
+        star.style.animationDelay = (Math.random() * 20) + 's, ' + (Math.random() * 2) + 's';
+        field.appendChild(star);
+      }
+    })();
+
+    /* ========================================
+       TYPEWRITER
+       ======================================== */
+    (function() {
+      const phrases = {
+        es: ['Tu cliente pide su código.', 'TrackPal lo entrega.'],
+        en: ['Your client asks for their code.', 'TrackPal delivers it.']
+      };
+      const el = document.getElementById('typewriter');
+      let lang = document.documentElement.dataset.lang || 'es';
+      let phraseIndex = 0;
+      let charIndex = 0;
+      let isDeleting = false;
+      let pauseTimer = null;
+
+      function type() {
+        const current = phrases[lang][phraseIndex];
+        if (!isDeleting) {
+          el.textContent = current.substring(0, charIndex + 1);
+          charIndex++;
+          if (charIndex === current.length) {
+            if (phraseIndex < phrases[lang].length - 1) {
+              pauseTimer = setTimeout(() => {
+                phraseIndex++;
+                charIndex = 0;
+                type();
+              }, 600);
+              return;
+            }
+            pauseTimer = setTimeout(() => { isDeleting = true; type(); }, 2500);
+            return;
+          }
+          pauseTimer = setTimeout(type, 55 + Math.random() * 30);
+        } else {
+          el.textContent = current.substring(0, charIndex - 1);
+          charIndex--;
+          if (charIndex === 0) {
+            isDeleting = false;
+            if (phraseIndex < phrases[lang].length - 1) {
+              phraseIndex++;
+              pauseTimer = setTimeout(type, 300);
+            } else {
+              phraseIndex = 0;
+              pauseTimer = setTimeout(type, 500);
+            }
+            return;
+          }
+          pauseTimer = setTimeout(type, 30);
+        }
+      }
+
+      window._restartTypewriter = function(newLang) {
+        clearTimeout(pauseTimer);
+        lang = newLang;
+        phraseIndex = 0;
+        charIndex = 0;
+        isDeleting = false;
+        el.textContent = '';
+        type();
+      };
+
+      type();
+    })();
+
+    /* ========================================
+       WHATSAPP CHAT ANIMATION
+       ======================================== */
+    (function() {
+      const container = document.getElementById('wa-messages');
+      const flows = {
+        es: [
+          { type: 'user', text: 'code', delay: 800 },
+          { type: 'bot', text: '¡Hola! 👋 ¿Qué servicio de streaming necesitas?\n\n1. Netflix\n2. Spotify\n3. Disney+\n4. HBO Max', delay: 1800 },
+          { type: 'user', text: 'Netflix', delay: 3200 },
+          { type: 'bot', text: '¿Cuál es el email asociado a tu suscripción?', delay: 4400 },
+          { type: 'user', text: 'cliente@email.com', delay: 5600 },
+          { type: 'bot', text: '✅ Aquí está tu código de acceso:\n\n📧 **usuario@netflix.com**\n🔑 **TKP-8827-XVMN**\n\nVálido por 24h. ¡Disfruta tu contenido!', delay: 7000 }
+        ],
+        en: [
+          { type: 'user', text: 'code', delay: 800 },
+          { type: 'bot', text: 'Hello! 👋 Which streaming service do you need?\n\n1. Netflix\n2. Spotify\n3. Disney+\n4. HBO Max', delay: 1800 },
+          { type: 'user', text: 'Netflix', delay: 3200 },
+          { type: 'bot', text: 'What\'s the email linked to your subscription?', delay: 4400 },
+          { type: 'user', text: 'client@email.com', delay: 5600 },
+          { type: 'bot', text: '✅ Here\'s your access code:\n\n📧 **user@netflix.com**\n🔑 **TKP-8827-XVMN**\n\nValid for 24h. Enjoy!', delay: 7000 }
+        ]
+      };
+
+      let currentLang = document.documentElement.dataset.lang || 'es';
+      let timeouts = [];
+
+      function clearChat() {
+        timeouts.forEach(t => clearTimeout(t));
+        timeouts = [];
+        container.innerHTML = '';
+      }
+
+      function runFlow() {
+        clearChat();
+        const flow = flows[currentLang];
+        flow.forEach((msg, i) => {
+          const t = setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = 'wa-msg ' + msg.type;
+            div.style.animationDelay = '0ms';
+            div.innerHTML = msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') +
+              '<span class="time">' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</span>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+          }, msg.delay);
+          timeouts.push(t);
+        });
+
+        // Loop after last message
+        const loopT = setTimeout(() => {
+          clearChat();
+          runFlow();
+        }, 11000);
+        timeouts.push(loopT);
+      }
+
+      runFlow();
+
+      window._restartChat = function(lang) {
+        currentLang = lang;
+        runFlow();
+      };
+    })();
+
+    /* ========================================
+       LANGUAGE TOGGLE
+       ======================================== */
+    function setLang(lang) {
+      document.documentElement.dataset.lang = lang;
+
+      // Toggle buttons
+      document.querySelectorAll('.lang-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+
+      // Update all translatable elements
+      document.querySelectorAll('[data-es][data-en]').forEach(el => {
+        const text = el.dataset[lang];
+        if (text) el.textContent = text;
+      });
+
+      // Restart typewriter and chat
+      if (window._restartTypewriter) window._restartTypewriter(lang);
+      if (window._restartChat) window._restartChat(lang);
+    }
+
+    /* ========================================
+       SCROLL REVEAL
+       ======================================== */
+    (function() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    })();
+  </script>
+
+</body>
+</html>
