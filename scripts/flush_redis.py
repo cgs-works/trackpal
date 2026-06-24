@@ -13,7 +13,7 @@ from redis.asyncio import Redis
 async def main() -> None:
     url = os.environ.get(
         "REDIS_URL",
-        "rediss://default:gQAAAAAAAd3cAAIgcDFmMTZmYjNmZmExNzA0OWZhOWQzZjE0NjU5NjNiYWI5OQ@adapting-burro-122332.upstash.io:6379",
+        "redis://:d63XU7HlZY9h4z0QbckF8anTj5spGe21@68.183.48.95:30168",
     )
 
     r = Redis.from_url(url, decode_responses=False)

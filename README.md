@@ -7,7 +7,7 @@ Each Tenant manages their own catalog (services and plans), Clients, and Subscri
 ## Stack
 
 - **Backend**: Python 3.12, FastAPI, PostgreSQL (asyncpg), Redis (HA), Alembic
-- **Frontend**: Vue 3, Vite, Pinia, vue-router
+- **Frontend**: React 19, TypeScript, Vite, Zustand, TanStack Router
 - **Infrastructure**: Render (backend), Cloudflare Pages (frontend), Evolution API (WhatsApp), n8n (automation, bot + reminders)
 
 ## Quick Start (Local Dev)

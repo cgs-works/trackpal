@@ -19,10 +19,24 @@
 ### Code Style
 
 - **Python**: Ruff (`ruff check .`, `ruff format .`) with defaults.
-- **JS/Vue**: Composition API `<script setup>`, Pinia stores, Vue Router. Plain ESM (no TypeScript).
+- **JS/React**: React 19 + TypeScript (strict mode), Zustand stores, TanStack Router, Tailwind CSS v4, shadcn/ui.
 - No pre-commit hooks.
 
-### Key Patterns & Gotchas
+## Agent skills
+
+### Issue tracker
+
+Issues viven en GitHub Issues (`gh` CLI). PRs externos NO son superficie de requests. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Cinco roles canónicos mapeados a labels de GitHub. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: backend, frontend, n8n como contextos separados. `CONTEXT-MAP.md` en raíz. See `docs/agents/domain.md`.
+
+## Key Patterns & Gotchas
 
 1. **DATA_ENCRYPTION_KEY** must be set before any app import. Test conftest sets it via `os.environ`.
 2. **WhatsApp session model**: admin session key = `session:admin:{phone}`, client context = `wa:client_ctx:{admin_phone}`, unauth codigo = `session:unreg:{key}`. TTL 5 min for all sessions (aligned with Evolution Go auto-close timeout).
