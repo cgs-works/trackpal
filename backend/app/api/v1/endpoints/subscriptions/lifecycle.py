@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep, resolve_locale
+from app.api.dependencies import CurrentUser, DbDep, ProTenantId, resolve_locale
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
 from app.schemas.subscription import (
@@ -42,7 +42,7 @@ async def cancel_subscription(
     subscription_id: uuid.UUID,
     payload: CancelRequest,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -64,7 +64,7 @@ async def reactivate_subscription(
     subscription_id: uuid.UUID,
     payload: ReactivateRequest,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -103,7 +103,7 @@ async def renew_subscription(
     subscription_id: uuid.UUID,
     payload: RenewRequest,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -139,7 +139,7 @@ async def renew_subscription(
 async def list_subscription_events(
     subscription_id: uuid.UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)

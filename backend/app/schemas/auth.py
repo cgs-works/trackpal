@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.tenant_plan import TenantPlan
+
 
 class LoginRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -26,6 +28,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserInfo
     active_tenant_id: UUID | None = None
+    tenant_plan: TenantPlan | None = None
 
 
 class RefreshRequest(BaseModel):

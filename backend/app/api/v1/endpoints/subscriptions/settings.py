@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep, resolve_locale
+from app.api.dependencies import CurrentUser, DbDep, ProTenantId, resolve_locale
 from app.core.errors import UserFacingError, translate_error
 from app.schemas.subscription import (
     SubscriptionReminderSettingsResponse,
@@ -16,7 +16,7 @@ subscription_service = SubscriptionService()
 @settings_router.get("", response_model=SubscriptionReminderSettingsResponse)
 async def get_reminder_settings(
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -27,7 +27,7 @@ async def get_reminder_settings(
 async def update_reminder_settings(
     payload: SubscriptionReminderSettingsUpdate,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)

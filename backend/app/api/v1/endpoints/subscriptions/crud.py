@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import HTTPException, status
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep, resolve_locale
+from app.api.dependencies import CurrentUser, DbDep, ProTenantId, resolve_locale
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
 from app.schemas.subscription import (
@@ -26,7 +26,7 @@ subscription_service = SubscriptionService()
 async def create_subscription(
     payload: SubscriptionCreate,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -46,7 +46,7 @@ async def create_subscription(
 @router.get("", response_model=List[SubscriptionResponse])
 async def list_subscriptions(
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
     status: Optional[str] = None,
     client_id: Optional[uuid.UUID] = None,
@@ -72,7 +72,7 @@ async def list_subscriptions(
 async def get_subscription(
     subscription_id: uuid.UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -90,7 +90,7 @@ async def get_subscription(
 async def reveal_subscription_credentials(
     subscription_id: uuid.UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -111,7 +111,7 @@ async def update_subscription(
     subscription_id: uuid.UUID,
     payload: SubscriptionUpdate,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
@@ -142,7 +142,7 @@ async def patch_subscription(
     subscription_id: uuid.UUID,
     payload: SubscriptionUpdate,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
     require_tenant_or_master(current_user)
