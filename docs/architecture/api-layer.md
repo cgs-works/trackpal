@@ -30,6 +30,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
 | `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
+| `/api/v1/access-control/*` | `app.api.v1.endpoints.access_control` | access-control | JWT + active tenant context |
 
 ### Code-Services Endpoints (master + tenant)
 
@@ -143,6 +144,22 @@ Note: Timezone is no longer part of subscription-settings. Timezone is managed v
 - `PUT /api/v1/tenant-settings` — Update locale and/or timezone. Auth: JWT + tenant or master + ActiveTenantId.
 - `GET /api/v1/tenant-settings/timezones` — Return a list of supported IANA timezones with labels. The backend serves this catalog using a three-tier strategy: external provider → system zoneinfo data → bundled fallback. Auth: JWT bearer (tenant or master).
 
+
+### Access Control Endpoints (tenant-scoped)
+
+- `GET /api/v1/access-control/blocks` — List active blocked identities for the current tenant. Auth: JWT + active tenant context.
+- `POST /api/v1/access-control/blocks` — Block a phone number. Auth: JWT + active tenant context.
+- `DELETE /api/v1/access-control/blocks/{block_id}` — Unblock an identity. Auth: JWT + active tenant context.
+
+
+### Plan-aware tenant access
+
+Tenant package is stored on `tenants.plan` with allowed values `starter` and `pro`. Backend gates read this database value. Frontend `tenant_plan` is only a rendering hint.
+
+- Starter tenant admins receive HTTP 404 for Pro-only modules: `/clients`, `/catalog/*`, `/subscriptions/*`, `/subscription-settings`.
+- Master users switched into a Starter tenant bypass Pro gates for support.
+- Starter can access profile, locale, `/tenant/mailbox/*`, `/code-services/tenants/current`, `/access-control/blocks`, dashboard, and WhatsApp code lookup.
+
 ## Dependency Injection
 
 Defined in `app/api/dependencies.py`:
@@ -151,4 +168,4 @@ Defined in `app/api/dependencies.py`:
 - `require_role(role)` — Returns a dependency that checks `current_user.role`
 - `verify_n8n_api_key_header` — Validates `X-API-Key` header against `settings.n8n_api_key`
 - `resolve_locale(db, tenant_id)` — Fetches `TenantSettings.locale` from DB via `tenant_settings_repository`, returns `"en"` fallback. Used before mutating service calls to translate `UserFacingError` responses. Must be called *before* the mutating call to avoid post-rollback RLS context loss.
-- Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`
+- Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`, `TenantPlanDep`, `ProTenantId`

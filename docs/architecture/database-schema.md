@@ -46,6 +46,7 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 | whatsapp_lid | VARCHAR(100) | Unique, nullable, `@lid` fallback identity |
 | evolution_instance_name | VARCHAR(200) | Unique, nullable |
 | evolution_instance_token | VARCHAR(500) | Nullable, encrypted via app-layer Fernet |
+| plan | VARCHAR(20) | Package source of truth. Allowed: `starter`, `pro`. Existing tenants are backfilled to `pro`; new tenants must choose explicitly. |
 | is_active | BOOLEAN | Default true |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
@@ -317,6 +318,7 @@ Alembic migrations:
 19. `ce10fe74caa11` — Rename `client_messaging_blocks` to `blocked_clients`, update indexes and constraints
 20. `07fa809c3ab3` — Merge branch heads (`ce10fe74caa11` + `cf10fe74caa0`)
 21. `d011fe74cab0` — Create `tenant_settings` table, backfill locale/timezone from `tenants` and `subscription_reminder_settings`, drop `tenants.locale` and `subscription_reminder_settings.timezone`, enable RLS
+22. `e011fe74cab1` — Add `plan` column to `tenants` with default `pro`, backfill existing tenants
 
 ## Key Constraints
 
