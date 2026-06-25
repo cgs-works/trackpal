@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import datetime
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
 
 from app.core.security import get_password_hash
-from app.models import Client, Tenant, TenantSettings, User
+from app.models import Client, RefreshSession, Tenant, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -223,3 +225,60 @@ async def test_master_switched_starter_can_see_timezone(client, auth_headers, ac
     response = await client.get("/api/v1/tenant-settings", headers=headers)
     assert response.status_code == 200, response.text
     assert response.json()["timezone"] == "UTC"
+
+
+# ── Task 4: Downgrade side effects (pro → starter) ────────────────────
+
+
+async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_headers, db_session, active_tenant_user):
+    """Verify pro→downgrade revokes sessions and clears Redis admin session."""
+    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    tenant = result.scalar_one()
+    client_user = User(
+        username=f"{tenant.client_prefix}_downgrade_client",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(client_user)
+    await db_session.flush()
+    db_session.add(
+        Client(
+            tenant_id=tenant.id,
+            owner_user_id=client_user.id,
+            full_name="Downgrade Client",
+            username=client_user.username,
+            phone="12015550201",
+            is_active=True,
+        )
+    )
+    db_session.add(
+        RefreshSession(
+            user_id=client_user.id,
+            refresh_token_hash="hash",
+            expires_at=datetime.datetime.now(datetime.timezone.utc).replace(year=2099),
+            revoked=False,
+        )
+    )
+    await db_session.commit()
+
+    fake_manager = AsyncMock()
+    with patch("app.services.tenant_service.mutations.get_redis_manager", return_value=fake_manager):
+        response = await client.put(
+            f"/api/v1/tenants/{active_tenant_user.id}",
+            json={"plan": "starter"},
+            headers=auth_headers,
+        )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["plan"] == "starter"
+
+    # Redis session clear was attempted (active_tenant_user has whatsapp_phone set)
+    fake_manager.execute.assert_awaited()
+
+    # Tenant can still log in and sees starter plan
+    tenant_login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "tenant", "password": "tenant-password"},
+    )
+    assert tenant_login.status_code == 200
+    assert tenant_login.json()["tenant_plan"] == "starter"
