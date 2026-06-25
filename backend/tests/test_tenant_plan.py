@@ -445,7 +445,7 @@ async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, a
     assert response.json()["reply"] == ""
 
 
-async def test_whatsapp_starter_client_denied_non_codigo(client, db_session, active_tenant_user):
+async def test_whatsapp_starter_client_denied_non_codigo(client, db_session, auth_headers, active_tenant_user):
     """Registered client under Starter gets access_denied for non-codigo messages."""
     from app.core.config import settings
     from sqlalchemy import select as sa_select
