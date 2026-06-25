@@ -445,7 +445,7 @@ async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, a
     assert response.json()["reply"] == ""
 
 
-async def test_whatsapp_starter_client_denied_non_codigo(client, auth_headers, db_session, active_tenant_user):
+async def test_whatsapp_starter_client_denied_non_codigo(client, db_session, active_tenant_user):
     """Registered client under Starter gets access_denied for non-codigo messages."""
     from app.core.config import settings
     from sqlalchemy import select as sa_select
@@ -498,3 +498,45 @@ async def test_whatsapp_starter_client_denied_non_codigo(client, auth_headers, d
     body = response.json()
     assert body["status"] == "closed"
     assert "denied" in body["reply"].lower() or "denegado" in body["reply"].lower()
+
+
+# ── Task 8: Subscription automation ignores Starter tenants ────────────
+
+
+async def test_subscription_cleanup_ignores_starter_tenant(client, db_session, auth_headers, active_tenant_user):
+    """Cleanup must not mutate subscriptions belonging to Starter tenants."""
+    from datetime import datetime, timedelta, timezone
+    from app.models import Client, Plan, Service, Subscription
+    from app.services.subscription_job_service import SubscriptionJobService
+
+    row = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    tenant = row.scalar_one()
+    tenant.plan = "starter"
+    client_user = User(username="cleanup_client", password_hash=get_password_hash("x-password"), role="client")
+    db_session.add(client_user)
+    await db_session.flush()
+    c = Client(tenant_id=tenant.id, owner_user_id=client_user.id, full_name="Cleanup Client", username="cleanup_client", is_active=True)
+    s = Service(tenant_id=tenant.id, name="Netflix")
+    db_session.add_all([c, s])
+    await db_session.flush()
+    p = Plan(tenant_id=tenant.id, service_id=s.id, name="Monthly")
+    db_session.add(p)
+    await db_session.flush()
+    sub = Subscription(
+        tenant_id=tenant.id,
+        client_id=c.id,
+        service_id=s.id,
+        plan_id=p.id,
+        streaming_email="viewer@example.com",
+        duration_type="1_month",
+        starts_at=datetime.now(timezone.utc) - timedelta(days=40),
+        expires_at=datetime.now(timezone.utc) - timedelta(days=2),
+        status="active",
+    )
+    db_session.add(sub)
+    await db_session.commit()
+
+    results = await SubscriptionJobService().run_cleanup(db_session)
+    await db_session.refresh(sub)
+    assert sub.status == "active"
+    assert results == []

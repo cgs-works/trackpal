@@ -163,8 +163,8 @@ async def generate_reminder_payloads(
             tenant = tenants_map.get(sub.tenant_id)
             tenant_settings = tenant_settings_map.get(sub.tenant_id)
 
-            # Skip if tenant or settings are missing
-            if not tenant or not settings:
+            # Skip if tenant or settings are missing, or tenant is not Pro
+            if not tenant or tenant.plan != "pro" or not settings:
                 continue
 
             # Skip entire tenant if reminders are disabled
