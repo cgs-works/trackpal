@@ -338,3 +338,163 @@ async def test_dashboard_returns_pro_metrics(client, active_tenant_user):
     assert isinstance(body["catalog_services"], int)
     assert isinstance(body["active_subscriptions"], int)
     assert isinstance(body["subscriptions_expiring_soon"], int)
+
+
+# ── Task 7: WhatsApp Starter/Pro menus, mailbox gate, and silent blocks ──
+
+
+class _FakeRedis:
+    def __init__(self):
+        self._store: dict[str, str] = {}
+        self._ttls: dict[str, int] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+        self._store[key] = value
+        if ex is not None:
+            self._ttls[key] = ex
+        elif not keepttl:
+            self._ttls.pop(key, None)
+
+    async def expire(self, key: str, time: int) -> int:
+        if key in self._store:
+            self._ttls[key] = time
+            return 1
+        return 0
+
+    async def delete(self, key: str) -> int:
+        self._ttls.pop(key, None)
+        return 1 if self._store.pop(key, None) is not None else 0
+
+    async def lpush(self, key: str, value: str) -> int:
+        self._store[key] = value
+        return 1
+
+
+class _FakeManager:
+    def __init__(self, *, used_backup: bool = False, fail_on_execute: bool = False):
+        from app.core.redis_client import RedisUnavailableError
+        self._redis = _FakeRedis()
+        self._used_backup = used_backup
+        self._fail_on_execute = fail_on_execute
+        self._RedisUnavailableError = RedisUnavailableError
+
+    @property
+    def used_backup(self) -> bool:
+        return self._used_backup
+
+    async def execute(self, operation_name, async_callable):
+        if self._fail_on_execute:
+            raise self._RedisUnavailableError("Both Redis stores unavailable")
+        return await async_callable(self._redis)
+
+
+async def test_whatsapp_starter_menu_is_reduced(client, auth_headers, active_tenant_user):
+    """Starter tenant sees reduced menu: Profile, Codigo, Access Control, Help — no Clients/Catalog/Subscriptions."""
+    from app.core.config import settings
+
+    changed = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert changed.status_code == 200, changed.text
+
+    fake_mgr = _FakeManager()
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        response = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={"phone": "+12015550002", "message": "menu", "instance": changed.json()["evolution_instance_name"]},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200, response.text
+    reply = response.json()["reply"]
+    assert "Buscar" in reply or "Find Access Code" in reply
+    assert "Control" in reply or "Access Control" in reply
+    assert "Clientes" not in reply and "Clients" not in reply
+    assert "Suscripciones" not in reply and "Subscriptions" not in reply
+
+
+async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, active_tenant_user):
+    """A blocked identity always receives no_reply=true."""
+    from app.core.config import settings
+    from sqlalchemy import select as sa_select
+    from app.models import BlockedClient, Tenant
+
+    row = await db_session.execute(sa_select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    tenant = row.scalar_one()
+
+    if not tenant.evolution_instance_name:
+        tenant.evolution_instance_name = "plan-tenant-instance"
+        await db_session.commit()
+
+    db_session.add(BlockedClient(tenant_id=tenant.id, phone="12015550999", is_active=True))
+    await db_session.commit()
+
+    fake_mgr = _FakeManager()
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        response = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={"phone": "+12015550999", "message": "codigo", "instance": tenant.evolution_instance_name},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200, response.text
+    assert response.json()["no_reply"] is True
+    assert response.json()["reply"] == ""
+
+
+async def test_whatsapp_starter_client_denied_non_codigo(client, auth_headers, db_session, active_tenant_user):
+    """Registered client under Starter gets access_denied for non-codigo messages."""
+    from app.core.config import settings
+    from sqlalchemy import select as sa_select
+    from app.models import Client, Tenant, User
+    from app.core.security import get_password_hash
+
+    row = await db_session.execute(sa_select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    tenant = row.scalar_one()
+
+    if not tenant.evolution_instance_name:
+        tenant.evolution_instance_name = "plan-tenant-instance"
+        await db_session.commit()
+
+    # Set tenant to starter
+    changed = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert changed.status_code == 200, changed.text
+
+    # Create a registered client under this tenant
+    client_user = User(
+        username=f"{tenant.client_prefix}_starter_wa_client",
+        password_hash=get_password_hash("client-password"),
+        role="client",
+    )
+    db_session.add(client_user)
+    await db_session.flush()
+    db_session.add(
+        Client(
+            tenant_id=tenant.id,
+            owner_user_id=client_user.id,
+            full_name="Starter WA Client",
+            username=client_user.username,
+            phone="12015550555",
+            is_active=True,
+        )
+    )
+    await db_session.commit()
+
+    fake_mgr = _FakeManager()
+    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+        response = await client.post(
+            "/api/v1/integrations/n8n/console",
+            json={"phone": "+12015550555", "message": "menu", "instance": tenant.evolution_instance_name},
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "closed"
+    assert "denied" in body["reply"].lower() or "denegado" in body["reply"].lower()

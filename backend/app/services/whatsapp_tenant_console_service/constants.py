@@ -10,7 +10,7 @@ KEY_FALLBACK_NO_FLOW = "wa.tenant.fallback.no_flow"
 KEY_FALLBACK_ACTIVE_FLOW = "wa.tenant.fallback.active_flow"
 
 RESET_COMMANDS = {"0", "menu", "menú", "/menu", "cancelar", "salir", "cerrar"}
-HELP_COMMANDS = {"5", "ayuda"}
+HELP_COMMANDS = {"ayuda"}
 
 # -- Flow identifiers ----------------------------------------------------
 
@@ -232,3 +232,14 @@ STREAMING_SERVICE_KEYS: list[str] = [
     "spotify",  # 5️⃣ Spotify
     "universal_plus",  # 6️⃣ Universal+
 ]
+
+# -- Access control flow constants ---------------------------------------
+
+ACCESS_CONTROL_FLOW = "access_control"
+ACCESS_CONTROL_STEP_MENU = "menu"
+ACCESS_CONTROL_STEP_BLOCK_PHONE = "block_phone"
+
+KEY_ACCESS_CONTROL_MENU = "wa.tenant.access_control.menu"
+KEY_ACCESS_CONTROL_BLOCK_PHONE_PROMPT = "wa.tenant.access_control.block_phone_prompt"
+KEY_ACCESS_CONTROL_BLOCK_SUCCESS = "wa.tenant.access_control.block_success"
+KEY_ACCESS_CONTROL_DUPLICATE = "wa.tenant.access_control.duplicate"

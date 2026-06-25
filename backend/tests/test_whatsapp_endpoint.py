@@ -170,7 +170,7 @@ async def test_tenant_phone_returns_tenant_console(client, active_tenant_user):
     reply = body["reply"]
     # Must be the tenant console (main menu or fallback), not the login prompt
     assert (
-        "Consola de Administracion" in reply
+        ("Consola de Administracion" in reply or "Consola de Administración" in reply)
         or "No entendi" in reply
         or "opcion del menu" in reply
         or "Admin Console" in reply
@@ -2099,7 +2099,7 @@ async def test_from_me_self_target_routes_to_tenant_console(
     assert "Contexto de cliente" not in reply
     # Should be a standard Tenant console reply
     assert (
-        "Consola de Administracion" in reply
+        ("Consola de Administracion" in reply or "Consola de Administración" in reply)
         or "No entendi" in reply
         or "opcion del menu" in reply
         or "Admin Console" in reply
@@ -2340,7 +2340,7 @@ async def test_from_me_owner_fallback_routes_to_console(
     # Must route to Tenant console via owner fallback
     assert "Contexto de cliente" not in reply
     assert (
-        "Consola de Administracion" in reply
+        ("Consola de Administracion" in reply or "Consola de Administración" in reply)
         or "No entendi" in reply
         or "opcion del menu" in reply
         or "Admin Console" in reply
@@ -2898,7 +2898,7 @@ async def test_context_shortcut_no_context_falls_through(
     body = response.json()
     assert "reply" in body
     # Should be Tenant console reply, not context shortcut
-    assert "Consola de Administracion" in body["reply"] or "No entendi" in body["reply"]
+    assert ("Consola de Administracion" in body["reply"] or "Consola de Administración" in body["reply"] or "No entendi" in body["reply"])
     # No context fields
     assert "reply_to" not in body or body.get("no_reply") is not True
 

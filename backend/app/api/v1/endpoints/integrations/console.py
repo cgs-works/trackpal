@@ -239,6 +239,16 @@ async def _route_by_instance(
     phone_digits = normalize_phone(phone) or phone
     msg_lower = message.strip().lower()
 
+    # ── Early blocked check — blocked senders always get silent treatment ──
+    blocked = await blocked_clients_repository.find_active(
+        db,
+        tenant.id,
+        phone=phone_digits if phone_digits else None,
+        whatsapp_lid=sender_lid,
+    )
+    if blocked:
+        return WhatsAppConsoleResponse(reply="", no_reply=True)
+
     tenant_admin = None
     if tenant.whatsapp_phone and phone:
         admin_phone = normalize_phone(tenant.whatsapp_phone)
@@ -326,6 +336,18 @@ async def _route_by_instance(
         if existing and existing.flow == "codigo":
             return await _handle_unauthenticated_codigo(
                 phone_digits, message, sender_lid, manager, tenant, db, close_jid
+            )
+
+        # Starter plan: only codigo allowed for registered clients
+        if tenant.plan == "starter":
+            if msg_lower in ("codigo", "código", "code"):
+                return await _handle_unauthenticated_codigo(
+                    phone_digits, message, sender_lid, manager, tenant, db, close_jid
+                )
+            return WhatsAppConsoleResponse(
+                reply=t(_tl(tenant), "wa.client.access_denied"),
+                status="closed",
+                close_jid=close_jid,
             )
 
         client_locale = _tl(tenant)

@@ -40,10 +40,6 @@ async def _handle_client_list_selection(
         return reply
     elif msg == "2":
         return await self._start_client_create(phone, session_service)
-    elif msg == "3":
-        return await self._handle_clients_block_list(
-            phone, msg, session, session_service, tenant_id, db
-        )
     elif is_back(msg):
         if session_service is not None:
             await session_service.clear_session(f"admin:{phone}")
