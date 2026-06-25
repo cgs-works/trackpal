@@ -177,3 +177,49 @@ async def test_client_login_under_starter_returns_generic_401(client, db_session
     )
     assert login.status_code == 401
     assert login.json()["detail"] == "Invalid credentials or account deactivated"
+
+
+# ── Task 3: Starter timezone behavior ──────────────────────────────────
+
+
+async def test_starter_tenant_settings_hides_and_blocks_timezone(client, auth_headers, active_tenant_user):
+    changed = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert changed.status_code == 200, changed.text
+    login = await _login(client, "tenant", "tenant-password")
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    read = await client.get("/api/v1/tenant-settings", headers=headers)
+    assert read.status_code == 200, read.text
+    assert read.json()["locale"] in {"en", "es"}
+    assert read.json()["timezone"] is None
+
+    locale_update = await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
+    assert locale_update.status_code == 200, locale_update.text
+    assert locale_update.json()["locale"] == "es"
+    assert locale_update.json()["timezone"] is None
+
+    timezone_update = await client.put("/api/v1/tenant-settings", json={"timezone": "America/Bogota"}, headers=headers)
+    assert timezone_update.status_code == 404
+
+
+async def test_master_switched_starter_can_see_timezone(client, auth_headers, active_tenant_user):
+    changed = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert changed.status_code == 200, changed.text
+    switched = await client.post(
+        "/api/v1/auth/switch-tenant",
+        json={"tenant_id": changed.json()["id"]},
+        headers=auth_headers,
+    )
+    headers = {"Authorization": f"Bearer {switched.json()['access_token']}"}
+
+    response = await client.get("/api/v1/tenant-settings", headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["timezone"] == "UTC"
