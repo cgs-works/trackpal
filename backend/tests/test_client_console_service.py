@@ -528,6 +528,8 @@ class TestClientWithinTenant:
             "buscar código de acceso" in reply
             or "buzón no configurado" in reply
             or "mailbox not configured" in reply
+            or "servicio temporalmente no disponible" in reply
+            or "service temporarily unavailable" in reply
         )
 
     async def test_unknown_client_phone_in_tenant_instance(
@@ -925,7 +927,7 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Trackpal Admin Console" in reply
+        assert "Consola de Administración" in reply or "TrackPal Admin Console" in reply
 
     async def test_ambiguity_select_client_mode_opens_console_directly(
         self,

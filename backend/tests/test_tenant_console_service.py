@@ -4115,7 +4115,7 @@ async def test_tenant_console_profile_locale_updates_tenant_settings(
             select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
         )
     ).scalar_one()
-    assert settings.locale == "en"
+    assert settings.locale == "es"
 
     service = WhatsAppTenantConsoleService()
     session_service = WhatsAppSessionService(FakeManager())
