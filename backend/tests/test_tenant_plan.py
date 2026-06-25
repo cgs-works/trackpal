@@ -234,6 +234,11 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
     """Verify pro→downgrade revokes sessions and clears Redis admin session."""
     result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
     tenant = result.scalar_one()
+
+    # Set evolution_instance_name so the close path is triggered
+    tenant.evolution_instance_name = "downgrade-test-instance"
+    await db_session.commit()
+
     client_user = User(
         username=f"{tenant.client_prefix}_downgrade_client",
         password_hash=get_password_hash("client-password"),
@@ -262,7 +267,11 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
     await db_session.commit()
 
     fake_manager = AsyncMock()
-    with patch("app.services.tenant_service.mutations.get_redis_manager", return_value=fake_manager):
+    fake_evo_close = AsyncMock()
+    with (
+        patch("app.services.tenant_service.mutations.get_redis_manager", return_value=fake_manager),
+        patch("app.services.tenant_service.mutations.evolution_client.close_chat_session", new=fake_evo_close),
+    ):
         response = await client.put(
             f"/api/v1/tenants/{active_tenant_user.id}",
             json={"plan": "starter"},
@@ -272,8 +281,15 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
     assert response.status_code == 200, response.text
     assert response.json()["plan"] == "starter"
 
+    # Session revocation verified
+    session_row = await db_session.execute(select(RefreshSession).where(RefreshSession.user_id == client_user.id))
+    assert session_row.scalar_one().revoked is True
+
     # Redis session clear was attempted (active_tenant_user has whatsapp_phone set)
     fake_manager.execute.assert_awaited()
+
+    # Evolution close was attempted
+    fake_evo_close.assert_awaited_once()
 
     # Tenant can still log in and sees starter plan
     tenant_login = await client.post(

@@ -112,6 +112,7 @@ async def create_tenant(
 async def _run_pro_to_starter_downgrade_effects(db: AsyncSession, profile: Tenant) -> None:
     """Side effects when a tenant downgrades from pro to starter."""
     await sessions_repository.revoke_all_for_tenant_clients(db, profile.id)
+    await db.commit()
 
     phone = validate_phone(profile.whatsapp_phone) if profile.whatsapp_phone else None
     manager = get_redis_manager()
