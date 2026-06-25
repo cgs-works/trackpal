@@ -25,6 +25,14 @@ class TenantDashboardResponse(BaseModel):
     message: str = "Dashboard en construccion"
     full_name: str
     email: str | None
+    tenant_plan: str
+    mailbox_status: str
+    enabled_code_services: list[str] = Field(default_factory=list)
+    access_control_count: int = 0
+    active_clients: int | None = None
+    catalog_services: int | None = None
+    active_subscriptions: int | None = None
+    subscriptions_expiring_soon: int | None = None
 
 
 class ClientDashboardResponse(BaseModel):

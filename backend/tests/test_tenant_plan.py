@@ -298,3 +298,43 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
     )
     assert tenant_login.status_code == 200
     assert tenant_login.json()["tenant_plan"] == "starter"
+
+
+# ── Task 5: Dashboard payload for Starter / Pro ───────────────────────
+
+
+async def test_dashboard_returns_starter_common_widgets(client, auth_headers, active_tenant_user):
+    changed = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert changed.status_code == 200, changed.text
+    login = await _login(client, "tenant", "tenant-password")
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    response = await client.get("/api/v1/dashboard", headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["tenant_plan"] == "starter"
+    assert body["mailbox_status"] in {"missing", "disconnected", "connected", "error", "revoked"}
+    assert body["enabled_code_services"] == []
+    assert body["access_control_count"] == 0
+    assert body["active_clients"] is None
+    assert body["catalog_services"] is None
+    assert body["active_subscriptions"] is None
+    assert body["subscriptions_expiring_soon"] is None
+
+
+async def test_dashboard_returns_pro_metrics(client, active_tenant_user):
+    login = await _login(client, "tenant", "tenant-password")
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    response = await client.get("/api/v1/dashboard", headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["tenant_plan"] == "pro"
+    assert isinstance(body["active_clients"], int)
+    assert isinstance(body["catalog_services"], int)
+    assert isinstance(body["active_subscriptions"], int)
+    assert isinstance(body["subscriptions_expiring_soon"], int)
