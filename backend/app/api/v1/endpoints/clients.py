@@ -7,17 +7,10 @@ from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
 from app.schemas.client import ClientCreate, ClientResponse, ClientUpdate
 from app.services.client_service import ClientService
+from app.api.v1.endpoints.subscriptions._common import require_tenant_or_master
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 client_service = ClientService()
-
-
-def _require_tenant_or_master(current_user) -> None:
-    if current_user.role not in ("tenant", "master"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Role 'tenant' required",
-        )
 
 
 def _client_response(client) -> ClientResponse:
@@ -36,7 +29,7 @@ def _client_response(client) -> ClientResponse:
 
 @router.get("", response_model=list[ClientResponse])
 async def list_clients(db: DbDep, tenant_id: ProTenantId, current_user: CurrentUser):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     return [
         _client_response(client)
         for client in await client_service.list_clients(db, tenant_id)
@@ -50,7 +43,7 @@ async def create_client(
     tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     locale = await resolve_locale(db, tenant_id)
     try:
         client = await client_service.create_client(db, tenant_id, payload)
@@ -74,7 +67,7 @@ async def create_client(
 async def get_client(
     client_id: UUID, db: DbDep, tenant_id: ProTenantId, current_user: CurrentUser
 ):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     client = await client_service.get_client(db, tenant_id, client_id)
     if client is None:
         locale = await resolve_locale(db, tenant_id)
@@ -93,7 +86,7 @@ async def update_client(
     tenant_id: ProTenantId,
     current_user: CurrentUser,
 ):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     locale = await resolve_locale(db, tenant_id)
     try:
         client = await client_service.update_client(db, tenant_id, client_id, payload)
@@ -117,7 +110,7 @@ async def update_client(
 async def deactivate_client(
     client_id: UUID, db: DbDep, tenant_id: ProTenantId, current_user: CurrentUser
 ):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     client = await client_service.deactivate_client(db, tenant_id, client_id)
     if client is None:
         locale = await resolve_locale(db, tenant_id)
@@ -132,7 +125,7 @@ async def deactivate_client(
 async def activate_client(
     client_id: UUID, db: DbDep, tenant_id: ProTenantId, current_user: CurrentUser
 ):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     client = await client_service.activate_client(db, tenant_id, client_id)
     if client is None:
         locale = await resolve_locale(db, tenant_id)
@@ -147,7 +140,7 @@ async def activate_client(
 async def delete_client(
     client_id: UUID, db: DbDep, tenant_id: ProTenantId, current_user: CurrentUser
 ):
-    _require_tenant_or_master(current_user)
+    require_tenant_or_master(current_user)
     locale = await resolve_locale(db, tenant_id)
     try:
         deleted = await client_service.delete_client(db, tenant_id, client_id)

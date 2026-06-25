@@ -107,38 +107,8 @@ async def reveal_subscription_credentials(
 
 
 @router.put("/{subscription_id}", response_model=SubscriptionResponse)
-async def update_subscription(
-    subscription_id: uuid.UUID,
-    payload: SubscriptionUpdate,
-    db: DbDep,
-    tenant_id: ProTenantId,
-    current_user: CurrentUser,
-):
-    require_tenant_or_master(current_user)
-    try:
-        sub = await subscription_service.update_subscription(
-            db, tenant_id, subscription_id, payload
-        )
-    except UserFacingError as exc:
-        locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
-        ) from exc
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-    if sub is None:
-        locale = await resolve_locale(db, tenant_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=_t(locale, "errors.subscription_not_found"),
-        )
-    return sub
-
-
 @router.patch("/{subscription_id}", response_model=SubscriptionResponse)
-async def patch_subscription(
+async def update_subscription(
     subscription_id: uuid.UUID,
     payload: SubscriptionUpdate,
     db: DbDep,
