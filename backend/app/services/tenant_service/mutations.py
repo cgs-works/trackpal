@@ -69,6 +69,7 @@ async def create_tenant(
     profile = Tenant(
         owner_user_id=user.id,
         client_prefix=client_prefix,
+        plan=payload.plan,
         name=full_name,
         email=email,
         whatsapp_phone=phone,
