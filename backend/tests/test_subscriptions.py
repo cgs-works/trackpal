@@ -1876,3 +1876,60 @@ async def test_cleanup_uses_tenant_settings_timezone_for_end_of_day(
     today = date(2026, 1, 2)
     eod = await _get_tenant_end_of_day(db_session, tenant.id, now, today)
     assert eod == datetime(2026, 1, 3, 4, 59, 59, tzinfo=timezone.utc)
+
+
+@pytest.mark.asyncio
+async def test_reminder_endpoint_skips_starter_tenants(
+    client, db_session, active_tenant_user, auth_headers
+):
+    """Reminder generation skips Starter tenants — no payloads returned."""
+    api_key = settings.n8n_api_key
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    sub_client, service, plan = await _create_subscription_dependencies(
+        db_session, tenant, "starter_rem"
+    )
+
+    now = datetime.now(timezone.utc)
+    headers = await _login_headers(client, "tenant", "tenant-password")
+
+    # Create active subscription expiring in 7 days (while still Pro)
+    resp = await client.post(
+        "/api/v1/subscriptions",
+        json=_subscription_payload(
+            sub_client,
+            service,
+            plan,
+            streaming_password="pwd",
+            profile_pin=None,
+            profile_name=None,
+            duration_type="custom",
+            starts_at=now.isoformat(),
+            expires_at=(now + timedelta(days=7)).isoformat(),
+        ),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Enable reminders (while still Pro)
+    await client.put(
+        "/api/v1/subscription-settings",
+        json={"reminder_time": "00:00", "reminders_enabled": True},
+        headers=headers,
+    )
+
+    # Downgrade tenant to Starter (requires master auth)
+    resp = await client.put(
+        f"/api/v1/tenants/{tenant.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+
+    # Pending endpoint should return empty — Starter tenants are skipped
+    resp_pending = await client.post(
+        "/api/v1/subscriptions/reminders/pending",
+        headers={"X-API-Key": api_key},
+    )
+    assert resp_pending.status_code == 200
+    data = resp_pending.json()
+    assert data["items"] == [], "Starter tenants should not receive reminders"
