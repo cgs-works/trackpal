@@ -22,8 +22,8 @@ async def test_get_profile_tenant_exposes_locale(client, active_tenant_user):
     assert response.status_code == 200
     data = response.json()
     assert data["role"] == "tenant"
-    # Tenant created without explicit locale → model default "en"
-    assert data["locale"] == "en"
+    # Tenant created with fixture locale
+    assert data["locale"] == "es"
 
 
 async def test_get_profile_master_locale_is_none(client, master_user):
@@ -50,7 +50,7 @@ async def test_update_profile_locale_is_ignored_by_me(client, active_tenant_user
     assert response.status_code == 200
     data = response.json()
     assert data["full_name"] == "Tenant Updated"
-    assert data["locale"] == "en"
+    assert data["locale"] == "es"
 
 
 async def test_update_tenant_settings_locale_valid(client, active_tenant_user):
@@ -124,12 +124,12 @@ async def test_catalog_endpoint_returns_english_default(client, active_tenant_us
 
     assert response.status_code == 200
     data = response.json()
-    assert data["locale"] == "en"
-    assert data["locale_name"] == "English"
+    assert data["locale"] == "es"
+    assert data["locale_name"] == "Español"
     assert "catalog" in data
     assert (
         data["catalog"]["error.auth.invalid_credentials"]
-        == "Invalid username or password"
+        == "Usuario o contraseña inválidos"
     )
 
 
@@ -174,19 +174,19 @@ async def test_catalog_endpoint_locale_refetch_after_change(client, active_tenan
     """Catalog reflects locale change immediately."""
     headers = await _login(client, "tenant", "tenant-password")
 
-    # Fetch catalog in English
+    # Fetch catalog (starts as es from fixture)
     resp_en = await client.get("/api/v1/i18n/catalog", headers=headers)
-    assert resp_en.json()["locale"] == "en"
+    assert resp_en.json()["locale"] == "es"
 
-    # Change locale
-    await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
+    # Change locale to en
+    await client.put("/api/v1/tenant-settings", json={"locale": "en"}, headers=headers)
 
     # Fetch again
-    resp_es = await client.get("/api/v1/i18n/catalog", headers=headers)
-    assert resp_es.json()["locale"] == "es"
+    resp_en = await client.get("/api/v1/i18n/catalog", headers=headers)
+    assert resp_en.json()["locale"] == "en"
     assert (
-        resp_es.json()["catalog"]["error.auth.invalid_credentials"]
-        == "Usuario o contraseña inválidos"
+        resp_en.json()["catalog"]["error.auth.invalid_credentials"]
+        == "Invalid username or password"
     )
 
 
