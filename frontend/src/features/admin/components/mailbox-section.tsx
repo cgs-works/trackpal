@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,30 +15,6 @@ import {
   disconnectMailbox,
 } from "../services/settings-api";
 import { useSettingsStore } from "@/store/settings";
-
-const PROVIDER_OPTIONS = [
-  {
-    value: "google",
-    label: t("frontend.mailbox.connect_google"),
-    description: t("frontend.mailbox.product_tooltip"),
-    icon: Inbox,
-    badge: "OAuth",
-  },
-  {
-    value: "microsoft",
-    label: t("frontend.mailbox.connect_microsoft"),
-    description: t("frontend.mailbox.product_tooltip"),
-    icon: ShieldCheck,
-    badge: "OAuth",
-  },
-  {
-    value: "imap_custom",
-    label: t("frontend.mailbox.template_custom"),
-    description: t("frontend.mailbox.template_custom_hint"),
-    icon: Server,
-    badge: null,
-  },
-] as const;
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
@@ -72,6 +48,7 @@ export function MailboxSection() {
   const { mailbox, mailboxLoaded, loadMailbox } = useSettingsStore();
   const [isLoading, setIsLoading] = useState(!mailboxLoaded);
   const [error, setError] = useState("");
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
   // Form state
   const [provider, setProvider] = useState("google");
@@ -83,6 +60,24 @@ export function MailboxSection() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  // ── Listen for OAuth popup completion via BroadcastChannel ──
+  useEffect(() => {
+    const ch = new BroadcastChannel("trackpal_oauth");
+    channelRef.current = ch;
+    ch.onmessage = async (ev) => {
+      if (ev.data === "mailbox_oauth_success") {
+        useSettingsStore.getState().clearSettingsCache();
+        await loadMailboxData();
+        toast.success(t("frontend.mailbox.oauth_connected"));
+      }
+    };
+    return () => {
+      ch.close();
+      channelRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadMailboxData = useCallback(async () => {
     setIsLoading(true);
@@ -185,6 +180,31 @@ export function MailboxSection() {
     }
   }
 
+  // Provider card config (resolved at render time, i18n is ready)
+  const providerOptions = [
+    {
+      value: "google" as const,
+      label: t("frontend.mailbox.connect_google"),
+      description: t("frontend.mailbox.product_tooltip"),
+      icon: Inbox,
+      badge: "OAuth",
+    },
+    {
+      value: "microsoft" as const,
+      label: t("frontend.mailbox.connect_microsoft"),
+      description: t("frontend.mailbox.product_tooltip"),
+      icon: ShieldCheck,
+      badge: "OAuth",
+    },
+    {
+      value: "imap_custom" as const,
+      label: t("frontend.mailbox.template_custom"),
+      description: t("frontend.mailbox.template_custom_hint"),
+      icon: Server,
+      badge: null,
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -216,7 +236,7 @@ export function MailboxSection() {
               <p className="text-xs text-muted-foreground">
                 {mailbox.provider === "imap_custom"
                   ? `IMAP · ${mailbox.imap_host}`
-                  : PROVIDER_OPTIONS.find((o) => o.value === mailbox.provider)?.label ?? mailbox.provider}
+                  : providerOptions.find((o) => o.value === mailbox.provider)?.label ?? mailbox.provider}
                 {mailbox.auth_method === "oauth" && " · OAuth"}
               </p>
             </div>
@@ -246,7 +266,7 @@ export function MailboxSection() {
       {!mailbox && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {PROVIDER_OPTIONS.map((opt) => {
+            {providerOptions.map((opt) => {
               const Icon = opt.icon;
               const isSelected = provider === opt.value;
               return (
@@ -283,28 +303,12 @@ export function MailboxSection() {
 
           {/* OAuth option */}
           {provider !== "imap_custom" && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="oauth_email">{t("frontend.mailbox.email")}</Label>
-                <Input
-                  id="oauth_email"
-                  type="email"
-                  required
-                  placeholder={t("frontend.mailbox.email")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <Button
-                onClick={() =>
-                  handleOAuthConnect(provider as "google" | "microsoft")
-                }
-                disabled={!email}
-                className="w-full"
-              >
-                {t("frontend.mailbox.connect_oauth")}
-              </Button>
-            </div>
+            <Button
+              onClick={() => handleOAuthConnect(provider as "google" | "microsoft")}
+              className="w-full"
+            >
+              {t("frontend.mailbox.connect_oauth")}
+            </Button>
           )}
 
           {/* IMAP option */}

@@ -1,12 +1,10 @@
 """Tenant mailbox configuration endpoints."""
 
-from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 
 from app.api.dependencies import ActiveTenantId, DbDep
-from app.core.config import settings
 from app.api.v1.endpoints._mailbox_helpers import (
     derive_auth_method,
     handle_test_error,
@@ -29,38 +27,36 @@ from app.services.imap_service import ImapConnectionError
 router = APIRouter(prefix="/tenant/mailbox", tags=["tenant-mailbox"])
 
 
-def _frontend_dashboard_url() -> str:
-    origins = [
-        item.strip() for item in settings.cors_origins.split(",") if item.strip()
-    ]
-    base_url = origins[0] if origins else "http://localhost:5173"
-    return f"{base_url.rstrip('/')}/admin/dashboard"
-
-
 def _oauth_callback_html(status_value: str) -> str:
-    target = f"{_frontend_dashboard_url()}?mailbox_oauth={quote(status_value)}"
     return f"""<!doctype html>
 <html>
   <head>
-    <meta charset=\"utf-8\" />
+    <meta charset="utf-8" />
     <title>Mailbox OAuth</title>
   </head>
   <body>
     <script>
       (function () {{
-        var target = {target!r};
+        try {{
+          var ch = new BroadcastChannel("trackpal_oauth");
+          ch.postMessage("mailbox_oauth_{status_value}");
+          ch.close();
+        }} catch (e) {{}}
+
         if (window.opener && !window.opener.closed) {{
-          window.opener.location.assign(target);
+          window.opener.location.reload();
           window.close();
           return;
         }}
-        window.location.assign(target);
+
+        window.close();
       }})();
     </script>
-    <p>Redirecting...</p>
+    <p style="font-family:system-ui;text-align:center;padding:3rem">
+      Authorization {status_value}. You may close this window.
+    </p>
   </body>
 </html>"""
-
 
 @router.get("/", response_model=MailboxResponse)
 async def get_mailbox(
