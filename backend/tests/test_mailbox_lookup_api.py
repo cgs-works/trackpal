@@ -543,8 +543,12 @@ class TestCreateThenPoll:
         session = ConversationSession(
             phone="admin:+12015550002",
             flow="codigo",
-            step="email",
-            temp_data={"service_key": "netflix"},
+            step="email_confirm",
+            temp_data={
+                "service_key": "netflix",
+                "service_label": "Netflix",
+                "target_email": "user@example.com",
+            },
         )
         await fake_redis.set(
             "session:admin:+12015550002",
@@ -563,7 +567,7 @@ class TestCreateThenPoll:
         ):
             response = await _handle_tenant_console(
                 phone="+12015550002",
-                message="user@example.com",
+                message="1",
                 instance="test-mailbox-instance",
                 manager=manager,
                 db=db_session,

@@ -1,7 +1,13 @@
 """Dashboard response assembly services."""
 
+from datetime import datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import func, select
+
+from app.models import BlockedClient, Client, Service, Subscription, TenantMailbox, TenantSettings
 from app.models.user import User
-from app.repositories import tenants_repository
+from app.repositories import code_services_repository, tenants_repository
 from app.schemas.dashboard import (
     ClientActiveSubscription,
     ClientDashboardResponse,
@@ -37,7 +43,66 @@ class DashboardService:
         if current_user.role == "client":
             return await self._client_dashboard(db, profile)
 
-        return TenantDashboardResponse(full_name=profile.full_name, email=profile.email)
+        return await self._tenant_dashboard(db, profile)
+
+    async def _tenant_dashboard(self, db, profile) -> TenantDashboardResponse:
+        tenant_id = profile.id
+        mailbox_status = await self._mailbox_status(db, tenant_id)
+        enabled = await code_services_repository.get_effective_service_keys(db, tenant_id)
+        access_count = await self._access_control_count(db, tenant_id)
+        payload = TenantDashboardResponse(
+            full_name=profile.full_name,
+            email=profile.email,
+            tenant_plan=profile.plan,
+            mailbox_status=mailbox_status,
+            enabled_code_services=enabled,
+            access_control_count=access_count,
+        )
+        if profile.plan == "pro":
+            payload.active_clients = await self._count(db, Client, tenant_id, Client.is_active.is_(True))
+            payload.catalog_services = await self._count(db, Service, tenant_id)
+            payload.active_subscriptions = await self._count(db, Subscription, tenant_id, Subscription.status == "active")
+            payload.subscriptions_expiring_soon = await self._subscriptions_expiring_soon(db, tenant_id)
+        return payload
+
+    async def _mailbox_status(self, db, tenant_id) -> str:
+        row = await db.execute(select(TenantMailbox.status).where(TenantMailbox.tenant_id == tenant_id))
+        return row.scalar_one_or_none() or "missing"
+
+    async def _access_control_count(self, db, tenant_id) -> int:
+        row = await db.execute(
+            select(func.count()).select_from(BlockedClient).where(BlockedClient.tenant_id == tenant_id, BlockedClient.is_active)
+        )
+        return int(row.scalar_one())
+
+    async def _count(self, db, model, tenant_id, *conditions) -> int:
+        stmt = select(func.count()).select_from(model).where(model.tenant_id == tenant_id)
+        for condition in conditions:
+            stmt = stmt.where(condition)
+        row = await db.execute(stmt)
+        return int(row.scalar_one())
+
+    async def _subscriptions_expiring_soon(self, db, tenant_id) -> int:
+        settings_row = await db.execute(select(TenantSettings.timezone).where(TenantSettings.tenant_id == tenant_id))
+        tz_name = settings_row.scalar_one_or_none() or "UTC"
+        try:
+            tz = ZoneInfo(tz_name)
+        except (KeyError, TypeError, ValueError):
+            tz = ZoneInfo("UTC")
+        local_today = datetime.now(timezone.utc).astimezone(tz).date()
+        start_utc = datetime.combine(local_today, time.min, tzinfo=tz).astimezone(timezone.utc)
+        end_utc = datetime.combine(local_today + timedelta(days=7), time.max, tzinfo=tz).astimezone(timezone.utc)
+        row = await db.execute(
+            select(func.count())
+            .select_from(Subscription)
+            .where(
+                Subscription.tenant_id == tenant_id,
+                Subscription.status == "active",
+                Subscription.expires_at >= start_utc,
+                Subscription.expires_at <= end_utc,
+            )
+        )
+        return int(row.scalar_one())
 
     async def _client_dashboard(self, db, profile) -> ClientDashboardResponse:
         tenant = getattr(profile, "tenant", None)

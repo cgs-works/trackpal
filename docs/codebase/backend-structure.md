@@ -17,6 +17,7 @@ backend/
 │   │           ├── catalog.py
 │   │           ├── clients.py
 │   │           ├── code_services.py   # Code-services governance (global + tenant)
+│   │           ├── access_control.py  # Tenant access-control blocks (list, create, delete)
 │   │           ├── dashboard.py
 │   │           ├── i18n.py       # GET /i18n/catalog
 │   │           ├── me.py
@@ -48,6 +49,7 @@ backend/
 │   │   ├── errors.py              # UserFacingError, translate_error
 │   │   ├── phone.py               # normalize_phone
 │   │   ├── security.py            # bcrypt, JWT, refresh tokens
+│   │   ├── tenant_plan.py          # TenantPlan type, valid plans, normalize helper
 │   │   ├── metrics.py             # lightweight registry + /metrics output
 │   │   ├── i18n/                  # Package: engine + 6 catalog files
 │   │   │   ├── __init__.py
@@ -101,6 +103,7 @@ backend/
 │   │   ├── auth.py
 │   │   ├── catalog.py
 │   │   ├── client.py
+│   │   ├── access_control.py           # Access-control block schemas
 │   │   ├── code_services.py                # Code-service governance schemas
 │   │   ├── dashboard.py
 │   │   ├── mailbox.py
@@ -113,6 +116,7 @@ backend/
 │   │       └── responses.py
 │   └── services/                  # All services organized as packages
 │       ├── __init__.py            # Re-exports for stable public API
+│       ├── access_control_service.py  # Block/unblock + codigo session cleanup
 │       ├── auth_service/
 │       ├── catalog_service/
 │       ├── client_service/
@@ -136,7 +140,7 @@ backend/
 │       ├── whatsapp_session_service/
 │       ├── whatsapp_tenant_console_facade/
 │       ├── whatsapp_navigation.py       # Shared navigation helpers (is_cancel, is_back, is_next, screen stack)
-│       └── whatsapp_tenant_console_service/ # Includes codigo_flow.py for mailbox lookup dialog
+│       └── whatsapp_tenant_console_service/ # Includes codigo_flow.py, access_control_flow.py for mailbox lookup + access control
 ├── alembic/
 │   ├── env.py
 │   ├── script.py.mako
@@ -157,7 +161,8 @@ backend/
 │       ├── cdbfefe74caa7_add_rls_to_core_and_mail_tables.py  # RLS on core + mailbox tables
 │       ├── cdc0fe74caa8_add_code_service_tables.py  # Code-service governance tables
 │       ├── ce10fe74caa10_add_client_messaging_blocks_table.py  # Client Messaging Blocks table (renamed to blocked_clients in ce10fe74caa11)
-│       └── ce10fe74caa11_rename_client_messaging_blocks_to_blocked_clients.py  # Rename to blocked_clients
+│       ├── ce10fe74caa11_rename_client_messaging_blocks_to_blocked_clients.py  # Rename to blocked_clients
+│       └── e011fe74cab1_add_tenant_plan.py  # Add plan column to tenants
 ├── scripts/
 │   └── seed.py
 ├── tests/
@@ -193,6 +198,8 @@ backend/
 │   ├── test_whatsapp_instance_alias.py
 │   ├── test_whatsapp_session_service.py
 │   ├── test_code_services.py    # Code-services governance tests
+│   ├── test_access_control_api.py # Access-control API tests
+│   ├── test_tenant_plan.py       # Tenant plan create/update/auth/gate tests
 │   ├── test_mailbox_persistence.py
 │   ├── test_mailbox_oauth_imap.py
 │   ├── test_mail_code_extractor.py
@@ -222,6 +229,7 @@ backend/
 |--------|---------------|
 | `app/api/v1/endpoints/subscriptions/` | Subscription CRUD, lifecycle, reminder endpoints (package) |
 | `app/core/encryption.py` | Fernet encryption for subscription secrets |
+| `app/core/tenant_plan.py` | TenantPlan type, valid plans, normalize helper |
 | `app/core/errors.py` | UserFacingError and translate_error |
 | `app/api/v1/endpoints/code_services.py` | Code-services global + tenant selection endpoints |
 | `app/core/input_validation/` | Shared validation package: contact, phone, general validators |
@@ -230,6 +238,7 @@ backend/
 | `app/services/whatsapp_client_console_facade/` | Client WhatsApp read-only console (package) |
 | `app/services/dashboard_service/` | Dashboard response assembly per role (package) |
 | `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
+| `app/services/access_control_service.py` | Block/unblock identities + codigo session cleanup |
 | `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
 | `app/services/mail_lookup_worker/` | Async mailbox lookup worker, provider fetchers (google/microsoft/imap), retries, dedupe pipeline, Redis queue |
 | `app/services/oauth_service/` | Google/Microsoft OAuth start/callback/refresh and revocation handling |

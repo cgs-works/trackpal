@@ -12,7 +12,7 @@ class TenantSettingsResponse(BaseModel):
 
     tenant_id: UUID
     locale: str
-    timezone: str
+    timezone: str | None
     created_at: datetime
     updated_at: datetime
 

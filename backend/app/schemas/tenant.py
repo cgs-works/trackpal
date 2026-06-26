@@ -10,6 +10,7 @@ from app.core.input_validation import (
     validate_phone,
     validate_username,
 )
+from app.core.tenant_plan import TenantPlan, normalize_tenant_plan
 
 
 class TenantCreate(BaseModel):
@@ -22,6 +23,12 @@ class TenantCreate(BaseModel):
     password: str | None = None
     evolution_instance_name: str = Field(min_length=1)
     client_prefix: str | None = None
+    plan: TenantPlan
+
+    @field_validator("plan")
+    @classmethod
+    def validate_plan_field(cls, v: str) -> TenantPlan:
+        return normalize_tenant_plan(v)
 
     @field_validator("password")
     @classmethod
@@ -66,6 +73,14 @@ class TenantUpdate(BaseModel):
     phone: str | None = None
     evolution_instance_name: str | None = None
     client_prefix: str | None = None
+    plan: TenantPlan | None = None
+
+    @field_validator("plan")
+    @classmethod
+    def validate_plan_field(cls, v: str | None) -> TenantPlan | None:
+        if v is None:
+            return None
+        return normalize_tenant_plan(v)
 
     @field_validator("full_name")
     @classmethod
@@ -101,6 +116,7 @@ class TenantResponse(BaseModel):
     email: str | None
     phone: str | None
     evolution_instance_name: str | None
+    plan: TenantPlan
     is_active: bool
     username: str
     created_at: datetime

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
-from app.api.dependencies import ActiveTenantId, DbDep, resolve_locale
+from app.api.dependencies import DbDep, ProTenantId, resolve_locale
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
 from app.schemas.catalog import (
@@ -21,14 +21,14 @@ catalog_service = CatalogService()
 
 
 @router.get("/services", response_model=list[ServiceResponse])
-async def list_services(db: DbDep, tenant_id: ActiveTenantId):
+async def list_services(db: DbDep, tenant_id: ProTenantId):
     return await catalog_service.list_services(db, tenant_id)
 
 
 @router.post(
     "/services", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_service(payload: ServiceCreate, db: DbDep, tenant_id: ActiveTenantId):
+async def create_service(payload: ServiceCreate, db: DbDep, tenant_id: ProTenantId):
     try:
         return await catalog_service.create_service(db, tenant_id, payload)
     except UserFacingError as exc:
@@ -43,7 +43,7 @@ async def create_service(payload: ServiceCreate, db: DbDep, tenant_id: ActiveTen
 
 
 @router.get("/services/{service_id}", response_model=ServiceResponse)
-async def get_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
+async def get_service(service_id: UUID, db: DbDep, tenant_id: ProTenantId):
     service = await catalog_service.get_service(db, tenant_id, service_id)
     if service is None:
         locale = await resolve_locale(db, tenant_id)
@@ -56,7 +56,7 @@ async def get_service(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
 
 @router.put("/services/{service_id}", response_model=ServiceResponse)
 async def update_service(
-    service_id: UUID, payload: ServiceUpdate, db: DbDep, tenant_id: ActiveTenantId
+    service_id: UUID, payload: ServiceUpdate, db: DbDep, tenant_id: ProTenantId
 ):
     try:
         service = await catalog_service.update_service(
@@ -86,7 +86,7 @@ async def update_service(
 async def preview_delete_service(
     service_id: UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=10),
 ):
@@ -108,7 +108,7 @@ async def preview_delete_service(
 async def delete_service(
     service_id: UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     confirm: bool = Query(False),
 ):
     try:
@@ -135,7 +135,7 @@ async def delete_service(
 
 
 @router.get("/services/{service_id}/plans", response_model=list[PlanResponse])
-async def list_plans(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
+async def list_plans(service_id: UUID, db: DbDep, tenant_id: ProTenantId):
     plans = await catalog_service.list_plans(db, tenant_id, service_id)
     if plans is None:
         locale = await resolve_locale(db, tenant_id)
@@ -152,7 +152,7 @@ async def list_plans(service_id: UUID, db: DbDep, tenant_id: ActiveTenantId):
     status_code=status.HTTP_201_CREATED,
 )
 async def create_plan(
-    service_id: UUID, payload: PlanCreate, db: DbDep, tenant_id: ActiveTenantId
+    service_id: UUID, payload: PlanCreate, db: DbDep, tenant_id: ProTenantId
 ):
     try:
         plan = await catalog_service.create_plan(db, tenant_id, service_id, payload)
@@ -180,7 +180,7 @@ async def update_plan(
     plan_id: UUID,
     payload: PlanUpdate,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
 ):
     try:
         plan = await catalog_service.update_plan(
@@ -212,7 +212,7 @@ async def preview_delete_plan(
     service_id: UUID,
     plan_id: UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=10),
 ):
@@ -237,7 +237,7 @@ async def delete_plan(
     service_id: UUID,
     plan_id: UUID,
     db: DbDep,
-    tenant_id: ActiveTenantId,
+    tenant_id: ProTenantId,
     confirm: bool = Query(False),
 ):
     try:

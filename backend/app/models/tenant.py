@@ -44,6 +44,7 @@ class Tenant(Base, TimestampMixin):
     whatsapp_lid: Mapped[str | None] = mapped_column(
         String(100), unique=True, nullable=True
     )
+    plan: Mapped[str] = mapped_column(String(20), default="pro", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     owner = relationship("User", back_populates="owned_tenant")

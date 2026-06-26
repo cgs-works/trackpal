@@ -401,6 +401,15 @@ Tenant console uses `WhatsAppSessionService` with logical key `admin:{phone}` so
 | 9 | Volver | Regresa al menu anterior en flujos interactivos |
 | 8 | Siguiente | Avanza a la siguiente pagina cuando hay paginacion |
 
+
+Plan-aware menus:
+
+**Starter menu:** Profile, Buscar código de acceso, Control de acceso, Help, Exit.
+
+**Pro menu:** Clients, Catalog, Profile, Subscriptions, Control de acceso, Help, Buscar código de acceso, Exit.
+
+Blocked identities receive `no_reply=true`; mailbox status must be `connected` for code lookup.
+
 Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
 
 ### Subscription flows

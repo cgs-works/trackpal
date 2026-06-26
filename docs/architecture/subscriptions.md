@@ -73,6 +73,9 @@ The `reminder_time` field is a tenant-local threshold. The backend checks if the
 
 The `reminders_enabled` field serves as a global opt-in toggle per tenant. When false (the default), no reminders are generated for that tenant regardless of other settings.
 
+Subscription automation is Pro-only. Cleanup, reminder generation, and pending-reminder payloads skip tenants whose `tenants.plan != pro`. Downgrading to Starter preserves subscription rows and reminder settings but automation stops mutating that tenant's preserved Pro data until upgrade.
+
+
 **Timezone ownership**: The `timezone` field was removed from this table in migration `d011fe74cab0`. Timezone is now managed centrally in `TenantSettings.timezone` at `GET/PUT /api/v1/tenant-settings`. The timezone catalog is served at `GET /api/v1/tenant-settings/timezones`.
 
 ## Encryption

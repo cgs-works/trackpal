@@ -410,11 +410,12 @@ async def test_dashboard_tenant(client, active_tenant_user):
     response = await client.get("/api/v1/dashboard", headers=headers)
 
     assert response.status_code == 200
-    assert response.json() == {
-        "message": "Dashboard en construccion",
-        "full_name": "Active Tenant",
-        "email": None,
-    }
+    data = response.json()
+    assert data["message"] == "Dashboard en construccion"
+    assert data["full_name"] == "Active Tenant"
+    assert data["email"] is None
+    assert "tenant_plan" in data
+    assert "mailbox_status" in data
 
 
 # ===========================================================================

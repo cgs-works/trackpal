@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    access_control,
     auth,
     catalog,
     clients,
@@ -21,6 +22,7 @@ api_router.include_router(integrations.router)
 api_router.include_router(mailbox.router)
 api_router.include_router(tenants.router)
 api_router.include_router(tenant_settings.router)
+api_router.include_router(access_control.router)
 api_router.include_router(clients.router)
 api_router.include_router(catalog.router)
 api_router.include_router(code_services.router)

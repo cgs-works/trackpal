@@ -21,6 +21,7 @@ def _tenant_response(profile) -> TenantResponse:
         id=profile.id,
         full_name=profile.full_name,
         client_prefix=profile.client_prefix,
+        plan=profile.plan,
         email=profile.email,
         phone=profile.phone,
         evolution_instance_name=profile.evolution_instance_name,

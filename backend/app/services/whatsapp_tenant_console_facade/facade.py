@@ -147,6 +147,12 @@ class WhatsAppTenantConsoleFacade:
                 )
 
         # 4. Delegate to the tenant console service
+        tenant_plan = "pro"
+        if db is not None and tenant_id is not None:
+            tenant = await self._tenant_service.get_tenant(db, UUID(str(user_id)))
+            if tenant is not None:
+                tenant_plan = getattr(tenant, "plan", "pro") or "pro"
+
         return await self._console_service.process_message(
             phone=phone,
             message=message,
@@ -155,6 +161,7 @@ class WhatsAppTenantConsoleFacade:
             db=db,
             session_service=self._session_service,
             locale=locale,
+            tenant_plan=tenant_plan,
         )
 
     # ------------------------------------------------------------------

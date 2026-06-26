@@ -58,7 +58,29 @@ class AuthService:
             return None
         await set_internal_rls_context(db)
         row = await clients_repository.get_active_client_tenant_join(db, user.id)
-        return row[0].tenant_id if row else None
+        if not row:
+            return None
+        tenant = row[0].tenant
+        if tenant.plan != "pro":
+            return None
+        return row[0].tenant_id
+
+    async def _tenant_plan_for_user(
+        self, db: AsyncSession, user: User, active_tenant_id: UUID | None
+    ) -> str | None:
+        if user.role == "tenant":
+            await set_internal_rls_context(db)
+            tenant = await tenants_repository.get_active_by_owner(db, user.id)
+            return tenant.plan if tenant else None
+        if user.role == "master" and active_tenant_id is not None:
+            await set_internal_rls_context(db)
+            tenant = await tenants_repository.get_active(db, active_tenant_id)
+            return tenant.plan if tenant else None
+        if user.role == "client" and active_tenant_id is not None:
+            await set_internal_rls_context(db)
+            tenant = await tenants_repository.get_active(db, active_tenant_id)
+            return tenant.plan if tenant else None
+        return None
 
     async def create_tokens(
         self, db: AsyncSession, user: User, active_tenant_id: UUID | None = None
@@ -67,6 +89,7 @@ class AuthService:
             active_tenant_id = await self._active_tenant_id_for_user(db, user)
             if active_tenant_id is None:
                 return None
+        tenant_plan = await self._tenant_plan_for_user(db, user, active_tenant_id)
         access_token = create_access_token(
             subject=str(user.id),
             role=user.role,
@@ -92,6 +115,7 @@ class AuthService:
             "token_type": "bearer",
             "user": {"id": user.id, "role": user.role, "username": user.username},
             "active_tenant_id": active_tenant_id,
+            "tenant_plan": tenant_plan,
         }
 
     async def refresh_access_token(

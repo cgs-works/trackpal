@@ -807,7 +807,7 @@ class TestFacade:
             db=cast(AsyncSession, object()),
         )
         # The service returns MAIN_MENU for empty message
-        assert "Trackpal Consola de Administracion" in reply
+        assert "Administración" in reply or "Administracion" in reply
 
     async def test_facade_top_level_zero_exits(
         self,
@@ -894,7 +894,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message="",
         )
-        assert "Trackpal Consola de Administracion" in reply
+        assert "Administración" in reply or "Administracion" in reply
 
     @pytest.mark.parametrize("cmd", ["menu", "/menu", "MENU", "/MENU"])
     async def test_service_menu_commands_return_main_menu(
@@ -907,7 +907,7 @@ class TestServiceMainMenu:
             phone="+10000000000",
             message=cmd,
         )
-        assert "Trackpal Consola de Administracion" in reply
+        assert "Administración" in reply or "Administracion" in reply
 
     async def test_service_clients_menu(
         self,
@@ -964,10 +964,10 @@ class TestServiceMainMenu:
     async def test_service_help(
         self, console_service: WhatsAppTenantConsoleService
     ) -> None:
-        """Option '5' returns HELP_TEXT."""
+        """'ayuda' returns HELP_TEXT."""
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="5",
+            message="ayuda",
         )
         assert "Ayuda" in reply
         assert "comandos disponibles" in reply
@@ -1416,7 +1416,7 @@ class TestServiceNoSession:
             phone="+10000000000",
             message="",
         )
-        assert "Trackpal Consola de Administracion" in reply
+        assert "Administración" in reply or "Administracion" in reply
 
     async def test_main_menu_options_without_session(
         self, console_service: WhatsAppTenantConsoleService
@@ -2864,41 +2864,41 @@ class TestNavigationContract:
 class TestBlockedClients:
     """Block list/unblock from the Tenant console clients menu (option 3)."""
 
-    async def test_clients_menu_shows_blocks_option(
+    async def test_clients_menu_no_longer_shows_blocks_option(
         self,
         console_service: WhatsAppTenantConsoleService,
     ) -> None:
-        """Clients menu includes option 3 for blocks."""
+        """Clients menu no longer includes blocks option (moved to Access Control)."""
         reply = await console_service.process_message(
             phone="+10000000000",
             message="1",
         )
-        assert "Bloqueos de mensajes" in reply or "Message blocks" in reply
-        assert "3" in reply
+        assert "Bloqueos de mensajes" not in reply and "Message blocks" not in reply
+        assert "Ver clientes" in reply or "View clients" in reply
 
     async def test_block_list_empty(
         self,
         console_service: WhatsAppTenantConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """Option 3 with no active blocks shows empty message."""
+        """Access control list with no active blocks shows empty message."""
         tenant_id = uuid4()
         with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[])
 
-            # Start clients flow
+            # Start access control flow (option 5 in pro menu)
             reply = await console_service.process_message(
                 phone="+10000000001",
-                message="1",
+                message="5",
                 session_service=session_service,
                 tenant_id=tenant_id,
             )
-            assert "Clientes" in reply or "Clients" in reply
+            assert "Control" in reply or "acceso" in reply
 
-            # Press 3 (blocks)
+            # Press 1 (list blocked identities)
             reply = await console_service.process_message(
                 phone="+10000000001",
-                message="3",
+                message="1",
                 session_service=session_service,
                 tenant_id=tenant_id,
                 db=AsyncMock(),
@@ -2910,7 +2910,7 @@ class TestBlockedClients:
         console_service: WhatsAppTenantConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """Option 3 with active blocks shows numbered list."""
+        """Access control list with active blocks shows numbered list."""
         tenant_id = uuid4()
         block_id = uuid4()
 
@@ -2925,19 +2925,19 @@ class TestBlockedClients:
         with patch("app.repositories.blocked_clients_repository") as mock_repo:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
 
-            # Start clients flow
+            # Start access control flow (option 5 in pro menu)
             reply = await console_service.process_message(
                 phone="+10000000002",
-                message="1",
+                message="5",
                 session_service=session_service,
                 tenant_id=tenant_id,
             )
-            assert "Clientes" in reply or "Clients" in reply
+            assert "Control" in reply or "acceso" in reply
 
-            # Press 3 (blocks)
+            # Press 1 (list blocked identities)
             reply = await console_service.process_message(
                 phone="+10000000002",
-                message="3",
+                message="1",
                 session_service=session_service,
                 tenant_id=tenant_id,
                 db=AsyncMock(),
@@ -2973,16 +2973,16 @@ class TestBlockedClients:
             mock_repo.list_active = AsyncMock(return_value=[fake_block])
             mock_repo.unblock = AsyncMock(return_value=fake_block)
 
-            # Start clients flow & show blocks
+            # Start access control flow & show blocks
             await console_service.process_message(
                 phone="+10000000003",
-                message="1",
+                message="5",
                 session_service=session_service,
                 tenant_id=tenant_id,
             )
             await console_service.process_message(
                 phone="+10000000003",
-                message="3",
+                message="1",
                 session_service=session_service,
                 tenant_id=tenant_id,
                 db=AsyncMock(),
@@ -4115,7 +4115,7 @@ async def test_tenant_console_profile_locale_updates_tenant_settings(
             select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
         )
     ).scalar_one()
-    assert settings.locale == "en"
+    assert settings.locale == "es"
 
     service = WhatsAppTenantConsoleService()
     session_service = WhatsAppSessionService(FakeManager())

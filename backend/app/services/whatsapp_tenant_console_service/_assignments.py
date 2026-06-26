@@ -163,3 +163,12 @@ _route_profile_flow = rt._route_profile_flow
 _route_subscriptions_flow = rt._route_subscriptions_flow
 _route_codigo_flow = rt._route_codigo_flow
 # fmt: on
+
+# -- Access control flow handlers
+from . import access_control_flow as acf
+_start_access_control_flow = acf._start_access_control_flow
+_handle_access_control_menu = acf._handle_access_control_menu
+_handle_access_control_block_phone = acf._handle_access_control_block_phone
+
+# -- Access control sub-router
+_route_access_control_flow = rt._route_access_control_flow

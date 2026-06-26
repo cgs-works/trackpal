@@ -366,3 +366,16 @@ async def _route_codigo_flow(
             phone, msg, session, session_service, tenant_id, db
         )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)
+
+async def _route_access_control_flow(
+    self, phone, msg, step, session, session_service, tenant_id, db
+):
+    if step == self.ACCESS_CONTROL_STEP_MENU:
+        return await self._handle_access_control_menu(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    if step == self.ACCESS_CONTROL_STEP_BLOCK_PHONE:
+        return await self._handle_access_control_block_phone(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)

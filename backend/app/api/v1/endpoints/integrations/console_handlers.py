@@ -564,9 +564,9 @@ async def _handle_unauthenticated_codigo(
 
         # Check mailbox is configured
         mailbox = await mailbox_config_repository.get_by_tenant(db, tenant.id)
-        if mailbox is None or mailbox.status not in ("connected", "error"):
+        if mailbox is None or mailbox.status != "connected":
             return WhatsAppConsoleResponse(
-                reply=_i18n_t(locale, "wa.tenant.codigo.no_mailbox")
+                reply=_i18n_t(locale, "wa.tenant.codigo.mailbox_unavailable_external")
             )
 
         # Get effective service list

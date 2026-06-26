@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, set_internal_rls_context, set_rls_context
 from app.core.security import decode_token, verify_n8n_api_key
+from app.core.tenant_plan import TENANT_PLAN_PRO, TenantPlan
 from app.repositories import (
     clients_repository,
     tenants_repository,
@@ -118,6 +119,51 @@ async def get_active_tenant_id(
     return tenant_id
 
 
+async def get_current_tenant_plan(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TenantPlan | None:
+    payload = decode_token(token)
+    if current_user.role == "tenant":
+        tenant = await tenants_repository.get_active_by_owner(db, current_user.id)
+        if tenant is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Account is deactivated",
+            )
+        return tenant.plan  # type: ignore[return-value]
+    if current_user.role == "master":
+        raw = payload.get("active_tenant_id")
+        if not raw:
+            return None
+        try:
+            tenant_id = UUID(raw)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid tenant context",
+            ) from None
+        tenant = await tenants_repository.get_active(db, tenant_id)
+        return tenant.plan if tenant else None  # type: ignore[return-value]
+    return None
+
+
+async def get_pro_tenant_id(
+    tenant_id: Annotated[UUID, Depends(get_active_tenant_id)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> UUID:
+    if current_user.role == "master":
+        return tenant_id
+    tenant = await tenants_repository.get_active(db, tenant_id)
+    if tenant is None or tenant.plan != TENANT_PLAN_PRO:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
+        )
+    return tenant_id
+
+
 def require_role(required_role: str):
     async def role_checker(current_user: Annotated[User, Depends(get_current_user)]):
         if current_user.role != required_role:
@@ -155,3 +201,5 @@ MasterUser = Annotated[User, Depends(require_role("master"))]
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 ApiKeyDbDep = Annotated[AsyncSession, Depends(set_api_key_rls_context)]
 ActiveTenantId = Annotated[UUID, Depends(get_active_tenant_id)]
+TenantPlanDep = Annotated[TenantPlan | None, Depends(get_current_tenant_plan)]
+ProTenantId = Annotated[UUID, Depends(get_pro_tenant_id)]

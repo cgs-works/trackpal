@@ -91,7 +91,7 @@ async def active_tenant_user(db_session):
     )
     db_session.add(tenant)
     await db_session.flush()
-    db_session.add(TenantSettings(tenant_id=tenant.id))
+    db_session.add(TenantSettings(tenant_id=tenant.id, locale="es"))
     await db_session.commit()
     return user
 

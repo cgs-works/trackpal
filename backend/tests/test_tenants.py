@@ -12,6 +12,7 @@ async def _create_tenant(client, auth_headers, **overrides):
         "phone": "+12015550004",
         "username": "tenant_one",
         "password": "tenant-password",
+        "plan": "pro",
     }
     payload.update(overrides)
     payload.setdefault("evolution_instance_name", f"{payload['username']}-instance")
@@ -598,6 +599,7 @@ async def test_create_tenant_service_normalizes_values(db_session):
         phone="+12015550040",  # with +
         password="test-password",
         evolution_instance_name="service-test-instance",
+        plan="pro",
     )
 
     service = TenantService()
@@ -620,6 +622,7 @@ async def test_create_tenant_service_normalizes_phone_jid(db_session):
         phone="+12015550041@s.whatsapp.net",
         password="test-password",
         evolution_instance_name="service-jid-instance",
+        plan="pro",
     )
 
     service = TenantService()
@@ -640,6 +643,7 @@ async def test_create_tenant_service_rejects_invalid_username_direct(db_session)
         phone="+12015550042",
         password="test-password",
         evolution_instance_name="test-instance",
+        plan="pro",
     )
     # Bypass Pydantic validation by mutating post-construction
     payload.username = "/menu"
@@ -661,6 +665,7 @@ async def test_create_tenant_service_rejects_invalid_phone_direct(db_session):
         phone="+12015550043",
         password="test-password",
         evolution_instance_name="test-instance",
+        plan="pro",
     )
     payload.phone = "abc"  # bypass Pydantic
 
@@ -681,6 +686,7 @@ async def test_create_tenant_service_rejects_invalid_full_name_direct(db_session
         phone="+12015550044",
         password="test-password",
         evolution_instance_name="test-instance",
+        plan="pro",
     )
     payload.full_name = " Leading"  # bypass Pydantic
 
@@ -704,6 +710,7 @@ async def test_create_tenant_service_rejects_invalid_email_direct(db_session):
         phone="+12015550045",
         password="test-password",
         evolution_instance_name="test-instance",
+        plan="pro",
     )
     payload.email = "not-an-email"  # bypass Pydantic
 
@@ -744,6 +751,7 @@ async def test_duplicate_username_service_layer(db_session):
         phone="+12015550060",
         password="test-password",
         evolution_instance_name="dup-test-1",
+        plan="pro",
     )
     service = TenantService()
     await service.create_tenant(db_session, payload1)
@@ -755,6 +763,7 @@ async def test_duplicate_username_service_layer(db_session):
         phone="+12015550061",
         password="test-password",
         evolution_instance_name="dup-test-2",
+        plan="pro",
     )
     with pytest.raises(ValueError, match="Username already registered"):
         await service.create_tenant(db_session, payload2)
@@ -772,6 +781,7 @@ async def test_duplicate_phone_service_layer(db_session):
         phone="+12015550070",
         password="test-password",
         evolution_instance_name="phone-dup-1",
+        plan="pro",
     )
     service = TenantService()
     await service.create_tenant(db_session, payload1)
@@ -783,6 +793,7 @@ async def test_duplicate_phone_service_layer(db_session):
         phone="12015550070",  # same digits, no +
         password="test-password",
         evolution_instance_name="phone-dup-2",
+        plan="pro",
     )
     with pytest.raises(ValueError, match="Phone already registered"):
         await service.create_tenant(db_session, payload2)

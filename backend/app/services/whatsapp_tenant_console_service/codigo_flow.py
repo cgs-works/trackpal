@@ -100,7 +100,7 @@ async def _start_codigo_flow(
         mailbox = await mailbox_config_repository.get_by_tenant(db, tenant_id)
         if mailbox is None:
             return self._t(self.KEY_CODIGO_NO_MAILBOX)
-        if mailbox.status not in ("connected", "error"):
+        if mailbox.status != "connected":
             return self._t(self.KEY_CODIGO_NO_MAILBOX)
 
     # Get effective service list (tenant_selected ∩ global_active)

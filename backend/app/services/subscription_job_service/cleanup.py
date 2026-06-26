@@ -17,6 +17,7 @@ from app.models.subscription import (
     SubscriptionEvent,
     SubscriptionReminderLog,
 )
+from app.models.tenant import Tenant
 from app.models.tenant_settings import TenantSettings
 
 
@@ -81,7 +82,10 @@ async def _expire_active_subs(
         tz_map = await _get_tenant_timezone_map(db)
     results: list[dict[str, Any]] = []
     res = await db.execute(
-        select(Subscription).where(
+        select(Subscription)
+        .join(Tenant, Tenant.id == Subscription.tenant_id)
+        .where(
+            Tenant.plan == "pro",
             Subscription.status == "active",
             Subscription.expires_at <= now,
         )
@@ -127,7 +131,10 @@ async def _cancel_long_expired_subs(
     results: list[dict[str, Any]] = []
     cutoff_7 = now - timedelta(days=7)
     res = await db.execute(
-        select(Subscription).where(
+        select(Subscription)
+        .join(Tenant, Tenant.id == Subscription.tenant_id)
+        .where(
+            Tenant.plan == "pro",
             Subscription.status == "expired",
             Subscription.expires_at <= cutoff_7,
         )
@@ -173,7 +180,10 @@ async def _delete_old_cancelled_subs(
     results: list[dict[str, Any]] = []
     cutoff_30 = now - timedelta(days=30)
     res = await db.execute(
-        select(Subscription).where(
+        select(Subscription)
+        .join(Tenant, Tenant.id == Subscription.tenant_id)
+        .where(
+            Tenant.plan == "pro",
             Subscription.status == "cancelled",
             Subscription.cancelled_at <= cutoff_30,
         )

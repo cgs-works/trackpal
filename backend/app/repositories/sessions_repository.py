@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import RefreshSession
+from app.models import Client, RefreshSession
 
 
 async def get_valid_sessions(db: AsyncSession, user_id: UUID) -> list[RefreshSession]:
@@ -43,8 +43,25 @@ async def revoke_all_for_user(db: AsyncSession, user_id: UUID) -> None:
     )
 
 
+async def revoke_all_for_tenant_clients(db: AsyncSession, tenant_id: UUID) -> None:
+    """Revoke all active refresh sessions for every client user in a tenant."""
+    result = await db.execute(select(Client.owner_user_id).where(Client.tenant_id == tenant_id))
+    user_ids = [row[0] for row in result.all()]
+    if not user_ids:
+        return
+    await db.execute(
+        update(RefreshSession)
+        .where(
+            RefreshSession.user_id.in_(user_ids),
+            RefreshSession.revoked == False,  # noqa: E712
+        )
+        .values(revoked=True)
+    )
+
+
 __all__ = [
     "get_valid_sessions",
     "get_all_unrevoked",
     "revoke_all_for_user",
+    "revoke_all_for_tenant_clients",
 ]

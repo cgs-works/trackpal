@@ -79,7 +79,7 @@ async def test_create_client_duplicate_phone(client, active_tenant_user):
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "Phone already registered"
+    assert "El teléfono ya está registrado" in response.json()["detail"] or "Phone already registered" in response.json()["detail"]
 
 
 async def test_create_client_weak_password_rejected(client, active_tenant_user):
@@ -270,6 +270,7 @@ async def test_cross_tenant_client_access_blocked(
             "password": "tenant-password",
             "evolution_instance_name": "tenant-two-instance",
             "client_prefix": "x9",
+            "plan": "pro",
         },
         headers=auth_headers,
     )

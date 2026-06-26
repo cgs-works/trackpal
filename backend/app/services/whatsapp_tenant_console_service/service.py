@@ -152,11 +152,15 @@ class WhatsAppTenantConsoleService(
     _route_profile_flow = _._route_profile_flow
     _route_subscriptions_flow = _._route_subscriptions_flow
     _route_codigo_flow = _._route_codigo_flow
+    _route_access_control_flow = _._route_access_control_flow
     _start_codigo_flow = _._start_codigo_flow
     _handle_codigo_service = _._handle_codigo_service
     _handle_codigo_email = _._handle_codigo_email
     _handle_codigo_email_confirm = _._handle_codigo_email_confirm
     _handle_codigo_awaiting_result = _._handle_codigo_awaiting_result
+    _start_access_control_flow = _._start_access_control_flow
+    _handle_access_control_menu = _._handle_access_control_menu
+    _handle_access_control_block_phone = _._handle_access_control_block_phone
     # fmt: on
 
     # ------------------------------------------------------------------
@@ -189,6 +193,7 @@ class WhatsAppTenantConsoleService(
         db: AsyncSession | None = None,
         session_service: WhatsAppSessionService | None = None,
         locale: str | None = None,
+        tenant_plan: str = "pro",
     ) -> str:
         if locale is not None:
             _token = ctx.set_locale(locale)
@@ -249,6 +254,8 @@ class WhatsAppTenantConsoleService(
                 )
 
             # ── No active flow ───────────────────────────────────────
+            menu_key = "wa.tenant.main_menu.starter" if tenant_plan == "starter" else "wa.tenant.main_menu.pro"
+
             if msg.lower() in self.RESET_COMMANDS:
                 if session_service is not None:
                     await session_service.clear_session(f"admin:{phone}")
@@ -256,7 +263,7 @@ class WhatsAppTenantConsoleService(
                     return self._with_main_menu(
                         _i18n_t(ctx.get_locale(), "wa.tenant.goodbye")
                     )
-                return self._t(self.KEY_MAIN_MENU)
+                return self._t(menu_key)
 
             if (
                 session is None
@@ -271,42 +278,56 @@ class WhatsAppTenantConsoleService(
                 return self._t(self.KEY_HELP_TEXT)
 
             if not msg:
-                return self._t(self.KEY_MAIN_MENU)
+                return self._t(menu_key)
 
+            if tenant_plan == "starter":
+                if msg == "1":
+                    return await self._start_profile_flow(
+                        phone, session_service, user_id, db
+                    )
+                if msg == "2" or msg.lower() in ("codigo", "código", "code"):
+                    return await self._start_codigo_flow(
+                        phone,
+                        session_service,
+                        tenant_id,
+                        db,
+                        started_from_menu=msg == "2",
+                        role="tenant",
+                    )
+                if msg == "3":
+                    return await self._start_access_control_flow(phone, session_service)
+                if msg == "4":
+                    return self._t(self.KEY_HELP_TEXT)
+                return self._t(self.KEY_FALLBACK_NO_FLOW)
+
+            # Pro plan routing
             if msg == "1":
                 return await self._start_clients_flow(
                     phone, session_service, tenant_id, db
                 )
-            elif msg == "2":
+            if msg == "2":
                 return await self._start_catalog_flow(
                     phone, session_service, tenant_id, db
                 )
-            elif msg == "3":
+            if msg == "3":
                 return await self._start_profile_flow(
                     phone, session_service, user_id, db
                 )
-            elif msg == "4":
+            if msg == "4":
                 return await self._start_subscriptions_flow(
                     phone, session_service, tenant_id, db
                 )
-            elif msg == "5":
+            if msg == "5":
+                return await self._start_access_control_flow(phone, session_service)
+            if msg == "6":
                 return self._t(self.KEY_HELP_TEXT)
-            elif msg == "6":
+            if msg == "7" or msg.lower() in ("codigo", "código", "code"):
                 return await self._start_codigo_flow(
                     phone,
                     session_service,
                     tenant_id,
                     db,
-                    started_from_menu=True,
-                    role="tenant",
-                )
-            elif msg.lower() in ("codigo", "código", "code"):
-                return await self._start_codigo_flow(
-                    phone,
-                    session_service,
-                    tenant_id,
-                    db,
-                    started_from_menu=False,
+                    started_from_menu=msg == "7",
                     role="tenant",
                 )
             return self._t(self.KEY_FALLBACK_NO_FLOW)
@@ -372,6 +393,16 @@ class WhatsAppTenantConsoleService(
             )
         if flow == self.CODIGO_FLOW:
             return await self._route_codigo_flow(
+                phone,
+                msg,
+                step,
+                session,
+                session_service,
+                tenant_id,
+                db,
+            )
+        if flow == self.ACCESS_CONTROL_FLOW:
+            return await self._route_access_control_flow(
                 phone,
                 msg,
                 step,

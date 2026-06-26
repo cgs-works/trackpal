@@ -23,7 +23,7 @@ async def test_tenant_settings_model_defaults_persist(db_session, active_tenant_
     settings = result.scalar_one()
 
     assert settings.tenant_id == tenant.id
-    assert settings.locale == "en"
+    assert settings.locale == "es"
     assert settings.timezone == "UTC"
     assert settings.created_at is not None
     assert settings.updated_at is not None
@@ -65,7 +65,7 @@ async def test_get_tenant_settings_returns_defaults(client, active_tenant_user):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["locale"] == "en"
+    assert data["locale"] == "es"
     assert data["timezone"] == "UTC"
     assert data["tenant_id"] is not None
     assert data["created_at"] is not None
