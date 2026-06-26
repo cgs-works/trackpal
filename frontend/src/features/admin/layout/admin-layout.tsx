@@ -13,18 +13,23 @@ import {
   PanelLeft,
 } from "lucide-react";
 import { t } from "@/i18n";
+import { SupportBanner } from "@/features/admin/components/support-banner";
 
 export function AdminLayout() {
-  const NAV_ITEMS = [
-    { to: "/admin/dashboard", label: t("frontend.dashboard.tenant.title"), icon: LayoutDashboard },
-    { to: "/admin/clients", label: t("frontend.clients.section_title"), icon: Users },
-    { to: "/admin/catalog", label: t("frontend.catalog.section_title"), icon: Package },
-    { to: "/admin/subscriptions", label: t("frontend.subscriptions.title"), icon: CreditCard },
-    { to: "/admin/settings", label: t("frontend.settings.section_title"), icon: Settings },
-  ];
-  const { username, logout } = useAuthStore();
+  const { username, logout, role, tenantPlan, isMasterSupportContext } = useAuthStore();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+
+  const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
+  const showProNav = !isStarterTenantAdmin || isMasterSupportContext;
+
+  const NAV_ITEMS = [
+    { to: "/admin/dashboard", label: t("frontend.dashboard.tenant.title"), icon: LayoutDashboard, proOnly: false },
+    { to: "/admin/clients", label: t("frontend.clients.section_title"), icon: Users, proOnly: true },
+    { to: "/admin/catalog", label: t("frontend.catalog.section_title"), icon: Package, proOnly: true },
+    { to: "/admin/subscriptions", label: t("frontend.subscriptions.title"), icon: CreditCard, proOnly: true },
+    { to: "/admin/settings", label: t("frontend.settings.section_title"), icon: Settings, proOnly: false },
+  ].filter((item) => showProNav || !item.proOnly);
 
   return (
     <div className="flex h-screen bg-background">
@@ -105,6 +110,7 @@ export function AdminLayout() {
 
       {/* ── Main content ─────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto md:pt-0 pt-14">
+        {isMasterSupportContext && tenantPlan === "starter" && <SupportBanner />}
         <Outlet />
       </main>
     </div>
