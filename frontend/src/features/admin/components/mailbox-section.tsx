@@ -180,6 +180,13 @@ export function MailboxSection() {
     }
   }
 
+  // Provider display names for status card (resolved at render time)
+  const providerDisplayNames: Record<string, string> = {
+    google: t("frontend.mailbox.provider_google"),
+    microsoft: t("frontend.mailbox.provider_microsoft"),
+    imap_custom: t("frontend.mailbox.provider_imap_custom"),
+  };
+
   // Provider card config (resolved at render time, i18n is ready)
   const providerOptions = [
     {
@@ -236,7 +243,7 @@ export function MailboxSection() {
               <p className="text-xs text-muted-foreground">
                 {mailbox.provider === "imap_custom"
                   ? `IMAP · ${mailbox.imap_host}`
-                  : providerOptions.find((o) => o.value === mailbox.provider)?.label ?? mailbox.provider}
+                  : `Proveedor: ${providerDisplayNames[mailbox.provider] ?? mailbox.provider}`}
                 {mailbox.auth_method === "oauth" && " · OAuth"}
               </p>
             </div>
