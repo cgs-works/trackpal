@@ -258,6 +258,28 @@ features/<role>/
 - Import `api` from `@/lib/api`
 - Types co-located in the service file or imported from shared types
 
+## Plan-Aware UI Conventions
+
+### `tenantPlan` is a UI hint, not authorization
+
+Plan-aware UI gates are convenience only. Do not use frontend `tenantPlan` as authorization. Pro-only backend calls must still expect 404 for Starter tenants.
+
+### `isMasterSupportContext` for support bypass
+
+Master users in tenant support context (`role=master` + `activeTenantId`) see the full Pro surface regardless of the tenant's plan. Components check this flag alongside `tenantPlan` to decide visibility.
+
+### Route-level gating
+
+Pro-only routes (`/admin/clients`, `/admin/catalog`, `/admin/subscriptions`) are wrapped in `<PlanRouteGate>` which renders a 404 for Starter tenant admins outside Master support context.
+
+### Sidebar nav filtering
+
+`AdminLayout` filters nav items by `proOnly` flag. Starter admins only see Dashboard and Settings in the sidebar.
+
+### Settings section visibility
+
+SettingsPage conditionally includes sections: Reminder Settings and Timezone are Pro-only; all other sections (Profile, Language, Code Services, Code Mailbox, Control de acceso, Password) are available for all plans.
+
 ## No Tests
 
 No frontend test files exist. Tests are not part of the current frontend setup. Backend has pytest coverage.

@@ -30,9 +30,9 @@ frontend/
 │   │   │   └── dashboard.tsx     # Master dashboard route
 │   │   ├── admin/
 │   │   │   ├── dashboard.tsx     # Tenant dashboard route
-│   │   │   ├── clients.tsx       # Client management route
-│   │   │   ├── catalog.tsx       # Catalog management route
-│   │   │   ├── subscriptions.tsx # Subscriptions route
+│   │   │   ├── clients.tsx       # Client management route (Pro-only, wrapped in PlanRouteGate)
+│   │   │   ├── catalog.tsx       # Catalog management route (Pro-only, wrapped in PlanRouteGate)
+│   │   │   ├── subscriptions.tsx # Subscriptions route (Pro-only, wrapped in PlanRouteGate)
 │   │   │   └── settings.tsx      # Settings route
 │   │   └── client/
 │   │       ├── dashboard.tsx     # Client dashboard route
@@ -40,7 +40,7 @@ frontend/
 │   ├── routeTree.gen.ts          # Auto-generated route tree (DO NOT EDIT)
 │   │
 │   ├── store/                    # Zustand stores
-│   │   ├── auth.ts               # Auth: token, user, login/logout/switchTenant
+│   │   ├── auth.ts               # Auth: token, user, tenantPlan, isMasterSupportContext, login/logout/switchTenant/setTenantPlan
 │   │   ├── catalog.ts            # Cache: services, plans, clients with dedup
 │   │   └── settings.ts           # Cache: tenant/reminder settings, timezones, mailbox
 │   │
@@ -80,13 +80,16 @@ frontend/
 │       │   ├── components/
 │       │   │   └── login-form.tsx
 │       │   └── services/
-│       │       └── auth-api.ts
+│       │       └── auth-api.ts   # TenantPlan type, TokenResponse with tenant_plan
 │       │
 │       ├── admin/                # Tenant admin feature
 │       │   ├── layout/
-│       │   │   └── admin-layout.tsx
+│       │   │   └── admin-layout.tsx  # Plan-aware nav items, support banner
 │       │   ├── components/
-│       │   │   ├── dashboard-page.tsx
+│       │   │   ├── dashboard-page.tsx        # Plan-aware metrics, tenantPlan correction
+│       │   │   ├── plan-route-gate.tsx       # Pro-only route guard component
+│       │   │   ├── support-banner.tsx        # Master support context alert
+│       │   │   ├── not-found-page.tsx        # 404 for blocked Pro routes
 │       │   │   ├── clients-page.tsx
 │       │   │   ├── client-table.tsx
 │       │   │   ├── client-form-dialog.tsx
@@ -97,29 +100,32 @@ frontend/
 │       │   │   ├── subscription-form-dialog.tsx
 │       │   │   ├── subscription-lifecycle-dialog.tsx
 │       │   │   ├── subscription-renew-dialog.tsx
-│       │   │   ├── settings-page.tsx
+│       │   │   ├── settings-page.tsx         # Plan-aware section visibility
 │       │   │   ├── profile-section.tsx
 │       │   │   ├── password-section.tsx
 │       │   │   ├── locale-section.tsx
 │       │   │   ├── timezone-section.tsx
 │       │   │   ├── timezone-picker.tsx
 │       │   │   ├── reminder-settings-modal.tsx
-│       │   │   ├── code-services-section.tsx
-│       │   │   └── mailbox-section.tsx
+│       │   │   ├── code-services-section.tsx  # Plan-aware labels
+│       │   │   ├── access-control-section.tsx # WhatsApp access blocks UI
+│       │   │   └── mailbox-section.tsx        # Plan-aware labels
 │       │   └── services/
 │       │       ├── client-api.ts
 │       │       ├── catalog-api.ts
 │       │       ├── subscription-api.ts
 │       │       ├── settings-api.ts
-│       │       └── reminder-api.ts
+│       │       ├── reminder-api.ts
+│       │       ├── dashboard-api.ts           # getTenantDashboard() with plan
+│       │       └── access-control-api.ts      # list/create/delete access blocks
 │       │
 │       ├── master/               # Master admin feature
 │       │   ├── layout/
 │       │   │   └── master-layout.tsx
 │       │   ├── components/
 │       │   │   ├── dashboard-page.tsx
-│       │   │   ├── business-table.tsx
-│       │   │   ├── business-form-dialog.tsx
+│       │   │   ├── business-table.tsx         # Plan badge per tenant
+│       │   │   ├── business-form-dialog.tsx   # Plan selector (Starter/Pro)
 │       │   │   ├── code-services-dialog.tsx
 │       │   │   ├── delete-confirm-dialog.tsx
 │       │   │   ├── empty-state.tsx
@@ -153,7 +159,7 @@ frontend/
 | Module | Files | Responsibility |
 |--------|-------|----------------|
 | Routes | `routes/*.tsx` | Route definitions, layout wrappers, page components |
-| Auth Store | `store/auth.ts` | Login/logout/switch, token/user persistence, cache clearing |
+| Auth Store | `store/auth.ts` | Login/logout/switch, token/user/plan persistence, cache clearing |
 | Catalog Store | `store/catalog.ts` | Services/plans/clients cache with dedup + invalidation |
 | Settings Store | `store/settings.ts` | Tenant/reminder settings, timezones, mailbox cache with dedup |
 | API Client | `lib/api.ts` | Axios singleton, JWT injection, 401 auto-logout |
