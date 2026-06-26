@@ -1,5 +1,7 @@
 import api from "@/lib/api";
 
+export type TenantPlan = "starter" | "pro";
+
 export interface UserInfo {
   id: string
   role: string
@@ -12,6 +14,7 @@ export interface TokenResponse {
   token_type: string
   user: UserInfo
   active_tenant_id: string | null
+  tenant_plan: TenantPlan | null
 }
 
 export async function loginApi(

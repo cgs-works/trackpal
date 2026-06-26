@@ -4,6 +4,7 @@ import {
   logoutApi,
   switchTenantApi,
   type TokenResponse,
+  type TenantPlan,
   type UserInfo,
 } from "@/features/auth/services/auth-api";
 import { loadCatalog } from "@/i18n";
@@ -15,6 +16,8 @@ interface AuthState {
   refreshToken: string | null
   user: UserInfo | null
   activeTenantId: string | null
+  tenantPlan: TenantPlan | null
+  isMasterSupportContext: boolean
   isAuthenticated: boolean
   role: string | null
   username: string
@@ -22,6 +25,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<TokenResponse>
   logout: () => Promise<void>
   switchTenant: (tenantId: string | null) => Promise<TokenResponse>
+  setTenantPlan: (plan: TenantPlan | null) => void
 }
 
 function loadFromStorage() {
@@ -30,6 +34,7 @@ function loadFromStorage() {
     refreshToken: localStorage.getItem("refreshToken"),
     user: JSON.parse(localStorage.getItem("user") || "null") as UserInfo | null,
     activeTenantId: localStorage.getItem("activeTenantId"),
+    tenantPlan: localStorage.getItem("tenantPlan") as TenantPlan | null,
   };
 }
 
@@ -42,6 +47,11 @@ function saveTokenData(data: TokenResponse) {
   } else {
     localStorage.removeItem("activeTenantId");
   }
+  if (data.tenant_plan) {
+    localStorage.setItem("tenantPlan", data.tenant_plan);
+  } else {
+    localStorage.removeItem("tenantPlan");
+  }
 }
 
 function clearTokenData() {
@@ -49,6 +59,7 @@ function clearTokenData() {
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
   localStorage.removeItem("activeTenantId");
+  localStorage.removeItem("tenantPlan");
 }
 
 const initial = loadFromStorage();
@@ -58,6 +69,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: initial.refreshToken,
   user: initial.user,
   activeTenantId: initial.activeTenantId,
+  tenantPlan: initial.tenantPlan,
+  isMasterSupportContext: initial.user?.role === "master" && !!initial.activeTenantId,
   isAuthenticated: !!initial.token,
   role: initial.user?.role || null,
   username: initial.user?.username || "",
@@ -73,6 +86,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: data.refresh_token,
       user: data.user,
       activeTenantId: data.active_tenant_id,
+      tenantPlan: data.tenant_plan,
+      isMasterSupportContext: data.user.role === "master" && !!data.active_tenant_id,
       isAuthenticated: true,
       role: data.user.role,
       username: data.user.username,
@@ -98,6 +113,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: null,
       user: null,
       activeTenantId: null,
+      tenantPlan: null,
+      isMasterSupportContext: false,
       isAuthenticated: false,
       role: null,
       username: "",
@@ -115,10 +132,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: data.refresh_token,
       user: data.user,
       activeTenantId: data.active_tenant_id,
+      tenantPlan: data.tenant_plan,
+      isMasterSupportContext: data.user.role === "master" && !!data.active_tenant_id,
       isAuthenticated: true,
       role: data.user.role,
       username: data.user.username,
     });
     return data;
+  },
+
+  setTenantPlan: (plan) => {
+    if (plan) {
+      localStorage.setItem("tenantPlan", plan);
+    } else {
+      localStorage.removeItem("tenantPlan");
+    }
+    set({ tenantPlan: plan });
   },
 }));
