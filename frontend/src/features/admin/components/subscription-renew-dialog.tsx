@@ -124,7 +124,7 @@ export function SubscriptionRenewDialog({
               {DURATION_OPTIONS.map((opt) => {
                 const isCustomOpt = opt.value === "custom";
                 const isSelected = selectedDuration === opt.value;
-                let preview = "";
+                let preview: string;
                 if (!isCustomOpt) {
                   preview = `→ ${addDays(subscription.expires_at, opt.days)}`;
                 } else if (isCustom && customDate) {

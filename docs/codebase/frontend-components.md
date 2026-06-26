@@ -6,7 +6,7 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 
-Settings hub with 7 expandable card sections. Uses `useSettingsStore` and `useCatalogStore` for cached data.
+Settings hub with expandable card sections. Uses `useSettingsStore` and `useCatalogStore` for cached data. Plan-aware: Starter shows Profile, Language, Code Services, Code Mailbox, Control de acceso, and Password. Pro adds Reminder Settings and Timezone. Master support context shows the full Pro settings set even for Starter tenants.
 
 | Section | Component | Data Source |
 |---------|-----------|-------------|
@@ -15,6 +15,7 @@ Settings hub with 7 expandable card sections. Uses `useSettingsStore` and `useCa
 | Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
 | Code Services | `CodeServicesSection` | API direct |
 | Code Mailbox | `MailboxSection` | `settingsStore.mailbox` |
+| Control de acceso | `AccessControlSection` | API direct |
 | Profile | `ProfileSection` | `getProfile()` API |
 | Password | `PasswordSection` | API direct |
 
@@ -73,6 +74,30 @@ IMAP/OAuth mailbox configuration.
 - Test connection, disconnect actions
 - After mutations: `clearSettingsCache()` + reload
 
+### AccessControlSection (`features/admin/components/access-control-section.tsx`)
+
+Lists active WhatsApp access blocks, blocks a phone, and unblocks existing entries through `/access-control/blocks`. This affects bot/code interactions only, not client portal accounts.
+
+### PlanRouteGate (`features/admin/components/plan-route-gate.tsx`)
+
+Wraps Pro-only route components. Checks `tenantPlan` + `isMasterSupportContext` from auth store. If Starter tenant admin without Master support context, renders `NotFoundPage` instead of children.
+
+### SupportBanner (`features/admin/components/support-banner.tsx`)
+
+Alert banner shown above content when Master is in support context on a Starter tenant. Informs the Master user they are viewing the full Pro surface in a Starter tenant.
+
+### NotFoundPage (`features/admin/components/not-found-page.tsx`)
+
+Simple 404 card with a link back to the admin dashboard. Used by `PlanRouteGate` when a Starter tenant admin accesses a Pro-only route.
+
+### DashboardPage (`features/admin/components/dashboard-page.tsx`)
+
+Tenant dashboard with plan-aware metrics. Displays:
+- Plan badge (Starter/Pro)
+- Common metrics: Mailbox status, enabled code services, access control count
+- Pro-only metrics: active clients, catalog services, active subscriptions, expiring soon
+- Corrects `tenantPlan` in authStore from API response if it differs
+
 ### ClientsPage (`features/admin/components/clients-page.tsx`)
 
 Client management with search, CRUD, and status toggle.
@@ -119,14 +144,15 @@ Master admin dashboard with tenant management.
 - Business table with CRUD
 - Code services dialog for global activation
 - Tenant support context switch
+- Plan selector in business form dialog
 
 ### BusinessTable (`features/master/components/business-table.tsx`)
 
-Tenant list table with actions (edit, activate/deactivate, delete, manage catalog).
+Tenant list table with actions (edit, activate/deactivate, delete, manage catalog). Shows plan badge per tenant.
 
 ### BusinessFormDialog (`features/master/components/business-form-dialog.tsx`)
 
-Create/edit tenant form dialog.
+Create/edit tenant form dialog. Includes plan selector (Starter/Pro).
 
 ### CodeServicesDialog (`features/master/components/code-services-dialog.tsx`)
 

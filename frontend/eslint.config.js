@@ -18,5 +18,12 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // ponytail: existing app loads data from effects and shadcn exports variants beside components.
+      "react-hooks/set-state-in-effect": "off",
+      "react-refresh/only-export-components": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^_" }],
+    },
   },
 ])

@@ -1,27 +1,34 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Globe, Clock, Mail, Shield, User, Lock } from "lucide-react";
+import { Ban, Bell, Globe, Clock, Mail, Shield, User, Lock } from "lucide-react";
 import { t } from "@/i18n";
+import { useAuthStore } from "@/store/auth";
 import { ReminderSettingsModal } from "../components/reminder-settings-modal";
 import { ProfileSection } from "../components/profile-section";
 import { PasswordSection } from "../components/password-section";
 import { MailboxSection } from "../components/mailbox-section";
 import { CodeServicesSection } from "../components/code-services-section";
+import { AccessControlSection } from "../components/access-control-section";
 import { LocaleSection } from "../components/locale-section";
 import { TimezoneSection } from "../components/timezone-section";
 import { getProfile, type Profile } from "../services/settings-api";
 
 export function SettingsPage() {
+  const { role, tenantPlan, isMasterSupportContext } = useAuthStore();
+  const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
+  const showProSettings = !isStarterTenantAdmin || isMasterSupportContext;
+
   const SECTIONS = [
-    { id: "reminders", title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell },
-    { id: "locale", title: t("frontend.profile.language"), description: "Choose your display language", icon: Globe },
-    { id: "timezone", title: t("frontend.subscriptions.timezone"), description: "Set your tenant timezone for subscriptions and reminders", icon: Clock },
-    { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.tenant_description"), icon: Shield },
-    { id: "mailbox", title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
-    { id: "profile", title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User },
-    { id: "password", title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock },
-  ] as const;
+    ...(showProSettings ? [{ id: "reminders" as const, title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell }] : []),
+    { id: "locale" as const, title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe },
+    ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock }] : []),
+    { id: "code-services" as const, title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield },
+    { id: "mailbox" as const, title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
+    { id: "access-control" as const, title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban },
+    { id: "profile" as const, title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User },
+    { id: "password" as const, title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock },
+  ];
 
   type SectionId = (typeof SECTIONS)[number]["id"];
   const [openSection, setOpenSection] = useState<SectionId | null>(null);
@@ -47,6 +54,27 @@ export function SettingsPage() {
       return;
     }
     setOpenSection((prev) => (prev === sectionId ? null : sectionId));
+  }
+
+  function renderSection(sectionId: SectionId) {
+    switch (sectionId) {
+      case "locale":
+        return <LocaleSection />;
+      case "timezone":
+        return <TimezoneSection />;
+      case "profile":
+        return profile ? <ProfileSection profile={profile} onProfileUpdate={setProfile} /> : null;
+      case "password":
+        return <PasswordSection />;
+      case "mailbox":
+        return <MailboxSection />;
+      case "access-control":
+        return <AccessControlSection />;
+      case "code-services":
+        return <CodeServicesSection />;
+      case "reminders":
+        return null;
+    }
   }
 
   return (
@@ -82,38 +110,9 @@ export function SettingsPage() {
                     {section.description}
                   </p>
 
-                  {/* Expanded sections */}
-                  {section.id === "locale" && isOpen && (
+                  {isOpen && (
                     <div className="mt-4">
-                      <LocaleSection />
-                    </div>
-                  )}
-                  {section.id === "timezone" && isOpen && (
-                    <div className="mt-4">
-                      <TimezoneSection />
-                    </div>
-                  )}
-                  {section.id === "profile" && isOpen && profile && (
-                    <div className="mt-4">
-                      <ProfileSection
-                        profile={profile}
-                        onProfileUpdate={setProfile}
-                      />
-                    </div>
-                  )}
-                  {section.id === "password" && isOpen && (
-                    <div className="mt-4">
-                      <PasswordSection />
-                    </div>
-                  )}
-                  {section.id === "mailbox" && isOpen && (
-                    <div className="mt-4">
-                      <MailboxSection />
-                    </div>
-                  )}
-                  {section.id === "code-services" && isOpen && (
-                    <div className="mt-4">
-                      <CodeServicesSection />
+                      {renderSection(section.id)}
                     </div>
                   )}
                 </CardContent>

@@ -92,7 +92,7 @@ export async function changePassword(payload: PasswordChange): Promise<void> {
 export interface TenantSettings {
   tenant_id: string;
   locale: string;
-  timezone: string;
+  timezone: string | null;
   created_at: string;
   updated_at: string;
 }

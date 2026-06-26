@@ -43,18 +43,20 @@ Routes defined in `src/routes/`:
 | `index.tsx` | `/` | Redirect by role | Required | any |
 | `master.tsx` → `master/dashboard.tsx` | `/master/dashboard` | `MasterDashboard` | Required | `master` |
 | `admin.tsx` → `admin/dashboard.tsx` | `/admin/dashboard` | `DashboardPage` | Required | `tenant` |
-| `admin.tsx` → `admin/clients.tsx` | `/admin/clients` | `ClientsPage` | Required | `tenant` |
-| `admin.tsx` → `admin/catalog.tsx` | `/admin/catalog` | `CatalogPage` | Required | `tenant` |
-| `admin.tsx` → `admin/subscriptions.tsx` | `/admin/subscriptions` | `SubscriptionsPage` | Required | `tenant` |
+| `admin.tsx` → `admin/clients.tsx` | `/admin/clients` | `ClientsPage` (Pro-only) | Required | `tenant` |
+| `admin.tsx` → `admin/catalog.tsx` | `/admin/catalog` | `CatalogPage` (Pro-only) | Required | `tenant` |
+| `admin.tsx` → `admin/subscriptions.tsx` | `/admin/subscriptions` | `SubscriptionsPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/settings.tsx` | `/admin/settings` | `SettingsPage` | Required | `tenant` |
 | `client.tsx` → `client/dashboard.tsx` | `/client/dashboard` | `ClientDashboard` | Required | `client` |
 | `client.tsx` → `client/profile.tsx` | `/client/profile` | `ProfilePage` | Required | `client` |
+
+Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/admin/clients`, `/admin/catalog`, `/admin/subscriptions`). Master support context bypasses this frontend gate to inspect preserved Pro data.
 
 ### Route Layouts
 
 - `__root.tsx` — Root layout: loads i18n catalog before rendering, renders `<Outlet>` + `<Toaster>` + devtools
 - `master.tsx` — Master layout with sidebar nav
-- `admin.tsx` — Admin layout with collapsible sidebar
+- `admin.tsx` — Admin layout with collapsible sidebar, plan-aware nav items, and support banner for Master support context
 - `client.tsx` — Client layout with sidebar nav
 
 ### Navigation Guard
@@ -78,10 +80,14 @@ Three Zustand stores in `src/store/`:
 
 - **State**: `token`, `refreshToken`, `user`, `activeTenantId` — persisted to `localStorage`
 - **Selectors**: `isAuthenticated`, `role`, `username`
+- **Plan-aware state**:
+  - `tenantPlan`: `starter | pro | null`, persisted from auth responses and corrected by tenant dashboard responses. This is only a UI hint; backend gates remain authoritative.
+  - `isMasterSupportContext`: true when Master is switched into a tenant (`role=master` + `activeTenantId`). Master support sees the full admin surface and a support banner.
 - **Actions**:
   - `login(username, password)` — POST to `/auth/login`, stores tokens + user, clears all caches, loads i18n catalog
   - `switchTenant(tenantId)` — Master support context switch, clears all caches
   - `logout()` — POST to `/auth/logout`, clears localStorage + all caches
+  - `setTenantPlan(plan)` — corrects `tenantPlan` from dashboard response after initial render
 
 ### `settingsStore` (`store/settings.ts`)
 
@@ -210,9 +216,10 @@ Login form with pre-auth i18n via `usePublicI18n()`. Uses translated labels for 
 ### AdminLayout (`features/admin/layout/admin-layout.tsx`)
 
 Collapsible sidebar layout for tenant admin pages:
-- Sidebar: brand, nav items (Dashboard, Clients, Catalog, Subscriptions, Settings), username, logout
+- Sidebar: brand, nav items (Dashboard, Settings always visible; Clients, Catalog, Subscriptions shown only for Pro or Master support context), username, logout
 - Mobile: header bar with brand + logout
 - Content: `<Outlet>` renders child routes
+- When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`
 
 ### MasterLayout (`features/master/layout/master-layout.tsx`)
 
@@ -223,18 +230,14 @@ Sidebar layout for master pages:
 
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 
-7 expandable card sections:
-1. **Reminder Settings** — opens modal for reminder configuration
-2. **Language** — locale selector (en/es) with save
-3. **Timezone** — searchable timezone picker with save
-4. **Code Services** — per-tenant service selection
-5. **Code Mailbox** — IMAP/OAuth configuration
-6. **Profile** — name, email, phone (identity fields only)
-7. **Password** — password change form
+Expandable card sections, plan-aware:
+- **Starter**: Language, Code Services, Code Mailbox, Control de acceso, Profile, Password
+- **Pro** (adds): Reminder Settings, Timezone
+- **Master support context**: shows the full Pro settings set even for Starter tenants
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 
-Full subscription management:
+Full subscription management (Pro-only):
 - Table with columns: client, service, email, profile, duration, dates, status badges, actions
 - Filters: status, client, service
 - Create/Edit/Renew/Reactivate/Cancel modals
@@ -242,7 +245,7 @@ Full subscription management:
 
 ### ClientsPage (`features/admin/components/clients-page.tsx`)
 
-Client management with cached data from `catalogStore`:
+Client management with cached data from `catalogStore` (Pro-only):
 - Client table with search
 - Create/Edit/Delete dialogs
 - Activate/deactivate toggle
@@ -250,7 +253,7 @@ Client management with cached data from `catalogStore`:
 
 ### CatalogPage (`features/admin/components/catalog-page.tsx`)
 
-Service + plan CRUD with cached data from `catalogStore`:
+Service + plan CRUD with cached data from `catalogStore` (Pro-only):
 - Services sidebar with create/rename/delete
 - Plans panel with create/rename/delete
 - Delete preview dialog with confirmation

@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Mail, CheckCircle2, AlertCircle, Unplug } from "lucide-react";
+import { Mail, CheckCircle2, AlertCircle, Unplug, HelpCircle } from "lucide-react";
 import { t } from "@/i18n";
 import {
   upsertMailbox,
@@ -180,6 +180,16 @@ export function MailboxSection() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-base font-medium">{t("frontend.mailbox.section_title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("frontend.mailbox.product_description")}</p>
+        </div>
+        <span title={t("frontend.mailbox.product_tooltip")}>
+          <HelpCircle className="size-4 text-muted-foreground" />
+        </span>
+      </div>
+
       {/* Current status */}
       {mailbox && (
         <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
