@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { HelpCircle } from "lucide-react";
 import { t } from "@/i18n";
 import {
   type TenantCodeService,
@@ -81,9 +82,13 @@ export function CodeServicesSection() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        {t("frontend.code_services.tenant_description")}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-base font-medium">{t("frontend.code_services.tenant_section_title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("frontend.code_services.product_description")}</p>
+        </div>
+        <span title={t("frontend.code_services.product_tooltip")}><HelpCircle className="size-4 text-muted-foreground" /></span>
+      </div>
 
       <div className="space-y-1">
         {services.map((service) => {
