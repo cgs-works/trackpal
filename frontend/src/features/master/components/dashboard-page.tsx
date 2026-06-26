@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ function getGeneratedPassword(data: unknown): string {
 
 export function DashboardPage() {
   const { switchTenant } = useAuthStore();
+  const navigate = useNavigate();
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [meta, setMeta] = useState<TenantMeta>({ total: 0, active: 0, inactive: 0 });
@@ -118,6 +120,7 @@ export function DashboardPage() {
       phone: tenant.phone || "",
       client_prefix: tenant.client_prefix || "",
       evolution_instance_name: tenant.evolution_instance_name || "",
+      plan: tenant.plan,
     });
     setFormOpen(true);
   }
@@ -130,6 +133,10 @@ export function DashboardPage() {
     e.preventDefault();
     setFormError("");
 
+    if (!form.plan) {
+      setFormError("Plan is required.");
+      return;
+    }
     if (!form.full_name || !form.email || !form.phone) {
       setFormError("Full name, email, and phone are required.");
       return;
@@ -151,6 +158,7 @@ export function DashboardPage() {
           email: form.email,
           phone: form.phone,
           evolution_instance_name: form.evolution_instance_name,
+          plan: form.plan,
         };
         if (form.client_prefix.trim()) payload.client_prefix = form.client_prefix;
         await updateTenant(form.id!, payload);
@@ -162,6 +170,7 @@ export function DashboardPage() {
           phone: form.phone,
           username: form.username,
           evolution_instance_name: form.evolution_instance_name,
+          plan: form.plan,
         };
         if (form.client_prefix.trim()) payload.client_prefix = form.client_prefix;
         if (form.password) payload.password = form.password;
@@ -212,6 +221,7 @@ export function DashboardPage() {
     try {
       await switchTenant(tenant.id);
       toast.success(`Switched to ${tenant.full_name}`);
+      navigate({ to: "/admin/dashboard" });
     } catch (error) {
       toast.error(getApiError(error, "Unable to switch business context"));
     }

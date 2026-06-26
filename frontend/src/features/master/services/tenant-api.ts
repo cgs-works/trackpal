@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import type { TenantPlan } from "@/features/auth/services/auth-api";
 
 export interface Tenant {
   id: string
@@ -10,6 +11,7 @@ export interface Tenant {
   is_active: boolean
   username: string
   created_at: string
+  plan: TenantPlan
 }
 
 export interface TenantMeta {

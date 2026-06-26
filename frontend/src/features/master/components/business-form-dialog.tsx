@@ -9,6 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { TenantPlan } from "@/features/auth/services/auth-api";
 
 export interface BusinessForm {
   id: string | null
@@ -19,6 +27,7 @@ export interface BusinessForm {
   username: string
   password: string
   evolution_instance_name: string
+  plan: TenantPlan
 }
 
 export function getEmptyForm(): BusinessForm {
@@ -31,6 +40,7 @@ export function getEmptyForm(): BusinessForm {
     username: "",
     password: "",
     evolution_instance_name: "",
+    plan: "starter",
   }
 }
 
@@ -88,6 +98,22 @@ export function BusinessFormDialog({
               value={form.full_name}
               onChange={(e) => onFormChange("full_name", e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="tenant_plan">Plan</Label>
+            <Select value={form.plan} onValueChange={(value) => onFormChange("plan", value!)}>
+              <SelectTrigger id="tenant_plan">
+                <SelectValue placeholder="Select plan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="starter">Starter</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Starter enables code lookup only. Pro enables clients, catalog, subscriptions, and reminders.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

@@ -35,6 +35,10 @@ function StatusBadge({ active }: { active: boolean }) {
   )
 }
 
+function PlanBadge({ plan }: { plan: Tenant["plan"] }) {
+  return <Badge variant={plan === "pro" ? "default" : "secondary"}>{plan === "pro" ? "Pro" : "Starter"}</Badge>;
+}
+
 export function BusinessTable({
   tenants,
   onEdit,
@@ -50,6 +54,7 @@ export function BusinessTable({
           <TableHeader>
             <TableRow>
               <TableHead>Business</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>Prefix</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Instance</TableHead>
@@ -61,6 +66,7 @@ export function BusinessTable({
             {tenants.map((tenant) => (
               <TableRow key={tenant.id} className="hover:bg-muted/50 transition-colors">
                 <TableCell className="font-medium">{tenant.full_name}</TableCell>
+                <TableCell><PlanBadge plan={tenant.plan} /></TableCell>
                 <TableCell>
                   <Badge variant="outline" className="font-mono">
                     {tenant.client_prefix || "—"}
@@ -122,7 +128,10 @@ export function BusinessTable({
                 <p className="font-medium">{tenant.full_name}</p>
                 <p className="text-sm text-muted-foreground">{tenant.email}</p>
               </div>
-              <StatusBadge active={tenant.is_active} />
+              <div className="flex items-center gap-2">
+                <PlanBadge plan={tenant.plan} />
+                <StatusBadge active={tenant.is_active} />
+              </div>
             </div>
             <div className="text-sm text-muted-foreground">
               <p>Prefix: {tenant.client_prefix || "—"}</p>
