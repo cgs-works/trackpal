@@ -22,6 +22,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.dashboard.tenant.go_subscriptions": "Ir a Suscripciones",
     "frontend.dashboard.tenant.exit_tenant": "Salir de la empresa",
     "frontend.dashboard.tenant.logout": "Cerrar sesiÃ³n",
+    "frontend.dashboard.expiring_soon": "Vencen en 7 días",
     "frontend.dashboard.client.title": "Dashboard de cliente",
     "frontend.dashboard.client.welcome": "Bienvenido, {name}",
     "frontend.dashboard.client.readonly": "Solo lectura. Cambia tu contraseÃ±a cuando lo necesites.",
