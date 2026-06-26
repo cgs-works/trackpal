@@ -4,15 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { toast } from "sonner";
-import { Mail, CheckCircle2, AlertCircle, Unplug, HelpCircle } from "lucide-react";
+import { Mail, CheckCircle2, AlertCircle, Unplug, HelpCircle, Loader2, ShieldCheck, Inbox, Server } from "lucide-react";
 import { t } from "@/i18n";
 import {
   upsertMailbox,
@@ -23,10 +17,28 @@ import {
 import { useSettingsStore } from "@/store/settings";
 
 const PROVIDER_OPTIONS = [
-  { value: "google", label: t("frontend.mailbox.connect_google") },
-  { value: "microsoft", label: t("frontend.mailbox.connect_microsoft") },
-  { value: "imap_custom", label: t("frontend.mailbox.template_custom") },
-];
+  {
+    value: "google",
+    label: t("frontend.mailbox.connect_google"),
+    description: t("frontend.mailbox.product_tooltip"),
+    icon: Inbox,
+    badge: "OAuth",
+  },
+  {
+    value: "microsoft",
+    label: t("frontend.mailbox.connect_microsoft"),
+    description: t("frontend.mailbox.product_tooltip"),
+    icon: ShieldCheck,
+    badge: "OAuth",
+  },
+  {
+    value: "imap_custom",
+    label: t("frontend.mailbox.template_custom"),
+    description: t("frontend.mailbox.template_custom_hint"),
+    icon: Server,
+    badge: null,
+  },
+] as const;
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
@@ -70,6 +82,7 @@ export function MailboxSection() {
   const [imapPassword, setImapPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const loadMailboxData = useCallback(async () => {
     setIsLoading(true);
@@ -157,6 +170,7 @@ export function MailboxSection() {
 
   // ── Disconnect ────────────────────────────────────────────
   async function handleDisconnect() {
+    setDisconnecting(true);
     try {
       await disconnectMailbox();
       useSettingsStore.getState().clearSettingsCache();
@@ -166,6 +180,8 @@ export function MailboxSection() {
       toast.error(
         err instanceof Error ? err.message : t("frontend.mailbox.error_disconnect")
       );
+    } finally {
+      setDisconnecting(false);
     }
   }
 
@@ -200,16 +216,20 @@ export function MailboxSection() {
               <p className="text-xs text-muted-foreground">
                 {mailbox.provider === "imap_custom"
                   ? `IMAP · ${mailbox.imap_host}`
-                  : mailbox.provider.charAt(0).toUpperCase() + mailbox.provider.slice(1)}
+                  : PROVIDER_OPTIONS.find((o) => o.value === mailbox.provider)?.label ?? mailbox.provider}
                 {mailbox.auth_method === "oauth" && " · OAuth"}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={mailbox.status} />
-            <Button variant="ghost" size="sm" onClick={handleDisconnect}>
-              <Unplug className="size-3.5 mr-1" />
-              {t("frontend.mailbox.disconnect")}
+            <Button variant="ghost" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+              {disconnecting ? (
+                <Loader2 className="size-3.5 mr-1 animate-spin" />
+              ) : (
+                <Unplug className="size-3.5 mr-1" />
+              )}
+              {disconnecting ? t("frontend.mailbox.disconnecting") : t("frontend.mailbox.disconnect")}
             </Button>
           </div>
         </div>
@@ -225,20 +245,40 @@ export function MailboxSection() {
       {/* Provider selection */}
       {!mailbox && (
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t("frontend.mailbox.provider")}</Label>
-            <Select value={provider} onValueChange={(v) => setProvider(v ?? "")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROVIDER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {PROVIDER_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const isSelected = provider === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setProvider(opt.value)}
+                  className={
+                    "relative flex flex-col items-center gap-2 p-4 rounded-lg border text-left transition-colors " +
+                    (isSelected
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border hover:border-muted-foreground/30")
+                  }
+                >
+                  <div className={
+                    "size-10 rounded-full flex items-center justify-center transition-colors " +
+                    (isSelected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")
+                  }>
+                    <Icon className="size-5" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{opt.label}</span>
+                  <span className="text-xs text-muted-foreground text-center leading-snug">
+                    {opt.description}
+                  </span>
+                  {opt.badge && (
+                    <span className="absolute top-2 right-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                      {opt.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* OAuth option */}
@@ -250,7 +290,7 @@ export function MailboxSection() {
                   id="oauth_email"
                   type="email"
                   required
-                  placeholder={t("frontend.subscriptions.placeholder_email")}
+                  placeholder={t("frontend.mailbox.email")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -340,8 +380,15 @@ export function MailboxSection() {
         </div>
       )}
 
+      {/* Error when mailbox exists */}
+      {error && mailbox && (
+        <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+          {error}
+        </div>
+      )}
+
       {/* Test connection */}
-      {mailbox && mailbox.auth_method === "imap_app_password" && (
+      {mailbox && (
         <div className="flex justify-end">
           <Button
             variant="outline"
