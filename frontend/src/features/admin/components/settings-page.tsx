@@ -56,6 +56,27 @@ export function SettingsPage() {
     setOpenSection((prev) => (prev === sectionId ? null : sectionId));
   }
 
+  function renderSection(sectionId: SectionId) {
+    switch (sectionId) {
+      case "locale":
+        return <LocaleSection />;
+      case "timezone":
+        return <TimezoneSection />;
+      case "profile":
+        return profile ? <ProfileSection profile={profile} onProfileUpdate={setProfile} /> : null;
+      case "password":
+        return <PasswordSection />;
+      case "mailbox":
+        return <MailboxSection />;
+      case "access-control":
+        return <AccessControlSection />;
+      case "code-services":
+        return <CodeServicesSection />;
+      case "reminders":
+        return null;
+    }
+  }
+
   return (
     <div className="flex-1 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -89,43 +110,9 @@ export function SettingsPage() {
                     {section.description}
                   </p>
 
-                  {/* Expanded sections */}
-                  {section.id === "locale" && isOpen && (
+                  {isOpen && (
                     <div className="mt-4">
-                      <LocaleSection />
-                    </div>
-                  )}
-                  {section.id === "timezone" && isOpen && (
-                    <div className="mt-4">
-                      <TimezoneSection />
-                    </div>
-                  )}
-                  {section.id === "profile" && isOpen && profile && (
-                    <div className="mt-4">
-                      <ProfileSection
-                        profile={profile}
-                        onProfileUpdate={setProfile}
-                      />
-                    </div>
-                  )}
-                  {section.id === "password" && isOpen && (
-                    <div className="mt-4">
-                      <PasswordSection />
-                    </div>
-                  )}
-                  {section.id === "mailbox" && isOpen && (
-                    <div className="mt-4">
-                      <MailboxSection />
-                    </div>
-                  )}
-                  {section.id === "access-control" && isOpen && (
-                    <div className="mt-4">
-                      <AccessControlSection />
-                    </div>
-                  )}
-                  {section.id === "code-services" && isOpen && (
-                    <div className="mt-4">
-                      <CodeServicesSection />
+                      {renderSection(section.id)}
                     </div>
                   )}
                 </CardContent>

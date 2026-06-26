@@ -58,6 +58,7 @@ export function DashboardPage() {
   }
 
   const isPro = dashboard.tenant_plan === "pro";
+  const planLabel = isPro ? "Pro" : "Starter";
 
   return (
     <div className="flex-1 p-6">
@@ -66,7 +67,7 @@ export function DashboardPage() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">{t("frontend.dashboard.tenant.title")}</h1>
-              <Badge variant={isPro ? "default" : "secondary"}>{isPro ? "Pro" : "Starter"}</Badge>
+              <Badge variant={isPro ? "default" : "secondary"}>{planLabel}</Badge>
             </div>
             <p className="text-muted-foreground">{t("frontend.dashboard.tenant.welcome", { name: username || "Admin" })}</p>
           </div>
@@ -77,7 +78,7 @@ export function DashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <MetricCard title={t("frontend.dashboard.plan")} value={isPro ? "Pro" : "Starter"} icon={CheckCircle2} />
+          <MetricCard title={t("frontend.dashboard.plan")} value={planLabel} icon={CheckCircle2} />
           <MetricCard title={t("frontend.mailbox.section_title")} value={dashboard.mailbox_status} icon={Mail} />
           <MetricCard title={t("frontend.code_services.tenant_section_title")} value={dashboard.enabled_code_services.length} icon={Package} />
           <MetricCard title={t("frontend.access_control.section_title")} value={dashboard.access_control_count} icon={Ban} />

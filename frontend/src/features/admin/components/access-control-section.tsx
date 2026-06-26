@@ -20,6 +20,7 @@ export function AccessControlSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const trimmedPhone = phone.trim();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,7 +39,6 @@ export function AccessControlSection() {
 
   async function handleBlock(e: React.FormEvent) {
     e.preventDefault();
-    const trimmedPhone = phone.trim();
     if (!trimmedPhone) return;
     setSaving(true);
     try {
@@ -78,7 +78,7 @@ export function AccessControlSection() {
             placeholder={t("frontend.access_control.phone_placeholder")}
           />
         </div>
-        <Button type="submit" disabled={saving || !phone.trim()}>
+        <Button type="submit" disabled={saving || !trimmedPhone}>
           <Ban data-icon="inline-start" />
           {t("frontend.access_control.block")}
         </Button>

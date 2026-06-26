@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/auth";
+import { getApiError } from "@/lib/api-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,17 +24,6 @@ import {
 import { Plus, Search } from "lucide-react";
 
 /* ── Helpers ────────────────────────────────────────────────────── */
-
-function getApiError(error: unknown, fallback: string): string {
-  const err = error as {
-    response?: { data?: { detail?: string | Array<{ msg?: string }> } }
-  }
-  const detail = err.response?.data?.detail
-  if (Array.isArray(detail)) {
-    return detail.map((item) => item.msg || String(item)).join(", ")
-  }
-  return (typeof detail === "string" ? detail : null) || fallback
-}
 
 function getGeneratedPassword(data: unknown): string {
   const d = data as Record<string, unknown>
@@ -71,12 +61,13 @@ export function DashboardPage() {
     setIsLoading(true);
     try {
       const res = await fetchTenants();
-      setTenants(res.data || []);
+      const data = res.data || [];
+      setTenants(data);
       setMeta(
         res.meta || {
-          total: (res.data || []).length,
-          active: (res.data || []).filter((t) => t.is_active).length,
-          inactive: (res.data || []).filter((t) => !t.is_active).length,
+          total: data.length,
+          active: data.filter((tenant) => tenant.is_active).length,
+          inactive: data.filter((tenant) => !tenant.is_active).length,
         }
       );
     } catch (error) {

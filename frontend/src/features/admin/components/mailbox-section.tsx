@@ -185,7 +185,9 @@ export function MailboxSection() {
           <h2 className="text-base font-medium">{t("frontend.mailbox.section_title")}</h2>
           <p className="text-sm text-muted-foreground">{t("frontend.mailbox.product_description")}</p>
         </div>
-        <span title={t("frontend.mailbox.product_tooltip")}><HelpCircle className="size-4 text-muted-foreground" /></span>
+        <span title={t("frontend.mailbox.product_tooltip")}>
+          <HelpCircle className="size-4 text-muted-foreground" />
+        </span>
       </div>
 
       {/* Current status */}
