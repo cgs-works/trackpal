@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,14 @@ import { useAuthStore } from "@/store/auth";
 import { t } from "@/i18n";
 import { getTenantDashboard, type TenantDashboardResponse } from "../services/dashboard-api";
 import { Ban, CheckCircle2, Database, LogOut, Mail, Package, Users } from "lucide-react";
+
+function getApiError(error: unknown, fallback: string): string {
+  const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
+  const detail = err.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg || String(item)).join(", ");
+  return error instanceof Error ? error.message : fallback;
+}
 
 function MetricCard({ title, value, icon: Icon }: { title: string; value: string | number; icon: typeof Users }) {
   return (
@@ -35,6 +44,8 @@ export function DashboardPage() {
       if (data.tenant_plan !== tenantPlan) {
         setTenantPlan(data.tenant_plan);
       }
+    } catch (error) {
+      toast.error(getApiError(error, t("frontend.dashboard.error_load")));
     } finally {
       setLoading(false);
     }
@@ -44,6 +55,7 @@ export function DashboardPage() {
     if (isAuthenticated) load();
   }, [isAuthenticated, load]);
 
+  // ponytail: master needs access to view tenant dashboards in support mode
   if (!isAuthenticated || (role !== "tenant" && role !== "master")) {
     return <Navigate to="/login" replace />;
   }
