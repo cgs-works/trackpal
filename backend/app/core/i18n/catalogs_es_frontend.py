@@ -252,6 +252,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.connect_google": "Conectar Gmail",
     "frontend.mailbox.connect_microsoft": "Conectar Outlook",
     "frontend.mailbox.connect_oauth": "Conectar con OAuth",
+    "frontend.mailbox.provider_label": "Proveedor:",
     "frontend.mailbox.provider_google": "Gmail",
     "frontend.mailbox.provider_microsoft": "Outlook",
     "frontend.mailbox.provider_imap_custom": "IMAP personalizado",

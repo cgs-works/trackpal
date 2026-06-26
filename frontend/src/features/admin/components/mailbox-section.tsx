@@ -243,7 +243,7 @@ export function MailboxSection() {
               <p className="text-xs text-muted-foreground">
                 {mailbox.provider === "imap_custom"
                   ? `IMAP · ${mailbox.imap_host}`
-                  : `Proveedor: ${providerDisplayNames[mailbox.provider] ?? mailbox.provider}`}
+                  : `${t("frontend.mailbox.provider_label")} ${providerDisplayNames[mailbox.provider] ?? mailbox.provider}`}
                 {mailbox.auth_method === "oauth" && " · OAuth"}
               </p>
             </div>
