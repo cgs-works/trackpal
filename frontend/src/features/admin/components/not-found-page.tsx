@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { t } from "@/i18n";
 
 export function NotFoundPage() {
   return (
@@ -10,9 +11,9 @@ export function NotFoundPage() {
           <CardTitle>404</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">This page is not available.</p>
+          <p className="text-sm text-muted-foreground">{t("frontend.not_found.description")}</p>
           <Link to="/admin/dashboard" className={buttonVariants()}>
-            Go to dashboard
+            {t("frontend.not_found.go_dashboard")}
           </Link>
         </CardContent>
       </Card>

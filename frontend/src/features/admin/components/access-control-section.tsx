@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { t } from "@/i18n";
+import { getApiError } from "@/lib/api-errors";
 import {
   createAccessBlock,
   deleteAccessBlock,
@@ -13,19 +14,12 @@ import {
   type AccessControlBlock,
 } from "../services/access-control-api";
 
-function getApiError(error: unknown, fallback: string): string {
-  const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
-  const detail = err.response?.data?.detail;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) return detail.map((item) => item.msg || String(item)).join(", ");
-  return error instanceof Error ? error.message : fallback;
-}
-
 export function AccessControlSection() {
   const [blocks, setBlocks] = useState<AccessControlBlock[]>([]);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,10 +38,11 @@ export function AccessControlSection() {
 
   async function handleBlock(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone.trim()) return;
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone) return;
     setSaving(true);
     try {
-      await createAccessBlock(phone);
+      await createAccessBlock(trimmedPhone);
       setPhone("");
       await load();
       toast.success(t("frontend.access_control.saved"));
@@ -59,7 +54,7 @@ export function AccessControlSection() {
   }
 
   async function handleUnblock(id: string) {
-    setSaving(true);
+    setUnblockingId(id);
     try {
       await deleteAccessBlock(id);
       await load();
@@ -67,7 +62,7 @@ export function AccessControlSection() {
     } catch (error) {
       toast.error(getApiError(error, t("frontend.access_control.error_save")));
     } finally {
-      setSaving(false);
+      setUnblockingId(null);
     }
   }
 
@@ -100,7 +95,7 @@ export function AccessControlSection() {
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">{block.phone || block.whatsapp_lid || "—"}</Badge>
               </div>
-              <Button variant="ghost" size="sm" disabled={saving} onClick={() => handleUnblock(block.id)}>
+              <Button variant="ghost" size="sm" disabled={unblockingId === block.id} onClick={() => handleUnblock(block.id)}>
                 <Trash2 data-icon="inline-start" />
                 {t("frontend.access_control.unblock")}
               </Button>

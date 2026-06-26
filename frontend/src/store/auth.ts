@@ -28,13 +28,17 @@ interface AuthState {
   setTenantPlan: (plan: TenantPlan | null) => void
 }
 
+function parseTenantPlan(value: string | null): TenantPlan | null {
+  return value === "starter" || value === "pro" ? value : null;
+}
+
 function loadFromStorage() {
   return {
     token: localStorage.getItem("token"),
     refreshToken: localStorage.getItem("refreshToken"),
     user: JSON.parse(localStorage.getItem("user") || "null") as UserInfo | null,
     activeTenantId: localStorage.getItem("activeTenantId"),
-    tenantPlan: localStorage.getItem("tenantPlan") as TenantPlan | null,
+    tenantPlan: parseTenantPlan(localStorage.getItem("tenantPlan")),
   };
 }
 
@@ -142,6 +146,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setTenantPlan: (plan) => {
+    // ponytail: support context depends on role + tenant, not plan.
     if (plan) {
       localStorage.setItem("tenantPlan", plan);
     } else {

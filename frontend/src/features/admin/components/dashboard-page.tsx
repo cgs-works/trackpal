@@ -7,15 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/store/auth";
 import { t } from "@/i18n";
 import { getTenantDashboard, type TenantDashboardResponse } from "../services/dashboard-api";
+import { getApiError } from "@/lib/api-errors";
 import { Ban, CheckCircle2, Database, LogOut, Mail, Package, Users } from "lucide-react";
-
-function getApiError(error: unknown, fallback: string): string {
-  const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
-  const detail = err.response?.data?.detail;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) return detail.map((item) => item.msg || String(item)).join(", ");
-  return error instanceof Error ? error.message : fallback;
-}
 
 function MetricCard({ title, value, icon: Icon }: { title: string; value: string | number; icon: typeof Users }) {
   return (
@@ -32,7 +25,7 @@ function MetricCard({ title, value, icon: Icon }: { title: string; value: string
 }
 
 export function DashboardPage() {
-  const { isAuthenticated, role, username, logout, tenantPlan, setTenantPlan } = useAuthStore();
+  const { isAuthenticated, role, username, logout, setTenantPlan } = useAuthStore();
   const [dashboard, setDashboard] = useState<TenantDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +34,7 @@ export function DashboardPage() {
     try {
       const data = await getTenantDashboard();
       setDashboard(data);
-      if (data.tenant_plan !== tenantPlan) {
+      if (data.tenant_plan !== useAuthStore.getState().tenantPlan) {
         setTenantPlan(data.tenant_plan);
       }
     } catch (error) {
@@ -49,7 +42,7 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [setTenantPlan, tenantPlan]);
+  }, [setTenantPlan]);
 
   useEffect(() => {
     if (isAuthenticated) load();
@@ -61,7 +54,7 @@ export function DashboardPage() {
   }
 
   if (loading || !dashboard) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{t("frontend.dashboard.loading")}</div>;
   }
 
   const isPro = dashboard.tenant_plan === "pro";
@@ -84,7 +77,7 @@ export function DashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <MetricCard title="Plan" value={isPro ? "Pro" : "Starter"} icon={CheckCircle2} />
+          <MetricCard title={t("frontend.dashboard.plan")} value={isPro ? "Pro" : "Starter"} icon={CheckCircle2} />
           <MetricCard title={t("frontend.mailbox.section_title")} value={dashboard.mailbox_status} icon={Mail} />
           <MetricCard title={t("frontend.code_services.tenant_section_title")} value={dashboard.enabled_code_services.length} icon={Package} />
           <MetricCard title={t("frontend.access_control.section_title")} value={dashboard.access_control_count} icon={Ban} />

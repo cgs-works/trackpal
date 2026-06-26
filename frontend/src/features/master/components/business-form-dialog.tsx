@@ -102,7 +102,7 @@ export function BusinessFormDialog({
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="tenant_plan">Plan</Label>
-            <Select value={form.plan} onValueChange={(value) => onFormChange("plan", value!)}>
+            <Select value={form.plan} onValueChange={(value) => { if (value) onFormChange("plan", value); }}>
               <SelectTrigger id="tenant_plan">
                 <SelectValue placeholder="Select plan" />
               </SelectTrigger>

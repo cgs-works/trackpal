@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Globe, Clock, Mail, Shield, User, Lock } from "lucide-react";
+import { Ban, Bell, Globe, Clock, Mail, Shield, User, Lock } from "lucide-react";
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
 import { ReminderSettingsModal } from "../components/reminder-settings-modal";
@@ -22,10 +22,10 @@ export function SettingsPage() {
   const SECTIONS = [
     ...(showProSettings ? [{ id: "reminders" as const, title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell }] : []),
     { id: "locale" as const, title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe },
-    ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: "Set your tenant timezone for subscriptions and reminders", icon: Clock }] : []),
-    { id: "code-services" as const, title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.tenant_description"), icon: Shield },
+    ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock }] : []),
+    { id: "code-services" as const, title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield },
     { id: "mailbox" as const, title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
-    { id: "access-control" as const, title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Shield },
+    { id: "access-control" as const, title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban },
     { id: "profile" as const, title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User },
     { id: "password" as const, title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock },
   ];
