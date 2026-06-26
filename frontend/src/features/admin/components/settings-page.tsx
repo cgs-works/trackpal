@@ -9,6 +9,7 @@ import { ProfileSection } from "../components/profile-section";
 import { PasswordSection } from "../components/password-section";
 import { MailboxSection } from "../components/mailbox-section";
 import { CodeServicesSection } from "../components/code-services-section";
+import { AccessControlSection } from "../components/access-control-section";
 import { LocaleSection } from "../components/locale-section";
 import { TimezoneSection } from "../components/timezone-section";
 import { getProfile, type Profile } from "../services/settings-api";
@@ -24,6 +25,7 @@ export function SettingsPage() {
     ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: "Set your tenant timezone for subscriptions and reminders", icon: Clock }] : []),
     { id: "code-services" as const, title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.tenant_description"), icon: Shield },
     { id: "mailbox" as const, title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
+    { id: "access-control" as const, title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Shield },
     { id: "profile" as const, title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User },
     { id: "password" as const, title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock },
   ];
@@ -114,6 +116,11 @@ export function SettingsPage() {
                   {section.id === "mailbox" && isOpen && (
                     <div className="mt-4">
                       <MailboxSection />
+                    </div>
+                  )}
+                  {section.id === "access-control" && isOpen && (
+                    <div className="mt-4">
+                      <AccessControlSection />
                     </div>
                   )}
                   {section.id === "code-services" && isOpen && (

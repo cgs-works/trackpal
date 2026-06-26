@@ -392,4 +392,6 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.access_control.unblock": "Unblock",
     "frontend.access_control.empty": "No blocked identities.",
     "frontend.access_control.saved": "Access control updated.",
+    "frontend.access_control.error_load": "Unable to load access control blocks.",
+    "frontend.access_control.error_save": "Unable to update access control.",
 }
