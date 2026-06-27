@@ -29,7 +29,12 @@ async def upsert_public_api_key(
 
 @router.post("/regenerate", response_model=PublicApiKeyResponse)
 async def regenerate_public_api_key(db: DbDep, tenant_id: ProTenantId):
-    return await public_api_key_service.regenerate(db, tenant_id)
+    try:
+        return await public_api_key_service.regenerate(db, tenant_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

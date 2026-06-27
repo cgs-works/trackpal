@@ -33,6 +33,11 @@ export function PublicApiSection() {
   const [revoking, setRevoking] = useState(false);
 
   const load = useCallback(async () => {
+    if (publicApiKeyLoaded) {
+      setOriginsText((publicApiKey?.allowed_origins || []).join("\n"));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const config = await loadPublicApiKey();
@@ -42,7 +47,7 @@ export function PublicApiSection() {
     } finally {
       setLoading(false);
     }
-  }, [loadPublicApiKey]);
+  }, [loadPublicApiKey, publicApiKey, publicApiKeyLoaded]);
 
   useEffect(() => {
     load();
@@ -96,8 +101,12 @@ export function PublicApiSection() {
 
   async function handleCopy() {
     if (!publicApiKey?.api_key) return;
-    await navigator.clipboard.writeText(publicApiKey.api_key);
-    toast.success(t("frontend.public_api.copied"));
+    try {
+      await navigator.clipboard.writeText(publicApiKey.api_key);
+      toast.success(t("frontend.public_api.copied"));
+    } catch (error) {
+      toast.error(getApiError(error, t("frontend.public_api.error_load")));
+    }
   }
 
   if (loading) {

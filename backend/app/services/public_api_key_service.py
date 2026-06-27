@@ -4,6 +4,7 @@ import secrets
 from urllib.parse import urlparse
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import restore_rls_context
@@ -72,15 +73,25 @@ class PublicApiKeyService:
         allowed_origins = normalize_allowed_origins(origins)
         row = await tenant_api_keys_repository.get_by_tenant_id(db, tenant_id)
         if row is None:
-            row = TenantApiKey(
-                tenant_id=tenant_id,
-                api_key=_new_api_key(),
-                allowed_origins=allowed_origins,
-            )
-            db.add(row)
+            try:
+                row = TenantApiKey(
+                    tenant_id=tenant_id,
+                    api_key=_new_api_key(),
+                    allowed_origins=allowed_origins,
+                )
+                db.add(row)
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
+                row = await tenant_api_keys_repository.get_by_tenant_id(
+                    db, tenant_id
+                )
+                # ponytail: row is guaranteed to exist after the conflict
+                row.allowed_origins = allowed_origins
+                await db.commit()
         else:
             row.allowed_origins = allowed_origins
-        await db.commit()
+            await db.commit()
         await restore_rls_context(db)
         await db.refresh(row)
         return row
@@ -88,12 +99,8 @@ class PublicApiKeyService:
     async def regenerate(self, db: AsyncSession, tenant_id: UUID) -> TenantApiKey:
         row = await tenant_api_keys_repository.get_by_tenant_id(db, tenant_id)
         if row is None:
-            row = TenantApiKey(
-                tenant_id=tenant_id, api_key=_new_api_key(), allowed_origins=[]
-            )
-            db.add(row)
-        else:
-            row.api_key = _new_api_key()
+            raise ValueError("Public API key not found")
+        row.api_key = _new_api_key()
         await db.commit()
         await restore_rls_context(db)
         await db.refresh(row)

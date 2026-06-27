@@ -29,10 +29,8 @@ describe("PublicApiSection", () => {
 
   it("loads and shows the existing key and origins", async () => {
     useSettingsStore.setState({ publicApiKey: config, publicApiKeyLoaded: true });
-    const load = vi.spyOn(useSettingsStore.getState(), "loadPublicApiKey").mockResolvedValueOnce(config);
     render(<PublicApiSection />);
 
-    expect(load).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("tpk_abc")).toBeInTheDocument();
     expect(screen.getByDisplayValue("https://example.com")).toBeInTheDocument();
     expect(screen.getByText(/fetch/)).toBeInTheDocument();

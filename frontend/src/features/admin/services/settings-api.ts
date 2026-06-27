@@ -188,10 +188,6 @@ export interface PublicApiKeyConfig {
   updated_at: string;
 }
 
-export interface PublicApiKeyUpdate {
-  allowed_origins: string[];
-}
-
 export async function getPublicApiKey(): Promise<PublicApiKeyConfig | null> {
   const { data } = await api.get("/public-api-key");
   return data;

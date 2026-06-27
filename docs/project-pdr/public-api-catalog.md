@@ -1,6 +1,6 @@
 # Public API Catalog
 
-Public API Catalog is a planned Pro-only feature tracked by GitHub Issue #73. It lets tenants publish their TrackPal catalog to tenant-owned browser frontends without duplicating service and plan names outside TrackPal.
+Public API Catalog is an implemented Pro-only feature tracked by GitHub Issue #73. It lets tenants publish their TrackPal catalog to tenant-owned browser frontends without duplicating service and plan names outside TrackPal.
 
 ## Product Rules
 
