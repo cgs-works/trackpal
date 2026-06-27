@@ -31,6 +31,27 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
 | `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
 | `/api/v1/access-control/*` | `app.api.v1.endpoints.access_control` | access-control | JWT + active tenant context |
+| `/api/v1/public/catalog` (planned) | Public API Catalog endpoint | public-catalog | Public API Key + exact `Origin` |
+| `/api/v1/public-api-key/*` (planned) | Public API Key management | public-api-key | JWT + Pro tenant or master support context |
+
+### Public API Catalog
+
+Issue #73 added a Pro-only public catalog surface for tenant-owned browser frontends.
+
+- `GET /api/v1/public/catalog?api_key=<tenant_public_api_key>` returns services with nested plans, limited to `id` and `name`.
+- The request must include an `Origin` header that exactly matches one origin registered in `tenant_api_keys.allowed_origins`.
+- Missing `Origin`, missing/invalid key, unregistered origin, inactive tenant, or Starter tenant returns 403.
+- Successful responses set `Access-Control-Allow-Origin` to the matched origin and `Vary: Origin`.
+- The endpoint does not use global CORS middleware and does not add app-level rate limiting.
+
+Authenticated management endpoints:
+
+- `GET /api/v1/public-api-key` returns the current config or `null`.
+- `PUT /api/v1/public-api-key` creates or updates `{ "allowed_origins": ["https://example.com"] }` without rotating the key.
+- `POST /api/v1/public-api-key/regenerate` rotates the key and preserves origins.
+- `DELETE /api/v1/public-api-key` revokes the key and removes the row.
+
+Production must configure Cloudflare rate limiting/WAF for `GET /api/v1/public/catalog` before the feature is advertised broadly.
 
 ### Code-Services Endpoints (master + tenant)
 
@@ -157,6 +178,7 @@ Note: Timezone is no longer part of subscription-settings. Timezone is managed v
 Tenant package is stored on `tenants.plan` with allowed values `starter` and `pro`. Backend gates read this database value. Frontend `tenant_plan` is only a rendering hint.
 
 - Starter tenant admins receive HTTP 404 for Pro-only modules: `/clients`, `/catalog/*`, `/subscriptions/*`, `/subscription-settings`.
+- Public API Catalog is Pro-only; downgraded Starter tenants receive 403 on public catalog calls while key configuration is preserved.
 - Master users switched into a Starter tenant bypass Pro gates for support.
 - Starter can access profile, locale, `/tenant/mailbox/*`, `/code-services/tenants/current`, `/access-control/blocks`, dashboard, and WhatsApp code lookup.
 

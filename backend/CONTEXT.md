@@ -20,7 +20,10 @@
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
 | **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant y Client. |
 | **Client Context Shortcut** | Sesión de WhatsApp que permite al Tenant gestionar clientes remotos desde su propia consola. |
-| **Catalog** | Servicios y planes que un tenant ofrece. Cada servicio tiene planes con duración y precio. |
+| **Catalog** | Servicios y planes que un tenant ofrece. Cada servicio tiene planes identificables por nombre; precios, disponibilidad y metadata no forman parte del catálogo v1. |
+| **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados y no permite mutaciones. |
+| **Public API Key** | Credencial tenant-scoped que habilita el Public API Catalog. Es visible para el tenant, revocable y regenerable; una key activa representa una integración pública de catálogo. Implementation table: `tenant_api_keys`. One row per tenant, plain-text `api_key`, JSON `allowed_origins`. |
+| **Allowed Origin** | Origin web exacto registrado por el tenant para usar su Public API Key desde navegador. Incluye scheme, host y puerto opcional; no representa un dominio wildcard ni acceso server-to-server. |
 | **Subscription** | Vincula un cliente, servicio y plan. Tiene credenciales encriptadas (Fernet), fechas de inicio/fin y estados (active/expired/cancelled). |
 | **Mailbox** | Conexión IMAP/OAuth (Google/Microsoft) de un tenant para extracción automática de códigos de acceso a streaming. |
 | **Mail Lookup Job** | Trabajo asíncrono de extracción de código: pending → processing → completed/failed/timeout. |
@@ -39,6 +42,7 @@
 | **BlockedClient** | Identidad de WhatsApp bloqueada. Model: `BlockedClient`. Al bloquear, se cancelan sesiones activas de código y jobs pendientes/processing para esa identidad. |
 | **Downgrade Effects** | Efectos secundarios al cambiar plan de Pro a Starter: revocar refresh sessions de clients, limpiar sesión admin Redis, intentar cerrar Evolution session (best-effort). |
 | **Master Support Context** | Master con `active_tenant_id` seteado. Ve UI completa incluyendo datos Pro preservados, con banner de soporte visible. |
+| **Public API Access** | Derecho Pro-only que permite usar y configurar el Public API Catalog. En downgrade a Starter se pausa el acceso público, pero se conserva la configuración para una futura reactivación. |
 
 ### Comportamiento por plan
 
@@ -46,6 +50,8 @@
 |---------|---------|-----|
 | Client login | 401 genérico (datos preservados) | Login normal |
 | Clientes, Catálogo, Suscripciones | 404 (bloqueado por Pro Gate) | Accesible |
+| Public API Catalog | 403 pausado si existe configuración preservada | Accesible con Public API Key + Allowed Origin |
+| Public API Key (Settings) | Oculto y bloqueado para tenant admin | Visible y gestionable |
 | Timezone (Settings) | Oculto y bloqueado para tenant admin | Visible y editable |
 | Reminder settings | Oculto | Visible |
 | Subscription jobs/reminders/cleanup | Ignorados completamente | Procesados |

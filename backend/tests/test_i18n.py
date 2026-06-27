@@ -403,3 +403,35 @@ async def test_frontend_catalog_new_terminology():
     assert en_client_tenant != "Tenant", (
         f"EN client.tenant should not be 'Tenant', got: {en_client_tenant}"
     )
+
+
+# ── Public API Catalog frontend i18n keys ──────────────────────────────────
+
+
+async def test_public_api_frontend_i18n_keys_exist():
+    from app.core.i18n import t
+
+    keys = [
+        "frontend.public_api.section_title",
+        "frontend.public_api.description",
+        "frontend.public_api.not_created",
+        "frontend.public_api.read_only",
+        "frontend.public_api.copy",
+        "frontend.public_api.copied",
+        "frontend.public_api.origins_label",
+        "frontend.public_api.origins_help",
+        "frontend.public_api.save",
+        "frontend.public_api.saved",
+        "frontend.public_api.regenerate",
+        "frontend.public_api.regenerated",
+        "frontend.public_api.revoke",
+        "frontend.public_api.revoked",
+        "frontend.public_api.example_title",
+        "frontend.public_api.error_load",
+        "frontend.public_api.error_save",
+        "frontend.public_api.error_regenerate",
+        "frontend.public_api.error_revoke",
+    ]
+    for locale in ("en", "es"):
+        for key in keys:
+            assert t(locale, key) != key

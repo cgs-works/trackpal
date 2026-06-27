@@ -52,3 +52,4 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
 | [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone/LID handling, validation, and deployment constraints |
+| [Public API Catalog](project-pdr/public-api-catalog.md) | Planned Pro-only public catalog API rules, UI scope, and Cloudflare rate-limit requirement |

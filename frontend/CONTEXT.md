@@ -20,7 +20,9 @@
 | **Client Layout** | Layout con sidebar para cliente final. Navegación: Dashboard, Profile. |
 | **Auth Store** | Zustand store: token, refreshToken, user, activeTenantId, tenantPlan. Persistido en localStorage. `tenantPlan` es UI hint corregido por dashboard responses. |
 | **Catalog Store** | Cache de servicios, planes y clientes con dedup de requests en vuelo. |
-| **Settings Store** | Cache de configuración de tenant, recordatorios, timezones y mailbox. |
+| **Settings Store** | Cache de configuración de tenant, recordatorios, timezones, mailbox y Public API Key. |
+| **Public API Section** | Sección Pro-only dentro de Settings donde el tenant gestiona su Public API Key y Allowed Origins para publicar el catálogo en frontends externos. The section calls `/public-api-key` management endpoints, stores state in `Settings Store`, and is hidden for Starter tenant admins outside Master support context. |
+| **Allowed Origin** | Origin web exacto permitido para usar la Public API Key desde navegador. Se muestra y edita como URL completa con scheme, host y puerto opcional. |
 | **Public I18n** | Hook `usePublicI18n()` para pre-auth (login). Catálogo local en `public.json`. |
 | **Backend I18n** | Catálogo servido via `GET /api/v1/i18n/catalog`. Función `t(key, params?)`. |
 | **Path Alias** | `@/` mapea a `src/` (configurado en tsconfig + vite). |
@@ -111,8 +113,10 @@ Axios singleton en `src/lib/api.ts`:
 | **SupportBanner** | Alert visible cuando Master está en contexto de soporte (switched a un Starter tenant). Indica que la UI completa es visible solo para soporte. |
 | **Master Support Context** | `role === "master" && activeTenantId !== null`. Master ve UI admin completa + banner, sin restricciones de plan. |
 | **AccessControlSection** | Sección en Settings para listar/bloquear/desbloquear identidades de WhatsApp. Disponible tanto para Starter como Pro. |
+| **PublicApiSection** | Sección en Settings para crear, mostrar, regenerar y revocar la Public API Key, y para editar Allowed Origins. Disponible para Pro y Master Support Context. |
 
 ### Product Labels (UI)
 - **Plataformas habilitadas**: code services seleccionados por tenant
 - **Correo central de búsqueda**: mailbox del tenant para extracción de códigos
 - **Control de acceso**: bloqueo/desbloqueo de identidades WhatsApp
+- **API pública de catálogo**: publicación read-only del catálogo para sitios externos
