@@ -14,11 +14,17 @@ async def get_public_api_key(db: DbDep, tenant_id: ProTenantId):
 
 
 @router.put("", response_model=PublicApiKeyResponse)
-async def upsert_public_api_key(payload: PublicApiKeyUpdate, db: DbDep, tenant_id: ProTenantId):
+async def upsert_public_api_key(
+    payload: PublicApiKeyUpdate, db: DbDep, tenant_id: ProTenantId
+):
     try:
-        return await public_api_key_service.upsert_origins(db, tenant_id, payload.allowed_origins)
+        return await public_api_key_service.upsert_origins(
+            db, tenant_id, payload.allowed_origins
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
 
 
 @router.post("/regenerate", response_model=PublicApiKeyResponse)

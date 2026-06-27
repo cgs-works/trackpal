@@ -22,12 +22,24 @@ def upgrade() -> None:
         sa.Column("tenant_id", sa.Uuid(), nullable=False),
         sa.Column("api_key", sa.String(length=128), nullable=False),
         sa.Column("allowed_origins", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("tenant_id"),
     )
-    op.create_index("ix_tenant_api_keys_api_key", "tenant_api_keys", ["api_key"], unique=True)
+    op.create_index(
+        "ix_tenant_api_keys_api_key", "tenant_api_keys", ["api_key"], unique=True
+    )
 
 
 def downgrade() -> None:

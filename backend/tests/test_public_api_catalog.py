@@ -8,7 +8,9 @@ from app.models import Plan, Service, Tenant, TenantApiKey, User
 pytestmark = pytest.mark.asyncio
 
 
-async def _login(client, username: str = "tenant", password: str = "tenant-password") -> dict[str, str]:
+async def _login(
+    client, username: str = "tenant", password: str = "tenant-password"
+) -> dict[str, str]:
     response = await client.post(
         "/api/v1/auth/login",
         json={"username": username, "password": password},
@@ -18,7 +20,9 @@ async def _login(client, username: str = "tenant", password: str = "tenant-passw
 
 
 async def _tenant_for_user(db_session, user: User) -> Tenant:
-    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == user.id))
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == user.id)
+    )
     return result.scalar_one()
 
 
@@ -52,7 +56,9 @@ async def _seed_catalog(db_session, tenant_id):
     return service, basic, premium
 
 
-async def test_public_api_key_management_lifecycle(client, active_tenant_user, db_session):
+async def test_public_api_key_management_lifecycle(
+    client, active_tenant_user, db_session
+):
     headers = await _login(client)
 
     empty = await client.get("/api/v1/public-api-key", headers=headers)
@@ -83,7 +89,9 @@ async def test_public_api_key_management_lifecycle(client, active_tenant_user, d
     assert updated.json()["api_key"] == body["api_key"]
     assert updated.json()["allowed_origins"] == ["https://docs.example.com"]
 
-    regenerated = await client.post("/api/v1/public-api-key/regenerate", headers=headers)
+    regenerated = await client.post(
+        "/api/v1/public-api-key/regenerate", headers=headers
+    )
     assert regenerated.status_code == 200, regenerated.text
     assert regenerated.json()["api_key"] != body["api_key"]
     assert regenerated.json()["allowed_origins"] == ["https://docs.example.com"]
@@ -107,7 +115,9 @@ async def test_public_api_key_management_lifecycle(client, active_tenant_user, d
         "https://example.com?x=1",
     ],
 )
-async def test_public_api_key_management_rejects_invalid_origins(client, active_tenant_user, origin: str):
+async def test_public_api_key_management_rejects_invalid_origins(
+    client, active_tenant_user, origin: str
+):
     headers = await _login(client)
     response = await client.put(
         "/api/v1/public-api-key",
@@ -117,7 +127,9 @@ async def test_public_api_key_management_rejects_invalid_origins(client, active_
     assert response.status_code == 422, response.text
 
 
-async def test_starter_tenant_cannot_manage_public_api_key(client, auth_headers, active_tenant_user):
+async def test_starter_tenant_cannot_manage_public_api_key(
+    client, auth_headers, active_tenant_user
+):
     await _make_starter(client, auth_headers, active_tenant_user)
     headers = await _login(client)
 

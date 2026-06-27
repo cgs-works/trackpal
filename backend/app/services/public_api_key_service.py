@@ -9,8 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import restore_rls_context
 from app.core.tenant_plan import TENANT_PLAN_PRO
 from app.models import TenantApiKey
-from app.repositories import catalog_repository, tenant_api_keys_repository, tenants_repository
-from app.schemas.public_api_key import PublicCatalogPlan, PublicCatalogResponse, PublicCatalogService
+from app.repositories import (
+    catalog_repository,
+    tenant_api_keys_repository,
+    tenants_repository,
+)
+from app.schemas.public_api_key import (
+    PublicCatalogPlan,
+    PublicCatalogResponse,
+    PublicCatalogService,
+)
 
 _ALLOWED_SCHEMES = {"http", "https"}
 
@@ -32,7 +40,9 @@ def validate_allowed_origin(origin: str) -> str:
         or parsed.query
         or parsed.fragment
     ):
-        raise ValueError("Allowed origin must be an exact http(s) origin such as https://example.com")
+        raise ValueError(
+            "Allowed origin must be an exact http(s) origin such as https://example.com"
+        )
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
@@ -48,7 +58,9 @@ def normalize_allowed_origins(origins: list[str]) -> list[str]:
 
 
 class PublicApiKeyService:
-    async def get_config(self, db: AsyncSession, tenant_id: UUID) -> TenantApiKey | None:
+    async def get_config(
+        self, db: AsyncSession, tenant_id: UUID
+    ) -> TenantApiKey | None:
         return await tenant_api_keys_repository.get_by_tenant_id(db, tenant_id)
 
     async def upsert_origins(
@@ -76,7 +88,9 @@ class PublicApiKeyService:
     async def regenerate(self, db: AsyncSession, tenant_id: UUID) -> TenantApiKey:
         row = await tenant_api_keys_repository.get_by_tenant_id(db, tenant_id)
         if row is None:
-            row = TenantApiKey(tenant_id=tenant_id, api_key=_new_api_key(), allowed_origins=[])
+            row = TenantApiKey(
+                tenant_id=tenant_id, api_key=_new_api_key(), allowed_origins=[]
+            )
             db.add(row)
         else:
             row.api_key = _new_api_key()

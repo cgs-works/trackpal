@@ -7,12 +7,16 @@ from app.models import TenantApiKey
 
 
 async def get_by_tenant_id(db: AsyncSession, tenant_id: UUID) -> TenantApiKey | None:
-    result = await db.execute(select(TenantApiKey).where(TenantApiKey.tenant_id == tenant_id))
+    result = await db.execute(
+        select(TenantApiKey).where(TenantApiKey.tenant_id == tenant_id)
+    )
     return result.scalar_one_or_none()
 
 
 async def get_by_api_key(db: AsyncSession, api_key: str) -> TenantApiKey | None:
-    result = await db.execute(select(TenantApiKey).where(TenantApiKey.api_key == api_key))
+    result = await db.execute(
+        select(TenantApiKey).where(TenantApiKey.api_key == api_key)
+    )
     return result.scalar_one_or_none()
 
 

@@ -15,7 +15,11 @@ class TenantApiKey(Base, TimestampMixin):
         ForeignKey("tenants.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    api_key: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
-    allowed_origins: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    api_key: Mapped[str] = mapped_column(
+        String(128), unique=True, index=True, nullable=False
+    )
+    allowed_origins: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
 
     tenant = relationship("Tenant", back_populates="api_key")
