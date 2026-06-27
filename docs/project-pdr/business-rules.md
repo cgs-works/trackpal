@@ -153,6 +153,18 @@ All field validation goes through centralized `app/core/input_validation/`:
 6. Invalid `service_key` in any payload returns HTTP 400 (validated via `validate_keys()`)
 7. Empty selection results in empty effective set; access code retrieval shows "no services available" message
 
+## Public API Catalog (planned)
+
+1. Public API Catalog is Pro-only and exposes the tenant Catalog as read-only data for tenant-owned browser frontends.
+2. Each tenant can have at most one active Public API Key in v1.
+3. Public API Key management lives in Settings and is hidden from Starter tenant admins.
+4. Allowed Origins are exact origins including scheme, host, and optional port; wildcard origins are not part of v1.
+5. Public catalog requests require both a valid Public API Key and a matching `Origin` header.
+6. Missing `Origin`, unknown key, non-matching origin, or downgraded Starter tenant returns 403.
+7. Regeneration replaces the key and preserves Allowed Origins; revocation deletes the public API configuration.
+8. The public payload includes only service and plan `id` + `name` values. Pricing, availability, descriptions, and metadata are out of scope.
+9. Production abuse protection for the public catalog route belongs at Cloudflare rate limiting/WAF, not app-level rate limiting in v1.
+
 ## Subscription Lifecycle
 
 1. Subscriptions belong to a tenant, client, service, and plan (all required)
@@ -188,8 +200,9 @@ All counters use `app.core.metrics` module backed by Prometheus-style counter re
 2. PostgreSQL database (external, configured via `DATABASE_URL`)
 3. Redis primary + backup (optional; console works in degraded mode without Redis via ContingencyReplyPolicy)
 4. Frontend hosted on Cloudflare Pages with SPA fallback redirect
-5. n8n self-hosted or cloud; connects via `N8N_API_KEY` and public backend URL
-6. `DATA_ENCRYPTION_KEY` and `ACCESS_TOKEN_ENCRYPTION_KEY` required at startup for Fernet encryption
+5. Public catalog traffic must be protected by Cloudflare rate limiting/WAF before broad production exposure
+6. n8n self-hosted or cloud; connects via `N8N_API_KEY` and public backend URL
+7. `DATA_ENCRYPTION_KEY` and `ACCESS_TOKEN_ENCRYPTION_KEY` required at startup for Fernet encryption
 
 ## Compliance & Data Model
 
