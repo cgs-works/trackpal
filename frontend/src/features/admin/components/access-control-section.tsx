@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Ban, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,12 +21,10 @@ export function AccessControlSection() {
   const trimmedPhone = phone.trim();
   const pageCount = Math.max(1, Math.ceil(blocks.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  const visibleBlocks = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return blocks.slice(start, start + PAGE_SIZE);
-  }, [blocks, safePage]);
-  const fromItem = blocks.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const toItem = Math.min(blocks.length, safePage * PAGE_SIZE);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const visibleBlocks = blocks.slice(pageStart, pageStart + PAGE_SIZE);
+  const fromItem = blocks.length === 0 ? 0 : pageStart + 1;
+  const toItem = Math.min(blocks.length, pageStart + PAGE_SIZE);
 
   const load = useCallback(async () => {
     setLoading(true);

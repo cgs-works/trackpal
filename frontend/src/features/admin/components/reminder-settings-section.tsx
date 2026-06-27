@@ -30,8 +30,17 @@ const DEFAULT_MESSAGES = {
   },
 };
 
+type ApiErrorDetail = string | Array<{ msg?: string }>;
+
 function getDefaultMessages(locale: string) {
   return DEFAULT_MESSAGES[locale as "en" | "es"] || DEFAULT_MESSAGES.en;
+}
+
+function getReminderSettingsError(error: unknown): string {
+  const detail = (error as { response?: { data?: { detail?: ApiErrorDetail } } }).response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) return detail.map((item) => item.msg || "Unknown error").join("; ");
+  return error instanceof Error ? error.message : t("frontend.subscriptions.error_reminder_settings");
 }
 
 function renderPreview(template: string): string {
@@ -74,13 +83,7 @@ export function ReminderSettingsSection() {
     try {
       await Promise.all([loadReminderSettings(), loadTenantSettings()]);
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
-      const detail = apiErr.response?.data?.detail;
-      let msg = t("frontend.subscriptions.error_reminder_settings");
-      if (typeof detail === "string") msg = detail;
-      else if (Array.isArray(detail) && detail.length > 0) msg = detail.map((d) => d.msg || "Unknown error").join("; ");
-      else if (err instanceof Error) msg = err.message;
-      setError(msg);
+      setError(getReminderSettingsError(err));
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +110,7 @@ export function ReminderSettingsSection() {
     const errors: Record<string, string> = {};
     if (settings.reminders_enabled) {
       if (settings.warning_days.length === 0) errors.warning_days = t("frontend.subscriptions.error_warning_days_required");
-      if (!/^\d{2}:\d{2}$/.test(settings.reminder_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(settings.reminder_time)) {
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(settings.reminder_time)) {
         errors.reminder_time = t("frontend.subscriptions.error_invalid_time");
       }
     }
@@ -148,20 +151,14 @@ export function ReminderSettingsSection() {
       await updateReminderSettings(settings);
       toast.success(t("frontend.subscriptions.reminder_saved"));
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
-      const detail = apiErr.response?.data?.detail;
-      let msg = t("frontend.subscriptions.error_reminder_settings");
-      if (typeof detail === "string") msg = detail;
-      else if (Array.isArray(detail) && detail.length > 0) msg = detail.map((d) => d.msg || "Unknown error").join("; ");
-      else if (err instanceof Error) msg = err.message;
-      setError(msg);
+      setError(getReminderSettingsError(err));
     } finally {
       setIsSaving(false);
     }
   }
 
-  const hasWarningDaysError = !!(validationErrors.warning_days && settings.reminders_enabled);
-  const hasTimeError = !!(validationErrors.reminder_time && settings.reminders_enabled);
+  const hasWarningDaysError = settings.reminders_enabled && Boolean(validationErrors.warning_days);
+  const hasTimeError = settings.reminders_enabled && Boolean(validationErrors.reminder_time);
 
   if (isLoading) {
     return (
