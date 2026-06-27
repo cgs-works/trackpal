@@ -15,7 +15,7 @@ async def create(
     phone: str | None = None,
     whatsapp_lid: str | None = None,
 ) -> BlockedClient:
-    """Create an active block for a tenant-scoped identity.
+    """Create a block for a tenant-scoped identity.
 
     At least one of *phone* or *whatsapp_lid* must be provided.
     """
@@ -28,7 +28,6 @@ async def create(
         tenant_id=tenant_id,
         phone=phone,
         whatsapp_lid=whatsapp_lid,
-        is_active=True,
     )
     db.add(block)
     await db.flush()
@@ -36,13 +35,10 @@ async def create(
 
 
 async def list_active(db: AsyncSession, tenant_id: UUID) -> list[BlockedClient]:
-    """List all active blocks for a tenant, newest first."""
+    """List all existing blocks for a tenant, newest first."""
     result = await db.execute(
         select(BlockedClient)
-        .where(
-            BlockedClient.tenant_id == tenant_id,
-            BlockedClient.is_active,
-        )
+        .where(BlockedClient.tenant_id == tenant_id)
         .order_by(BlockedClient.created_at.desc())
     )
     return list(result.scalars().all())
@@ -55,13 +51,10 @@ async def find_active(
     phone: str | None = None,
     whatsapp_lid: str | None = None,
 ) -> BlockedClient | None:
-    """Find an active block by phone or LID within a tenant."""
+    """Find a block by phone or LID within a tenant."""
     if not phone and not whatsapp_lid:
         return None
-    stmt = select(BlockedClient).where(
-        BlockedClient.tenant_id == tenant_id,
-        BlockedClient.is_active,
-    )
+    stmt = select(BlockedClient).where(BlockedClient.tenant_id == tenant_id)
     if phone and whatsapp_lid:
         stmt = stmt.where(
             or_(
@@ -82,17 +75,16 @@ async def unblock(
     tenant_id: UUID,
     block_id: UUID,
 ) -> BlockedClient | None:
-    """Deactivate (soft-delete) a specific block. Returns the updated row or None."""
+    """Delete a specific block. Returns the deleted row or None."""
     result = await db.execute(
         select(BlockedClient).where(
             BlockedClient.id == block_id,
             BlockedClient.tenant_id == tenant_id,
-            BlockedClient.is_active,
         )
     )
     block = result.scalar_one_or_none()
     if block is not None:
-        block.is_active = False
+        await db.delete(block)
         await db.flush()
     return block
 
@@ -104,16 +96,13 @@ async def clear_identity(
     phone: str | None = None,
     whatsapp_lid: str | None = None,
 ) -> int:
-    """Deactivate all active blocks for an identity (used when a Client is created).
+    """Delete all blocks for an identity when a Client is created.
 
-    Returns the number of blocks deactivated.
+    Returns the number of blocks deleted.
     """
     if not phone and not whatsapp_lid:
         return 0
-    stmt = select(BlockedClient).where(
-        BlockedClient.tenant_id == tenant_id,
-        BlockedClient.is_active,
-    )
+    stmt = select(BlockedClient).where(BlockedClient.tenant_id == tenant_id)
     if phone and whatsapp_lid:
         stmt = stmt.where(
             or_(
@@ -128,7 +117,7 @@ async def clear_identity(
     result = await db.execute(stmt)
     blocks = list(result.scalars().all())
     for block in blocks:
-        block.is_active = False
+        await db.delete(block)
     await db.flush()
     return len(blocks)
 

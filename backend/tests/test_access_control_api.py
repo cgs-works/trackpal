@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime, timezone
 
 import pytest
@@ -52,7 +53,12 @@ async def test_access_control_list_block_duplicate_and_unblock(client, db_sessio
     assert created.status_code == 201, created.text
     body = created.json()
     assert body["phone"] == "12015550222"
-    assert body["is_active"] is True
+    assert "is_active" not in body
+
+    tenant = await _tenant(db_session, active_tenant_user)
+    row = await db_session.get(BlockedClient, uuid.UUID(body["id"]))
+    assert row is not None
+    assert row.tenant_id == tenant.id
 
     duplicate = await client.post("/api/v1/access-control/blocks", json={"phone": "+12015550222"}, headers=headers)
     assert duplicate.status_code == 409
@@ -60,6 +66,7 @@ async def test_access_control_list_block_duplicate_and_unblock(client, db_sessio
     listed = await client.get("/api/v1/access-control/blocks", headers=headers)
     assert listed.status_code == 200, listed.text
     assert [row["phone"] for row in listed.json()] == ["12015550222"]
+    assert "is_active" not in listed.json()[0]
 
     deleted = await client.delete(f"/api/v1/access-control/blocks/{body['id']}", headers=headers)
     assert deleted.status_code == 204
@@ -67,6 +74,10 @@ async def test_access_control_list_block_duplicate_and_unblock(client, db_sessio
     listed_again = await client.get("/api/v1/access-control/blocks", headers=headers)
     assert listed_again.status_code == 200
     assert listed_again.json() == []
+    # Expire the identity map so db_session.get() re-fetches from DB
+    # (the API endpoint commits on a separate session).
+    db_session.expire_all()
+    assert await db_session.get(BlockedClient, uuid.UUID(body["id"])) is None
 
 
 async def test_block_phone_cancels_active_codigo_session_and_job(client, db_session, active_tenant_user, monkeypatch):

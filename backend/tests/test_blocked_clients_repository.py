@@ -62,7 +62,6 @@ class TestCreate:
         assert block.tenant_id == tenant.id
         assert block.phone == "12015550030"
         assert block.whatsapp_lid is None
-        assert block.is_active is True
         assert block.created_at is not None
 
     async def test_create_with_lid(self, db_session: AsyncSession) -> None:
@@ -188,7 +187,7 @@ class TestListActive:
         blocks = await blocked_repo.list_active(db_session, tenant.id)
         assert blocks == []
 
-    async def test_list_returns_only_active(self, db_session: AsyncSession) -> None:
+    async def test_list_returns_existing_rows(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
         block_a = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
         await blocked_repo.create(db_session, tenant.id, phone="12015550031")
@@ -213,24 +212,28 @@ class TestUnblock:
     async def test_unblock_active_block(self, db_session: AsyncSession) -> None:
         _user, tenant = await _seed_tenant(db_session)
         block = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        result = await blocked_repo.unblock(db_session, tenant.id, block.id)
+        block_id = block.id
+
+        result = await blocked_repo.unblock(db_session, tenant.id, block_id)
+
         assert result is not None
-        assert result.is_active is False
-        # Verify persistence
-        db_session.expire(block)
+        assert result.id == block_id
         found = await blocked_repo.find_active(
             db_session, tenant.id, phone="12015550030"
         )
         assert found is None
+        assert await db_session.get(type(block), block_id) is None
 
     async def test_unblock_already_unblocked_returns_none(
         self, db_session: AsyncSession
     ) -> None:
         _user, tenant = await _seed_tenant(db_session)
         block = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        await blocked_repo.unblock(db_session, tenant.id, block.id)
-        # Second unblock returns None
-        result = await blocked_repo.unblock(db_session, tenant.id, block.id)
+        block_id = block.id
+        await blocked_repo.unblock(db_session, tenant.id, block_id)
+
+        result = await blocked_repo.unblock(db_session, tenant.id, block_id)
+
         assert result is None
 
     async def test_unblock_nonexistent_returns_none(
@@ -321,15 +324,16 @@ class TestPersistence:
         assert found is not None
         assert found.id == block.id
 
-    async def test_block_persists_until_unblocked(
+    async def test_block_row_is_deleted_when_unblocked(
         self, db_session: AsyncSession
     ) -> None:
         _user, tenant = await _seed_tenant(db_session)
         tenant_id = tenant.id
         block = await blocked_repo.create(db_session, tenant_id, phone="12015550030")
+        block_id = block.id
         await db_session.commit()
 
-        await blocked_repo.unblock(db_session, tenant_id, block.id)
+        await blocked_repo.unblock(db_session, tenant_id, block_id)
         await db_session.commit()
 
         db_session.expire_all()
@@ -337,6 +341,7 @@ class TestPersistence:
             db_session, tenant_id, phone="12015550030"
         )
         assert found is None
+        assert await db_session.get(type(block), block_id) is None
 
     async def test_created_block_appears_in_list(
         self, db_session: AsyncSession
@@ -350,15 +355,23 @@ class TestPersistence:
         assert len(blocks) == 1
         assert blocks[0].phone == "12015550030"
 
-    async def test_clear_allows_recreate(self, db_session: AsyncSession) -> None:
+    async def test_clear_deletes_then_allows_recreate(
+        self, db_session: AsyncSession
+    ) -> None:
         """After clearing, a new block can be created for the same identity."""
         _user, tenant = await _seed_tenant(db_session)
-        await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        await blocked_repo.clear_identity(db_session, tenant.id, phone="12015550030")
+        first = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
+        first_id = first.id
 
-        block = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
-        assert block.is_active is True
-        assert block.phone == "12015550030"
+        cleared = await blocked_repo.clear_identity(
+            db_session, tenant.id, phone="12015550030"
+        )
+        second = await blocked_repo.create(db_session, tenant.id, phone="12015550030")
+
+        assert cleared == 1
+        assert await db_session.get(type(first), first_id) is None
+        assert second.id != first_id
+        assert second.phone == "12015550030"
 
 
 class TestClientCreationClearsBlock:

@@ -430,7 +430,7 @@ async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, a
         tenant.evolution_instance_name = "plan-tenant-instance"
         await db_session.commit()
 
-    db_session.add(BlockedClient(tenant_id=tenant.id, phone="12015550999", is_active=True))
+    db_session.add(BlockedClient(tenant_id=tenant.id, phone="12015550999"))
     await db_session.commit()
 
     fake_mgr = _FakeManager()

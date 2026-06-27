@@ -27,6 +27,5 @@ class AccessControlBlockResponse(BaseModel):
     tenant_id: UUID
     phone: str | None
     whatsapp_lid: str | None
-    is_active: bool
     created_at: datetime
     updated_at: datetime
