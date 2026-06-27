@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Copy, Eye, EyeOff, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff, KeyRound, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,18 +20,10 @@ import { t } from "@/i18n";
 import { getApiError } from "@/lib/api-errors";
 import { useSettingsStore } from "@/store/settings";
 
-const LANGUAGES = ["html", "react", "python", "php", "java", "go"] as const;
-const VARIANTS = ["A", "B", "C"] as const;
+const LANGUAGES = ["html", "react", "vue", "svelte", "angular", "alpine"] as const;
 const TOOLTIP = "frontend.public_api.tooltip";
 
 type Language = (typeof LANGUAGES)[number];
-type Variant = (typeof VARIANTS)[number];
-
-function currentVariant(): Variant {
-  if (typeof window === "undefined") return "A";
-  const value = new URLSearchParams(window.location.search).get("variant");
-  return VARIANTS.includes(value as Variant) ? (value as Variant) : "A";
-}
 
 function maskKey(key: string): string {
   return `${key.slice(0, 4)}••••••••••••••••••`;
@@ -51,7 +43,6 @@ export function PublicApiSection() {
   const [originInput, setOriginInput] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [language, setLanguage] = useState<Language>("html");
-  const [variant, setVariant] = useState<Variant>(currentVariant);
   const [loading, setLoading] = useState(!publicApiKeyLoaded);
   const [saving, setSaving] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -131,13 +122,6 @@ export function PublicApiSection() {
     }
   }
 
-  function setVariantParam(next: Variant) {
-    setVariant(next);
-    const url = new URL(window.location.href);
-    url.searchParams.set("variant", next);
-    window.history.replaceState(null, "", url);
-  }
-
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -167,15 +151,7 @@ export function PublicApiSection() {
     save,
   };
 
-  return (
-    <>
-      {/* prototype: Three variants of the Public API settings section, switchable via ?variant=, on the existing /admin/settings route. */}
-      {variant === "A" && <GuidedVariant {...props} />}
-      {variant === "B" && <DeveloperVariant {...props} />}
-      {variant === "C" && <ChecklistVariant {...props} />}
-      {import.meta.env.DEV && <PrototypeSwitcher current={variant} onChange={setVariantParam} />}
-    </>
-  );
+  return <GuidedLayout {...props} />;
 }
 
 type VariantProps = {
@@ -198,43 +174,10 @@ type VariantProps = {
   save: () => Promise<void>;
 };
 
-function GuidedVariant(props: VariantProps) {
+function GuidedLayout(props: VariantProps) {
   return (
     <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
       <Header />
-      {!props.publicApiKey ? <CreateKeyCard {...props} /> : <KeyCard {...props} />}
-      {props.publicApiKey && <SitesEditor {...props} />}
-      {props.publicApiKey && <DeveloperTabs {...props} />}
-      {props.publicApiKey && <DangerZone {...props} />}
-    </div>
-  );
-}
-
-function DeveloperVariant(props: VariantProps) {
-  return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-        <Header />
-        {!props.publicApiKey ? <CreateKeyCard {...props} /> : <SitesEditor {...props} />}
-      </div>
-      <div className="flex flex-col gap-4 rounded-xl border bg-muted/40 p-4">
-        {props.publicApiKey ? <KeyCard {...props} /> : <p className="text-sm text-muted-foreground">{t("frontend.public_api.create_first_site")}</p>}
-        {props.publicApiKey && <DeveloperTabs {...props} />}
-        {props.publicApiKey && <DangerZone {...props} />}
-      </div>
-    </div>
-  );
-}
-
-function ChecklistVariant(props: VariantProps) {
-  return (
-    <div className="flex flex-col gap-4">
-      <Header />
-      <div className="grid gap-3 md:grid-cols-3">
-        <Step done={props.origins.length > 0} label={t("frontend.public_api.step_site")} />
-        <Step done={Boolean(props.publicApiKey)} label={t("frontend.public_api.step_key")} />
-        <Step done={Boolean(props.publicApiKey)} label={t("frontend.public_api.step_connect")} />
-      </div>
       {!props.publicApiKey ? <CreateKeyCard {...props} /> : <KeyCard {...props} />}
       {props.publicApiKey && <SitesEditor {...props} />}
       {props.publicApiKey && <DeveloperTabs {...props} />}
@@ -379,45 +322,12 @@ function DangerZone({ revoking, handleRevoke }: VariantProps) {
   );
 }
 
-function Step({ done, label }: { done: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border bg-card p-3 text-sm">
-      <span className="inline-flex size-6 items-center justify-center rounded-full border">{done ? <Check /> : ""}</span>
-      {label}
-    </div>
-  );
-}
-
-function PrototypeSwitcher({ current, onChange }: { current: Variant; onChange: (variant: Variant) => void }) {
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      if (target?.matches("input, textarea, [contenteditable=true]")) return;
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        const index = VARIANTS.indexOf(current);
-        const delta = event.key === "ArrowRight" ? 1 : -1;
-        onChange(VARIANTS[(index + delta + VARIANTS.length) % VARIANTS.length]);
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [current, onChange]);
-
-  return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border bg-background px-3 py-2 text-sm shadow-lg">
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange(VARIANTS[(VARIANTS.indexOf(current) + 2) % 3])}>←</Button>
-      <span>Prototype {current}</span>
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange(VARIANTS[(VARIANTS.indexOf(current) + 1) % 3])}>→</Button>
-    </div>
-  );
-}
-
 function buildExample(language: Language, baseUrl: string, key: string): string {
   const url = `${baseUrl}/public/catalog?api_key=${key}`;
   if (language === "react") return `useEffect(() => {\n  fetch("${url}")\n    .then((res) => res.json())\n    .then(setCatalog);\n}, []);`;
-  if (language === "python") return `# Prototipo local. En producción usa esta clave desde el navegador.\nimport requests\n\nprint(requests.get("${url}").json())`;
-  if (language === "php") return `<?php\n// Prototipo local. En producción usa esta clave desde el navegador.\necho file_get_contents("${url}");`;
-  if (language === "java") return `// Prototipo local. En producción usa esta clave desde el navegador.\nvar client = java.net.http.HttpClient.newHttpClient();\nvar request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("${url}")).build();`;
-  if (language === "go") return `// Prototipo local. En producción usa esta clave desde el navegador.\nresp, err := http.Get("${url}")\n_ = resp\n_ = err`;
+  if (language === "vue") return `<script setup>\nimport { onMounted, ref } from "vue";\n\nconst catalog = ref(null);\n\nonMounted(async () => {\n  catalog.value = await fetch("${url}").then((res) => res.json());\n});\n</script>`;
+  if (language === "svelte") return `<script>\n  import { onMount } from "svelte";\n\n  let catalog;\n\n  onMount(async () => {\n    catalog = await fetch("${url}").then((res) => res.json());\n  });\n</script>`;
+  if (language === "angular") return `import { HttpClient } from "@angular/common/http";\n\nconstructor(private http: HttpClient) {}\n\ncatalog$ = this.http.get("${url}");`;
+  if (language === "alpine") return `<div x-data="{ catalog: null }"\n  x-init="catalog = await fetch('${url}').then((res) => res.json())">\n</div>`;
   return `<script>\nfetch("${url}")\n  .then((res) => res.json())\n  .then((catalog) => console.log(catalog));\n</script>`;
 }
