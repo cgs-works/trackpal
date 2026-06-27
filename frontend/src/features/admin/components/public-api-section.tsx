@@ -1,47 +1,71 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, KeyRound, RefreshCw, Trash2 } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { getApiError } from "@/lib/api-errors";
 import { useSettingsStore } from "@/store/settings";
 
-function splitOrigins(value: string): string[] {
-  return value
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+const LANGUAGES = ["html", "react", "python", "php", "java", "go"] as const;
+const VARIANTS = ["A", "B", "C"] as const;
+const TOOLTIP = "frontend.public_api.tooltip";
+
+type Language = (typeof LANGUAGES)[number];
+type Variant = (typeof VARIANTS)[number];
+
+function currentVariant(): Variant {
+  if (typeof window === "undefined") return "A";
+  const value = new URLSearchParams(window.location.search).get("variant");
+  return VARIANTS.includes(value as Variant) ? (value as Variant) : "A";
+}
+
+function maskKey(key: string): string {
+  return `${key.slice(0, 4)}••••••••••••••••••`;
+}
+
+function isUrlish(value: string): boolean {
+  return /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(value.trim());
+}
+
+function unique(items: string[]): string[] {
+  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 }
 
 export function PublicApiSection() {
-  const {
-    publicApiKey,
-    publicApiKeyLoaded,
-    loadPublicApiKey,
-    savePublicApiKeyOrigins,
-    regeneratePublicApiKey,
-    revokePublicApiKey,
-  } = useSettingsStore();
-  const [originsText, setOriginsText] = useState("");
+  const { publicApiKey, publicApiKeyLoaded, loadPublicApiKey, savePublicApiKeyOrigins, revokePublicApiKey } = useSettingsStore();
+  const [origins, setOrigins] = useState<string[]>([]);
+  const [originInput, setOriginInput] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [language, setLanguage] = useState<Language>("html");
+  const [variant, setVariant] = useState<Variant>(currentVariant);
   const [loading, setLoading] = useState(!publicApiKeyLoaded);
   const [saving, setSaving] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
   const load = useCallback(async () => {
     if (publicApiKeyLoaded) {
-      setOriginsText((publicApiKey?.allowed_origins ?? []).join("\n"));
+      setOrigins(publicApiKey?.allowed_origins ?? []);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
       const config = await loadPublicApiKey();
-      setOriginsText((config?.allowed_origins ?? []).join("\n"));
+      setOrigins(config?.allowed_origins ?? []);
     } catch (error) {
       toast.error(getApiError(error, t("frontend.public_api.error_load")));
     } finally {
@@ -54,16 +78,14 @@ export function PublicApiSection() {
   }, [load]);
 
   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-  const snippet = publicApiKey?.api_key
-    ? `fetch("${baseUrl}/public/catalog?api_key=${publicApiKey.api_key}")`
-    : "";
+  const example = useMemo(() => buildExample(language, baseUrl, publicApiKey?.api_key ?? "tpk_TU_CLAVE_API"), [baseUrl, language, publicApiKey]);
 
-  async function handleSave(event: React.FormEvent) {
-    event.preventDefault();
+  async function save(nextOrigins = origins) {
     setSaving(true);
     try {
-      const config = await savePublicApiKeyOrigins(splitOrigins(originsText));
-      setOriginsText(config.allowed_origins.join("\n"));
+      const config = await savePublicApiKeyOrigins(unique(nextOrigins));
+      setOrigins(config.allowed_origins);
+      setOriginInput("");
       toast.success(t("frontend.public_api.saved"));
     } catch (error) {
       toast.error(getApiError(error, t("frontend.public_api.error_save")));
@@ -72,23 +94,25 @@ export function PublicApiSection() {
     }
   }
 
-  async function handleRegenerate() {
-    setRegenerating(true);
-    try {
-      await regeneratePublicApiKey();
-      toast.success(t("frontend.public_api.regenerated"));
-    } catch (error) {
-      toast.error(getApiError(error, t("frontend.public_api.error_regenerate")));
-    } finally {
-      setRegenerating(false);
-    }
+  async function handleCreate(event: React.FormEvent) {
+    event.preventDefault();
+    if (!isUrlish(originInput)) return;
+    await save([originInput]);
+  }
+
+  function handleAddSite() {
+    if (!isUrlish(originInput)) return;
+    setOrigins((items) => unique([...items, originInput]));
+    setOriginInput("");
   }
 
   async function handleRevoke() {
     setRevoking(true);
     try {
       await revokePublicApiKey();
-      setOriginsText("");
+      setOrigins([]);
+      setOriginInput("");
+      setShowKey(false);
       toast.success(t("frontend.public_api.revoked"));
     } catch (error) {
       toast.error(getApiError(error, t("frontend.public_api.error_revoke")));
@@ -107,6 +131,13 @@ export function PublicApiSection() {
     }
   }
 
+  function setVariantParam(next: Variant) {
+    setVariant(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("variant", next);
+    window.history.replaceState(null, "", url);
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -116,76 +147,277 @@ export function PublicApiSection() {
     );
   }
 
+  const props = {
+    publicApiKey,
+    origins,
+    originInput,
+    showKey,
+    language,
+    example,
+    saving,
+    revoking,
+    setOriginInput,
+    setOrigins,
+    setShowKey,
+    setLanguage,
+    handleAddSite,
+    handleCopy,
+    handleCreate,
+    handleRevoke,
+    save,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-base font-medium">{t("frontend.public_api.section_title")}</h2>
-        <p className="text-sm text-muted-foreground">{t("frontend.public_api.description")}</p>
-      </div>
+    <>
+      {/* prototype: Three variants of the Public API settings section, switchable via ?variant=, on the existing /admin/settings route. */}
+      {variant === "A" && <GuidedVariant {...props} />}
+      {variant === "B" && <DeveloperVariant {...props} />}
+      {variant === "C" && <ChecklistVariant {...props} />}
+      {import.meta.env.DEV && <PrototypeSwitcher current={variant} onChange={setVariantParam} />}
+    </>
+  );
+}
 
-      <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-2">
-            <KeyRound className="size-4 text-muted-foreground" />
-            {publicApiKey ? (
-              <code className="truncate rounded bg-muted px-2 py-1 text-xs">{publicApiKey.api_key}</code>
-            ) : (
-              <span className="text-sm text-muted-foreground">{t("frontend.public_api.not_created")}</span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{t("frontend.public_api.read_only")}</Badge>
-            {publicApiKey && (
-              <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
-                <Copy data-icon="inline-start" />
-                {t("frontend.public_api.copy")}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+type VariantProps = {
+  publicApiKey: ReturnType<typeof useSettingsStore.getState>["publicApiKey"];
+  origins: string[];
+  originInput: string;
+  showKey: boolean;
+  language: Language;
+  example: string;
+  saving: boolean;
+  revoking: boolean;
+  setOriginInput: (value: string) => void;
+  setOrigins: React.Dispatch<React.SetStateAction<string[]>>;
+  setShowKey: (value: boolean) => void;
+  setLanguage: (value: Language) => void;
+  handleAddSite: () => void;
+  handleCopy: () => void;
+  handleCreate: (event: React.FormEvent) => void;
+  handleRevoke: () => void;
+  save: () => Promise<void>;
+};
 
-      <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="public-api-origins">{t("frontend.public_api.origins_label")}</Label>
-          <textarea
-            id="public-api-origins"
-            value={originsText}
-            onChange={(event) => setOriginsText(event.target.value)}
-            placeholder="https://example.com"
-            aria-describedby="public-api-origins-help"
-            className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-          />
-          <p id="public-api-origins-help" className="text-xs text-muted-foreground">
-            {t("frontend.public_api.origins_help")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={saving}>
-            {saving ? t("frontend.common.saving") : t("frontend.public_api.save")}
-          </Button>
-          <Button type="button" variant="outline" disabled={regenerating} onClick={handleRegenerate}>
-            <RefreshCw data-icon="inline-start" />
-            {t("frontend.public_api.regenerate")}
-          </Button>
-          <Button type="button" variant="destructive" disabled={!publicApiKey || revoking} onClick={handleRevoke}>
-            <Trash2 data-icon="inline-start" />
-            {t("frontend.public_api.revoke")}
-          </Button>
-        </div>
-      </form>
-
-      {snippet && (
-        <>
-          <Separator />
-          <div className="flex flex-col gap-2">
-            <Label>{t("frontend.public_api.example_title")}</Label>
-            <code className="overflow-x-auto rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-              {snippet}
-            </code>
-          </div>
-        </>
-      )}
+function GuidedVariant(props: VariantProps) {
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+      <Header />
+      {!props.publicApiKey ? <CreateKeyCard {...props} /> : <KeyCard {...props} />}
+      {props.publicApiKey && <SitesEditor {...props} />}
+      {props.publicApiKey && <DeveloperTabs {...props} />}
+      {props.publicApiKey && <DangerZone {...props} />}
     </div>
   );
+}
+
+function DeveloperVariant(props: VariantProps) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+        <Header />
+        {!props.publicApiKey ? <CreateKeyCard {...props} /> : <SitesEditor {...props} />}
+      </div>
+      <div className="flex flex-col gap-4 rounded-xl border bg-muted/40 p-4">
+        {props.publicApiKey ? <KeyCard {...props} /> : <p className="text-sm text-muted-foreground">{t("frontend.public_api.create_first_site")}</p>}
+        {props.publicApiKey && <DeveloperTabs {...props} />}
+        {props.publicApiKey && <DangerZone {...props} />}
+      </div>
+    </div>
+  );
+}
+
+function ChecklistVariant(props: VariantProps) {
+  return (
+    <div className="flex flex-col gap-4">
+      <Header />
+      <div className="grid gap-3 md:grid-cols-3">
+        <Step done={props.origins.length > 0} label={t("frontend.public_api.step_site")} />
+        <Step done={Boolean(props.publicApiKey)} label={t("frontend.public_api.step_key")} />
+        <Step done={Boolean(props.publicApiKey)} label={t("frontend.public_api.step_connect")} />
+      </div>
+      {!props.publicApiKey ? <CreateKeyCard {...props} /> : <KeyCard {...props} />}
+      {props.publicApiKey && <SitesEditor {...props} />}
+      {props.publicApiKey && <DeveloperTabs {...props} />}
+      {props.publicApiKey && <DangerZone {...props} />}
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <h2 className="text-base font-medium">{t("frontend.public_api.section_title")}</h2>
+        <span title={t(TOOLTIP)} className="inline-flex size-5 items-center justify-center rounded-full border text-xs text-muted-foreground">?</span>
+        <Badge variant="secondary">{t("frontend.public_api.read_only")}</Badge>
+      </div>
+      <p className="text-sm text-muted-foreground">{t("frontend.public_api.description")}</p>
+    </div>
+  );
+}
+
+function CreateKeyCard({ originInput, saving, setOriginInput, handleCreate }: VariantProps) {
+  return (
+    <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+      <div className="flex items-center gap-2">
+        <KeyRound className="text-muted-foreground" data-icon="inline-start" />
+        <p className="text-sm font-medium">{t("frontend.public_api.create_first_site")}</p>
+      </div>
+      <Label htmlFor="public-api-first-site">{t("frontend.public_api.site_label")}</Label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input id="public-api-first-site" value={originInput} onChange={(event) => setOriginInput(event.target.value)} placeholder="https://tusitio.com" />
+        <Button type="submit" disabled={saving || !isUrlish(originInput)}>{saving ? t("frontend.common.saving") : t("frontend.public_api.create_key")}</Button>
+      </div>
+    </form>
+  );
+}
+
+function KeyCard({ publicApiKey, showKey, setShowKey, handleCopy }: VariantProps) {
+  if (!publicApiKey) return null;
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <Label>{t("frontend.public_api.key_label")}</Label>
+        <code className="mt-1 block truncate rounded bg-muted px-2 py-1 text-xs">{showKey ? publicApiKey.api_key : maskKey(publicApiKey.api_key)}</code>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => setShowKey(!showKey)}>
+          {showKey ? <EyeOff data-icon="inline-start" /> : <Eye data-icon="inline-start" />}
+          {showKey ? t("frontend.public_api.hide") : t("frontend.public_api.show")}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
+          <Copy data-icon="inline-start" />
+          {t("frontend.public_api.copy")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SitesEditor({ origins, originInput, saving, setOriginInput, setOrigins, handleAddSite, save }: VariantProps) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+      <div>
+        <Label htmlFor="public-api-site">{t("frontend.public_api.sites_label")}</Label>
+        <p className="text-xs text-muted-foreground">{t("frontend.public_api.sites_help")}</p>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input id="public-api-site" value={originInput} onChange={(event) => setOriginInput(event.target.value)} placeholder="https://mitienda.com" />
+        <Button type="button" variant="outline" onClick={handleAddSite} disabled={!isUrlish(originInput)}>
+          <Plus data-icon="inline-start" />
+          {t("frontend.public_api.add_site")}
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2">
+        {origins.map((origin) => (
+          <div key={origin} className="flex flex-col gap-2 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between">
+            <code className="truncate text-xs">{origin}</code>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOrigins((items) => items.filter((item) => item !== origin))}>
+              <Trash2 data-icon="inline-start" />
+              {t("frontend.public_api.delete_site")}
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button type="button" className="self-start" disabled={saving || origins.length === 0} onClick={() => void save()}>
+        {saving ? t("frontend.common.saving") : t("frontend.public_api.save_changes")}
+      </Button>
+    </div>
+  );
+}
+
+function DeveloperTabs({ language, example, setLanguage }: VariantProps) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+      <div>
+        <Label>{t("frontend.public_api.developer_title")}</Label>
+        <p className="text-xs text-muted-foreground">{t("frontend.public_api.browser_only_warning")}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {LANGUAGES.map((item) => (
+          <Button key={item} type="button" variant={language === item ? "default" : "outline"} size="sm" onClick={() => setLanguage(item)}>
+            {t(`frontend.public_api.lang_${item}`)}
+          </Button>
+        ))}
+      </div>
+      <code className="overflow-x-auto whitespace-pre rounded-lg bg-muted p-3 text-xs text-muted-foreground">{example}</code>
+    </div>
+  );
+}
+
+function DangerZone({ revoking, handleRevoke }: VariantProps) {
+  const [open, setOpen] = useState(false);
+
+  async function confirmDelete() {
+    await handleRevoke();
+    setOpen(false);
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-background p-3">
+      <Label>{t("frontend.public_api.danger_title")}</Label>
+      <p className="text-xs text-muted-foreground">{t("frontend.public_api.delete_key_help")}</p>
+      <Button type="button" variant="destructive" className="self-start" onClick={() => setOpen(true)}>
+        <Trash2 data-icon="inline-start" />
+        {t("frontend.public_api.delete_key")}
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("frontend.public_api.delete_key_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("frontend.public_api.delete_key_description")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("frontend.common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={revoking} onClick={() => void confirmDelete()}>
+              {revoking ? t("frontend.common.deleting") : t("frontend.public_api.delete_key")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function Step({ done, label }: { done: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border bg-card p-3 text-sm">
+      <span className="inline-flex size-6 items-center justify-center rounded-full border">{done ? <Check /> : ""}</span>
+      {label}
+    </div>
+  );
+}
+
+function PrototypeSwitcher({ current, onChange }: { current: Variant; onChange: (variant: Variant) => void }) {
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, [contenteditable=true]")) return;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const index = VARIANTS.indexOf(current);
+        const delta = event.key === "ArrowRight" ? 1 : -1;
+        onChange(VARIANTS[(index + delta + VARIANTS.length) % VARIANTS.length]);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [current, onChange]);
+
+  return (
+    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border bg-background px-3 py-2 text-sm shadow-lg">
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange(VARIANTS[(VARIANTS.indexOf(current) + 2) % 3])}>←</Button>
+      <span>Prototype {current}</span>
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange(VARIANTS[(VARIANTS.indexOf(current) + 1) % 3])}>→</Button>
+    </div>
+  );
+}
+
+function buildExample(language: Language, baseUrl: string, key: string): string {
+  const url = `${baseUrl}/public/catalog?api_key=${key}`;
+  if (language === "react") return `useEffect(() => {\n  fetch("${url}")\n    .then((res) => res.json())\n    .then(setCatalog);\n}, []);`;
+  if (language === "python") return `# Prototipo local. En producción usa esta clave desde el navegador.\nimport requests\n\nprint(requests.get("${url}").json())`;
+  if (language === "php") return `<?php\n// Prototipo local. En producción usa esta clave desde el navegador.\necho file_get_contents("${url}");`;
+  if (language === "java") return `// Prototipo local. En producción usa esta clave desde el navegador.\nvar client = java.net.http.HttpClient.newHttpClient();\nvar request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("${url}")).build();`;
+  if (language === "go") return `// Prototipo local. En producción usa esta clave desde el navegador.\nresp, err := http.Get("${url}")\n_ = resp\n_ = err`;
+  return `<script>\nfetch("${url}")\n  .then((res) => res.json())\n  .then((catalog) => console.log(catalog));\n</script>`;
 }
