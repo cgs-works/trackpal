@@ -62,6 +62,12 @@ class Tenant(Base, TimestampMixin):
         uselist=False,
         lazy="selectin",
     )
+    api_key = relationship(
+        "TenantApiKey",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
     @property
     def full_name(self) -> str:
