@@ -141,7 +141,7 @@ class TestClientConsoleMenu:
             message="",
             identity=identity,
         )
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
         assert "Ver mi perfil" in reply
         assert "Ver suscripciones activas" in reply
         assert "Cancelar" in reply
@@ -156,7 +156,7 @@ class TestClientConsoleMenu:
             message="menu",
             identity=identity,
         )
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
 
     async def test_option_1_profile_no_db(
         self, client_facade: WhatsAppClientConsoleFacade
@@ -213,7 +213,7 @@ class TestClientConsoleMenu:
             message="99",
             identity=identity,
         )
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
 
     async def test_unknown_phone_cannot_use_master_instance(
         self,
@@ -297,7 +297,7 @@ class TestInstanceFirstRouting:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert "Master Console" in reply or "TrackPal" in reply
 
     async def test_master_instance_rejects_tenant_phone(
         self,
@@ -367,7 +367,7 @@ class TestInstanceFirstRouting:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Administración" in reply or "Trackpal" in reply
+        assert "Consola de administración" in reply or "TrackPal" in reply
 
     async def test_tenant_exit_sets_closed_status(
         self,
@@ -481,7 +481,7 @@ class TestClientWithinTenant:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
         assert "Ver mi perfil" in reply
 
     async def test_client_code_routes_to_codigo_flow(
@@ -869,7 +869,7 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
 
     async def test_ambiguity_select_tenant_mode(
         self,
@@ -927,7 +927,7 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Administración" in reply or "TrackPal Admin Console" in reply
+        assert "Consola de administración" in reply or "TrackPal Admin Console" in reply
 
     async def test_ambiguity_select_client_mode_opens_console_directly(
         self,
@@ -986,7 +986,7 @@ class TestAmbiguity:
 
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
 
     async def test_ambiguity_mode_persists_messages(
         self,
@@ -1056,7 +1056,7 @@ class TestAmbiguity:
             )
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
 
     async def test_ambiguity_code_switches_to_tenant_flow_from_client_mode(
         self,
@@ -1197,7 +1197,7 @@ class TestAmbiguity:
 
         assert response.status_code == 200
         reply = response.json()["reply"]
-        assert "Consola de Cliente" in reply
+        assert "Consola de cliente" in reply
         assert "Selecciona tu modo" not in reply
 
     async def test_ambiguity_zero_exits_and_clears_mode(

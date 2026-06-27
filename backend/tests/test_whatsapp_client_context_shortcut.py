@@ -271,7 +271,7 @@ def test_client_context_i18n_keys_exist_in_en_and_es():
             rendered = t(locale, key, **params)
             assert rendered != key
             assert (
-                "Gestion del cliente" in rendered
+                "Gestión del cliente" in rendered
                 or "Client management" in rendered
                 or key.endswith(
                     (
@@ -335,8 +335,8 @@ async def test_from_me_shortcut_renders_contextual_menu_for_unregistered(
     reply = body["reply"]
     assert "Contexto de cliente iniciado" not in reply
     # Spanish (tenant.locale = "es") contextual menu markers.
-    assert "Gestion del cliente" in reply
-    assert "Crear cliente para este numero" in reply
+    assert "Gestión del cliente" in reply
+    assert "Crear cliente para este número" in reply
     # reply_to must point at the admin's private JID.
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
@@ -387,7 +387,7 @@ async def test_from_me_self_menu_routes_to_tenant_console(
     assert response.status_code == 200
     body = response.json()
     # Must NOT show the client context menu
-    assert "Gestion del cliente" not in body.get("reply", "")
+    assert "Gestión del cliente" not in body.get("reply", "")
 
 
 async def test_block_access_closes_client_context_immediately(
@@ -627,10 +627,10 @@ async def test_active_context_invalid_input_uses_i18n(
     assert resp.status_code == 200
     data = resp.json()
     assert data.get("reply_to") == admin_jid
-    # Must NOT route to Tenant console (no "Trackpal" in reply)
-    assert "Trackpal" not in data.get("reply", "")
+    # Must NOT route to Tenant console (no "TrackPal" in reply)
+    assert "TrackPal" not in data.get("reply", "")
     # Must use the i18n invalid_option text
-    assert "Opcion invalida" in data.get("reply", "")
+    assert "Opción inválida" in data.get("reply", "")
 
 
 # ---------------------------------------------------------------------------
@@ -673,7 +673,7 @@ async def test_active_menu_option_2_enters_edit_flow(
 
     assert response.status_code == 200
     reply = response.json()["reply"]
-    assert "Que campo desea editar" in reply
+    assert "Qué campo desea editar" in reply
     assert "Nombre completo" in reply
     assert "Nombre de usuario" in reply
     assert "Seleccione un *servicio*" not in reply
@@ -728,7 +728,7 @@ async def test_active_menu_option_3_opens_view_subscriptions(
     assert "Suscripciones" in reply
     assert "Subscription Client" in reply
     assert "No hay suscripciones" in reply
-    assert "Crear nueva suscripcion" in reply
+    assert "Crear nueva suscripción" in reply
 
     ctx_data = await fake_mgr._redis.get(ctx_key)
     assert ctx_data is not None
@@ -793,7 +793,7 @@ async def test_view_subscriptions_creates_subscription_from_empty_list(
     assert response.status_code == 200
     reply = response.json()["reply"]
     # Now we should see the subscription creation flow (service selection)
-    assert "suscripcion" in reply.lower()
+    assert "suscripción" in reply.lower()
     assert "Streaming Pro" in reply
     assert "[1]" in reply  # bracket service notation
     assert "*Cliente:*" in reply
@@ -904,7 +904,7 @@ async def test_active_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl(
 
     assert response.status_code == 200
     reply = response.json()["reply"]
-    assert "Opcion invalida" in reply
+    assert "Opción inválida" in reply
     assert "Editar cliente" in reply
     assert "Ver suscripciones" in reply
     assert "Desactivar cliente" in reply
@@ -1275,7 +1275,7 @@ async def test_inactive_menu_option_4_delete_flow_shows_unregistered_menu_after_
 
     reply = response.json()["reply"]
     assert "eliminado" in reply.lower()
-    assert "Crear cliente para este numero" in reply
+    assert "Crear cliente para este número" in reply
     assert "Bloquear acceso" in reply
 
 
@@ -1316,7 +1316,7 @@ async def test_inactive_menu_invalid_input_rerenders_full_menu_and_refreshes_ttl
         )
 
     reply = response.json()["reply"]
-    assert "Opcion invalida" in reply
+    assert "Opción inválida" in reply
     assert "Ver detalle" in reply
     assert "Editar cliente" in reply
     assert "Reactivar cliente" in reply
