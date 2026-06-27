@@ -10,7 +10,7 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 
 | Section | Component | Data Source |
 |---------|-----------|-------------|
-| Reminder Settings | `ReminderSettingsModal` (dialog) | `settingsStore.reminderSettings` |
+| Reminder Settings | `ReminderSettingsSection` (inline panel) | `settingsStore.reminderSettings` |
 | Language | `LocaleSection` | `settingsStore.tenantSettings` |
 | Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
 | Code Services | `CodeServicesSection` | API direct |
@@ -55,14 +55,15 @@ Searchable timezone dropdown using `createPortal` to escape parent overflow cont
 - Positioned relative to trigger button using `getBoundingClientRect()`
 - Closes on click outside (checks both trigger and portal element)
 
-### ReminderSettingsModal (`features/admin/components/reminder-settings-modal.tsx`)
+### ReminderSettingsSection (`features/admin/components/reminder-settings-section.tsx`)
 
-Dialog for reminder configuration (warning days, reminder time, recipient mode, enabled toggle).
+Inline panel for reminder configuration (warning days, reminder time, recipient mode, enabled toggle, custom messages).
 
 - Timezone displayed as read-only (edited via TimezoneSection)
-- Loads via `loadReminderSettings()` + `loadTenantSettings()` on open
+- Loads via `loadReminderSettings()` + `loadTenantSettings()` on mount
 - Saves via `updateReminderSettings()`
-- Resets local state on modal open via `useEffect([open])`
+- Resets local state via `useEffect` when `reminderSettingsLoaded` changes
+- Shows template preview for custom messages using placeholder values
 
 ### MailboxSection (`features/admin/components/mailbox-section.tsx`)
 

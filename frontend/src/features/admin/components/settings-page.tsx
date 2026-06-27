@@ -77,14 +77,16 @@ export function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const activeConfig = sections.find((section) => section.id === activeSection) ?? null;
 
   const loadProfile = useCallback(async () => {
     try {
       const data = await getProfile();
       setProfile(data);
+      setProfileError(null);
     } catch {
-      // Non-critical: profile section can render empty until retry via page reload.
+      setProfileError(t("frontend.profile.error_update"));
     }
   }, []);
 
@@ -106,6 +108,16 @@ export function SettingsPage() {
       case "timezone":
         return <TimezoneSection />;
       case "profile":
+        if (profileError) {
+          return (
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <p className="text-sm text-muted-foreground">{profileError}</p>
+              <Button type="button" variant="outline" onClick={() => { setProfileError(null); loadProfile(); }}>
+                {t("frontend.common.save")}
+              </Button>
+            </div>
+          );
+        }
         return profile ? <ProfileSection profile={profile} onProfileUpdate={setProfile} /> : null;
       case "password":
         return <PasswordSection />;

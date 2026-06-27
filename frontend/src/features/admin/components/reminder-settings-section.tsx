@@ -221,7 +221,7 @@ export function ReminderSettingsSection() {
                 {settings.warning_days.map((day) => (
                   <span key={day} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
                     {day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.days")}
-                    <button type="button" onClick={() => removeWarningDay(day)} className="transition-colors hover:text-destructive">
+                    <button type="button" onClick={() => removeWarningDay(day)} aria-label={t("frontend.subscriptions.remove_day", { day: String(day) })} className="transition-colors hover:text-destructive">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </span>

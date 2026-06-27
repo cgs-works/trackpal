@@ -68,9 +68,9 @@ async def find_active(
     if identity_clause is None:
         return None
     result = await db.execute(
-        select(BlockedClient).where(
-            BlockedClient.tenant_id == tenant_id, identity_clause
-        )
+        select(BlockedClient)
+        .where(BlockedClient.tenant_id == tenant_id, identity_clause)
+        .limit(1)
     )
     return result.scalar_one_or_none()
 
