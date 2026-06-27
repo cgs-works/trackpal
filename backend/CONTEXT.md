@@ -39,7 +39,7 @@
 | **TenantPlan** | Nivel de servicio del tenant: `starter` o `pro`. Source of truth: `tenants.plan` en la BD. El frontend lo usa solo como UI hint; la autorización real es backend. |
 | **Pro Gate** | Dependency injection (`ProTenantId`) que bloquea endpoints Pro-only para tenants Starter retornando 404. Master en contexto de soporte bypass el gate. |
 | **Access Control** | Módulo para bloquear/desbloquear identidades de WhatsApp. Afecta interacciones del bot y búsqueda de códigos, no cuentas de portal de clientes. |
-| **BlockedClient** | Identidad de WhatsApp bloqueada. Model: `BlockedClient`. Al bloquear, se cancelan sesiones activas de código y jobs pendientes/processing para esa identidad. |
+| **BlockedClient** | Identidad de WhatsApp bloqueada. Model: `BlockedClient`. Una fila en `blocked_clients` representa un bloqueo activo; desbloquear elimina la fila. Al bloquear, se cancelan sesiones activas de código y jobs pendientes/processing para esa identidad. |
 | **Downgrade Effects** | Efectos secundarios al cambiar plan de Pro a Starter: revocar refresh sessions de clients, limpiar sesión admin Redis, intentar cerrar Evolution session (best-effort). |
 | **Master Support Context** | Master con `active_tenant_id` seteado. Ve UI completa incluyendo datos Pro preservados, con banner de soporte visible. |
 | **Public API Access** | Derecho Pro-only que permite usar y configurar el Public API Catalog. En downgrade a Starter se pausa el acceso público, pero se conserva la configuración para una futura reactivación. |

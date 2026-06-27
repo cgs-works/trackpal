@@ -274,19 +274,20 @@ Blocked Clients prevent unregistered WhatsApp identities from using the console,
 
 - Table: ``blocked_clients``
 - At least one identity field required (``phone`` or ``whatsapp_lid``)
-- ``is_active`` boolean for soft-delete
+- A row represents an active block
+- Unblocking deletes the row
+- No inactive block rows are kept
 - Tenant-scoped indexes on ``(tenant_id, phone)`` and ``(tenant_id, whatsapp_lid)``
-- Created in migration ``ce10fe74caa10``, renamed in ``ce10fe74caa11``
 
 ### Repository operations (``blocked_clients_repository.py``)
 
 | Operation | Description |
 |-----------|-------------|
-| ``create(db, tenant_id, phone=, whatsapp_lid=)`` | Create an active block |
-| ``list_active(db, tenant_id)`` | List active blocks, newest first |
-| ``find_active(db, tenant_id, phone=, whatsapp_lid=)`` | Find an active block by identity; matches by either identifier when both are provided |
-| ``unblock(db, tenant_id, block_id)`` | Soft-delete a specific block (sets ``is_active=False``) |
-| ``clear_identity(db, tenant_id, phone=, whatsapp_lid=)`` | Deactivate all blocks for an identity; matches by either identifier when both are provided |
+| ``create(db, tenant_id, phone=, whatsapp_lid=)`` | Create a block row |
+| ``list_active(db, tenant_id)`` | List existing block rows, newest first |
+| ``find_active(db, tenant_id, phone=, whatsapp_lid=)`` | Find a block by identity; matches by either identifier when both are provided |
+| ``unblock(db, tenant_id, block_id)`` | Delete a specific block row |
+| ``clear_identity(db, tenant_id, phone=, whatsapp_lid=)`` | Delete all blocks for an identity |
 
 ### Block enforcement
 
