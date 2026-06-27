@@ -14,9 +14,9 @@
 
 | Término | Definición |
 |---------|------------|
-| **Tenant** | Entidad que presta servicios. Tiene su propia instancia de Evolution WhatsApp, catálogo, clientes y suscripciones. Un tenant es un "empresa" en el sistema. |
-| **Master** | Operador principal. Gestiona el ciclo de vida de tenants via WhatsApp Console y web dashboard. Solo hay una instancia. |
-| **Client** | Cliente final de un tenant. Login compuesto: `{client_prefix}_{local_username}`. Solo puede ver perfil y cambiar contraseña. |
+| **Tenant** | Entidad que presta servicios. Tiene su propia instancia de Evolution WhatsApp, catálogo, clientes y suscripciones. Un tenant es un "empresa" en el sistema. Cada tenant tiene un **plan** (starter o pro) que determina qué módulos puede usar. |
+| **Master** | Operador principal. Gestiona el ciclo de vida de tenants via WhatsApp Console y web dashboard. Solo hay una instancia. Puede **switchear** a un tenant específico para soporte; en ese contexto ve la UI completa sin restricciones de plan. |
+| **Client** | Cliente final de un tenant. Login compuesto: `{client_prefix}_{local_username}`. Solo puede ver perfil y cambiar contraseña. En tenants Starter, el login de client retorna 401 genérico (datos preservados, pero no accesibles). |
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
 | **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant y Client. |
 | **Client Context Shortcut** | Sesión de WhatsApp que permite al Tenant gestionar clientes remotos desde su propia consola. |
@@ -28,6 +28,28 @@
 | **Codigo** | Flujo de búsqueda de código de acceso via WhatsApp. El cliente selecciona servicio → ingresa email → el sistema busca en el mailbox. |
 | **RLS** | Row-Level Security en PostgreSQL. Contexto de transacción: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`. |
 | **Contingency Reply** | Respuesta determinística cuando Redis está caído. Resetea al menú principal sin estado. |
+
+## Starter/Pro Product Split
+
+| Término | Definición |
+|---------|------------|
+| **TenantPlan** | Nivel de servicio del tenant: `starter` o `pro`. Source of truth: `tenants.plan` en la BD. El frontend lo usa solo como UI hint; la autorización real es backend. |
+| **Pro Gate** | Dependency injection (`ProTenantId`) que bloquea endpoints Pro-only para tenants Starter retornando 404. Master en contexto de soporte bypass el gate. |
+| **Access Control** | Módulo para bloquear/desbloquear identidades de WhatsApp. Afecta interacciones del bot y búsqueda de códigos, no cuentas de portal de clientes. |
+| **BlockedClient** | Identidad de WhatsApp bloqueada. Model: `BlockedClient`. Al bloquear, se cancelan sesiones activas de código y jobs pendientes/processing para esa identidad. |
+| **Downgrade Effects** | Efectos secundarios al cambiar plan de Pro a Starter: revocar refresh sessions de clients, limpiar sesión admin Redis, intentar cerrar Evolution session (best-effort). |
+| **Master Support Context** | Master con `active_tenant_id` seteado. Ve UI completa incluyendo datos Pro preservados, con banner de soporte visible. |
+
+### Comportamiento por plan
+
+| Aspecto | Starter | Pro |
+|---------|---------|-----|
+| Client login | 401 genérico (datos preservados) | Login normal |
+| Clientes, Catálogo, Suscripciones | 404 (bloqueado por Pro Gate) | Accesible |
+| Timezone (Settings) | Oculto y bloqueado para tenant admin | Visible y editable |
+| Reminder settings | Oculto | Visible |
+| Subscription jobs/reminders/cleanup | Ignorados completamente | Procesados |
+| Search code flow | Requiere mailbox `connected` | Requiere mailbox `connected` |
 
 ## Arquitectura por capas
 

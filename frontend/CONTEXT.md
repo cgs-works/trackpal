@@ -16,9 +16,9 @@
 | Término | Definición |
 |---------|------------|
 | **Master Layout** | Layout con sidebar para el operador Master. Muestra summary cards y business table. |
-| **Admin Layout** | Layout colapsable con sidebar para tenant admin. Navegación: Dashboard, Clients, Catalog, Subscriptions, Settings. |
+| **Admin Layout** | Layout colapsable con sidebar para tenant admin. Navegación: Dashboard, Clients, Catalog, Subscriptions, Settings. Starter oculta links Pro-only. Master en contexto de soporte ve navegación completa + banner. |
 | **Client Layout** | Layout con sidebar para cliente final. Navegación: Dashboard, Profile. |
-| **Auth Store** | Zustand store: token, refreshToken, user, activeTenantId. Persistido en localStorage. |
+| **Auth Store** | Zustand store: token, refreshToken, user, activeTenantId, tenantPlan. Persistido en localStorage. `tenantPlan` es UI hint corregido por dashboard responses. |
 | **Catalog Store** | Cache de servicios, planes y clientes con dedup de requests en vuelo. |
 | **Settings Store** | Cache de configuración de tenant, recordatorios, timezones y mailbox. |
 | **Public I18n** | Hook `usePublicI18n()` para pre-auth (login). Catálogo local en `public.json`. |
@@ -44,18 +44,20 @@ Cada feature tiene:
 
 File-based routing via `@tanstack/router-plugin`. Árbol auto-generado en `src/routeTree.gen.ts` (NO editar manualmente).
 
-| Ruta | Componente | Rol |
-|------|-----------|-----|
-| `/login` | `LoginForm` | Público |
-| `/` | Redirect por rol | Autenticado |
-| `/master/dashboard` | `MasterDashboard` | `master` |
-| `/admin/dashboard` | `DashboardPage` | `tenant` |
-| `/admin/clients` | `ClientsPage` | `tenant` |
-| `/admin/catalog` | `CatalogPage` | `tenant` |
-| `/admin/subscriptions` | `SubscriptionsPage` | `tenant` |
-| `/admin/settings` | `SettingsPage` | `tenant` |
-| `/client/dashboard` | `ClientDashboard` | `client` |
-| `/client/profile` | `ProfilePage` | `client` |
+| Ruta | Componente | Rol | Plan Gate |
+|------|-----------|-----|----------|
+| `/login` | `LoginForm` | Público | — |
+| `/` | Redirect por rol | Autenticado | — |
+| `/master/dashboard` | `MasterDashboard` | `master` | — |
+| `/admin/dashboard` | `DashboardPage` | `tenant` | — |
+| `/admin/clients` | `ClientsPage` | `tenant` | Pro-only |
+| `/admin/catalog` | `CatalogPage` | `tenant` | Pro-only |
+| `/admin/subscriptions` | `SubscriptionsPage` | `tenant` | Pro-only |
+| `/admin/settings` | `SettingsPage` | `tenant` | — |
+| `/client/dashboard` | `ClientDashboard` | `client` | — |
+| `/client/profile` | `ProfilePage` | `client` | — |
+
+Rutas Pro-only usan `PlanRouteGate` wrapper. Starter tenant admin ve 404 en estas rutas. Master en contexto de soporte bypass el gate.
 
 ## State Management (Zustand)
 
@@ -99,3 +101,18 @@ Axios singleton en `src/lib/api.ts`:
 - Responsive: mobile-first con `md:` breakpoint
 - Geist Variable como font display/body/label
 - Tokens OKLCH en `index.css` (extender ahí, no colores raw)
+
+## Starter/Pro Product Split
+
+| Término | Definición |
+|---------|------------|
+| **TenantPlan** | `"starter" | "pro" | null`. Persistido en auth store, corregido por dashboard. UI hint solamente; backend es source of truth para autorización. |
+| **PlanRouteGate** | Componente wrapper para rutas Pro-only. Starter tenant admin ve `NotFoundPage`. Master support bypass. |
+| **SupportBanner** | Alert visible cuando Master está en contexto de soporte (switched a un Starter tenant). Indica que la UI completa es visible solo para soporte. |
+| **Master Support Context** | `role === "master" && activeTenantId !== null`. Master ve UI admin completa + banner, sin restricciones de plan. |
+| **AccessControlSection** | Sección en Settings para listar/bloquear/desbloquear identidades de WhatsApp. Disponible tanto para Starter como Pro. |
+
+### Product Labels (UI)
+- **Plataformas habilitadas**: code services seleccionados por tenant
+- **Correo central de búsqueda**: mailbox del tenant para extracción de códigos
+- **Control de acceso**: bloqueo/desbloqueo de identidades WhatsApp
