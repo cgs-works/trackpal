@@ -21,6 +21,10 @@ import {
   type PublicApiKeyConfig,
 } from "@/features/admin/services/settings-api";
 
+interface ApiError {
+  response?: { data?: { detail?: string | Array<{ msg?: string }> } };
+}
+
 interface SettingsState {
   reminderSettings: ReminderSettings | null;
   tenantSettings: TenantSettings | null;
@@ -195,6 +199,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 }));
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  const detail = (error as ApiError)?.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || "Unknown error").join("; ");
+  }
+  return fallback;
+}
+
 async function loadReminderSettings(
   set: (partial: Partial<SettingsState>) => void,
   get: () => SettingsState,
@@ -211,17 +224,10 @@ async function loadReminderSettings(
     });
     return data;
   } catch (error: unknown) {
-    const err = error as {
-      response?: { data?: { detail?: string | Array<{ msg?: string }> } };
-    };
-    const detail = err?.response?.data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d) => d.msg || "Unknown error").join("; ")
-          : "Failed to load reminder settings";
-    set({ settingsLoadError: msg, reminderSettingsInFlight: null });
+    set({
+      settingsLoadError: getErrorMessage(error, "Failed to load reminder settings"),
+      reminderSettingsInFlight: null,
+    });
     throw error;
   }
 }
@@ -242,17 +248,10 @@ async function loadTenantSettings(
     });
     return data;
   } catch (error: unknown) {
-    const err = error as {
-      response?: { data?: { detail?: string | Array<{ msg?: string }> } };
-    };
-    const detail = err?.response?.data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d) => d.msg || "Unknown error").join("; ")
-          : "Failed to load tenant settings";
-    set({ settingsLoadError: msg, tenantSettingsInFlight: null });
+    set({
+      settingsLoadError: getErrorMessage(error, "Failed to load tenant settings"),
+      tenantSettingsInFlight: null,
+    });
     throw error;
   }
 }
@@ -323,17 +322,10 @@ async function loadPublicApiKey(
     });
     return data;
   } catch (error: unknown) {
-    const err = error as {
-      response?: { data?: { detail?: string | Array<{ msg?: string }> } };
-    };
-    const detail = err?.response?.data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d) => d.msg || "Unknown error").join("; ")
-          : "Failed to load public API key";
-    set({ settingsLoadError: msg, publicApiKeyInFlight: null });
+    set({
+      settingsLoadError: getErrorMessage(error, "Failed to load public API key"),
+      publicApiKeyInFlight: null,
+    });
     throw error;
   }
 }

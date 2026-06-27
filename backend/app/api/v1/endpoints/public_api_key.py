@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import DbDep, ProTenantId
 from app.schemas.public_api_key import PublicApiKeyResponse, PublicApiKeyUpdate
@@ -40,4 +40,3 @@ async def regenerate_public_api_key(db: DbDep, tenant_id: ProTenantId):
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_public_api_key(db: DbDep, tenant_id: ProTenantId):
     await public_api_key_service.revoke(db, tenant_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

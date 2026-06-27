@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -34,14 +34,14 @@ export function PublicApiSection() {
 
   const load = useCallback(async () => {
     if (publicApiKeyLoaded) {
-      setOriginsText((publicApiKey?.allowed_origins || []).join("\n"));
+      setOriginsText((publicApiKey?.allowed_origins ?? []).join("\n"));
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
       const config = await loadPublicApiKey();
-      setOriginsText((config?.allowed_origins || []).join("\n"));
+      setOriginsText((config?.allowed_origins ?? []).join("\n"));
     } catch (error) {
       toast.error(getApiError(error, t("frontend.public_api.error_load")));
     } finally {
@@ -53,12 +53,10 @@ export function PublicApiSection() {
     load();
   }, [load]);
 
-  const snippet = useMemo(() => {
-    if (!publicApiKey?.api_key) return "";
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-    const url = `${baseUrl}/public/catalog?api_key=${publicApiKey.api_key}`;
-    return `fetch("${url}")`;
-  }, [publicApiKey?.api_key]);
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+  const snippet = publicApiKey?.api_key
+    ? `fetch("${baseUrl}/public/catalog?api_key=${publicApiKey.api_key}")`
+    : "";
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();

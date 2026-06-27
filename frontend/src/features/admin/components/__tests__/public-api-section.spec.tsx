@@ -5,12 +5,7 @@ import { PublicApiSection } from "../public-api-section";
 import { useSettingsStore } from "@/store/settings";
 
 vi.mock("@/i18n", () => ({
-  t: (key: string, params?: Record<string, string>) => {
-    if (key === "frontend.public_api.example_snippet" && params) {
-      return `fetch("${params.url}")`;
-    }
-    return key;
-  },
+  t: (key: string) => key,
 }));
 
 const config = {

@@ -10,14 +10,7 @@ class PublicApiKeyUpdate(BaseModel):
     @field_validator("allowed_origins")
     @classmethod
     def clean_allowed_origins(cls, value: list[str]) -> list[str]:
-        cleaned = []
-        seen = set()
-        for origin in value:
-            item = origin.strip()
-            if item not in seen:
-                cleaned.append(item)
-                seen.add(item)
-        return cleaned
+        return list(dict.fromkeys(origin.strip() for origin in value))
 
 
 class PublicApiKeyResponse(BaseModel):

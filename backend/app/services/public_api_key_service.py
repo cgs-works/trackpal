@@ -48,14 +48,7 @@ def validate_allowed_origin(origin: str) -> str:
 
 
 def normalize_allowed_origins(origins: list[str]) -> list[str]:
-    cleaned: list[str] = []
-    seen: set[str] = set()
-    for origin in origins:
-        normalized = validate_allowed_origin(origin)
-        if normalized not in seen:
-            cleaned.append(normalized)
-            seen.add(normalized)
-    return cleaned
+    return list(dict.fromkeys(validate_allowed_origin(origin) for origin in origins))
 
 
 class PublicApiKeyService:
