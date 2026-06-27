@@ -328,6 +328,11 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.settings.description": "Manage your account and notification preferences",
     "frontend.settings.close": "Close",
     "frontend.settings.configure": "Configure",
+    "frontend.settings.guide_title": "Choose a settings category",
+    "frontend.settings.guide_description": "Select a category to edit its settings. No changes are made until you save inside a section.",
+    "frontend.settings.select_category": "Select category",
+    "frontend.settings.active_panel": "Active settings panel",
+    "frontend.settings.cancel": "Cancel",
     # Public API Catalog
     "frontend.public_api.section_title": "API Key",
     "frontend.public_api.description": "Let your website automatically show the services and plans in your catalog.",
