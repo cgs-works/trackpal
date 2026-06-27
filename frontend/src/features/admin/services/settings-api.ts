@@ -178,3 +178,39 @@ export async function updateTenantCodeServices(
   });
   return data;
 }
+
+// ── Public API Key ────────────────────────────────────────────
+export interface PublicApiKeyConfig {
+  tenant_id: string;
+  api_key: string;
+  allowed_origins: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PublicApiKeyUpdate {
+  allowed_origins: string[];
+}
+
+export async function getPublicApiKey(): Promise<PublicApiKeyConfig | null> {
+  const { data } = await api.get("/public-api-key");
+  return data;
+}
+
+export async function savePublicApiKeyOrigins(
+  allowedOrigins: string[],
+): Promise<PublicApiKeyConfig> {
+  const { data } = await api.put("/public-api-key", {
+    allowed_origins: allowedOrigins,
+  });
+  return data;
+}
+
+export async function regeneratePublicApiKey(): Promise<PublicApiKeyConfig> {
+  const { data } = await api.post("/public-api-key/regenerate");
+  return data;
+}
+
+export async function revokePublicApiKey(): Promise<void> {
+  await api.delete("/public-api-key");
+}
