@@ -7,8 +7,10 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import restore_rls_context
+from app.core.tenant_plan import TENANT_PLAN_PRO
 from app.models import TenantApiKey
-from app.repositories import tenant_api_keys_repository
+from app.repositories import catalog_repository, tenant_api_keys_repository, tenants_repository
+from app.schemas.public_api_key import PublicCatalogPlan, PublicCatalogResponse, PublicCatalogService
 
 _ALLOWED_SCHEMES = {"http", "https"}
 
@@ -87,3 +89,38 @@ class PublicApiKeyService:
         await tenant_api_keys_repository.delete_by_tenant_id(db, tenant_id)
         await db.commit()
         await restore_rls_context(db)
+
+    async def build_public_catalog(
+        self,
+        db: AsyncSession,
+        *,
+        api_key: str | None,
+        origin: str | None,
+    ) -> tuple[PublicCatalogResponse, str] | None:
+        if not api_key or not origin:
+            return None
+
+        key = await tenant_api_keys_repository.get_by_api_key(db, api_key)
+        if key is None:
+            return None
+
+        if origin not in key.allowed_origins:
+            return None
+
+        tenant = await tenants_repository.get_active(db, key.tenant_id)
+        if tenant is None or tenant.plan != TENANT_PLAN_PRO:
+            return None
+
+        services = await catalog_repository.list_services(db, key.tenant_id)
+        service_list: list[PublicCatalogService] = []
+        for svc in services:
+            plans = await catalog_repository.list_plans(db, key.tenant_id, svc.id)
+            service_list.append(
+                PublicCatalogService(
+                    id=svc.id,
+                    name=svc.name,
+                    plans=[PublicCatalogPlan(id=p.id, name=p.name) for p in plans],
+                )
+            )
+
+        return PublicCatalogResponse(services=service_list), origin

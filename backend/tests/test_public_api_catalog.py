@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.models import Tenant, TenantApiKey, User
+from app.models import Plan, Service, Tenant, TenantApiKey, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -29,6 +29,27 @@ async def _make_starter(client, auth_headers, active_tenant_user: User) -> None:
         headers=auth_headers,
     )
     assert response.status_code == 200, response.text
+
+
+async def _create_public_key(client, headers, origins: list[str]) -> str:
+    response = await client.put(
+        "/api/v1/public-api-key",
+        json={"allowed_origins": origins},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["api_key"]
+
+
+async def _seed_catalog(db_session, tenant_id):
+    service = Service(tenant_id=tenant_id, name="Netflix")
+    db_session.add(service)
+    await db_session.flush()
+    basic = Plan(tenant_id=tenant_id, service_id=service.id, name="Basic")
+    premium = Plan(tenant_id=tenant_id, service_id=service.id, name="Premium")
+    db_session.add_all([basic, premium])
+    await db_session.commit()
+    return service, basic, premium
 
 
 async def test_public_api_key_management_lifecycle(client, active_tenant_user, db_session):
@@ -135,3 +156,77 @@ async def test_master_support_context_can_manage_starter_public_api_key(
     )
     assert response.status_code == 200, response.text
     assert response.json()["allowed_origins"] == ["https://support.example.com"]
+
+
+async def test_public_catalog_success_returns_nested_services_and_cors(
+    client, active_tenant_user, db_session
+):
+    headers = await _login(client)
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    service, basic, premium = await _seed_catalog(db_session, tenant.id)
+    api_key = await _create_public_key(client, headers, ["https://example.com"])
+
+    response = await client.get(
+        f"/api/v1/public/catalog?api_key={api_key}",
+        headers={"Origin": "https://example.com"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["access-control-allow-origin"] == "https://example.com"
+    assert response.headers["vary"] == "Origin"
+    assert response.json() == {
+        "services": [
+            {
+                "id": str(service.id),
+                "name": "Netflix",
+                "plans": [
+                    {"id": str(basic.id), "name": "Basic"},
+                    {"id": str(premium.id), "name": "Premium"},
+                ],
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "headers,query",
+    [
+        ({}, "api_key=tpk_missing_origin"),
+        ({"Origin": "https://example.com"}, ""),
+        ({"Origin": "https://example.com"}, "api_key=tpk_invalid"),
+        ({"Origin": "https://evil.example"}, "api_key={api_key}"),
+    ],
+)
+async def test_public_catalog_forbidden_cases(
+    client, active_tenant_user, db_session, headers: dict[str, str], query: str
+):
+    auth_headers = await _login(client)
+    api_key = await _create_public_key(client, auth_headers, ["https://example.com"])
+    resolved_query = query.format(api_key=api_key)
+
+    response = await client.get(
+        f"/api/v1/public/catalog{('?' + resolved_query) if resolved_query else ''}",
+        headers=headers,
+    )
+
+    assert response.status_code == 403, response.text
+    assert "access-control-allow-origin" not in response.headers
+
+
+async def test_public_catalog_starter_downgrade_preserves_config_but_returns_403(
+    client, auth_headers, active_tenant_user, db_session
+):
+    tenant_headers = await _login(client)
+    api_key = await _create_public_key(client, tenant_headers, ["https://example.com"])
+    await _make_starter(client, auth_headers, active_tenant_user)
+
+    response = await client.get(
+        f"/api/v1/public/catalog?api_key={api_key}",
+        headers={"Origin": "https://example.com"},
+    )
+    assert response.status_code == 403, response.text
+
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    row = await db_session.get(TenantApiKey, tenant.id)
+    assert row is not None
+    assert row.api_key == api_key
