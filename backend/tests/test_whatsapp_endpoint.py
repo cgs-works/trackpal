@@ -1251,7 +1251,6 @@ async def test_unregistered_identity_blocked_returns_no_reply(
     block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
-        is_active=True,
     )
     db_session.add(block)
     await db_session.commit()
@@ -1287,7 +1286,6 @@ async def test_unregistered_identity_blocked_any_message_no_reply(
     block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
-        is_active=True,
     )
     db_session.add(block)
     await db_session.commit()
@@ -1407,7 +1405,6 @@ async def test_blocked_unregistered_with_existing_codigo_session_returns_no_repl
     block = BlockedClient(
         tenant_id=_tenant.id,
         phone="12015559999",
-        is_active=True,
     )
     db_session.add(block)
     await db_session.commit()
@@ -2946,7 +2943,6 @@ async def test_context_shortcut_blocked_menu_shows_unblock(
     block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
-        is_active=True,
     )
     db_session.add(block)
     await db_session.commit()
@@ -3102,7 +3098,6 @@ async def test_context_shortcut_bloquear_creates_block(
         select(BlockedClient).where(
             BlockedClient.tenant_id == tenant.id,
             BlockedClient.phone == "12015559999",
-            BlockedClient.is_active,
         )
     )
     db_block = result.scalar_one_or_none()
@@ -3122,7 +3117,6 @@ async def test_context_shortcut_desbloquear_unblocks(
     block = BlockedClient(
         tenant_id=tenant.id,
         phone="12015559999",
-        is_active=True,
     )
     db_session.add(block)
     await db_session.commit()
@@ -3149,15 +3143,13 @@ async def test_context_shortcut_desbloquear_unblocks(
     assert "Acceso desbloqueado" in body["reply"]
     assert body.get("reply_to") == "12015550002@s.whatsapp.net"
 
-    # Verify block was deactivated
-    # Expire cached object so identity map reloads from DB
-    db_session.expire(block)
+    # Verify block was deleted (hard-delete)
+    db_session.expire_all()
     result = await db_session.execute(
         select(BlockedClient).where(BlockedClient.id == block_id)
     )
     db_block = result.scalar_one_or_none()
-    assert db_block is not None
-    assert db_block.is_active is False
+    assert db_block is None
 
 
 

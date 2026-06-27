@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Index, String
+from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +12,7 @@ class BlockedClient(Base, TimestampMixin):
 
     At least one identity field (phone or whatsapp_lid) must be
     provided at creation — enforced by the repository layer.
+    A row represents an active block; unblocking deletes the row.
     """
 
     __tablename__ = "blocked_clients"
@@ -24,7 +25,6 @@ class BlockedClient(Base, TimestampMixin):
     )
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     whatsapp_lid: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     __table_args__ = (
         Index("ix_blocked_clients_tenant_phone", "tenant_id", "phone"),

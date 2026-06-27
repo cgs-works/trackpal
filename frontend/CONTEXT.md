@@ -17,6 +17,7 @@
 |---------|------------|
 | **Master Layout** | Layout con sidebar para el operador Master. Muestra summary cards y business table. |
 | **Admin Layout** | Layout colapsable con sidebar para tenant admin. Navegación: Dashboard, Clients, Catalog, Subscriptions, Settings. Starter oculta links Pro-only. Master en contexto de soporte ve navegación completa + banner. |
+| **Settings Page** | Superficie de configuración del tenant admin. Usa navegación por categorías con un único panel activo para editar una sección a la vez; en móvil la selección de categoría se abre desde un drawer. El panel activo usa scroll interno para secciones largas e incluye una acción común de Cancelar que cierra la sección y descarta cambios locales no guardados. |
 | **Client Layout** | Layout con sidebar para cliente final. Navegación: Dashboard, Profile. |
 | **Auth Store** | Zustand store: token, refreshToken, user, activeTenantId, tenantPlan. Persistido en localStorage. `tenantPlan` es UI hint corregido por dashboard responses. |
 | **Catalog Store** | Cache de servicios, planes y clientes con dedup de requests en vuelo. |
@@ -112,7 +113,7 @@ Axios singleton en `src/lib/api.ts`:
 | **PlanRouteGate** | Componente wrapper para rutas Pro-only. Starter tenant admin ve `NotFoundPage`. Master support bypass. |
 | **SupportBanner** | Alert visible cuando Master está en contexto de soporte (switched a un Starter tenant). Indica que la UI completa es visible solo para soporte. |
 | **Master Support Context** | `role === "master" && activeTenantId !== null`. Master ve UI admin completa + banner, sin restricciones de plan. |
-| **AccessControlSection** | Sección en Settings para listar/bloquear/desbloquear identidades de WhatsApp. Disponible tanto para Starter como Pro. |
+| **AccessControlSection** | Sección en Settings para listar/bloquear/desbloquear identidades de WhatsApp. Disponible tanto para Starter como Pro. La lista visible se pagina en grupos de 10 bloqueos. |
 | **PublicApiSection** | Sección en Settings para crear, mostrar, regenerar y revocar la Public API Key, y para editar Allowed Origins. Disponible para Pro y Master Support Context. |
 
 ### Product Labels (UI)

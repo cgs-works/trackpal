@@ -247,7 +247,7 @@ Unique constraints/indexes:
 
 ### `BlockedClient` — `blocked_clients` table
 
-Tenant-scoped block for unregistered WhatsApp identities that should not receive console replies. Renamed from `client_messaging_blocks` to clarify it blocks system access (console, codes, profile, subscriptions), not only messages.
+Tenant-scoped block for unregistered WhatsApp identities that should not receive console replies. A row represents an active block; unblocking deletes the row.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -255,7 +255,6 @@ Tenant-scoped block for unregistered WhatsApp identities that should not receive
 | tenant_id | UUID | FK → tenants.id CASCADE, not null |
 | phone | VARCHAR(50) | Nullable, canonical digits-only |
 | whatsapp_lid | VARCHAR(100) | Nullable, `@lid` identity |
-| is_active | BOOLEAN | Default true, soft-delete |
 | created_at | TIMESTAMPTZ | From TimestampMixin |
 | updated_at | TIMESTAMPTZ | From TimestampMixin |
 
@@ -319,6 +318,7 @@ Alembic migrations:
 20. `07fa809c3ab3` — Merge branch heads (`ce10fe74caa11` + `cf10fe74caa0`)
 21. `d011fe74cab0` — Create `tenant_settings` table, backfill locale/timezone from `tenants` and `subscription_reminder_settings`, drop `tenants.locale` and `subscription_reminder_settings.timezone`, enable RLS
 22. `e011fe74cab1` — Add `plan` column to `tenants` with default `pro`, backfill existing tenants
+23. `e013fe74cab3` — Delete inactive `blocked_clients` rows and drop `blocked_clients.is_active`; row existence now represents an active block
 
 ## Key Constraints
 

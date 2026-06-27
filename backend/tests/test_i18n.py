@@ -418,20 +418,64 @@ async def test_public_api_frontend_i18n_keys_exist():
         "frontend.public_api.read_only",
         "frontend.public_api.copy",
         "frontend.public_api.copied",
-        "frontend.public_api.origins_label",
-        "frontend.public_api.origins_help",
-        "frontend.public_api.save",
+        "frontend.public_api.sites_label",
+        "frontend.public_api.sites_help",
+        "frontend.public_api.save_changes",
         "frontend.public_api.saved",
-        "frontend.public_api.regenerate",
-        "frontend.public_api.regenerated",
-        "frontend.public_api.revoke",
         "frontend.public_api.revoked",
-        "frontend.public_api.example_title",
-        "frontend.public_api.error_load",
-        "frontend.public_api.error_save",
-        "frontend.public_api.error_regenerate",
-        "frontend.public_api.error_revoke",
+        "frontend.public_api.section_title",
+        "frontend.public_api.description",
+        "frontend.public_api.tooltip",
+        "frontend.public_api.key_label",
+        "frontend.public_api.show",
+        "frontend.public_api.hide",
+        "frontend.public_api.create_first_site",
+        "frontend.public_api.site_label",
+        "frontend.public_api.create_key",
+        "frontend.public_api.add_site",
+        "frontend.public_api.delete_site",
     ]
     for locale in ("en", "es"):
         for key in keys:
             assert t(locale, key) != key
+
+
+# ── Settings & reminder frontend i18n keys ──────────────────────────────────
+
+
+async def test_settings_frontend_i18n_keys_exist():
+    from app.core.i18n import t
+
+    keys_no_params = [
+        "frontend.settings.guide_title",
+        "frontend.settings.guide_description",
+        "frontend.settings.select_category",
+        "frontend.settings.active_panel",
+        "frontend.settings.cancel",
+        "frontend.subscriptions.custom_message_tenant",
+        "frontend.subscriptions.custom_message_client",
+        "frontend.subscriptions.days",
+        "frontend.subscriptions.placeholder_custom",
+        "frontend.subscriptions.custom_messages",
+        "frontend.subscriptions.recipient_desc_tenant_only",
+        "frontend.subscriptions.recipient_desc_client_only",
+        "frontend.subscriptions.recipient_desc_both",
+        "frontend.access_control.pagination_previous",
+        "frontend.access_control.pagination_next",
+    ]
+    keys_with_params = {
+        "frontend.subscriptions.custom_messages_hint": {"placeholder": "test"},
+        "frontend.access_control.pagination_summary": {"from_item": "1", "to_item": "10", "total": "100"},
+        "frontend.access_control.pagination_page": {"page": "1"},
+        "frontend.subscriptions.remove_day": {"day": "3"},
+    }
+    for locale in ("en", "es"):
+        for key in keys_no_params:
+            assert t(locale, key) != key, (
+                f"Missing i18n key '{key}' in {locale} catalog"
+            )
+        for key, params in keys_with_params.items():
+            result = t(locale, key, **params)
+            assert result != key, (
+                f"Missing i18n key '{key}' in {locale} catalog"
+            )

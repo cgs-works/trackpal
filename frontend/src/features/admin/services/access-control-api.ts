@@ -5,7 +5,6 @@ export interface AccessControlBlock {
   tenant_id: string;
   phone: string | null;
   whatsapp_lid: string | null;
-  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

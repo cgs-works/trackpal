@@ -6,11 +6,11 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 
-Settings hub with expandable card sections. Uses `useSettingsStore` and `useCatalogStore` for cached data. Plan-aware: Starter shows Profile, Language, Code Services, Code Mailbox, Control de acceso, and Password. Pro adds Reminder Settings, Timezone, and planned Public API Key management. Master support context shows the full Pro settings set even for Starter tenants.
+`SettingsPage` renders tenant settings as a flat category list plus a single active detail panel. No category opens by default; the panel shows a guide message until the user selects a category. Desktop uses a lateral category menu, mobile uses a `Sheet` category picker, long sections scroll inside the detail panel, and the common Cancelar action closes the active section so unsaved local edits are discarded by unmounting the section component.
 
 | Section | Component | Data Source |
 |---------|-----------|-------------|
-| Reminder Settings | `ReminderSettingsModal` (dialog) | `settingsStore.reminderSettings` |
+| Reminder Settings | `ReminderSettingsSection` (inline panel) | `settingsStore.reminderSettings` |
 | Language | `LocaleSection` | `settingsStore.tenantSettings` |
 | Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
 | Code Services | `CodeServicesSection` | API direct |
@@ -55,14 +55,15 @@ Searchable timezone dropdown using `createPortal` to escape parent overflow cont
 - Positioned relative to trigger button using `getBoundingClientRect()`
 - Closes on click outside (checks both trigger and portal element)
 
-### ReminderSettingsModal (`features/admin/components/reminder-settings-modal.tsx`)
+### ReminderSettingsSection (`features/admin/components/reminder-settings-section.tsx`)
 
-Dialog for reminder configuration (warning days, reminder time, recipient mode, enabled toggle).
+Inline panel for reminder configuration (warning days, reminder time, recipient mode, enabled toggle, custom messages).
 
 - Timezone displayed as read-only (edited via TimezoneSection)
-- Loads via `loadReminderSettings()` + `loadTenantSettings()` on open
+- Loads via `loadReminderSettings()` + `loadTenantSettings()` on mount
 - Saves via `updateReminderSettings()`
-- Resets local state on modal open via `useEffect([open])`
+- Resets local state via `useEffect` when `reminderSettingsLoaded` changes
+- Shows template preview for custom messages using placeholder values
 
 ### MailboxSection (`features/admin/components/mailbox-section.tsx`)
 

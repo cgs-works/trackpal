@@ -71,7 +71,7 @@ class DashboardService:
 
     async def _access_control_count(self, db, tenant_id) -> int:
         row = await db.execute(
-            select(func.count()).select_from(BlockedClient).where(BlockedClient.tenant_id == tenant_id, BlockedClient.is_active)
+            select(func.count()).select_from(BlockedClient).where(BlockedClient.tenant_id == tenant_id)
         )
         return int(row.scalar_one())
 
