@@ -53,7 +53,7 @@ Evolution Go manages per-webhook, per-`remoteJid` chatbot sessions in memory (`S
 3. If session opened and matches trigger → dispatch to webhook.
 4. If no session → evaluate trigger. If content matches trigger regex → open session + dispatch.
 5. If no session and content does NOT match trigger → **silently discarded** (prevents random chat text from hitting n8n).
-6. When Evolution Go expires a session by inactivity, it dispatches a timeout event through the webhook so Trackpal sends the notice in the tenant locale.
+6. When Evolution Go expires a session by inactivity, it dispatches a timeout event through the webhook so TrackPal sends the notice in the tenant locale.
 
 **`from_me` trigger dispatch (outgoing-message dispatch):**
 When `fromMe=true` and the webhook has `ListeningFromMe=true`, all messages (including those without an active session) must first match the trigger regex before they are dispatched. If a `fromMe` trigger matches and the sender JID (`remoteJid`) differs from the admin JID (`senderPn`), an admin alias session is opened keyed by `instance.Jid` so subsequent tenant replies in the admin chat flow through the existing session. This replaces the earlier unconditional `from_me_bypass` that dispatched every outgoing message.

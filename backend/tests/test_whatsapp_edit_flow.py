@@ -343,7 +343,7 @@ class TestEditFlowStart:
             tenant_service=tenant_service,
         )
 
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
 
 @pytest.mark.asyncio
@@ -500,7 +500,7 @@ class TestEditFieldSelection:
             tenant_service=tenant_service,
         )
 
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_reset_from_field_selection(
         self,
@@ -518,7 +518,7 @@ class TestEditFieldSelection:
             tenant_service=tenant_service,
         )
 
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         session = await session_service.get_session("+10000000000")
         assert session is None
 
@@ -570,7 +570,7 @@ class TestEditNewValue:
         # Should return success message + main menu
         assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp Renamed" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         # Tenant should be updated in the fake service
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
@@ -599,7 +599,7 @@ class TestEditNewValue:
 
         assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
@@ -627,7 +627,7 @@ class TestEditNewValue:
 
         assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
@@ -655,7 +655,7 @@ class TestEditNewValue:
 
         assert "Empresa actualizada exitosamente" in reply
         assert "Alpha Corp" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
@@ -684,7 +684,7 @@ class TestEditNewValue:
 
         assert "Empresa actualizada exitosamente" in reply
         assert "New Name" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_empty_full_name_reprompts(
         self,
@@ -824,7 +824,7 @@ class TestEditNewValue:
         )
 
         assert "Empresa actualizada exitosamente" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         # Email normalized (domain lowercase, local part preserved)
@@ -848,7 +848,7 @@ class TestEditNewValue:
         )
 
         assert "Empresa actualizada exitosamente" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
         # Phone stored canonical digits-only (no + prefix)
@@ -920,7 +920,7 @@ class TestEditNewValue:
 
         # Should show success with main menu
         assert "Empresa actualizada exitosamente" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         tenant = await tenant_service.get_tenant(TENANT_1_ID)
         assert tenant is not None
@@ -946,7 +946,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         session = await session_service.get_session("+10000000000")
         assert session is None
 
@@ -966,7 +966,7 @@ class TestEditNewValue:
             tenant_service=tenant_service,
         )
 
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         session = await session_service.get_session("+10000000000")
         assert session is None
 
@@ -1055,7 +1055,7 @@ class TestEditFlowFullScenario:
         )
         assert "Empresa actualizada exitosamente" in reply
         assert "New Alpha Name" in reply
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         # Session cleared after first edit — re-navigate from main menu
         await console_service.process_message(
@@ -1095,7 +1095,7 @@ class TestEditFlowFullScenario:
         )
         assert "Empresa actualizada exitosamente" in reply
         assert "New Alpha Name" in reply  # Previous edit preserved in DB
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         # Verify persisted changes
         tenant = await tenant_service.get_tenant(TENANT_1_ID)

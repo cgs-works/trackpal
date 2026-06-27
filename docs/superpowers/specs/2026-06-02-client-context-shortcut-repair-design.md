@@ -2,17 +2,17 @@
 
 ## Purpose
 
-Repair the Client Context Shortcut so `/menu` behaves predictably for Tenant admins, sends an intuitive private client-management menu, closes the correct Evolution session, reduces unnecessary Redis reads, and aligns all backend-rendered messages with Trackpal i18n.
+Repair the Client Context Shortcut so `/menu` behaves predictably for Tenant admins, sends an intuitive private client-management menu, closes the correct Evolution session, reduces unnecessary Redis reads, and aligns all backend-rendered messages with TrackPal i18n.
 
 ## Approved Behaviour
 
 ### Self chat
 
-When a Tenant admin sends `/menu` in their own private Tenant chat, Trackpal must route to the normal Tenant console menu. It must not create a Client Context Shortcut and must not treat the Tenant admin as a client.
+When a Tenant admin sends `/menu` in their own private Tenant chat, TrackPal must route to the normal Tenant console menu. It must not create a Client Context Shortcut and must not treat the Tenant admin as a client.
 
 ### Client or external chat
 
-When a Tenant admin sends `/menu` in a chat that is not their own private Tenant chat, Trackpal must open a temporary Client Context Shortcut for that target identity and immediately send the relevant contextual menu to the Tenant admin's private chat.
+When a Tenant admin sends `/menu` in a chat that is not their own private Tenant chat, TrackPal must open a temporary Client Context Shortcut for that target identity and immediately send the relevant contextual menu to the Tenant admin's private chat.
 
 Administrative shortcut messages must never be sent to the target/client chat.
 
@@ -158,7 +158,7 @@ Rules:
 
 ## Closing Semantics
 
-When the Tenant admin sends `0` inside the Client Context Shortcut, Trackpal must perform a total Tenant-side close:
+When the Tenant admin sends `0` inside the Client Context Shortcut, TrackPal must perform a total Tenant-side close:
 
 1. Delete `wa:client_ctx:{admin_phone}`.
 2. Delete the normal Tenant console session `session:admin:{admin_phone}`.
@@ -244,6 +244,6 @@ n8n validation/manual tests must cover:
 
 ## Non-goals
 
-- Evolution Go code changes inside Trackpal repository.
+- Evolution Go code changes inside TrackPal repository.
 - Client-specific locale override.
 - Redesigning all Tenant console menus outside the Client Context Shortcut work.

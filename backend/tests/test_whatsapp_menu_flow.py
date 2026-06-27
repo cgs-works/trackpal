@@ -131,7 +131,7 @@ class TestMainMenu:
             message="",
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_blank_message_returns_menu(
         self, console_service: WhatsAppConsoleService
@@ -141,7 +141,7 @@ class TestMainMenu:
             message="   ",
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_menu_contains_categories(
         self, console_service: WhatsAppConsoleService
@@ -246,7 +246,7 @@ class TestResetCommands:
             message=cmd,
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     @pytest.mark.parametrize("cmd", ["menu", "menú", "/menu", "cancelar"])
     async def test_reset_clears_session(
@@ -290,7 +290,7 @@ class TestResetCommands:
             is_master=True,
             session_service=None,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     @pytest.mark.parametrize("cmd", ["MENU", "Menú", "/MENU", "/Menu", "CANCELAR"])
     async def test_reset_is_case_insensitive(
@@ -303,7 +303,7 @@ class TestResetCommands:
             message=cmd,
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     # ------------------------------------------------------------------
     # Navigation contract: 9 no longer a reset command
@@ -321,7 +321,7 @@ class TestResetCommands:
         )
         # With no active flow and no specific handling for 9,
         # it should fall through to the no-flow fallback.
-        assert "Trackpal Master Console" not in reply
+        assert "TrackPal Master Console" not in reply
         assert "No entendí" in reply
 
     async def test_nine_during_active_flow_does_not_clear_session(
@@ -349,7 +349,7 @@ class TestResetCommands:
         assert fetched is not None
 
         # Reply should NOT contain menu
-        assert "Trackpal Master Console" not in reply
+        assert "TrackPal Master Console" not in reply
 
 
 # ---------------------------------------------------------------------------
@@ -450,7 +450,7 @@ class TestFallbackActiveFlow:
             is_master=True,
             session_service=session_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
         # Session should be cleared
         fetched = await session_service.get_session("+10000000000")
@@ -499,7 +499,7 @@ class TestFallbackActiveFlow:
         assert fetched is None
 
         # Reply should mention cancellation + main menu
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
 
 
@@ -524,7 +524,7 @@ class TestMenuOptionsNotImplemented:
             message=opt,
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_option_2_starts_create_flow(
         self,
@@ -555,7 +555,7 @@ class TestNoSessionService:
             message="menu",
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_processes_help_without_session_service(
         self, console_service: WhatsAppConsoleService

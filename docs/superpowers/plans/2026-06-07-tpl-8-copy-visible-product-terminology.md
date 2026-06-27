@@ -89,7 +89,7 @@ Apply the approved terminology:
 
 ```python
 MAIN_MENU = (
-    "🤖 *Trackpal Master Console*\n\n"
+    "🤖 *TrackPal Master Console*\n\n"
     "1️⃣ Ver empresas\n"
     "2️⃣ Crear empresa\n"
     "3️⃣ Desactivar empresa\n"

@@ -29,7 +29,7 @@
 - Modify: `backend/app/api/v1/endpoints/integrations/console.py:408-615` — insertar la rama temprana de cancelación remota en `_handle_from_me_routing()` antes del manejo de context collision.
 - Modify: `backend/app/api/v1/endpoints/integrations/console_handlers.py:116-176` y nueva helper cerca de los handlers de `codigo` — agregar `_cancel_target_codigo_flow(...)`.
 - Modify: `backend/tests/test_whatsapp_endpoint.py` — añadir cobertura para phone path, LID path, active job, no aliases, no Redis session, admin session intacta y context activa intacta.
-- Modify: `n8n/Trackpal WhatsApp Bot.json` — cambiar el nodo `Guard fromMe external non-menu` para exceptuar sólo el `0` remoto.
+- Modify: `n8n/TrackPal WhatsApp Bot.json` — cambiar el nodo `Guard fromMe external non-menu` para exceptuar sólo el `0` remoto.
 - Modify: `docs/architecture/whatsapp-console-flow.md` — documentar la nueva excepción del guard y la rama remota `0`.
 - Modify: `docs/architecture/evolution-integration.md` — documentar `listeningFromMe=true` y el supuesto operativo del flujo remoto.
 
@@ -692,8 +692,8 @@ git commit -m "feat: handle remote codigo cancel edge cases"
 - `superpowers:verification-before-completion`
 
 **Files:**
-- Modify: `n8n/Trackpal WhatsApp Bot.json`
-- Test/Verify: `n8n/Trackpal WhatsApp Bot.json`
+- Modify: `n8n/TrackPal WhatsApp Bot.json`
+- Test/Verify: `n8n/TrackPal WhatsApp Bot.json`
 
 - [x] **Step 1: Write the failing guard verification**
 
@@ -704,7 +704,7 @@ Run:
 ```bash
 python - <<'PY'
 import json, pathlib, sys
-path = pathlib.Path("n8n/Trackpal WhatsApp Bot.json")
+path = pathlib.Path("n8n/TrackPal WhatsApp Bot.json")
 data = json.loads(path.read_text(encoding="utf-8"))
 node = next(n for n in data["nodes"] if n["name"] == "Guard fromMe external non-menu")
 code = node["parameters"]["jsCode"]
@@ -794,7 +794,7 @@ Run:
 ```bash
 python - <<'PY'
 import json, pathlib
-path = pathlib.Path("n8n/Trackpal WhatsApp Bot.json")
+path = pathlib.Path("n8n/TrackPal WhatsApp Bot.json")
 data = json.loads(path.read_text(encoding="utf-8"))
 node = next(n for n in data["nodes"] if n["name"] == "Guard fromMe external non-menu")
 code = node["parameters"]["jsCode"]
@@ -810,7 +810,7 @@ Expected: `OK`.
 - [x] **Step 4: Commit**
 
 ```bash
-git add "n8n/Trackpal WhatsApp Bot.json"
+git add "n8n/TrackPal WhatsApp Bot.json"
 git commit -m "feat: allow remote zero through n8n guard"
 ```
 
@@ -867,7 +867,7 @@ Then verify the workflow JSON still parses:
 ```bash
 python - <<'PY'
 import json, pathlib
-json.loads(pathlib.Path("n8n/Trackpal WhatsApp Bot.json").read_text(encoding="utf-8"))
+json.loads(pathlib.Path("n8n/TrackPal WhatsApp Bot.json").read_text(encoding="utf-8"))
 print("workflow json ok")
 PY
 ```

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-06-11T00:00:00.000Z",
-  "title": "Design System: Trackpal",
+  "title": "Design System: TrackPal",
   "extensions": {
     "colorMeta": {
       "background": {
@@ -102,7 +102,7 @@
   ],
   "narrative": {
     "northStar": "The Operations Ledger",
-    "overview": "Trackpal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings. This system is product-first. Familiar controls are an asset. Future screens should look trustworthy to operators who manage tenants, clients, subscriptions, mailbox connections, and access-code workflows in Spanish-first contexts.",
+    "overview": "TrackPal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings. This system is product-first. Familiar controls are an asset. Future screens should look trustworthy to operators who manage tenants, clients, subscriptions, mailbox connections, and access-code workflows in Spanish-first contexts.",
     "keyCharacteristics": [
       "Restrained neutral surfaces with near-black primary actions.",
       "Comfortable and calm density: not sparse marketing, not cramped infrastructure UI.",

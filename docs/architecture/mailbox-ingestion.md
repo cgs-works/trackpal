@@ -4,7 +4,7 @@
 
 Tenant mailbox ingestion lets each tenant configure a tech mailbox for
 extracting streaming-service access codes without deploying Python bots
-per tenant.  Execution is centralised in the Trackpal backend and runs
+per tenant.  Execution is centralised in the TrackPal backend and runs
 on-demand when n8n requests a code lookup.
 
 ## Components

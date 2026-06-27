@@ -158,7 +158,7 @@ Submodules: `cleanup.py`, `reminder_log.py`, `reminder_payloads.py`, `reminder_s
 
 ## n8n Workflow
 
-File: `n8n/Trackpal Subscription Reminders.json`. 11 nodes, separate from main bot.
+File: `n8n/TrackPal Subscription Reminders.json`. 11 nodes, separate from main bot.
 
 1. Schedule Trigger (every 30 minutes)
 2. Config (URLs, keys, page limit 100, configurable delay)

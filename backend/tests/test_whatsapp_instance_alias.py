@@ -81,4 +81,4 @@ async def test_instance_alias_with_tenant_prefix_routes_tenant(
 
     assert response.status_code == 200
     reply = response.json()["reply"]
-    assert "Consola de Administración" in reply or "Trackpal" in reply
+    assert "Consola de Administración" in reply or "TrackPal" in reply

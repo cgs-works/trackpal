@@ -4,7 +4,7 @@
 
 **Goal:** Make successful lookup results close the Evolution Go session after send, keep recoverable results open with explicit `1 / 2 / 0` options, and make local n8n-timeout retry semantics coherent for both tenant and unauth code flows.
 
-**Architecture:** Keep the change surgical. The workflow fix lives in `n8n/Trackpal WhatsApp Bot.json` by adding an explicit `close_after_send` flag in `Build result message` and teaching `Check close session` to read that flag from upstream result data instead of relying on the HTTP node output. Backend changes are limited to the two awaiting-result handlers so `1`/`2` remain coherent after n8n times out locally, while existing `0` cancel-close behavior is preserved.
+**Architecture:** Keep the change surgical. The workflow fix lives in `n8n/TrackPal WhatsApp Bot.json` by adding an explicit `close_after_send` flag in `Build result message` and teaching `Check close session` to read that flag from upstream result data instead of relying on the HTTP node output. Backend changes are limited to the two awaiting-result handlers so `1`/`2` remain coherent after n8n times out locally, while existing `0` cancel-close behavior is preserved.
 
 **Tech Stack:** n8n workflow JSON, JavaScript Code nodes, Python 3.11+ / FastAPI, pytest, httpx AsyncClient, unittest.mock, project docs in `docs/architecture/`.
 
@@ -12,7 +12,7 @@
 
 ## File map
 
-- `n8n/Trackpal WhatsApp Bot.json`
+- `n8n/TrackPal WhatsApp Bot.json`
   - Source of truth for `Build result message`, `Send result`, and `Check close session`.
 - `backend/tests/test_n8n_whatsapp_workflow.py` **(new)**
   - Regression tests that parse the workflow export and lock the JSON/JS contract.
@@ -51,7 +51,7 @@ import json
 from pathlib import Path
 
 WORKFLOW_PATH = (
-    Path(__file__).resolve().parents[2] / "n8n" / "Trackpal WhatsApp Bot.json"
+    Path(__file__).resolve().parents[2] / "n8n" / "TrackPal WhatsApp Bot.json"
 )
 
 
@@ -125,7 +125,7 @@ git commit -m "test: lock n8n lookup close-session contract"
 - `docs/architecture/n8n-workflow.md`
 
 **Files:**
-- Modify: `n8n/Trackpal WhatsApp Bot.json` (nodes `Build result message`, `Check close session`)
+- Modify: `n8n/TrackPal WhatsApp Bot.json` (nodes `Build result message`, `Check close session`)
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
 - [x] **Step 1: Update `Build result message` to emit `close_after_send` and recoverable failure text**
@@ -232,7 +232,7 @@ Run:
 python - <<'PY'
 import json
 from pathlib import Path
-path = Path('n8n/Trackpal WhatsApp Bot.json')
+path = Path('n8n/TrackPal WhatsApp Bot.json')
 json.loads(path.read_text(encoding='utf-8'))
 print('workflow json ok')
 PY
@@ -253,7 +253,7 @@ Expected: PASS.
 - [x] **Step 5: Commit**
 
 ```bash
-git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
+git add n8n/TrackPal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
 git commit -m "fix: close successful lookup sessions in n8n"
 ```
 

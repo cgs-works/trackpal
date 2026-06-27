@@ -10,7 +10,7 @@ UNKNOWN_PHONE_REPLY = (
 )
 
 TENANT_CONSOLE_PLACEHOLDER = (
-    "🤖 *Trackpal Consola de Administración*\n\n"
+    "🤖 *TrackPal Consola de Administración*\n\n"
     "Bienvenido a la consola de administración para tu tenant.\n\n"
     "Esta funcionalidad estará disponible próximamente."
 )

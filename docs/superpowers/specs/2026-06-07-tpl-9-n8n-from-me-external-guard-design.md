@@ -276,7 +276,7 @@ Validate with representative parsed items:
 - No database migration is required.
 - No backend deploy is required for the selected fix.
 - No Evolution Go deploy is required for the selected fix.
-- Import or update `n8n/Trackpal WhatsApp Bot.json` after editing the workflow.
+- Import or update `n8n/TrackPal WhatsApp Bot.json` after editing the workflow.
 - Keep the previous workflow export available for rollback.
 - If the guard accidentally blocks `/menu`, rollback immediately because that would break Client Context Shortcut.
 

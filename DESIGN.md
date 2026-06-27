@@ -1,5 +1,5 @@
 ---
-name: Trackpal
+name: TrackPal
 description: Calm operations UI for WhatsApp-based tenant, subscription, and mailbox-code workflows.
 colors:
   background: "oklch(1 0 0)"
@@ -77,13 +77,13 @@ components:
     padding: "0.25rem 0.625rem"
 ---
 
-# Design System: Trackpal
+# Design System: TrackPal
 
 ## 1. Overview
 
 **Creative North Star: "The Operations Ledger"**
 
-Trackpal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings.
+TrackPal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings.
 
 This system is product-first. Familiar controls are an asset. Future screens should look trustworthy to operators who manage tenants, clients, subscriptions, mailbox connections, and access-code workflows in Spanish-first contexts. It explicitly rejects generic SaaS-card aesthetics: gradient hero text, repeated metric-card scaffolds, decorative dashboards, startup-template polish, and motion that does not improve state comprehension.
 
@@ -139,7 +139,7 @@ The palette is **Ink and Porcelain**: porcelain-white work surfaces, ink-black a
 
 ## 4. Elevation
 
-Trackpal uses **tonal layers**: borders, muted fills, and spacing establish depth first. Shadows are not part of the core vocabulary yet; when introduced, they should appear as interaction feedback or for overlays, not as permanent decoration on every card.
+TrackPal uses **tonal layers**: borders, muted fills, and spacing establish depth first. Shadows are not part of the core vocabulary yet; when introduced, they should appear as interaction feedback or for overlays, not as permanent decoration on every card.
 
 ### Named Rules
 **The Border-Before-Shadow Rule.** Start with `ring-foreground/10`, `border-border`, muted footers, and spacing. Add shadow only when a surface must float above another surface.

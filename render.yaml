@@ -23,7 +23,7 @@ services:
       - key: MASTER_PASSWORD
         sync: false
       - key: MASTER_NAME
-        value: "Master Trackpal"
+        value: "Master TrackPal"
       - key: MASTER_PHONE
         sync: false
       - key: EVOLUTION_API_URL

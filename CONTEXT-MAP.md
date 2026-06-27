@@ -1,6 +1,6 @@
 # Context Map
 
-Trackpal es un multi-context project. Cada contexto tiene su propio `CONTEXT.md` con vocabulario de dominio, decisiones arquitectónicas y convenciones específicas.
+TrackPal es un multi-context project. Cada contexto tiene su propio `CONTEXT.md` con vocabulario de dominio, decisiones arquitectónicas y convenciones específicas.
 
 ## Contexts
 

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     master_username: str = "master"
     master_password: str = "changeme"
-    master_name: str = "Master Trackpal"
+    master_name: str = "Master TrackPal"
     master_phone: str = "+1234567890"
     redis_url: str = ""
     redis_primary_url: str = ""

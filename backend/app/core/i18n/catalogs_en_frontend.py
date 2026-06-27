@@ -248,7 +248,7 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.status_connected": "Connected",
     "frontend.mailbox.status_disconnected": "Not connected",
     "frontend.mailbox.status_error": "Error",
-    "frontend.mailbox.status_revoked": "Revoked â€” Reconnect required",
+    "frontend.mailbox.status_revoked": "Revoked — Reconnect required",
     "frontend.mailbox.connect_google": "Connect Gmail",
     "frontend.mailbox.connect_microsoft": "Connect Outlook",
     "frontend.mailbox.connect_oauth": "Connect with OAuth",

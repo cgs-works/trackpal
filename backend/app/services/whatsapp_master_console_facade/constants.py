@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 USERNAME_PROMPT = (
-    "🔐 *Trackpal Master Console - Acceso*\n\n"
+    "🔐 *TrackPal Master Console - Acceso*\n\n"
     "Para usar la consola, primero debes iniciar sesión.\n\n"
     "¿Cuál es tu *nombre de usuario*?"
 )

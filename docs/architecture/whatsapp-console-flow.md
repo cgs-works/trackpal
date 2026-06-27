@@ -1,6 +1,6 @@
 # WhatsApp Console Flow Architecture
 
-Trackpal has three WhatsApp conversational consoles:
+TrackPal has three WhatsApp conversational consoles:
 - **Master Console** for tenant lifecycle management
 - **Tenant Console** for tenant admins to manage clients, catalog, profile, and subscriptions
 - **Client Console** (read-only) for tenant clients
@@ -16,7 +16,7 @@ Evolution
     ↓ (webhook)
 n8n Workflow → POST /api/v1/integrations/n8n/console
     ↓
-Trackpal Backend
+TrackPal Backend
     ↓
 WhatsApp*ConsoleFacade.process_message()
     ↓

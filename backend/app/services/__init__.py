@@ -1,4 +1,4 @@
-"""Service layer — business logic and orchestration for Trackpal."""
+"""Service layer — business logic and orchestration for TrackPal."""
 
 from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService

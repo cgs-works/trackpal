@@ -248,7 +248,7 @@ This makes 30-minute polling acceptable without excessive backend load.
 
 ### Workflow file
 
-`n8n/Trackpal Subscription Reminders.json`
+`n8n/TrackPal Subscription Reminders.json`
 
 ### Trigger behavior
 

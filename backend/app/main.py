@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 
-app = FastAPI(title="Trackpal API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="TrackPal API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

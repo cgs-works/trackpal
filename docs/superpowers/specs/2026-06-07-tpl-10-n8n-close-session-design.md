@@ -25,7 +25,7 @@ Fix the WhatsApp Bot workflow so Evolution Go closes the chat session after a te
 
 Issue TPL-10 reports that the n8n WhatsApp Bot workflow sends the final access-code lookup result but does not close the Evolution Go chatbot session afterward.
 
-The verified current root cause is in `n8n/Trackpal WhatsApp Bot.json`:
+The verified current root cause is in `n8n/TrackPal WhatsApp Bot.json`:
 
 - `Merge & lookup data` preserves `lookup_job_id` on the item.
 - `Build result message` currently returns `{ ...base, ...poll, reply: finalMessage }` and does **not** emit any explicit close/terminal flag.

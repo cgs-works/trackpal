@@ -5,7 +5,7 @@ Status: approved for planning
 
 ## Goal
 
-Create a uniform, fully interactive navigation model for every WhatsApp console flow in Trackpal.
+Create a uniform, fully interactive navigation model for every WhatsApp console flow in TrackPal.
 
 Global option semantics:
 

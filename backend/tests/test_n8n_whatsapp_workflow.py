@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 WORKFLOW_PATH = (
-    Path(__file__).resolve().parents[2] / "n8n" / "Trackpal WhatsApp Bot.json"
+    Path(__file__).resolve().parents[2] / "n8n" / "TrackPal WhatsApp Bot.json"
 )
 
 
@@ -129,7 +129,7 @@ def test_parse_input_filters_not_registered_bot_echoes_without_dropping_from_me(
 
     assert "no tienes una cuenta registrada" in js
     assert "you do not have a registered account" in js
-    assert "if (!fromMe && looksLikeTrackpalGeneratedReply)" in js
+    assert "if (!fromMe && looksLikeTrackPalGeneratedReply)" in js
 
 
 def test_parse_input_filters_trackpal_menu_and_cancel_echoes() -> None:

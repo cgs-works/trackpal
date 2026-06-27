@@ -389,7 +389,7 @@ class TestDeactivateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
 
         session = await session_service.get_session("+10000000000")
@@ -420,7 +420,7 @@ class TestDeactivateFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
 
         session = await session_service.get_session("+10000000000")
@@ -697,7 +697,7 @@ class TestDeleteFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         session = await session_service.get_session("+10000000000")
         assert session is None
@@ -727,7 +727,7 @@ class TestDeleteFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         session = await session_service.get_session("+10000000000")
         assert session is None
@@ -816,7 +816,7 @@ class TestMainMenuLifecycleShortcuts:
             message="3",
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
     async def test_option_4_without_tenant_service_returns_menu(
         self,
@@ -828,7 +828,7 @@ class TestMainMenuLifecycleShortcuts:
             message="4",
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
 
 # ===========================================================================

@@ -204,7 +204,7 @@ Defined in `vite.config.ts`:
 ### Cloudflare Pages Deployment
 
 - `_redirects` file: SPA fallback `/* /index.html 200` — all paths serve index.html
-- Favicon: `favicon.svg` (purple Trackpal logo)
+- Favicon: `favicon.svg` (purple TrackPal logo)
 - `Icons.svg`: Social media icon sprite
 
 ## Views Overview

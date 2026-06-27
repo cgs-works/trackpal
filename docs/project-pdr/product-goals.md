@@ -2,7 +2,7 @@
 
 ## Overview
 
-Trackpal is a multi-tenant platform that enables a Master operator to manage WhatsApp-based service delivery for streaming account management. The Master creates and manages tenants (service intermediaries), each with their own Evolution WhatsApp instance. Tenants manage clients, catalog, profiles, subscriptions, and mailbox code ingestion through REST, web dashboard, and WhatsApp.
+TrackPal is a multi-tenant platform that enables a Master operator to manage WhatsApp-based service delivery for streaming account management. The Master creates and manages tenants (service intermediaries), each with their own Evolution WhatsApp instance. Tenants manage clients, catalog, profiles, subscriptions, and mailbox code ingestion through REST, web dashboard, and WhatsApp.
 
 The system bridges three channels: **WhatsApp Console** (chatbot-driven admin), **Web Dashboard** (full CRUD UI), and **Mailbox Ingestion** (automated code extraction from OAuth/IMAP mailboxes).
 

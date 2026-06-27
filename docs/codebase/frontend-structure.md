@@ -10,7 +10,7 @@ frontend/
 ├── .env.example                  # VITE_API_URL template
 │
 ├── public/
-│   ├── favicon.svg               # Trackpal logo (purple gradient)
+│   ├── favicon.svg               # TrackPal logo (purple gradient)
 │   ├── icons.svg                 # Social media icon sprite
 │   └── _redirects                # Cloudflare Pages SPA fallback: /* /index.html 200
 │

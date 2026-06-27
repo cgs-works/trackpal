@@ -292,7 +292,7 @@ class TestListTenantsFlow:
             message="1",
             is_master=True,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
 
 @pytest.mark.asyncio
@@ -467,7 +467,7 @@ class TestSelectTenantFlow:
             session_service=session_service,
             tenant_service=tenant_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
 
         # Session should be cleared
         session = await session_service.get_session("+10000000000")
@@ -629,4 +629,4 @@ class TestListSelectWithoutSessionService:
             is_master=True,
         )
         # No tenant_service, so option 1 returns main menu
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply

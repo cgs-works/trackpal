@@ -129,7 +129,7 @@ Contract tests in `test_whatsapp_console_navigation_contract.py` scan all source
 4. **Reply fallback**: The `Merge Reply` Code node provides a static Spanish fallback message when backend returns no reply, except when `no_reply=true` in the response (the fallback is skipped to keep the response silent).
 5. **``reply_to`` routing**: When the backend returns `reply_to`, the Evolution Go Send node uses that JID as the send target instead of the original sender's phone. This keeps contextual administrative replies private to the admin chat.
 6. **``no_reply`` silence**: When the backend returns `no_reply=true`, a new IF node routes the data directly to Check Close Session, bypassing all Evolution API send calls. This prevents blocked identities and context collisions from generating user-facing messages.
-5. **Workflow files**: Exported as `n8n/Trackpal WhatsApp Bot.json` and `n8n/Trackpal Subscription Reminders.json`. Config values are visible in plaintext in the JSON export; treat both files as secrets-bearing.
+5. **Workflow files**: Exported as `n8n/TrackPal WhatsApp Bot.json` and `n8n/TrackPal Subscription Reminders.json`. Config values are visible in plaintext in the JSON export; treat both files as secrets-bearing.
 
 ## Migration Guidelines
 

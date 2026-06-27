@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------
 
 MAIN_MENU = (
-    "🤖 *Trackpal Master Console*\n\n"
+    "🤖 *TrackPal Master Console*\n\n"
     "1️⃣ Ver empresas\n"
     "2️⃣ Crear empresa\n"
     "3️⃣ Desactivar empresa\n"
@@ -15,10 +15,10 @@ MAIN_MENU = (
     "Responde con el número de la opción deseada."
 )
 
-ACCESS_DENIED = "⚠️ Este servicio solo está disponible para el Master de Trackpal."
+ACCESS_DENIED = "⚠️ Este servicio solo está disponible para el Master de TrackPal."
 
 HELP_TEXT = (
-    "🤖 *Ayuda - Trackpal Master Console*\n\n"
+    "🤖 *Ayuda - TrackPal Master Console*\n\n"
     "Los comandos disponibles son:\n\n"
     "1️⃣ *Ver empresas* — Muestra la lista de empresas.\n"
     "2️⃣ *Crear empresa* — Inicia el flujo de creación.\n"
@@ -122,7 +122,7 @@ CREATE_PROMPT_PHONE = (
 CREATE_PROMPT_USERNAME = (
     "✏️ *Crear empresa*\n\n"
     "¿Cuál es el *nombre de usuario* para la empresa?\n\n"
-    "(Se usará para iniciar sesión en Trackpal)"
+    "(Se usará para iniciar sesión en TrackPal)"
 )
 
 CREATE_PROMPT_EVOLUTION_INSTANCE = (

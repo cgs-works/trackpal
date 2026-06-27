@@ -1,6 +1,6 @@
 # I18n / Localization System
 
-Trackpal uses a Python-centered i18n system. Backend is translation source-of-truth; English default with Spanish as primary secondary locale. Tenants persist locale preference; catalogs are in-memory Python dicts loaded at import.
+TrackPal uses a Python-centered i18n system. Backend is translation source-of-truth; English default with Spanish as primary secondary locale. Tenants persist locale preference; catalogs are in-memory Python dicts loaded at import.
 
 ## Architecture
 

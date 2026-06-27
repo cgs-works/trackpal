@@ -225,7 +225,7 @@ class TestLoginFlow:
             db=db_session,
         )
 
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert "Master Console" in reply or "TrackPal" in reply
 
         # Verify auth session was created
         auth_session = await auth_session_service.get_auth_session("+12015550001")
@@ -276,7 +276,7 @@ class TestLoginFlow:
             db=db_session,
         )
 
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert "Master Console" in reply or "TrackPal" in reply
 
         # Verify auth session was created
         auth_session = await auth_session_service.get_auth_session("+12015550001")
@@ -772,7 +772,7 @@ class TestAuthSessionActive:
         )
 
         # Must get main menu (not a login prompt)
-        assert "Master Console" in reply or "Trackpal" in reply
+        assert "Master Console" in reply or "TrackPal" in reply
         assert "usuario" not in reply.lower()
 
     async def test_auth_session_active_calls_console_service_with_is_master(

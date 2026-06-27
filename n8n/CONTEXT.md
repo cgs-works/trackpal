@@ -11,8 +11,8 @@
 
 | Workflow | Archivo | Propósito |
 |----------|---------|-----------|
-| WhatsApp Bot | `Trackpal WhatsApp Bot.json` | Bridge webhook: recibe mensajes de Evolution → envía a backend → procesa respuesta → envía via Evolution |
-| Subscription Reminders | `Trackpal Subscription Reminders.json` | Scheduler diario: genera recordatorios de suscripciones próximas a vencer |
+| WhatsApp Bot | `TrackPal WhatsApp Bot.json` | Bridge webhook: recibe mensajes de Evolution → envía a backend → procesa respuesta → envía via Evolution |
+| Subscription Reminders | `TrackPal Subscription Reminders.json` | Scheduler diario: genera recordatorios de suscripciones próximas a vencer |
 
 ## Vocabulario de dominio
 
@@ -71,5 +71,5 @@ Siempre setear `close_jid` al JID canónico del teléfono (ej. `584243106642@s.w
 ## Secrets
 
 Ambos archivos JSON contienen valores de configuración en texto plano. Tratar como secrets-bearing:
-- `n8n/Trackpal WhatsApp Bot.json`
-- `n8n/Trackpal Subscription Reminders.json`
+- `n8n/TrackPal WhatsApp Bot.json`
+- `n8n/TrackPal Subscription Reminders.json`

@@ -1,4 +1,4 @@
-# Trackpal
+# TrackPal
 
 Multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp console and a web dashboard. Tenants also have their own WhatsApp console for clients, catalog, profile, and subscriptions.
 

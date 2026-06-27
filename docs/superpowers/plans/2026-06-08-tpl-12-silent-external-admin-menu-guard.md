@@ -35,7 +35,7 @@
 - `backend/tests/test_n8n_whatsapp_workflow.py`
   - Extend workflow-export regression tests to lock the Parse Input not-registered echo filter.
 
-- `n8n/Trackpal WhatsApp Bot.json`
+- `n8n/TrackPal WhatsApp Bot.json`
   - Update only the `Parse input` Code node JS to ignore the Spanish and English not-registered bot echoes.
   - Do not rewire the workflow graph.
 
@@ -722,7 +722,7 @@ git commit -m "fix: silence external admin menu in tenant routing"
 
 **Files:**
 - Modify: `backend/tests/test_n8n_whatsapp_workflow.py`
-- Modify: `n8n/Trackpal WhatsApp Bot.json`
+- Modify: `n8n/TrackPal WhatsApp Bot.json`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
 - [x] **Step 1: Add the failing workflow-export regression test**
@@ -735,7 +735,7 @@ def test_parse_input_filters_not_registered_bot_echoes_without_dropping_from_me(
 
     assert "no tienes una cuenta registrada" in js
     assert "you do not have a registered account" in js
-    assert "if (!fromMe && looksLikeTrackpalGeneratedReply)" in js
+    assert "if (!fromMe && looksLikeTrackPalGeneratedReply)" in js
 ```
 
 - [x] **Step 2: Run the workflow regression tests and verify they fail**
@@ -750,10 +750,10 @@ Expected: FAIL because the current Parse Input JS does not yet include the Spani
 
 - [x] **Step 3: Update only the Parse Input filter in the workflow export**
 
-In `n8n/Trackpal WhatsApp Bot.json`, inside node `Parse input`, replace the `looksLikeTrackpalGeneratedReply` block with this exact code:
+In `n8n/TrackPal WhatsApp Bot.json`, inside node `Parse input`, replace the `looksLikeTrackPalGeneratedReply` block with this exact code:
 
 ```javascript
-const looksLikeTrackpalGeneratedReply =
+const looksLikeTrackPalGeneratedReply =
   lowerMessage.includes('no tienes acceso a la consola') ||
   lowerMessage.includes('access denied, you do not have an active account') ||
   lowerMessage.includes('servicio temporalmente no disponible') ||
@@ -761,7 +761,7 @@ const looksLikeTrackpalGeneratedReply =
   lowerMessage.includes('no tienes una cuenta registrada') ||
   lowerMessage.includes('you do not have a registered account');
 
-if (!fromMe && looksLikeTrackpalGeneratedReply) {
+if (!fromMe && looksLikeTrackPalGeneratedReply) {
   return [];
 }
 ```
@@ -776,7 +776,7 @@ Run:
 python - <<'PY'
 from pathlib import Path
 import json
-path = Path('n8n/Trackpal WhatsApp Bot.json')
+path = Path('n8n/TrackPal WhatsApp Bot.json')
 json.loads(path.read_text(encoding='utf-8'))
 print('workflow json ok')
 PY
@@ -790,7 +790,7 @@ Expected:
 - [x] **Step 5: Commit the workflow filter change**
 
 ```bash
-git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
+git add n8n/TrackPal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
 git commit -m "fix: filter not-registered bot echoes in workflow"
 ```
 
@@ -809,7 +809,7 @@ git commit -m "fix: filter not-registered bot echoes in workflow"
 - Verify: `backend/tests/test_whatsapp_external_admin_menu_guard.py`
 - Verify: `backend/tests/test_n8n_whatsapp_workflow.py`
 - Verify: `backend/tests/test_whatsapp_endpoint.py`
-- Verify: `n8n/Trackpal WhatsApp Bot.json`
+- Verify: `n8n/TrackPal WhatsApp Bot.json`
 - Verify: `E:/Documentos/GitHub/evolution-go/pkg/webhook/service/listener.go`
 
 - [x] **Step 1: Update `docs/architecture/whatsapp-console-flow.md`**
@@ -839,7 +839,7 @@ Make these text edits:
 1. In Parse Input normalisation logic, add this bullet after the existing generated-reply filter sentence:
 
 ```markdown
-- Suppresses known Trackpal-generated not-registered replies (`no tienes una cuenta registrada` / `you do not have a registered account`) when they re-enter the webhook as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
+- Suppresses known TrackPal-generated not-registered replies (`no tienes una cuenta registrada` / `you do not have a registered account`) when they re-enter the webhook as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
 ```
 
 2. In the `IF no reply` / `Check Close Session` discussion, add this sentence:
@@ -866,7 +866,7 @@ cd backend && uv run ruff check app/repositories/tenants_repository.py app/api/v
 python - <<'PY'
 from pathlib import Path
 import json
-path = Path('n8n/Trackpal WhatsApp Bot.json')
+path = Path('n8n/TrackPal WhatsApp Bot.json')
 json.loads(path.read_text(encoding='utf-8'))
 print('workflow json ok')
 PY
@@ -884,7 +884,7 @@ Expected:
 Do these checks in order:
 
 1. Open `E:/Documentos/GitHub/evolution-go/pkg/webhook/service/listener.go` and verify the deployed source branch still builds payloads with `adminJid = instance.Jid` for `fromMe=true` dispatch.
-2. Import `n8n/Trackpal WhatsApp Bot.json` into the target n8n instance.
+2. Import `n8n/TrackPal WhatsApp Bot.json` into the target n8n instance.
 3. Run this manual scenario:
    - Tenant A sends `/menu` to Tenant B.
    - Tenant A must receive the private contextual menu.

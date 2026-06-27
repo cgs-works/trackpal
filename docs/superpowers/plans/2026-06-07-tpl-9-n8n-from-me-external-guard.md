@@ -4,7 +4,7 @@
 
 **Goal:** Prevent `fromMe=true` external non-menu messages from calling the TrackPal backend or keeping an Evolution Go session open, while preserving `/menu` / `menu` Client Context Shortcut behavior and normal inbound code lookup.
 
-**Architecture:** Keep the fix isolated to `n8n/Trackpal WhatsApp Bot.json`, plus workflow-contract tests and doc updates. Per user decision, place the guard **after `Config` and before `Console call`** so both branches can keep using the existing `Config` node references; the true branch goes directly to `Check close session`, and the false branch continues through the current backend path unchanged. `Check close session` must also become tolerant of the new guard branch, because `Merge & lookup data` will not execute on guarded items.
+**Architecture:** Keep the fix isolated to `n8n/TrackPal WhatsApp Bot.json`, plus workflow-contract tests and doc updates. Per user decision, place the guard **after `Config` and before `Console call`** so both branches can keep using the existing `Config` node references; the true branch goes directly to `Check close session`, and the false branch continues through the current backend path unchanged. `Check close session` must also become tolerant of the new guard branch, because `Merge & lookup data` will not execute on guarded items.
 
 **Tech Stack:** n8n workflow JSON, JavaScript Code nodes, pytest, Ruff, project docs in `docs/architecture/`.
 
@@ -12,7 +12,7 @@
 
 ## File map
 
-- `n8n/Trackpal WhatsApp Bot.json`
+- `n8n/TrackPal WhatsApp Bot.json`
   - Source of truth for the WhatsApp Bot workflow. This change adds the guard Code node, the IF routing node, rewires connections, and hardens `Check close session` for the guarded branch.
 - `backend/tests/test_n8n_whatsapp_workflow.py`
   - Regression tests that parse the workflow export and lock the new guard contract, routing, and close-session tolerance.
@@ -47,7 +47,7 @@ import json
 from pathlib import Path
 
 WORKFLOW_PATH = (
-    Path(__file__).resolve().parents[2] / "n8n" / "Trackpal WhatsApp Bot.json"
+    Path(__file__).resolve().parents[2] / "n8n" / "TrackPal WhatsApp Bot.json"
 )
 
 
@@ -157,12 +157,12 @@ git commit -m "test: lock tpl-9 n8n guard contract"
 - `n8n-mcp-tools-expert` **only if you choose to edit the live workflow through MCP instead of editing the repo JSON directly**
 
 **Files:**
-- Modify: `n8n/Trackpal WhatsApp Bot.json`
+- Modify: `n8n/TrackPal WhatsApp Bot.json`
 - Test: `backend/tests/test_n8n_whatsapp_workflow.py`
 
 - [x] **Step 1: Insert the new guard Code node after `Config` in the `nodes` array**
 
-Add this node object to `n8n/Trackpal WhatsApp Bot.json`:
+Add this node object to `n8n/TrackPal WhatsApp Bot.json`:
 
 ```json
 {
@@ -334,7 +334,7 @@ Run:
 python - <<'PY'
 import json
 from pathlib import Path
-path = Path('n8n/Trackpal WhatsApp Bot.json')
+path = Path('n8n/TrackPal WhatsApp Bot.json')
 json.loads(path.read_text(encoding='utf-8'))
 print('workflow json ok')
 PY
@@ -355,7 +355,7 @@ Expected: PASS.
 - [x] **Step 7: Commit the workflow implementation**
 
 ```bash
-git add n8n/Trackpal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
+git add n8n/TrackPal\ WhatsApp\ Bot.json backend/tests/test_n8n_whatsapp_workflow.py
 git commit -m "fix: guard from_me external non-menu in n8n"
 ```
 
@@ -526,7 +526,7 @@ git commit -m "docs: describe tpl-9 n8n guard"
 - `n8n-mcp-tools-expert` **if validating or importing through n8n MCP**
 
 **Files:**
-- Verify: `n8n/Trackpal WhatsApp Bot.json`
+- Verify: `n8n/TrackPal WhatsApp Bot.json`
 - Verify: `backend/tests/test_n8n_whatsapp_workflow.py`
 - Verify: `docs/architecture/n8n-workflow.md`
 - Verify: `docs/architecture/whatsapp-console-flow.md`
@@ -539,7 +539,7 @@ Run:
 python - <<'PY'
 import json
 from pathlib import Path
-path = Path('n8n/Trackpal WhatsApp Bot.json')
+path = Path('n8n/TrackPal WhatsApp Bot.json')
 json.loads(path.read_text(encoding='utf-8'))
 print('workflow json ok')
 PY
@@ -555,7 +555,7 @@ Expected:
 
 - [x] **Step 2: Import the updated workflow export into n8n and run the manual TPL-9 checks**
 
-Use `n8n/Trackpal WhatsApp Bot.json` as the import source, then verify these scenarios in order:
+Use `n8n/TrackPal WhatsApp Bot.json` as the import source, then verify these scenarios in order:
 
 1. Tenant A sends `code` to Tenant B.
 2. Tenant A execution shows `Guard fromMe external non-menu` with `skip_console_call=true`, `guard_reason=from_me_external_non_menu`, no `Console call`, and a `Close session` request for Tenant B `targetJid`.

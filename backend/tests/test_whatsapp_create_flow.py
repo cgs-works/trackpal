@@ -237,7 +237,7 @@ class TestCreateFlowStart:
             is_master=True,
         )
         # Should NOT return main menu anymore
-        assert "Trackpal Master Console" not in reply
+        assert "TrackPal Master Console" not in reply
         assert "nombre completo" in reply.lower()
         assert "crear" in reply.lower()
 
@@ -312,7 +312,7 @@ class TestFullNameStepRegression:
         )
 
         # MUST NOT contain main menu
-        assert "Trackpal Master Console" not in reply
+        assert "TrackPal Master Console" not in reply
 
         # MUST ask for email
         assert "email" in reply.lower() or "correo" in reply.lower()
@@ -398,7 +398,7 @@ class TestFullNameStepRegression:
             is_master=True,
             session_service=session_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         session = await session_service.get_session("+10000000000")
         assert session is None
 
@@ -1112,7 +1112,7 @@ class TestUsernameStep:
             session_service=session_service,
         )
         # '/menu' triggers global reset, returns main menu
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         # Session cleared
         session = await session_service.get_session("+10000000000")
         assert session is None
@@ -1133,7 +1133,7 @@ class TestUsernameStep:
             session_service=session_service,
         )
         # 'menu' triggers global reset, returns main menu
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         # Session cleared
         session = await session_service.get_session("+10000000000")
         assert session is None
@@ -1249,7 +1249,7 @@ class TestUsernameStep:
             session_service=session_service,
         )
         # Global reset returns main menu
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         # Session cleared
         session = await session_service.get_session("+10000000000")
         assert session is None
@@ -1786,7 +1786,7 @@ class TestConfirmationStep:
             is_master=True,
             session_service=session_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         session = await session_service.get_session("+10000000000")
         assert session is None
 
@@ -1842,7 +1842,7 @@ class TestFullCreateFlow:
             session_service=session_service,
         )
         assert "email" in reply.lower()
-        assert "Trackpal Master Console" not in reply  # REGRESSION CHECK
+        assert "TrackPal Master Console" not in reply  # REGRESSION CHECK
 
         # Step 3: Email (optional, skip)
         reply = await console_service.process_message(
@@ -1929,7 +1929,7 @@ class TestFullCreateFlow:
             session_service=session_service,
         )
         assert "email" in reply.lower()
-        assert "Trackpal Master Console" not in reply  # REGRESSION CHECK
+        assert "TrackPal Master Console" not in reply  # REGRESSION CHECK
 
         # Step 3: Email
         reply = await console_service.process_message(
@@ -2371,7 +2371,7 @@ class TestFullCreateFlow:
             is_master=True,
             session_service=session_service,
         )
-        assert "Trackpal Master Console" in reply
+        assert "TrackPal Master Console" in reply
         assert "cancelada" in reply.lower() or "cancelado" in reply.lower()
         session = await session_service.get_session("+10000000000")
         assert session is None

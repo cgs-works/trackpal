@@ -1,6 +1,6 @@
 # n8n Workflow Architecture
 
-Trackpal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles expiry reminder dispatch (polling every 30 minutes, pure transport). The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution Go.
+TrackPal uses two n8n workflows: the **WhatsApp Bot** bridges Evolution Go webhooks with the backend WhatsApp consoles (Master + Tenant), and the **Subscription Reminders** scheduler handles expiry reminder dispatch (polling every 30 minutes, pure transport). The workflow receives inbound messages, normalises them, calls the backend, and relays the reply back through Evolution Go.
 
 ## WhatsApp Bot Workflow
 
@@ -35,9 +35,9 @@ IF skip_console_call?
 
 ## Workflow File
 
-**File**: `n8n/Trackpal WhatsApp Bot.json`
+**File**: `n8n/TrackPal WhatsApp Bot.json`
 
-- **Name**: `Trackpal WhatsApp Bot`
+- **Name**: `TrackPal WhatsApp Bot`
 - **Active**: `true`
 - **n8n version**: Compatible with n8n v1.x (nodes use typeVersion 2.1–4.4)
 - **Execution order**: `v1` (sequential)
@@ -76,8 +76,8 @@ JavaScript code that normalises the raw Evolution Go payload into a consistent s
 - Preserves original `remoteJid` and `apiKey` for downstream send/close nodes.
 - **Extracts contextual fields** from multiple Evolution shapes: `fromMe`, `adminJid`, `targetJid`, `targetPhone`, `targetLid`.
 - For outgoing `fromMe=true` messages, treats `remoteJid` as the target chat and derives `targetPhone` or `targetLid` from it when explicit target fields are missing.
-- Suppresses known Trackpal-generated access-denied/fallback replies when they re-enter the webhook as bot echoes, preventing recursive “access denied” loops.
-- Suppresses known Trackpal-generated menu/cancel/not-registered replies (`Buscar Codigo de Acceso`, `Client Console`, `Operacion cancelada`, `no tienes una cuenta registrada`, and English equivalents) when they re-enter another tenant instance as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
+- Suppresses known TrackPal-generated access-denied/fallback replies when they re-enter the webhook as bot echoes, preventing recursive “access denied” loops.
+- Suppresses known TrackPal-generated menu/cancel/not-registered replies (`Buscar Codigo de Acceso`, `Client Console`, `Operacion cancelada`, `no tienes una cuenta registrada`, and English equivalents) when they re-enter another tenant instance as inbound bot echoes, preventing tenant-to-tenant ping-pong loops.
 - **Output**: `{ phone, message, instance, remoteJid, apiKey, sender_lid, fromMe, adminJid, targetJid, targetPhone, targetLid, raw }`
 ### 3. Config (Set Node)
 
@@ -358,12 +358,12 @@ To update config values:
 
 The workflow communicates with backend services:
 
-1. **Trackpal Backend Console** (`POST /api/v1/integrations/n8n/console`):
+1. **TrackPal Backend Console** (`POST /api/v1/integrations/n8n/console`):
    - Authenticated via `X-API-Key` header matching `settings.n8n_api_key`
    - Request body: `WhatsAppConsoleRequest` schema (phone, message, optional instance, optional sender_lid, optional from_me, optional admin_phone, optional admin_jid, optional target_jid, optional target_phone, optional target_lid)
    - Response body: `WhatsAppConsoleResponse` schema (reply text, optional `lookup_job_id`, optional `tenant_id`, optional `reply_to`, optional `no_reply`)
 
-2. **Trackpal Backend Mail Lookup**:
+2. **TrackPal Backend Mail Lookup**:
    - `POST /api/v1/integrations/n8n/mail/lookups`
    - `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
    - Polling cadence: every 4s, max 20s.
@@ -388,9 +388,9 @@ The workflow communicates with backend services:
 
 ## Subscription Reminders Workflow
 
-**File**: `n8n/Trackpal Subscription Reminders.json`
+**File**: `n8n/TrackPal Subscription Reminders.json`
 
-**Name**: `Trackpal Subscription Reminders`
+**Name**: `TrackPal Subscription Reminders`
 **Active**: `true`
 **Total nodes**: 11
 **Execution order**: v1 (sequential)

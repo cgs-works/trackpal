@@ -1,4 +1,4 @@
-# Trackpal Documentation
+# TrackPal Documentation
 
 ## Project Overview
 

@@ -1,11 +1,11 @@
 # System Overview
 
-Trackpal is a multi-tenant platform for managing WhatsApp-based service delivery. The backend provides REST API and WhatsApp consoles (Master and Tenant) for tenant lifecycle management and daily operations.
+TrackPal is a multi-tenant platform for managing WhatsApp-based service delivery. The backend provides REST API and WhatsApp consoles (Master and Tenant) for tenant lifecycle management and daily operations.
 
 ## High-Level Architecture
 
 ```
-[Cloudflare Pages] ---> [Trackpal API (Render)] ---> [PostgreSQL]
+[Cloudflare Pages] ---> [TrackPal API (Render)] ---> [PostgreSQL]
       |                      |                        |
       |                 [Redis HA]             [Alembic Migrations]
       |                      |
