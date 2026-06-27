@@ -11,6 +11,8 @@ from app.api.v1.endpoints import (
     integrations,
     mailbox,
     me,
+    public_api_key,
+    public_catalog,
     tenants,
     tenant_settings,
     subscriptions,
@@ -28,6 +30,8 @@ api_router.include_router(catalog.router)
 api_router.include_router(code_services.router)
 api_router.include_router(i18n.router)
 api_router.include_router(me.router)
+api_router.include_router(public_api_key.router)
+api_router.include_router(public_catalog.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(subscriptions.settings_router)

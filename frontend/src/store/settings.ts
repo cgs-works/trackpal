@@ -10,25 +10,37 @@ import {
   updateTenantSettings as apiUpdateTenantSettings,
   getTimezones,
   getMailbox as apiGetMailbox,
+  getPublicApiKey as apiGetPublicApiKey,
+  savePublicApiKeyOrigins as apiSavePublicApiKeyOrigins,
+  regeneratePublicApiKey as apiRegeneratePublicApiKey,
+  revokePublicApiKey as apiRevokePublicApiKey,
   type TenantSettings,
   type TenantSettingsUpdate,
   type TimezoneOption,
   type Mailbox,
+  type PublicApiKeyConfig,
 } from "@/features/admin/services/settings-api";
+
+interface ApiError {
+  response?: { data?: { detail?: string | Array<{ msg?: string }> } };
+}
 
 interface SettingsState {
   reminderSettings: ReminderSettings | null;
   tenantSettings: TenantSettings | null;
   timezoneOptions: TimezoneOption[];
   mailbox: Mailbox | null;
+  publicApiKey: PublicApiKeyConfig | null;
   reminderSettingsLoaded: boolean;
   tenantSettingsLoaded: boolean;
   timezonesLoaded: boolean;
   mailboxLoaded: boolean;
+  publicApiKeyLoaded: boolean;
   reminderSettingsInFlight: Promise<ReminderSettings | null> | null;
   tenantSettingsInFlight: Promise<TenantSettings | null> | null;
   timezonesInFlight: Promise<TimezoneOption[]> | null;
   mailboxInFlight: Promise<Mailbox | null> | null;
+  publicApiKeyInFlight: Promise<PublicApiKeyConfig | null> | null;
   settingsLoadError: string | null;
   _settingsEpoch: number;
 
@@ -36,12 +48,18 @@ interface SettingsState {
   loadTenantSettings: () => Promise<TenantSettings | null>;
   loadTimezoneOptions: () => Promise<TimezoneOption[]>;
   loadMailbox: () => Promise<Mailbox | null>;
+  loadPublicApiKey: () => Promise<PublicApiKeyConfig | null>;
   updateReminderSettings: (
-    settings: ReminderSettingsUpdate
+    settings: ReminderSettingsUpdate,
   ) => Promise<ReminderSettings>;
   updateTenantSettings: (
-    settings: TenantSettingsUpdate
+    settings: TenantSettingsUpdate,
   ) => Promise<TenantSettings>;
+  savePublicApiKeyOrigins: (
+    origins: string[],
+  ) => Promise<PublicApiKeyConfig>;
+  regeneratePublicApiKey: () => Promise<PublicApiKeyConfig>;
+  revokePublicApiKey: () => Promise<void>;
   clearSettingsCache: () => void;
 }
 
@@ -50,21 +68,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   tenantSettings: null,
   timezoneOptions: [],
   mailbox: null,
+  publicApiKey: null,
   reminderSettingsLoaded: false,
   tenantSettingsLoaded: false,
   timezonesLoaded: false,
   mailboxLoaded: false,
+  publicApiKeyLoaded: false,
   reminderSettingsInFlight: null,
   tenantSettingsInFlight: null,
   timezonesInFlight: null,
   mailboxInFlight: null,
+  publicApiKeyInFlight: null,
   settingsLoadError: null,
   _settingsEpoch: 0,
 
   loadReminderSettings: async () => {
     const state = get();
     if (state.reminderSettingsLoaded) return state.reminderSettings;
-    const promise = state.reminderSettingsInFlight || loadReminderSettings(set, get);
+    const promise =
+      state.reminderSettingsInFlight || loadReminderSettings(set, get);
     if (!state.reminderSettingsInFlight) {
       set({ reminderSettingsInFlight: promise });
     }
@@ -74,7 +96,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   loadTenantSettings: async () => {
     const state = get();
     if (state.tenantSettingsLoaded) return state.tenantSettings;
-    const promise = state.tenantSettingsInFlight || loadTenantSettings(set, get);
+    const promise =
+      state.tenantSettingsInFlight || loadTenantSettings(set, get);
     if (!state.tenantSettingsInFlight) {
       set({ tenantSettingsInFlight: promise });
     }
@@ -101,6 +124,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return promise;
   },
 
+  loadPublicApiKey: async () => {
+    const state = get();
+    if (state.publicApiKeyLoaded) return state.publicApiKey;
+    const promise =
+      state.publicApiKeyInFlight || loadPublicApiKey(set, get);
+    if (!state.publicApiKeyInFlight) {
+      set({ publicApiKeyInFlight: promise });
+    }
+    return promise;
+  },
+
   updateReminderSettings: async (payload) => {
     const data = await apiUpdateReminderSettings(payload);
     set({ reminderSettings: data, reminderSettingsLoaded: true });
@@ -113,25 +147,66 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return data;
   },
 
+  savePublicApiKeyOrigins: async (origins) => {
+    const data = await apiSavePublicApiKeyOrigins(origins);
+    set({
+      publicApiKey: data,
+      publicApiKeyLoaded: true,
+      publicApiKeyInFlight: null,
+    });
+    return data;
+  },
+
+  regeneratePublicApiKey: async () => {
+    const data = await apiRegeneratePublicApiKey();
+    set({
+      publicApiKey: data,
+      publicApiKeyLoaded: true,
+      publicApiKeyInFlight: null,
+    });
+    return data;
+  },
+
+  revokePublicApiKey: async () => {
+    await apiRevokePublicApiKey();
+    set({
+      publicApiKey: null,
+      publicApiKeyLoaded: true,
+      publicApiKeyInFlight: null,
+    });
+  },
+
   clearSettingsCache: () => {
     set({
       reminderSettings: null,
       tenantSettings: null,
       timezoneOptions: [],
       mailbox: null,
+      publicApiKey: null,
       reminderSettingsLoaded: false,
       tenantSettingsLoaded: false,
       timezonesLoaded: false,
       mailboxLoaded: false,
+      publicApiKeyLoaded: false,
       reminderSettingsInFlight: null,
       tenantSettingsInFlight: null,
       timezonesInFlight: null,
       mailboxInFlight: null,
+      publicApiKeyInFlight: null,
       settingsLoadError: null,
       _settingsEpoch: get()._settingsEpoch + 1,
     });
   },
 }));
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  const detail = (error as ApiError)?.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || "Unknown error").join("; ");
+  }
+  return fallback;
+}
 
 async function loadReminderSettings(
   set: (partial: Partial<SettingsState>) => void,
@@ -149,15 +224,10 @@ async function loadReminderSettings(
     });
     return data;
   } catch (error: unknown) {
-    const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
-    const detail = err?.response?.data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d) => d.msg || "Unknown error").join("; ")
-          : "Failed to load reminder settings";
-    set({ settingsLoadError: msg, reminderSettingsInFlight: null });
+    set({
+      settingsLoadError: getErrorMessage(error, "Failed to load reminder settings"),
+      reminderSettingsInFlight: null,
+    });
     throw error;
   }
 }
@@ -178,15 +248,10 @@ async function loadTenantSettings(
     });
     return data;
   } catch (error: unknown) {
-    const err = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } };
-    const detail = err?.response?.data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail.map((d) => d.msg || "Unknown error").join("; ")
-          : "Failed to load tenant settings";
-    set({ settingsLoadError: msg, tenantSettingsInFlight: null });
+    set({
+      settingsLoadError: getErrorMessage(error, "Failed to load tenant settings"),
+      tenantSettingsInFlight: null,
+    });
     throw error;
   }
 }
@@ -238,5 +303,29 @@ async function loadMailbox(
       mailboxInFlight: null,
     });
     return null;
+  }
+}
+
+async function loadPublicApiKey(
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
+): Promise<PublicApiKeyConfig | null> {
+  const epoch = get()._settingsEpoch;
+  try {
+    const data = await apiGetPublicApiKey();
+    if (get()._settingsEpoch !== epoch) return null;
+    set({
+      publicApiKey: data,
+      publicApiKeyLoaded: true,
+      publicApiKeyInFlight: null,
+      settingsLoadError: null,
+    });
+    return data;
+  } catch (error: unknown) {
+    set({
+      settingsLoadError: getErrorMessage(error, "Failed to load public API key"),
+      publicApiKeyInFlight: null,
+    });
+    throw error;
   }
 }

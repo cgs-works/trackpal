@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Ban, Bell, Globe, Clock, Mail, Shield, User, Lock } from "lucide-react";
+import { Ban, Bell, Globe, Clock, Mail, Shield, User, Lock, KeyRound } from "lucide-react";
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
 import { ReminderSettingsModal } from "../components/reminder-settings-modal";
@@ -12,6 +12,7 @@ import { CodeServicesSection } from "../components/code-services-section";
 import { AccessControlSection } from "../components/access-control-section";
 import { LocaleSection } from "../components/locale-section";
 import { TimezoneSection } from "../components/timezone-section";
+import { PublicApiSection } from "../components/public-api-section";
 import { getProfile, type Profile } from "../services/settings-api";
 
 export function SettingsPage() {
@@ -23,6 +24,7 @@ export function SettingsPage() {
     ...(showProSettings ? [{ id: "reminders" as const, title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell }] : []),
     { id: "locale" as const, title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe },
     ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock }] : []),
+    ...(showProSettings ? [{ id: "public-api" as const, title: t("frontend.public_api.section_title"), description: t("frontend.public_api.description"), icon: KeyRound }] : []),
     { id: "code-services" as const, title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield },
     { id: "mailbox" as const, title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
     { id: "access-control" as const, title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban },
@@ -72,6 +74,8 @@ export function SettingsPage() {
         return <AccessControlSection />;
       case "code-services":
         return <CodeServicesSection />;
+      case "public-api":
+        return <PublicApiSection />;
       case "reminders":
         return null;
     }

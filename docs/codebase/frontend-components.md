@@ -6,7 +6,7 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 
-Settings hub with expandable card sections. Uses `useSettingsStore` and `useCatalogStore` for cached data. Plan-aware: Starter shows Profile, Language, Code Services, Code Mailbox, Control de acceso, and Password. Pro adds Reminder Settings and Timezone. Master support context shows the full Pro settings set even for Starter tenants.
+Settings hub with expandable card sections. Uses `useSettingsStore` and `useCatalogStore` for cached data. Plan-aware: Starter shows Profile, Language, Code Services, Code Mailbox, Control de acceso, and Password. Pro adds Reminder Settings, Timezone, and planned Public API Key management. Master support context shows the full Pro settings set even for Starter tenants.
 
 | Section | Component | Data Source |
 |---------|-----------|-------------|
@@ -15,6 +15,7 @@ Settings hub with expandable card sections. Uses `useSettingsStore` and `useCata
 | Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
 | Code Services | `CodeServicesSection` | API direct |
 | Code Mailbox | `MailboxSection` | `settingsStore.mailbox` |
+| Public API Catalog (planned) | `PublicApiSection` | Public API Key management API |
 | Control de acceso | `AccessControlSection` | API direct |
 | Profile | `ProfileSection` | `getProfile()` API |
 | Password | `PasswordSection` | API direct |
@@ -73,6 +74,10 @@ IMAP/OAuth mailbox configuration.
 - IMAP form: host, port, SSL toggle, password
 - Test connection, disconnect actions
 - After mutations: `clearSettingsCache()` + reload
+
+### PublicApiSection (`features/admin/components/public-api-section.tsx`) — planned
+
+Pro-only Settings section for Public API Catalog configuration. It should show the visible Public API Key, edit exact Allowed Origins, regenerate the key while preserving origins, and revoke the public API configuration.
 
 ### AccessControlSection (`features/admin/components/access-control-section.tsx`)
 

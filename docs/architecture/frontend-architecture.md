@@ -233,6 +233,7 @@ Sidebar layout for master pages:
 Expandable card sections, plan-aware:
 - **Starter**: Language, Code Services, Code Mailbox, Control de acceso, Profile, Password
 - **Pro** (adds): Reminder Settings, Timezone
+- **Public API Catalog**: Pro-only Settings section for creating/viewing a visible read-only key, editing exact Allowed Origins, regenerating the key while preserving origins, revoking the key, and copying a browser fetch example. Master support context can see the section even when the tenant is Starter.
 - **Master support context**: shows the full Pro settings set even for Starter tenants
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)

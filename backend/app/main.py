@@ -21,6 +21,25 @@ _worker_task: asyncio.Task | None = None
 _cleanup_task: asyncio.Task | None = None
 
 
+class PublicCatalogCORS(CORSMiddleware):
+    """CORSMiddleware that skips the public catalog endpoint.
+
+    The public catalog endpoint sets its own CORS headers dynamically
+    based on the registered Allowed Origins for the API key. The global
+    CORSMiddleware would duplicate these headers when the browser Origin
+    matches settings.cors_origins, causing spec-violating behavior.
+
+    This subclass bypasses CORS processing for the public catalog path
+    so the endpoint retains full control of its CORS response.
+    """
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].startswith("/api/v1/public/"):
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _worker_task, _cleanup_task
@@ -55,7 +74,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="TrackPal API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
-    CORSMiddleware,
+    PublicCatalogCORS,
     allow_origins=settings.cors_origins.split(","),
     allow_credentials=True,
     allow_methods=["*"],
