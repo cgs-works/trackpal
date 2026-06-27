@@ -209,11 +209,11 @@ export function ReminderSettingsSection() {
               {[7, 3, 1].map((day) => (
                 <label key={day} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 transition-colors hover:bg-accent">
                   <input type="checkbox" checked={settings.warning_days.includes(day)} onChange={() => toggleWarningDay(day)} className="rounded" />
-                  <span className="text-sm">{day} {day === 1 ? "day" : "days"}</span>
+                  <span className="text-sm">{day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.days")}</span>
                 </label>
               ))}
               <div className="flex items-center gap-1.5">
-                <Input type="number" min={1} value={customDay} onChange={(e) => setCustomDay(e.target.value)} placeholder="Custom" className="h-9 w-20 text-sm" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomDay(); } }} />
+                <Input type="number" min={1} value={customDay} onChange={(e) => setCustomDay(e.target.value)} placeholder={t("frontend.subscriptions.placeholder_custom")} className="h-9 w-20 text-sm" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomDay(); } }} />
                 <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={addCustomDay} disabled={!customDay}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -223,7 +223,7 @@ export function ReminderSettingsSection() {
               <div className="mt-3 flex flex-wrap gap-2">
                 {settings.warning_days.map((day) => (
                   <span key={day} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
-                    {day} {day === 1 ? "day" : "days"}
+                    {day} {day === 1 ? t("frontend.subscriptions.day") : t("frontend.subscriptions.days")}
                     <button type="button" onClick={() => removeWarningDay(day)} className="transition-colors hover:text-destructive">
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -245,9 +245,9 @@ export function ReminderSettingsSection() {
             <Label className="text-sm font-medium">{t("frontend.subscriptions.recipients")}</Label>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                { value: "tenant_only", label: t("frontend.subscriptions.recipient_mode_tenant_only"), desc: "Admin only" },
-                { value: "client_only", label: t("frontend.subscriptions.recipient_mode_client_only"), desc: "Client only" },
-                { value: "both", label: t("frontend.subscriptions.recipient_mode_both"), desc: "Both" },
+                { value: "tenant_only", label: t("frontend.subscriptions.recipient_mode_tenant_only"), desc: t("frontend.subscriptions.recipient_desc_tenant_only") },
+                { value: "client_only", label: t("frontend.subscriptions.recipient_mode_client_only"), desc: t("frontend.subscriptions.recipient_desc_client_only") },
+                { value: "both", label: t("frontend.subscriptions.recipient_mode_both"), desc: t("frontend.subscriptions.recipient_desc_both") },
               ].map((opt) => (
                 <label key={opt.value} className={settings.recipient_mode === opt.value ? "flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-primary bg-primary/5 p-3 transition-colors" : "flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-border p-3 transition-colors hover:bg-accent"}>
                   <input type="radio" name="recipient_mode" value={opt.value} checked={settings.recipient_mode === opt.value} onChange={(e) => setSettings((prev) => ({ ...prev, recipient_mode: e.target.value as "tenant_only" | "client_only" | "both" }))} className="sr-only" />
@@ -261,9 +261,9 @@ export function ReminderSettingsSection() {
           <Separator />
           <div className="flex flex-col gap-4">
             <div>
-              <Label className="text-sm font-medium">Custom messages</Label>
+              <Label className="text-sm font-medium">{t("frontend.subscriptions.custom_messages")}</Label>
               <p className="mt-1 text-sm text-muted-foreground">
-                Use <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{"{{placeholder}}"}</code> for dynamic values: client_name, service_name, days, streaming_email, expires_at
+                {t("frontend.subscriptions.custom_messages_hint", { placeholder: "{{placeholder}}" })}
               </p>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
