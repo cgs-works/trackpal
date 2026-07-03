@@ -19,7 +19,7 @@
 | **Client** | Cliente final de un tenant. Login compuesto: `{client_prefix}_{local_username}`. Solo puede ver perfil y cambiar contraseña. En tenants Starter, el login de client retorna 401 genérico (datos preservados, pero no accesibles). |
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
 | **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant y Client. |
-| **Client Context Shortcut** | Sesión de WhatsApp que permite al Tenant gestionar clientes remotos desde su propia consola. |
+| **Client Context Shortcut** | Sesión privada de WhatsApp que permite al Tenant gestionar un contacto remoto desde su chat privado de admin. El contacto remoto no ve el menú; las acciones del menú se aceptan solo desde el chat privado del Tenant. |
 | **Catalog** | Servicios y planes que un tenant ofrece. Cada servicio tiene planes identificables por nombre; precios, disponibilidad y metadata no forman parte del catálogo v1. |
 | **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados y no permite mutaciones. |
 | **Public API Key** | Credencial tenant-scoped que habilita el Public API Catalog. Es visible para el tenant, revocable y regenerable; una key activa representa una integración pública de catálogo. Implementation table: `tenant_api_keys`. One row per tenant, plain-text `api_key`, JSON `allowed_origins`. |
@@ -39,7 +39,7 @@
 | **TenantPlan** | Nivel de servicio del tenant: `starter` o `pro`. Source of truth: `tenants.plan` en la BD. El frontend lo usa solo como UI hint; la autorización real es backend. |
 | **Pro Gate** | Dependency injection (`ProTenantId`) que bloquea endpoints Pro-only para tenants Starter retornando 404. Master en contexto de soporte bypass el gate. |
 | **Access Control** | Módulo para bloquear/desbloquear identidades de WhatsApp. Afecta interacciones del bot y búsqueda de códigos, no cuentas de portal de clientes. |
-| **BlockedClient** | Identidad de WhatsApp bloqueada. Model: `BlockedClient`. Una fila en `blocked_clients` representa un bloqueo activo; desbloquear elimina la fila. Al bloquear, se cancelan sesiones activas de código y jobs pendientes/processing para esa identidad. |
+| **BlockedClient** | Identidad de WhatsApp bloqueada. Una fila en `blocked_clients` representa un bloqueo activo; desbloquear elimina la fila. Bloquear y desbloquear son acciones terminales del Client Context Shortcut: el admin recibe confirmación privada y el contacto recibe una notificación genérica i18n en su `targetJid` original. |
 | **Downgrade Effects** | Efectos secundarios al cambiar plan de Pro a Starter: revocar refresh sessions de clients, limpiar sesión admin Redis, intentar cerrar Evolution session (best-effort). |
 | **Master Support Context** | Master con `active_tenant_id` seteado. Ve UI completa incluyendo datos Pro preservados, con banner de soporte visible. |
 | **Public API Access** | Derecho Pro-only que permite usar y configurar el Public API Catalog. En downgrade a Starter se pausa el acceso público, pero se conserva la configuración para una futura reactivación. |

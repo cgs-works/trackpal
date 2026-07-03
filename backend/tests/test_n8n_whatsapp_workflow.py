@@ -99,6 +99,33 @@ def test_if_skip_console_call_true_branch_terminates_silently() -> None:
     assert condition["operator"]["operation"] == "true"
     assert connections["IF skip console call"]["main"][0] == []
 
+
+def test_merge_preserves_outbound_messages_contract() -> None:
+    js = _workflow_nodes()["Merge & lookup data"]["parameters"]["jsCode"]
+
+    assert "const outboundMessages = Array.isArray(responseData.outbound_messages)" in js
+    assert "outbound_messages: outboundMessages" in js
+
+
+def test_prepare_evolution_sends_expands_admin_and_extra_messages() -> None:
+    nodes = _workflow_nodes()
+    js = nodes["Prepare Evolution sends"]["parameters"]["jsCode"]
+
+    assert "const outboundMessages = Array.isArray(data.outbound_messages)" in js
+    assert "send_target" in js
+    assert "send_text" in js
+    assert "target: message.target" in js
+    assert "text: message.text" in js
+
+
+def test_normal_reply_routes_through_prepare_evolution_sends() -> None:
+    connections = _workflow_connections()
+
+    assert connections["IF has lookup"]["main"][1][0]["node"] == "Prepare Evolution sends"
+    assert connections["Prepare Evolution sends"]["main"][0][0]["node"] == "Evolution API Send"
+    assert connections["Evolution API Send"]["main"][0][0]["node"] == "Check close session"
+
+
 def test_guard_connections_bypass_console_call_on_true_branch() -> None:
     connections = _workflow_connections()
 

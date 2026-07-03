@@ -25,6 +25,8 @@
 | **Merge Reply** | Code node que proporciona fallback en español cuando el backend no retorna respuesta. |
 | **reply_to** | Campo del backend que indica JID alternativo para envío (respuestas contextuales privadas al admin). |
 | **no_reply** | Campo del backend que indica silencio — se salta el envío por Evolution. |
+| **client_notification_target** | JID original del contacto remoto que debe recibir notificaciones terminales de bloqueo/desbloqueo. |
+| **outbound_messages** | Lista backend-driven de mensajes extra que n8n debe transportar además de la respuesta privada primaria. |
 | **close_jid** | JID canónico del teléfono para cierre de sesión. Fallback chain: `close_jid → reply_to → remoteJid`. |
 | **senderPn** | Phone number del remitente en el payload de Evolution. |
 | **sender_lid** | LID del remitente cuando no hay phone number disponible. |

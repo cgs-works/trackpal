@@ -162,8 +162,9 @@ The response schema now includes fields for private routing and silent replies.
 | `close_jid` | string | no | Exact JID n8n must close when ``status="closed"``. Context shortcut close uses the Tenant admin private JID to avoid closing the target/client chat |
 | `close_jids` | list[str] | no | When present, list of ALL Evolution sessions to close (admin JID + target JID + target phone JID). Supersedes ``close_jid`` for multi-session closure |
 | `no_reply` | boolean | no | ``true`` means n8n must not send any Evolution API message. Used for silent admin replies or blocked attempts |
+| `outbound_messages` | list[{target,text}] | no | Extra WhatsApp messages n8n must send after the primary reply. Block/unblock uses this to notify the remote contact at the original ``target_jid`` while confirming privately to the admin. |
 
-When ``no_reply=true``, n8n must skip all Evolution sends entirely (no call to ``/send/text``). When ``reply_to`` is present, n8n sends to that JID rather than the original sender's phone.
+When ``no_reply=true``, n8n must skip all Evolution sends entirely (no call to ``/send/text``). When ``reply_to`` is present, n8n sends the primary reply to that JID rather than the original sender's phone. When ``outbound_messages`` is present, n8n expands the response into multiple Evolution sends: the primary admin reply plus each extra target/text pair.
 
 ## Split routing architecture
 
@@ -236,7 +237,8 @@ Multi-step client creation with phone skip or LID-only phone prompt:
 2. Only ``target_lid`` exists → prompt for phone first → then proceed as above.
 3. ``0`` at any step cancels creation and clears context.
 4. On successful creation, matching Client Messaging Blocks are cleared automatically.
-5. After an action completes (block/unblock/create/deactivate/reactivate/edit/delete), the context is **kept alive** (``save_ctx`` instead of ``clear_ctx``) so a subsequent ``0`` from the admin is caught by the universal cancel handler, which correctly closes all sessions (admin + target + phone JID) instead of falling through to the Tenant console which only closes the admin's session.
+5. Block and unblock are terminal actions: the context is cleared, the admin receives a private confirmation, the contact receives a generic i18n notification at the original ``target_jid``, and n8n closes configured sessions.
+6. Create/deactivate/reactivate/edit/delete flows may keep context alive when the next private admin action needs the same target state.
 
 ### Active client menu
 
@@ -293,8 +295,8 @@ Blocked Clients prevent unregistered WhatsApp identities from using the console,
 
 - Blocked unregistered identities receive ``no_reply=true`` for all messages (``codigo``, ``/menu``, or any other attempt).
 - n8n must not send any message when ``no_reply=true``, keeping the block silent from the user's perspective.
-- Blocks are created immediately without confirmation (from the Context Shortcut) and now close the shortcut immediately by returning ``status="closed"``, ``close_jid``, and ``close_jids`` for n8n/Evolution session cleanup.
-- Blocked targets can be unblocked from the Context Shortcut or from the Tenant console Clients menu. When unblocked from the Context Shortcut, the backend now closes the shortcut immediately with the same ``status="closed"`` + ``close_jid``/``close_jids`` contract used by other terminal shortcut actions.
+- Blocks are created immediately from the Context Shortcut and close the shortcut immediately by returning ``status="closed"``, ``close_jid``, and ``close_jids`` for n8n/Evolution session cleanup. The response also includes ``outbound_messages`` so n8n notifies the contact that access is temporarily suspended.
+- Blocked targets can be unblocked from the Context Shortcut or from the Tenant console Clients menu. When unblocked from the Context Shortcut, the backend closes the shortcut immediately with the same ``status="closed"`` + ``close_jid``/``close_jids`` contract and includes ``outbound_messages`` so n8n notifies the contact that access is restored.
 - When a Client is successfully created for a blocked identity, blocks are cleared automatically.
 
 ### Tenant console management

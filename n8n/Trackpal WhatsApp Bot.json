@@ -346,7 +346,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: String($json.reply_to || $json.phone || $json.remoteJid || '').replace('+', ''), text: String($json.reply || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: String($json.send_target || $json.reply_to || $json.phone || $json.remoteJid || '').replace('+', ''), text: String($json.send_text || $json.reply || '') }) }}",
         "options": {
           "response": {
             "response": {
@@ -399,7 +399,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids } }];"
+        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\nconst outboundMessages = Array.isArray(responseData.outbound_messages) ? responseData.outbound_messages : [];\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids, outbound_messages: outboundMessages } }];"
       },
       "id": "df4dcaf9-c561-4c7a-9157-df526b50598e",
       "name": "Merge & lookup data",
@@ -518,6 +518,19 @@
         -512
       ],
       "webhookId": "1a9978bf7-c6b1-4abb-9e40-b375cb55eb60"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\nconst outboundMessages = Array.isArray(data.outbound_messages)\n  ? data.outbound_messages\n  : [];\n\nconst results = [];\nconst adminTarget = data.reply_to || data.phone || data.remoteJid || '';\nconst adminText = String(data.reply || '');\n\nif (adminTarget && adminText) {\n  results.push({\n    json: {\n      ...data,\n      send_target: String(adminTarget),\n      send_text: adminText,\n      send_role: 'primary',\n    },\n  });\n}\n\nfor (const message of outboundMessages) {\n  if (!message || !message.target || !message.text) continue;\n  results.push({\n    json: {\n      ...data,\n      send_target: String(message.target),\n      send_text: String(message.text),\n      send_role: 'outbound_message',\n      target: message.target,\n      text: message.text,\n    },\n  });\n}\n\nreturn results;"
+      },
+      "id": "b6543e3d-0f8f-4b0a-a6f8-4f7b3ad3c9e1",
+      "name": "Prepare Evolution sends",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5600,
+        -512
+      ]
     }
   ],
   "pinData": {},
@@ -698,7 +711,7 @@
         ],
         [
           {
-            "node": "Evolution API Send",
+            "node": "Prepare Evolution sends",
             "type": "main",
             "index": 0
           }
@@ -754,6 +767,17 @@
         [
           {
             "node": "Parse input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Evolution sends": {
+      "main": [
+        [
+          {
+            "node": "Evolution API Send",
             "type": "main",
             "index": 0
           }

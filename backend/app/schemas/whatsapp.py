@@ -42,6 +42,13 @@ class WhatsAppConsoleRequest(BaseModel):
     target_lid: str | None = None
 
 
+class WhatsAppOutboundMessage(BaseModel):
+    """Additional WhatsApp message for n8n transport."""
+
+    target: str
+    text: str
+
+
 class WhatsAppConsoleResponse(BaseModel):
     """Reply for n8n to send back through Evolution API.
 
@@ -68,6 +75,8 @@ class WhatsAppConsoleResponse(BaseModel):
         close_jids: Optional list of all Evolution sessions to close when
             ``status`` requests session close. Client Context Shortcut uses
             this to close both admin private chat and original target chat.
+        outbound_messages: Optional extra WhatsApp messages n8n must send.
+            Used when one backend action needs multiple destination chats.
     """
 
     reply: str
@@ -78,6 +87,7 @@ class WhatsAppConsoleResponse(BaseModel):
     no_reply: bool | None = None
     close_jid: str | None = None
     close_jids: list[str] | None = None
+    outbound_messages: list[WhatsAppOutboundMessage] | None = None
 
     @model_serializer
     def ser_model(self) -> dict:
@@ -96,4 +106,8 @@ class WhatsAppConsoleResponse(BaseModel):
             d["close_jid"] = self.close_jid
         if self.close_jids is not None:
             d["close_jids"] = self.close_jids
+        if self.outbound_messages is not None:
+            d["outbound_messages"] = [
+                message.model_dump() for message in self.outbound_messages
+            ]
         return d

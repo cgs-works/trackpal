@@ -398,6 +398,7 @@ async def test_block_access_closes_client_context_immediately(
     admin_phone = tenant.whatsapp_phone
     admin_jid = f"{admin_phone}@s.whatsapp.net"
     target_external_phone = "+12015559999"
+    target_jid = f"{target_external_phone.lstrip('+')}@s.whatsapp.net"
 
     fake_mgr = _FakeManager(used_backup=False)
 
@@ -415,7 +416,7 @@ async def test_block_access_closes_client_context_immediately(
                 "admin_phone": admin_phone,
                 "admin_jid": admin_jid,
                 "target_phone": target_external_phone,
-                "target_jid": f"{target_external_phone}@s.whatsapp.net",
+                "target_jid": target_jid,
             },
             headers={"X-API-Key": settings.n8n_api_key},
         )
@@ -444,6 +445,12 @@ async def test_block_access_closes_client_context_immediately(
     assert body["close_jid"] == admin_jid
     assert admin_jid in body["close_jids"]
     assert "12015559999@s.whatsapp.net" in body["close_jids"]
+    assert body.get("outbound_messages") == [
+        {
+            "target": "12015559999@s.whatsapp.net",
+            "text": "🚫 Acceso temporalmente suspendido. No puedes usar este servicio en este momento.",
+        }
+    ]
 
 
 async def test_unblock_access_closes_client_context_immediately(
@@ -456,6 +463,7 @@ async def test_unblock_access_closes_client_context_immediately(
     admin_phone = tenant.whatsapp_phone
     admin_jid = f"{admin_phone}@s.whatsapp.net"
     target_external_phone = "+12015559999"
+    target_jid = f"{target_external_phone.lstrip('+')}@s.whatsapp.net"
 
     await blocked_clients_repository.create(
         db_session,
@@ -481,7 +489,7 @@ async def test_unblock_access_closes_client_context_immediately(
                 "admin_phone": admin_phone,
                 "admin_jid": admin_jid,
                 "target_phone": target_external_phone,
-                "target_jid": f"{target_external_phone}@s.whatsapp.net",
+                "target_jid": target_jid,
             },
             headers={"X-API-Key": settings.n8n_api_key},
         )
@@ -510,6 +518,12 @@ async def test_unblock_access_closes_client_context_immediately(
     assert body["close_jid"] == admin_jid
     assert admin_jid in body["close_jids"]
     assert "12015559999@s.whatsapp.net" in body["close_jids"]
+    assert body.get("outbound_messages") == [
+        {
+            "target": "12015559999@s.whatsapp.net",
+            "text": "✅ Acceso restaurado. Ya puedes usar este servicio nuevamente.",
+        }
+    ]
 
 
 async def test_context_close_cleans_redis_session(

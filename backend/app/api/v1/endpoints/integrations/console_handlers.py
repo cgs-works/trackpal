@@ -21,7 +21,7 @@ from app.core.redis_client import (
     RedisUnavailableError,
     get_redis_manager,
 )
-from app.schemas.whatsapp import WhatsAppConsoleResponse
+from app.schemas.whatsapp import WhatsAppConsoleResponse, WhatsAppOutboundMessage
 from app.repositories import (
     blocked_clients_repository,
     clients_repository,
@@ -249,6 +249,17 @@ def _client_context_close_jids(temp_data: dict, admin_jid: str | None) -> list[s
             seen.add(value)
             close_jids.append(value)
     return close_jids
+
+
+def _client_context_notification_target(temp_data: dict) -> str | None:
+    """Original target chat for terminal client notifications."""
+    target_jid = _canonical_jid(temp_data.get("target_jid"))
+    if target_jid:
+        return target_jid
+    target_phone = normalize_phone(temp_data.get("target_phone"))
+    if target_phone:
+        return f"{target_phone}@s.whatsapp.net"
+    return _canonical_jid(temp_data.get("target_lid"))
 
 
 # ====================================================================
@@ -1864,7 +1875,22 @@ async def _handle_ctx_unblocked_menu(
         )
         await db.commit()
         await clear_ctx()
-        close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
+        temp_data = data.get("temp_data", {})
+        close_jids = _client_context_close_jids(temp_data, admin_jid)
+        target_notice = _client_context_notification_target(temp_data)
+        outbound_messages = (
+            [
+                WhatsAppOutboundMessage(
+                    target=target_notice,
+                    text=_i18n_t(
+                        locale,
+                        "wa.tenant.client_context.block_access.client_notice",
+                    ),
+                )
+            ]
+            if target_notice
+            else None
+        )
         return WhatsAppConsoleResponse(
             reply=_i18n_t(
                 locale,
@@ -1875,6 +1901,7 @@ async def _handle_ctx_unblocked_menu(
             reply_to=admin_jid,
             close_jid=admin_jid,
             close_jids=close_jids,
+            outbound_messages=outbound_messages,
         )
 
     if is_cancel(msg_lower):
@@ -1940,7 +1967,22 @@ async def _handle_ctx_blocked_menu(
             )
             await db.commit()
         await clear_ctx()
-        close_jids = _client_context_close_jids(data.get("temp_data", {}), admin_jid)
+        temp_data = data.get("temp_data", {})
+        close_jids = _client_context_close_jids(temp_data, admin_jid)
+        target_notice = _client_context_notification_target(temp_data)
+        outbound_messages = (
+            [
+                WhatsAppOutboundMessage(
+                    target=target_notice,
+                    text=_i18n_t(
+                        locale,
+                        "wa.tenant.client_context.unblock_access.client_notice",
+                    ),
+                )
+            ]
+            if target_notice
+            else None
+        )
         return WhatsAppConsoleResponse(
             reply=_i18n_t(
                 locale,
@@ -1951,6 +1993,7 @@ async def _handle_ctx_blocked_menu(
             reply_to=admin_jid,
             close_jid=admin_jid,
             close_jids=close_jids,
+            outbound_messages=outbound_messages,
         )
 
     if is_cancel(msg_lower):

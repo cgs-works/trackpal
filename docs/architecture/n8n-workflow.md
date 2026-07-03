@@ -28,7 +28,7 @@ IF skip_console_call?
          IF no_reply=true?
            ├─ Yes → Check Close Session (skip all Evolution sends)
            └─ No  → IF has lookup_job_id?
-                     ├─ No  → Evolution Go Send → Check Close Session
+                     ├─ No  → Prepare Evolution sends → Evolution Go Send → Check Close Session
                      └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
                                 → Build result message → Send result → Check Close Session
 ```
@@ -145,9 +145,9 @@ All new contextual fields are sent conditionally (only when present in the parse
 
 JavaScript that takes backend response from `Console call` and merges it with parsed input.
 
-**Logic**: Preserve `reply_to` and `no_reply` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`, `close_jids`.
+**Logic**: Preserve `reply_to`, `no_reply`, and `outbound_messages` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`, `close_jids`, and `outbound_messages`.
 
-**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id, reply_to, no_reply }`.
+**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id, reply_to, no_reply, outbound_messages }`.
 
 ### 5a. IF no reply (IF Node)
 
@@ -166,9 +166,15 @@ When ``no_reply=true``, the workflow bypasses the ``Evolution Go Send`` and ``lo
 - Context collision rejection (private to admin chat via ``reply_to``)
 - Internal administrative responses that need no user-facing message
 
-### 6. Evolution Go Send (HTTP Request Node)
+### 6. Prepare Evolution sends (Code Node)
 
-Sends the reply text back to the user via Evolution Go.
+Expands one backend response into one or more Evolution send items.
+
+**Logic**: The primary item sends `reply` to `reply_to || phone || remoteJid`. Each item in `outbound_messages` becomes an additional send item with `send_target=target` and `send_text=text`. This lets terminal Client Context Shortcut actions confirm privately to the admin while notifying the remote contact at its original `targetJid`.
+
+### 6b. Evolution Go Send (HTTP Request Node)
+
+Sends prepared reply text back through Evolution Go.
 
 | Property | Value |
 |----------|-------|
@@ -176,12 +182,11 @@ Sends the reply text back to the user via Evolution Go.
 | Method | POST |
 | URL | `{{ $('Config').first().json.evolution_api_url }}/send/text` |
 | Headers | `apikey: {{ $json.apiKey }}` |
-| Body (no reply_to) | `{"number": "phone_without_plus", "text": "reply_text"}` |
-| Body (with reply_to) | `{"number": "{{$json.reply_to}}", "text": "reply_text"}` |
+| Body | `{"number": "{{$json.send_target}}", "text": "{{$json.send_text}}"}` |
 | Never Error | `true` |
 
-Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. When ``reply_to`` is present in the response, the send target uses the ``reply_to`` JID instead of the original sender's phone JID. This ensures administrative replies are sent privately to the admin chat rather than to the target contact. When ``reply_to`` is absent, reply target uses preserved `remoteJid` (can be `@lid` or phone JID depending on Evolution session state).
-### 6a. Build Result Message (Code Node)
+Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. `Prepare Evolution sends` sets `send_target` and `send_text`. When ``reply_to`` is present in the response, the primary send target uses the ``reply_to`` JID instead of the original sender's phone JID. Extra `outbound_messages` targets are sent as separate Evolution API calls.
+### 6c. Build Result Message (Code Node)
 
 Code node that constructs the final lookup result message after polling completes.
 
