@@ -63,7 +63,10 @@ async def _get_instance_credentials(
     """
     tenant = await _get_configured_tenant(db, tenant_id)
 
-    decrypted = decrypt_value(tenant.evolution_instance_token)
+    try:
+        decrypted = decrypt_value(tenant.evolution_instance_token)
+    except Exception:
+        raise UserFacingError("whatsapp_link.invalid_instance_token")
     if not decrypted:
         raise UserFacingError("whatsapp_link.invalid_instance_token")
 
@@ -135,7 +138,11 @@ class WhatsAppLinkService:
         except EvolutionClientError as exc:
             raise _map_evolution_error(exc) from exc
 
-        return WhatsAppPairResponse(code=result.get("code", ""))
+        code = result.get("code", "")
+        if not code:
+            raise UserFacingError("whatsapp_link.request_failed")
+
+        return WhatsAppPairResponse(code=code)
 
     async def get_qr_code(
         self, db: AsyncSession, tenant_id: UUID
@@ -157,7 +164,11 @@ class WhatsAppLinkService:
         except EvolutionClientError as exc:
             raise _map_evolution_error(exc) from exc
 
-        return WhatsAppQrResponse(qrcode=result.get("qrcode", ""))
+        qrcode = result.get("qrcode", "")
+        if not qrcode:
+            raise UserFacingError("whatsapp_link.request_failed")
+
+        return WhatsAppQrResponse(qrcode=qrcode)
 
     async def disconnect(
         self, db: AsyncSession, tenant_id: UUID

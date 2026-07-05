@@ -60,6 +60,18 @@ export function WhatsappLinkSection() {
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const qrRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Refs for stale closure prevention in QR refresh timer
+  const pollingEnabledRef = useRef(pollingEnabled);
+  const connectedRef = useRef(status?.connected === true);
+
+  useEffect(() => {
+    pollingEnabledRef.current = pollingEnabled;
+  }, [pollingEnabled]);
+
+  useEffect(() => {
+    connectedRef.current = status?.connected === true;
+  }, [status?.connected]);
+
   const connected = status?.connected === true;
   const hasPhone = !!status?.phone;
   const badgeState: BadgeState = pollingEnabled ? "connecting" : connected ? "connected" : "disconnected";
@@ -82,6 +94,45 @@ export function WhatsappLinkSection() {
     loadStatus();
   }, [loadStatus]);
 
+  // ---- QR auto-refresh timer (defined before polling hook to avoid forward ref issues) ----
+
+  const clearQrRefreshTimer = useCallback(() => {
+    if (qrRefreshTimer.current !== null) {
+      clearTimeout(qrRefreshTimer.current);
+      qrRefreshTimer.current = null;
+    }
+  }, []);
+
+  // Use a ref to avoid forward-reference lint errors
+  const scheduleQrRefreshRef = useRef<() => void>(() => {});
+
+  const scheduleQrRefresh = useCallback(() => {
+    clearQrRefreshTimer();
+    // Refresh QR approximately 5 seconds before the 40-second expiry window
+    qrRefreshTimer.current = setTimeout(async () => {
+      // Read live state from refs to avoid stale closure
+      if (!pollingEnabledRef.current && !connectedRef.current) {
+        try {
+          const { qrcode } = await getQRCode();
+          setQrCode(qrcode);
+          scheduleQrRefreshRef.current(); // reschedule via ref
+        } catch {
+          // Silently fail; user can manually refresh
+        }
+      }
+    }, 35000);
+  }, [clearQrRefreshTimer]);
+
+  useEffect(() => {
+    scheduleQrRefreshRef.current = scheduleQrRefresh;
+  }, [scheduleQrRefresh]);
+
+  useEffect(() => {
+    return () => {
+      clearQrRefreshTimer();
+    };
+  }, [clearQrRefreshTimer]);
+
   // ---- Polling hook ----
 
   useWhatsAppLinkPolling({
@@ -98,46 +149,9 @@ export function WhatsappLinkSection() {
     onTimeout: () => {
       setPollingEnabled(false);
       setTimeoutError(true);
+      clearQrRefreshTimer(); // Clear QR refresh on timeout
     },
   });
-
-  // ---- QR auto-refresh timer ----
-
-  const clearQrRefreshTimer = useCallback(() => {
-    if (qrRefreshTimer.current !== null) {
-      clearTimeout(qrRefreshTimer.current);
-      qrRefreshTimer.current = null;
-    }
-  }, []);
-
-  // Use a ref to avoid forward-reference lint errors
-  const scheduleQrRefreshRef = useRef<() => void>(() => {});
-
-  const scheduleQrRefresh = useCallback(() => {
-    clearQrRefreshTimer();
-    // Refresh QR approximately 5 seconds before the 40-second expiry window
-    qrRefreshTimer.current = setTimeout(async () => {
-      if (!pollingEnabled && !connected) {
-        try {
-          const { qrcode } = await getQRCode();
-          setQrCode(qrcode);
-          scheduleQrRefreshRef.current(); // reschedule via ref
-        } catch {
-          // Silently fail; user can manually refresh
-        }
-      }
-    }, 35000);
-  }, [clearQrRefreshTimer, pollingEnabled, connected]);
-
-  useEffect(() => {
-    scheduleQrRefreshRef.current = scheduleQrRefresh;
-  }, [scheduleQrRefresh]);
-
-  useEffect(() => {
-    return () => {
-      clearQrRefreshTimer();
-    };
-  }, [clearQrRefreshTimer]);
 
   // ---- Handlers ----
 
@@ -185,6 +199,7 @@ export function WhatsappLinkSection() {
       toast.success(t("frontend.whatsapp_link.success_disconnected"));
       await loadStatus();
     } catch (err) {
+      setDisconnectDialogOpen(false); // Close dialog on failure so error is visible
       setError(getApiError(err, t("frontend.whatsapp_link.error_disconnect")));
     } finally {
       setIsDisconnecting(false);
@@ -192,6 +207,7 @@ export function WhatsappLinkSection() {
   };
 
   const handleRetry = () => {
+    setIsInitialLoading(true); // Reset to show skeleton during reload
     setError(null);
     setPairError(null);
     setQrError(null);
@@ -305,9 +321,9 @@ export function WhatsappLinkSection() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>{t("frontend.common.cancel")}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDisconnectConfirm}>
-                      {t("frontend.whatsapp_link.disconnect")}
+                    <AlertDialogCancel disabled={isDisconnecting}>{t("frontend.common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDisconnectConfirm} disabled={isDisconnecting}>
+                      {isDisconnecting ? t("frontend.whatsapp_link.disconnecting") : t("frontend.whatsapp_link.disconnect")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
