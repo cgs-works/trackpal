@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Provide a frontend settings section that enables tenant administrators to view their WhatsApp connection status, initiate pairing (via code or QR), and disconnect — directly from the admin panel without master intervention. The section enforces Pro plan gating, handles connection polling, and displays all text via i18n.
+Provide a frontend settings section that enables Starter and Pro tenant administrators to view their WhatsApp connection status, initiate pairing (via code or QR), and disconnect — directly from the admin panel without master intervention. The section handles connection polling and displays all text via i18n.
 
 ## Requirements
 
 ### Requirement: Settings Section Visibility
 
-The "WhatsApp" section MUST appear in the tenant Settings page only when the tenant's plan is `"pro"` OR the current user is a master acting in a support context for the tenant.
+The "WhatsApp" section MUST appear in the tenant Settings page for active Starter and Pro tenant admins, and for a master acting in a support context for the tenant.
 
 #### Scenario: Pro tenant sees WhatsApp section
 
@@ -16,12 +16,11 @@ The "WhatsApp" section MUST appear in the tenant Settings page only when the ten
 - WHEN the tenant admin navigates to Settings
 - THEN the "WhatsApp" section MUST be visible
 
-#### Scenario: Non-Pro tenant does not see WhatsApp section
+#### Scenario: Starter tenant sees WhatsApp section
 
-- GIVEN a tenant with a plan other than `"pro"`
-- AND the current user is not a master in support context
+- GIVEN a tenant with `plan === "starter"`
 - WHEN the tenant admin navigates to Settings
-- THEN the "WhatsApp" section MUST NOT be visible
+- THEN the "WhatsApp" section MUST be visible
 
 #### Scenario: Master support context sees WhatsApp section
 

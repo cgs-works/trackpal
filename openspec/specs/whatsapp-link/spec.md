@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide a backend API that allows tenant administrators to manage their WhatsApp instance connection lifecycle — checking status, initiating pairing (via code or QR), and disconnecting — without master intervention. The API proxies requests to the Evolution Go API via `EvolutionClient`, enforcing tenant authorization, plan gating, and input validation.
+Provide a backend API that allows Starter and Pro tenant administrators to manage their WhatsApp instance connection lifecycle — checking status, initiating pairing (via code or QR), and disconnecting — without master intervention. The API proxies requests to the Evolution Go API via `EvolutionClient`, enforcing tenant authorization and input validation.
 
 ## Requirements
 
@@ -129,9 +129,9 @@ All WhatsApp Link endpoints MUST require a valid JWT token and an active tenant 
 
 The caller MUST be either the tenant admin or a master user acting in a support context for that tenant.
 
-#### Scenario: Valid tenant JWT
+#### Scenario: Valid Starter or Pro tenant JWT
 
-- GIVEN a request with a valid JWT for an active tenant
+- GIVEN a request with a valid JWT for an active Starter or Pro tenant
 - WHEN any WhatsApp Link endpoint is called
 - THEN the request MUST proceed to endpoint logic
 
@@ -152,7 +152,7 @@ The caller MUST be either the tenant admin or a master user acting in a support 
 
 - GIVEN a master user acting in a support context for a specific tenant
 - WHEN any WhatsApp Link endpoint is called
-- THEN the request MUST proceed as if the tenant admin called it (plan gate bypassed per BR10)
+- THEN the request MUST proceed as if the tenant admin called it
 
 ---
 

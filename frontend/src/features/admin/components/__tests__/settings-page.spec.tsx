@@ -104,7 +104,7 @@ describe("SettingsPage", () => {
       expect(screen.getByText("frontend.whatsapp_link.section_title")).toBeInTheDocument();
     });
 
-    it("does NOT show WhatsApp section for starter tenant admin", async () => {
+    it("shows WhatsApp section for starter tenant admin without exposing Pro-only settings", async () => {
       mockUseAuthStore.mockReturnValue({
         role: "tenant",
         tenantPlan: "starter",
@@ -113,7 +113,10 @@ describe("SettingsPage", () => {
 
       render(<SettingsPage />);
 
-      expect(screen.queryByText("frontend.whatsapp_link.section_title")).not.toBeInTheDocument();
+      expect(screen.getByText("frontend.whatsapp_link.section_title")).toBeInTheDocument();
+      expect(screen.queryByText("frontend.subscriptions.reminder_settings_title")).not.toBeInTheDocument();
+      expect(screen.queryByText("frontend.subscriptions.timezone")).not.toBeInTheDocument();
+      expect(screen.queryByText("frontend.public_api.section_title")).not.toBeInTheDocument();
     });
 
     it("shows WhatsApp section for master support context even with starter plan", async () => {

@@ -33,7 +33,7 @@ function buildSections(showProSettings: boolean): SettingsSection[] {
     { id: "locale", title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe },
     ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock }] : []),
     ...(showProSettings ? [{ id: "public-api" as const, title: t("frontend.public_api.section_title"), description: t("frontend.public_api.description"), icon: KeyRound }] : []),
-        ...(showProSettings ? [{ id: "whatsapp-link" as const, title: t("frontend.whatsapp_link.section_title"), description: t("frontend.whatsapp_link.section_description"), icon: MessageCircle }] : []),
+        { id: "whatsapp-link", title: t("frontend.whatsapp_link.section_title"), description: t("frontend.whatsapp_link.section_description"), icon: MessageCircle },
     { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield },
     { id: "mailbox", title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
     { id: "access-control", title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban },
@@ -131,8 +131,8 @@ export function SettingsPage() {
         return <CodeServicesSection />;
       case "public-api":
         return <PublicApiSection />;
-          case "whatsapp-link":
-            return <WhatsappLinkSection />;
+      case "whatsapp-link":
+        return <WhatsappLinkSection />;
     }
   }
 

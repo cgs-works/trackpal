@@ -165,15 +165,16 @@ class TestAuthAndAuthorization:
         response = await client.get(self.STATUS_URL, headers=headers)
         assert response.status_code == 403
 
-    async def test_starter_tenant_admin_returns_404(self, client: AsyncClient, db_session):
-        """Starter (non-Pro) tenant cannot access → 404 concealment."""
+    async def test_starter_tenant_admin_can_access_status(self, client: AsyncClient, db_session):
+        """Starter tenant admins can access WhatsApp self-linking status."""
         tenant, user = await _seed_tenant_with_evolution(db_session, plan=TENANT_PLAN_STARTER)
         headers = await _login_as(client, user.username)
 
         with _patch_decrypt():
             with _patch_evolution("get_instance_status", return_value={"connected": False, "loggedIn": False}):
                 response = await client.get(self.STATUS_URL, headers=headers)
-        assert response.status_code == 404
+        assert response.status_code == 200
+        assert response.json()["instance_name"] == tenant.evolution_instance_name
 
     async def test_master_support_can_access_starter_tenant(
         self, client: AsyncClient, db_session
@@ -323,6 +324,19 @@ class TestPair:
         assert "code" in data
         assert data["code"] == "12345678"
 
+    async def test_starter_tenant_admin_can_access_pair(self, client: AsyncClient, db_session):
+        """Starter tenant admins can request a WhatsApp pairing code."""
+        tenant, user = await _seed_tenant_with_evolution(db_session, plan=TENANT_PLAN_STARTER)
+        headers = await _login_as(client, user.username)
+
+        with _patch_decrypt():
+            with _patch_evolution("get_instance_status", return_value={"connected": False, "loggedIn": False}):
+                with _patch_evolution("pair_instance", return_value={"code": "12345678"}):
+                    response = await client.post(self.URL, json={}, headers=headers)
+
+        assert response.status_code == 200
+        assert response.json()["code"] == "12345678"
+
     async def test_rejects_client_supplied_phone(self, client: AsyncClient, db_session):
         """Client-supplied phone is rejected via extra='forbid' → 422."""
         tenant, user = await _seed_tenant_with_evolution(db_session)
@@ -390,6 +404,19 @@ class TestGetQr:
         assert "qrcode" in data
         assert data["qrcode"] == "base64imagdata=="
 
+    async def test_starter_tenant_admin_can_access_qr(self, client: AsyncClient, db_session):
+        """Starter tenant admins can retrieve a WhatsApp QR code."""
+        tenant, user = await _seed_tenant_with_evolution(db_session, plan=TENANT_PLAN_STARTER)
+        headers = await _login_as(client, user.username)
+
+        with _patch_decrypt():
+            with _patch_evolution("get_instance_status", return_value={"connected": False, "loggedIn": False}):
+                with _patch_evolution("get_qr_code", return_value={"qrcode": "base64imagdata=="}):
+                    response = await client.get(self.URL, headers=headers)
+
+        assert response.status_code == 200
+        assert response.json()["qrcode"] == "base64imagdata=="
+
     async def test_no_phone_returns_400(self, client: AsyncClient, db_session):
         """Missing whatsapp_phone → 400."""
         tenant, user = await _seed_tenant_with_evolution(db_session, has_phone=False, phone=None)
@@ -434,6 +461,18 @@ class TestDisconnect:
         assert response.status_code == 200
         data = response.json()
         assert data["connected"] is False
+
+    async def test_starter_tenant_admin_can_access_disconnect(self, client: AsyncClient, db_session):
+        """Starter tenant admins can disconnect their WhatsApp instance."""
+        tenant, user = await _seed_tenant_with_evolution(db_session, plan=TENANT_PLAN_STARTER)
+        headers = await _login_as(client, user.username)
+
+        with _patch_decrypt():
+            with _patch_evolution("logout_instance", return_value=None):
+                response = await client.post(self.URL, headers=headers)
+
+        assert response.status_code == 200
+        assert response.json()["connected"] is False
 
     async def test_already_disconnected_returns_200(self, client: AsyncClient, db_session):
         """Already disconnected is idempotent → 200."""

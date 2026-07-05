@@ -1,8 +1,8 @@
 """FastAPI router for tenant WhatsApp self-linking endpoints.
 
 All endpoints require a valid JWT, active tenant context, and either
-tenant (admin) or master role.  Pro plan is enforced for tenant users;
-master support bypasses the plan gate.
+tenant (admin) or master role. Starter and Pro tenant admins can use
+this feature; master support can access the active tenant context.
 """
 
 from __future__ import annotations
@@ -14,10 +14,8 @@ from app.api.dependencies import (
     ActiveTenantId,
     CurrentUser,
     DbDep,
-    TenantPlanDep,
 )
 from app.core.errors import UserFacingError, translate_error
-from app.core.tenant_plan import TENANT_PLAN_PRO
 from app.schemas.whatsapp_link import (
     WhatsAppDisconnectResponse,
     WhatsAppLinkStatusResponse,
@@ -50,21 +48,12 @@ DEFAULT_ERROR_STATUS = status.HTTP_502_BAD_GATEWAY
 
 async def _check_role_and_plan(
     current_user: CurrentUser,
-    tenant_plan: TenantPlanDep,
 ) -> None:
-    """Reject client role and enforce Pro plan for tenant users.
-
-    Master support context bypasses the plan gate.
-    """
+    """Reject roles that cannot manage tenant WhatsApp linking."""
     if current_user.role not in ("tenant", "master"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Role 'tenant' or 'master' required",
-        )
-
-    if current_user.role == "tenant" and tenant_plan != TENANT_PLAN_PRO:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
         )
 
 
@@ -97,8 +86,6 @@ async def _resolve_locale(db: DbDep, tenant_id: ActiveTenantId) -> str:
 async def get_status(
     db: DbDep,
     tenant_id: ActiveTenantId,
-    current_user: CurrentUser,
-    tenant_plan: TenantPlanDep,
     _: AuthDep,
 ) -> WhatsAppLinkStatusResponse:
     """Return the current WhatsApp connection status for the tenant."""
@@ -114,8 +101,6 @@ async def pair(
     payload: WhatsAppPairRequest,
     db: DbDep,
     tenant_id: ActiveTenantId,
-    current_user: CurrentUser,
-    tenant_plan: TenantPlanDep,
     _: AuthDep,
 ) -> WhatsAppPairResponse:
     """Request an 8-digit pairing code for the tenant's WhatsApp instance.
@@ -134,8 +119,6 @@ async def pair(
 async def get_qr(
     db: DbDep,
     tenant_id: ActiveTenantId,
-    current_user: CurrentUser,
-    tenant_plan: TenantPlanDep,
     _: AuthDep,
 ) -> WhatsAppQrResponse:
     """Retrieve the QR code for WhatsApp Web linking."""
@@ -150,8 +133,6 @@ async def get_qr(
 async def disconnect(
     db: DbDep,
     tenant_id: ActiveTenantId,
-    current_user: CurrentUser,
-    tenant_plan: TenantPlanDep,
     _: AuthDep,
 ) -> WhatsAppDisconnectResponse:
     """Log out the WhatsApp instance without deleting it.

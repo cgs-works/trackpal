@@ -51,6 +51,7 @@
 | Client login | 401 genérico (datos preservados) | Login normal |
 | Clientes, Catálogo, Suscripciones | 404 (bloqueado por Pro Gate) | Accesible |
 | Public API Catalog | 403 pausado si existe configuración preservada | Accesible con Public API Key + Allowed Origin |
+| WhatsApp self-linking | Accesible si la instancia Evolution está configurada | Accesible si la instancia Evolution está configurada |
 | Public API Key (Settings) | Oculto y bloqueado para tenant admin | Visible y gestionable |
 | Timezone (Settings) | Oculto y bloqueado para tenant admin | Visible y editable |
 | Reminder settings | Oculto | Visible |

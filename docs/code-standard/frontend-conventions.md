@@ -278,7 +278,7 @@ Pro-only routes (`/admin/clients`, `/admin/catalog`, `/admin/subscriptions`) are
 
 ### Settings section visibility
 
-SettingsPage conditionally includes sections: Reminder Settings and Timezone are Pro-only; all other sections (Profile, Language, Code Services, Code Mailbox, Control de acceso, Password) are available for all plans.
+SettingsPage conditionally includes sections: Reminder Settings, Timezone, and Public API are Pro-only; all other sections (Profile, Language, Code Services, Code Mailbox, Control de acceso, WhatsApp, Password) are available for all plans.
 
 ## No Tests
 
