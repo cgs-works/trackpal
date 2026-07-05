@@ -9,7 +9,27 @@ from app.core.config import settings
 logger = __import__("logging").getLogger(__name__)
 
 
+class EvolutionClientError(RuntimeError):
+    """Raised when an Evolution API request fails.
+
+    Attributes:
+        code: Machine-readable error code (e.g. "invalid_instance_token").
+        status_code: Optional HTTP status code from the Evolution response.
+    """
+
+    def __init__(self, code: str, *, status_code: int | None = None) -> None:
+        self.code = code
+        self.status_code = status_code
+        super().__init__(code)
+
+
 class EvolutionClient:
+    # ── Route constants (isolate production route-shape changes here) ──
+    ROUTE_STATUS = "/instance/status"
+    ROUTE_QR = "/instance/qr"
+    ROUTE_PAIR = "/instance/pair"
+    ROUTE_LOGOUT = "/instance/logout"
+
     def __init__(
         self,
         base_url: str = settings.evolution_api_url,
@@ -186,6 +206,135 @@ class EvolutionClient:
             data = {**data, **instance}
         value = data.get("id") or data.get("instanceId")
         return str(value) if value else ""
+
+    # ── Instance-token helpers ──────────────────────────────────────────
+
+    def _instance_headers(self, instance_token: str) -> dict[str, str]:
+        """Build headers using the tenant's instance token, never the global API key."""
+        return {"Content-Type": "application/json", "apikey": instance_token}
+
+    async def _send_instance_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        instance_name: str,
+        instance_token: str,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        """Send a request to the Evolution API using instance-token auth.
+
+        Handles error mapping, response unwrapping, and logging without exposing tokens.
+        """
+        if not self.base_url:
+            raise EvolutionClientError("service_unavailable")
+
+        normalized_instance_name = self._instance_name(instance_name)
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
+            try:
+                response = await client.request(
+                    method,
+                    path,
+                    json=json,
+                    headers=self._instance_headers(instance_token),
+                )
+                if response.status_code in {401, 403}:
+                    raise EvolutionClientError(
+                        "invalid_instance_token", status_code=response.status_code
+                    )
+                if response.status_code >= 500:
+                    raise EvolutionClientError(
+                        "service_unavailable", status_code=response.status_code
+                    )
+                response.raise_for_status()
+            except httpx.RequestError as exc:
+                logger.warning(
+                    "Evolution instance request failed instance=%s path=%s",
+                    normalized_instance_name,
+                    path,
+                    exc_info=True,
+                )
+                raise EvolutionClientError("service_unavailable") from exc
+            except httpx.HTTPStatusError as exc:
+                raise EvolutionClientError(
+                    "request_failed", status_code=exc.response.status_code
+                ) from exc
+
+        return self._response_data(response.json()) if response.content else None
+
+    # ── WhatsApp instance lifecycle methods ─────────────────────────────
+
+    async def get_instance_status(
+        self, instance_name: str, instance_token: str
+    ) -> dict[str, Any]:
+        """Fetch the connection status of a WhatsApp instance.
+
+        Returns the normalized Evolution response dict (e.g.
+        ``{"connected": ..., "loggedIn": ..., ...}``).
+        """
+        return await self._send_instance_request(
+            "GET",
+            self.ROUTE_STATUS,
+            instance_name=instance_name,
+            instance_token=instance_token,
+        )
+
+    async def get_qr_code(
+        self, instance_name: str, instance_token: str
+    ) -> dict[str, Any]:
+        """Retrieve the QR code for WhatsApp Web linking.
+
+        Normalizes the response so the result always contains a ``qrcode`` key.
+        """
+        data = await self._send_instance_request(
+            "GET",
+            self.ROUTE_QR,
+            instance_name=instance_name,
+            instance_token=instance_token,
+        )
+        if isinstance(data, dict):
+            if "qrcode" in data:
+                return {"qrcode": data["qrcode"]}
+            for key in ("qr", "base64"):
+                if key in data:
+                    return {"qrcode": data[key]}
+        return {"qrcode": ""}
+
+    async def pair_instance(
+        self, instance_name: str, instance_token: str, phone: str
+    ) -> dict[str, Any]:
+        """Request an 8-digit pairing code for the given phone number.
+
+        Normalizes the response so the result always contains a ``code`` key.
+        """
+        data = await self._send_instance_request(
+            "POST",
+            self.ROUTE_PAIR,
+            instance_name=instance_name,
+            instance_token=instance_token,
+            json={"phone": phone},
+        )
+        if isinstance(data, dict):
+            if "code" in data:
+                return {"code": data["code"]}
+            if "pairingCode" in data:
+                return {"code": data["pairingCode"]}
+        return {"code": ""}
+
+    async def logout_instance(
+        self, instance_name: str, instance_token: str
+    ) -> None:
+        """Log out a WhatsApp instance without deleting it.
+
+        The Evolution instance is preserved so the tenant can re-link later.
+        Returns None — callers should not expect a body.
+        """
+        await self._send_instance_request(
+            "POST",
+            self.ROUTE_LOGOUT,
+            instance_name=instance_name,
+            instance_token=instance_token,
+        )
 
     async def close_chat_session(self, *, instance: str, remote_jid: str) -> None:
         """Deprecated: Cierre de sesión ahora se gestiona directamente desde n8n
