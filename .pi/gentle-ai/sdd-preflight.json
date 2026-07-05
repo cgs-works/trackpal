@@ -1,8 +1,0 @@
-{
-  "executionMode": "interactive",
-  "artifactStore": "openspec",
-  "chainedPrStrategy": "ask-always",
-  "reviewBudgetLines": 2500,
-  "engramAvailable": true,
-  "prompted": true
-}
