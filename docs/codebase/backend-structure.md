@@ -33,6 +33,7 @@ backend/
 │   │           │   └── mail_lookups.py          # n8n create/poll mailbox lookup jobs
 │   │           ├── _mailbox_helpers.py      # Shared mailbox response helpers
 │   │           ├── mailbox.py               # Tenant mailbox CRUD/test/OAuth endpoints
+│   │           ├── whatsapp_link.py         # Tenant WhatsApp self-linking endpoints
 │   │           └── subscriptions/ # Package: crud, lifecycle, jobs, settings, router
 │   │               ├── __init__.py
 │   │               ├── _common.py
@@ -139,6 +140,7 @@ backend/
 │       ├── whatsapp_master_console_facade/
 │       ├── whatsapp_session_service/
 │       ├── whatsapp_tenant_console_facade/
+│       ├── whatsapp_link_service.py     # Tenant WhatsApp self-linking orchestration
 │       ├── whatsapp_navigation.py       # Shared navigation helpers (is_cancel, is_back, is_next, screen stack)
 │       └── whatsapp_tenant_console_service/ # Includes codigo_flow.py, access_control_flow.py for mailbox lookup + access control
 ├── alembic/
@@ -236,6 +238,7 @@ backend/
 | `app/services/whatsapp_tenant_console_service/` | Tenant WhatsApp menu routing (package, 18 modules) |
 | `app/services/whatsapp_tenant_console_facade/` | Tenant console phone-based orchestration (package) |
 | `app/services/whatsapp_client_console_facade/` | Client WhatsApp read-only console (package) |
+| `app/services/whatsapp_link_service.py` | Tenant WhatsApp connection self-linking orchestration |
 | `app/services/dashboard_service/` | Dashboard response assembly per role (package) |
 | `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
 | `app/services/access_control_service.py` | Block/unblock identities + codigo session cleanup |

@@ -15,7 +15,8 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 | Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
 | Code Services | `CodeServicesSection` | API direct |
 | Code Mailbox | `MailboxSection` | `settingsStore.mailbox` |
-| Public API Catalog (planned) | `PublicApiSection` | Public API Key management API |
+| Public API Catalog | `PublicApiSection` | Public API Key management API |
+| WhatsApp | `WhatsappLinkSection` | Status polling, pairing code, or QR code |
 | Control de acceso | `AccessControlSection` | API direct |
 | Profile | `ProfileSection` | `getProfile()` API |
 | Password | `PasswordSection` | API direct |
@@ -76,9 +77,13 @@ IMAP/OAuth mailbox configuration.
 - Test connection, disconnect actions
 - After mutations: `clearSettingsCache()` + reload
 
-### PublicApiSection (`features/admin/components/public-api-section.tsx`) — planned
+### PublicApiSection (`features/admin/components/public-api-section.tsx`)
 
-Pro-only Settings section for Public API Catalog configuration. It should show the visible Public API Key, edit exact Allowed Origins, regenerate the key while preserving origins, and revoke the public API configuration.
+Pro-only Settings section for Public API Catalog configuration. It shows the visible Public API Key, allows editing exact Allowed Origins, regenerates the key while preserving origins, and revokes the public API configuration.
+
+### WhatsappLinkSection (`features/admin/components/whatsapp-link-section.tsx`)
+
+Settings section for managing WhatsApp connection (status badge, pairing code, QR scanning, and disconnect). Available for both Starter and Pro tenant admins, and master support context. Uses the `useWhatsAppLinkPolling` hook to fetch status every 5 seconds.
 
 ### AccessControlSection (`features/admin/components/access-control-section.tsx`)
 

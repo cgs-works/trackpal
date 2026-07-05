@@ -37,7 +37,7 @@ Resolved inside tenant instance scope. Clients can:
 ### Web Dashboard
 
 - **Master Dashboard** (`/master/dashboard`): Full tenant management UI (CRUD, activate/deactivate, delete) with summary cards and modal forms. Includes global code-service activation panel.
-- **Tenant Dashboard** (`/admin/dashboard`): Self-service profile + password management, catalog panel, client management panel, subscriptions page, mailbox config panel, code-service selection panel.
+- **Tenant Dashboard** (`/admin/dashboard`): Self-service profile + password management, catalog panel, client management panel, subscriptions page, mailbox config panel, code-service selection panel, access-control settings, and WhatsApp self-linking configuration.
 - **Client Dashboard** (`/client/dashboard`): Read-only profile view and password change for end-customers.
 
 ### Mailbox Ingestion (automated)
@@ -69,6 +69,7 @@ Programmatic access for frontend SPA and n8n integration:
 - Catalog management (services, plans), Client management, Subscriptions
 - Mailbox config (OAuth + IMAP), Mail lookup jobs (n8n-facing)
 - Code-services governance (global + tenant)
+- WhatsApp self-linking lifecycle management (status, pairing code, QR, disconnect) for Starter and Pro tenants
 - I18n catalog endpoint (en/es)
 - Dashboard (role-aware response assembly)
 

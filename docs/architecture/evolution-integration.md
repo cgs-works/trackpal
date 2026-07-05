@@ -18,6 +18,17 @@ The backend integrates with **Evolution API** (WhatsApp Business API proxy, vers
 
 Instance names are prefixed with `tenant-` automatically (e.g., `tenant-acme`).
 
+### WhatsApp Instance Linking Management (Self-Linking)
+
+The following methods are exposed by `EvolutionClient` for self-linking management, authenticated using the tenant's decrypted instance token (`apikey` in headers per request):
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `get_instance_status(instance_name, instance_token)` | `GET /instance/status` | Connection status of a WhatsApp instance (checks `connected` + `loggedIn`) |
+| `get_qr_code(instance_name, instance_token)` | `GET /instance/qr` | Retrieve QR code for WhatsApp Web linking (normalizes to `{ qrcode: "base64" }`) |
+| `pair_instance(instance_name, instance_token, phone)` | `POST /instance/pair` | Request 8-digit pairing code for the given phone number |
+| `logout_instance(instance_name, instance_token)` | `POST /instance/logout` | Log out a WhatsApp instance without deleting the Evolution instance |
+
 ### Webhook Registration
 `register_webhook` replaces the legacy `setup_n8n_integration`. It uses a defensive upsert pattern and chatbot payload now includes LID-aware sender identity fields for n8n:
 

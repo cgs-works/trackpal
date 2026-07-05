@@ -28,6 +28,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/subscriptions/jobs` | `app.api.v1.endpoints.subscriptions` | subscriptions-jobs | X-API-Key header |
 | `/api/v1/subscriptions/reminders` | `app.api.v1.endpoints.subscriptions` | subscriptions-reminders | X-API-Key header |
 | `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
+| `/api/v1/tenant/whatsapp-link/*` | `app.api.v1.endpoints.whatsapp_link` | tenant-whatsapp-link | JWT + active tenant context (Starter + Pro) |
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
 | `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
 | `/api/v1/access-control/*` | `app.api.v1.endpoints.access_control` | access-control | JWT + active tenant context |
@@ -180,7 +181,7 @@ Tenant package is stored on `tenants.plan` with allowed values `starter` and `pr
 - Starter tenant admins receive HTTP 404 for Pro-only modules: `/clients`, `/catalog/*`, `/subscriptions/*`, `/subscription-settings`.
 - Public API Catalog is Pro-only; downgraded Starter tenants receive 403 on public catalog calls while key configuration is preserved.
 - Master users switched into a Starter tenant bypass Pro gates for support.
-- Starter can access profile, locale, `/tenant/mailbox/*`, `/code-services/tenants/current`, `/access-control/blocks`, dashboard, and WhatsApp code lookup.
+- Starter can access profile, locale, `/tenant/mailbox/*`, `/tenant/whatsapp-link/*`, `/code-services/tenants/current`, `/access-control/blocks`, dashboard, and WhatsApp code lookup.
 
 ## Dependency Injection
 

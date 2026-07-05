@@ -34,6 +34,6 @@ Full documentation: [docs/SUMMARY.md](docs/SUMMARY.md)
 ## Project Structure
 
 - `backend/` — Python FastAPI application
-- `frontend/` — Vue 3 SPA
+- `frontend/` — React 19 SPA
 - `docs/` — Project documentation
 - `n8n/` — n8n workflow exports (WhatsApp bot + subscription reminders)
