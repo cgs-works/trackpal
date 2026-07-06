@@ -8,6 +8,7 @@ SERVICE: ServiceEntry = {
         "amazon.com: Intento de inicio de sesión",
         "amazon.com.mx: Intento de inicio de sesión",
         "amazon.com: Sign-in attempt",
+        "amazon.co.uk: Sign-in attempt",
     ],
     "extraction_rules": [
         {
