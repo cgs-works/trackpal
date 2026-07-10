@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { NavItem } from "./sidebar-nav";
+import { BrandLogo } from "./brand-logo";
 
 export interface SidebarItem {
   label: string
@@ -45,15 +46,14 @@ function SidebarContent({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="h-14 flex items-center px-4 border-b shrink-0">
-        <span
-          className={cn(
-            "font-bold tracking-tight text-primary transition-all",
-            collapsed ? "text-lg" : "text-xl"
-          )}
-        >
-          {collapsed ? collapsedBrandName : brandName}
-        </span>
+      <div className="flex h-16 shrink-0 items-center border-b px-4">
+        {brandName === "TrackPal" ? (
+          <BrandLogo compact={collapsed} />
+        ) : (
+          <span className="font-heading text-sm font-semibold text-primary">
+            {collapsed ? collapsedBrandName : brandName}
+          </span>
+        )}
       </div>
 
       <nav className="flex-1 p-2 flex flex-col gap-1">
@@ -124,8 +124,8 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "hidden md:flex flex-col border-r bg-card transition-all duration-200 shrink-0",
-        collapsed ? "w-[60px]" : "w-[220px]"
+        "hidden shrink-0 flex-col border-r bg-sidebar transition-[width] duration-200 md:flex",
+        collapsed ? "w-16" : "w-60"
       )}
     >
       <SidebarContent
@@ -151,7 +151,7 @@ export function MobileSidebar({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="md:hidden flex items-center gap-3 h-14 px-4 border-b">
+    <div className="flex h-16 items-center gap-3 border-b bg-sidebar px-4 md:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           render={
@@ -172,7 +172,7 @@ export function MobileSidebar({
           />
         </SheetContent>
       </Sheet>
-      <span className="font-bold tracking-tight text-primary">{brandName}</span>
+      {brandName === "TrackPal" ? <BrandLogo /> : <span className="font-heading text-sm font-semibold">{brandName}</span>}
     </div>
   );
 }

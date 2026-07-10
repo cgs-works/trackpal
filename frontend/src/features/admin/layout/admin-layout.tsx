@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { t } from "@/i18n";
 import { SupportBanner } from "@/features/admin/components/support-banner";
+import { BrandLogo } from "@/components/layout/brand-logo";
 
 export function AdminLayout() {
   const { username, logout, role, tenantPlan, isMasterSupportContext } = useAuthStore();
@@ -32,18 +33,16 @@ export function AdminLayout() {
   ].filter((item) => showProNav || !item.proOnly);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background/80">
       {/* ── Sidebar ──────────────────────────────────────────── */}
       <aside
-        className={`hidden md:flex flex-col border-r border-border transition-all duration-200 ${
-          collapsed ? "w-[60px]" : "w-[220px]"
+        className={`hidden flex-col border-r border-border bg-sidebar transition-[width] duration-200 md:flex ${
+          collapsed ? "w-16" : "w-60"
         }`}
       >
         {/* Brand */}
-        <div className="flex items-center gap-2 h-14 px-4 border-b border-border">
-          {!collapsed && (
-            <span className="font-bold text-lg tracking-tight">TrackPal</span>
-          )}
+        <div className="flex h-16 items-center gap-2 border-b border-border px-4">
+          {!collapsed && <BrandLogo />}
           <Button
             variant="ghost"
             size="icon"
@@ -59,17 +58,17 @@ export function AdminLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex flex-1 flex-col gap-1 p-2">
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname.startsWith(item.to);
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_0_22px_-12px_var(--sidebar-primary)]"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
                 <item.icon className="size-4 shrink-0" />
@@ -98,8 +97,8 @@ export function AdminLayout() {
       </aside>
 
       {/* ── Mobile header ────────────────────────────────────── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center gap-3 h-14 px-4 border-b border-border bg-background">
-        <span className="font-bold text-lg tracking-tight">TrackPal</span>
+      <div className="fixed inset-x-0 top-0 z-40 flex h-16 items-center gap-3 border-b border-border bg-sidebar/95 px-4 backdrop-blur-xl md:hidden">
+        <BrandLogo />
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{username}</span>
           <Button variant="ghost" size="icon" onClick={() => logout()}>
@@ -109,7 +108,7 @@ export function AdminLayout() {
       </div>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto md:pt-0 pt-14">
+      <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
         {isMasterSupportContext && tenantPlan === "starter" && <SupportBanner />}
         <Outlet />
       </main>

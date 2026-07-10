@@ -1,43 +1,43 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-06-11T00:00:00.000Z",
+  "generatedAt": "2026-07-10T00:00:00.000Z",
   "title": "Design System: TrackPal",
   "extensions": {
     "colorMeta": {
       "background": {
         "role": "neutral",
         "displayName": "Porcelain Surface",
-        "canonical": "oklch(1 0 0)",
+        "canonical": "oklch(0.985 0 0)",
         "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.25 0 0)", "oklch(0.37 0 0)", "oklch(0.56 0 0)", "oklch(0.71 0 0)", "oklch(0.88 0 0)", "oklch(0.97 0 0)", "oklch(1 0 0)"]
       },
       "foreground": {
         "role": "neutral",
         "displayName": "Operator Ink",
-        "canonical": "oklch(0.145 0 0)",
+        "canonical": "oklch(0.16 0.008 255)",
         "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.439 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.922 0 0)"]
       },
       "primary": {
         "role": "primary",
-        "displayName": "Ledger Ink",
-        "canonical": "oklch(0.205 0 0)",
-        "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.439 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.922 0 0)"]
+        "displayName": "Console Cyan",
+        "canonical": "oklch(0.55 0.16 235)",
+        "tonalRamp": ["oklch(0.25 0.08 235)", "oklch(0.34 0.11 235)", "oklch(0.44 0.14 235)", "oklch(0.55 0.16 235)", "oklch(0.64 0.17 233)", "oklch(0.72 0.16 230)", "oklch(0.84 0.12 230)", "oklch(0.94 0.04 230)"]
       },
       "muted": {
         "role": "neutral",
         "displayName": "Muted Panel",
-        "canonical": "oklch(0.97 0 0)",
+        "canonical": "oklch(0.955 0.004 255)",
         "tonalRamp": ["oklch(0.205 0 0)", "oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)", "oklch(0.985 0 0)"]
       },
       "border": {
         "role": "neutral",
         "displayName": "Soft Divider",
-        "canonical": "oklch(0.922 0 0)",
+        "canonical": "oklch(0.88 0.008 255)",
         "tonalRamp": ["oklch(0.269 0 0)", "oklch(0.371 0 0)", "oklch(0.439 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.87 0 0)", "oklch(0.922 0 0)", "oklch(0.97 0 0)"]
       },
       "destructive": {
         "role": "risk",
         "displayName": "Risk Red",
-        "canonical": "oklch(0.577 0.245 27.325)",
+        "canonical": "oklch(0.55 0.21 27)",
         "tonalRamp": ["oklch(0.25 0.12 27.325)", "oklch(0.35 0.16 27.325)", "oklch(0.45 0.21 27.325)", "oklch(0.577 0.245 27.325)", "oklch(0.68 0.18 27.325)", "oklch(0.78 0.12 27.325)", "oklch(0.9 0.06 27.325)", "oklch(0.96 0.03 27.325)"]
       }
     },
@@ -63,7 +63,7 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Compact primary action using Ledger Ink and a visible focus ring.",
+      "description": "Primary action using Console Cyan and a visible focus ring.",
       "html": "<button class=\"ds-button-primary\">Guardar cambios</button>",
       "css": ".ds-button-primary { height: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius, 0.625rem); background: var(--primary); color: var(--primary-foreground); font: 500 0.875rem/1 'Geist Variable', sans-serif; transition: background-color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-primary:hover { background: color-mix(in oklch, var(--primary), var(--background) 15%); } .ds-button-primary:active { transform: translateY(1px); } .ds-button-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
     },
@@ -101,10 +101,10 @@
     }
   ],
   "narrative": {
-    "northStar": "The Operations Ledger",
-    "overview": "TrackPal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings. This system is product-first. Familiar controls are an asset. Future screens should look trustworthy to operators who manage tenants, clients, subscriptions, mailbox connections, and access-code workflows in Spanish-first contexts.",
+    "northStar": "The Operations Console",
+    "overview": "TrackPal is the authenticated continuation of its developer-tools landing page: near-black and porcelain work surfaces, electric cyan reserved for actions and live state, a restrained 80px grid field, JetBrains Mono for page headings and key figures, and IBM Plex Sans for readable operational UI. The dashboard keeps familiar shadcn affordances while adopting the landing page's sharper technical identity.",
     "keyCharacteristics": [
-      "Restrained neutral surfaces with near-black primary actions.",
+      "Restrained near-black and porcelain surfaces with electric-cyan primary actions.",
       "Comfortable and calm density: not sparse marketing, not cramped infrastructure UI.",
       "Role-aware layouts where master, tenant, and client capabilities are unmistakable.",
       "Bilingual-ready labels, forms, tables, and validation messages.",
@@ -113,7 +113,7 @@
     "rules": [
       { "name": "The ≤10% Ink Rule", "body": "Primary ink is for action and selection. If a screen is mostly primary color, the hierarchy has failed.", "section": "colors" },
       { "name": "The No Decorative Accent Rule", "body": "Do not introduce indigo, gradients, or arbitrary success colors as ornament. Every non-neutral color must represent state, risk, selection, or a documented data role.", "section": "colors" },
-      { "name": "The One-Family Rule", "body": "Product UI uses Geist for everything until a real data-display need proves otherwise. No display fonts in controls, labels, tables, or form fields.", "section": "typography" },
+      { "name": "The Two-Role Type Rule", "body": "JetBrains Mono is limited to page headings, identifiers, and key figures. IBM Plex Sans carries controls, labels, tables, forms, and body copy.", "section": "typography" },
       { "name": "The No Gradient Text Rule", "body": "Gradient text is prohibited. Emphasis comes from hierarchy, not background-clip decoration.", "section": "typography" },
       { "name": "The Border-Before-Shadow Rule", "body": "Start with ring-foreground/10, border-border, muted footers, and spacing. Add shadow only when a surface must float above another surface.", "section": "elevation" },
       { "name": "The State-Only Motion Rule", "body": "Motion is 150–250ms and explains state: hover, focus, loading, expansion, or route feedback. No choreographed page-load sequences.", "section": "elevation" }

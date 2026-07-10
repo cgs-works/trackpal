@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sun, Moon, Globe } from "lucide-react";
+import { BrandLogo } from "@/components/layout/brand-logo";
 
 /* ── Atmospheric Panel ─────────────────────────────────────────── */
 
 function AtmosphericPanel() {
   return (
-    <div className="relative hidden md:flex flex-1 items-center justify-center overflow-hidden bg-[oklch(0.11_0_0)]">
+    <div className="relative hidden flex-1 items-center justify-center overflow-hidden bg-[oklch(0.11_0.004_285)] md:flex">
       <div
         className="absolute inset-0 opacity-[0.07]"
         style={{
@@ -29,22 +30,20 @@ function AtmosphericPanel() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 50% 50% at 50% 50%, oklch(0.55_0.12_260 / 0.15), transparent 70%)",
+            "radial-gradient(ellipse 50% 50% at 50% 50%, oklch(0.72 0.16 230 / 0.16), transparent 70%)",
         }}
       />
       <div
         className="absolute inset-0 opacity-60"
         style={{
           background:
-            "radial-gradient(ellipse 40% 30% at 50% 70%, oklch(0.50_0.08_300 / 0.12), transparent 60%)",
+            "radial-gradient(ellipse 40% 30% at 50% 70%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 60%)",
         }}
       />
       <div className="relative z-10 flex flex-col items-center gap-6 px-8 text-center">
-        <div className="h-px w-16 bg-gradient-to-r from-transparent via-[oklch(0.7_0.1_260)] to-transparent opacity-40" />
-        <h1 className="text-4xl font-extrabold tracking-tight text-white">
-          TrackPal
-        </h1>
-        <p className="max-w-xs text-sm leading-relaxed text-white/40">
+        <div className="h-px w-16 bg-primary opacity-40" />
+        <img src="/trackpal-dark.png" alt="TrackPal" className="h-10 w-[172px] object-contain" />
+        <p className="max-w-xs text-sm leading-relaxed text-white/55">
           Operations platform for WhatsApp-based service delivery and subscription management.
         </p>
         <div className="flex gap-2 mt-4">
@@ -150,15 +149,15 @@ export function LoginForm() {
       <div className="flex w-full items-center justify-center p-6 sm:p-10 md:w-[480px] lg:w-[520px]">
         <div className="w-full max-w-sm flex flex-col gap-8">
           {/* Mobile brand */}
-          <div className="flex flex-col items-center gap-2 md:hidden">
-            <h1 className="text-2xl font-bold tracking-tight">TrackPal</h1>
-            <p className="text-xs text-muted-foreground">Operations platform</p>
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <BrandLogo />
+            <p className="font-mono text-xs text-muted-foreground">Operations platform</p>
           </div>
 
           {/* Header */}
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2 className="font-heading text-xl font-semibold tracking-tight">
                 {t("login.title")}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">

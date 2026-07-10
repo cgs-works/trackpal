@@ -1,42 +1,42 @@
 ---
 name: TrackPal
-description: Calm operations UI for WhatsApp-based tenant, subscription, and mailbox-code workflows.
+description: Technical operations console aligned with the TrackPal landing-page identity.
 colors:
-  background: "oklch(1 0 0)"
-  foreground: "oklch(0.145 0 0)"
+  background: "oklch(0.985 0 0)"
+  foreground: "oklch(0.16 0.008 255)"
   card: "oklch(1 0 0)"
-  primary: "oklch(0.205 0 0)"
-  primary-foreground: "oklch(0.985 0 0)"
-  secondary: "oklch(0.97 0 0)"
-  muted: "oklch(0.97 0 0)"
-  muted-foreground: "oklch(0.556 0 0)"
-  border: "oklch(0.922 0 0)"
-  ring: "oklch(0.708 0 0)"
-  destructive: "oklch(0.577 0.245 27.325)"
+  primary: "oklch(0.55 0.16 235)"
+  primary-foreground: "oklch(1 0 0)"
+  secondary: "oklch(0.955 0.004 255)"
+  muted: "oklch(0.955 0.004 255)"
+  muted-foreground: "oklch(0.43 0.018 255)"
+  border: "oklch(0.88 0.008 255)"
+  ring: "oklch(0.55 0.16 235)"
+  destructive: "oklch(0.55 0.21 27)"
 typography:
   display:
-    fontFamily: "Geist Variable, sans-serif"
+    fontFamily: "JetBrains Mono Variable, monospace"
     fontSize: "3rem"
-    fontWeight: 800
-    lineHeight: 1
-    letterSpacing: "-0.025em"
-  headline:
-    fontFamily: "Geist Variable, sans-serif"
-    fontSize: "1.5rem"
     fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.032em"
+  headline:
+    fontFamily: "JetBrains Mono Variable, monospace"
+    fontSize: "1.5rem"
+    fontWeight: 600
     lineHeight: 1.2
   title:
-    fontFamily: "Geist Variable, sans-serif"
+    fontFamily: "IBM Plex Sans Variable, sans-serif"
     fontSize: "1rem"
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 1.375
   body:
-    fontFamily: "Geist Variable, sans-serif"
+    fontFamily: "IBM Plex Sans Variable, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "Geist Variable, sans-serif"
+    fontFamily: "IBM Plex Sans Variable, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 500
     lineHeight: 1
@@ -56,13 +56,13 @@ components:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.primary-foreground}"
     rounded: "{rounded.lg}"
-    height: "2rem"
+    height: "2.5rem"
     padding: "0 0.625rem"
   button-outline:
     backgroundColor: "{colors.background}"
     textColor: "{colors.foreground}"
     rounded: "{rounded.lg}"
-    height: "2rem"
+    height: "2.5rem"
     padding: "0 0.625rem"
   card:
     backgroundColor: "{colors.card}"
@@ -81,14 +81,14 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Operations Ledger"**
+**Creative North Star: "The Operations Console"**
 
-TrackPal should feel like a calm operational ledger: clear enough for repeated daily work, stable enough for credential and subscription tasks, and quiet enough that WhatsApp, tenant, mailbox, and role boundaries stay legible. The current React frontend establishes a shadcn/base-nova foundation: Geist Variable, neutral OKLCH tokens, compact controls, rounded-lg buttons and inputs, rounded-xl cards, borders, muted fills, and visible focus rings.
+TrackPal should feel like the authenticated continuation of its developer-tools landing page: near-black and porcelain work surfaces, electric cyan reserved for actions and live state, a restrained 80px grid field, JetBrains Mono for page headings and key figures, and IBM Plex Sans for readable operational UI. The dashboard keeps shadcn/base-nova affordances while adopting the landing page's sharper, technical identity.
 
-This system is product-first. Familiar controls are an asset. Future screens should look trustworthy to operators who manage tenants, clients, subscriptions, mailbox connections, and access-code workflows in Spanish-first contexts. It explicitly rejects generic SaaS-card aesthetics: gradient hero text, repeated metric-card scaffolds, decorative dashboards, startup-template polish, and motion that does not improve state comprehension.
+This system is product-first. Familiar controls remain an asset. The landing-page language is translated into quieter product materials: cyan marks selection and action rather than decoration, shadows are bounded to raised panels, and motion only explains state. Screens must remain trustworthy for Spanish-first tenant, subscription, mailbox, and WhatsApp workflows.
 
 **Key Characteristics:**
-- Restrained neutral surfaces with near-black primary actions.
+- Restrained near-black and porcelain surfaces with electric-cyan primary actions.
 - Comfortable and calm density: not sparse marketing, not cramped infrastructure UI.
 - Role-aware layouts where master, tenant, and client capabilities are unmistakable.
 - Bilingual-ready labels, forms, tables, and validation messages.
@@ -96,10 +96,10 @@ This system is product-first. Familiar controls are an asset. Future screens sho
 
 ## 2. Colors
 
-The palette is **Ink and Porcelain**: porcelain-white work surfaces, ink-black action hierarchy, soft neutral dividers, and destructive red reserved for real risk.
+The palette is **Electric Console**: near-black and porcelain work surfaces, cyan action hierarchy, soft cool-neutral dividers, and destructive red reserved for real risk.
 
 ### Primary
-- **Ledger Ink** (`colors.primary`): Primary actions, selected navigation, and the strongest text/action moments. Use it sparingly so the interface reads as controlled, not decorated.
+- **Console Cyan** (`colors.primary`): Primary actions, selected navigation, focus, and live-state moments. Use it sparingly so the interface reads as controlled, not decorated.
 
 ### Neutral
 - **Porcelain Surface** (`colors.background`, `colors.card`): Default page and panel surface. This is the main working material.
@@ -119,11 +119,13 @@ The palette is **Ink and Porcelain**: porcelain-white work surfaces, ink-black a
 
 ## 3. Typography
 
-**Display Font:** Geist Variable (with sans-serif fallback)  
-**Body Font:** Geist Variable (with sans-serif fallback)  
-**Label/Mono Font:** Geist Variable unless a true code/identifier context requires mono later.
+**Display Font:** JetBrains Mono Variable (with monospace fallback)
 
-**Character:** One disciplined sans-serif carries the product. It should feel precise, current, and unshowy. The hierarchy comes from weight, size, spacing, and placement—not font novelty.
+**Body Font:** IBM Plex Sans Variable (with system sans-serif fallback)
+
+**Label Font:** IBM Plex Sans Variable; reserve JetBrains Mono for page headings, identifiers, and key figures.
+
+**Character:** A technical mono/sans pairing connects the product to the landing page without turning controls into terminal UI. Hierarchy comes from weight, size, spacing, and placement—not decoration.
 
 ### Hierarchy
 - **Display** (800, `3rem`, line-height `1`): Rare product-level headings and transitional scaffold pages. Do not use fluid hero typography for app views.
@@ -133,7 +135,7 @@ The palette is **Ink and Porcelain**: porcelain-white work surfaces, ink-black a
 - **Label** (500, `0.875rem`, line-height `1`): Form labels, compact nav items, table headers, and button text. Avoid all-caps tracking as a section scaffold.
 
 ### Named Rules
-**The One-Family Rule.** Product UI uses Geist for everything until a real data-display need proves otherwise. No display fonts in controls, labels, tables, or form fields.
+**The Two-Role Type Rule.** JetBrains Mono is limited to page headings, identifiers, and key figures. IBM Plex Sans carries controls, labels, tables, forms, and body copy.
 
 **The No Gradient Text Rule.** Gradient text is prohibited. Emphasis comes from hierarchy, not background-clip decoration.
 
@@ -149,8 +151,8 @@ TrackPal uses **tonal layers**: borders, muted fills, and spacing establish dept
 ## 5. Components
 
 ### Buttons
-- **Shape:** Gently rounded compact controls (`rounded-lg`, height `2rem`).
-- **Primary:** Ledger Ink background with Porcelain text; used for the one main action in a local region.
+- **Shape:** Gently rounded controls (`rounded-lg`, default height `2.5rem`) with compact variants for dense toolbars.
+- **Primary:** Console Cyan background with high-contrast text; used for the one main action in a local region.
 - **Hover / Focus:** Hover darkens through token mixing; focus uses visible ring (`ring-3`, `ring/50`). Active may move by 1px only where the base component already does it.
 - **Secondary / Ghost / Tertiary:** Outline, secondary, ghost, destructive, and link variants come from the installed shadcn button component. Do not override their color vocabulary with raw Tailwind colors.
 
