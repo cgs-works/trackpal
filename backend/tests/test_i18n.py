@@ -462,6 +462,10 @@ async def test_settings_frontend_i18n_keys_exist():
         "frontend.subscriptions.recipient_desc_both",
         "frontend.access_control.pagination_previous",
         "frontend.access_control.pagination_next",
+        "frontend.access_control.search_label",
+        "frontend.access_control.search_placeholder",
+        "frontend.access_control.clear_search",
+        "frontend.access_control.no_search_results",
     ]
     keys_with_params = {
         "frontend.subscriptions.custom_messages_hint": {"placeholder": "test"},
