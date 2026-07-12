@@ -87,7 +87,7 @@ Settings section for managing WhatsApp connection (status badge, pairing code, Q
 
 ### AccessControlSection (`features/admin/components/access-control-section.tsx`)
 
-Lists active WhatsApp access blocks, blocks a phone, and unblocks existing entries through `/access-control/blocks`. This affects bot/code interactions only, not client portal accounts.
+Lists active WhatsApp access blocks, blocks a phone, and unblocks existing entries through `/access-control/blocks`. This affects bot/code interactions only, not client portal accounts. Phone Search filters the already-loaded collection by partial phone digits, excludes LID-only identities while a query is active, and paginates matching results locally in groups of 10.
 
 ### PlanRouteGate (`features/admin/components/plan-route-gate.tsx`)
 

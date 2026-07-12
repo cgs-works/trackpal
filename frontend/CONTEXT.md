@@ -114,6 +114,7 @@ Axios singleton en `src/lib/api.ts`:
 | **SupportBanner** | Alert visible cuando Master está en contexto de soporte (switched a un Starter tenant). Indica que la UI completa es visible solo para soporte. |
 | **Master Support Context** | `role === "master" && activeTenantId !== null`. Master ve UI admin completa + banner, sin restricciones de plan. |
 | **AccessControlSection** | Sección en Settings para listar/bloquear/desbloquear identidades de WhatsApp. Disponible tanto para Starter como Pro. La lista visible se pagina en grupos de 10 bloqueos. |
+| **Phone Search** | Access Control lookup criterion that matches blocked phone identities by a partial sequence of digits. It does not match identities represented only by a WhatsApp LID. |
 | **PublicApiSection** | Sección en Settings para crear, mostrar, regenerar y revocar la Public API Key, y para editar Allowed Origins. Disponible para Pro y Master Support Context. |
 | **WhatsappLinkSection** | Sección en Settings para que el tenant vincule, consulte y desconecte su instancia WhatsApp. Disponible para Starter, Pro y Master Support Context si la instancia Evolution está configurada. |
 
