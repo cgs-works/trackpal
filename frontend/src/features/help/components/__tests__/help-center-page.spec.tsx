@@ -121,7 +121,7 @@ describe("HelpCenterPage", () => {
     });
 
     expect(container.querySelector('[data-help-id="admin.help"]')).toHaveClass("max-w-screen-2xl");
-    expect(screen.getByText("Dashboard content.")).toHaveClass("max-w-[80ch]", "text-justify");
+    expect(screen.getByText("Dashboard content.")).toHaveClass("max-w-none", "text-justify");
   });
 
   it("scrolls to the article start after selecting a topic", async () => {

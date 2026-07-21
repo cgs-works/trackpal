@@ -29,6 +29,10 @@ vi.mock("react-joyride", () => ({
     const Tooltip = props.tooltipComponent as ComponentType<Record<string, unknown>>;
     const steps = props.steps as Array<Record<string, unknown>>;
     const stepIndex = props.stepIndex as number;
+    const step = steps[stepIndex];
+    if (!step.skipBeacon) {
+      return <button data-testid="help-tour-beacon" />;
+    }
     const eventProps = {
       onClick: () => undefined,
       title: "action",
@@ -42,7 +46,7 @@ vi.mock("react-joyride", () => ({
       primaryProps: eventProps,
       size: steps.length,
       skipProps: eventProps,
-      step: steps[stepIndex],
+      step,
       tooltipProps: { "aria-modal": true, role: "dialog" },
     });
   },

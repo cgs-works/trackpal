@@ -405,7 +405,7 @@ export function OrientationTour() {
         title: step.title,
         content: step.content,
         data: { topic_id: step.topic_id },
-        disableBeacon: true,
+        skipBeacon: true,
       })) ?? [],
     [tour],
   );

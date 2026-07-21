@@ -42,7 +42,7 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
           return (
             <ul
               key={`list-${index}`}
-              className="flex max-w-[80ch] list-disc flex-col gap-2 pl-5 text-justify text-muted-foreground"
+              className="flex max-w-none list-disc flex-col gap-2 pl-5 text-justify text-muted-foreground"
             >
               {lines.map((line, lineIndex) => (
                 <li key={`${line}-${lineIndex}`}>
@@ -54,7 +54,7 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
         }
 
         return (
-          <p key={`paragraph-${index}`} className="max-w-[80ch] text-justify leading-7 text-muted-foreground">
+          <p key={`paragraph-${index}`} className="max-w-none text-justify leading-7 text-muted-foreground">
             {renderInlineMarkdown(lines.join(" "))}
           </p>
         );
