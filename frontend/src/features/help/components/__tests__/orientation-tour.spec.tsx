@@ -149,6 +149,38 @@ describe("OrientationTour", () => {
     ]);
   });
 
+  it("acknowledges completion before advancing past the final step", async () => {
+    render(
+      <>
+        <div data-help-id="admin.dashboard" />
+        <OrientationTour />
+      </>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+    );
+
+    act(() => {
+      const onEvent = joyrideState.props?.onEvent as
+        | ((data: Record<string, unknown>) => void)
+        | undefined;
+      onEvent?.({
+        action: "next",
+        index: 0,
+        status: "running",
+        type: "step:after",
+      });
+    });
+
+    await waitFor(() =>
+      expect(acknowledgeHelpTour).toHaveBeenCalledWith(
+        release.release_id,
+        "completed",
+      ),
+    );
+  });
+
   it("requires confirmation before skipping and keeps replay available", async () => {
     const user = userEvent.setup();
     render(

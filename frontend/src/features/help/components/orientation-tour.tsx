@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -227,6 +228,7 @@ export function OrientationTour() {
   const [targetReady, setTargetReady] = useState(false);
   const [skipConfirmationOpen, setSkipConfirmationOpen] = useState(false);
   const [acknowledging, setAcknowledging] = useState(false);
+  const acknowledgementInFlight = useRef(false);
 
   const canRun =
     isPrivateHelpEnabled() &&
@@ -364,7 +366,8 @@ export function OrientationTour() {
 
   const acknowledge = useCallback(
     async (status: "completed" | "skipped") => {
-      if (!tour || acknowledging) return;
+      if (!tour || acknowledgementInFlight.current) return;
+      acknowledgementInFlight.current = true;
       setAcknowledging(true);
       try {
         await acknowledgeHelpTour(tour.release_id, status);
@@ -372,16 +375,23 @@ export function OrientationTour() {
       } catch {
         toast.error(t("frontend.help.tour_acknowledge_error"));
       } finally {
+        acknowledgementInFlight.current = false;
         setAcknowledging(false);
       }
     },
-    [acknowledging, stopTour, tour],
+    [stopTour, tour],
   );
 
   const handleEvent: EventHandler = useCallback(
     (data) => {
       if (data.type === EVENTS.STEP_AFTER) {
-        const nextIndex = data.action === ACTIONS.PREV ? data.index - 1 : data.index + 1;
+        const movingForward = data.action !== ACTIONS.PREV;
+        const isLastStep = data.index === (tour?.steps.length ?? 0) - 1;
+        if (movingForward && isLastStep) {
+          void acknowledge("completed");
+          return;
+        }
+        const nextIndex = movingForward ? data.index + 1 : data.index - 1;
         setTargetReady(false);
         setStepIndex(Math.max(0, nextIndex));
       }
@@ -395,7 +405,7 @@ export function OrientationTour() {
         requestSkip();
       }
     },
-    [acknowledge, requestSkip, stopTour],
+    [acknowledge, requestSkip, stopTour, tour],
   );
 
   const steps = useMemo<Step[]>(
