@@ -38,6 +38,10 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.mailbox",
         "tenant-admin.access-control",
         "tenant-admin.activate-access-code-lookup",
+        "tenant-admin.clients",
+        "tenant-admin.catalog",
+        "tenant-admin.subscriptions",
+        "tenant-admin.first-pro-client",
     ]
     assert index_response.json()["topics"][1]["help_targets"] == [
         "admin.settings.language"
@@ -89,6 +93,67 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
     )
     assert english_topic.status_code == 200
     assert english_topic.json()["title"] == "Business Dashboard"
+
+
+async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
+    client, active_tenant_user, db_session
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    index_response = await client.get("/api/v1/help", headers=headers)
+    clients_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.clients", headers=headers
+    )
+    first_client_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.first-pro-client", headers=headers
+    )
+
+    assert index_response.status_code == 200
+    assert {topic["id"] for topic in index_response.json()["topics"]} >= {
+        "tenant-admin.clients",
+        "tenant-admin.catalog",
+        "tenant-admin.subscriptions",
+        "tenant-admin.first-pro-client",
+    }
+    assert clients_topic.status_code == 200
+    assert clients_topic.json()["safe_navigation"] == {
+        "route": "/admin/clients",
+        "settings_category": None,
+    }
+    assert first_client_topic.status_code == 200
+    first_client_data = first_client_topic.json()
+    assert [
+        first_client_data["safe_navigation"]["route"],
+        *(link["route"] for link in first_client_data["safe_links"]),
+    ] == [
+        "/admin/catalog",
+        "/admin/clients",
+        "/admin/subscriptions",
+    ]
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    tenant.plan = "starter"
+    await db_session.commit()
+
+    starter_index = await client.get("/api/v1/help", headers=headers)
+    starter_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.clients", headers=headers
+    )
+    starter_search = await client.get(
+        "/api/v1/help/search", params={"q": "canonical login"}, headers=headers
+    )
+
+    assert starter_index.status_code == 200
+    assert "tenant-admin.clients" not in {
+        topic["id"] for topic in starter_index.json()["topics"]
+    }
+    assert starter_topic.status_code == 404
+    assert starter_search.status_code == 200
+    assert starter_search.json()["results"] == []
 
 
 async def test_help_topics_are_searchable_with_safe_cross_module_links(
@@ -147,7 +212,9 @@ async def test_help_search_uses_locale_synonyms_and_returns_no_results(
     )
     assert spanish.status_code == 200
     assert [result["id"] for result in spanish.json()["results"]] == [
-        "tenant-admin.dashboard"
+        "tenant-admin.clients",
+        "tenant-admin.dashboard",
+        "tenant-admin.first-pro-client",
     ]
 
     tenant = (

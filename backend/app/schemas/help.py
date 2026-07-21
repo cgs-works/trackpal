@@ -15,6 +15,7 @@ class HelpTopicSummary(BaseModel):
     order: int
     help_targets: list[str] = Field(default_factory=list)
     safe_navigation: HelpSafeNavigation
+    safe_links: list[HelpSafeNavigation] = Field(default_factory=list)
 
 
 class HelpIndexResponse(BaseModel):

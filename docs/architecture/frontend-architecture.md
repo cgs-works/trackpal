@@ -47,6 +47,7 @@ Routes defined in `src/routes/`:
 | `admin.tsx` → `admin/catalog.tsx` | `/admin/catalog` | `CatalogPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/subscriptions.tsx` | `/admin/subscriptions` | `SubscriptionsPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/settings.tsx` | `/admin/settings` | `SettingsPage` | Required | `tenant` |
+| `admin.tsx` → `admin/help.tsx` | `/admin/help` | `HelpCenterPage` (private release-gated) | Required | `tenant` |
 | `client.tsx` → `client/dashboard.tsx` | `/client/dashboard` | `ClientDashboard` | Required | `client` |
 | `client.tsx` → `client/profile.tsx` | `/client/profile` | `ProfilePage` | Required | `client` |
 
@@ -56,7 +57,7 @@ Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/
 
 - `__root.tsx` — Root layout: loads i18n catalog before rendering, renders `<Outlet>` + `<Toaster>` + devtools
 - `master.tsx` — Master layout with sidebar nav
-- `admin.tsx` — Tenant Admin layout with shared collapsible desktop sidebar, plan-aware role navigation, and support banner for Master support context; mobile navigation opens in a Sheet
+- `admin.tsx` — Tenant Admin layout with shared collapsible desktop sidebar, plan-aware role navigation, contextual Help on Dashboard, Pro modules, and Settings, and support banner for Master support context; mobile navigation opens in a Sheet
 - `client.tsx` — Client layout using the same shared role navigation and mobile Sheet
 
 

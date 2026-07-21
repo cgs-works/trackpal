@@ -6,6 +6,9 @@ import type { HelpSafeNavigation } from "./services/help-api";
 
 export type SafeHelpDestination =
   | { to: "/admin/dashboard" }
+  | { to: "/admin/clients" }
+  | { to: "/admin/catalog" }
+  | { to: "/admin/subscriptions" }
   | { to: "/admin/settings"; search?: { category?: SettingsCategoryId } };
 
 export function resolveSafeHelpNavigation(
@@ -13,6 +16,18 @@ export function resolveSafeHelpNavigation(
 ): SafeHelpDestination | null {
   if (navigation.route === "/admin/dashboard" && navigation.settings_category === null) {
     return { to: "/admin/dashboard" };
+  }
+
+  if (navigation.settings_category === null) {
+    if (navigation.route === "/admin/clients") {
+      return { to: "/admin/clients" };
+    }
+    if (navigation.route === "/admin/catalog") {
+      return { to: "/admin/catalog" };
+    }
+    if (navigation.route === "/admin/subscriptions") {
+      return { to: "/admin/subscriptions" };
+    }
   }
 
   if (

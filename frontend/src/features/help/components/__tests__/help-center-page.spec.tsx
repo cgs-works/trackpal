@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/store/auth";
-import { HelpCenterPage } from "../help-center-page";
+import { HelpCenterPage, SafeNavigationLink } from "../help-center-page";
+import type { HelpTopic } from "../../services/help-api";
 import { getHelpIndex, getHelpTopic, searchHelp } from "../../services/help-api";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -66,6 +67,31 @@ describe("HelpCenterPage", () => {
     });
     expect(screen.getAllByRole("button", { name: /Business Dashboard/ }).length).toBeGreaterThan(0);
     expect(screen.getByText("Dashboard content.")).toBeInTheDocument();
+  });
+
+  it("renders all safe module links for the first Pro Client guide", () => {
+    const topic: HelpTopic = {
+      id: "tenant-admin.first-pro-client",
+      title: "Set up your first Pro Client",
+      summary: "Follow the setup order.",
+      module: "help",
+      route: "/admin/catalog",
+      order: 130,
+      help_targets: [],
+      safe_navigation: { route: "/admin/catalog", settings_category: null },
+      safe_links: [
+        { route: "/admin/clients", settings_category: null },
+        { route: "/admin/subscriptions", settings_category: null },
+      ],
+      body: "Guide",
+    };
+
+    render(<SafeNavigationLink topic={topic} />);
+
+    expect(screen.getAllByRole("link")).toHaveLength(3);
+    expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", "/admin/catalog");
+    expect(screen.getAllByRole("link")[1]).toHaveAttribute("href", "/admin/clients");
+    expect(screen.getAllByRole("link")[2]).toHaveAttribute("href", "/admin/subscriptions");
   });
 
   it("searches, selects a result, and clears the query", async () => {

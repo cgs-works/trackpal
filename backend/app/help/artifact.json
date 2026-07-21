@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "help-access-code-workflows-1",
+  "content_version": "help-pro-client-catalog-1",
   "frontend_target_contract_version": "2",
   "locales": [
     "en",
@@ -52,6 +52,7 @@
           "route": "/admin/settings",
           "settings_category": "access-control"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# WhatsApp access control\n\nWhatsApp access control is the Tenant Admin list of identities that must not use the Tenant's WhatsApp bot. It protects the WhatsApp console and access-code flow; it is separate from a Client's portal account status.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for the full list and phone search; WhatsApp for the Tenant Admin's Access Control menu.\n- **Prerequisites:** Be a Tenant Admin. A phone or WhatsApp identity must be available to block. Blocking is available on Starter and Pro.\n- **Actions:** On Web, open Settings, choose Access control, search the list by phone digits, block a phone, or unblock an existing entry. In WhatsApp, Starter opens Access Control with `3` and Pro with `5`; choose `1` to list blocked identities or `2` to block a phone.\n\n## Results and states\n\n- **Loading:** TrackPal is retrieving blocked identities. Wait before deciding that the list is empty.\n- **Empty:** No identity is blocked, so Web shows the empty state and WhatsApp can show an empty list.\n- **Blocked:** The identity is denied access to the WhatsApp bot, including access-code requests and console actions.\n- **Unblocked:** Removing the entry allows the identity to use WhatsApp again when its other requirements are met.\n- **Duplicate:** Trying to block an identity that is already blocked leaves the existing entry unchanged.\n- **No search results:** A phone search can return no matching block; clear the search or check the digits.\n- **Error:** A failed list, block, or unblock request leaves the current state unchanged. Retry and contact support if it persists.\n\n## Web and WhatsApp actions\n\nThe Web list supports phone search without changing the stored blocks. In WhatsApp, use `9` to return to the main menu and `0` to cancel the current action. The bot block affects WhatsApp identity access; it does not log a Client out of the portal or change the Client's active/inactive account status.\n\n## Limits, consequences, and recovery\n\nBlocking prevents the identity from reaching the Tenant's WhatsApp console, requesting access codes, viewing WhatsApp profile information, or checking WhatsApp subscriptions. It does not delete the Client, deactivate the Client portal account, or remove subscriptions. Unblock the exact identity from Web or the WhatsApp list when access should be restored. If a phone is represented by a WhatsApp LID, use the identity shown by TrackPal and ask support for help rather than guessing a phone number.\n\n## Support boundary\n\nSupport can help identify a persistent block or identity mismatch. Share the visible phone or identity and the approximate time; never share a password, access code, pairing code, QR image, or mailbox credential."
       },
@@ -100,8 +101,112 @@
           "route": "/admin/settings",
           "settings_category": "code-services"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Activate access-code lookup\n\nUse this path when the business wants to find a service access code from WhatsApp. Complete the dependencies in order; the lookup is available only after the linked WhatsApp instance, enabled platform, and central mailbox are ready.\n\n## Dependency chain\n\n1. **Link WhatsApp:** In Web Settings, configure the business phone in Profile, open WhatsApp, and pair with a pairing code or QR code. Wait for Connected. A disconnected or missing-phone state must be recovered before continuing.\n2. **Select a platform:** In Settings, open Enabled code platforms, select at least one globally active service, and save. If the list is loading, unavailable, or returns an error, wait or retry before testing a search.\n3. **Connect the mailbox:** In Settings, open Central lookup mailbox and connect Google, Microsoft, or custom IMAP. Run Test connection and continue only when the status is Connected. Pending, error, revoked, or timed-out connections need recovery in that category.\n4. **Start from the matching WhatsApp menu:** Starter uses `2` for Find Access Code. Pro uses `7`. Choose a listed service, enter the subscription email, and review it before confirming with `1`.\n5. **Handle the first result:** The search is pending while TrackPal checks recent mailbox messages. A found code or link is returned to the WhatsApp conversation. A not-found, duplicate, error, or timeout result tells you which recovery to use.\n\n## Navigation and safe recovery\n\nThe shared navigation contract uses `0` to cancel, while the current prompt labels `8` and `9` for page navigation or returning to the previous screen. On email confirmation, `2` corrects the email and `9` returns to the service list. Use `0` instead of sending credentials or abandoning a half-completed search. If the session times out, start the flow again from the plan menu.\n\n## States and recovery\n\n- **Pending:** Wait for the result instead of starting repeated searches. If it does not arrive, use the timeout recovery and check the mailbox status.\n- **Found:** Use the code promptly because service codes can expire. Treat a returned link as sensitive and open it only when expected.\n- **Not found:** Request a new code from the service, wait for the email, and try again with the correct service and subscription email.\n- **Duplicate:** Wait the displayed cooldown, then retry for the latest code instead of repeating immediately.\n- **Error:** Check that the mailbox is Connected and the selected platform is still available, then retry later.\n- **Timeout:** Check the provider and mailbox connection, then start a new search. Do not disconnect a healthy WhatsApp instance or mailbox as a first response.\n- **Missing prerequisites:** Return to Web Settings and complete the first missing dependency. Existing platform selections and business data are preserved when a connection is repaired.\n\n## Web and WhatsApp actions\n\nThe Web Help link opens Settings without saving forms, connecting or disconnecting a service, blocking an identity, or starting a search. The WhatsApp flow is the place where the search is requested; the guide never asks you to paste mailbox credentials, passwords, tokens, pairing codes, or QR images into chat.\n\n## Support boundary\n\nSupport can trace a persistent lookup error, timeout, or unexpected result when given the service, mailbox status, visible error, and approximate time. Never send the access code, email password, OAuth token, pairing code, or QR image in a support request."
+      },
+      {
+        "id": "tenant-admin.catalog",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "catalog",
+        "capabilities": [
+          "tenant_catalog"
+        ],
+        "route": "/admin/catalog",
+        "help_targets": [
+          "admin.catalog"
+        ],
+        "title": "Catalog",
+        "summary": "Create and organize services and plans before assigning subscriptions to clients.",
+        "search_tags": [
+          "catalog",
+          "service",
+          "plan",
+          "create service",
+          "create plan",
+          "rename service",
+          "rename plan",
+          "delete service",
+          "delete plan",
+          "delete impact"
+        ],
+        "synonyms": [
+          "product catalog",
+          "offerings",
+          "service list"
+        ],
+        "related_topics": [
+          "tenant-admin.clients",
+          "tenant-admin.first-pro-client",
+          "tenant-admin.subscriptions"
+        ],
+        "order": 110,
+        "safe_navigation": {
+          "route": "/admin/catalog",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Catalog\n\nThe Catalog is the Pro Tenant's list of services and plans. A service is the offering, and its plans are the selectable variants used when creating a subscription.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Open Catalog from the sidebar. Create a service, select it, create or rename its plans, rename a service, or open the delete preview before deleting a service or plan.\n- **WhatsApp:** From the Pro main menu choose `2` Catalog. With services, choose `1` to view them, `2` to create a service, or `3` to delete a service. Select a service to edit its name, view plans, create a plan, or delete a plan. With no services, the menu offers the first service creation directly.\n- **Prerequisites:** Catalog is Pro-only. To create a plan, create or select its service first. A catalog change does not create a client or subscription automatically.\n\n## Services, plans, and empty states\n\nA service can exist without plans. The service detail screen shows an empty plans state and offers Create plan; return with `9` or cancel with `0`. An empty service list means no services exist, so create the first service. An empty plan list means the selected service has no plans; it is not a loading failure.\n\nLists may paginate. Use `8` only when Next is displayed and `9` to go back. A loading state means TrackPal is retrieving the current catalog. A failed load or save leaves the prior catalog unchanged; retry after checking the visible error.\n\n## Create and rename\n\nEnter a non-empty service or plan name and save on Web, or answer the WhatsApp prompt. A successful result returns to a post-action prompt; choose `1` to return to the main menu. A blank name, invalid selection, duplicate name, or unavailable service is rejected and can be corrected without creating a partial record. Renaming changes the label only; it does not move plans or change existing subscriptions.\n\n## Deletion preview and consequences\n\nDeleting a service or plan is irreversible. Before confirmation, Web and WhatsApp show the delete impact preview. For a service, review the affected plan count, active subscriptions, historical subscriptions, total subscriptions, and the listed active subscription rows. For a plan, review the active, historical, and total subscription counts and rows. Historical subscriptions are included in the consequence summary even though they are no longer active.\n\nDeleting a service permanently removes that service, its plans, and all subscriptions attached to it. Deleting a plan permanently removes that plan and all subscriptions attached to it. Active subscriptions are not preserved or converted. Use the listed client, service, plan, and expiration details to verify the impact before proceeding.\n\nOn Web, type `DELETE` in the preview confirmation field. In WhatsApp, type `CONFIRM` or `CONFIRMAR` when prompted. Any other value shows a confirmation re-prompt; `0` cancels and `9` returns to selection. A cancelled preview or failed deletion does not mutate the catalog.\n\n## Limits, validation, and recovery\n\nOnly services that are globally active can be selected for access-code lookup; Catalog names do not enable a code platform. The Catalog does not reveal subscription credentials. If the preview cannot load, do not guess the impact or repeat the destructive action; retry the preview and contact support with the visible error.\n\n## Support boundary\n\nSupport can investigate a persistent catalog load, validation, preview, or deletion error. Share the affected service or plan name and visible counts only; never share subscription passwords, PINs, mailbox credentials, or access codes."
+      },
+      {
+        "id": "tenant-admin.clients",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "clients",
+        "capabilities": [
+          "tenant_clients"
+        ],
+        "route": "/admin/clients",
+        "help_targets": [
+          "admin.clients"
+        ],
+        "title": "Clients",
+        "summary": "Manage Pro clients, their access, status, canonical login, and subscriptions.",
+        "search_tags": [
+          "clients",
+          "client search",
+          "create client",
+          "edit client",
+          "activate client",
+          "deactivate client",
+          "delete client",
+          "canonical login",
+          "client subscriptions"
+        ],
+        "synonyms": [
+          "customers",
+          "users",
+          "client accounts"
+        ],
+        "related_topics": [
+          "tenant-admin.first-pro-client",
+          "tenant-admin.subscriptions",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 100,
+        "safe_navigation": {
+          "route": "/admin/clients",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Clients\n\nClients are the people who receive the services offered by a Pro Tenant. Client management is available only to Pro Tenant Admins on Web and in the Pro WhatsApp console.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Open Clients from the sidebar. Search by full name, canonical username, or phone; use Create to add a client, the edit action to change identity fields, the power action to activate or deactivate access, the subscriptions action to open that client's subscriptions, and the delete action for an inactive client.\n- **WhatsApp:** From the Pro main menu choose `1` Clients. Choose `1` to view clients or `2` to create one. Select a listed client to edit, deactivate, reactivate, or delete it. Use `9` to go back and `0` to cancel.\n- **Prerequisites:** The Tenant must be on Pro and you must be its Tenant Admin. To create a client, prepare a full name, a valid local username, a password of at least six characters, and an optional phone number.\n\n## Create and canonical login\n\nEnter the client's full name, local username, optional phone, and password, then save on Web or confirm the summary in WhatsApp. The local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores. TrackPal combines it with the Tenant's immutable prefix to create the canonical login in the form `{client_prefix}_{local_username}`, such as `t1_pepe`. Give the client this full canonical login, not only the local portion.\n\nA successful creation adds an active client. A duplicate local username, canonical username, or phone is rejected and leaves the existing clients unchanged. Correct the field and try again. A missing or invalid name, username, phone, or password is a validation error; it does not create a partial client.\n\n## Search, edit, activate, and deactivate\n\nSearch is a local filter over the loaded client list and does not change data. An empty list means no clients exist; an empty search result means the filter has no match. Clear the search or adjust the spelling and digits.\n\nEdit changes the full name, local username, or phone. Renaming the local username also updates the canonical login. A duplicate value or invalid field is rejected without applying the edit. Activate restores access for an inactive client. Deactivate changes the client to inactive and revokes that client's active Web sessions; the client must sign in again after reactivation.\n\n## Subscriptions and deletion\n\nUse the credit-card or subscriptions action on the client row to open Subscriptions already filtered to that client. This is a safe navigation link; it does not create, reveal, cancel, renew, or reactivate a subscription. The client topic is also related to the Subscriptions module for the full subscription workflow.\n\nAn active client cannot be deleted. Deactivate it first. Deletion is permanent: it removes the client account and its login, cannot be undone, and is not a substitute for deactivation. Confirm the deletion only after checking that the selected client is correct. A cancelled dialog or a failed request leaves the client in its previous state.\n\n## WhatsApp validation and recovery\n\nThe Pro WhatsApp flow validates each requested field and repeats the prompt for an invalid selection, empty name, empty username, short password, or invalid phone. At the confirmation prompt type `CONFIRM` or `CONFIRMAR` as shown; type `0` to cancel. A failed create, edit, activation, deactivation, or deletion keeps the previous data and can be retried. `9` returns to the preceding screen and `8` advances only when the prompt displays it.\n\n## Support boundary\n\nSupport can help with a persistent validation or access error when given the visible field and message. Never share a client's password, generated password, access token, or subscription credentials in a ticket or chat."
       },
       {
         "id": "tenant-admin.code-services",
@@ -148,6 +253,7 @@
           "route": "/admin/settings",
           "settings_category": "code-services"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Enabled code platforms\n\nEnabled code platforms are the services that TrackPal can search when a Tenant Admin or a client requests an access code. The available list is controlled by the platform catalog and your Tenant selection.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web for configuration; WhatsApp for using the selected platforms in the access-code search.\n- **Prerequisites:** Be a Tenant Admin. The business WhatsApp instance and central lookup mailbox are separate prerequisites for completing a search.\n- **Actions:** Open Settings, choose Enabled code platforms, select the services that should be available, and save. Only globally active services can be selected.\n\n## Results and states\n\n- **Loading:** TrackPal is retrieving the platform list. Wait for the list before changing selections.\n- **Enabled:** A selected, globally active platform appears in the WhatsApp service list.\n- **Unavailable:** A platform marked globally inactive cannot be selected. It is not an error in your Tenant configuration.\n- **Missing:** If no platform is selected, access-code lookup cannot start and WhatsApp reports that code services are not configured.\n- **Error:** If the list or save request fails, keep the current selection, retry from Settings, and do not start repeated WhatsApp searches until the list is available.\n\n## Web and WhatsApp actions\n\nOn Web, selecting a platform changes which services appear in future searches; it does not search the mailbox or send a WhatsApp message. In WhatsApp, the Starter menu opens access-code search with `2` and the Pro menu opens it with `7`. The service list contains only the effective selection: Tenant-selected services that are still globally active.\n\n## Limits, consequences, and recovery\n\nThe list is limited to the services currently supported and globally active by TrackPal. Enabling a platform does not connect its provider account and does not create a client or subscription. If a platform becomes globally inactive, it is omitted from effective searches until it is available again. If lookup reports no configured services, return to this category, select an available platform, save, and start a new search.\n\n## Support boundary\n\nSupport can confirm whether a platform is globally available and investigate a persistent load or save error. Share the platform label and visible error only; never share mailbox credentials, access codes, passwords, or tokens."
       },
@@ -191,8 +297,65 @@
           "route": "/admin/dashboard",
           "settings_category": null
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes what TrackPal can do for your business on the current plan.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. The dashboard is not a WhatsApp menu.\n- **Prerequisites:** Sign in as a Tenant Admin with an active Tenant. No setup is required to read the page.\n- **Actions:** Open Dashboard from the sidebar and use the read-only indicators to decide which module to open next.\n\n## Results and states\n\n- You see your Starter or Pro plan, central lookup mailbox status, enabled code-service count, and blocked WhatsApp identity count.\n- Pro also shows active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n- A loading state means TrackPal is refreshing Tenant data. An empty mailbox or zero enabled services means access-code lookup is not ready.\n- A failed load leaves the page without current metrics. Retry from the page and contact support if the error persists.\n\n## Limits, consequences, and recovery\n\nDashboard is read-only: viewing it creates no records and changes no settings. It does not link WhatsApp, enable platforms, configure a mailbox, or start a WhatsApp session. Open the matching Settings category to complete setup. If a module is missing from navigation, the current plan does not include it; Pro data remains preserved after a downgrade but Pro actions are unavailable.\n\n## Web and WhatsApp\n\nUse Web Dashboard for the overview. WhatsApp has its own Tenant Admin menu and session rules; use the WhatsApp topic for that flow. Dashboard values are refreshed from the active Tenant and can change after another administrator updates setup.\n\n## Support boundary\n\nSupport can help interpret a status, plan access, or a persistent loading error. Do not send passwords, pairing codes, access tokens, or mailbox credentials in a support request."
+      },
+      {
+        "id": "tenant-admin.first-pro-client",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "tenant_catalog",
+          "tenant_clients",
+          "tenant_subscriptions"
+        ],
+        "route": "/admin/catalog",
+        "help_targets": [],
+        "title": "Set up your first Pro Client",
+        "summary": "Follow the safe order from Catalog preparation to a client's first subscription.",
+        "search_tags": [
+          "first client",
+          "Pro setup",
+          "catalog setup",
+          "first subscription",
+          "onboarding order"
+        ],
+        "synonyms": [
+          "get started with clients",
+          "first customer",
+          "initial setup"
+        ],
+        "related_topics": [
+          "tenant-admin.catalog",
+          "tenant-admin.clients",
+          "tenant-admin.subscriptions"
+        ],
+        "order": 130,
+        "safe_navigation": {
+          "route": "/admin/catalog",
+          "settings_category": null
+        },
+        "safe_links": [
+          {
+            "route": "/admin/clients",
+            "settings_category": null
+          },
+          {
+            "route": "/admin/subscriptions",
+            "settings_category": null
+          }
+        ],
+        "tour": null,
+        "body": "# Set up your first Pro Client\n\nUse this order when a new Pro Tenant is ready to serve its first person. The guide is informational and its links only open authorized modules; Help never creates records or submits a form for you.\n\n## 1. Prepare the Catalog\n\nOpen Catalog and create the service you offer. Select that service and create at least one plan. If the service or plan list is empty, that is the expected first state: use the create controls. Confirm the names before leaving the module. Read the Catalog delete preview guidance before removing anything.\n\n## 2. Create the Client\n\nOpen Clients and choose Create. Enter the full name, a valid local username, the optional phone, and a password. Save the form and copy the generated canonical login pattern `{client_prefix}_{local_username}` for the person. Search for the new client and verify that its status is active.\n\nIf a local username or phone already exists, correct the value instead of retrying with duplicate data. Do not send the client's password to the person through an unsafe channel. The client can use the canonical login only while the Tenant is Pro and the account is active.\n\n## 3. Open Client Subscriptions\n\nFrom the Client row choose the subscriptions action, or open Subscriptions and select the client filter. Create the first subscription by choosing the prepared service and plan, then enter only the credentials and dates required by the form. Review the summary before confirming. The Client topic explains the direct link; the Catalog topic explains the data it depends on.\n\n## Web and WhatsApp order\n\nOn Web the authorized module links are Catalog, Clients, and Subscriptions. In WhatsApp, use the Pro menu: `2` Catalog, `1` Clients, and `4` Subscriptions. Inside a flow, follow the displayed `9` Back, `8` Next, `0` Cancel, and confirmation prompts. Invalid input keeps the flow at its current step; it does not create partial setup.\n\n## Completion and recovery\n\nThe setup is complete when the service, plan, active client, and first subscription appear in their respective authorized modules. If any module is loading or unavailable, retry that module and fix its visible validation error. If a subscription creation fails, the Catalog and Client remain available; check the service, plan, client status, and form values before trying again.\n\n## Support boundary\n\nSupport can help identify which prerequisite is missing. Share module names and visible statuses only; never share client passwords, subscription credentials, mailbox credentials, access codes, or API keys."
       },
       {
         "id": "tenant-admin.language",
@@ -235,6 +398,7 @@
           "route": "/admin/settings",
           "settings_category": "locale"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Language\n\nLanguage controls the TrackPal interface and the private Help content for your active business workspace.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. WhatsApp replies follow the active locale but language is changed here.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings. The Language category is available on Starter and Pro.\n- **Actions:** Choose Language, select the available locale, and save the change. The page reloads the catalog after a successful save.\n\n## Results and states\n\nThe navigation, Settings labels, and Help topics use the selected language after the update. While saving, the control is busy. The current selection remains visible when the page loads. If the locale cannot be loaded or saved, the existing language remains active and an error is shown.\n\n## Limits, consequences, and recovery\n\nLanguage is a Tenant setting, so it applies to the business rather than only one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.\n\n## Support boundary\n\nSupport can help when the language selector or catalog remains unavailable after retrying. Include the selected locale and the visible error, but never include a password, pairing code, access token, or mailbox secret."
       },
@@ -283,6 +447,7 @@
           "route": "/admin/settings",
           "settings_category": "mailbox"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Central lookup mailbox\n\nThe central lookup mailbox is the inbox TrackPal checks for recent access-code emails. It is a business-level connection, not a client's personal mailbox.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web for setup, connection testing, and disconnection; WhatsApp uses the connected mailbox during access-code search.\n- **Prerequisites:** Be a Tenant Admin and have access to the mailbox. Choose Google or Microsoft OAuth, or provide a custom IMAP server, email, port, SSL setting, and mailbox password.\n- **Actions:** Open Settings, choose Central lookup mailbox, connect with OAuth or save the IMAP form, then use Test connection. The status must be Connected before a search can run.\n\n## Results and states\n\n- **Not configured or disconnected:** No mailbox is ready, so WhatsApp access-code search stops before the service list or reports that the mailbox is not configured.\n- **Pending:** An OAuth window or connection test is still in progress. Keep the window open and wait for the result instead of starting another connection.\n- **Connected:** The mailbox passed its connection setup and is available to the lookup worker.\n- **Error:** A failed test or provider error leaves an error status and may show the last connection error. Correct the configuration and test again.\n- **Revoked:** If an OAuth provider revokes permission, reconnect the provider. A revoked connection cannot be repaired by repeating a WhatsApp search.\n- **Timeout:** A slow provider or IMAP server can time out. Check the host, port, SSL setting, and provider availability before retrying.\n\n## Web and WhatsApp actions\n\nOn Web, OAuth opens a provider authorization window. IMAP saves the configuration before testing it. In WhatsApp, the lookup flow reads the central mailbox after the email is confirmed; it does not ask the user to send a mailbox password to the bot.\n\n## Limits, consequences, and recovery\n\nThe Tenant has one central lookup mailbox. Disconnecting it ends the mailbox connection, clears stored mailbox secrets, and makes access-code lookup unavailable until a new connection is completed; it does not remove enabled platforms, clients, subscriptions, or WhatsApp access-control entries. If a test fails, fix the visible provider settings and test again. If OAuth is revoked, reconnect it. Never disconnect a healthy mailbox just to recover a missing code; check the platform and email first.\n\n## Support boundary\n\nSupport can help with a persistent OAuth, IMAP, revoked, or timeout error. Share the provider, status, host and port when relevant, and the approximate time; never share an OAuth token, IMAP password, provider password, or access code."
       },
@@ -326,6 +491,7 @@
           "route": "/admin/settings",
           "settings_category": "password"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Password\n\nUse Password in Settings to change the password for the signed-in Tenant Admin account.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Password changes are not available from the Tenant Admin WhatsApp console.\n- **Prerequisites:** Sign in with the account whose password you want to change and open Settings, then Password. You need the current password.\n- **Actions:** Enter the current password, enter a new password, confirm it, and save. TrackPal validates the new value before sending it.\n\n## Results and states\n\nA successful change confirms the update. While saving, the form is busy. Missing, incorrect, or mismatched values show a validation error and do not change the password. If the request fails, the existing password remains valid and the form can be retried.\n\n## Limits, consequences, and recovery\n\nChanging the password affects this Tenant Admin account, not other administrators, clients, mailbox credentials, or WhatsApp sessions. Use a new password that meets the minimum shown by the form and do not reuse a shared mailbox password. If you forget the current password or repeated retries fail, stop guessing and use the supported account recovery or contact the workspace owner; do not reveal the password to support.\n\n## Support boundary\n\nSupport can explain the visible validation or connection error, but cannot view, recover, or accept a password. Never put current or new passwords in a ticket, chat, screenshot, or Help search."
       },
@@ -371,8 +537,59 @@
           "route": "/admin/settings",
           "settings_category": "profile"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Profile\n\nProfile stores the business identity and contact details that Tenant Admins use to configure TrackPal.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Profile editing is not available as a WhatsApp action.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings, then Profile.\n- **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.\n\n## Results and states\n\nA successful save shows a confirmation and the updated values remain in the form. Loading means TrackPal is retrieving the current profile. Validation errors identify a value that must be corrected. A failed save leaves the previous profile on the server and keeps the local form available for recovery.\n\n## Limits, consequences, and recovery\n\nProfile values identify the Tenant and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.\n\n## Support boundary\n\nSupport can help with validation or a profile save that fails repeatedly. Share the field name and error message only. Do not share password values, WhatsApp pairing codes, API keys, or mailbox credentials."
+      },
+      {
+        "id": "tenant-admin.subscriptions",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "subscriptions",
+        "capabilities": [
+          "tenant_subscriptions"
+        ],
+        "route": "/admin/subscriptions",
+        "help_targets": [
+          "admin.subscriptions"
+        ],
+        "title": "Client Subscriptions",
+        "summary": "Open and manage the subscriptions attached to a client, service, and plan.",
+        "search_tags": [
+          "subscriptions",
+          "client subscriptions",
+          "filter subscriptions",
+          "create subscription",
+          "cancel subscription",
+          "renew subscription",
+          "reactivate subscription",
+          "reveal credentials"
+        ],
+        "synonyms": [
+          "memberships",
+          "client plans",
+          "service access"
+        ],
+        "related_topics": [
+          "tenant-admin.clients",
+          "tenant-admin.catalog",
+          "tenant-admin.first-pro-client"
+        ],
+        "order": 120,
+        "safe_navigation": {
+          "route": "/admin/subscriptions",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Client Subscriptions\n\nSubscriptions connect a Client to a Catalog service and plan. Open Subscriptions from the sidebar, or use the subscriptions action in a Client row to arrive with that client selected.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Filter the list by status, service, or client. Create a subscription, edit its fields, cancel it, renew it, reactivate a cancelled subscription, or open the credential reveal dialog when you have a valid reason.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions. Filter the list, select a subscription, then use the actions shown for its status: edit, cancel, renew, or reactivate when available.\n- **Prerequisites:** The Tenant must be Pro. Create the required service and plan in Catalog and have an active Client before creating a subscription.\n\n## States, confirmations, and sensitive data\n\nActive, expired, and cancelled are distinct statuses. Cancelling changes the status and does not delete the subscription. Renewing or reactivating changes its dates after a confirmation. Create and lifecycle dialogs show a summary before the mutation; cancel with the visible Cancel action or `0` in WhatsApp.\n\nStreaming passwords and profile PINs are sensitive credentials. Reveal them only through the explicit Web action when necessary, do not paste them into Help or support, and remember that a Help link never reveals them. A duplicate active subscription may offer extending its expiry instead of creating another one.\n\n## Empty, validation, and recovery states\n\nAn empty list means no subscriptions match the current filters, not that the Client or Catalog was deleted. A missing service, plan, or Client prevents creation. Invalid email, date, duration, selection, or confirmation keeps the existing subscription unchanged. If a load or mutation fails, retry after checking the visible error.\n\n## Support boundary\n\nSupport can help with a persistent subscription or lifecycle error using the visible status and identifiers. Never share streaming passwords, profile PINs, mailbox credentials, or revealed credentials."
       },
       {
         "id": "tenant-admin.whatsapp",
@@ -418,8 +635,9 @@
           "route": "/admin/settings",
           "settings_category": "whatsapp-link"
         },
+        "safe_links": [],
         "tour": null,
-        "body": "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
+        "body": "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.\n\n## Pro menu, validation, and confirmations\n\nThe Pro main menu is `1` Clients, `2` Catalog, `3` My Profile, `4` Subscriptions, `5` Access Control, `6` Help, and `7` Find Access Code. Starter has a smaller menu and cannot open the Pro modules. The main menu uses `0` to exit. Inside a flow, `0` cancels, `9` goes back, and `8` advances only when the current message displays Next.\n\nEach Pro flow validates selections and values before changing data. Invalid numbers, empty names, duplicate values, invalid phones, short passwords, and unavailable records show a recoverable validation message and keep the flow at the current step. Destructive Client or Catalog actions show a summary or impact preview and require `CONFIRM` or `CONFIRMAR`; any other response re-prompts and `0` cancels. A session timeout closes the flow without applying a partial mutation.\n\n## Pro Client Context Shortcut boundaries\n\nA Pro Tenant Admin can use `menu` or `/menu` from the private admin chat when the message targets a remote contact. TrackPal replies to the admin's private chat; the remote contact cannot see or operate the administrative menu. The shortcut can show client details, create or edit a client, activate or deactivate access, delete only an inactive client, and open that client's subscriptions. It does not expose the admin menu to the contact, edit a phone from the shortcut, reveal credentials automatically, or let the contact perform administrative actions.\n\nOnly one Client Context Shortcut may be active for an admin at a time. Send `0` in the private admin chat to close it before starting another. Do not send arbitrary messages to a remote contact expecting a shortcut: only `menu` or `/menu` starts it, and an already open context rejects collisions safely. The shortcut's block or unblock notifications to the contact are generic; the admin receives the management confirmation privately.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, session, validation, or Client Context Shortcut error. Share the instance status and approximate time, never a pairing code, QR image, token, password, mailbox credential, client password, or subscription credential."
       }
     ],
     "es": [
@@ -467,6 +685,7 @@
           "route": "/admin/settings",
           "settings_category": "access-control"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Control de acceso de WhatsApp\n\nEl Control de acceso de WhatsApp es la lista de identidades que un Tenant Admin impide usar el bot de WhatsApp del Tenant. Protege la consola y el flujo de códigos de acceso; es diferente del estado de la cuenta de un Cliente en el portal.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para ver la lista completa y buscar teléfonos; WhatsApp para el menú de Control de acceso del Tenant Admin.\n- **Requisitos:** Ser Tenant Admin. Debe existir un teléfono o una identidad de WhatsApp que quieras bloquear. El bloqueo está disponible en Starter y Pro.\n- **Acciones:** En Web, abre Configuración, elige Control de acceso, busca por los dígitos del teléfono, bloquea un teléfono o desbloquea una entrada existente. En WhatsApp, Starter abre Control de acceso con `3` y Pro con `5`; elige `1` para listar identidades bloqueadas o `2` para bloquear un teléfono.\n\n## Resultados y estados\n\n- **Cargando:** TrackPal está obteniendo las identidades bloqueadas. Espera antes de concluir que la lista está vacía.\n- **Vacío:** No hay identidades bloqueadas; Web muestra el estado vacío y WhatsApp puede mostrar una lista vacía.\n- **Bloqueado:** La identidad no puede entrar al bot de WhatsApp, pedir códigos de acceso ni usar acciones de la consola.\n- **Desbloqueado:** Al eliminar la entrada, la identidad puede volver a usar WhatsApp cuando cumple los demás requisitos.\n- **Duplicado:** Intentar bloquear una identidad ya bloqueada conserva la entrada existente.\n- **Sin resultados:** Una búsqueda por teléfono puede no encontrar un bloqueo; limpia la búsqueda o revisa los dígitos.\n- **Error:** Un fallo al listar, bloquear o desbloquear conserva el estado actual. Reintenta y contacta a soporte si continúa.\n\n## Acciones en Web y WhatsApp\n\nLa lista Web permite buscar teléfonos sin cambiar los bloqueos guardados. En WhatsApp, usa `9` para volver al menú principal y `0` para cancelar la acción actual. El bloqueo del bot afecta el acceso de la identidad a WhatsApp; no cierra la sesión del Cliente en el portal ni cambia el estado activo/inactivo de su cuenta.\n\n## Límites, consecuencias y recuperación\n\nBloquear impide que la identidad entre a la consola de WhatsApp del Tenant, solicite códigos de acceso, vea el perfil por WhatsApp o consulte suscripciones por WhatsApp. No elimina al Cliente, desactiva su cuenta del portal ni elimina suscripciones. Desbloquea la identidad exacta desde Web o desde la lista de WhatsApp cuando deba recuperar el acceso. Si un teléfono aparece como LID de WhatsApp, usa la identidad que muestra TrackPal y pide ayuda a soporte en vez de adivinar un teléfono.\n\n## Límite de soporte\n\nSoporte puede ayudarte a identificar un bloqueo persistente o una identidad que no coincide. Comparte el teléfono o identidad visible y la hora aproximada; nunca envíes una contraseña, código de acceso, código de vinculación, imagen QR ni credencial del buzón."
       },
@@ -515,8 +734,112 @@
           "route": "/admin/settings",
           "settings_category": "code-services"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Activar la búsqueda de códigos de acceso\n\nUsa este camino cuando el negocio quiera encontrar un código de acceso de un servicio desde WhatsApp. Completa las dependencias en orden: la búsqueda solo está disponible después de vincular WhatsApp, habilitar una plataforma y preparar el buzón central.\n\n## Cadena de dependencias\n\n1. **Vincula WhatsApp:** En Configuración Web, configura el teléfono del negocio en Perfil, abre WhatsApp y vincula con un código de vinculación o código QR. Espera el estado Conectado. Un estado desconectado o un teléfono faltante debe recuperarse antes de continuar.\n2. **Selecciona una plataforma:** En Configuración, abre Plataformas de códigos habilitadas, selecciona al menos un servicio activo globalmente y guarda. Si la lista está cargando, no disponible o devuelve un error, espera o reintenta antes de probar una búsqueda.\n3. **Conecta el buzón:** En Configuración, abre Buzón central de consultas y conecta Google, Microsoft o IMAP personalizado. Usa Probar conexión y continúa solo cuando el estado sea Conectado. Una conexión pendiente, con error, revocada o con tiempo agotado necesita recuperación en esa categoría.\n4. **Inicia desde el menú de WhatsApp:** Starter usa `2` para Buscar código de acceso. Pro usa `7`. Elige un servicio listado, escribe el email de la suscripción y revísalo antes de confirmar con `1`.\n5. **Procesa el primer resultado:** La búsqueda queda pendiente mientras TrackPal revisa correos recientes del buzón. Un código o enlace encontrado se devuelve en la conversación de WhatsApp. Un resultado no encontrado, duplicado, con error o con tiempo agotado indica la recuperación correspondiente.\n\n## Navegación y recuperación segura\n\nEl contrato compartido de navegación usa `0` para cancelar, mientras el mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior. En la confirmación del email, `2` corrige el correo y `9` vuelve a la lista de servicios. Usa `0` en vez de enviar credenciales o abandonar una búsqueda a medias. Si la sesión expira, inicia el flujo otra vez desde el menú de tu plan.\n\n## Estados y recuperación\n\n- **Pendiente:** Espera el resultado en vez de iniciar búsquedas repetidas. Si no llega, aplica la recuperación de tiempo agotado y revisa el estado del buzón.\n- **Encontrado:** Usa pronto el código porque los códigos de los servicios pueden expirar. Trata un enlace devuelto como información sensible y ábrelo solo si lo esperabas.\n- **No encontrado:** Solicita un código nuevo en el servicio, espera el correo e inténtalo otra vez con el servicio y el email correctos.\n- **Duplicado:** Espera el tiempo de enfriamiento mostrado y vuelve a intentar para obtener el código más reciente, en vez de repetir inmediatamente.\n- **Error:** Comprueba que el buzón esté Conectado y que la plataforma seleccionada siga disponible; después reintenta.\n- **Tiempo de espera agotado:** Revisa el proveedor y la conexión del buzón y comienza una búsqueda nueva. No desconectes una instancia sana de WhatsApp ni el buzón como primera respuesta.\n- **Requisitos faltantes:** Vuelve a Configuración Web y completa la primera dependencia que falte. Las selecciones de plataformas y los datos del negocio se conservan al reparar una conexión.\n\n## Acciones en Web y WhatsApp\n\nEl enlace de Ayuda en Web abre Configuración sin guardar formularios, conectar o desconectar servicios, bloquear o desbloquear identidades ni iniciar una búsqueda. El flujo de WhatsApp es el lugar donde se solicita la búsqueda; esta guía nunca pide pegar credenciales del buzón, contraseñas, tokens, códigos de vinculación o imágenes QR en el chat.\n\n## Límite de soporte\n\nSoporte puede rastrear un error, tiempo de espera o resultado inesperado persistente si recibe el servicio, estado del buzón, error visible y hora aproximada. Nunca envíes el código de acceso, contraseña del correo, token OAuth, código de vinculación ni imagen QR en una solicitud de soporte."
+      },
+      {
+        "id": "tenant-admin.catalog",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "catalog",
+        "capabilities": [
+          "tenant_catalog"
+        ],
+        "route": "/admin/catalog",
+        "help_targets": [
+          "admin.catalog"
+        ],
+        "title": "Catálogo",
+        "summary": "Crea y organiza servicios y planes antes de asignar suscripciones a clientes.",
+        "search_tags": [
+          "catálogo",
+          "servicio",
+          "plan",
+          "crear servicio",
+          "crear plan",
+          "renombrar servicio",
+          "renombrar plan",
+          "eliminar servicio",
+          "eliminar plan",
+          "impacto de eliminación"
+        ],
+        "synonyms": [
+          "catálogo de productos",
+          "oferta",
+          "lista de servicios"
+        ],
+        "related_topics": [
+          "tenant-admin.clients",
+          "tenant-admin.first-pro-client",
+          "tenant-admin.subscriptions"
+        ],
+        "order": 110,
+        "safe_navigation": {
+          "route": "/admin/catalog",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Catálogo\n\nEl Catálogo es la lista de servicios y planes del Tenant Pro. Un servicio es la oferta y sus planes son las variantes que se seleccionan al crear una suscripción.\n\n## Canal, requisitos y acciones\n\n- **Web:** Abre Catálogo desde la barra lateral. Crea un servicio, selecciónalo, crea o renombra sus planes, renombra un servicio o abre la vista previa de eliminación antes de borrar un servicio o plan.\n- **WhatsApp:** Desde el menú principal Pro elige `2` Catálogo. Con servicios, elige `1` para verlos, `2` para crear un servicio o `3` para eliminar un servicio. Selecciona un servicio para editar su nombre, ver planes, crear un plan o eliminar un plan. Sin servicios, el menú ofrece directamente crear el primero.\n- **Requisitos:** Catálogo es solo Pro. Para crear un plan, primero crea o selecciona su servicio. Un cambio del catálogo no crea automáticamente un cliente ni una suscripción.\n\n## Servicios, planes y estados vacíos\n\nUn servicio puede existir sin planes. La pantalla de detalle muestra el estado de planes vacío y ofrece Crear plan; regresa con `9` o cancela con `0`. Una lista de servicios vacía significa que no existen servicios, así que crea el primero. Una lista de planes vacía significa que el servicio seleccionado no tiene planes; no es un fallo de carga.\n\nLas listas pueden tener varias páginas. Usa `8` solo cuando se muestre Siguiente y `9` para regresar. Un estado de carga significa que TrackPal está obteniendo el catálogo actual. Un error de carga o guardado conserva el catálogo anterior; reintenta después de revisar el error visible.\n\n## Crear y renombrar\n\nEscribe un nombre de servicio o plan que no esté vacío y guarda en Web, o responde al mensaje de WhatsApp. Un resultado exitoso muestra un mensaje posterior; elige `1` para volver al menú principal. Un nombre vacío, selección inválida, nombre duplicado o servicio no disponible se rechaza y se puede corregir sin crear un registro parcial. Renombrar cambia solo la etiqueta; no mueve planes ni modifica suscripciones existentes.\n\n## Vista previa y consecuencias de eliminar\n\nEliminar un servicio o plan es irreversible. Antes de confirmar, Web y WhatsApp muestran la vista previa del impacto. Para un servicio revisa la cantidad de planes afectados, suscripciones activas, suscripciones históricas, total de suscripciones y las filas de suscripciones activas. Para un plan revisa las cantidades de suscripciones activas, históricas y totales, además de sus filas. Las suscripciones históricas aparecen en el resumen aunque ya no estén activas.\n\nEliminar un servicio borra permanentemente ese servicio, sus planes y todas las suscripciones asociadas. Eliminar un plan borra permanentemente ese plan y todas sus suscripciones asociadas. Las suscripciones activas no se conservan ni se convierten. Comprueba los datos de cliente, servicio, plan y vencimiento antes de continuar.\n\nEn Web escribe `DELETE` en el campo de confirmación de la vista previa. En WhatsApp escribe `CONFIRM` o `CONFIRMAR` cuando se solicite. Cualquier otro valor muestra otro mensaje de confirmación; `0` cancela y `9` regresa a la selección. Una vista previa cancelada o una eliminación fallida no modifica el catálogo.\n\n## Límites, validación y recuperación\n\nSolo los servicios globalmente activos pueden seleccionarse para la búsqueda de códigos; los nombres del Catálogo no habilitan una plataforma de códigos. El Catálogo no revela credenciales de suscripciones. Si la vista previa no carga, no adivines el impacto ni repitas la acción destructiva; reintenta la vista previa y contacta a soporte con el error visible.\n\n## Límite de soporte\n\nSoporte puede investigar un error persistente de carga, validación, vista previa o eliminación del catálogo. Comparte solo el nombre del servicio o plan y las cantidades visibles; nunca compartas contraseñas de suscripciones, PIN, credenciales del buzón ni códigos de acceso."
+      },
+      {
+        "id": "tenant-admin.clients",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "clients",
+        "capabilities": [
+          "tenant_clients"
+        ],
+        "route": "/admin/clients",
+        "help_targets": [
+          "admin.clients"
+        ],
+        "title": "Clientes",
+        "summary": "Gestiona clientes Pro, su acceso, estado, inicio de sesión canónico y suscripciones.",
+        "search_tags": [
+          "clientes",
+          "buscar cliente",
+          "crear cliente",
+          "editar cliente",
+          "activar cliente",
+          "desactivar cliente",
+          "eliminar cliente",
+          "inicio canónico",
+          "suscripciones del cliente"
+        ],
+        "synonyms": [
+          "usuarios",
+          "cuentas de clientes",
+          "consumidores"
+        ],
+        "related_topics": [
+          "tenant-admin.first-pro-client",
+          "tenant-admin.subscriptions",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 100,
+        "safe_navigation": {
+          "route": "/admin/clients",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Clientes\n\nLos clientes son las personas que reciben los servicios ofrecidos por un Tenant Pro. La gestión de clientes está disponible solo para Tenant Admins Pro en Web y en la consola de WhatsApp Pro.\n\n## Canal, requisitos y acciones\n\n- **Web:** Abre Clientes desde la barra lateral. Busca por nombre completo, usuario canónico o teléfono; usa Crear para agregar un cliente, la acción de editar para cambiar sus datos de identidad, el botón de estado para activar o desactivar el acceso, la acción de suscripciones para abrir las suscripciones de ese cliente y la acción de eliminar para un cliente inactivo.\n- **WhatsApp:** Desde el menú principal Pro elige `1` Clientes. Elige `1` para ver clientes o `2` para crear uno. Selecciona un cliente para editarlo, desactivarlo, reactivarlo o eliminarlo. Usa `9` para regresar y `0` para cancelar.\n- **Requisitos:** El Tenant debe tener plan Pro y tú debes ser su Tenant Admin. Para crear un cliente prepara un nombre completo, un nombre de usuario local válido, una contraseña de al menos seis caracteres y un teléfono opcional.\n\n## Crear e inicio de sesión canónico\n\nEscribe el nombre completo, el nombre de usuario local, el teléfono opcional y la contraseña; luego guarda en Web o confirma el resumen en WhatsApp. El nombre de usuario local debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones bajos. TrackPal lo combina con el prefijo inmutable del Tenant para crear el inicio de sesión canónico con la forma `{client_prefix}_{local_username}`, por ejemplo `t1_pepe`. Entrega al cliente ese inicio de sesión completo, no solo la parte local.\n\nUna creación exitosa agrega un cliente activo. Un nombre de usuario local, usuario canónico o teléfono duplicado se rechaza y deja sin cambios a los clientes existentes. Corrige el campo y vuelve a intentarlo. Un nombre, usuario, teléfono o contraseña ausente o inválido es un error de validación; no crea un cliente parcial.\n\n## Buscar, editar, activar y desactivar\n\nLa búsqueda es un filtro local sobre la lista cargada y no cambia datos. Una lista vacía significa que no existen clientes; un resultado vacío significa que el filtro no coincide. Limpia la búsqueda o corrige las letras y dígitos.\n\nEditar cambia el nombre completo, el nombre de usuario local o el teléfono. Al cambiar el nombre de usuario local también se actualiza el inicio de sesión canónico. Un valor duplicado o campo inválido se rechaza sin aplicar la edición. Activar restaura el acceso de un cliente inactivo. Desactivar cambia el cliente a inactivo y revoca sus sesiones Web activas; después de reactivarlo, el cliente debe iniciar sesión otra vez.\n\n## Suscripciones y eliminación\n\nUsa la acción de tarjeta o suscripciones de la fila del cliente para abrir Suscripciones filtradas por ese cliente. Es un enlace de navegación seguro: no crea, revela, cancela, renueva ni reactiva una suscripción. El topic de Clientes también se relaciona con el módulo Suscripciones para consultar el flujo completo.\n\nUn cliente activo no se puede eliminar. Primero desactívalo. Eliminar es permanente: borra la cuenta del cliente y su inicio de sesión, no se puede deshacer y no reemplaza la desactivación. Confirma solo después de comprobar que seleccionaste al cliente correcto. Cancelar el diálogo o un error de la solicitud deja al cliente en su estado anterior.\n\n## Validación y recuperación en WhatsApp\n\nEl flujo de WhatsApp valida cada campo solicitado y repite el mensaje cuando hay una selección inválida, nombre vacío, usuario vacío, contraseña corta o teléfono inválido. En la confirmación escribe `CONFIRM` o `CONFIRMAR` como se muestre; escribe `0` para cancelar. Un error al crear, editar, activar, desactivar o eliminar conserva los datos anteriores y permite reintentar. `9` regresa a la pantalla anterior y `8` avanza solo cuando el mensaje lo muestra.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de validación o acceso si compartes el campo y mensaje visibles. Nunca compartas en un ticket o chat la contraseña del cliente, una contraseña generada, un token ni credenciales de suscripciones."
       },
       {
         "id": "tenant-admin.code-services",
@@ -563,6 +886,7 @@
           "route": "/admin/settings",
           "settings_category": "code-services"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Plataformas de códigos habilitadas\n\nLas plataformas de códigos habilitadas son los servicios que TrackPal puede consultar cuando un Tenant Admin o un cliente solicita un código de acceso. La lista disponible depende del catálogo de plataformas y de la selección de tu Tenant.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web para configurar; WhatsApp para usar las plataformas seleccionadas en la búsqueda de códigos.\n- **Requisitos:** Ser Tenant Admin. La instancia de WhatsApp del negocio y el buzón central son requisitos separados para completar una búsqueda.\n- **Acciones:** Abre Configuración, elige Plataformas de códigos habilitadas, selecciona los servicios que deben estar disponibles y guarda. Solo puedes seleccionar servicios activos globalmente.\n\n## Resultados y estados\n\n- **Cargando:** TrackPal está obteniendo la lista de plataformas. Espera a que aparezca antes de cambiar selecciones.\n- **Habilitado:** Un servicio seleccionado y activo globalmente aparece en la lista de servicios de WhatsApp.\n- **No disponible:** Una plataforma marcada como inactiva globalmente no se puede seleccionar. No es un error de la configuración de tu Tenant.\n- **Faltante:** Si no seleccionas ninguna plataforma, la búsqueda de códigos no puede iniciar y WhatsApp informa que los servicios de códigos no están configurados.\n- **Error:** Si falla la carga o el guardado, conserva la selección actual, reintenta desde Configuración y no inicies búsquedas repetidas hasta que la lista esté disponible.\n\n## Acciones en Web y WhatsApp\n\nEn Web, seleccionar una plataforma cambia los servicios que aparecerán en búsquedas futuras; no consulta el buzón ni envía mensajes de WhatsApp. En WhatsApp, el menú Starter abre la búsqueda con `2` y el menú Pro con `7`. La lista solo contiene la selección efectiva: servicios elegidos por el Tenant que siguen activos globalmente.\n\n## Límites, consecuencias y recuperación\n\nLa lista está limitada a los servicios que TrackPal admite y que están activos globalmente. Habilitar una plataforma no conecta una cuenta del proveedor ni crea un cliente o una suscripción. Si una plataforma pasa a estar inactiva globalmente, se omite de las búsquedas hasta que vuelva a estar disponible. Si la búsqueda informa que no hay servicios configurados, vuelve a esta categoría, selecciona una plataforma disponible, guarda e inicia una búsqueda nueva.\n\n## Límite de soporte\n\nSoporte puede confirmar si una plataforma está disponible globalmente e investigar un error persistente de carga o guardado. Comparte solo la etiqueta de la plataforma y el error visible; nunca envíes credenciales del buzón, códigos de acceso, contraseñas ni tokens."
       },
@@ -606,8 +930,65 @@
           "route": "/admin/dashboard",
           "settings_category": null
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Dashboard de la empresa\n\nEl Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. El dashboard no es un menú de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.\n- **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.\n\n## Resultados y estados\n\n- Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.\n- Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.\n- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.\n- Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.\n\n## Límites, consecuencias y recuperación\n\nEl Dashboard es de solo lectura: verlo no crea registros ni cambia configuraciones. No vincula WhatsApp, habilita plataformas, configura un buzón ni inicia una sesión de WhatsApp. Abre la categoría correspondiente de Configuración para completar la preparación. Si un módulo no aparece en la navegación, el plan actual no lo incluye; los datos Pro se conservan después de bajar a Starter, pero las acciones Pro quedan inactivas.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.\n\n## Límite de soporte\n\nSoporte puede ayudarte a interpretar un estado, el acceso del plan o un error de carga persistente. No envíes contraseñas, códigos de vinculación, tokens ni credenciales del buzón en una solicitud."
+      },
+      {
+        "id": "tenant-admin.first-pro-client",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "tenant_catalog",
+          "tenant_clients",
+          "tenant_subscriptions"
+        ],
+        "route": "/admin/catalog",
+        "help_targets": [],
+        "title": "Configura tu primer Cliente Pro",
+        "summary": "Sigue el orden seguro desde la preparación del Catálogo hasta la primera suscripción del cliente.",
+        "search_tags": [
+          "primer cliente",
+          "configuración Pro",
+          "configurar catálogo",
+          "primera suscripción",
+          "orden de preparación"
+        ],
+        "synonyms": [
+          "comenzar con clientes",
+          "primer consumidor",
+          "configuración inicial"
+        ],
+        "related_topics": [
+          "tenant-admin.catalog",
+          "tenant-admin.clients",
+          "tenant-admin.subscriptions"
+        ],
+        "order": 130,
+        "safe_navigation": {
+          "route": "/admin/catalog",
+          "settings_category": null
+        },
+        "safe_links": [
+          {
+            "route": "/admin/clients",
+            "settings_category": null
+          },
+          {
+            "route": "/admin/subscriptions",
+            "settings_category": null
+          }
+        ],
+        "tour": null,
+        "body": "# Configura tu primer Cliente Pro\n\nUsa este orden cuando un Tenant Pro nuevo esté listo para atender a su primera persona. La guía es informativa y sus enlaces solo abren módulos autorizados; Help nunca crea registros ni envía un formulario por ti.\n\n## 1. Prepara el Catálogo\n\nAbre Catálogo y crea el servicio que ofreces. Selecciona ese servicio y crea al menos un plan. Si la lista de servicios o planes está vacía, ese es el estado inicial esperado: usa los controles de creación. Comprueba los nombres antes de salir del módulo. Lee la guía de vista previa de eliminación del Catálogo antes de borrar algo.\n\n## 2. Crea el Cliente\n\nAbre Clientes y elige Crear. Escribe el nombre completo, un nombre de usuario local válido, el teléfono opcional y una contraseña. Guarda el formulario y copia para la persona el patrón de inicio de sesión canónico `{client_prefix}_{local_username}`. Busca el nuevo cliente y verifica que su estado sea activo.\n\nSi el usuario local o teléfono ya existe, corrige el valor en vez de repetir datos duplicados. No envíes la contraseña del cliente por un canal inseguro. El cliente solo puede usar el inicio de sesión canónico mientras el Tenant sea Pro y la cuenta esté activa.\n\n## 3. Abre las suscripciones del Cliente\n\nDesde la fila del Cliente elige la acción de suscripciones, o abre Suscripciones y selecciona el filtro del cliente. Crea la primera suscripción eligiendo el servicio y plan preparados; luego escribe solo las credenciales y fechas requeridas por el formulario. Revisa el resumen antes de confirmar. El topic de Clientes explica el enlace directo; el topic de Catálogo explica los datos que necesita.\n\n## Orden en Web y WhatsApp\n\nEn Web los enlaces autorizados son Catálogo, Clientes y Suscripciones. En WhatsApp usa el menú Pro: `2` Catálogo, `1` Clientes y `4` Suscripciones. Dentro de un flujo sigue los mensajes visibles `9` Regresar, `8` Siguiente, `0` Cancelar y las confirmaciones. Una entrada inválida mantiene el flujo en su paso actual; no crea una preparación parcial.\n\n## Finalización y recuperación\n\nLa configuración termina cuando el servicio, plan, cliente activo y primera suscripción aparecen en sus respectivos módulos autorizados. Si un módulo carga o no está disponible, reintenta ese módulo y corrige el error de validación visible. Si falla la creación de una suscripción, el Catálogo y Cliente siguen disponibles; comprueba el servicio, plan, estado del cliente y valores del formulario antes de reintentar.\n\n## Límite de soporte\n\nSoporte puede ayudarte a identificar qué requisito falta. Comparte solo nombres de módulos y estados visibles; nunca compartas contraseñas de clientes, credenciales de suscripciones, credenciales del buzón, códigos de acceso ni claves API."
       },
       {
         "id": "tenant-admin.language",
@@ -650,6 +1031,7 @@
           "route": "/admin/settings",
           "settings_category": "locale"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Idioma\n\nEl Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para el espacio de trabajo de tu negocio activo.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración. La categoría Idioma está disponible en Starter y Pro.\n- **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.\n\n## Resultados y estados\n\nLa navegación, las etiquetas de Configuración y los temas de Ayuda usan el idioma seleccionado después de actualizarlo. Mientras guarda, el control está ocupado. La selección actual permanece visible al cargar la página. Si el idioma no puede cargarse o guardarse, el idioma anterior continúa activo y aparece un error.\n\n## Límites, consecuencias y recuperación\n\nEl idioma es una configuración del Tenant, por lo que aplica al negocio y no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.\n\n## Límite de soporte\n\nSoporte puede ayudarte si el selector o el catálogo siguen sin estar disponibles después de reintentar. Incluye el idioma seleccionado y el error visible, pero nunca una contraseña, código de vinculación, token o secreto del buzón."
       },
@@ -698,6 +1080,7 @@
           "route": "/admin/settings",
           "settings_category": "mailbox"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Buzón central de consultas\n\nEl buzón central de consultas es la bandeja que TrackPal revisa para encontrar correos recientes con códigos de acceso. Es una conexión del negocio, no el buzón personal de un cliente.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web para configurar, probar la conexión y desconectar; WhatsApp usa el buzón conectado durante la búsqueda de códigos.\n- **Requisitos:** Ser Tenant Admin y tener acceso al buzón. Elige OAuth de Google o Microsoft, o proporciona un servidor IMAP personalizado, correo, puerto, SSL y contraseña del buzón.\n- **Acciones:** Abre Configuración, elige Buzón central de consultas, conecta con OAuth o guarda el formulario IMAP y usa Probar conexión. El estado debe ser Conectado antes de iniciar una búsqueda.\n\n## Resultados y estados\n\n- **No configurado o desconectado:** No hay un buzón listo; la búsqueda de códigos de WhatsApp se detiene antes de mostrar servicios o informa que el buzón no está configurado.\n- **Pendiente:** Una ventana OAuth o una prueba de conexión sigue en curso. Mantén la ventana abierta y espera el resultado en vez de iniciar otra conexión.\n- **Conectado:** El buzón completó la configuración de conexión y está disponible para el trabajador de búsqueda.\n- **Error:** Una prueba fallida o un error del proveedor deja un estado de error y puede mostrar el último error de conexión. Corrige la configuración y prueba de nuevo.\n- **Revocado:** Si el proveedor revoca el permiso OAuth, vuelve a conectar el proveedor. Una conexión revocada no se repara repitiendo una búsqueda de WhatsApp.\n- **Tiempo de espera agotado:** Un proveedor o servidor IMAP lento puede agotar el tiempo. Revisa host, puerto, SSL y disponibilidad del proveedor antes de reintentar.\n\n## Acciones en Web y WhatsApp\n\nEn Web, OAuth abre una ventana de autorización del proveedor. IMAP guarda la configuración antes de probarla. En WhatsApp, la búsqueda lee el buzón central después de confirmar el correo; nunca pide enviar la contraseña del buzón al bot.\n\n## Límites, consecuencias y recuperación\n\nEl Tenant tiene un buzón central. Desconectarlo termina la conexión, elimina los secretos guardados del buzón y deja indisponible la búsqueda de códigos hasta completar una conexión nueva; no elimina las plataformas habilitadas, clientes, suscripciones ni entradas de Control de acceso. Si una prueba falla, corrige la configuración visible y vuelve a probar. Si OAuth fue revocado, reconecta. Nunca desconectes un buzón sano solo para recuperar un código que no aparece; revisa primero la plataforma y el correo.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de OAuth, IMAP, revocación o tiempo de espera. Comparte el proveedor, estado, host y puerto cuando corresponda, y la hora aproximada; nunca envíes un token OAuth, contraseña IMAP, contraseña del proveedor ni código de acceso."
       },
@@ -741,6 +1124,7 @@
           "route": "/admin/settings",
           "settings_category": "password"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Contraseña\n\nUsa Contraseña en Configuración para cambiar la contraseña de la cuenta Tenant Admin con la que iniciaste sesión.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Los cambios de contraseña no están disponibles en la consola de WhatsApp del Tenant Admin.\n- **Requisitos:** Inicia sesión con la cuenta cuya contraseña quieres cambiar y abre Configuración, luego Contraseña. Necesitas la contraseña actual.\n- **Acciones:** Escribe la contraseña actual, una nueva contraseña, confírmala y guarda. TrackPal valida el nuevo valor antes de enviarlo.\n\n## Resultados y estados\n\nUn cambio exitoso confirma la actualización. Mientras guarda, el formulario está ocupado. Los valores faltantes, incorrectos o que no coinciden muestran un error de validación y no cambian la contraseña. Si falla la solicitud, la contraseña existente sigue siendo válida y puedes reintentar desde el formulario.\n\n## Límites, consecuencias y recuperación\n\nCambiar la contraseña afecta esta cuenta Tenant Admin, no a otros administradores, clientes, credenciales del buzón ni sesiones de WhatsApp. Usa una contraseña nueva que cumpla el mínimo mostrado por el formulario y no reutilices la contraseña de un buzón compartido. Si olvidaste la contraseña actual o fallan varios intentos, deja de probar y usa la recuperación disponible o contacta al propietario del espacio; no reveles la contraseña a soporte.\n\n## Límite de soporte\n\nSoporte puede explicar un error visible de validación o conexión, pero no puede ver, recuperar ni aceptar una contraseña. Nunca incluyas contraseñas actuales o nuevas en un ticket, chat, captura o búsqueda de Ayuda."
       },
@@ -786,8 +1170,59 @@
           "route": "/admin/settings",
           "settings_category": "profile"
         },
+        "safe_links": [],
         "tour": null,
         "body": "# Perfil\n\nPerfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.\n- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.\n\n## Resultados y estados\n\nDespués de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.\n\n## Límites, consecuencias y recuperación\n\nLos valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.\n\n## Límite de soporte\n\nSoporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón."
+      },
+      {
+        "id": "tenant-admin.subscriptions",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "subscriptions",
+        "capabilities": [
+          "tenant_subscriptions"
+        ],
+        "route": "/admin/subscriptions",
+        "help_targets": [
+          "admin.subscriptions"
+        ],
+        "title": "Suscripciones de clientes",
+        "summary": "Abre y gestiona las suscripciones asociadas a un cliente, servicio y plan.",
+        "search_tags": [
+          "suscripciones",
+          "suscripciones del cliente",
+          "filtrar suscripciones",
+          "crear suscripción",
+          "cancelar suscripción",
+          "renovar suscripción",
+          "reactivar suscripción",
+          "revelar credenciales"
+        ],
+        "synonyms": [
+          "membresías",
+          "planes del cliente",
+          "acceso al servicio"
+        ],
+        "related_topics": [
+          "tenant-admin.clients",
+          "tenant-admin.catalog",
+          "tenant-admin.first-pro-client"
+        ],
+        "order": 120,
+        "safe_navigation": {
+          "route": "/admin/subscriptions",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Suscripciones de clientes\n\nLas suscripciones conectan a un Cliente con un servicio y plan del Catálogo. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese cliente seleccionado.\n\n## Canal, requisitos y acciones\n\n- **Web:** Filtra la lista por estado, servicio o cliente. Crea una suscripción, edita sus campos, cancélala, renuévala, reactiva una suscripción cancelada o abre el diálogo para revelar credenciales cuando exista una razón válida.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones. Filtra la lista, selecciona una suscripción y usa las acciones mostradas según su estado: editar, cancelar, renovar o reactivar cuando esté disponible.\n- **Requisitos:** El Tenant debe ser Pro. Crea el servicio y plan requeridos en Catálogo y ten un Cliente activo antes de crear una suscripción.\n\n## Estados, confirmaciones y datos sensibles\n\nActiva, expirada y cancelada son estados distintos. Cancelar cambia el estado y no elimina la suscripción. Renovar o reactivar cambia las fechas después de una confirmación. Los diálogos de creación y ciclo de vida muestran un resumen antes de modificar; cancela con el botón visible o con `0` en WhatsApp.\n\nLas contraseñas de streaming y los PIN de perfil son credenciales sensibles. Revélalos solo mediante la acción explícita de Web cuando sea necesario, no los pegues en Help ni en soporte y recuerda que un enlace de Help nunca los revela. Una suscripción activa duplicada puede ofrecer extender su vencimiento en lugar de crear otra.\n\n## Estados vacíos, validación y recuperación\n\nUna lista vacía significa que ninguna suscripción coincide con los filtros actuales, no que se haya eliminado el Cliente o el Catálogo. La falta de servicio, plan o Cliente impide crear. Un email, fecha, duración, selección o confirmación inválidos conserva la suscripción existente. Si falla la carga o una modificación, reintenta después de revisar el error visible.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de suscripción o ciclo de vida usando el estado e identificadores visibles. Nunca compartas contraseñas de streaming, PIN de perfil, credenciales del buzón ni credenciales reveladas."
       },
       {
         "id": "tenant-admin.whatsapp",
@@ -833,8 +1268,9 @@
           "route": "/admin/settings",
           "settings_category": "whatsapp-link"
         },
+        "safe_links": [],
         "tour": null,
-        "body": "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
+        "body": "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.\n\n## Menú Pro, validación y confirmaciones\n\nEl menú principal Pro es `1` Clientes, `2` Catálogo, `3` Mi perfil, `4` Suscripciones, `5` Control de acceso, `6` Ayuda y `7` Buscar código de acceso. Starter tiene un menú más pequeño y no puede abrir los módulos Pro. El menú principal usa `0` para salir. Dentro de un flujo, `0` cancela, `9` regresa y `8` avanza solo cuando el mensaje actual muestra Siguiente.\n\nCada flujo Pro valida las selecciones y valores antes de cambiar datos. Números inválidos, nombres vacíos, valores duplicados, teléfonos inválidos, contraseñas cortas y registros no disponibles muestran un mensaje de validación recuperable y mantienen el flujo en el paso actual. Las acciones destructivas de Clientes o Catálogo muestran un resumen o vista previa del impacto y requieren `CONFIRM` o `CONFIRMAR`; otra respuesta vuelve a pedir confirmación y `0` cancela. Una sesión expirada cierra el flujo sin aplicar una mutación parcial.\n\n## Límites del Client Context Shortcut Pro\n\nUn Tenant Admin Pro puede usar `menu` o `/menu` desde el chat privado de administración cuando el mensaje apunta a un contacto remoto. TrackPal responde al chat privado del administrador; el contacto remoto no puede ver ni operar el menú administrativo. El acceso directo puede mostrar datos del cliente, crear o editar un cliente, activar o desactivar su acceso, eliminar solo un cliente inactivo y abrir sus suscripciones. No muestra el menú de administración al contacto, no permite editar un teléfono desde el acceso directo, no revela credenciales automáticamente ni permite que el contacto realice acciones administrativas.\n\nSolo puede existir un Client Context Shortcut activo por administrador. Envía `0` en el chat privado de administración para cerrarlo antes de iniciar otro. No envíes mensajes arbitrarios a un contacto remoto esperando abrir el acceso directo: solo `menu` o `/menu` lo inicia y un contexto ya abierto rechaza colisiones de forma segura. Las notificaciones de bloqueo o desbloqueo para el contacto son genéricas; el administrador recibe la confirmación de gestión en privado.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado, sesión, validación o Client Context Shortcut. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña, credencial del buzón, contraseña de cliente ni credencial de suscripción."
       }
     ]
   },
@@ -875,6 +1311,49 @@
         ]
       },
       {
+        "id": "tenant-admin.catalog",
+        "title": "Catalog",
+        "terms": [
+          "Catalog",
+          "Create and organize services and plans before assigning subscriptions to clients.",
+          "catalog",
+          "service",
+          "plan",
+          "create service",
+          "create plan",
+          "rename service",
+          "rename plan",
+          "delete service",
+          "delete plan",
+          "delete impact",
+          "product catalog",
+          "offerings",
+          "service list",
+          "# Catalog\n\nThe Catalog is the Pro Tenant's list of services and plans. A service is the offering, and its plans are the selectable variants used when creating a subscription.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Open Catalog from the sidebar. Create a service, select it, create or rename its plans, rename a service, or open the delete preview before deleting a service or plan.\n- **WhatsApp:** From the Pro main menu choose `2` Catalog. With services, choose `1` to view them, `2` to create a service, or `3` to delete a service. Select a service to edit its name, view plans, create a plan, or delete a plan. With no services, the menu offers the first service creation directly.\n- **Prerequisites:** Catalog is Pro-only. To create a plan, create or select its service first. A catalog change does not create a client or subscription automatically.\n\n## Services, plans, and empty states\n\nA service can exist without plans. The service detail screen shows an empty plans state and offers Create plan; return with `9` or cancel with `0`. An empty service list means no services exist, so create the first service. An empty plan list means the selected service has no plans; it is not a loading failure.\n\nLists may paginate. Use `8` only when Next is displayed and `9` to go back. A loading state means TrackPal is retrieving the current catalog. A failed load or save leaves the prior catalog unchanged; retry after checking the visible error.\n\n## Create and rename\n\nEnter a non-empty service or plan name and save on Web, or answer the WhatsApp prompt. A successful result returns to a post-action prompt; choose `1` to return to the main menu. A blank name, invalid selection, duplicate name, or unavailable service is rejected and can be corrected without creating a partial record. Renaming changes the label only; it does not move plans or change existing subscriptions.\n\n## Deletion preview and consequences\n\nDeleting a service or plan is irreversible. Before confirmation, Web and WhatsApp show the delete impact preview. For a service, review the affected plan count, active subscriptions, historical subscriptions, total subscriptions, and the listed active subscription rows. For a plan, review the active, historical, and total subscription counts and rows. Historical subscriptions are included in the consequence summary even though they are no longer active.\n\nDeleting a service permanently removes that service, its plans, and all subscriptions attached to it. Deleting a plan permanently removes that plan and all subscriptions attached to it. Active subscriptions are not preserved or converted. Use the listed client, service, plan, and expiration details to verify the impact before proceeding.\n\nOn Web, type `DELETE` in the preview confirmation field. In WhatsApp, type `CONFIRM` or `CONFIRMAR` when prompted. Any other value shows a confirmation re-prompt; `0` cancels and `9` returns to selection. A cancelled preview or failed deletion does not mutate the catalog.\n\n## Limits, validation, and recovery\n\nOnly services that are globally active can be selected for access-code lookup; Catalog names do not enable a code platform. The Catalog does not reveal subscription credentials. If the preview cannot load, do not guess the impact or repeat the destructive action; retry the preview and contact support with the visible error.\n\n## Support boundary\n\nSupport can investigate a persistent catalog load, validation, preview, or deletion error. Share the affected service or plan name and visible counts only; never share subscription passwords, PINs, mailbox credentials, or access codes."
+        ]
+      },
+      {
+        "id": "tenant-admin.clients",
+        "title": "Clients",
+        "terms": [
+          "Clients",
+          "Manage Pro clients, their access, status, canonical login, and subscriptions.",
+          "clients",
+          "client search",
+          "create client",
+          "edit client",
+          "activate client",
+          "deactivate client",
+          "delete client",
+          "canonical login",
+          "client subscriptions",
+          "customers",
+          "users",
+          "client accounts",
+          "# Clients\n\nClients are the people who receive the services offered by a Pro Tenant. Client management is available only to Pro Tenant Admins on Web and in the Pro WhatsApp console.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Open Clients from the sidebar. Search by full name, canonical username, or phone; use Create to add a client, the edit action to change identity fields, the power action to activate or deactivate access, the subscriptions action to open that client's subscriptions, and the delete action for an inactive client.\n- **WhatsApp:** From the Pro main menu choose `1` Clients. Choose `1` to view clients or `2` to create one. Select a listed client to edit, deactivate, reactivate, or delete it. Use `9` to go back and `0` to cancel.\n- **Prerequisites:** The Tenant must be on Pro and you must be its Tenant Admin. To create a client, prepare a full name, a valid local username, a password of at least six characters, and an optional phone number.\n\n## Create and canonical login\n\nEnter the client's full name, local username, optional phone, and password, then save on Web or confirm the summary in WhatsApp. The local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores. TrackPal combines it with the Tenant's immutable prefix to create the canonical login in the form `{client_prefix}_{local_username}`, such as `t1_pepe`. Give the client this full canonical login, not only the local portion.\n\nA successful creation adds an active client. A duplicate local username, canonical username, or phone is rejected and leaves the existing clients unchanged. Correct the field and try again. A missing or invalid name, username, phone, or password is a validation error; it does not create a partial client.\n\n## Search, edit, activate, and deactivate\n\nSearch is a local filter over the loaded client list and does not change data. An empty list means no clients exist; an empty search result means the filter has no match. Clear the search or adjust the spelling and digits.\n\nEdit changes the full name, local username, or phone. Renaming the local username also updates the canonical login. A duplicate value or invalid field is rejected without applying the edit. Activate restores access for an inactive client. Deactivate changes the client to inactive and revokes that client's active Web sessions; the client must sign in again after reactivation.\n\n## Subscriptions and deletion\n\nUse the credit-card or subscriptions action on the client row to open Subscriptions already filtered to that client. This is a safe navigation link; it does not create, reveal, cancel, renew, or reactivate a subscription. The client topic is also related to the Subscriptions module for the full subscription workflow.\n\nAn active client cannot be deleted. Deactivate it first. Deletion is permanent: it removes the client account and its login, cannot be undone, and is not a substitute for deactivation. Confirm the deletion only after checking that the selected client is correct. A cancelled dialog or a failed request leaves the client in its previous state.\n\n## WhatsApp validation and recovery\n\nThe Pro WhatsApp flow validates each requested field and repeats the prompt for an invalid selection, empty name, empty username, short password, or invalid phone. At the confirmation prompt type `CONFIRM` or `CONFIRMAR` as shown; type `0` to cancel. A failed create, edit, activation, deactivation, or deletion keeps the previous data and can be retried. `9` returns to the preceding screen and `8` advances only when the prompt displays it.\n\n## Support boundary\n\nSupport can help with a persistent validation or access error when given the visible field and message. Never share a client's password, generated password, access token, or subscription credentials in a ticket or chat."
+        ]
+      },
+      {
         "id": "tenant-admin.code-services",
         "title": "Enabled code platforms",
         "terms": [
@@ -904,6 +1383,23 @@
           "home",
           "overview",
           "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes what TrackPal can do for your business on the current plan.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. The dashboard is not a WhatsApp menu.\n- **Prerequisites:** Sign in as a Tenant Admin with an active Tenant. No setup is required to read the page.\n- **Actions:** Open Dashboard from the sidebar and use the read-only indicators to decide which module to open next.\n\n## Results and states\n\n- You see your Starter or Pro plan, central lookup mailbox status, enabled code-service count, and blocked WhatsApp identity count.\n- Pro also shows active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n- A loading state means TrackPal is refreshing Tenant data. An empty mailbox or zero enabled services means access-code lookup is not ready.\n- A failed load leaves the page without current metrics. Retry from the page and contact support if the error persists.\n\n## Limits, consequences, and recovery\n\nDashboard is read-only: viewing it creates no records and changes no settings. It does not link WhatsApp, enable platforms, configure a mailbox, or start a WhatsApp session. Open the matching Settings category to complete setup. If a module is missing from navigation, the current plan does not include it; Pro data remains preserved after a downgrade but Pro actions are unavailable.\n\n## Web and WhatsApp\n\nUse Web Dashboard for the overview. WhatsApp has its own Tenant Admin menu and session rules; use the WhatsApp topic for that flow. Dashboard values are refreshed from the active Tenant and can change after another administrator updates setup.\n\n## Support boundary\n\nSupport can help interpret a status, plan access, or a persistent loading error. Do not send passwords, pairing codes, access tokens, or mailbox credentials in a support request."
+        ]
+      },
+      {
+        "id": "tenant-admin.first-pro-client",
+        "title": "Set up your first Pro Client",
+        "terms": [
+          "Set up your first Pro Client",
+          "Follow the safe order from Catalog preparation to a client's first subscription.",
+          "first client",
+          "Pro setup",
+          "catalog setup",
+          "first subscription",
+          "onboarding order",
+          "get started with clients",
+          "first customer",
+          "initial setup",
+          "# Set up your first Pro Client\n\nUse this order when a new Pro Tenant is ready to serve its first person. The guide is informational and its links only open authorized modules; Help never creates records or submits a form for you.\n\n## 1. Prepare the Catalog\n\nOpen Catalog and create the service you offer. Select that service and create at least one plan. If the service or plan list is empty, that is the expected first state: use the create controls. Confirm the names before leaving the module. Read the Catalog delete preview guidance before removing anything.\n\n## 2. Create the Client\n\nOpen Clients and choose Create. Enter the full name, a valid local username, the optional phone, and a password. Save the form and copy the generated canonical login pattern `{client_prefix}_{local_username}` for the person. Search for the new client and verify that its status is active.\n\nIf a local username or phone already exists, correct the value instead of retrying with duplicate data. Do not send the client's password to the person through an unsafe channel. The client can use the canonical login only while the Tenant is Pro and the account is active.\n\n## 3. Open Client Subscriptions\n\nFrom the Client row choose the subscriptions action, or open Subscriptions and select the client filter. Create the first subscription by choosing the prepared service and plan, then enter only the credentials and dates required by the form. Review the summary before confirming. The Client topic explains the direct link; the Catalog topic explains the data it depends on.\n\n## Web and WhatsApp order\n\nOn Web the authorized module links are Catalog, Clients, and Subscriptions. In WhatsApp, use the Pro menu: `2` Catalog, `1` Clients, and `4` Subscriptions. Inside a flow, follow the displayed `9` Back, `8` Next, `0` Cancel, and confirmation prompts. Invalid input keeps the flow at its current step; it does not create partial setup.\n\n## Completion and recovery\n\nThe setup is complete when the service, plan, active client, and first subscription appear in their respective authorized modules. If any module is loading or unavailable, retry that module and fix its visible validation error. If a subscription creation fails, the Catalog and Client remain available; check the service, plan, client status, and form values before trying again.\n\n## Support boundary\n\nSupport can help identify which prerequisite is missing. Share module names and visible statuses only; never share client passwords, subscription credentials, mailbox credentials, access codes, or API keys."
         ]
       },
       {
@@ -971,6 +1467,26 @@
         ]
       },
       {
+        "id": "tenant-admin.subscriptions",
+        "title": "Client Subscriptions",
+        "terms": [
+          "Client Subscriptions",
+          "Open and manage the subscriptions attached to a client, service, and plan.",
+          "subscriptions",
+          "client subscriptions",
+          "filter subscriptions",
+          "create subscription",
+          "cancel subscription",
+          "renew subscription",
+          "reactivate subscription",
+          "reveal credentials",
+          "memberships",
+          "client plans",
+          "service access",
+          "# Client Subscriptions\n\nSubscriptions connect a Client to a Catalog service and plan. Open Subscriptions from the sidebar, or use the subscriptions action in a Client row to arrive with that client selected.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Filter the list by status, service, or client. Create a subscription, edit its fields, cancel it, renew it, reactivate a cancelled subscription, or open the credential reveal dialog when you have a valid reason.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions. Filter the list, select a subscription, then use the actions shown for its status: edit, cancel, renew, or reactivate when available.\n- **Prerequisites:** The Tenant must be Pro. Create the required service and plan in Catalog and have an active Client before creating a subscription.\n\n## States, confirmations, and sensitive data\n\nActive, expired, and cancelled are distinct statuses. Cancelling changes the status and does not delete the subscription. Renewing or reactivating changes its dates after a confirmation. Create and lifecycle dialogs show a summary before the mutation; cancel with the visible Cancel action or `0` in WhatsApp.\n\nStreaming passwords and profile PINs are sensitive credentials. Reveal them only through the explicit Web action when necessary, do not paste them into Help or support, and remember that a Help link never reveals them. A duplicate active subscription may offer extending its expiry instead of creating another one.\n\n## Empty, validation, and recovery states\n\nAn empty list means no subscriptions match the current filters, not that the Client or Catalog was deleted. A missing service, plan, or Client prevents creation. Invalid email, date, duration, selection, or confirmation keeps the existing subscription unchanged. If a load or mutation fails, retry after checking the visible error.\n\n## Support boundary\n\nSupport can help with a persistent subscription or lifecycle error using the visible status and identifiers. Never share streaming passwords, profile PINs, mailbox credentials, or revealed credentials."
+        ]
+      },
+      {
         "id": "tenant-admin.whatsapp",
         "title": "WhatsApp",
         "terms": [
@@ -984,7 +1500,7 @@
           "WhatsApp connection",
           "link phone",
           "bot",
-          "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
+          "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.\n\n## Pro menu, validation, and confirmations\n\nThe Pro main menu is `1` Clients, `2` Catalog, `3` My Profile, `4` Subscriptions, `5` Access Control, `6` Help, and `7` Find Access Code. Starter has a smaller menu and cannot open the Pro modules. The main menu uses `0` to exit. Inside a flow, `0` cancels, `9` goes back, and `8` advances only when the current message displays Next.\n\nEach Pro flow validates selections and values before changing data. Invalid numbers, empty names, duplicate values, invalid phones, short passwords, and unavailable records show a recoverable validation message and keep the flow at the current step. Destructive Client or Catalog actions show a summary or impact preview and require `CONFIRM` or `CONFIRMAR`; any other response re-prompts and `0` cancels. A session timeout closes the flow without applying a partial mutation.\n\n## Pro Client Context Shortcut boundaries\n\nA Pro Tenant Admin can use `menu` or `/menu` from the private admin chat when the message targets a remote contact. TrackPal replies to the admin's private chat; the remote contact cannot see or operate the administrative menu. The shortcut can show client details, create or edit a client, activate or deactivate access, delete only an inactive client, and open that client's subscriptions. It does not expose the admin menu to the contact, edit a phone from the shortcut, reveal credentials automatically, or let the contact perform administrative actions.\n\nOnly one Client Context Shortcut may be active for an admin at a time. Send `0` in the private admin chat to close it before starting another. Do not send arbitrary messages to a remote contact expecting a shortcut: only `menu` or `/menu` starts it, and an already open context rejects collisions safely. The shortcut's block or unblock notifications to the contact are generic; the admin receives the management confirmation privately.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, session, validation, or Client Context Shortcut error. Share the instance status and approximate time, never a pairing code, QR image, token, password, mailbox credential, client password, or subscription credential."
         ]
       }
     ],
@@ -1024,6 +1540,49 @@
         ]
       },
       {
+        "id": "tenant-admin.catalog",
+        "title": "Catálogo",
+        "terms": [
+          "Catálogo",
+          "Crea y organiza servicios y planes antes de asignar suscripciones a clientes.",
+          "catálogo",
+          "servicio",
+          "plan",
+          "crear servicio",
+          "crear plan",
+          "renombrar servicio",
+          "renombrar plan",
+          "eliminar servicio",
+          "eliminar plan",
+          "impacto de eliminación",
+          "catálogo de productos",
+          "oferta",
+          "lista de servicios",
+          "# Catálogo\n\nEl Catálogo es la lista de servicios y planes del Tenant Pro. Un servicio es la oferta y sus planes son las variantes que se seleccionan al crear una suscripción.\n\n## Canal, requisitos y acciones\n\n- **Web:** Abre Catálogo desde la barra lateral. Crea un servicio, selecciónalo, crea o renombra sus planes, renombra un servicio o abre la vista previa de eliminación antes de borrar un servicio o plan.\n- **WhatsApp:** Desde el menú principal Pro elige `2` Catálogo. Con servicios, elige `1` para verlos, `2` para crear un servicio o `3` para eliminar un servicio. Selecciona un servicio para editar su nombre, ver planes, crear un plan o eliminar un plan. Sin servicios, el menú ofrece directamente crear el primero.\n- **Requisitos:** Catálogo es solo Pro. Para crear un plan, primero crea o selecciona su servicio. Un cambio del catálogo no crea automáticamente un cliente ni una suscripción.\n\n## Servicios, planes y estados vacíos\n\nUn servicio puede existir sin planes. La pantalla de detalle muestra el estado de planes vacío y ofrece Crear plan; regresa con `9` o cancela con `0`. Una lista de servicios vacía significa que no existen servicios, así que crea el primero. Una lista de planes vacía significa que el servicio seleccionado no tiene planes; no es un fallo de carga.\n\nLas listas pueden tener varias páginas. Usa `8` solo cuando se muestre Siguiente y `9` para regresar. Un estado de carga significa que TrackPal está obteniendo el catálogo actual. Un error de carga o guardado conserva el catálogo anterior; reintenta después de revisar el error visible.\n\n## Crear y renombrar\n\nEscribe un nombre de servicio o plan que no esté vacío y guarda en Web, o responde al mensaje de WhatsApp. Un resultado exitoso muestra un mensaje posterior; elige `1` para volver al menú principal. Un nombre vacío, selección inválida, nombre duplicado o servicio no disponible se rechaza y se puede corregir sin crear un registro parcial. Renombrar cambia solo la etiqueta; no mueve planes ni modifica suscripciones existentes.\n\n## Vista previa y consecuencias de eliminar\n\nEliminar un servicio o plan es irreversible. Antes de confirmar, Web y WhatsApp muestran la vista previa del impacto. Para un servicio revisa la cantidad de planes afectados, suscripciones activas, suscripciones históricas, total de suscripciones y las filas de suscripciones activas. Para un plan revisa las cantidades de suscripciones activas, históricas y totales, además de sus filas. Las suscripciones históricas aparecen en el resumen aunque ya no estén activas.\n\nEliminar un servicio borra permanentemente ese servicio, sus planes y todas las suscripciones asociadas. Eliminar un plan borra permanentemente ese plan y todas sus suscripciones asociadas. Las suscripciones activas no se conservan ni se convierten. Comprueba los datos de cliente, servicio, plan y vencimiento antes de continuar.\n\nEn Web escribe `DELETE` en el campo de confirmación de la vista previa. En WhatsApp escribe `CONFIRM` o `CONFIRMAR` cuando se solicite. Cualquier otro valor muestra otro mensaje de confirmación; `0` cancela y `9` regresa a la selección. Una vista previa cancelada o una eliminación fallida no modifica el catálogo.\n\n## Límites, validación y recuperación\n\nSolo los servicios globalmente activos pueden seleccionarse para la búsqueda de códigos; los nombres del Catálogo no habilitan una plataforma de códigos. El Catálogo no revela credenciales de suscripciones. Si la vista previa no carga, no adivines el impacto ni repitas la acción destructiva; reintenta la vista previa y contacta a soporte con el error visible.\n\n## Límite de soporte\n\nSoporte puede investigar un error persistente de carga, validación, vista previa o eliminación del catálogo. Comparte solo el nombre del servicio o plan y las cantidades visibles; nunca compartas contraseñas de suscripciones, PIN, credenciales del buzón ni códigos de acceso."
+        ]
+      },
+      {
+        "id": "tenant-admin.clients",
+        "title": "Clientes",
+        "terms": [
+          "Clientes",
+          "Gestiona clientes Pro, su acceso, estado, inicio de sesión canónico y suscripciones.",
+          "clientes",
+          "buscar cliente",
+          "crear cliente",
+          "editar cliente",
+          "activar cliente",
+          "desactivar cliente",
+          "eliminar cliente",
+          "inicio canónico",
+          "suscripciones del cliente",
+          "usuarios",
+          "cuentas de clientes",
+          "consumidores",
+          "# Clientes\n\nLos clientes son las personas que reciben los servicios ofrecidos por un Tenant Pro. La gestión de clientes está disponible solo para Tenant Admins Pro en Web y en la consola de WhatsApp Pro.\n\n## Canal, requisitos y acciones\n\n- **Web:** Abre Clientes desde la barra lateral. Busca por nombre completo, usuario canónico o teléfono; usa Crear para agregar un cliente, la acción de editar para cambiar sus datos de identidad, el botón de estado para activar o desactivar el acceso, la acción de suscripciones para abrir las suscripciones de ese cliente y la acción de eliminar para un cliente inactivo.\n- **WhatsApp:** Desde el menú principal Pro elige `1` Clientes. Elige `1` para ver clientes o `2` para crear uno. Selecciona un cliente para editarlo, desactivarlo, reactivarlo o eliminarlo. Usa `9` para regresar y `0` para cancelar.\n- **Requisitos:** El Tenant debe tener plan Pro y tú debes ser su Tenant Admin. Para crear un cliente prepara un nombre completo, un nombre de usuario local válido, una contraseña de al menos seis caracteres y un teléfono opcional.\n\n## Crear e inicio de sesión canónico\n\nEscribe el nombre completo, el nombre de usuario local, el teléfono opcional y la contraseña; luego guarda en Web o confirma el resumen en WhatsApp. El nombre de usuario local debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones bajos. TrackPal lo combina con el prefijo inmutable del Tenant para crear el inicio de sesión canónico con la forma `{client_prefix}_{local_username}`, por ejemplo `t1_pepe`. Entrega al cliente ese inicio de sesión completo, no solo la parte local.\n\nUna creación exitosa agrega un cliente activo. Un nombre de usuario local, usuario canónico o teléfono duplicado se rechaza y deja sin cambios a los clientes existentes. Corrige el campo y vuelve a intentarlo. Un nombre, usuario, teléfono o contraseña ausente o inválido es un error de validación; no crea un cliente parcial.\n\n## Buscar, editar, activar y desactivar\n\nLa búsqueda es un filtro local sobre la lista cargada y no cambia datos. Una lista vacía significa que no existen clientes; un resultado vacío significa que el filtro no coincide. Limpia la búsqueda o corrige las letras y dígitos.\n\nEditar cambia el nombre completo, el nombre de usuario local o el teléfono. Al cambiar el nombre de usuario local también se actualiza el inicio de sesión canónico. Un valor duplicado o campo inválido se rechaza sin aplicar la edición. Activar restaura el acceso de un cliente inactivo. Desactivar cambia el cliente a inactivo y revoca sus sesiones Web activas; después de reactivarlo, el cliente debe iniciar sesión otra vez.\n\n## Suscripciones y eliminación\n\nUsa la acción de tarjeta o suscripciones de la fila del cliente para abrir Suscripciones filtradas por ese cliente. Es un enlace de navegación seguro: no crea, revela, cancela, renueva ni reactiva una suscripción. El topic de Clientes también se relaciona con el módulo Suscripciones para consultar el flujo completo.\n\nUn cliente activo no se puede eliminar. Primero desactívalo. Eliminar es permanente: borra la cuenta del cliente y su inicio de sesión, no se puede deshacer y no reemplaza la desactivación. Confirma solo después de comprobar que seleccionaste al cliente correcto. Cancelar el diálogo o un error de la solicitud deja al cliente en su estado anterior.\n\n## Validación y recuperación en WhatsApp\n\nEl flujo de WhatsApp valida cada campo solicitado y repite el mensaje cuando hay una selección inválida, nombre vacío, usuario vacío, contraseña corta o teléfono inválido. En la confirmación escribe `CONFIRM` o `CONFIRMAR` como se muestre; escribe `0` para cancelar. Un error al crear, editar, activar, desactivar o eliminar conserva los datos anteriores y permite reintentar. `9` regresa a la pantalla anterior y `8` avanza solo cuando el mensaje lo muestra.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de validación o acceso si compartes el campo y mensaje visibles. Nunca compartas en un ticket o chat la contraseña del cliente, una contraseña generada, un token ni credenciales de suscripciones."
+        ]
+      },
+      {
         "id": "tenant-admin.code-services",
         "title": "Plataformas de códigos habilitadas",
         "terms": [
@@ -1053,6 +1612,23 @@
           "inicio",
           "resumen",
           "# Dashboard de la empresa\n\nEl Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. El dashboard no es un menú de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.\n- **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.\n\n## Resultados y estados\n\n- Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.\n- Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.\n- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.\n- Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.\n\n## Límites, consecuencias y recuperación\n\nEl Dashboard es de solo lectura: verlo no crea registros ni cambia configuraciones. No vincula WhatsApp, habilita plataformas, configura un buzón ni inicia una sesión de WhatsApp. Abre la categoría correspondiente de Configuración para completar la preparación. Si un módulo no aparece en la navegación, el plan actual no lo incluye; los datos Pro se conservan después de bajar a Starter, pero las acciones Pro quedan inactivas.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.\n\n## Límite de soporte\n\nSoporte puede ayudarte a interpretar un estado, el acceso del plan o un error de carga persistente. No envíes contraseñas, códigos de vinculación, tokens ni credenciales del buzón en una solicitud."
+        ]
+      },
+      {
+        "id": "tenant-admin.first-pro-client",
+        "title": "Configura tu primer Cliente Pro",
+        "terms": [
+          "Configura tu primer Cliente Pro",
+          "Sigue el orden seguro desde la preparación del Catálogo hasta la primera suscripción del cliente.",
+          "primer cliente",
+          "configuración Pro",
+          "configurar catálogo",
+          "primera suscripción",
+          "orden de preparación",
+          "comenzar con clientes",
+          "primer consumidor",
+          "configuración inicial",
+          "# Configura tu primer Cliente Pro\n\nUsa este orden cuando un Tenant Pro nuevo esté listo para atender a su primera persona. La guía es informativa y sus enlaces solo abren módulos autorizados; Help nunca crea registros ni envía un formulario por ti.\n\n## 1. Prepara el Catálogo\n\nAbre Catálogo y crea el servicio que ofreces. Selecciona ese servicio y crea al menos un plan. Si la lista de servicios o planes está vacía, ese es el estado inicial esperado: usa los controles de creación. Comprueba los nombres antes de salir del módulo. Lee la guía de vista previa de eliminación del Catálogo antes de borrar algo.\n\n## 2. Crea el Cliente\n\nAbre Clientes y elige Crear. Escribe el nombre completo, un nombre de usuario local válido, el teléfono opcional y una contraseña. Guarda el formulario y copia para la persona el patrón de inicio de sesión canónico `{client_prefix}_{local_username}`. Busca el nuevo cliente y verifica que su estado sea activo.\n\nSi el usuario local o teléfono ya existe, corrige el valor en vez de repetir datos duplicados. No envíes la contraseña del cliente por un canal inseguro. El cliente solo puede usar el inicio de sesión canónico mientras el Tenant sea Pro y la cuenta esté activa.\n\n## 3. Abre las suscripciones del Cliente\n\nDesde la fila del Cliente elige la acción de suscripciones, o abre Suscripciones y selecciona el filtro del cliente. Crea la primera suscripción eligiendo el servicio y plan preparados; luego escribe solo las credenciales y fechas requeridas por el formulario. Revisa el resumen antes de confirmar. El topic de Clientes explica el enlace directo; el topic de Catálogo explica los datos que necesita.\n\n## Orden en Web y WhatsApp\n\nEn Web los enlaces autorizados son Catálogo, Clientes y Suscripciones. En WhatsApp usa el menú Pro: `2` Catálogo, `1` Clientes y `4` Suscripciones. Dentro de un flujo sigue los mensajes visibles `9` Regresar, `8` Siguiente, `0` Cancelar y las confirmaciones. Una entrada inválida mantiene el flujo en su paso actual; no crea una preparación parcial.\n\n## Finalización y recuperación\n\nLa configuración termina cuando el servicio, plan, cliente activo y primera suscripción aparecen en sus respectivos módulos autorizados. Si un módulo carga o no está disponible, reintenta ese módulo y corrige el error de validación visible. Si falla la creación de una suscripción, el Catálogo y Cliente siguen disponibles; comprueba el servicio, plan, estado del cliente y valores del formulario antes de reintentar.\n\n## Límite de soporte\n\nSoporte puede ayudarte a identificar qué requisito falta. Comparte solo nombres de módulos y estados visibles; nunca compartas contraseñas de clientes, credenciales de suscripciones, credenciales del buzón, códigos de acceso ni claves API."
         ]
       },
       {
@@ -1120,6 +1696,26 @@
         ]
       },
       {
+        "id": "tenant-admin.subscriptions",
+        "title": "Suscripciones de clientes",
+        "terms": [
+          "Suscripciones de clientes",
+          "Abre y gestiona las suscripciones asociadas a un cliente, servicio y plan.",
+          "suscripciones",
+          "suscripciones del cliente",
+          "filtrar suscripciones",
+          "crear suscripción",
+          "cancelar suscripción",
+          "renovar suscripción",
+          "reactivar suscripción",
+          "revelar credenciales",
+          "membresías",
+          "planes del cliente",
+          "acceso al servicio",
+          "# Suscripciones de clientes\n\nLas suscripciones conectan a un Cliente con un servicio y plan del Catálogo. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese cliente seleccionado.\n\n## Canal, requisitos y acciones\n\n- **Web:** Filtra la lista por estado, servicio o cliente. Crea una suscripción, edita sus campos, cancélala, renuévala, reactiva una suscripción cancelada o abre el diálogo para revelar credenciales cuando exista una razón válida.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones. Filtra la lista, selecciona una suscripción y usa las acciones mostradas según su estado: editar, cancelar, renovar o reactivar cuando esté disponible.\n- **Requisitos:** El Tenant debe ser Pro. Crea el servicio y plan requeridos en Catálogo y ten un Cliente activo antes de crear una suscripción.\n\n## Estados, confirmaciones y datos sensibles\n\nActiva, expirada y cancelada son estados distintos. Cancelar cambia el estado y no elimina la suscripción. Renovar o reactivar cambia las fechas después de una confirmación. Los diálogos de creación y ciclo de vida muestran un resumen antes de modificar; cancela con el botón visible o con `0` en WhatsApp.\n\nLas contraseñas de streaming y los PIN de perfil son credenciales sensibles. Revélalos solo mediante la acción explícita de Web cuando sea necesario, no los pegues en Help ni en soporte y recuerda que un enlace de Help nunca los revela. Una suscripción activa duplicada puede ofrecer extender su vencimiento en lugar de crear otra.\n\n## Estados vacíos, validación y recuperación\n\nUna lista vacía significa que ninguna suscripción coincide con los filtros actuales, no que se haya eliminado el Cliente o el Catálogo. La falta de servicio, plan o Cliente impide crear. Un email, fecha, duración, selección o confirmación inválidos conserva la suscripción existente. Si falla la carga o una modificación, reintenta después de revisar el error visible.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de suscripción o ciclo de vida usando el estado e identificadores visibles. Nunca compartas contraseñas de streaming, PIN de perfil, credenciales del buzón ni credenciales reveladas."
+        ]
+      },
+      {
         "id": "tenant-admin.whatsapp",
         "title": "WhatsApp",
         "terms": [
@@ -1133,7 +1729,7 @@
           "conexión de WhatsApp",
           "vincular teléfono",
           "bot",
-          "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
+          "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.\n\n## Menú Pro, validación y confirmaciones\n\nEl menú principal Pro es `1` Clientes, `2` Catálogo, `3` Mi perfil, `4` Suscripciones, `5` Control de acceso, `6` Ayuda y `7` Buscar código de acceso. Starter tiene un menú más pequeño y no puede abrir los módulos Pro. El menú principal usa `0` para salir. Dentro de un flujo, `0` cancela, `9` regresa y `8` avanza solo cuando el mensaje actual muestra Siguiente.\n\nCada flujo Pro valida las selecciones y valores antes de cambiar datos. Números inválidos, nombres vacíos, valores duplicados, teléfonos inválidos, contraseñas cortas y registros no disponibles muestran un mensaje de validación recuperable y mantienen el flujo en el paso actual. Las acciones destructivas de Clientes o Catálogo muestran un resumen o vista previa del impacto y requieren `CONFIRM` o `CONFIRMAR`; otra respuesta vuelve a pedir confirmación y `0` cancela. Una sesión expirada cierra el flujo sin aplicar una mutación parcial.\n\n## Límites del Client Context Shortcut Pro\n\nUn Tenant Admin Pro puede usar `menu` o `/menu` desde el chat privado de administración cuando el mensaje apunta a un contacto remoto. TrackPal responde al chat privado del administrador; el contacto remoto no puede ver ni operar el menú administrativo. El acceso directo puede mostrar datos del cliente, crear o editar un cliente, activar o desactivar su acceso, eliminar solo un cliente inactivo y abrir sus suscripciones. No muestra el menú de administración al contacto, no permite editar un teléfono desde el acceso directo, no revela credenciales automáticamente ni permite que el contacto realice acciones administrativas.\n\nSolo puede existir un Client Context Shortcut activo por administrador. Envía `0` en el chat privado de administración para cerrarlo antes de iniciar otro. No envíes mensajes arbitrarios a un contacto remoto esperando abrir el acceso directo: solo `menu` o `/menu` lo inicia y un contexto ya abierto rechaza colisiones de forma segura. Las notificaciones de bloqueo o desbloqueo para el contacto son genéricas; el administrador recibe la confirmación de gestión en privado.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado, sesión, validación o Client Context Shortcut. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña, credencial del buzón, contraseña de cliente ni credencial de suscripción."
         ]
       }
     ]

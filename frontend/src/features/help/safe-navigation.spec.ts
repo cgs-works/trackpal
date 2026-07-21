@@ -27,6 +27,27 @@ describe("resolveSafeHelpNavigation", () => {
     ).toBeNull();
   });
 
+  it("allows Pro module destinations without exposing mutation routes", () => {
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/clients",
+        settings_category: null,
+      }),
+    ).toEqual({ to: "/admin/clients" });
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/catalog",
+        settings_category: null,
+      }),
+    ).toEqual({ to: "/admin/catalog" });
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/subscriptions",
+        settings_category: null,
+      }),
+    ).toEqual({ to: "/admin/subscriptions" });
+  });
+
   it("rejects routes outside the navigation allowlist", () => {
     expect(
       resolveSafeHelpNavigation({

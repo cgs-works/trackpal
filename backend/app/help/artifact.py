@@ -116,6 +116,7 @@ def _public_topic(topic: dict[str, Any]) -> dict[str, Any]:
         "order": topic["order"],
         "help_targets": topic["help_targets"],
         "safe_navigation": topic["safe_navigation"],
+        "safe_links": topic.get("safe_links", []),
     }
 
 

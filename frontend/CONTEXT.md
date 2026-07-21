@@ -17,7 +17,7 @@
 |---------|------------|
 | **Tenant Admin** | The person who operates a Tenant through the plan-aware administrative Web and WhatsApp interfaces. Use **Tenant** for the business entity, not the person. |
 | **Master Layout** | Layout con sidebar para el operador Master. Muestra summary cards y business table. |
-| **Admin Layout** | Layout colapsable con sidebar para tenant admin. Navegación: Dashboard, Clients, Catalog, Subscriptions, Settings, and the gated Help Center. Starter oculta links Pro-only. Master en contexto de soporte ve navegación completa + banner, pero no Tenant Admin Help. |
+| **Admin Layout** | Layout colapsable con sidebar para tenant admin. Navegación: Dashboard, Clients, Catalog, Subscriptions, Settings, and the gated Help Center. Starter oculta links Pro-only. Master en contexto de soporte ve navegación completa + banner, pero no Tenant Admin Help. Contextual Help uses stable targets `admin.clients`, `admin.catalog`, and `admin.subscriptions` on the Pro screens without submitting their forms. |
 
 | **Settings Page** | Superficie de configuración del tenant admin. Usa navegación por categorías con un único panel activo para editar una sección a la vez; en móvil la selección de categoría se abre desde un drawer. El panel activo usa scroll interno para secciones largas e incluye una acción común de Cancelar que cierra la sección y descarta cambios locales no guardados. |
 | **Client Layout** | Layout con sidebar para cliente final. Navegación: Dashboard, Profile. |

@@ -120,25 +120,58 @@ function TopicList({
   );
 }
 
-export function SafeNavigationLink({ topic }: { topic: HelpTopic }) {
-  const destination = resolveSafeHelpNavigation(topic.safe_navigation);
+function safeNavigationLabel(destination: ReturnType<typeof resolveSafeHelpNavigation>): string {
+  if (!destination) {
+    return "";
+  }
+
+  const moduleKey =
+    destination.to === "/admin/dashboard"
+      ? "frontend.dashboard.tenant.title"
+      : destination.to === "/admin/clients"
+        ? "frontend.clients.section_title"
+        : destination.to === "/admin/catalog"
+          ? "frontend.catalog.section_title"
+          : destination.to === "/admin/subscriptions"
+            ? "frontend.subscriptions.title"
+            : "frontend.settings.section_title";
+  return `${t("frontend.help.go_to_module")}: ${t(moduleKey)}`;
+}
+
+function SafeNavigationAnchor({ navigation }: { navigation: HelpTopic["safe_navigation"] }) {
+  const destination = resolveSafeHelpNavigation(navigation);
   if (!destination) {
     return null;
   }
 
   const className = buttonVariants({ variant: "outline" });
+  const label = safeNavigationLabel(destination);
   if (destination.to === "/admin/settings") {
     return (
       <Link to={destination.to} search={destination.search} className={className}>
-        {t("frontend.help.go_to_module")}
+        {label}
       </Link>
     );
   }
 
   return (
     <Link to={destination.to} className={className}>
-      {t("frontend.help.go_to_module")}
+      {label}
     </Link>
+  );
+}
+
+export function SafeNavigationLink({ topic }: { topic: HelpTopic }) {
+  const navigations = [topic.safe_navigation, ...(topic.safe_links ?? [])];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {navigations.map((navigation, index) => (
+        <SafeNavigationAnchor
+          key={`${navigation.route}-${navigation.settings_category ?? "root"}-${index}`}
+          navigation={navigation}
+        />
+      ))}
+    </div>
   );
 }
 

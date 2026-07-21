@@ -22,6 +22,9 @@ export function AdminLayout() {
     role === "tenant" &&
     isPrivateHelpEnabled() &&
     (location.pathname === "/admin/dashboard" ||
+      location.pathname === "/admin/clients" ||
+      location.pathname === "/admin/catalog" ||
+      location.pathname === "/admin/subscriptions" ||
       location.pathname === "/admin/settings");
   const sidebarItems = createSidebarItems(
     getAdminNavigationItems(

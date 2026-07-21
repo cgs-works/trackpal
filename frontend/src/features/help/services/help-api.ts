@@ -14,6 +14,7 @@ export interface HelpTopicSummary {
   order: number;
   help_targets: string[];
   safe_navigation: HelpSafeNavigation;
+  safe_links?: HelpSafeNavigation[];
 }
 
 export interface HelpIndexResponse {

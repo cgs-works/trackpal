@@ -25,7 +25,7 @@ React Help client
         └── React Joyride Orientation Tour
 ```
 
-The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The first tracer is a single bilingual Tenant Admin Dashboard topic; the Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
+The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact now covers the common Tenant Admin topics plus the Pro Clients, Catalog, Client Subscriptions, and first-Pro-Client guide topics. The Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
 
 ## Tracer implementation
 
@@ -34,8 +34,9 @@ The public Vite bundle contains the Help client and presentation components, but
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
 - Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
 - The common Tenant Admin release includes mirrored Dashboard, Language, Profile, Password, WhatsApp, Enabled code platforms, Central lookup mailbox, WhatsApp access control, and Activate access-code lookup topics for Starter and Pro.
-- Dashboard and Settings use semantic targets such as `data-help-id="admin.dashboard"` and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
-- The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links. Access-code workflow topics link safely to the relevant Settings category without executing connection, disconnection, blocking, unblocking, or lookup actions.
+- The Pro extension includes mirrored Clients, Catalog, Client Subscriptions, and first-Pro-Client cross-module topics. Starter filtering is enforced before topic retrieval and search matching, so these topics do not appear in Starter Help.
+- Dashboard, Pro modules, and Settings use semantic targets such as `data-help-id="admin.dashboard"`, `data-help-id="admin.clients"`, `data-help-id="admin.catalog"`, `data-help-id="admin.subscriptions"`, and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
+- The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links. Pro topics may expose multiple safe module links, while access-code workflow topics link safely to Settings categories; none executes connection, disconnection, blocking, unblocking, lookup, or mutation actions.
 - The shared Tenant Admin layout provides contextual Help in a responsive Sheet. It resolves the most specific current target, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved.
 
 ## Canonical Markdown Source
@@ -53,7 +54,7 @@ A topic frontmatter contract must identify at least:
 - Module and capability IDs
 - Related route or Settings category
 - Stable `data-help-id` targets
-- Explicit navigation order and allow-listed safe navigation destination
+- Explicit navigation order and one or more allow-listed safe navigation destinations
 - Search tags and maintained synonyms
 - Related topic IDs
 - Optional Tour Release, order, target, safe preparation action, and conditional-target rule
@@ -181,7 +182,7 @@ The backend filters the searchable corpus by audience, plan, and locale before m
 
 ## Safe Navigation
 
-A Help topic may navigate to an authorized route and optionally request that a safe Settings category open. The navigation contract is declarative and allow-listed.
+A Help topic may navigate to an authorized route, optionally request that a safe Settings category open, and declare additional safe module links. The navigation contract is declarative and allow-listed; the frontend rejects unknown routes and never calls mutation services from these links.
 
 Help may not:
 
@@ -215,7 +216,7 @@ Build and CI validation covers:
 - Unique and known IDs
 - Spanish/English parity
 - Known roles, plans, channels, modules, actions, routes, and targets
-- Internal links and navigation allow-list
+- Internal links, safe module destinations, and navigation allow-list
 - Tour Release ordering, maximum seven steps, and eligibility
 - Artifact schema and target-contract versions
 

@@ -25,15 +25,27 @@ ALLOWED_MODULES = {
 ALLOWED_CAPABILITIES = {
     "tenant_access_code_lookup",
     "tenant_access_control",
+    "tenant_catalog",
+    "tenant_clients",
     "tenant_code_services",
     "tenant_dashboard",
     "tenant_mailbox",
     "tenant_settings",
+    "tenant_subscriptions",
     "tenant_whatsapp",
 }
-ALLOWED_ROUTES = {"/admin/dashboard", "/admin/settings"}
+ALLOWED_ROUTES = {
+    "/admin/dashboard",
+    "/admin/clients",
+    "/admin/catalog",
+    "/admin/subscriptions",
+    "/admin/settings",
+}
 ALLOWED_HELP_TARGETS = {
     "admin.dashboard",
+    "admin.clients",
+    "admin.catalog",
+    "admin.subscriptions",
     "admin.settings",
     "admin.settings.language",
     "admin.settings.reminders",
@@ -75,7 +87,7 @@ REQUIRED_FIELDS = {
     "order",
     "safe_navigation",
 }
-OPTIONAL_FIELDS = {"tour"}
+OPTIONAL_FIELDS = {"safe_links", "tour"}
 LOCALIZED_FIELDS = {"title", "summary", "search_tags", "synonyms"}
 ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
 HTML_PATTERN = re.compile(r"(?is)<\s*(?:/?\s*[a-zA-Z][^>]*|!--|!doctype\b|\?.*?\?)")
@@ -149,7 +161,7 @@ class HelpCompiler:
         }
         return {
             "schema_version": 1,
-            "content_version": "help-access-code-workflows-1",
+            "content_version": "help-pro-client-catalog-1",
             "frontend_target_contract_version": "2",
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,
@@ -179,6 +191,9 @@ class HelpCompiler:
             "related_topics": _string_list(frontmatter, "related_topics", path),
             "order": _positive_int(frontmatter, "order", path),
             "safe_navigation": _safe_navigation(frontmatter, path),
+            "safe_links": _safe_navigation_list(
+                frontmatter.get("safe_links", []), path
+            ),
             "tour": frontmatter.get("tour"),
             "body": body.strip(),
         }
@@ -219,10 +234,13 @@ class HelpCompiler:
         if route not in ALLOWED_ROUTES:
             raise HelpValidationError(f"Unknown route in {path.name}: {route}")
         targets = _string_list(frontmatter, "help_targets", path)
-        if not targets or any(target not in ALLOWED_HELP_TARGETS for target in targets):
+        if (module != "help" and not targets) or any(
+            target not in ALLOWED_HELP_TARGETS for target in targets
+        ):
             raise HelpValidationError(f"Unknown Help target in {path.name}")
         _positive_int(frontmatter, "order", path)
         _safe_navigation(frontmatter, path)
+        _safe_navigation_list(frontmatter.get("safe_links", []), path)
         for field in ("title", "summary"):
             if not _string(frontmatter, field, path).strip():
                 raise HelpValidationError(f"Empty {field} in {path.name}")
@@ -261,6 +279,10 @@ class HelpCompiler:
                     raise HelpValidationError(
                         f"Topic metadata parity mismatch for {topic_id}: {field}"
                     )
+            if english_topic["safe_links"] != spanish_topic["safe_links"]:
+                raise HelpValidationError(
+                    f"Topic metadata parity mismatch for {topic_id}: safe_links"
+                )
             if english_topic["tour"] != spanish_topic["tour"]:
                 raise HelpValidationError(
                     f"Topic metadata parity mismatch for {topic_id}: tour"
@@ -336,14 +358,26 @@ def _positive_int(frontmatter: dict[str, Any], field: str, path: Path) -> int:
 
 def _safe_navigation(frontmatter: dict[str, Any], path: Path) -> dict[str, str | None]:
     value = frontmatter.get("safe_navigation")
+    declared_route = _string(frontmatter, "route", path)
+    return _validate_safe_navigation(value, path, declared_route=declared_route)
+
+
+def _safe_navigation_list(value: Any, path: Path) -> list[dict[str, str | None]]:
+    if not isinstance(value, list):
+        raise HelpValidationError(f"Safe links must be a list in {path.name}")
+    return [_validate_safe_navigation(item, path) for item in value]
+
+
+def _validate_safe_navigation(
+    value: Any, path: Path, *, declared_route: str | None = None
+) -> dict[str, str | None]:
     if not isinstance(value, dict) or set(value) - {"route", "settings_category"}:
         raise HelpValidationError(f"Invalid safe navigation in {path.name}")
 
     route = value.get("route")
     if not isinstance(route, str) or route not in ALLOWED_ROUTES:
         raise HelpValidationError(f"Unknown safe navigation route in {path.name}")
-    declared_route = _string(frontmatter, "route", path)
-    if route != declared_route:
+    if declared_route is not None and route != declared_route:
         raise HelpValidationError(
             f"Safe navigation route must match route in {path.name}"
         )

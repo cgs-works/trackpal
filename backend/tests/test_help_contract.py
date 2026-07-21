@@ -14,7 +14,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
     assert artifact["schema_version"] == 1
-    assert artifact["content_version"] == "help-access-code-workflows-1"
+    assert artifact["content_version"] == "help-pro-client-catalog-1"
     assert artifact["frontend_target_contract_version"] == "2"
     assert set(artifact["locales"]) == {"en", "es"}
     expected_ids = [
@@ -27,6 +27,10 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "tenant-admin.password",
         "tenant-admin.profile",
         "tenant-admin.whatsapp",
+        "tenant-admin.catalog",
+        "tenant-admin.clients",
+        "tenant-admin.first-pro-client",
+        "tenant-admin.subscriptions",
     ]
     assert [topic["id"] for topic in artifact["topics"]["en"]] == sorted(expected_ids)
     assert [topic["id"] for topic in artifact["topics"]["es"]] == sorted(expected_ids)
@@ -45,6 +49,71 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "route": "/admin/settings",
         "settings_category": "code-services",
     }
+
+
+def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    assert topics["tenant-admin.clients"]["plans"] == ["pro"]
+    assert topics["tenant-admin.clients"]["help_targets"] == ["admin.clients"]
+    assert topics["tenant-admin.clients"]["safe_navigation"] == {
+        "route": "/admin/clients",
+        "settings_category": None,
+    }
+    assert topics["tenant-admin.catalog"]["help_targets"] == ["admin.catalog"]
+    assert topics["tenant-admin.catalog"]["safe_navigation"] == {
+        "route": "/admin/catalog",
+        "settings_category": None,
+    }
+    assert topics["tenant-admin.subscriptions"]["help_targets"] == [
+        "admin.subscriptions"
+    ]
+    first_client = topics["tenant-admin.first-pro-client"]
+    assert first_client["help_targets"] == []
+    assert first_client["related_topics"] == [
+        "tenant-admin.catalog",
+        "tenant-admin.clients",
+        "tenant-admin.subscriptions",
+    ]
+    assert [
+        first_client["safe_navigation"]["route"],
+        *[link["route"] for link in first_client["safe_links"]],
+    ] == [
+        "/admin/catalog",
+        "/admin/clients",
+        "/admin/subscriptions",
+    ]
+
+    clients_body = topics["tenant-admin.clients"]["body"].lower()
+    for phrase in (
+        "search",
+        "create",
+        "edit",
+        "activate",
+        "deactivate",
+        "delete",
+        "canonical",
+        "subscriptions",
+    ):
+        assert phrase in clients_body
+
+    catalog_body = topics["tenant-admin.catalog"]["body"].lower()
+    for phrase in (
+        "service",
+        "plan",
+        "rename",
+        "empty",
+        "active subscription",
+        "historical subscription",
+        "irreversible",
+        "confirm",
+    ):
+        assert phrase in catalog_body
+
+    whatsapp_body = topics["tenant-admin.whatsapp"]["body"].lower()
+    for phrase in ("clients", "catalog", "subscriptions", "context shortcut"):
+        assert phrase in whatsapp_body
 
 
 def test_access_code_topics_expose_cross_channel_contracts_and_states() -> None:

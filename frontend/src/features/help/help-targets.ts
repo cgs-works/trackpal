@@ -1,5 +1,8 @@
 export const HELP_TARGETS = {
   dashboard: "admin.dashboard",
+  clients: "admin.clients",
+  catalog: "admin.catalog",
+  subscriptions: "admin.subscriptions",
   settings: "admin.settings",
   language: "admin.settings.language",
   reminders: "admin.settings.reminders",
