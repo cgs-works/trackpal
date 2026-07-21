@@ -67,7 +67,7 @@ tour:
 
 ## Add a client
 
-Select **Create client** and enter the name, a local username, a password with at least six characters, and an optional phone. TrackPal adds your business prefix to the username. Give the client the full username shown after saving, for example `t1_pepe`.
+Select **Create client** and enter the name, a username, a password with at least six characters, and a phone (international format). TrackPal adds your business prefix to the username, you cannot change your prefix. Give the client the full username shown after saving, for example `t1_pepe`.
 
 ## Manage access
 

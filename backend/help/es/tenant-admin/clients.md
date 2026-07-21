@@ -67,7 +67,7 @@ Con **TrackPal Pro** puedes crear una cuenta para cada persona que recibe tus se
 
 ## Añadir un cliente
 
-Pulsa **Crear cliente** y completa el nombre, un usuario local, una contraseña de al menos seis caracteres y, si lo tienes, el teléfono. TrackPal añadirá el prefijo de tu negocio al usuario. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.
+Pulsa **Crear cliente** y completa el nombre, un nombre de usuario, una contraseña de al menos seis caracteres y el teléfono (formato internacional). TrackPal añadirá el prefijo de tu negocio al usuario, no puedes cambiar tu prefijo. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.
 
 ## Gestionar su acceso
 
