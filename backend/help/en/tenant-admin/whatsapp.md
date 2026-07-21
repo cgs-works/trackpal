@@ -34,10 +34,19 @@ related_topics:
   - tenant-admin.profile
   - tenant-admin.language
 tour:
-  release_id: tenant-admin-tracer-1
-  order: 3
-  target: admin.settings.whatsapp
-  conditional: false
+  - release_id: tenant-admin-starter-1
+    order: 4
+    target: admin.settings.whatsapp
+    conditional: false
+    plans:
+      - starter
+    title: WhatsApp on Web
+    content: |
+      # WhatsApp on Web
+
+      Use Settings to review the business WhatsApp connection and understand the Starter console. The Web tour summarizes the plan-aware menu; it never controls the phone, starts pairing, refreshes a QR code, or disconnects an instance.
+
+      WhatsApp access-code lookup also depends on an enabled platform and a connected central mailbox. Choose **Learn more** for the full WhatsApp manual topic.
 ---
 
 # WhatsApp

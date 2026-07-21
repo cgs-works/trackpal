@@ -34,10 +34,19 @@ related_topics:
   - tenant-admin.profile
   - tenant-admin.language
 tour:
-  release_id: tenant-admin-tracer-1
-  order: 3
-  target: admin.settings.whatsapp
-  conditional: false
+  - release_id: tenant-admin-starter-1
+    order: 4
+    target: admin.settings.whatsapp
+    conditional: false
+    plans:
+      - starter
+    title: WhatsApp en Web
+    content: |
+      # WhatsApp en Web
+
+      Usa Configuración para revisar la conexión de WhatsApp del negocio y entender la consola Starter. El recorrido Web resume el menú según el plan; nunca controla el teléfono, inicia la vinculación, actualiza un código QR ni desconecta una instancia.
+
+      La búsqueda de códigos de acceso también depende de una plataforma habilitada y un buzón central conectado. Elige **Más información** para consultar el tema completo de WhatsApp.
 ---
 
 # WhatsApp

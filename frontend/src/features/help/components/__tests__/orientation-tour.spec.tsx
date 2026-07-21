@@ -2,7 +2,11 @@ import { createElement, type ComponentType } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { OrientationTour, requestHelpTourReplay } from "../orientation-tour";
+import {
+  OrientationTour,
+  requestHelpTourReplay,
+  waitForTourTarget,
+} from "../orientation-tour";
 import {
   acknowledgeHelpTour,
   getUnseenHelpTour,
@@ -12,6 +16,7 @@ import {
 
 const joyrideState = vi.hoisted(() => ({
   props: null as Record<string, unknown> | null,
+  navigate: vi.fn(),
 }));
 
 vi.mock("react-joyride", () => ({
@@ -44,7 +49,7 @@ vi.mock("react-joyride", () => ({
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => joyrideState.navigate,
 }));
 
 vi.mock("@/store/auth", () => ({
@@ -75,7 +80,7 @@ vi.mock("../../services/help-api", () => ({
 }));
 
 const release: HelpTourRelease = {
-  release_id: "tenant-admin-tracer-1",
+  release_id: "tenant-admin-starter-1",
   status: null,
   acknowledged_at: null,
   locale: "en",
@@ -101,6 +106,7 @@ describe("OrientationTour", () => {
     vi.clearAllMocks();
     vi.stubEnv("VITE_PRIVATE_HELP_ENABLED", "true");
     joyrideState.props = null;
+    joyrideState.navigate.mockReset();
     vi.mocked(getUnseenHelpTour).mockResolvedValue(release);
     vi.mocked(replayHelpTour).mockResolvedValue(release);
     vi.mocked(acknowledgeHelpTour).mockResolvedValue({
@@ -111,10 +117,17 @@ describe("OrientationTour", () => {
   });
 
   it("starts the unseen release with an anchored target and reduced-motion-safe scroll settings", async () => {
-    render(<OrientationTour />);
+    render(
+      <>
+        <div data-help-id="admin.dashboard" />
+        <OrientationTour />
+      </>,
+    );
 
     await waitFor(() => expect(getUnseenHelpTour).toHaveBeenCalled());
-    expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+    );
     expect(getUnseenHelpTour).toHaveBeenCalledOnce();
     expect(joyrideState.props?.options).toMatchObject({
       scrollDuration: 400,
@@ -128,14 +141,33 @@ describe("OrientationTour", () => {
 
   it("requires confirmation before skipping and keeps replay available", async () => {
     const user = userEvent.setup();
-    render(<OrientationTour />);
+    render(
+      <>
+        <div data-help-id="admin.dashboard" />
+        <OrientationTour />
+      </>,
+    );
 
     await waitFor(() => expect(getUnseenHelpTour).toHaveBeenCalled());
-    expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "frontend.help.tour_skip" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+    );
+    const skipButton = screen.getByRole("button", { name: "frontend.help.tour_skip" });
+    skipButton.focus();
+    await user.keyboard("{Enter}");
 
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     expect(acknowledgeHelpTour).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "frontend.help.tour_keep_going" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+    );
+    expect(acknowledgeHelpTour).not.toHaveBeenCalled();
+
+    const skipAgain = screen.getByRole("button", { name: "frontend.help.tour_skip" });
+    skipAgain.focus();
+    await user.keyboard("{Enter}");
 
     await user.click(screen.getByRole("button", { name: "frontend.help.tour_confirm_skip" }));
     await waitFor(() =>
@@ -147,5 +179,71 @@ describe("OrientationTour", () => {
 
     requestHelpTourReplay();
     await waitFor(() => expect(replayHelpTour).toHaveBeenCalledWith(release.release_id));
+  });
+
+  it("replaces tour motion when the user prefers reduced motion", async () => {
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    });
+
+    try {
+      render(
+        <>
+          <div data-help-id="admin.dashboard" />
+          <OrientationTour />
+        </>,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+      );
+      expect(joyrideState.props?.options).toMatchObject({ scrollDuration: 0 });
+      expect(screen.getByTestId("help-tour-popover")).toHaveAttribute(
+        "data-reduced-motion",
+        "true",
+      );
+    } finally {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: originalMatchMedia,
+      });
+    }
+  });
+
+  it("opens the matching manual topic without performing a product action", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <div data-help-id="admin.dashboard" />
+        <OrientationTour />
+      </>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "frontend.help.tour_learn_more" }));
+
+    expect(joyrideState.navigate).toHaveBeenCalledWith({
+      to: "/admin/help",
+      search: { topic: "tenant-admin.dashboard" },
+    });
+    expect(acknowledgeHelpTour).not.toHaveBeenCalled();
+  });
+
+  it("waits for a target and reports missing targets without guessing", async () => {
+    const target = waitForTourTarget("admin.settings.profile", 100);
+    window.setTimeout(() => {
+      const element = document.createElement("div");
+      element.dataset.helpId = "admin.settings.profile";
+      document.body.appendChild(element);
+    }, 10);
+
+    await expect(target).resolves.toBe(true);
+    await expect(waitForTourTarget("admin.missing", 1)).resolves.toBe(false);
   });
 });

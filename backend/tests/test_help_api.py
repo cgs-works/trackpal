@@ -46,6 +46,7 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.timezone",
         "tenant-admin.public-api",
         "tenant-admin.subscription-expirations",
+        "tenant-admin.help",
     ]
     assert index_response.json()["topics"][1]["help_targets"] == [
         "admin.settings.language"
@@ -77,6 +78,7 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.mailbox",
         "tenant-admin.access-control",
         "tenant-admin.activate-access-code-lookup",
+        "tenant-admin.help",
     ]
 
     tenant = (
@@ -278,7 +280,7 @@ async def test_help_topics_are_searchable_with_safe_cross_module_links(
         "route": "/admin/settings",
         "settings_category": "code-services",
     }
-    assert topic_response.json()["help_targets"] == ["admin.settings"]
+    assert topic_response.json()["help_targets"] == ["admin.settings.code-services"]
 
 
 async def test_help_search_returns_only_authorized_private_content(

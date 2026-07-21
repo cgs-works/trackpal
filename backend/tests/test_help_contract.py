@@ -22,6 +22,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "tenant-admin.activate-access-code-lookup",
         "tenant-admin.code-services",
         "tenant-admin.dashboard",
+        "tenant-admin.help",
         "tenant-admin.language",
         "tenant-admin.mailbox",
         "tenant-admin.password",
@@ -64,12 +65,27 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "settings_category": "code-services",
     }
     tracer = artifact["tour_releases"]["en"][0]
-    assert tracer["release_id"] == "tenant-admin-tracer-1"
+    assert tracer["release_id"] == "tenant-admin-starter-1"
     assert [step["target"] for step in tracer["steps"]] == [
         "admin.dashboard",
-        "admin.settings.language",
+        "admin.dashboard",
+        "admin.settings.profile",
         "admin.settings.whatsapp",
+        "admin.settings.code-services",
+        "admin.settings.access-control",
+        "admin.help",
     ]
+    assert tracer["plans"] == ["starter"]
+    tour_content = " ".join(step["content"] for step in tracer["steps"]).casefold()
+    for forbidden in (
+        "clients",
+        "catalog",
+        "subscriptions",
+        "reminder",
+        "timezone",
+        "public api",
+    ):
+        assert forbidden not in tour_content
 
 
 def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
@@ -300,7 +316,7 @@ def test_access_code_topics_expose_cross_channel_contracts_and_states() -> None:
         "admin.settings.access-control"
     ]
     assert topics["tenant-admin.activate-access-code-lookup"]["help_targets"] == [
-        "admin.settings"
+        "admin.settings.code-services"
     ]
     assert topics["tenant-admin.activate-access-code-lookup"]["safe_navigation"] == {
         "route": "/admin/settings",

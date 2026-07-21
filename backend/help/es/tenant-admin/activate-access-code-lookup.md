@@ -12,7 +12,7 @@ capabilities:
   - tenant_access_code_lookup
 route: /admin/settings
 help_targets:
-  - admin.settings
+  - admin.settings.code-services
 title: Activar la búsqueda de códigos de acceso
 summary: Conecta las dependencias en orden y ejecuta la primera búsqueda segura desde WhatsApp.
 search_tags:
@@ -34,6 +34,20 @@ related_topics:
   - tenant-admin.mailbox
   - tenant-admin.whatsapp
   - tenant-admin.access-control
+tour:
+  - release_id: tenant-admin-starter-1
+    order: 5
+    target: admin.settings.code-services
+    conditional: false
+    plans:
+      - starter
+    title: Plataformas y buzón
+    content: |
+      # Completa la ruta de códigos de acceso
+
+      Habilita al menos una plataforma disponible, conecta y prueba el buzón central y después usa el menú Starter de WhatsApp para solicitar una búsqueda de código. Son requisitos, no pasos de demostración: el recorrido no activa plataformas, conecta un buzón ni inicia una búsqueda.
+
+      Las listas vacías y los estados desconectados son estados iniciales válidos. Elige **Más información** para consultar el orden de dependencias y la recuperación segura.
 ---
 
 # Activar la búsqueda de códigos de acceso

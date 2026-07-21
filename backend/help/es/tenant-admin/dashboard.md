@@ -30,10 +30,32 @@ related_topics:
   - tenant-admin.language
   - tenant-admin.whatsapp
 tour:
-  release_id: tenant-admin-tracer-1
-  order: 1
-  target: admin.dashboard
-  conditional: false
+  - release_id: tenant-admin-starter-1
+    order: 1
+    target: admin.dashboard
+    conditional: false
+    plans:
+      - starter
+    title: Bienvenido a TrackPal
+    content: |
+      # Bienvenido a TrackPal
+
+      Esta orientación Starter es opcional y dura aproximadamente de 2 a 3 minutos. Explica dónde están las herramientas de tu plan actual y cómo se relacionan Web, WhatsApp, las plataformas habilitadas y el buzón central.
+
+      Continúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio de trabajo y puedes repetirlo desde Ayuda.
+  - release_id: tenant-admin-starter-1
+    order: 2
+    target: admin.dashboard
+    conditional: false
+    plans:
+      - starter
+    title: Dashboard y navegación
+    content: |
+      # Tu espacio Starter
+
+      El Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.
+
+      Estos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones.
 ---
 
 # Dashboard de la empresa

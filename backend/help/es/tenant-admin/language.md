@@ -30,11 +30,6 @@ related_topics:
   - tenant-admin.dashboard
   - tenant-admin.profile
   - tenant-admin.password
-tour:
-  release_id: tenant-admin-tracer-1
-  order: 2
-  target: admin.settings.language
-  conditional: false
 ---
 
 # Idioma

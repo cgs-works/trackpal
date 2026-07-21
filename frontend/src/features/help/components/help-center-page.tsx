@@ -165,6 +165,8 @@ function safeNavigationLabel(
             ? "frontend.subscriptions.title"
             : destination.to === "/admin/settings"
               ? "frontend.settings.section_title"
+              : destination.to === "/admin/help"
+                ? "frontend.help.title"
               : destination.to === "/client/profile"
                 ? "frontend.dashboard.client.profile"
                 : destination.to === "/client/help"
@@ -228,8 +230,10 @@ export function SafeNavigationLink({
 
 export function HelpCenterPage({
   audience = "tenant",
+  initialTopicId,
 }: {
   audience?: HelpAudience;
+  initialTopicId?: string;
 }) {
   const { isAuthenticated, role } = useAuthStore();
   const expectedRole = audience === "client" ? "client" : "tenant";
@@ -262,7 +266,9 @@ export function HelpCenterPage({
     try {
       const nextIndex = await getHelpIndex();
       setIndex(nextIndex);
-      const firstTopic = nextIndex.topics[0];
+      const firstTopic =
+        nextIndex.topics.find((candidate) => candidate.id === initialTopicId) ??
+        nextIndex.topics[0];
       if (firstTopic) {
         await loadTopic(firstTopic.id);
       }
@@ -271,7 +277,7 @@ export function HelpCenterPage({
     } finally {
       setLoading(false);
     }
-  }, [loadTopic]);
+  }, [initialTopicId, loadTopic]);
 
   useEffect(() => {
     if (isPrivateHelpEnabled() && isAuthenticated && role === expectedRole) {
@@ -332,7 +338,10 @@ export function HelpCenterPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 sm:p-6 lg:p-8">
+    <div
+      className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 sm:p-6 lg:p-8"
+      data-help-id={audience === "tenant" ? "admin.help" : undefined}
+    >
       <header className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">

@@ -49,6 +49,7 @@ ALLOWED_ROUTES = {
     "/admin/catalog",
     "/admin/subscriptions",
     "/admin/settings",
+    "/admin/help",
     "/client/dashboard",
     "/client/profile",
     "/client/help",
@@ -69,6 +70,7 @@ ALLOWED_HELP_TARGETS = {
     "admin.settings.access-control",
     "admin.settings.profile",
     "admin.settings.password",
+    "admin.help",
     "client.dashboard",
     "client.profile",
     "client.subscriptions",
@@ -213,7 +215,12 @@ class HelpCompiler:
             "safe_links": _safe_navigation_list(
                 frontmatter.get("safe_links", []), path
             ),
-            "tour": frontmatter.get("tour"),
+            "tour": _tour_entries(
+                frontmatter.get("tour"),
+                path,
+                targets=_string_list(frontmatter, "help_targets", path),
+                topic_plans=_string_list(frontmatter, "plans", path),
+            ),
             "body": body.strip(),
         }
 
@@ -289,34 +296,12 @@ class HelpCompiler:
         for value in _iter_strings(frontmatter):
             _reject_unsafe_content(value, path)
 
-        tour = frontmatter.get("tour")
-        if tour is None:
-            return
-        if not isinstance(tour, dict):
-            raise HelpValidationError(f"Invalid tour metadata in {path.name}")
-        unknown_tour_fields = set(tour) - {
-            "release_id",
-            "order",
-            "target",
-            "conditional",
-        }
-        if unknown_tour_fields:
-            raise HelpValidationError(f"Unknown tour fields in {path.name}")
-        release_id = tour.get("release_id")
-        order = tour.get("order")
-        target = tour.get("target")
-        conditional = tour.get("conditional", False)
-        if (
-            not isinstance(release_id, str)
-            or not TOUR_RELEASE_PATTERN.fullmatch(release_id)
-            or not isinstance(order, int)
-            or isinstance(order, bool)
-            or order < 1
-            or not isinstance(target, str)
-            or target not in targets
-            or not isinstance(conditional, bool)
-        ):
-            raise HelpValidationError(f"Incomplete tour metadata in {path.name}")
+        _tour_entries(
+            frontmatter.get("tour"),
+            path,
+            targets=targets,
+            topic_plans=plans,
+        )
 
     def _validate_metadata_parity(
         self, topics_by_locale: dict[str, list[dict[str, Any]]]
@@ -334,7 +319,9 @@ class HelpCompiler:
                 raise HelpValidationError(
                     f"Topic metadata parity mismatch for {topic_id}: safe_links"
                 )
-            if english_topic["tour"] != spanish_topic["tour"]:
+            if _tour_contract(english_topic["tour"]) != _tour_contract(
+                spanish_topic["tour"]
+            ):
                 raise HelpValidationError(
                     f"Topic metadata parity mismatch for {topic_id}: tour"
                 )
@@ -346,25 +333,23 @@ class HelpCompiler:
         for locale, topics in topics_by_locale.items():
             releases: dict[str, list[dict[str, Any]]] = {}
             for topic in topics:
-                tour = topic["tour"]
-                if tour is None:
-                    continue
-                releases.setdefault(tour["release_id"], []).append(
-                    {
-                        "topic_id": topic["id"],
-                        "title": topic["title"],
-                        "content": topic["body"],
-                        "summary": topic["summary"],
-                        "route": topic["route"],
-                        "settings_category": topic["safe_navigation"][
-                            "settings_category"
-                        ],
-                        "target": tour["target"],
-                        "conditional": tour.get("conditional", False),
-                        "order": tour["order"],
-                        "plans": topic["plans"],
-                    }
-                )
+                for tour in topic["tour"] or []:
+                    releases.setdefault(tour["release_id"], []).append(
+                        {
+                            "topic_id": topic["id"],
+                            "title": tour.get("title", topic["title"]),
+                            "content": tour.get("content", topic["body"]),
+                            "summary": topic["summary"],
+                            "route": topic["route"],
+                            "settings_category": topic["safe_navigation"][
+                                "settings_category"
+                            ],
+                            "target": tour["target"],
+                            "conditional": tour.get("conditional", False),
+                            "order": tour["order"],
+                            "plans": tour["plans"],
+                        }
+                    )
             releases_by_locale[locale] = []
             for release_id, steps in sorted(releases.items()):
                 steps.sort(key=lambda step: (step["order"], step["topic_id"]))
@@ -452,6 +437,87 @@ def _positive_int(frontmatter: dict[str, Any], field: str, path: Path) -> int:
             f"Frontmatter field {field} must be a positive integer in {path.name}"
         )
     return value
+
+
+def _tour_entries(
+    value: Any,
+    path: Path,
+    *,
+    targets: list[str] | None = None,
+    topic_plans: list[str] | None = None,
+) -> list[dict[str, Any]] | None:
+    if value is None:
+        return None
+    entries = [value] if isinstance(value, dict) else value
+    if not isinstance(entries, list) or not entries:
+        raise HelpValidationError(f"Invalid tour metadata in {path.name}")
+
+    validated: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise HelpValidationError(f"Invalid tour metadata in {path.name}")
+        unknown = set(entry) - {
+            "release_id",
+            "order",
+            "target",
+            "conditional",
+            "plans",
+            "title",
+            "content",
+        }
+        if unknown:
+            raise HelpValidationError(f"Unknown tour fields in {path.name}")
+
+        release_id = entry.get("release_id")
+        order = entry.get("order")
+        target = entry.get("target")
+        conditional = entry.get("conditional", False)
+        title = entry.get("title")
+        content = entry.get("content")
+        tour_plans = entry.get("plans", topic_plans)
+        if (
+            not isinstance(release_id, str)
+            or not TOUR_RELEASE_PATTERN.fullmatch(release_id)
+            or not isinstance(order, int)
+            or isinstance(order, bool)
+            or order < 1
+            or not isinstance(target, str)
+            or (targets is not None and target not in targets)
+            or not isinstance(conditional, bool)
+            or not isinstance(tour_plans, list)
+            or not tour_plans
+            or any(plan not in ALLOWED_PLANS for plan in tour_plans)
+            or (title is not None and (not isinstance(title, str) or not title.strip()))
+            or (
+                content is not None
+                and (not isinstance(content, str) or not content.strip())
+            )
+        ):
+            raise HelpValidationError(f"Incomplete tour metadata in {path.name}")
+        validated.append(
+            {
+                "release_id": release_id,
+                "order": order,
+                "target": target,
+                "conditional": conditional,
+                "plans": tour_plans,
+                **({"title": title} if title is not None else {}),
+                **({"content": content} if content is not None else {}),
+            }
+        )
+    return validated
+
+
+def _tour_contract(value: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
+    if value is None:
+        return None
+    return [
+        {
+            key: entry[key]
+            for key in ("release_id", "order", "target", "conditional", "plans")
+        }
+        for entry in value
+    ]
 
 
 def _safe_navigation(frontmatter: dict[str, Any], path: Path) -> dict[str, str | None]:

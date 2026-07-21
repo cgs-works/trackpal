@@ -18,31 +18,44 @@ async def _login(client, username: str, password: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
+async def _set_tenant_plan(db_session, user_id, plan: str) -> None:
+    tenant = (
+        await db_session.execute(select(Tenant).where(Tenant.owner_user_id == user_id))
+    ).scalar_one()
+    tenant.plan = plan
+    await db_session.commit()
+
+
 async def test_tenant_admin_receives_unseen_tracer_and_can_complete_idempotently(
     client, active_tenant_user, db_session
 ):
+    await _set_tenant_plan(db_session, active_tenant_user.id, "starter")
     headers = await _login(client, "tenant", "tenant-password")
 
     unseen = await client.get("/api/v1/help/tour", headers=headers)
 
     assert unseen.status_code == 200
     release = unseen.json()
-    assert release["release_id"] == "tenant-admin-tracer-1"
+    assert release["release_id"] == "tenant-admin-starter-1"
     assert release["status"] is None
     assert [step["target"] for step in release["steps"]] == [
         "admin.dashboard",
-        "admin.settings.language",
+        "admin.dashboard",
+        "admin.settings.profile",
         "admin.settings.whatsapp",
+        "admin.settings.code-services",
+        "admin.settings.access-control",
+        "admin.help",
     ]
     assert all(step["content"] for step in release["steps"])
 
     acknowledged = await client.post(
-        "/api/v1/help/tour/tenant-admin-tracer-1/acknowledge",
+        "/api/v1/help/tour/tenant-admin-starter-1/acknowledge",
         headers=headers,
         json={"status": "completed"},
     )
     repeated = await client.post(
-        "/api/v1/help/tour/tenant-admin-tracer-1/acknowledge",
+        "/api/v1/help/tour/tenant-admin-starter-1/acknowledge",
         headers=headers,
         json={"status": "completed"},
     )
@@ -55,7 +68,7 @@ async def test_tenant_admin_receives_unseen_tracer_and_can_complete_idempotently
 
     no_longer_unseen = await client.get("/api/v1/help/tour", headers=headers)
     replay = await client.get(
-        "/api/v1/help/tour/tenant-admin-tracer-1/replay", headers=headers
+        "/api/v1/help/tour/tenant-admin-starter-1/replay", headers=headers
     )
 
     assert no_longer_unseen.status_code == 404
@@ -66,7 +79,7 @@ async def test_tenant_admin_receives_unseen_tracer_and_can_complete_idempotently
         (
             await db_session.execute(
                 select(TenantHelpAcknowledgement).where(
-                    TenantHelpAcknowledgement.release_id == "tenant-admin-tracer-1"
+                    TenantHelpAcknowledgement.release_id == "tenant-admin-starter-1"
                 )
             )
         )
@@ -77,23 +90,38 @@ async def test_tenant_admin_receives_unseen_tracer_and_can_complete_idempotently
 
 
 async def test_skip_is_confirmed_by_the_client_and_replay_remains_available(
-    client, active_tenant_user
+    client, active_tenant_user, db_session
 ):
+    await _set_tenant_plan(db_session, active_tenant_user.id, "starter")
     headers = await _login(client, "tenant", "tenant-password")
 
     skipped = await client.post(
-        "/api/v1/help/tour/tenant-admin-tracer-1/acknowledge",
+        "/api/v1/help/tour/tenant-admin-starter-1/acknowledge",
         headers=headers,
         json={"status": "skipped"},
     )
     replay = await client.get(
-        "/api/v1/help/tour/tenant-admin-tracer-1/replay", headers=headers
+        "/api/v1/help/tour/tenant-admin-starter-1/replay", headers=headers
     )
 
     assert skipped.status_code == 200
     assert skipped.json()["status"] == "skipped"
     assert replay.status_code == 200
     assert replay.json()["status"] == "skipped"
+
+
+async def test_starter_release_is_not_eligible_for_pro_tenants(
+    client, active_tenant_user
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    unseen = await client.get("/api/v1/help/tour", headers=headers)
+    replay = await client.get(
+        "/api/v1/help/tour/tenant-admin-starter-1/replay", headers=headers
+    )
+
+    assert unseen.status_code == 404
+    assert replay.status_code == 404
 
 
 async def test_tour_is_private_to_tenant_admin_context(

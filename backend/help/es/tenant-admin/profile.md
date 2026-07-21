@@ -31,6 +31,20 @@ related_topics:
   - tenant-admin.dashboard
   - tenant-admin.language
   - tenant-admin.whatsapp
+tour:
+  - release_id: tenant-admin-starter-1
+    order: 3
+    target: admin.settings.profile
+    conditional: false
+    plans:
+      - starter
+    title: Configuración de la cuenta
+    content: |
+      # Configuración de la cuenta
+
+      Configuración reúne el mapa de tu cuenta. Idioma cambia el idioma del espacio de trabajo, Perfil contiene la identidad y el teléfono del negocio que se usa para preparar WhatsApp, y Contraseña cambia solo la contraseña del Tenant Admin que inició sesión.
+
+      Este paso abre el panel seguro de Perfil como un objetivo real. El recorrido nunca guarda un formulario, cambia una contraseña ni muestra valores sensibles.
 ---
 
 # Perfil

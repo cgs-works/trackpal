@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ACTIONS,
@@ -34,13 +41,41 @@ import { HELP_TARGET_CONTRACT_VERSION, isPrivateHelpEnabled } from "../config";
 import { SafeMarkdown } from "./safe-markdown";
 
 export const HELP_TOUR_REPLAY_EVENT = "trackpal:help-tour-replay";
+const TARGET_WAIT_TIMEOUT_MS = 2500;
 
 export function requestHelpTourReplay() {
   window.dispatchEvent(new Event(HELP_TOUR_REPLAY_EVENT));
 }
 
-type TourContextValue = { requestSkip: () => void };
+type TourContextValue = {
+  requestSkip: () => void;
+  requestLearnMore: (topicId: string) => void;
+};
 const TourContext = createContext<TourContextValue | null>(null);
+
+export function waitForTourTarget(
+  target: string,
+  timeoutMs = TARGET_WAIT_TIMEOUT_MS,
+): Promise<boolean> {
+  const selector = tourSelector(target);
+  if (document.querySelector(selector)) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const deadline = Date.now() + timeoutMs;
+    const check = () => {
+      if (document.querySelector(selector)) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() >= deadline) {
+        resolve(false);
+        return;
+      }
+      window.setTimeout(check, 25);
+    };
+    window.setTimeout(check, 0);
+  });
+}
 
 function TourTooltip(props: TooltipRenderProps) {
   const context = useContext(TourContext);
@@ -80,7 +115,13 @@ function TourTooltip(props: TooltipRenderProps) {
           : undefined
       }
       data-testid="help-tour-popover"
-      className="z-[1000] max-w-lg rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl"
+      data-tour-layout={isMobile ? "mobile-sheet" : "desktop-popover"}
+      data-reduced-motion={useReducedMotion() ? "true" : "false"}
+      className={
+        isMobile
+          ? "z-[1000] max-w-lg rounded-t-xl border bg-popover p-5 text-popover-foreground shadow-xl"
+          : "z-[1000] max-w-lg rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl"
+      }
       aria-labelledby="help-tour-title"
     >
       <div className="flex items-start justify-between gap-4">
@@ -114,6 +155,16 @@ function TourTooltip(props: TooltipRenderProps) {
           {t("frontend.help.tour_skip")}
         </Button>
         <div className="flex gap-2">
+          {typeof step.data?.topic_id === "string" && (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={() => context?.requestLearnMore(step.data.topic_id)}
+            >
+              {t("frontend.help.tour_learn_more")}
+            </Button>
+          )}
           {index > 0 && (
             <Button {...props.backProps} type="button" variant="outline" size="sm">
               {t("frontend.help.tour_back")}
@@ -158,6 +209,7 @@ export function OrientationTour() {
   const [tour, setTour] = useState<HelpTourRelease | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [running, setRunning] = useState(false);
+  const [targetReady, setTargetReady] = useState(false);
   const [skipConfirmationOpen, setSkipConfirmationOpen] = useState(false);
   const [acknowledging, setAcknowledging] = useState(false);
 
@@ -166,6 +218,13 @@ export function OrientationTour() {
     isAuthenticated &&
     role === "tenant" &&
     !isMasterSupportContext;
+
+  const stopTour = useCallback(() => {
+    setRunning(false);
+    setTargetReady(false);
+    setTour(null);
+    setStepIndex(0);
+  }, []);
 
   const loadTour = useCallback(
     async (loader: () => Promise<HelpTourRelease>) => {
@@ -179,6 +238,7 @@ export function OrientationTour() {
         }
         setTour(nextTour);
         setStepIndex(0);
+        setTargetReady(false);
         setRunning(true);
       } catch {
         // Help is optional and must not make the product unavailable.
@@ -189,12 +249,11 @@ export function OrientationTour() {
 
   useEffect(() => {
     if (!canRun) {
-      setTour(null);
-      setRunning(false);
+      stopTour();
       return;
     }
     void loadTour(getUnseenHelpTour);
-  }, [canRun, loadTour]);
+  }, [canRun, loadTour, stopTour]);
 
   useEffect(() => {
     if (!canRun) return;
@@ -213,21 +272,74 @@ export function OrientationTour() {
   useEffect(() => {
     if (!running || !tour) return;
     const step = tour.steps[stepIndex];
-    if (!step) return;
+    if (!step) {
+      stopTour();
+      return;
+    }
     const destination = resolveSafeHelpNavigation(
       { route: step.route, settings_category: step.settings_category },
       "tenant",
     );
     if (!destination) {
-      setRunning(false);
+      stopTour();
       return;
     }
-    if (destination.to === "/admin/settings") {
-      void navigate({ to: destination.to, search: destination.search });
-    } else {
-      void navigate({ to: destination.to });
+
+    let cancelled = false;
+    setTargetReady(false);
+    const prepareStep = async () => {
+      try {
+        if (destination.to === "/admin/settings") {
+          await navigate({ to: destination.to, search: destination.search });
+        } else {
+          await navigate({ to: destination.to });
+        }
+      } catch {
+        if (!cancelled) stopTour();
+        return;
+      }
+
+      const found = await waitForTourTarget(step.target);
+      if (cancelled) return;
+      if (found) {
+        setTargetReady(true);
+        return;
+      }
+      if (step.conditional && stepIndex < tour.steps.length - 1) {
+        setStepIndex((current) => current + 1);
+        return;
+      }
+      stopTour();
+    };
+
+    void prepareStep();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, running, stepIndex, stopTour, tour]);
+
+  const requestSkip = useCallback(() => {
+    setRunning(false);
+    setTargetReady(false);
+    setSkipConfirmationOpen(true);
+  }, []);
+
+  const requestLearnMore = useCallback(
+    (topicId: string) => {
+      setRunning(false);
+      setTargetReady(false);
+      void navigate({ to: "/admin/help", search: { topic: topicId } });
+    },
+    [navigate],
+  );
+
+  const keepTourGoing = useCallback(() => {
+    setSkipConfirmationOpen(false);
+    if (tour) {
+      setTargetReady(true);
+      setRunning(true);
     }
-  }, [navigate, running, stepIndex, tour]);
+  }, [tour]);
 
   const acknowledge = useCallback(
     async (status: "completed" | "skipped") => {
@@ -236,7 +348,9 @@ export function OrientationTour() {
       try {
         await acknowledgeHelpTour(tour.release_id, status);
         setRunning(false);
+        setTargetReady(false);
         setTour(null);
+        setSkipConfirmationOpen(false);
       } catch {
         toast.error(t("frontend.help.tour_acknowledge_error"));
       } finally {
@@ -250,20 +364,20 @@ export function OrientationTour() {
     (data) => {
       if (data.type === EVENTS.STEP_AFTER) {
         const nextIndex = data.action === ACTIONS.PREV ? data.index - 1 : data.index + 1;
+        setTargetReady(false);
         setStepIndex(Math.max(0, nextIndex));
       }
       if (data.type === EVENTS.ERROR) {
-        setRunning(false);
+        stopTour();
       }
       if (data.status === STATUS.FINISHED) {
         void acknowledge("completed");
       }
       if (data.status === STATUS.SKIPPED) {
-        setRunning(false);
-        setSkipConfirmationOpen(true);
+        requestSkip();
       }
     },
-    [acknowledge],
+    [acknowledge, requestSkip, stopTour],
   );
 
   const steps = useMemo<Step[]>(
@@ -272,6 +386,7 @@ export function OrientationTour() {
         target: tourSelector(step.target),
         title: step.title,
         content: step.content,
+        data: { topic_id: step.topic_id },
         disableBeacon: true,
       })) ?? [],
     [tour],
@@ -280,10 +395,10 @@ export function OrientationTour() {
   if (!canRun || !tour || steps.length === 0) return null;
 
   return (
-    <TourContext.Provider value={{ requestSkip: () => setSkipConfirmationOpen(true) }}>
+    <TourContext.Provider value={{ requestSkip, requestLearnMore }}>
       <Joyride
         continuous
-        run={running}
+        run={running && targetReady}
         steps={steps}
         stepIndex={stepIndex}
         onEvent={handleEvent}
@@ -299,6 +414,9 @@ export function OrientationTour() {
           scrollDuration: reducedMotion ? 0 : 400,
           zIndex: 1000,
         }}
+        styles={{
+          spotlight: reducedMotion ? { className: "transition-none" } : undefined,
+        }}
       />
       <AlertDialog
         open={skipConfirmationOpen}
@@ -312,7 +430,10 @@ export function OrientationTour() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={acknowledging}>
+            <AlertDialogCancel
+              disabled={acknowledging}
+              onClick={keepTourGoing}
+            >
               {t("frontend.help.tour_keep_going")}
             </AlertDialogCancel>
             <AlertDialogAction

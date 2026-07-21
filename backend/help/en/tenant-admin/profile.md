@@ -31,6 +31,20 @@ related_topics:
   - tenant-admin.dashboard
   - tenant-admin.language
   - tenant-admin.whatsapp
+tour:
+  - release_id: tenant-admin-starter-1
+    order: 3
+    target: admin.settings.profile
+    conditional: false
+    plans:
+      - starter
+    title: Account settings
+    content: |
+      # Account settings
+
+      Settings keeps your account map in one place. Language changes the workspace language, Profile holds the business identity and phone used for WhatsApp preparation, and Password changes only the signed-in Tenant Admin password.
+
+      This step opens the safe Profile panel as a real target. The tour never saves a form, changes a password, or reveals sensitive values.
 ---
 
 # Profile

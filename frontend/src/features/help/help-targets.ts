@@ -14,6 +14,7 @@ export const HELP_TARGETS = {
   accessControl: "admin.settings.access-control",
   profile: "admin.settings.profile",
   password: "admin.settings.password",
+  help: "admin.help",
   clientDashboard: "client.dashboard",
   clientProfile: "client.profile",
   clientSubscriptions: "client.subscriptions",

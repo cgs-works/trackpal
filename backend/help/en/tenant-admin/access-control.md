@@ -33,6 +33,18 @@ related_topics:
   - tenant-admin.whatsapp
   - tenant-admin.activate-access-code-lookup
   - tenant-admin.profile
+tour:
+  - release_id: tenant-admin-starter-1
+    order: 6
+    target: admin.settings.access-control
+    conditional: false
+    plans:
+      - starter
+    title: Access control
+    content: |
+      # Access control
+
+      Settings shows the identities blocked from the Tenant WhatsApp bot. An empty list is a valid state. The tour only highlights the first available action and explains the boundary; it never blocks, unblocks, searches, or opens a confirmation dialog.
 ---
 
 # WhatsApp access control

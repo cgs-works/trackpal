@@ -27,6 +27,15 @@ describe("resolveSafeHelpNavigation", () => {
     ).toBeNull();
   });
 
+  it("allows the authenticated Help Center destination", () => {
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/help",
+        settings_category: null,
+      }),
+    ).toEqual({ to: "/admin/help" });
+  });
+
   it("allows Pro module destinations without exposing mutation routes", () => {
     expect(
       resolveSafeHelpNavigation({

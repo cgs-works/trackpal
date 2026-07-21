@@ -10,6 +10,7 @@ export type SafeHelpDestination =
   | { to: "/admin/catalog" }
   | { to: "/admin/subscriptions" }
   | { to: "/admin/settings"; search?: { category?: SettingsCategoryId } }
+  | { to: "/admin/help"; search?: { topic?: string } }
   | { to: "/client/dashboard" }
   | { to: "/client/profile" }
   | { to: "/client/help" };
@@ -61,7 +62,11 @@ export function resolveSafeHelpNavigation(
       : {
           to: "/admin/settings",
           search: { category: navigation.settings_category },
-        };
+      };
+  }
+
+  if (navigation.route === "/admin/help" && navigation.settings_category === null) {
+    return { to: "/admin/help" };
   }
 
   return null;

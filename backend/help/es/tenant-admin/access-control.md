@@ -33,6 +33,18 @@ related_topics:
   - tenant-admin.whatsapp
   - tenant-admin.activate-access-code-lookup
   - tenant-admin.profile
+tour:
+  - release_id: tenant-admin-starter-1
+    order: 6
+    target: admin.settings.access-control
+    conditional: false
+    plans:
+      - starter
+    title: Control de acceso
+    content: |
+      # Control de acceso
+
+      Configuración muestra las identidades bloqueadas para el bot de WhatsApp del Tenant. Una lista vacía es un estado válido. El recorrido solo resalta la primera acción disponible y explica el límite; nunca bloquea, desbloquea, busca ni abre una confirmación.
 ---
 
 # Control de acceso de WhatsApp

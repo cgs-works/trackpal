@@ -34,7 +34,7 @@ The public Vite bundle contains the Help client and presentation components, but
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
 - Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
 - Tenant Admin orientation state uses `GET /api/v1/help/tour` for the first unseen eligible release, `GET /api/v1/help/tour/{release_id}/replay` for an explicit replay, and `POST /api/v1/help/tour/{release_id}/acknowledge` for a completed or confirmed skipped release. Acknowledgements are immutable and unique per Tenant and release.
-- The first internal tracer release is `tenant-admin-tracer-1`; its three steps are declared by the Dashboard, Language, and WhatsApp Markdown topics and target `data-help-id` contracts rather than translated labels or CSS selectors.
+- The Starter orientation release is `tenant-admin-starter-1`; its seven ordered steps are declared by the Dashboard, Profile, WhatsApp, access-code, access-control, and Help Markdown topics and target `data-help-id` contracts rather than translated labels or CSS selectors. Tour metadata may declare plan eligibility and localized copy separately from the manual body.
 - The common Tenant Admin release includes mirrored Dashboard, Language, Profile, Password, WhatsApp, Enabled code platforms, Central lookup mailbox, WhatsApp access control, and Activate access-code lookup topics for Starter and Pro.
 - The Pro extension includes mirrored Clients, Catalog, Client Subscriptions, reminder settings, timezone, first-Pro-Client, and subscription-expiration cross-module topics. Starter filtering is enforced before topic retrieval and search matching, so these topics do not appear in Starter Help.
 - Dashboard, Pro modules, and Settings use semantic targets such as `data-help-id="admin.dashboard"`, `data-help-id="admin.clients"`, `data-help-id="admin.catalog"`, `data-help-id="admin.subscriptions"`, `data-help-id="admin.settings.reminders"`, `data-help-id="admin.settings.timezone"`, and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
@@ -55,11 +55,11 @@ A topic frontmatter contract must identify at least:
 - Channels: Web, WhatsApp, or both
 - Module and capability IDs
 - Related route or Settings category
-- Stable `data-help-id` targets
+- Stable `data-help-id` targets, including `admin.help`
 - Explicit navigation order and one or more allow-listed safe navigation destinations
 - Search tags and maintained synonyms
 - Related topic IDs
-- Optional Tour Release, order, target, safe preparation action, and conditional-target rule
+- Optional Tour Release entries with order, target, plan eligibility, localized copy, safe preparation action, and conditional-target rule
 
 The compiler treats IDs and visibility metadata as product contracts. Prose remains human-authored Markdown.
 

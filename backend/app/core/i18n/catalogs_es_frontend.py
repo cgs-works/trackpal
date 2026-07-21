@@ -544,6 +544,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.tour_back": "Atrás",
     "frontend.help.tour_next": "Siguiente",
     "frontend.help.tour_done": "Listo",
+    "frontend.help.tour_learn_more": "Más información",
     "frontend.help.tour_skip_title": "¿Omitir este recorrido?",
     "frontend.help.tour_skip_description": "Guardaremos esta decisión para este espacio de trabajo. Puedes repetir el recorrido desde Ayuda cuando quieras.",
     "frontend.help.tour_keep_going": "Continuar",

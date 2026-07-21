@@ -12,7 +12,7 @@ capabilities:
   - tenant_access_code_lookup
 route: /admin/settings
 help_targets:
-  - admin.settings
+  - admin.settings.code-services
 title: Activate access-code lookup
 summary: Connect the dependencies in order, then run the first safe WhatsApp code search.
 search_tags:
@@ -34,6 +34,20 @@ related_topics:
   - tenant-admin.mailbox
   - tenant-admin.whatsapp
   - tenant-admin.access-control
+tour:
+  - release_id: tenant-admin-starter-1
+    order: 5
+    target: admin.settings.code-services
+    conditional: false
+    plans:
+      - starter
+    title: Enabled platforms and mailbox
+    content: |
+      # Complete the access-code path
+
+      Enable at least one available platform, connect and test the central mailbox, then use the Starter WhatsApp menu to request an access-code search. These are prerequisites, not demo steps: the tour does not toggle a platform, connect a mailbox, or start a search.
+
+      Empty lists and disconnected states are valid first states. Choose **Learn more** for the dependency order and safe recovery guidance.
 ---
 
 # Activate access-code lookup
