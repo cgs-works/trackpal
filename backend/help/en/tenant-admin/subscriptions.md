@@ -39,24 +39,41 @@ related_topics:
 
 # Client Subscriptions
 
-Subscriptions connect a Client to a Catalog service and plan. Open Subscriptions from the sidebar, or use the subscriptions action in a Client row to arrive with that client selected.
+A Subscription connects one Client to one Catalog service and plan. It records the streaming email, optional profile details, start and expiry dates, and a lifecycle status. Open Subscriptions from the sidebar, or use the subscription action in a Client row to arrive with that Client selected.
 
-## Channel, prerequisites, and actions
+## Channels, prerequisites, and list filters
 
-- **Web:** Filter the list by status, service, or client. Create a subscription, edit its fields, cancel it, renew it, reactivate a cancelled subscription, or open the credential reveal dialog when you have a valid reason.
-- **WhatsApp:** From the Pro main menu choose `4` Subscriptions. Filter the list, select a subscription, then use the actions shown for its status: edit, cancel, renew, or reactivate when available.
-- **Prerequisites:** The Tenant must be Pro. Create the required service and plan in Catalog and have an active Client before creating a subscription.
+- **Web:** The Pro Subscriptions page lists the Client, service, plan, streaming email, dates, and status. Filter by status, service, or Client; use the visible date and status values before choosing an action.
+- **WhatsApp:** From the Pro main menu choose `4` Subscriptions, then `1` View subscriptions. Choose Active, Expired, Cancelled, or All, select a row, and follow the displayed actions.
+- **Prerequisites:** The Tenant must be Pro. Creating requires an active Client plus an existing Catalog service and plan. Starter Tenant Admins cannot open or search this topic or module, although preserved Pro data is not deleted on downgrade.
+- **Expected result:** A successful create or update returns the subscription to the list with its current status and dates. A Help link only opens this explanation or the safe module route; it never submits a form.
 
-## States, confirmations, and sensitive data
+## Create and edit on Web
 
-Active, expired, and cancelled are distinct statuses. Cancelling changes the status and does not delete the subscription. Renewing or reactivating changes its dates after a confirmation. Create and lifecycle dialogs show a summary before the mutation; cancel with the visible Cancel action or `0` in WhatsApp.
+Choose New subscription and select the Client, service, and plan. Enter the required streaming email. A streaming password is optional; a profile name and profile PIN are also optional, but a PIN requires a profile name. Choose a duration such as 1, 3, 6, or 9 months, 1 year, or a custom expiry date, then review the start and expiry dates before saving.
 
-Streaming passwords and profile PINs are sensitive credentials. Reveal them only through the explicit Web action when necessary, do not paste them into Help or support, and remember that a Help link never reveals them. A duplicate active subscription may offer extending its expiry instead of creating another one.
+Edit changes the fields exposed by the form. In edit mode the Client, service, and plan identify the existing relationship; blank password or PIN fields keep the stored value. A changed email, password, profile, duration, or date is not applied until the form saves successfully. A duplicate active subscription for the same Client, service, and streaming email may be reported so you can extend the existing expiry instead of creating another record.
 
-## Empty, validation, and recovery states
+## WhatsApp creation, editing, and navigation
 
-An empty list means no subscriptions match the current filters, not that the Client or Catalog was deleted. A missing service, plan, or Client prevents creation. Invalid email, date, duration, selection, or confirmation keeps the existing subscription unchanged. If a load or mutation fails, retry after checking the visible error.
+From Subscriptions choose `2` Create subscription. Select the Client, service, and plan, enter the streaming email, optionally enter and confirm the streaming password, choose whether to add a profile name and PIN, select a duration, and enter a custom date when requested. The final creation summary shows the Client, service, plan, email, profile, duration, and dates; type `CONFIRM` or `CONFIRMAR` only after checking it.
+
+For an existing row, the actions are `1` Edit, `2` Cancel, `3` Renew, and `4` Reactivate when the status allows it. Edit can change Client, service, plan, streaming email, streaming password, profile name, or profile PIN. Password and PIN changes are requested twice for confirmation. Use `8` for Next when a page offers it, `9` to go back, and `0` to cancel. Invalid selections keep the flow on its current step; a session timeout does not create a partial subscription.
+
+## Statuses, durations, and lifecycle actions
+
+- **Active:** The subscription is currently usable and can be edited, cancelled, or renewed. A reminder job considers only active subscriptions.
+- **Expired:** The expiry date has passed according to the Tenant's local end-of-day automation. It can be renewed or reactivated from the available actions.
+- **Cancelled:** Cancellation changes the status and records the cancellation time; it does not immediately delete the row. It can be reactivated with a new duration and dates.
+
+Cancel requires a visible confirmation on Web or a `CONFIRM`/`CONFIRMAR` response in WhatsApp. Renew extends from the current expiry, while Reactivate starts the cancelled subscription again with a new duration or custom date. Both lifecycle actions show the proposed dates before confirmation. Automated expiration and later cleanup are explained in Manage subscription expirations.
+
+## Credentials, empty states, and recovery
+
+The streaming email is not the same as a Client login. Use Reveal credentials on Web only when there is a legitimate operational reason; the dialog can show the stored streaming password and profile PIN. The WhatsApp subscription detail may include the stored access information for the authenticated Tenant Admin. Help never activates Reveal, opens a credential dialog, copies a secret, or exposes a credential through a module link.
+
+An empty list can mean that no subscription matches the selected filters; it does not mean the Client or Catalog was deleted. A missing Client, service, or plan prevents creation. An invalid email, date, duration, selection, or confirmation leaves the existing record unchanged. If loading or a mutation fails, read the visible error and retry without sending credentials to support.
 
 ## Support boundary
 
-Support can help with a persistent subscription or lifecycle error using the visible status and identifiers. Never share streaming passwords, profile PINs, mailbox credentials, or revealed credentials.
+Support can investigate a persistent subscription or lifecycle error from the visible status, dates, and non-sensitive identifiers. Never share streaming passwords, profile PINs, Client passwords, mailbox credentials, access codes, or revealed credentials. Use the Reminder settings and Timezone topics for automated expiry notifications and local-date behavior.

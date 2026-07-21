@@ -42,6 +42,9 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.catalog",
         "tenant-admin.subscriptions",
         "tenant-admin.first-pro-client",
+        "tenant-admin.reminders",
+        "tenant-admin.timezone",
+        "tenant-admin.subscription-expirations",
     ]
     assert index_response.json()["topics"][1]["help_targets"] == [
         "admin.settings.language"
@@ -107,6 +110,12 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
     first_client_topic = await client.get(
         "/api/v1/help/topics/tenant-admin.first-pro-client", headers=headers
     )
+    reminders_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.reminders", headers=headers
+    )
+    expiration_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.subscription-expirations", headers=headers
+    )
 
     assert index_response.status_code == 200
     assert {topic["id"] for topic in index_response.json()["topics"]} >= {
@@ -130,6 +139,16 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
         "/admin/clients",
         "/admin/subscriptions",
     ]
+    assert reminders_topic.status_code == 200
+    assert reminders_topic.json()["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "reminders",
+    }
+    assert expiration_topic.status_code == 200
+    assert expiration_topic.json()["safe_links"] == [
+        {"route": "/admin/settings", "settings_category": "timezone"},
+        {"route": "/admin/settings", "settings_category": "reminders"},
+    ]
 
     tenant = (
         await db_session.execute(
@@ -146,14 +165,53 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
     starter_search = await client.get(
         "/api/v1/help/search", params={"q": "canonical login"}, headers=headers
     )
+    starter_reminders = await client.get(
+        "/api/v1/help/topics/tenant-admin.reminders", headers=headers
+    )
+    starter_timezone = await client.get(
+        "/api/v1/help/topics/tenant-admin.timezone", headers=headers
+    )
+    starter_expirations = await client.get(
+        "/api/v1/help/topics/tenant-admin.subscription-expirations", headers=headers
+    )
+    starter_expirations_search = await client.get(
+        "/api/v1/help/search", params={"q": "warning days"}, headers=headers
+    )
 
     assert starter_index.status_code == 200
     assert "tenant-admin.clients" not in {
         topic["id"] for topic in starter_index.json()["topics"]
     }
     assert starter_topic.status_code == 404
+    assert starter_reminders.status_code == 404
+    assert starter_timezone.status_code == 404
+    assert starter_expirations.status_code == 404
     assert starter_search.status_code == 200
     assert starter_search.json()["results"] == []
+    assert starter_expirations_search.status_code == 200
+    assert starter_expirations_search.json()["results"] == []
+
+
+async def test_subscription_help_search_exposes_lifecycle_and_reminder_terms(
+    client, active_tenant_user
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    lifecycle = await client.get(
+        "/api/v1/help/search", params={"q": "reactivar"}, headers=headers
+    )
+    reminders = await client.get(
+        "/api/v1/help/search", params={"q": "opt-in"}, headers=headers
+    )
+
+    assert lifecycle.status_code == 200
+    assert "tenant-admin.subscriptions" in {
+        result["id"] for result in lifecycle.json()["results"]
+    }
+    assert reminders.status_code == 200
+    assert [result["id"] for result in reminders.json()["results"]] == [
+        "tenant-admin.reminders",
+    ]
 
 
 async def test_help_topics_are_searchable_with_safe_cross_module_links(
@@ -215,6 +273,9 @@ async def test_help_search_uses_locale_synonyms_and_returns_no_results(
         "tenant-admin.clients",
         "tenant-admin.dashboard",
         "tenant-admin.first-pro-client",
+        "tenant-admin.subscription-expirations",
+        "tenant-admin.subscriptions",
+        "tenant-admin.timezone",
     ]
 
     tenant = (

@@ -161,7 +161,7 @@ class HelpCompiler:
         }
         return {
             "schema_version": 1,
-            "content_version": "help-pro-client-catalog-1",
+            "content_version": "help-pro-subscriptions-1",
             "frontend_target_contract_version": "2",
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,

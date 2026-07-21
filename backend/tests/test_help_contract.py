@@ -14,7 +14,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
     assert artifact["schema_version"] == 1
-    assert artifact["content_version"] == "help-pro-client-catalog-1"
+    assert artifact["content_version"] == "help-pro-subscriptions-1"
     assert artifact["frontend_target_contract_version"] == "2"
     assert set(artifact["locales"]) == {"en", "es"}
     expected_ids = [
@@ -30,7 +30,10 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "tenant-admin.catalog",
         "tenant-admin.clients",
         "tenant-admin.first-pro-client",
+        "tenant-admin.reminders",
+        "tenant-admin.subscription-expirations",
         "tenant-admin.subscriptions",
+        "tenant-admin.timezone",
     ]
     assert [topic["id"] for topic in artifact["topics"]["en"]] == sorted(expected_ids)
     assert [topic["id"] for topic in artifact["topics"]["es"]] == sorted(expected_ids)
@@ -114,6 +117,91 @@ def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
     whatsapp_body = topics["tenant-admin.whatsapp"]["body"].lower()
     for phrase in ("clients", "catalog", "subscriptions", "context shortcut"):
         assert phrase in whatsapp_body
+
+
+def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts() -> (
+    None
+):
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    subscriptions = topics["tenant-admin.subscriptions"]
+    assert subscriptions["channels"] == ["web", "whatsapp"]
+    assert subscriptions["safe_navigation"] == {
+        "route": "/admin/subscriptions",
+        "settings_category": None,
+    }
+    subscriptions_body = subscriptions["body"].lower()
+    for phrase in (
+        "filter",
+        "create",
+        "edit",
+        "reveal",
+        "cancel",
+        "renew",
+        "reactivate",
+        "active",
+        "expired",
+        "cancelled",
+        "duration",
+        "profile",
+        "credential",
+        "whatsapp",
+        "8",
+        "9",
+        "0",
+    ):
+        assert phrase in subscriptions_body
+
+    reminders = topics["tenant-admin.reminders"]
+    assert reminders["help_targets"] == ["admin.settings.reminders"]
+    assert reminders["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "reminders",
+    }
+    reminders_body = reminders["body"].lower()
+    for phrase in (
+        "opt-in",
+        "warning days",
+        "local time",
+        "recipients",
+        "custom message",
+        "automation",
+        "pro",
+    ):
+        assert phrase in reminders_body
+
+    timezone = topics["tenant-admin.timezone"]
+    assert timezone["help_targets"] == ["admin.settings.timezone"]
+    assert timezone["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "timezone",
+    }
+    timezone_body = timezone["body"].lower()
+    for phrase in ("iana", "local date", "reminder", "expiration", "pro"):
+        assert phrase in timezone_body
+
+    expiration = topics["tenant-admin.subscription-expirations"]
+    assert expiration["help_targets"] == []
+    assert expiration["safe_navigation"] == {
+        "route": "/admin/subscriptions",
+        "settings_category": None,
+    }
+    assert expiration["safe_links"] == [
+        {"route": "/admin/settings", "settings_category": "timezone"},
+        {"route": "/admin/settings", "settings_category": "reminders"},
+    ]
+    expiration_body = expiration["body"].lower()
+    for phrase in (
+        "timezone",
+        "reminder",
+        "expire",
+        "renew",
+        "reactivat",
+        "cancel",
+        "automation",
+    ):
+        assert phrase in expiration_body
 
 
 def test_access_code_topics_expose_cross_channel_contracts_and_states() -> None:

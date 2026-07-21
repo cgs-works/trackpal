@@ -149,5 +149,29 @@ describe("SettingsPage", () => {
 
       expect(screen.getByText("whatsapp link section")).toBeInTheDocument();
     });
+
+    it("exposes contextual targets for Pro reminder and timezone categories", async () => {
+      mockUseAuthStore.mockReturnValue({
+        role: "tenant",
+        tenantPlan: "pro",
+        isMasterSupportContext: false,
+      });
+
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await user.click(screen.getByText("frontend.subscriptions.reminder_settings_title"));
+      expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
+        "data-help-id",
+        "admin.settings.reminders",
+      );
+
+      await user.click(screen.getByRole("button", { name: "frontend.settings.cancel" }));
+      await user.click(screen.getByText("frontend.subscriptions.timezone"));
+      expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
+        "data-help-id",
+        "admin.settings.timezone",
+      );
+    });
   });
 });

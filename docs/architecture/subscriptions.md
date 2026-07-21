@@ -189,6 +189,10 @@ File: `frontend/src/features/admin/components/subscriptions-page.tsx`. Route: `/
 - Reminder settings panel: timezone read-only display (from `GET /api/v1/tenant-settings`, edits via `PUT /api/v1/tenant-settings`), warning days, reminder time, recipient mode, reminders_enabled toggle
 - Timezone edits are handled via `GET/PUT /api/v1/tenant-settings`, no longer owned by the reminder modal
 
+### Private Help
+
+The authenticated Tenant Admin Help artifact includes Pro topics for Subscriptions, Reminder settings, Tenant timezone, and the cross-module subscription-expiration guide in English and Spanish. These topics link only to `/admin/subscriptions` or safe Settings categories; they never submit mutations or reveal credentials. Starter filtering is enforced by the Help API before topic retrieval and search.
+
 ## Migration
 
 `backend/alembic/versions/`:

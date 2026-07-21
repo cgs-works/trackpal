@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "help-pro-client-catalog-1",
+  "content_version": "help-pro-subscriptions-1",
   "frontend_target_contract_version": "2",
   "locales": [
     "en",
@@ -542,6 +542,111 @@
         "body": "# Profile\n\nProfile stores the business identity and contact details that Tenant Admins use to configure TrackPal.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Profile editing is not available as a WhatsApp action.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings, then Profile.\n- **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.\n\n## Results and states\n\nA successful save shows a confirmation and the updated values remain in the form. Loading means TrackPal is retrieving the current profile. Validation errors identify a value that must be corrected. A failed save leaves the previous profile on the server and keeps the local form available for recovery.\n\n## Limits, consequences, and recovery\n\nProfile values identify the Tenant and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.\n\n## Support boundary\n\nSupport can help with validation or a profile save that fails repeatedly. Share the field name and error message only. Do not share password values, WhatsApp pairing codes, API keys, or mailbox credentials."
       },
       {
+        "id": "tenant-admin.reminders",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_subscriptions",
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.reminders"
+        ],
+        "title": "Subscription reminder settings",
+        "summary": "Opt in to expiry reminders and choose when, where, and how they are prepared.",
+        "search_tags": [
+          "reminders",
+          "subscription reminders",
+          "warning days",
+          "reminder time",
+          "recipients",
+          "custom message",
+          "expiring subscriptions"
+        ],
+        "synonyms": [
+          "expiry alerts",
+          "renewal notifications",
+          "expiration warnings"
+        ],
+        "related_topics": [
+          "tenant-admin.subscriptions",
+          "tenant-admin.timezone",
+          "tenant-admin.subscription-expirations"
+        ],
+        "order": 140,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "reminders"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Subscription reminder settings\n\nReminder settings control the optional WhatsApp notifications prepared for subscriptions that are approaching their expiry. The reminders are an opt-in feature: they remain off until a Pro Tenant Admin enables them. This is a Pro Tenant setting. It does not create, renew, cancel, or reactivate a subscription, and Help never saves the form for you.\n\n## Opt in and prerequisites\n\nOpen Settings, choose Subscription reminder settings, and turn on the reminders toggle when the Tenant is ready to use automated expiry notifications. Reminders are off by default. The Tenant must be Pro, the subscription must be active, and recipients need usable WhatsApp phone numbers. Starter Tenant Admins cannot see, retrieve, or search this topic; preserved subscription data is not changed by reminder automation while the Tenant is Starter.\n\nWhen reminders are disabled, no pending reminder payloads or reminder logs are generated for the Tenant. Saving the settings does not send a message immediately. The separate Subscriptions module remains the place for manual lifecycle actions.\n\n## Warning days and local time\n\nChoose one or more warning days before expiry. The default days are 7, 3, and 1; you can remove a default day or add another positive number. At least one warning day is required while reminders are enabled.\n\nSet the reminder time in the Tenant's local time. The time is a threshold: the backend can prepare that day's reminder once the local clock reaches the configured time. The timezone is shown here for reference and is edited in the separate Timezone category. Use the Timezone topic before changing this value if the business operates in another IANA timezone.\n\nA warning day is calculated from the Tenant-local calendar date, not by treating every day as a fixed UTC interval. The backend owns the local-time check, so the n8n transport schedule does not change the meaning of the configured time.\n\n## Recipients and custom messages\n\nChoose who should receive an eligible reminder:\n\n- **Tenant only:** send to the business WhatsApp phone.\n- **Client only:** send to the Client's WhatsApp phone.\n- **Both:** prepare one reminder for each available recipient.\n\nThe settings form also provides separate Tenant and Client custom-message fields. Keep the supported placeholders such as `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}`, and `{{expires_at}}` intact when editing them. The preview replaces sample values so you can check the wording before saving; do not put passwords, mailbox secrets, or access codes in a message.\n\nIf the selected recipient has no usable phone, that recipient is skipped. A failed save leaves the previous configuration in place. Correct the visible validation error for an empty warning-day list or invalid `HH:MM` time and save again.\n\n## Automation and recovery\n\nThe backend evaluates Pro tenants, active subscriptions, local warning days, local time, recipients, and duplicate protection. A separate n8n workflow polls approximately every 30 minutes, transports pending payloads to WhatsApp, and reports delivery success or failure. It does not decide the Tenant timezone or perform subscription lifecycle changes.\n\nA reminder can be pending, sent, or failed after retries. If no reminder appears, check the Pro plan, toggle, warning day, local time, Timezone setting, active status, expiry date, WhatsApp link, and recipient phone. Do not disconnect WhatsApp or reveal credentials as a first response. The expiration guide connects these checks with manual renewal, reactivation, cancellation, and automatic transitions.\n\n## Safe navigation and support boundary\n\nThe Help link opens Settings in the reminders category without saving, toggling, sending, or changing a setting. Support can inspect a persistent scheduling or delivery error using the visible status and approximate time. Never share a Client password, streaming password, profile PIN, mailbox credential, OAuth token, access code, or WhatsApp pairing secret."
+      },
+      {
+        "id": "tenant-admin.subscription-expirations",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "tenant_subscriptions",
+          "tenant_settings"
+        ],
+        "route": "/admin/subscriptions",
+        "help_targets": [],
+        "title": "Manage subscription expirations",
+        "summary": "Connect local dates, reminders, manual lifecycle actions, and automatic subscription transitions.",
+        "search_tags": [
+          "subscription expirations",
+          "expiration management",
+          "expiring subscriptions",
+          "renewal workflow",
+          "automatic expiration",
+          "warning days"
+        ],
+        "synonyms": [
+          "expiry management",
+          "renewal planning",
+          "subscription end dates"
+        ],
+        "related_topics": [
+          "tenant-admin.subscriptions",
+          "tenant-admin.reminders",
+          "tenant-admin.timezone"
+        ],
+        "order": 160,
+        "safe_navigation": {
+          "route": "/admin/subscriptions",
+          "settings_category": null
+        },
+        "safe_links": [
+          {
+            "route": "/admin/settings",
+            "settings_category": "timezone"
+          },
+          {
+            "route": "/admin/settings",
+            "settings_category": "reminders"
+          }
+        ],
+        "tour": null,
+        "body": "# Manage subscription expirations\n\nExpiration management joins three Pro surfaces: Subscriptions for manual action, Timezone for the Tenant-local calendar, and Subscription reminder settings for optional WhatsApp automation. The guide is informational. Its links open safe screens only; Help never creates, edits, cancels, renews, reactivates, reveals, or deletes a subscription.\n\n## Prepare the operational calendar\n\n1. Open Timezone and confirm the business IANA timezone. TrackPal uses it for local dates, reminder thresholds, and the end-of-day boundary used by cleanup.\n2. Open Subscription reminder settings and decide whether to opt in. If enabled, select warning days such as 7, 3, and 1, set the local reminder time, choose Tenant, Client, or Both recipients, and review custom-message placeholders.\n3. Open Subscriptions and check the Client, service, plan, status, start date, expiry date, and stored email. The Tenant must be Pro for subscription data and automation to be operational.\n\nThe timezone and reminder links are safe navigation: they select a Settings category but do not save a form or send a message. A Help link into Subscriptions does not open a credential reveal dialog.\n\n## Manual expiration response on Web or WhatsApp\n\nFor an active subscription that is approaching expiry, review the dates and choose Renew. Select a supported duration or custom date, read the proposed new expiry, and confirm. If the service relationship or credentials changed, use Edit separately and save only after checking the form summary.\n\nIf a subscription is Expired, renew or reactivate it according to the available action and the business decision. Reactivation starts it again with new dates; renewal extends from the current expiry. If access must stop before the expiry date, Cancel changes the status to Cancelled without immediately deleting the row. Cancel and lifecycle actions require the visible Web confirmation or `CONFIRM`/`CONFIRMAR` in WhatsApp.\n\nIn WhatsApp, use Pro menu `4`, choose the status filter, select the subscription, then use `1` Edit, `2` Cancel, `3` Renew, or `4` Reactivate when shown. Use `8` Next, `9` Back, and `0` Cancel according to the current prompt. Never paste a secret into a Help link or a confirmation message.\n\n## Automated transitions and reminders\n\nWhen reminders are enabled, the backend checks only active Pro subscriptions. It calculates days until expiry from the Tenant-local date, waits until the local reminder time, prepares one payload per eligible recipient, and deduplicates the same subscription, warning day, recipient, and local date. n8n polls about every 30 minutes only to transport pending payloads and report success or failure.\n\nCleanup is separate from reminder delivery. It uses the Tenant-local end of day when deciding whether an already-passed expiry should transition. When a cleanup run sees an eligible active subscription, it becomes Expired and an event is recorded. An Expired subscription that remains expired for at least 7 days is automatically moved to Cancelled. A Cancelled subscription older than 30 days is deleted by cleanup. These transitions are automation, not actions performed by Help or by an n8n reminder message.\n\nDisabling reminders stops new reminder payloads and logs, but it does not pause or delete subscriptions. Downgrading a Tenant to Starter preserves Pro rows and settings while subscription, reminder, and cleanup jobs ignore that Tenant. Upgrading back to Pro makes the preserved data available again subject to its current status and dates.\n\n## Expiry states and recovery\n\n- No reminder: check Pro access, the toggle, warning days, local time, timezone, active status, recipient phone, and WhatsApp readiness.\n- Unexpected date: confirm the IANA timezone and distinguish a stored expiry instant from its local calendar representation.\n- Expired but still needed: review the record and use Renew or Reactivate; do not create a duplicate without checking the existing Client, service, and email.\n- Cancelled by automation: confirm whether the seven-day expired transition was expected and whether the record is still within the supported manual recovery path.\n- Failed delivery: inspect the pending or failed status and visible error; do not repeatedly toggle settings or reveal credentials as a workaround.\n\n## Security and support boundary\n\nReveal credentials is a separate sensitive Web action and is never opened by this guide. Streaming passwords, profile PINs, Client passwords, mailbox credentials, access codes, API keys, and WhatsApp pairing secrets must not be included in Help searches or support requests. Support can use non-sensitive IDs, statuses, dates, plan, timezone, recipient mode, and approximate times to investigate a persistent issue."
+      },
+      {
         "id": "tenant-admin.subscriptions",
         "locale": "en",
         "audience": "tenant_admin",
@@ -589,7 +694,55 @@
         },
         "safe_links": [],
         "tour": null,
-        "body": "# Client Subscriptions\n\nSubscriptions connect a Client to a Catalog service and plan. Open Subscriptions from the sidebar, or use the subscriptions action in a Client row to arrive with that client selected.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Filter the list by status, service, or client. Create a subscription, edit its fields, cancel it, renew it, reactivate a cancelled subscription, or open the credential reveal dialog when you have a valid reason.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions. Filter the list, select a subscription, then use the actions shown for its status: edit, cancel, renew, or reactivate when available.\n- **Prerequisites:** The Tenant must be Pro. Create the required service and plan in Catalog and have an active Client before creating a subscription.\n\n## States, confirmations, and sensitive data\n\nActive, expired, and cancelled are distinct statuses. Cancelling changes the status and does not delete the subscription. Renewing or reactivating changes its dates after a confirmation. Create and lifecycle dialogs show a summary before the mutation; cancel with the visible Cancel action or `0` in WhatsApp.\n\nStreaming passwords and profile PINs are sensitive credentials. Reveal them only through the explicit Web action when necessary, do not paste them into Help or support, and remember that a Help link never reveals them. A duplicate active subscription may offer extending its expiry instead of creating another one.\n\n## Empty, validation, and recovery states\n\nAn empty list means no subscriptions match the current filters, not that the Client or Catalog was deleted. A missing service, plan, or Client prevents creation. Invalid email, date, duration, selection, or confirmation keeps the existing subscription unchanged. If a load or mutation fails, retry after checking the visible error.\n\n## Support boundary\n\nSupport can help with a persistent subscription or lifecycle error using the visible status and identifiers. Never share streaming passwords, profile PINs, mailbox credentials, or revealed credentials."
+        "body": "# Client Subscriptions\n\nA Subscription connects one Client to one Catalog service and plan. It records the streaming email, optional profile details, start and expiry dates, and a lifecycle status. Open Subscriptions from the sidebar, or use the subscription action in a Client row to arrive with that Client selected.\n\n## Channels, prerequisites, and list filters\n\n- **Web:** The Pro Subscriptions page lists the Client, service, plan, streaming email, dates, and status. Filter by status, service, or Client; use the visible date and status values before choosing an action.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions, then `1` View subscriptions. Choose Active, Expired, Cancelled, or All, select a row, and follow the displayed actions.\n- **Prerequisites:** The Tenant must be Pro. Creating requires an active Client plus an existing Catalog service and plan. Starter Tenant Admins cannot open or search this topic or module, although preserved Pro data is not deleted on downgrade.\n- **Expected result:** A successful create or update returns the subscription to the list with its current status and dates. A Help link only opens this explanation or the safe module route; it never submits a form.\n\n## Create and edit on Web\n\nChoose New subscription and select the Client, service, and plan. Enter the required streaming email. A streaming password is optional; a profile name and profile PIN are also optional, but a PIN requires a profile name. Choose a duration such as 1, 3, 6, or 9 months, 1 year, or a custom expiry date, then review the start and expiry dates before saving.\n\nEdit changes the fields exposed by the form. In edit mode the Client, service, and plan identify the existing relationship; blank password or PIN fields keep the stored value. A changed email, password, profile, duration, or date is not applied until the form saves successfully. A duplicate active subscription for the same Client, service, and streaming email may be reported so you can extend the existing expiry instead of creating another record.\n\n## WhatsApp creation, editing, and navigation\n\nFrom Subscriptions choose `2` Create subscription. Select the Client, service, and plan, enter the streaming email, optionally enter and confirm the streaming password, choose whether to add a profile name and PIN, select a duration, and enter a custom date when requested. The final creation summary shows the Client, service, plan, email, profile, duration, and dates; type `CONFIRM` or `CONFIRMAR` only after checking it.\n\nFor an existing row, the actions are `1` Edit, `2` Cancel, `3` Renew, and `4` Reactivate when the status allows it. Edit can change Client, service, plan, streaming email, streaming password, profile name, or profile PIN. Password and PIN changes are requested twice for confirmation. Use `8` for Next when a page offers it, `9` to go back, and `0` to cancel. Invalid selections keep the flow on its current step; a session timeout does not create a partial subscription.\n\n## Statuses, durations, and lifecycle actions\n\n- **Active:** The subscription is currently usable and can be edited, cancelled, or renewed. A reminder job considers only active subscriptions.\n- **Expired:** The expiry date has passed according to the Tenant's local end-of-day automation. It can be renewed or reactivated from the available actions.\n- **Cancelled:** Cancellation changes the status and records the cancellation time; it does not immediately delete the row. It can be reactivated with a new duration and dates.\n\nCancel requires a visible confirmation on Web or a `CONFIRM`/`CONFIRMAR` response in WhatsApp. Renew extends from the current expiry, while Reactivate starts the cancelled subscription again with a new duration or custom date. Both lifecycle actions show the proposed dates before confirmation. Automated expiration and later cleanup are explained in Manage subscription expirations.\n\n## Credentials, empty states, and recovery\n\nThe streaming email is not the same as a Client login. Use Reveal credentials on Web only when there is a legitimate operational reason; the dialog can show the stored streaming password and profile PIN. The WhatsApp subscription detail may include the stored access information for the authenticated Tenant Admin. Help never activates Reveal, opens a credential dialog, copies a secret, or exposes a credential through a module link.\n\nAn empty list can mean that no subscription matches the selected filters; it does not mean the Client or Catalog was deleted. A missing Client, service, or plan prevents creation. An invalid email, date, duration, selection, or confirmation leaves the existing record unchanged. If loading or a mutation fails, read the visible error and retry without sending credentials to support.\n\n## Support boundary\n\nSupport can investigate a persistent subscription or lifecycle error from the visible status, dates, and non-sensitive identifiers. Never share streaming passwords, profile PINs, Client passwords, mailbox credentials, access codes, or revealed credentials. Use the Reminder settings and Timezone topics for automated expiry notifications and local-date behavior."
+      },
+      {
+        "id": "tenant-admin.timezone",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings",
+          "tenant_subscriptions"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.timezone"
+        ],
+        "title": "Tenant timezone",
+        "summary": "Set the IANA timezone used for local subscription dates, reminders, and expiration automation.",
+        "search_tags": [
+          "timezone",
+          "time zone",
+          "IANA timezone",
+          "local time",
+          "local date",
+          "daylight saving"
+        ],
+        "synonyms": [
+          "business time zone",
+          "regional time",
+          "clock settings"
+        ],
+        "related_topics": [
+          "tenant-admin.reminders",
+          "tenant-admin.subscriptions",
+          "tenant-admin.subscription-expirations"
+        ],
+        "order": 150,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "timezone"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Tenant timezone\n\nThe Tenant timezone is a business setting, not a browser-only preference. TrackPal uses the selected IANA timezone to interpret local subscription dates and to schedule expiry reminders. It is available to Pro Tenant Admins; Starter Tenant Admins cannot see, retrieve, or search this topic. Master Support Context can inspect preserved Pro settings without changing the Tenant's plan.\n\n## Choose and save a timezone\n\nOpen Settings, choose Timezone, search the timezone picker by region or identifier, select the matching IANA value, and save. The default is `UTC`. The picker displays a human-readable label and its identifier so you can confirm the business location before saving. Locale and timezone are separate settings: changing one does not translate the other or change subscription data.\n\nSaving changes the Tenant-wide value used by future calculations. Help only opens the Timezone category; it does not select, save, or silently convert a value. If the list is loading, wait for it. If the save fails, the previous timezone remains in effect and the visible error can be retried.\n\n## What the timezone changes\n\n- Reminder warning days use the Tenant-local calendar date.\n- The reminder time is interpreted as local time and is checked by the backend before a pending reminder is created.\n- Subscription expiration cleanup uses the Tenant-local end of day before moving an active subscription to Expired.\n- WhatsApp subscription creation and reactivation use the Tenant timezone when preparing the start date and confirmation.\n- Dashboard and operational expiration information should be interpreted with the same Tenant-local calendar in mind.\n\nThe timezone does not create reminders, renew subscriptions, reactivate cancelled records, cancel a subscription, link WhatsApp, or reveal credentials. Use Subscriptions for manual actions and Reminder settings for opt-in and recipient choices.\n\n## States, boundaries, and recovery\n\nA missing or invalid value is handled defensively by backend services, but the supported picker values are valid IANA identifiers and should be preferred. Recheck the region after daylight-saving changes or when the business moves. A wrong timezone can make a warning day appear early or late without changing the stored expiry instant.\n\nThe setting applies to the active Tenant and should be confirmed after switching Tenant context. It does not change the Client's personal device clock, the mailbox provider's timestamps, or the absolute stored `starts_at` and `expires_at` instants. It changes how TrackPal evaluates those instants against the Tenant's local date.\n\n## Safe navigation and support boundary\n\nThe Help link opens Settings in the Timezone category without saving or opening a mutation dialog. Support can help verify the selected identifier and a visible scheduling or expiry error. Share the region, IANA value, and approximate time only; never share passwords, PINs, mailbox credentials, OAuth tokens, access codes, or WhatsApp pairing secrets."
       },
       {
         "id": "tenant-admin.whatsapp",
@@ -1175,6 +1328,111 @@
         "body": "# Perfil\n\nPerfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.\n- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.\n\n## Resultados y estados\n\nDespués de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.\n\n## Límites, consecuencias y recuperación\n\nLos valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.\n\n## Límite de soporte\n\nSoporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón."
       },
       {
+        "id": "tenant-admin.reminders",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_subscriptions",
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.reminders"
+        ],
+        "title": "Ajustes de recordatorios de suscripciones",
+        "summary": "Activa los recordatorios de vencimiento y elige cuándo, dónde y cómo se preparan.",
+        "search_tags": [
+          "recordatorios",
+          "recordatorios de suscripciones",
+          "días de aviso",
+          "hora del recordatorio",
+          "destinatarios",
+          "mensaje personalizado",
+          "suscripciones por vencer"
+        ],
+        "synonyms": [
+          "alertas de vencimiento",
+          "notificaciones de renovación",
+          "avisos de expiración"
+        ],
+        "related_topics": [
+          "tenant-admin.subscriptions",
+          "tenant-admin.timezone",
+          "tenant-admin.subscription-expirations"
+        ],
+        "order": 140,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "reminders"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Ajustes de recordatorios de suscripciones\n\nLos ajustes de recordatorios controlan las notificaciones opcionales de WhatsApp que se preparan cuando una suscripción se acerca a su vencimiento. Los recordatorios son una función opt-in: permanecen desactivados hasta que un Tenant Admin Pro los activa. Es un ajuste de Tenant Pro. No crea, renueva, cancela ni reactiva suscripciones y Help nunca guarda el formulario por ti.\n\n## Activación y requisitos\n\nAbre Ajustes, elige Ajustes de recordatorios de suscripciones y activa el interruptor cuando el Tenant esté listo para usar notificaciones automáticas de vencimiento. Los recordatorios están desactivados por defecto. El Tenant debe ser Pro, la suscripción debe estar activa y los destinatarios necesitan teléfonos de WhatsApp utilizables. Los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic; la automatización no cambia los datos de suscripciones conservados mientras el Tenant sea Starter.\n\nCuando los recordatorios están desactivados, no se generan payloads pendientes ni registros de recordatorio para el Tenant. Guardar los ajustes no envía un mensaje inmediatamente. El módulo Suscripciones sigue siendo el lugar para las acciones manuales de ciclo de vida.\n\n## Días de aviso y hora local\n\nElige uno o más días de aviso antes del vencimiento. Los días predeterminados son 7, 3 y 1; puedes quitar un día predeterminado o agregar otro número positivo. Mientras los recordatorios estén activos se necesita al menos un día de aviso.\n\nConfigura la hora del recordatorio en la hora local del Tenant. La hora es un umbral: el backend puede preparar el recordatorio de ese día cuando el reloj local alcance la hora configurada. La zona horaria se muestra aquí como referencia y se edita en la categoría separada Zona horaria. Consulta ese topic antes de cambiarla si el negocio opera en otra zona horaria IANA.\n\nEl día de aviso se calcula con la fecha del calendario local del Tenant, no tratando cada día como un intervalo UTC fijo. El backend controla la comprobación de hora local, por lo que el horario de transporte de n8n no cambia el significado de la hora configurada.\n\n## Destinatarios y mensajes personalizados\n\nElige quién recibe un recordatorio elegible:\n\n- **Solo Tenant:** se envía al teléfono de WhatsApp del negocio.\n- **Solo Cliente:** se envía al teléfono de WhatsApp del Cliente.\n- **Ambos:** prepara un recordatorio para cada destinatario disponible.\n\nEl formulario también ofrece campos separados de mensaje personalizado para Tenant y Cliente. Conserva los placeholders admitidos como `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}` y `{{expires_at}}` al editarlos. La vista previa reemplaza valores de ejemplo para comprobar el texto antes de guardar; no incluyas contraseñas, secretos del buzón ni códigos de acceso en un mensaje.\n\nSi el destinatario elegido no tiene un teléfono utilizable, ese destinatario se omite. Un guardado fallido deja la configuración anterior. Corrige el error visible de una lista de días vacía o una hora `HH:MM` inválida y vuelve a guardar.\n\n## Automatización y recuperación\n\nEl backend evalúa los Tenant Pro, las suscripciones activas, los días de aviso locales, la hora local, los destinatarios y la protección contra duplicados. Un workflow separado de n8n consulta aproximadamente cada 30 minutos, transporta los payloads pendientes a WhatsApp e informa si se entregaron o fallaron. No decide la zona horaria del Tenant ni ejecuta cambios de ciclo de vida.\n\nUn recordatorio puede quedar pendiente, enviado o fallar después de los reintentos. Si no aparece un recordatorio, revisa el plan Pro, el interruptor, el día de aviso, la hora local, Zona horaria, el estado activo, la fecha de vencimiento, el enlace de WhatsApp y el teléfono del destinatario. No desconectes WhatsApp ni reveles credenciales como primera respuesta. La guía de vencimientos conecta estas comprobaciones con la renovación manual, la reactivación, la cancelación y las transiciones automáticas.\n\n## Navegación segura y límite de soporte\n\nEl enlace de Help abre Ajustes en la categoría de recordatorios sin guardar, activar, enviar ni cambiar un ajuste. Soporte puede revisar un error persistente de programación o entrega con el estado visible y la hora aproximada. Nunca compartas contraseña de Cliente, contraseña de streaming, PIN de perfil, credenciales del buzón, token OAuth, código de acceso ni secreto de vinculación de WhatsApp."
+      },
+      {
+        "id": "tenant-admin.subscription-expirations",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "tenant_subscriptions",
+          "tenant_settings"
+        ],
+        "route": "/admin/subscriptions",
+        "help_targets": [],
+        "title": "Gestiona los vencimientos de suscripciones",
+        "summary": "Conecta fechas locales, recordatorios, acciones manuales de ciclo de vida y transiciones automáticas.",
+        "search_tags": [
+          "vencimientos de suscripciones",
+          "gestión de expiraciones",
+          "suscripciones por vencer",
+          "flujo de renovación",
+          "expiración automática",
+          "días de aviso"
+        ],
+        "synonyms": [
+          "gestión de vencimientos",
+          "planificación de renovaciones",
+          "fechas finales de suscripción"
+        ],
+        "related_topics": [
+          "tenant-admin.subscriptions",
+          "tenant-admin.reminders",
+          "tenant-admin.timezone"
+        ],
+        "order": 160,
+        "safe_navigation": {
+          "route": "/admin/subscriptions",
+          "settings_category": null
+        },
+        "safe_links": [
+          {
+            "route": "/admin/settings",
+            "settings_category": "timezone"
+          },
+          {
+            "route": "/admin/settings",
+            "settings_category": "reminders"
+          }
+        ],
+        "tour": null,
+        "body": "# Gestiona los vencimientos de suscripciones\n\nLa gestión de vencimientos une tres superficies Pro: Suscripciones para acciones manuales, Zona horaria para el calendario local del Tenant y Ajustes de recordatorios para la automatización opcional de WhatsApp. Esta guía es informativa. Sus enlaces solo abren pantallas seguras; Help nunca crea, edita, cancela, renueva, reactiva, revela ni elimina una suscripción.\n\n## Preparar el calendario operativo\n\n1. Abre Zona horaria y confirma la zona IANA del negocio. TrackPal la usa para fechas locales, umbrales de recordatorios y el límite de final de día de la limpieza.\n2. Abre Ajustes de recordatorios de suscripciones y decide si activarlos. Si los activas, elige días de aviso como 7, 3 y 1, define la hora local, selecciona destinatarios Tenant, Cliente o Ambos y revisa los placeholders del mensaje personalizado.\n3. Abre Suscripciones y revisa Cliente, servicio, plan, estado, fecha de inicio, fecha de vencimiento y email guardado. El Tenant debe ser Pro para que los datos y la automatización de suscripciones estén operativos.\n\nLos enlaces de zona horaria y recordatorios son navegación segura: seleccionan una categoría de Ajustes, pero no guardan un formulario ni envían un mensaje. Un enlace de Help a Suscripciones no abre un diálogo para revelar credenciales.\n\n## Respuesta manual al vencimiento en Web o WhatsApp\n\nPara una suscripción activa próxima a vencer, revisa las fechas y elige Renovar. Selecciona una duración disponible o una fecha personalizada, lee el nuevo vencimiento propuesto y confirma. Si cambió la relación del servicio o las credenciales, usa Editar por separado y guarda solo después de comprobar el resumen del formulario.\n\nSi una suscripción está Expirada, renuévala o reactívala según la acción disponible y la decisión del negocio. Reactivar la inicia de nuevo con nuevas fechas; renovar extiende desde el vencimiento actual. Si el acceso debe terminar antes, Cancelar cambia el estado a Cancelada sin borrar inmediatamente la fila. Cancelar y las acciones de ciclo de vida requieren la confirmación visible en Web o `CONFIRM`/`CONFIRMAR` en WhatsApp.\n\nEn WhatsApp usa el menú Pro `4`, elige el filtro de estado, selecciona la suscripción y usa `1` Editar, `2` Cancelar, `3` Renovar o `4` Reactivar cuando aparezca. Usa `8` Siguiente, `9` Regresar y `0` Cancelar según el mensaje actual. Nunca pegues un secreto en un enlace de Help ni en un mensaje de confirmación.\n\n## Transiciones y recordatorios automáticos\n\nCuando los recordatorios están activos, el backend solo comprueba suscripciones activas de Tenant Pro. Calcula los días hasta el vencimiento desde la fecha local del Tenant, espera hasta la hora local, prepara un payload por destinatario elegible y evita duplicados de la misma suscripción, día de aviso, destinatario y fecha local. n8n consulta aproximadamente cada 30 minutos solo para transportar payloads pendientes e informar éxito o fallo.\n\nLa limpieza es independiente del envío de recordatorios. Usa el final del día local del Tenant para decidir si un vencimiento ya pasado debe cambiar de estado. Cuando una ejecución de limpieza encuentra una suscripción activa elegible, la convierte en Expirada y registra un evento. Una suscripción Expirada que permanece así al menos 7 días pasa automáticamente a Cancelada. Una suscripción Cancelada con más de 30 días se elimina mediante la limpieza. Estas transiciones son automatización, no acciones que Help ni un mensaje de recordatorio de n8n ejecuten.\n\nDesactivar recordatorios detiene nuevos payloads y registros, pero no pausa ni elimina suscripciones. Degradar un Tenant a Starter conserva las filas y ajustes Pro mientras los trabajos de suscripciones, recordatorios y limpieza ignoran ese Tenant. Al volver a Pro, los datos conservados están disponibles otra vez según su estado y fechas actuales.\n\n## Estados de vencimiento y recuperación\n\n- Sin recordatorio: revisa acceso Pro, interruptor, días de aviso, hora local, zona horaria, estado activo, teléfono del destinatario y disponibilidad de WhatsApp.\n- Fecha inesperada: confirma la zona IANA y distingue el instante de vencimiento guardado de su representación en el calendario local.\n- Expirada pero necesaria: revisa el registro y usa Renovar o Reactivar; no crees un duplicado sin comprobar Cliente, servicio y email existentes.\n- Cancelada por automatización: confirma si se esperaba la transición después de siete días expirada y si aún existe una ruta de recuperación manual compatible.\n- Entrega fallida: revisa el estado pendiente o fallido y el error visible; no alternes repetidamente los ajustes ni reveles credenciales como solución.\n\n## Seguridad y límite de soporte\n\nRevelar credenciales es una acción sensible separada de Web y esta guía nunca la abre. No incluyas contraseñas de streaming, PIN de perfil, contraseñas de Clientes, credenciales del buzón, códigos de acceso, claves API ni secretos de vinculación de WhatsApp en búsquedas de Help o solicitudes de soporte. Soporte puede usar identificadores no sensibles, estados, fechas, plan, zona horaria, destinatarios y horas aproximadas para investigar un problema persistente."
+      },
+      {
         "id": "tenant-admin.subscriptions",
         "locale": "es",
         "audience": "tenant_admin",
@@ -1222,7 +1480,55 @@
         },
         "safe_links": [],
         "tour": null,
-        "body": "# Suscripciones de clientes\n\nLas suscripciones conectan a un Cliente con un servicio y plan del Catálogo. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese cliente seleccionado.\n\n## Canal, requisitos y acciones\n\n- **Web:** Filtra la lista por estado, servicio o cliente. Crea una suscripción, edita sus campos, cancélala, renuévala, reactiva una suscripción cancelada o abre el diálogo para revelar credenciales cuando exista una razón válida.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones. Filtra la lista, selecciona una suscripción y usa las acciones mostradas según su estado: editar, cancelar, renovar o reactivar cuando esté disponible.\n- **Requisitos:** El Tenant debe ser Pro. Crea el servicio y plan requeridos en Catálogo y ten un Cliente activo antes de crear una suscripción.\n\n## Estados, confirmaciones y datos sensibles\n\nActiva, expirada y cancelada son estados distintos. Cancelar cambia el estado y no elimina la suscripción. Renovar o reactivar cambia las fechas después de una confirmación. Los diálogos de creación y ciclo de vida muestran un resumen antes de modificar; cancela con el botón visible o con `0` en WhatsApp.\n\nLas contraseñas de streaming y los PIN de perfil son credenciales sensibles. Revélalos solo mediante la acción explícita de Web cuando sea necesario, no los pegues en Help ni en soporte y recuerda que un enlace de Help nunca los revela. Una suscripción activa duplicada puede ofrecer extender su vencimiento en lugar de crear otra.\n\n## Estados vacíos, validación y recuperación\n\nUna lista vacía significa que ninguna suscripción coincide con los filtros actuales, no que se haya eliminado el Cliente o el Catálogo. La falta de servicio, plan o Cliente impide crear. Un email, fecha, duración, selección o confirmación inválidos conserva la suscripción existente. Si falla la carga o una modificación, reintenta después de revisar el error visible.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de suscripción o ciclo de vida usando el estado e identificadores visibles. Nunca compartas contraseñas de streaming, PIN de perfil, credenciales del buzón ni credenciales reveladas."
+        "body": "# Suscripciones de clientes\n\nUna suscripción conecta a un Cliente con un servicio y plan del Catálogo. Guarda el email de streaming, los datos opcionales del perfil, las fechas de inicio y vencimiento y un estado de ciclo de vida. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese Cliente seleccionado.\n\n## Canales, requisitos y filtros de la lista\n\n- **Web:** La página Pro de Suscripciones muestra Cliente, servicio, plan, email de streaming, fechas y estado. Filtra por estado, servicio o Cliente y revisa las fechas y el estado visibles antes de elegir una acción.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones y luego `1` Ver suscripciones. Elige Activas, Expiradas, Canceladas o Todas, selecciona una fila y sigue las acciones mostradas.\n- **Requisitos:** El Tenant debe ser Pro. Para crear se necesita un Cliente activo y un servicio y plan existentes en Catálogo. Un Tenant Admin Starter no puede abrir ni buscar este topic o módulo; los datos Pro conservados no se eliminan al degradar.\n- **Resultado esperado:** Una creación o actualización exitosa devuelve la suscripción a la lista con su estado y fechas actuales. Un enlace de Help solo abre esta explicación o la ruta segura del módulo; nunca envía un formulario.\n\n## Crear y editar en Web\n\nElige Nueva suscripción y selecciona Cliente, servicio y plan. Escribe el email de streaming requerido. La contraseña de streaming es opcional; el nombre y PIN de perfil también, pero el PIN necesita un nombre de perfil. Elige una duración como 1, 3, 6 o 9 meses, 1 año o una fecha de vencimiento personalizada, y revisa las fechas de inicio y vencimiento antes de guardar.\n\nEditar permite cambiar los campos expuestos por el formulario. En modo edición, Cliente, servicio y plan identifican la relación existente; dejar vacíos los campos de contraseña o PIN conserva el valor guardado. Un email, contraseña, perfil, duración o fecha nuevos no se aplican hasta guardar correctamente. Una suscripción activa duplicada para el mismo Cliente, servicio y email de streaming puede avisarte para extender el vencimiento existente en vez de crear otro registro.\n\n## Creación, edición y navegación en WhatsApp\n\nDesde Suscripciones elige `2` Crear suscripción. Selecciona Cliente, servicio y plan, escribe el email de streaming, introduce y confirma opcionalmente la contraseña, elige si agregar nombre y PIN de perfil, selecciona una duración y escribe una fecha personalizada cuando se solicite. El resumen final muestra Cliente, servicio, plan, email, perfil, duración y fechas; escribe `CONFIRMAR` o `CONFIRM` solo después de revisarlo.\n\nPara una fila existente, las acciones son `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar cuando el estado lo permite. Editar puede cambiar Cliente, servicio, plan, email de streaming, contraseña de streaming, nombre de perfil o PIN de perfil. Los cambios de contraseña y PIN se solicitan dos veces para confirmarlos. Usa `8` para Siguiente cuando una página lo ofrezca, `9` para Regresar y `0` para Cancelar. Una selección inválida mantiene el flujo en su paso; una sesión expirada no crea una suscripción parcial.\n\n## Estados, duraciones y acciones de ciclo de vida\n\n- **Activa:** La suscripción está utilizable y puede editarse, cancelarse o renovarse. El trabajo de recordatorios solo considera suscripciones activas.\n- **Expirada:** La fecha de vencimiento pasó según el cierre de día local del Tenant y la automatización. Puede renovarse o reactivarse desde las acciones disponibles.\n- **Cancelada:** Cancelar cambia el estado y registra la hora de cancelación; no elimina inmediatamente la fila. Puede reactivarse con nueva duración y fechas.\n\nCancelar requiere una confirmación visible en Web o una respuesta `CONFIRM`/`CONFIRMAR` en WhatsApp. Renovar extiende desde el vencimiento actual, mientras Reactivar vuelve a iniciar la suscripción cancelada con una duración o fecha personalizada. Ambas acciones muestran las fechas propuestas antes de confirmar. La expiración automática y la limpieza posterior se explican en Gestiona los vencimientos de suscripciones.\n\n## Credenciales, estados vacíos y recuperación\n\nEl email de streaming no es el mismo que el inicio de sesión del Cliente. Usa Revelar credenciales en Web solo cuando exista una razón operativa legítima; el diálogo puede mostrar la contraseña de streaming y el PIN de perfil guardados. El detalle de suscripción en WhatsApp puede incluir la información de acceso guardada para el Tenant Admin autenticado. Help nunca activa Revelar, abre un diálogo de credenciales, copia un secreto ni expone una credencial mediante un enlace de módulo.\n\nUna lista vacía puede significar que ninguna suscripción coincide con los filtros elegidos; no significa que se eliminó el Cliente o Catálogo. La falta de Cliente, servicio o plan impide crear. Un email, fecha, duración, selección o confirmación inválidos dejan el registro sin cambios. Si falla la carga o una modificación, revisa el error visible y reintenta sin enviar credenciales a soporte.\n\n## Límite de soporte\n\nSoporte puede investigar un error persistente de suscripción o ciclo de vida con el estado, fechas e identificadores no sensibles visibles. Nunca compartas contraseñas de streaming, PIN de perfil, contraseñas de Clientes, credenciales del buzón, códigos de acceso ni credenciales reveladas. Usa los topics de Ajustes de recordatorios y Zona horaria para las notificaciones automáticas y las fechas locales."
+      },
+      {
+        "id": "tenant-admin.timezone",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings",
+          "tenant_subscriptions"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.timezone"
+        ],
+        "title": "Zona horaria del Tenant",
+        "summary": "Define la zona horaria IANA usada para fechas locales, recordatorios y automatización de vencimientos.",
+        "search_tags": [
+          "zona horaria",
+          "timezone",
+          "zona IANA",
+          "hora local",
+          "fecha local",
+          "horario de verano"
+        ],
+        "synonyms": [
+          "zona horaria del negocio",
+          "hora regional",
+          "ajustes del reloj"
+        ],
+        "related_topics": [
+          "tenant-admin.reminders",
+          "tenant-admin.subscriptions",
+          "tenant-admin.subscription-expirations"
+        ],
+        "order": 150,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "timezone"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Zona horaria del Tenant\n\nLa zona horaria del Tenant es un ajuste del negocio, no una preferencia exclusiva del navegador. TrackPal usa la zona IANA elegida para interpretar fechas locales de suscripciones y programar recordatorios de vencimiento. Está disponible para Tenant Admin Pro; los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic. El Master Support Context puede revisar ajustes Pro conservados sin cambiar el plan del Tenant.\n\n## Elegir y guardar una zona horaria\n\nAbre Ajustes, elige Zona horaria, busca en el selector por región o identificador, selecciona el valor IANA correspondiente y guarda. El valor predeterminado es `UTC`. El selector muestra una etiqueta legible y su identificador para confirmar la ubicación del negocio antes de guardar. Idioma y zona horaria son ajustes separados: cambiar uno no traduce el otro ni modifica los datos de suscripciones.\n\nGuardar cambia el valor global del Tenant usado por los cálculos futuros. Help solo abre la categoría Zona horaria; no selecciona, guarda ni convierte un valor silenciosamente. Si la lista está cargando, espera. Si guardar falla, la zona horaria anterior sigue vigente y el error visible se puede reintentar.\n\n## Qué cambia la zona horaria\n\n- Los días de aviso de recordatorios usan la fecha del calendario local del Tenant.\n- La hora del recordatorio se interpreta como hora local y el backend la comprueba antes de crear un recordatorio pendiente.\n- La limpieza de vencimientos usa el final del día local del Tenant antes de pasar una suscripción activa a Expirada.\n- La creación y reactivación de suscripciones en WhatsApp usan la zona horaria del Tenant al preparar el inicio y la confirmación.\n- El dashboard y la información operativa de vencimientos deben interpretarse con el mismo calendario local del Tenant.\n\nLa zona horaria no crea recordatorios, renueva suscripciones, reactiva registros cancelados, cancela una suscripción, conecta WhatsApp ni revela credenciales. Usa Suscripciones para acciones manuales y Ajustes de recordatorios para activación y destinatarios.\n\n## Estados, límites y recuperación\n\nLos servicios backend manejan defensivamente un valor ausente o inválido, pero se deben preferir los identificadores IANA válidos del selector. Comprueba la región después de cambios de horario de verano o cuando el negocio se mude. Una zona horaria incorrecta puede hacer que un día de aviso parezca temprano o tarde sin cambiar el instante de vencimiento guardado.\n\nEl ajuste aplica al Tenant activo y debe confirmarse después de cambiar de Tenant en soporte. No cambia el reloj personal del Cliente, las marcas de tiempo del proveedor de correo ni los instantes absolutos `starts_at` y `expires_at` guardados. Cambia cómo TrackPal evalúa esos instantes respecto a la fecha local del Tenant.\n\n## Navegación segura y límite de soporte\n\nEl enlace de Help abre Ajustes en la categoría Zona horaria sin guardar ni abrir un diálogo de modificación. Soporte puede ayudar a verificar el identificador elegido y un error visible de programación o vencimiento. Comparte solo la región, el valor IANA y la hora aproximada; nunca compartas contraseñas, PIN, credenciales del buzón, tokens OAuth, códigos de acceso ni secretos de vinculación de WhatsApp."
       },
       {
         "id": "tenant-admin.whatsapp",
@@ -1467,6 +1773,43 @@
         ]
       },
       {
+        "id": "tenant-admin.reminders",
+        "title": "Subscription reminder settings",
+        "terms": [
+          "Subscription reminder settings",
+          "Opt in to expiry reminders and choose when, where, and how they are prepared.",
+          "reminders",
+          "subscription reminders",
+          "warning days",
+          "reminder time",
+          "recipients",
+          "custom message",
+          "expiring subscriptions",
+          "expiry alerts",
+          "renewal notifications",
+          "expiration warnings",
+          "# Subscription reminder settings\n\nReminder settings control the optional WhatsApp notifications prepared for subscriptions that are approaching their expiry. The reminders are an opt-in feature: they remain off until a Pro Tenant Admin enables them. This is a Pro Tenant setting. It does not create, renew, cancel, or reactivate a subscription, and Help never saves the form for you.\n\n## Opt in and prerequisites\n\nOpen Settings, choose Subscription reminder settings, and turn on the reminders toggle when the Tenant is ready to use automated expiry notifications. Reminders are off by default. The Tenant must be Pro, the subscription must be active, and recipients need usable WhatsApp phone numbers. Starter Tenant Admins cannot see, retrieve, or search this topic; preserved subscription data is not changed by reminder automation while the Tenant is Starter.\n\nWhen reminders are disabled, no pending reminder payloads or reminder logs are generated for the Tenant. Saving the settings does not send a message immediately. The separate Subscriptions module remains the place for manual lifecycle actions.\n\n## Warning days and local time\n\nChoose one or more warning days before expiry. The default days are 7, 3, and 1; you can remove a default day or add another positive number. At least one warning day is required while reminders are enabled.\n\nSet the reminder time in the Tenant's local time. The time is a threshold: the backend can prepare that day's reminder once the local clock reaches the configured time. The timezone is shown here for reference and is edited in the separate Timezone category. Use the Timezone topic before changing this value if the business operates in another IANA timezone.\n\nA warning day is calculated from the Tenant-local calendar date, not by treating every day as a fixed UTC interval. The backend owns the local-time check, so the n8n transport schedule does not change the meaning of the configured time.\n\n## Recipients and custom messages\n\nChoose who should receive an eligible reminder:\n\n- **Tenant only:** send to the business WhatsApp phone.\n- **Client only:** send to the Client's WhatsApp phone.\n- **Both:** prepare one reminder for each available recipient.\n\nThe settings form also provides separate Tenant and Client custom-message fields. Keep the supported placeholders such as `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}`, and `{{expires_at}}` intact when editing them. The preview replaces sample values so you can check the wording before saving; do not put passwords, mailbox secrets, or access codes in a message.\n\nIf the selected recipient has no usable phone, that recipient is skipped. A failed save leaves the previous configuration in place. Correct the visible validation error for an empty warning-day list or invalid `HH:MM` time and save again.\n\n## Automation and recovery\n\nThe backend evaluates Pro tenants, active subscriptions, local warning days, local time, recipients, and duplicate protection. A separate n8n workflow polls approximately every 30 minutes, transports pending payloads to WhatsApp, and reports delivery success or failure. It does not decide the Tenant timezone or perform subscription lifecycle changes.\n\nA reminder can be pending, sent, or failed after retries. If no reminder appears, check the Pro plan, toggle, warning day, local time, Timezone setting, active status, expiry date, WhatsApp link, and recipient phone. Do not disconnect WhatsApp or reveal credentials as a first response. The expiration guide connects these checks with manual renewal, reactivation, cancellation, and automatic transitions.\n\n## Safe navigation and support boundary\n\nThe Help link opens Settings in the reminders category without saving, toggling, sending, or changing a setting. Support can inspect a persistent scheduling or delivery error using the visible status and approximate time. Never share a Client password, streaming password, profile PIN, mailbox credential, OAuth token, access code, or WhatsApp pairing secret."
+        ]
+      },
+      {
+        "id": "tenant-admin.subscription-expirations",
+        "title": "Manage subscription expirations",
+        "terms": [
+          "Manage subscription expirations",
+          "Connect local dates, reminders, manual lifecycle actions, and automatic subscription transitions.",
+          "subscription expirations",
+          "expiration management",
+          "expiring subscriptions",
+          "renewal workflow",
+          "automatic expiration",
+          "warning days",
+          "expiry management",
+          "renewal planning",
+          "subscription end dates",
+          "# Manage subscription expirations\n\nExpiration management joins three Pro surfaces: Subscriptions for manual action, Timezone for the Tenant-local calendar, and Subscription reminder settings for optional WhatsApp automation. The guide is informational. Its links open safe screens only; Help never creates, edits, cancels, renews, reactivates, reveals, or deletes a subscription.\n\n## Prepare the operational calendar\n\n1. Open Timezone and confirm the business IANA timezone. TrackPal uses it for local dates, reminder thresholds, and the end-of-day boundary used by cleanup.\n2. Open Subscription reminder settings and decide whether to opt in. If enabled, select warning days such as 7, 3, and 1, set the local reminder time, choose Tenant, Client, or Both recipients, and review custom-message placeholders.\n3. Open Subscriptions and check the Client, service, plan, status, start date, expiry date, and stored email. The Tenant must be Pro for subscription data and automation to be operational.\n\nThe timezone and reminder links are safe navigation: they select a Settings category but do not save a form or send a message. A Help link into Subscriptions does not open a credential reveal dialog.\n\n## Manual expiration response on Web or WhatsApp\n\nFor an active subscription that is approaching expiry, review the dates and choose Renew. Select a supported duration or custom date, read the proposed new expiry, and confirm. If the service relationship or credentials changed, use Edit separately and save only after checking the form summary.\n\nIf a subscription is Expired, renew or reactivate it according to the available action and the business decision. Reactivation starts it again with new dates; renewal extends from the current expiry. If access must stop before the expiry date, Cancel changes the status to Cancelled without immediately deleting the row. Cancel and lifecycle actions require the visible Web confirmation or `CONFIRM`/`CONFIRMAR` in WhatsApp.\n\nIn WhatsApp, use Pro menu `4`, choose the status filter, select the subscription, then use `1` Edit, `2` Cancel, `3` Renew, or `4` Reactivate when shown. Use `8` Next, `9` Back, and `0` Cancel according to the current prompt. Never paste a secret into a Help link or a confirmation message.\n\n## Automated transitions and reminders\n\nWhen reminders are enabled, the backend checks only active Pro subscriptions. It calculates days until expiry from the Tenant-local date, waits until the local reminder time, prepares one payload per eligible recipient, and deduplicates the same subscription, warning day, recipient, and local date. n8n polls about every 30 minutes only to transport pending payloads and report success or failure.\n\nCleanup is separate from reminder delivery. It uses the Tenant-local end of day when deciding whether an already-passed expiry should transition. When a cleanup run sees an eligible active subscription, it becomes Expired and an event is recorded. An Expired subscription that remains expired for at least 7 days is automatically moved to Cancelled. A Cancelled subscription older than 30 days is deleted by cleanup. These transitions are automation, not actions performed by Help or by an n8n reminder message.\n\nDisabling reminders stops new reminder payloads and logs, but it does not pause or delete subscriptions. Downgrading a Tenant to Starter preserves Pro rows and settings while subscription, reminder, and cleanup jobs ignore that Tenant. Upgrading back to Pro makes the preserved data available again subject to its current status and dates.\n\n## Expiry states and recovery\n\n- No reminder: check Pro access, the toggle, warning days, local time, timezone, active status, recipient phone, and WhatsApp readiness.\n- Unexpected date: confirm the IANA timezone and distinguish a stored expiry instant from its local calendar representation.\n- Expired but still needed: review the record and use Renew or Reactivate; do not create a duplicate without checking the existing Client, service, and email.\n- Cancelled by automation: confirm whether the seven-day expired transition was expected and whether the record is still within the supported manual recovery path.\n- Failed delivery: inspect the pending or failed status and visible error; do not repeatedly toggle settings or reveal credentials as a workaround.\n\n## Security and support boundary\n\nReveal credentials is a separate sensitive Web action and is never opened by this guide. Streaming passwords, profile PINs, Client passwords, mailbox credentials, access codes, API keys, and WhatsApp pairing secrets must not be included in Help searches or support requests. Support can use non-sensitive IDs, statuses, dates, plan, timezone, recipient mode, and approximate times to investigate a persistent issue."
+        ]
+      },
+      {
         "id": "tenant-admin.subscriptions",
         "title": "Client Subscriptions",
         "terms": [
@@ -1483,7 +1826,25 @@
           "memberships",
           "client plans",
           "service access",
-          "# Client Subscriptions\n\nSubscriptions connect a Client to a Catalog service and plan. Open Subscriptions from the sidebar, or use the subscriptions action in a Client row to arrive with that client selected.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Filter the list by status, service, or client. Create a subscription, edit its fields, cancel it, renew it, reactivate a cancelled subscription, or open the credential reveal dialog when you have a valid reason.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions. Filter the list, select a subscription, then use the actions shown for its status: edit, cancel, renew, or reactivate when available.\n- **Prerequisites:** The Tenant must be Pro. Create the required service and plan in Catalog and have an active Client before creating a subscription.\n\n## States, confirmations, and sensitive data\n\nActive, expired, and cancelled are distinct statuses. Cancelling changes the status and does not delete the subscription. Renewing or reactivating changes its dates after a confirmation. Create and lifecycle dialogs show a summary before the mutation; cancel with the visible Cancel action or `0` in WhatsApp.\n\nStreaming passwords and profile PINs are sensitive credentials. Reveal them only through the explicit Web action when necessary, do not paste them into Help or support, and remember that a Help link never reveals them. A duplicate active subscription may offer extending its expiry instead of creating another one.\n\n## Empty, validation, and recovery states\n\nAn empty list means no subscriptions match the current filters, not that the Client or Catalog was deleted. A missing service, plan, or Client prevents creation. Invalid email, date, duration, selection, or confirmation keeps the existing subscription unchanged. If a load or mutation fails, retry after checking the visible error.\n\n## Support boundary\n\nSupport can help with a persistent subscription or lifecycle error using the visible status and identifiers. Never share streaming passwords, profile PINs, mailbox credentials, or revealed credentials."
+          "# Client Subscriptions\n\nA Subscription connects one Client to one Catalog service and plan. It records the streaming email, optional profile details, start and expiry dates, and a lifecycle status. Open Subscriptions from the sidebar, or use the subscription action in a Client row to arrive with that Client selected.\n\n## Channels, prerequisites, and list filters\n\n- **Web:** The Pro Subscriptions page lists the Client, service, plan, streaming email, dates, and status. Filter by status, service, or Client; use the visible date and status values before choosing an action.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions, then `1` View subscriptions. Choose Active, Expired, Cancelled, or All, select a row, and follow the displayed actions.\n- **Prerequisites:** The Tenant must be Pro. Creating requires an active Client plus an existing Catalog service and plan. Starter Tenant Admins cannot open or search this topic or module, although preserved Pro data is not deleted on downgrade.\n- **Expected result:** A successful create or update returns the subscription to the list with its current status and dates. A Help link only opens this explanation or the safe module route; it never submits a form.\n\n## Create and edit on Web\n\nChoose New subscription and select the Client, service, and plan. Enter the required streaming email. A streaming password is optional; a profile name and profile PIN are also optional, but a PIN requires a profile name. Choose a duration such as 1, 3, 6, or 9 months, 1 year, or a custom expiry date, then review the start and expiry dates before saving.\n\nEdit changes the fields exposed by the form. In edit mode the Client, service, and plan identify the existing relationship; blank password or PIN fields keep the stored value. A changed email, password, profile, duration, or date is not applied until the form saves successfully. A duplicate active subscription for the same Client, service, and streaming email may be reported so you can extend the existing expiry instead of creating another record.\n\n## WhatsApp creation, editing, and navigation\n\nFrom Subscriptions choose `2` Create subscription. Select the Client, service, and plan, enter the streaming email, optionally enter and confirm the streaming password, choose whether to add a profile name and PIN, select a duration, and enter a custom date when requested. The final creation summary shows the Client, service, plan, email, profile, duration, and dates; type `CONFIRM` or `CONFIRMAR` only after checking it.\n\nFor an existing row, the actions are `1` Edit, `2` Cancel, `3` Renew, and `4` Reactivate when the status allows it. Edit can change Client, service, plan, streaming email, streaming password, profile name, or profile PIN. Password and PIN changes are requested twice for confirmation. Use `8` for Next when a page offers it, `9` to go back, and `0` to cancel. Invalid selections keep the flow on its current step; a session timeout does not create a partial subscription.\n\n## Statuses, durations, and lifecycle actions\n\n- **Active:** The subscription is currently usable and can be edited, cancelled, or renewed. A reminder job considers only active subscriptions.\n- **Expired:** The expiry date has passed according to the Tenant's local end-of-day automation. It can be renewed or reactivated from the available actions.\n- **Cancelled:** Cancellation changes the status and records the cancellation time; it does not immediately delete the row. It can be reactivated with a new duration and dates.\n\nCancel requires a visible confirmation on Web or a `CONFIRM`/`CONFIRMAR` response in WhatsApp. Renew extends from the current expiry, while Reactivate starts the cancelled subscription again with a new duration or custom date. Both lifecycle actions show the proposed dates before confirmation. Automated expiration and later cleanup are explained in Manage subscription expirations.\n\n## Credentials, empty states, and recovery\n\nThe streaming email is not the same as a Client login. Use Reveal credentials on Web only when there is a legitimate operational reason; the dialog can show the stored streaming password and profile PIN. The WhatsApp subscription detail may include the stored access information for the authenticated Tenant Admin. Help never activates Reveal, opens a credential dialog, copies a secret, or exposes a credential through a module link.\n\nAn empty list can mean that no subscription matches the selected filters; it does not mean the Client or Catalog was deleted. A missing Client, service, or plan prevents creation. An invalid email, date, duration, selection, or confirmation leaves the existing record unchanged. If loading or a mutation fails, read the visible error and retry without sending credentials to support.\n\n## Support boundary\n\nSupport can investigate a persistent subscription or lifecycle error from the visible status, dates, and non-sensitive identifiers. Never share streaming passwords, profile PINs, Client passwords, mailbox credentials, access codes, or revealed credentials. Use the Reminder settings and Timezone topics for automated expiry notifications and local-date behavior."
+        ]
+      },
+      {
+        "id": "tenant-admin.timezone",
+        "title": "Tenant timezone",
+        "terms": [
+          "Tenant timezone",
+          "Set the IANA timezone used for local subscription dates, reminders, and expiration automation.",
+          "timezone",
+          "time zone",
+          "IANA timezone",
+          "local time",
+          "local date",
+          "daylight saving",
+          "business time zone",
+          "regional time",
+          "clock settings",
+          "# Tenant timezone\n\nThe Tenant timezone is a business setting, not a browser-only preference. TrackPal uses the selected IANA timezone to interpret local subscription dates and to schedule expiry reminders. It is available to Pro Tenant Admins; Starter Tenant Admins cannot see, retrieve, or search this topic. Master Support Context can inspect preserved Pro settings without changing the Tenant's plan.\n\n## Choose and save a timezone\n\nOpen Settings, choose Timezone, search the timezone picker by region or identifier, select the matching IANA value, and save. The default is `UTC`. The picker displays a human-readable label and its identifier so you can confirm the business location before saving. Locale and timezone are separate settings: changing one does not translate the other or change subscription data.\n\nSaving changes the Tenant-wide value used by future calculations. Help only opens the Timezone category; it does not select, save, or silently convert a value. If the list is loading, wait for it. If the save fails, the previous timezone remains in effect and the visible error can be retried.\n\n## What the timezone changes\n\n- Reminder warning days use the Tenant-local calendar date.\n- The reminder time is interpreted as local time and is checked by the backend before a pending reminder is created.\n- Subscription expiration cleanup uses the Tenant-local end of day before moving an active subscription to Expired.\n- WhatsApp subscription creation and reactivation use the Tenant timezone when preparing the start date and confirmation.\n- Dashboard and operational expiration information should be interpreted with the same Tenant-local calendar in mind.\n\nThe timezone does not create reminders, renew subscriptions, reactivate cancelled records, cancel a subscription, link WhatsApp, or reveal credentials. Use Subscriptions for manual actions and Reminder settings for opt-in and recipient choices.\n\n## States, boundaries, and recovery\n\nA missing or invalid value is handled defensively by backend services, but the supported picker values are valid IANA identifiers and should be preferred. Recheck the region after daylight-saving changes or when the business moves. A wrong timezone can make a warning day appear early or late without changing the stored expiry instant.\n\nThe setting applies to the active Tenant and should be confirmed after switching Tenant context. It does not change the Client's personal device clock, the mailbox provider's timestamps, or the absolute stored `starts_at` and `expires_at` instants. It changes how TrackPal evaluates those instants against the Tenant's local date.\n\n## Safe navigation and support boundary\n\nThe Help link opens Settings in the Timezone category without saving or opening a mutation dialog. Support can help verify the selected identifier and a visible scheduling or expiry error. Share the region, IANA value, and approximate time only; never share passwords, PINs, mailbox credentials, OAuth tokens, access codes, or WhatsApp pairing secrets."
         ]
       },
       {
@@ -1696,6 +2057,43 @@
         ]
       },
       {
+        "id": "tenant-admin.reminders",
+        "title": "Ajustes de recordatorios de suscripciones",
+        "terms": [
+          "Ajustes de recordatorios de suscripciones",
+          "Activa los recordatorios de vencimiento y elige cuándo, dónde y cómo se preparan.",
+          "recordatorios",
+          "recordatorios de suscripciones",
+          "días de aviso",
+          "hora del recordatorio",
+          "destinatarios",
+          "mensaje personalizado",
+          "suscripciones por vencer",
+          "alertas de vencimiento",
+          "notificaciones de renovación",
+          "avisos de expiración",
+          "# Ajustes de recordatorios de suscripciones\n\nLos ajustes de recordatorios controlan las notificaciones opcionales de WhatsApp que se preparan cuando una suscripción se acerca a su vencimiento. Los recordatorios son una función opt-in: permanecen desactivados hasta que un Tenant Admin Pro los activa. Es un ajuste de Tenant Pro. No crea, renueva, cancela ni reactiva suscripciones y Help nunca guarda el formulario por ti.\n\n## Activación y requisitos\n\nAbre Ajustes, elige Ajustes de recordatorios de suscripciones y activa el interruptor cuando el Tenant esté listo para usar notificaciones automáticas de vencimiento. Los recordatorios están desactivados por defecto. El Tenant debe ser Pro, la suscripción debe estar activa y los destinatarios necesitan teléfonos de WhatsApp utilizables. Los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic; la automatización no cambia los datos de suscripciones conservados mientras el Tenant sea Starter.\n\nCuando los recordatorios están desactivados, no se generan payloads pendientes ni registros de recordatorio para el Tenant. Guardar los ajustes no envía un mensaje inmediatamente. El módulo Suscripciones sigue siendo el lugar para las acciones manuales de ciclo de vida.\n\n## Días de aviso y hora local\n\nElige uno o más días de aviso antes del vencimiento. Los días predeterminados son 7, 3 y 1; puedes quitar un día predeterminado o agregar otro número positivo. Mientras los recordatorios estén activos se necesita al menos un día de aviso.\n\nConfigura la hora del recordatorio en la hora local del Tenant. La hora es un umbral: el backend puede preparar el recordatorio de ese día cuando el reloj local alcance la hora configurada. La zona horaria se muestra aquí como referencia y se edita en la categoría separada Zona horaria. Consulta ese topic antes de cambiarla si el negocio opera en otra zona horaria IANA.\n\nEl día de aviso se calcula con la fecha del calendario local del Tenant, no tratando cada día como un intervalo UTC fijo. El backend controla la comprobación de hora local, por lo que el horario de transporte de n8n no cambia el significado de la hora configurada.\n\n## Destinatarios y mensajes personalizados\n\nElige quién recibe un recordatorio elegible:\n\n- **Solo Tenant:** se envía al teléfono de WhatsApp del negocio.\n- **Solo Cliente:** se envía al teléfono de WhatsApp del Cliente.\n- **Ambos:** prepara un recordatorio para cada destinatario disponible.\n\nEl formulario también ofrece campos separados de mensaje personalizado para Tenant y Cliente. Conserva los placeholders admitidos como `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}` y `{{expires_at}}` al editarlos. La vista previa reemplaza valores de ejemplo para comprobar el texto antes de guardar; no incluyas contraseñas, secretos del buzón ni códigos de acceso en un mensaje.\n\nSi el destinatario elegido no tiene un teléfono utilizable, ese destinatario se omite. Un guardado fallido deja la configuración anterior. Corrige el error visible de una lista de días vacía o una hora `HH:MM` inválida y vuelve a guardar.\n\n## Automatización y recuperación\n\nEl backend evalúa los Tenant Pro, las suscripciones activas, los días de aviso locales, la hora local, los destinatarios y la protección contra duplicados. Un workflow separado de n8n consulta aproximadamente cada 30 minutos, transporta los payloads pendientes a WhatsApp e informa si se entregaron o fallaron. No decide la zona horaria del Tenant ni ejecuta cambios de ciclo de vida.\n\nUn recordatorio puede quedar pendiente, enviado o fallar después de los reintentos. Si no aparece un recordatorio, revisa el plan Pro, el interruptor, el día de aviso, la hora local, Zona horaria, el estado activo, la fecha de vencimiento, el enlace de WhatsApp y el teléfono del destinatario. No desconectes WhatsApp ni reveles credenciales como primera respuesta. La guía de vencimientos conecta estas comprobaciones con la renovación manual, la reactivación, la cancelación y las transiciones automáticas.\n\n## Navegación segura y límite de soporte\n\nEl enlace de Help abre Ajustes en la categoría de recordatorios sin guardar, activar, enviar ni cambiar un ajuste. Soporte puede revisar un error persistente de programación o entrega con el estado visible y la hora aproximada. Nunca compartas contraseña de Cliente, contraseña de streaming, PIN de perfil, credenciales del buzón, token OAuth, código de acceso ni secreto de vinculación de WhatsApp."
+        ]
+      },
+      {
+        "id": "tenant-admin.subscription-expirations",
+        "title": "Gestiona los vencimientos de suscripciones",
+        "terms": [
+          "Gestiona los vencimientos de suscripciones",
+          "Conecta fechas locales, recordatorios, acciones manuales de ciclo de vida y transiciones automáticas.",
+          "vencimientos de suscripciones",
+          "gestión de expiraciones",
+          "suscripciones por vencer",
+          "flujo de renovación",
+          "expiración automática",
+          "días de aviso",
+          "gestión de vencimientos",
+          "planificación de renovaciones",
+          "fechas finales de suscripción",
+          "# Gestiona los vencimientos de suscripciones\n\nLa gestión de vencimientos une tres superficies Pro: Suscripciones para acciones manuales, Zona horaria para el calendario local del Tenant y Ajustes de recordatorios para la automatización opcional de WhatsApp. Esta guía es informativa. Sus enlaces solo abren pantallas seguras; Help nunca crea, edita, cancela, renueva, reactiva, revela ni elimina una suscripción.\n\n## Preparar el calendario operativo\n\n1. Abre Zona horaria y confirma la zona IANA del negocio. TrackPal la usa para fechas locales, umbrales de recordatorios y el límite de final de día de la limpieza.\n2. Abre Ajustes de recordatorios de suscripciones y decide si activarlos. Si los activas, elige días de aviso como 7, 3 y 1, define la hora local, selecciona destinatarios Tenant, Cliente o Ambos y revisa los placeholders del mensaje personalizado.\n3. Abre Suscripciones y revisa Cliente, servicio, plan, estado, fecha de inicio, fecha de vencimiento y email guardado. El Tenant debe ser Pro para que los datos y la automatización de suscripciones estén operativos.\n\nLos enlaces de zona horaria y recordatorios son navegación segura: seleccionan una categoría de Ajustes, pero no guardan un formulario ni envían un mensaje. Un enlace de Help a Suscripciones no abre un diálogo para revelar credenciales.\n\n## Respuesta manual al vencimiento en Web o WhatsApp\n\nPara una suscripción activa próxima a vencer, revisa las fechas y elige Renovar. Selecciona una duración disponible o una fecha personalizada, lee el nuevo vencimiento propuesto y confirma. Si cambió la relación del servicio o las credenciales, usa Editar por separado y guarda solo después de comprobar el resumen del formulario.\n\nSi una suscripción está Expirada, renuévala o reactívala según la acción disponible y la decisión del negocio. Reactivar la inicia de nuevo con nuevas fechas; renovar extiende desde el vencimiento actual. Si el acceso debe terminar antes, Cancelar cambia el estado a Cancelada sin borrar inmediatamente la fila. Cancelar y las acciones de ciclo de vida requieren la confirmación visible en Web o `CONFIRM`/`CONFIRMAR` en WhatsApp.\n\nEn WhatsApp usa el menú Pro `4`, elige el filtro de estado, selecciona la suscripción y usa `1` Editar, `2` Cancelar, `3` Renovar o `4` Reactivar cuando aparezca. Usa `8` Siguiente, `9` Regresar y `0` Cancelar según el mensaje actual. Nunca pegues un secreto en un enlace de Help ni en un mensaje de confirmación.\n\n## Transiciones y recordatorios automáticos\n\nCuando los recordatorios están activos, el backend solo comprueba suscripciones activas de Tenant Pro. Calcula los días hasta el vencimiento desde la fecha local del Tenant, espera hasta la hora local, prepara un payload por destinatario elegible y evita duplicados de la misma suscripción, día de aviso, destinatario y fecha local. n8n consulta aproximadamente cada 30 minutos solo para transportar payloads pendientes e informar éxito o fallo.\n\nLa limpieza es independiente del envío de recordatorios. Usa el final del día local del Tenant para decidir si un vencimiento ya pasado debe cambiar de estado. Cuando una ejecución de limpieza encuentra una suscripción activa elegible, la convierte en Expirada y registra un evento. Una suscripción Expirada que permanece así al menos 7 días pasa automáticamente a Cancelada. Una suscripción Cancelada con más de 30 días se elimina mediante la limpieza. Estas transiciones son automatización, no acciones que Help ni un mensaje de recordatorio de n8n ejecuten.\n\nDesactivar recordatorios detiene nuevos payloads y registros, pero no pausa ni elimina suscripciones. Degradar un Tenant a Starter conserva las filas y ajustes Pro mientras los trabajos de suscripciones, recordatorios y limpieza ignoran ese Tenant. Al volver a Pro, los datos conservados están disponibles otra vez según su estado y fechas actuales.\n\n## Estados de vencimiento y recuperación\n\n- Sin recordatorio: revisa acceso Pro, interruptor, días de aviso, hora local, zona horaria, estado activo, teléfono del destinatario y disponibilidad de WhatsApp.\n- Fecha inesperada: confirma la zona IANA y distingue el instante de vencimiento guardado de su representación en el calendario local.\n- Expirada pero necesaria: revisa el registro y usa Renovar o Reactivar; no crees un duplicado sin comprobar Cliente, servicio y email existentes.\n- Cancelada por automatización: confirma si se esperaba la transición después de siete días expirada y si aún existe una ruta de recuperación manual compatible.\n- Entrega fallida: revisa el estado pendiente o fallido y el error visible; no alternes repetidamente los ajustes ni reveles credenciales como solución.\n\n## Seguridad y límite de soporte\n\nRevelar credenciales es una acción sensible separada de Web y esta guía nunca la abre. No incluyas contraseñas de streaming, PIN de perfil, contraseñas de Clientes, credenciales del buzón, códigos de acceso, claves API ni secretos de vinculación de WhatsApp en búsquedas de Help o solicitudes de soporte. Soporte puede usar identificadores no sensibles, estados, fechas, plan, zona horaria, destinatarios y horas aproximadas para investigar un problema persistente."
+        ]
+      },
+      {
         "id": "tenant-admin.subscriptions",
         "title": "Suscripciones de clientes",
         "terms": [
@@ -1712,7 +2110,25 @@
           "membresías",
           "planes del cliente",
           "acceso al servicio",
-          "# Suscripciones de clientes\n\nLas suscripciones conectan a un Cliente con un servicio y plan del Catálogo. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese cliente seleccionado.\n\n## Canal, requisitos y acciones\n\n- **Web:** Filtra la lista por estado, servicio o cliente. Crea una suscripción, edita sus campos, cancélala, renuévala, reactiva una suscripción cancelada o abre el diálogo para revelar credenciales cuando exista una razón válida.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones. Filtra la lista, selecciona una suscripción y usa las acciones mostradas según su estado: editar, cancelar, renovar o reactivar cuando esté disponible.\n- **Requisitos:** El Tenant debe ser Pro. Crea el servicio y plan requeridos en Catálogo y ten un Cliente activo antes de crear una suscripción.\n\n## Estados, confirmaciones y datos sensibles\n\nActiva, expirada y cancelada son estados distintos. Cancelar cambia el estado y no elimina la suscripción. Renovar o reactivar cambia las fechas después de una confirmación. Los diálogos de creación y ciclo de vida muestran un resumen antes de modificar; cancela con el botón visible o con `0` en WhatsApp.\n\nLas contraseñas de streaming y los PIN de perfil son credenciales sensibles. Revélalos solo mediante la acción explícita de Web cuando sea necesario, no los pegues en Help ni en soporte y recuerda que un enlace de Help nunca los revela. Una suscripción activa duplicada puede ofrecer extender su vencimiento en lugar de crear otra.\n\n## Estados vacíos, validación y recuperación\n\nUna lista vacía significa que ninguna suscripción coincide con los filtros actuales, no que se haya eliminado el Cliente o el Catálogo. La falta de servicio, plan o Cliente impide crear. Un email, fecha, duración, selección o confirmación inválidos conserva la suscripción existente. Si falla la carga o una modificación, reintenta después de revisar el error visible.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de suscripción o ciclo de vida usando el estado e identificadores visibles. Nunca compartas contraseñas de streaming, PIN de perfil, credenciales del buzón ni credenciales reveladas."
+          "# Suscripciones de clientes\n\nUna suscripción conecta a un Cliente con un servicio y plan del Catálogo. Guarda el email de streaming, los datos opcionales del perfil, las fechas de inicio y vencimiento y un estado de ciclo de vida. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese Cliente seleccionado.\n\n## Canales, requisitos y filtros de la lista\n\n- **Web:** La página Pro de Suscripciones muestra Cliente, servicio, plan, email de streaming, fechas y estado. Filtra por estado, servicio o Cliente y revisa las fechas y el estado visibles antes de elegir una acción.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones y luego `1` Ver suscripciones. Elige Activas, Expiradas, Canceladas o Todas, selecciona una fila y sigue las acciones mostradas.\n- **Requisitos:** El Tenant debe ser Pro. Para crear se necesita un Cliente activo y un servicio y plan existentes en Catálogo. Un Tenant Admin Starter no puede abrir ni buscar este topic o módulo; los datos Pro conservados no se eliminan al degradar.\n- **Resultado esperado:** Una creación o actualización exitosa devuelve la suscripción a la lista con su estado y fechas actuales. Un enlace de Help solo abre esta explicación o la ruta segura del módulo; nunca envía un formulario.\n\n## Crear y editar en Web\n\nElige Nueva suscripción y selecciona Cliente, servicio y plan. Escribe el email de streaming requerido. La contraseña de streaming es opcional; el nombre y PIN de perfil también, pero el PIN necesita un nombre de perfil. Elige una duración como 1, 3, 6 o 9 meses, 1 año o una fecha de vencimiento personalizada, y revisa las fechas de inicio y vencimiento antes de guardar.\n\nEditar permite cambiar los campos expuestos por el formulario. En modo edición, Cliente, servicio y plan identifican la relación existente; dejar vacíos los campos de contraseña o PIN conserva el valor guardado. Un email, contraseña, perfil, duración o fecha nuevos no se aplican hasta guardar correctamente. Una suscripción activa duplicada para el mismo Cliente, servicio y email de streaming puede avisarte para extender el vencimiento existente en vez de crear otro registro.\n\n## Creación, edición y navegación en WhatsApp\n\nDesde Suscripciones elige `2` Crear suscripción. Selecciona Cliente, servicio y plan, escribe el email de streaming, introduce y confirma opcionalmente la contraseña, elige si agregar nombre y PIN de perfil, selecciona una duración y escribe una fecha personalizada cuando se solicite. El resumen final muestra Cliente, servicio, plan, email, perfil, duración y fechas; escribe `CONFIRMAR` o `CONFIRM` solo después de revisarlo.\n\nPara una fila existente, las acciones son `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar cuando el estado lo permite. Editar puede cambiar Cliente, servicio, plan, email de streaming, contraseña de streaming, nombre de perfil o PIN de perfil. Los cambios de contraseña y PIN se solicitan dos veces para confirmarlos. Usa `8` para Siguiente cuando una página lo ofrezca, `9` para Regresar y `0` para Cancelar. Una selección inválida mantiene el flujo en su paso; una sesión expirada no crea una suscripción parcial.\n\n## Estados, duraciones y acciones de ciclo de vida\n\n- **Activa:** La suscripción está utilizable y puede editarse, cancelarse o renovarse. El trabajo de recordatorios solo considera suscripciones activas.\n- **Expirada:** La fecha de vencimiento pasó según el cierre de día local del Tenant y la automatización. Puede renovarse o reactivarse desde las acciones disponibles.\n- **Cancelada:** Cancelar cambia el estado y registra la hora de cancelación; no elimina inmediatamente la fila. Puede reactivarse con nueva duración y fechas.\n\nCancelar requiere una confirmación visible en Web o una respuesta `CONFIRM`/`CONFIRMAR` en WhatsApp. Renovar extiende desde el vencimiento actual, mientras Reactivar vuelve a iniciar la suscripción cancelada con una duración o fecha personalizada. Ambas acciones muestran las fechas propuestas antes de confirmar. La expiración automática y la limpieza posterior se explican en Gestiona los vencimientos de suscripciones.\n\n## Credenciales, estados vacíos y recuperación\n\nEl email de streaming no es el mismo que el inicio de sesión del Cliente. Usa Revelar credenciales en Web solo cuando exista una razón operativa legítima; el diálogo puede mostrar la contraseña de streaming y el PIN de perfil guardados. El detalle de suscripción en WhatsApp puede incluir la información de acceso guardada para el Tenant Admin autenticado. Help nunca activa Revelar, abre un diálogo de credenciales, copia un secreto ni expone una credencial mediante un enlace de módulo.\n\nUna lista vacía puede significar que ninguna suscripción coincide con los filtros elegidos; no significa que se eliminó el Cliente o Catálogo. La falta de Cliente, servicio o plan impide crear. Un email, fecha, duración, selección o confirmación inválidos dejan el registro sin cambios. Si falla la carga o una modificación, revisa el error visible y reintenta sin enviar credenciales a soporte.\n\n## Límite de soporte\n\nSoporte puede investigar un error persistente de suscripción o ciclo de vida con el estado, fechas e identificadores no sensibles visibles. Nunca compartas contraseñas de streaming, PIN de perfil, contraseñas de Clientes, credenciales del buzón, códigos de acceso ni credenciales reveladas. Usa los topics de Ajustes de recordatorios y Zona horaria para las notificaciones automáticas y las fechas locales."
+        ]
+      },
+      {
+        "id": "tenant-admin.timezone",
+        "title": "Zona horaria del Tenant",
+        "terms": [
+          "Zona horaria del Tenant",
+          "Define la zona horaria IANA usada para fechas locales, recordatorios y automatización de vencimientos.",
+          "zona horaria",
+          "timezone",
+          "zona IANA",
+          "hora local",
+          "fecha local",
+          "horario de verano",
+          "zona horaria del negocio",
+          "hora regional",
+          "ajustes del reloj",
+          "# Zona horaria del Tenant\n\nLa zona horaria del Tenant es un ajuste del negocio, no una preferencia exclusiva del navegador. TrackPal usa la zona IANA elegida para interpretar fechas locales de suscripciones y programar recordatorios de vencimiento. Está disponible para Tenant Admin Pro; los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic. El Master Support Context puede revisar ajustes Pro conservados sin cambiar el plan del Tenant.\n\n## Elegir y guardar una zona horaria\n\nAbre Ajustes, elige Zona horaria, busca en el selector por región o identificador, selecciona el valor IANA correspondiente y guarda. El valor predeterminado es `UTC`. El selector muestra una etiqueta legible y su identificador para confirmar la ubicación del negocio antes de guardar. Idioma y zona horaria son ajustes separados: cambiar uno no traduce el otro ni modifica los datos de suscripciones.\n\nGuardar cambia el valor global del Tenant usado por los cálculos futuros. Help solo abre la categoría Zona horaria; no selecciona, guarda ni convierte un valor silenciosamente. Si la lista está cargando, espera. Si guardar falla, la zona horaria anterior sigue vigente y el error visible se puede reintentar.\n\n## Qué cambia la zona horaria\n\n- Los días de aviso de recordatorios usan la fecha del calendario local del Tenant.\n- La hora del recordatorio se interpreta como hora local y el backend la comprueba antes de crear un recordatorio pendiente.\n- La limpieza de vencimientos usa el final del día local del Tenant antes de pasar una suscripción activa a Expirada.\n- La creación y reactivación de suscripciones en WhatsApp usan la zona horaria del Tenant al preparar el inicio y la confirmación.\n- El dashboard y la información operativa de vencimientos deben interpretarse con el mismo calendario local del Tenant.\n\nLa zona horaria no crea recordatorios, renueva suscripciones, reactiva registros cancelados, cancela una suscripción, conecta WhatsApp ni revela credenciales. Usa Suscripciones para acciones manuales y Ajustes de recordatorios para activación y destinatarios.\n\n## Estados, límites y recuperación\n\nLos servicios backend manejan defensivamente un valor ausente o inválido, pero se deben preferir los identificadores IANA válidos del selector. Comprueba la región después de cambios de horario de verano o cuando el negocio se mude. Una zona horaria incorrecta puede hacer que un día de aviso parezca temprano o tarde sin cambiar el instante de vencimiento guardado.\n\nEl ajuste aplica al Tenant activo y debe confirmarse después de cambiar de Tenant en soporte. No cambia el reloj personal del Cliente, las marcas de tiempo del proveedor de correo ni los instantes absolutos `starts_at` y `expires_at` guardados. Cambia cómo TrackPal evalúa esos instantes respecto a la fecha local del Tenant.\n\n## Navegación segura y límite de soporte\n\nEl enlace de Help abre Ajustes en la categoría Zona horaria sin guardar ni abrir un diálogo de modificación. Soporte puede ayudar a verificar el identificador elegido y un error visible de programación o vencimiento. Comparte solo la región, el valor IANA y la hora aproximada; nunca compartas contraseñas, PIN, credenciales del buzón, tokens OAuth, códigos de acceso ni secretos de vinculación de WhatsApp."
         ]
       },
       {
