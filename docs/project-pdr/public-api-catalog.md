@@ -25,6 +25,9 @@ Public API Catalog is an implemented Pro-only feature tracked by GitHub Issue #7
 - Public API Key management lives in the tenant Settings page as a Pro-only section.
 - Master Support Context may see the section to troubleshoot tenant integrations.
 - UI copy should use the backend-sourced frontend i18n catalog.
+- Settings provides a localized developer handoff package with maintained HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js examples.
+- The handoff package uses `YOUR_PUBLIC_API_KEY` as a placeholder and must never include the Tenant's real key automatically; the real key is shared separately through a secure channel.
+
 
 ## Related Decision
 

@@ -44,6 +44,7 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.first-pro-client",
         "tenant-admin.reminders",
         "tenant-admin.timezone",
+        "tenant-admin.public-api",
         "tenant-admin.subscription-expirations",
     ]
     assert index_response.json()["topics"][1]["help_targets"] == [
@@ -190,6 +191,47 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
     assert starter_search.json()["results"] == []
     assert starter_expirations_search.status_code == 200
     assert starter_expirations_search.json()["results"] == []
+
+
+async def test_public_api_help_is_searchable_and_pro_only(
+    client, active_tenant_user, db_session
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.public-api", headers=headers
+    )
+    search = await client.get(
+        "/api/v1/help/search", params={"q": "desarrollador"}, headers=headers
+    )
+
+    assert topic.status_code == 200
+    assert topic.json()["help_targets"] == ["admin.settings.public-api"]
+    assert topic.json()["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "public-api",
+    }
+    assert [result["id"] for result in search.json()["results"]] == [
+        "tenant-admin.public-api",
+    ]
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    tenant.plan = "starter"
+    await db_session.commit()
+
+    starter_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.public-api", headers=headers
+    )
+    starter_search = await client.get(
+        "/api/v1/help/search", params={"q": "desarrollador"}, headers=headers
+    )
+
+    assert starter_topic.status_code == 404
+    assert starter_search.json()["results"] == []
 
 
 async def test_subscription_help_search_exposes_lifecycle_and_reminder_terms(

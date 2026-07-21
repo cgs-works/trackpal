@@ -14,7 +14,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
     assert artifact["schema_version"] == 1
-    assert artifact["content_version"] == "help-pro-subscriptions-1"
+    assert artifact["content_version"] == "help-public-api-handoff-1"
     assert artifact["frontend_target_contract_version"] == "2"
     assert set(artifact["locales"]) == {"en", "es"}
     expected_ids = [
@@ -30,6 +30,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "tenant-admin.catalog",
         "tenant-admin.clients",
         "tenant-admin.first-pro-client",
+        "tenant-admin.public-api",
         "tenant-admin.reminders",
         "tenant-admin.subscription-expirations",
         "tenant-admin.subscriptions",
@@ -117,6 +118,35 @@ def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
     whatsapp_body = topics["tenant-admin.whatsapp"]["body"].lower()
     for phrase in ("clients", "catalog", "subscriptions", "context shortcut"):
         assert phrase in whatsapp_body
+
+
+def test_public_api_topic_covers_safe_browser_publication_contract() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topic = next(
+        topic
+        for topic in artifact["topics"]["en"]
+        if topic["id"] == "tenant-admin.public-api"
+    )
+
+    assert topic["plans"] == ["pro"]
+    assert topic["channels"] == ["web"]
+    assert topic["help_targets"] == ["admin.settings.public-api"]
+    assert topic["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "public-api",
+    }
+    body = topic["body"].lower()
+    for phrase in (
+        "allowed origin",
+        "exact",
+        "read-only",
+        "regenerat",
+        "revok",
+        "cloudflare",
+        "rate-limit",
+        "your_public_api_key",
+    ):
+        assert phrase in body
 
 
 def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts() -> (

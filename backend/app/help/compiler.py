@@ -30,6 +30,7 @@ ALLOWED_CAPABILITIES = {
     "tenant_code_services",
     "tenant_dashboard",
     "tenant_mailbox",
+    "tenant_public_api",
     "tenant_settings",
     "tenant_subscriptions",
     "tenant_whatsapp",
@@ -161,7 +162,7 @@ class HelpCompiler:
         }
         return {
             "schema_version": 1,
-            "content_version": "help-pro-subscriptions-1",
+            "content_version": "help-public-api-handoff-1",
             "frontend_target_contract_version": "2",
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,

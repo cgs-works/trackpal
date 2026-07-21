@@ -25,7 +25,7 @@ React Help client
         └── React Joyride Orientation Tour
 ```
 
-The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact now covers the common Tenant Admin topics plus the Pro Clients, Catalog, Client Subscriptions, reminder settings, timezone, first-Pro-Client, and subscription-expiration guide topics. The Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
+The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact now covers the common Tenant Admin topics plus the Pro Clients, Catalog, Client Subscriptions, reminder settings, timezone, Public API Catalog, first-Pro-Client, and subscription-expiration guide topics. The Public API topic links only to the safe Settings category and the Catalog; its Settings panel provides a localized, copyable developer handoff containing placeholder keys and all supported browser examples, never the Tenant's real key. The Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
 
 ## Tracer implementation
 

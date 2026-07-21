@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "help-pro-subscriptions-1",
+  "content_version": "help-public-api-handoff-1",
   "frontend_target_contract_version": "2",
   "locales": [
     "en",
@@ -540,6 +540,61 @@
         "safe_links": [],
         "tour": null,
         "body": "# Profile\n\nProfile stores the business identity and contact details that Tenant Admins use to configure TrackPal.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Profile editing is not available as a WhatsApp action.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings, then Profile.\n- **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.\n\n## Results and states\n\nA successful save shows a confirmation and the updated values remain in the form. Loading means TrackPal is retrieving the current profile. Validation errors identify a value that must be corrected. A failed save leaves the previous profile on the server and keeps the local form available for recovery.\n\n## Limits, consequences, and recovery\n\nProfile values identify the Tenant and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.\n\n## Support boundary\n\nSupport can help with validation or a profile save that fails repeatedly. Share the field name and error message only. Do not share password values, WhatsApp pairing codes, API keys, or mailbox credentials."
+      },
+      {
+        "id": "tenant-admin.public-api",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_catalog",
+          "tenant_public_api",
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.public-api"
+        ],
+        "title": "Publish the Public API Catalog",
+        "summary": "Prepare a read-only browser integration and hand safe implementation instructions to your developer.",
+        "search_tags": [
+          "public API",
+          "API Key",
+          "Allowed Origins",
+          "browser catalog",
+          "developer handoff",
+          "read-only catalog",
+          "Cloudflare"
+        ],
+        "synonyms": [
+          "website catalog",
+          "external catalog",
+          "frontend integration",
+          "developer package"
+        ],
+        "related_topics": [
+          "tenant-admin.catalog",
+          "tenant-admin.first-pro-client"
+        ],
+        "order": 155,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "public-api"
+        },
+        "safe_links": [
+          {
+            "route": "/admin/catalog",
+            "settings_category": null
+          }
+        ],
+        "tour": null,
+        "body": "# Publish the Public API Catalog\n\nThe Public API Catalog lets a Pro Tenant publish its services and plans to a Tenant-owned browser frontend. It is **read-only**: the public payload contains service and plan IDs and names, not prices, availability, descriptions, credentials, or mutation controls. This topic is private Help for Tenant Admins; it does not create, reveal, regenerate, or revoke a key for you.\n\n## Prepare the Catalog and Allowed Origins\n\nFirst make the Catalog ready. Create the services and plans that the website should display, and confirm their names and order in Catalog. The public endpoint reads the current Catalog, so later Catalog changes are reflected without copying records into the website.\n\nAn Allowed Origin is the exact browser origin where the catalog will run. Register the complete `http://` or `https://` scheme, host, and optional port, such as `https://shop.example.com` or `http://localhost:5173`. Do not add a path, query string, fragment, wildcard, or a server URL. The browser's `Origin` must match exactly; server-to-server use is outside this version.\n\n## Create the key and connect the website\n\nOpen Settings, choose API Key, add at least one Allowed Origin, and create the key. Keep the key out of source control, screenshots, public chat, and frontend logs. The developer handoff package in this Settings panel contains a placeholder, `YOUR_PUBLIC_API_KEY`, and maintained examples for HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js. It never inserts this Tenant's real key. Send the package separately, then provide the real key through a secure channel.\n\nThe browser integration makes a `GET` request to `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. The browser supplies `Origin` automatically. TrackPal returns the read-only catalog only when both the key and exact origin are valid. A missing Origin, unknown key, non-matching origin, or Starter downgrade returns a forbidden response.\n\nThe handoff examples are reference snippets, not a full REST API manual. Select the example matching the site's existing technology. Help links only open this Settings category or Catalog; they never submit the form or call an API operation.\n\n## Lifecycle and consequences\n\nRegenerating the key replaces the old key and preserves the Allowed Origins. Every integration using the old value must be updated, and the old value stops authorizing requests. Revoking or deleting the key removes the public configuration and disables the catalog on connected websites. It is irreversible from the integration's point of view; a future key must be created and shared separately.\n\nChanging an Allowed Origin affects browser authorization immediately. Removing a site's origin does not delete Catalog data, but that site will receive a forbidden response until its exact origin is registered again. Catalog deletion remains a separate destructive operation with its own impact preview.\n\n## States, protection, and recovery\n\nA missing key means the public integration has not been created. An empty or invalid origin is rejected before key creation. A forbidden response usually means the key, `Origin`, plan, or registered origin does not match; verify the exact scheme, host, and port without adding a path. If a Catalog request fails, confirm the browser request is made from an authorized site and check the visible error before retrying.\n\nBefore broad production exposure, protect `GET /api/v1/public/catalog` with a Cloudflare rate-limit or WAF rule for all public traffic. Cloudflare protection is the expected abuse boundary for this public route; do not add an application, Redis, or in-memory rate limiter as a workaround.\n\nStarter Tenant Admins cannot retrieve, search, or invoke this topic. A downgrade pauses public access but preserves the key configuration for a future Pro reactivation. Contact support with the public endpoint, exact origin, response status, and visible non-secret error; never send the API Key itself."
       },
       {
         "id": "tenant-admin.reminders",
@@ -1328,6 +1383,61 @@
         "body": "# Perfil\n\nPerfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.\n- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.\n\n## Resultados y estados\n\nDespués de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.\n\n## Límites, consecuencias y recuperación\n\nLos valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.\n\n## Límite de soporte\n\nSoporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón."
       },
       {
+        "id": "tenant-admin.public-api",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_catalog",
+          "tenant_public_api",
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.public-api"
+        ],
+        "title": "Publicar el catálogo mediante API pública",
+        "summary": "Prepara una integración de navegador de solo lectura y entrega instrucciones seguras a tu desarrollador.",
+        "search_tags": [
+          "API pública",
+          "Clave API",
+          "sitios autorizados",
+          "catálogo en navegador",
+          "entrega al desarrollador",
+          "catálogo de solo lectura",
+          "Cloudflare"
+        ],
+        "synonyms": [
+          "catálogo para sitio web",
+          "catálogo externo",
+          "integración frontend",
+          "paquete para desarrollador"
+        ],
+        "related_topics": [
+          "tenant-admin.catalog",
+          "tenant-admin.first-pro-client"
+        ],
+        "order": 155,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "public-api"
+        },
+        "safe_links": [
+          {
+            "route": "/admin/catalog",
+            "settings_category": null
+          }
+        ],
+        "tour": null,
+        "body": "# Publicar el catálogo mediante API pública\n\nLa API pública de catálogo permite que un Tenant Pro publique sus servicios y planes en un frontend web de su propiedad. Es **de solo lectura**: la respuesta pública contiene los identificadores y nombres de servicios y planes, no precios, disponibilidad, descripciones, credenciales ni controles de mutación. Este tema pertenece a la Ayuda privada para Tenant Admins; no crea, muestra, regenera ni revoca una clave por ti.\n\n## Prepara el Catálogo y los sitios autorizados\n\nPrimero prepara el Catálogo. Crea los servicios y planes que el sitio web debe mostrar y confirma sus nombres y orden en Catálogo. El endpoint público lee el Catálogo actual, por lo que los cambios posteriores aparecen sin copiar registros al sitio web.\n\nUn sitio autorizado es el origen exacto del navegador donde funcionará el catálogo. Registra el esquema completo `http://` o `https://`, el host y el puerto opcional, por ejemplo `https://tienda.example.com` o `http://localhost:5173`. No agregues una ruta, query, fragmento, wildcard ni una URL de servidor. El `Origin` del navegador debe coincidir exactamente; el uso servidor a servidor está fuera de esta versión.\n\n## Crea la clave y conecta el sitio\n\nAbre Configuración, elige Clave API, agrega al menos un sitio autorizado y crea la clave. Mantén la clave fuera del control de versiones, capturas, chats públicos y logs del frontend. El paquete para desarrollador de este panel contiene el marcador `YOUR_PUBLIC_API_KEY` y ejemplos mantenidos para HTML + JavaScript, React, Vue, Svelte, Angular y Alpine.js. Nunca inserta la clave real de este Tenant. Envía el paquete por separado y comparte la clave real mediante un canal seguro.\n\nLa integración del navegador hace una solicitud `GET` a `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. El navegador envía `Origin` automáticamente. TrackPal devuelve el catálogo de solo lectura solo cuando la clave y el origen exacto son válidos. La ausencia de Origin, una clave desconocida, un origen distinto o una degradación a Starter producen una respuesta prohibida.\n\nLos ejemplos del paquete son referencias, no un manual REST completo. Elige el ejemplo que corresponda a la tecnología que ya usa el sitio. Los enlaces de Ayuda solo abren esta categoría de Configuración o Catálogo; nunca guardan el formulario ni llaman una operación de API.\n\n## Ciclo de vida y consecuencias\n\nRegenerar la clave reemplaza la anterior y conserva los sitios autorizados. Cada integración que use el valor anterior debe actualizarse, y el valor anterior deja de autorizar solicitudes. Revocar o eliminar la clave borra la configuración pública y desactiva el catálogo en los sitios conectados. Es irreversible desde el punto de vista de la integración; para volver a publicar tendrás que crear y compartir otra clave por separado.\n\nCambiar un sitio autorizado afecta inmediatamente la autorización del navegador. Quitar un sitio no borra datos del Catálogo, pero ese sitio recibirá una respuesta prohibida hasta que su origen exacto vuelva a registrarse. El borrado del Catálogo es una acción destructiva separada con su propia vista previa de impacto.\n\n## Estados, protección y recuperación\n\nLa ausencia de clave significa que todavía no se creó la integración pública. Un sitio vacío o inválido se rechaza antes de crear la clave. Una respuesta prohibida normalmente significa que no coinciden la clave, el `Origin`, el plan o el sitio registrado; verifica el esquema, host y puerto exactos sin agregar una ruta. Si falla una solicitud al Catálogo, confirma que el navegador está en un sitio autorizado y revisa el error visible antes de reintentar.\n\nAntes de exponerlo ampliamente en producción, protege `GET /api/v1/public/catalog` con una regla de rate limit o WAF de Cloudflare para todo el tráfico público. Cloudflare es el límite esperado contra abuso para esta ruta pública; no agregues como solución un rate limiter de aplicación, Redis o memoria.\n\nLos Tenant Admins Starter no pueden recuperar, buscar ni invocar este tema. Una degradación pausa el acceso público, pero conserva la configuración de la clave para una futura reactivación Pro. Contacta a soporte con el endpoint público, el origen exacto, el estado de respuesta y el error visible no secreto; nunca envíes la Clave API."
+      },
+      {
         "id": "tenant-admin.reminders",
         "locale": "es",
         "audience": "tenant_admin",
@@ -1773,6 +1883,26 @@
         ]
       },
       {
+        "id": "tenant-admin.public-api",
+        "title": "Publish the Public API Catalog",
+        "terms": [
+          "Publish the Public API Catalog",
+          "Prepare a read-only browser integration and hand safe implementation instructions to your developer.",
+          "public API",
+          "API Key",
+          "Allowed Origins",
+          "browser catalog",
+          "developer handoff",
+          "read-only catalog",
+          "Cloudflare",
+          "website catalog",
+          "external catalog",
+          "frontend integration",
+          "developer package",
+          "# Publish the Public API Catalog\n\nThe Public API Catalog lets a Pro Tenant publish its services and plans to a Tenant-owned browser frontend. It is **read-only**: the public payload contains service and plan IDs and names, not prices, availability, descriptions, credentials, or mutation controls. This topic is private Help for Tenant Admins; it does not create, reveal, regenerate, or revoke a key for you.\n\n## Prepare the Catalog and Allowed Origins\n\nFirst make the Catalog ready. Create the services and plans that the website should display, and confirm their names and order in Catalog. The public endpoint reads the current Catalog, so later Catalog changes are reflected without copying records into the website.\n\nAn Allowed Origin is the exact browser origin where the catalog will run. Register the complete `http://` or `https://` scheme, host, and optional port, such as `https://shop.example.com` or `http://localhost:5173`. Do not add a path, query string, fragment, wildcard, or a server URL. The browser's `Origin` must match exactly; server-to-server use is outside this version.\n\n## Create the key and connect the website\n\nOpen Settings, choose API Key, add at least one Allowed Origin, and create the key. Keep the key out of source control, screenshots, public chat, and frontend logs. The developer handoff package in this Settings panel contains a placeholder, `YOUR_PUBLIC_API_KEY`, and maintained examples for HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js. It never inserts this Tenant's real key. Send the package separately, then provide the real key through a secure channel.\n\nThe browser integration makes a `GET` request to `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. The browser supplies `Origin` automatically. TrackPal returns the read-only catalog only when both the key and exact origin are valid. A missing Origin, unknown key, non-matching origin, or Starter downgrade returns a forbidden response.\n\nThe handoff examples are reference snippets, not a full REST API manual. Select the example matching the site's existing technology. Help links only open this Settings category or Catalog; they never submit the form or call an API operation.\n\n## Lifecycle and consequences\n\nRegenerating the key replaces the old key and preserves the Allowed Origins. Every integration using the old value must be updated, and the old value stops authorizing requests. Revoking or deleting the key removes the public configuration and disables the catalog on connected websites. It is irreversible from the integration's point of view; a future key must be created and shared separately.\n\nChanging an Allowed Origin affects browser authorization immediately. Removing a site's origin does not delete Catalog data, but that site will receive a forbidden response until its exact origin is registered again. Catalog deletion remains a separate destructive operation with its own impact preview.\n\n## States, protection, and recovery\n\nA missing key means the public integration has not been created. An empty or invalid origin is rejected before key creation. A forbidden response usually means the key, `Origin`, plan, or registered origin does not match; verify the exact scheme, host, and port without adding a path. If a Catalog request fails, confirm the browser request is made from an authorized site and check the visible error before retrying.\n\nBefore broad production exposure, protect `GET /api/v1/public/catalog` with a Cloudflare rate-limit or WAF rule for all public traffic. Cloudflare protection is the expected abuse boundary for this public route; do not add an application, Redis, or in-memory rate limiter as a workaround.\n\nStarter Tenant Admins cannot retrieve, search, or invoke this topic. A downgrade pauses public access but preserves the key configuration for a future Pro reactivation. Contact support with the public endpoint, exact origin, response status, and visible non-secret error; never send the API Key itself."
+        ]
+      },
+      {
         "id": "tenant-admin.reminders",
         "title": "Subscription reminder settings",
         "terms": [
@@ -2054,6 +2184,26 @@
           "datos de cuenta",
           "información del negocio",
           "# Perfil\n\nPerfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.\n- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.\n\n## Resultados y estados\n\nDespués de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.\n\n## Límites, consecuencias y recuperación\n\nLos valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.\n\n## Límite de soporte\n\nSoporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón."
+        ]
+      },
+      {
+        "id": "tenant-admin.public-api",
+        "title": "Publicar el catálogo mediante API pública",
+        "terms": [
+          "Publicar el catálogo mediante API pública",
+          "Prepara una integración de navegador de solo lectura y entrega instrucciones seguras a tu desarrollador.",
+          "API pública",
+          "Clave API",
+          "sitios autorizados",
+          "catálogo en navegador",
+          "entrega al desarrollador",
+          "catálogo de solo lectura",
+          "Cloudflare",
+          "catálogo para sitio web",
+          "catálogo externo",
+          "integración frontend",
+          "paquete para desarrollador",
+          "# Publicar el catálogo mediante API pública\n\nLa API pública de catálogo permite que un Tenant Pro publique sus servicios y planes en un frontend web de su propiedad. Es **de solo lectura**: la respuesta pública contiene los identificadores y nombres de servicios y planes, no precios, disponibilidad, descripciones, credenciales ni controles de mutación. Este tema pertenece a la Ayuda privada para Tenant Admins; no crea, muestra, regenera ni revoca una clave por ti.\n\n## Prepara el Catálogo y los sitios autorizados\n\nPrimero prepara el Catálogo. Crea los servicios y planes que el sitio web debe mostrar y confirma sus nombres y orden en Catálogo. El endpoint público lee el Catálogo actual, por lo que los cambios posteriores aparecen sin copiar registros al sitio web.\n\nUn sitio autorizado es el origen exacto del navegador donde funcionará el catálogo. Registra el esquema completo `http://` o `https://`, el host y el puerto opcional, por ejemplo `https://tienda.example.com` o `http://localhost:5173`. No agregues una ruta, query, fragmento, wildcard ni una URL de servidor. El `Origin` del navegador debe coincidir exactamente; el uso servidor a servidor está fuera de esta versión.\n\n## Crea la clave y conecta el sitio\n\nAbre Configuración, elige Clave API, agrega al menos un sitio autorizado y crea la clave. Mantén la clave fuera del control de versiones, capturas, chats públicos y logs del frontend. El paquete para desarrollador de este panel contiene el marcador `YOUR_PUBLIC_API_KEY` y ejemplos mantenidos para HTML + JavaScript, React, Vue, Svelte, Angular y Alpine.js. Nunca inserta la clave real de este Tenant. Envía el paquete por separado y comparte la clave real mediante un canal seguro.\n\nLa integración del navegador hace una solicitud `GET` a `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. El navegador envía `Origin` automáticamente. TrackPal devuelve el catálogo de solo lectura solo cuando la clave y el origen exacto son válidos. La ausencia de Origin, una clave desconocida, un origen distinto o una degradación a Starter producen una respuesta prohibida.\n\nLos ejemplos del paquete son referencias, no un manual REST completo. Elige el ejemplo que corresponda a la tecnología que ya usa el sitio. Los enlaces de Ayuda solo abren esta categoría de Configuración o Catálogo; nunca guardan el formulario ni llaman una operación de API.\n\n## Ciclo de vida y consecuencias\n\nRegenerar la clave reemplaza la anterior y conserva los sitios autorizados. Cada integración que use el valor anterior debe actualizarse, y el valor anterior deja de autorizar solicitudes. Revocar o eliminar la clave borra la configuración pública y desactiva el catálogo en los sitios conectados. Es irreversible desde el punto de vista de la integración; para volver a publicar tendrás que crear y compartir otra clave por separado.\n\nCambiar un sitio autorizado afecta inmediatamente la autorización del navegador. Quitar un sitio no borra datos del Catálogo, pero ese sitio recibirá una respuesta prohibida hasta que su origen exacto vuelva a registrarse. El borrado del Catálogo es una acción destructiva separada con su propia vista previa de impacto.\n\n## Estados, protección y recuperación\n\nLa ausencia de clave significa que todavía no se creó la integración pública. Un sitio vacío o inválido se rechaza antes de crear la clave. Una respuesta prohibida normalmente significa que no coinciden la clave, el `Origin`, el plan o el sitio registrado; verifica el esquema, host y puerto exactos sin agregar una ruta. Si falla una solicitud al Catálogo, confirma que el navegador está en un sitio autorizado y revisa el error visible antes de reintentar.\n\nAntes de exponerlo ampliamente en producción, protege `GET /api/v1/public/catalog` con una regla de rate limit o WAF de Cloudflare para todo el tráfico público. Cloudflare es el límite esperado contra abuso para esta ruta pública; no agregues como solución un rate limiter de aplicación, Redis o memoria.\n\nLos Tenant Admins Starter no pueden recuperar, buscar ni invocar este tema. Una degradación pausa el acceso público, pero conserva la configuración de la clave para una futura reactivación Pro. Contacta a soporte con el endpoint público, el origen exacto, el estado de respuesta y el error visible no secreto; nunca envíes la Clave API."
         ]
       },
       {
