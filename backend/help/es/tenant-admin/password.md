@@ -12,8 +12,8 @@ capabilities:
 route: /admin/settings
 help_targets:
   - admin.settings.password
-title: Contraseña
-summary: Cambia tu contraseña de acceso sin modificar el perfil del negocio.
+title: Cambiar tu contraseña
+summary: Actualiza la contraseña de la cuenta con la que administras TrackPal.
 search_tags:
   - contraseña
   - seguridad
@@ -31,24 +31,10 @@ related_topics:
   - tenant-admin.language
 ---
 
-# Contraseña
+# Cambiar tu contraseña
 
-Usa Contraseña en Configuración para cambiar la contraseña de la cuenta que estás usando.
+Abre **Configuración > Contraseña**. Escribe tu contraseña actual, crea una nueva, repítela y guarda.
 
-## Canal, requisitos y acciones
+El cambio solo afecta a la cuenta con la que iniciaste sesión. No modifica las cuentas de otros administradores, clientes, WhatsApp ni el buzón central.
 
-- **Canal:** Web. Los cambios de contraseña no están disponibles en la consola de WhatsApp del administrador.
-- **Requisitos:** Inicia sesión con la cuenta cuya contraseña quieres cambiar y abre Configuración, luego Contraseña. Necesitas la contraseña actual.
-- **Acciones:** Escribe la contraseña actual, una nueva contraseña, confírmala y guarda. TrackPal valida el nuevo valor antes de enviarlo.
-
-## Resultados y estados
-
-Un cambio exitoso confirma la actualización. Mientras guarda, el formulario está ocupado. Los valores faltantes, incorrectos o que no coinciden muestran un error de validación y no cambian la contraseña. Si falla la solicitud, la contraseña existente sigue siendo válida y puedes reintentar desde el formulario.
-
-## Límites, consecuencias y recuperación
-
-Cambiar la contraseña afecta solo a la cuenta que estás usando, no a otros administradores, clientes, contraseñas del buzón ni sesiones de WhatsApp. Usa una contraseña nueva que cumpla el mínimo mostrado por el formulario y no reutilices la contraseña de un buzón compartido. Si olvidaste la contraseña actual o fallan varios intentos, deja de probar y usa la recuperación disponible o contacta al propietario del espacio; no reveles la contraseña a soporte.
-
-## Límite de soporte
-
-Soporte puede explicar un error visible de validación o conexión, pero no puede ver, recuperar ni aceptar una contraseña. Nunca incluyas contraseñas actuales o nuevas en un ticket, chat, captura o búsqueda de Ayuda.
+Si TrackPal rechaza el cambio, revisa el mensaje del formulario. Tu contraseña anterior seguirá funcionando hasta que la actualización termine correctamente. Nunca envíes una contraseña a soporte.

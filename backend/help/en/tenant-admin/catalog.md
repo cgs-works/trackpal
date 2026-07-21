@@ -13,7 +13,7 @@ route: /admin/catalog
 help_targets:
   - admin.catalog
 title: Catalog
-summary: Create and organize services and plans before assigning subscriptions to clients.
+summary: Organize the services and plans your business offers.
 search_tags:
   - catalog
   - service
@@ -44,60 +44,36 @@ tour:
     conditional: false
     plans:
       - pro
-    title: Catalog services and plans
+    title: Catalog
     content: |
-      # Build the Catalog
+      # Prepare your Catalog
 
-      Catalog is where Pro services and plans are organized before subscriptions are assigned. Review the list and the safe action group; deletion always has an impact preview and confirmation outside this tour.
-
-      The tour only highlights the real module. It never creates, renames, deletes, or opens a destructive confirmation.
+      Create the services your business offers and add their plans. You will use them when preparing a client subscription.
   - release_id: tenant-admin-pro-upgrade-1
     order: 2
     target: admin.catalog
     conditional: false
     plans:
       - pro
-    title: Your new Pro Catalog
+    title: Catalog in TrackPal Pro
     content: |
-      # Catalog is now available
+      # Meet the Catalog
 
-      Your upgrade adds Catalog. Prepare services and plans here before assigning subscriptions to Clients.
-
-      The tour is read-only: it does not create, rename, delete, or preview a destructive change.
+      Organize your services and plans so they are ready for subscriptions.
 ---
 
 # Catalog
 
-The Catalog contains the services and plans your business offers when this feature is included in your current plan. A service is the offering, and its plans are the selectable variants used when creating a subscription.
+In **TrackPal Pro**, the Catalog contains your services and the plans available for each one. Prepare it before creating subscriptions.
 
-## Channel, prerequisites, and actions
+## Create and organize
 
-- **Web:** Open Catalog from the sidebar. Create a service, select it, create or rename its plans, rename a service, or open the delete preview before deleting a service or plan.
-- **WhatsApp:** From the Pro main menu choose `2` Catalog. With services, choose `1` to view them, `2` to create a service, or `3` to delete a service. Select a service to edit its name, view plans, create a plan, or delete a plan. With no services, the menu offers the first service creation directly.
-- **Prerequisites:** Catalog is Pro-only. To create a plan, create or select its service first. A catalog change does not create a client or subscription automatically.
+Create a service, open it, and add its plans. You can also rename them on the Web or from **Catalog** in the **TrackPal Pro** WhatsApp menu. An empty list simply means the first service or plan has not been created yet.
 
-## Services, plans, and empty states
+## Before deleting
 
-A service can exist without plans. The service detail screen shows an empty plans state and offers Create plan; return with `9` or cancel with `0`. An empty service list means no services exist, so create the first service. An empty plan list means the selected service has no plans; it is not a loading failure.
+TrackPal shows how many active subscriptions and historical subscriptions depend on the service or plan. Review them carefully: deletion is irreversible and also removes the related subscriptions.
 
-Lists may paginate. Use `8` only when Next is displayed and `9` to go back. A loading state means TrackPal is retrieving the current catalog. A failed load or save leaves the prior catalog unchanged; retry after checking the visible error.
+Enter `DELETE` on the Web to confirm. In WhatsApp use `CONFIRM` or `CONFIRMAR`; `0` cancels and `9` goes back.
 
-## Create and rename
-
-Enter a non-empty service or plan name and save on Web, or answer the WhatsApp prompt. A successful result returns to a post-action prompt; choose `1` to return to the main menu. A blank name, invalid selection, duplicate name, or unavailable service is rejected and can be corrected without creating a partial record. Renaming changes the label only; it does not move plans or change existing subscriptions.
-
-## Deletion preview and consequences
-
-Deleting a service or plan is irreversible. Before confirmation, Web and WhatsApp show the delete impact preview. For a service, review the affected plan count, active subscriptions, historical subscriptions, total subscriptions, and the listed active subscription rows. For a plan, review the active, historical, and total subscription counts and rows. Historical subscriptions are included in the consequence summary even though they are no longer active.
-
-Deleting a service permanently removes that service, its plans, and all subscriptions attached to it. Deleting a plan permanently removes that plan and all subscriptions attached to it. Active subscriptions are not preserved or converted. Use the listed client, service, plan, and expiration details to verify the impact before proceeding.
-
-On Web, type `DELETE` in the preview confirmation field. In WhatsApp, type `CONFIRM` or `CONFIRMAR` when prompted. Any other value shows a confirmation re-prompt; `0` cancels and `9` returns to selection. A cancelled preview or failed deletion does not mutate the catalog.
-
-## Limits, validation, and recovery
-
-Only services that are globally active can be selected for access-code lookup; Catalog names do not enable a code platform. The Catalog does not reveal subscription credentials. If the preview cannot load, do not guess the impact or repeat the destructive action; retry the preview and contact support with the visible error.
-
-## Support boundary
-
-Support can investigate a persistent catalog load, validation, preview, or deletion error. Share the affected service or plan name and visible counts only; never share subscription passwords, PINs, mailbox credentials, or access codes.
+If the preview does not load or a name already exists, correct the issue before continuing. Support does not need client credentials to help.

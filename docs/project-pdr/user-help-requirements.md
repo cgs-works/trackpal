@@ -160,7 +160,9 @@ Each topic must:
 
 - Use the exact current product label in the selected locale.
 - Explain TrackPal-specific concepts for beginners without explaining obvious browser controls.
-- Use customer-facing language in visible copy: describe the user's business, control panel, administrator account, and current plan instead of exposing internal role or tenancy terms such as Tenant or Tenant Admin. Use plan names only when the distinction is necessary and make clear that they are plan names.
+- Use customer-facing language in visible copy: describe the user's business, control panel, administrator account, and current plan instead of exposing internal role or tenancy terms such as Tenant or Tenant Admin.
+- When a plan distinction is necessary, always write the complete product name **TrackPal Starter** or **TrackPal Pro**. Never show Starter or Pro alone, and never invent combinations such as “WhatsApp Pro.”
+- Use a warm, direct, second-person voice with short, task-oriented sections. Avoid repeated template headings and defensive tour disclaimers that describe actions the tour does not perform.
 - Separate Web and WhatsApp steps.
 - State audience, plan, prerequisites, and expected result.
 - Cover empty, loading, unavailable, validation, success, and recoverable error states where applicable.

@@ -13,7 +13,7 @@ route: /admin/help
 help_targets:
   - admin.help
 title: Ayuda
-summary: Encuentra el manual privado y repite el recorrido de orientación opcional.
+summary: Encuentra respuestas y repite el recorrido cuando lo necesites.
 search_tags:
   - ayuda
   - manual
@@ -38,38 +38,26 @@ tour:
     conditional: false
     plans:
       - starter
-    title: Ayuda y repetición
+    title: Ayuda siempre a mano
     content: |
-      # Ayuda y repetición
+      # Ayuda siempre a mano
 
-      Ayuda contiene los temas del manual autorizados para tu plan Starter, incluidos WhatsApp, las plataformas habilitadas, el buzón central y el control de acceso. Usa el buscador para encontrar un tema sin perder tus datos actuales.
-
-      Puedes repetir esta orientación desde Ayuda cuando quieras. Los enlaces del manual solo abren pantallas seguras; nunca envían formularios, muestran credenciales ni realizan acciones del producto.
+      Busca aquí cualquier tarea o problema relacionado con TrackPal Starter. También puedes repetir esta orientación cuando quieras.
   - release_id: tenant-admin-pro-1
     order: 7
     target: admin.help
     conditional: false
     plans:
       - pro
-    title: WhatsApp, Ayuda y repetición
+    title: Ayuda siempre a mano
     content: |
-      # Termina en Ayuda
+      # Ayuda siempre a mano
 
-      WhatsApp Pro incluye Clientes, Catálogo, Perfil, Suscripciones, Control de acceso, Ayuda y búsqueda de códigos de acceso. Ayuda contiene el manual autorizado y permite repetir esta orientación.
-
-      La navegación de Ayuda es de solo lectura. Nunca envía formularios, muestra credenciales, cambia datos ni ejecuta una acción de WhatsApp.
+      Busca aquí instrucciones para cualquier sección de TrackPal Pro. También puedes repetir esta orientación cuando quieras.
 ---
 
 # Ayuda
 
-La Ayuda muestra orientación sobre las herramientas incluidas en tu plan actual y en el idioma seleccionado.
+Usa el buscador para escribir una tarea, una pantalla o un problema. TrackPal mostrará únicamente los temas disponibles para tu plan.
 
-## Encuentra un tema
-
-Busca una acción, estado, error o requisito. La Ayuda Starter incluye Dashboard, Configuración, WhatsApp, plataformas de códigos habilitadas, buzón central, control de acceso, perfil, contraseña y la guía de búsqueda de códigos. Clientes, Catálogo, Suscripciones, recordatorios, zona horaria y administración de API pública, que son funciones Pro, no se muestran a usuarios Starter.
-
-## Repite la orientación
-
-La orientación Starter opcional explica el mapa operativo en aproximadamente de 2 a 3 minutos. Elige Repetir recorrido de orientación cuando quieras verlo otra vez. Cerrar el recorrido requiere confirmación antes de guardar el estado omitido.
-
-La navegación de Ayuda es de solo lectura. Sus enlaces abren módulos o categorías de Configuración autorizados sin guardar formularios, cambiar estados, conectar servicios, mostrar secretos ni iniciar una búsqueda.
+Si quieres volver a conocer la aplicación, pulsa **Repetir recorrido de orientación**. Puedes cerrar el recorrido y retomarlo más adelante desde esta misma página.

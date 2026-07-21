@@ -56,7 +56,7 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "settings_category": "locale",
     }
     assert topic_response.status_code == 200
-    assert topic_response.json()["title"] == "Panel del negocio"
+    assert topic_response.json()["title"] == "Dashboard"
     assert "dashboard" in topic_response.json()["body"].lower()
     assert "frontmatter" not in topic_response.json()
 
@@ -98,7 +98,7 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "/api/v1/help/topics/tenant-admin.dashboard", headers=headers
     )
     assert english_topic.status_code == 200
-    assert english_topic.json()["title"] == "Business Dashboard"
+    assert english_topic.json()["title"] == "Dashboard"
 
 
 async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
@@ -316,10 +316,6 @@ async def test_help_search_uses_locale_synonyms_and_returns_no_results(
     assert [result["id"] for result in spanish.json()["results"]] == [
         "tenant-admin.clients",
         "tenant-admin.dashboard",
-        "tenant-admin.first-pro-client",
-        "tenant-admin.subscription-expirations",
-        "tenant-admin.subscriptions",
-        "tenant-admin.timezone",
     ]
 
     tenant = (
@@ -380,10 +376,9 @@ async def test_help_isolates_clients_and_denies_unauthenticated_and_master_conte
     assert client_search.status_code == 200
     assert [result["id"] for result in client_search.json()["results"]] == [
         "client.dashboard",
-        "client.subscriptions",
     ]
     assert client_response.status_code == 200
-    assert client_response.json()["title"] == "Dashboard de cliente"
+    assert client_response.json()["title"] == "Dashboard del cliente"
     assert tenant_admin_response.status_code == 404
 
     tenant = (

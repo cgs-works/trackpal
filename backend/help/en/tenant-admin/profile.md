@@ -12,8 +12,8 @@ capabilities:
 route: /admin/settings
 help_targets:
   - admin.settings.profile
-title: Profile
-summary: Update the business identity and contact information used by TrackPal.
+title: Business profile
+summary: Keep your business name, email, and phone up to date.
 search_tags:
   - profile
   - name
@@ -38,33 +38,17 @@ tour:
     conditional: false
     plans:
       - starter
-    title: Account settings
+    title: Set up your business
     content: |
-      # Account settings
+      # Set up your business
 
-      Settings keeps your account map in one place. Language changes the workspace language, Profile holds the business identity and phone used for WhatsApp preparation, and Password changes only the signed-in administrator password.
-
-      This step opens the safe Profile panel as a real target. The tour never saves a form, changes a password, or reveals sensitive values.
+      Keep the business name and phone current in Profile. Settings is also where you change the language and your password.
 ---
 
-# Profile
+# Business profile
 
-Profile stores the business identity and contact details that administrators use to configure TrackPal.
+This is where you save the name, email, and phone TrackPal uses to identify your business.
 
-## Channel, prerequisites, and actions
+Open **Settings > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.
 
-- **Channel:** Web. Profile editing is not available as a WhatsApp action.
-- **Prerequisites:** Sign in as an administrator and open Settings, then Profile.
-- **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.
-
-## Results and states
-
-A successful save shows a confirmation and the updated values remain in the form. Loading means TrackPal is retrieving the current profile. Validation errors identify a value that must be corrected. A failed save leaves the previous profile on the server and keeps the local form available for recovery.
-
-## Limits, consequences, and recovery
-
-Profile values identify the business and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.
-
-## Support boundary
-
-Support can help with validation or a profile save that fails repeatedly. Share the field name and error message only. Do not share password values, WhatsApp pairing codes, API keys, or mailbox credentials.
+If you see an error, correct the highlighted field and save again. Reloading before you save can discard your changes.

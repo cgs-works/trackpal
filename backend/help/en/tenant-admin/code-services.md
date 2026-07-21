@@ -13,8 +13,8 @@ capabilities:
 route: /admin/settings
 help_targets:
   - admin.settings.code-services
-title: Enabled code platforms
-summary: Choose which supported services can be searched for access codes.
+title: Platforms for access-code search
+summary: Choose which supported services TrackPal can search for access codes.
 search_tags:
   - code services
   - access code
@@ -36,32 +36,12 @@ related_topics:
   - tenant-admin.whatsapp
 ---
 
-# Enabled code platforms
+# Platforms for access-code search
 
-Enabled code platforms are the services that TrackPal can search when an administrator or a client requests an access code. The available list is controlled by the platform catalog and your business selection.
+Select the services you want to offer in access-code search, such as Netflix, Disney+, or Spotify.
 
-## Channel, prerequisites, and actions
+Open **Settings > Enabled platforms**, choose the services your business uses, and save. Only platforms supported by TrackPal are listed.
 
-- **Channel:** Web for configuration; WhatsApp for using the selected platforms in the access-code search.
-- **Prerequisites:** Be an administrator. The business WhatsApp instance and central lookup mailbox are separate prerequisites for completing a search.
-- **Actions:** Open Settings, choose Enabled code platforms, select the services that should be available, and save. Only globally active services can be selected.
+Search also needs a linked WhatsApp account and a connected central mailbox. In WhatsApp, open **Search for an access code** from the **TrackPal Starter** or **TrackPal Pro** menu.
 
-## Results and states
-
-- **Loading:** TrackPal is retrieving the platform list. Wait for the list before changing selections.
-- **Enabled:** A selected, globally active platform appears in the WhatsApp service list.
-- **Unavailable:** A platform marked globally inactive cannot be selected. It is not an error in your business configuration.
-- **Missing:** If no platform is selected, access-code lookup cannot start and WhatsApp reports that code services are not configured.
-- **Error:** If the list or save request fails, keep the current selection, retry from Settings, and do not start repeated WhatsApp searches until the list is available.
-
-## Web and WhatsApp actions
-
-On Web, selecting a platform changes which services appear in future searches; it does not search the mailbox or send a WhatsApp message. In WhatsApp, the Starter menu opens access-code search with `2` and the Pro menu opens it with `7`. The service list contains only the effective selection: business-selected services that are still globally active.
-
-## Limits, consequences, and recovery
-
-The list is limited to the services currently supported and globally active by TrackPal. Enabling a platform does not connect its provider account and does not create a client or subscription. If a platform becomes globally inactive, it is omitted from effective searches until it is available again. If lookup reports no configured services, return to this category, select an available platform, save, and start a new search.
-
-## Support boundary
-
-Support can confirm whether a platform is globally available and investigate a persistent load or save error. Share the platform label and visible error only; never share mailbox credentials, access codes, passwords, or tokens.
+If no service appears, return here, check your selection, and save again.

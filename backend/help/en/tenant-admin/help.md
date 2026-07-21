@@ -12,8 +12,8 @@ capabilities:
 route: /admin/help
 help_targets:
   - admin.help
-title: Help Center
-summary: Find the private manual and replay the optional orientation tour.
+title: Help
+summary: Find answers and replay the orientation whenever you need it.
 search_tags:
   - help
   - manual
@@ -38,38 +38,26 @@ tour:
     conditional: false
     plans:
       - starter
-    title: Help and replay
+    title: Help is always here
     content: |
-      # Help and replay
+      # Help is always here
 
-      Help contains the manual topics authorized for your Starter plan, including WhatsApp, enabled platforms, the central mailbox, and access control. Use the search box to find a topic without leaving your current data behind.
-
-      You can replay this orientation from Help at any time. Manual links only open safe screens; they never submit forms, reveal credentials, or perform product actions.
+      Search for any TrackPal Starter task or problem. You can also replay this orientation whenever you need it.
   - release_id: tenant-admin-pro-1
     order: 7
     target: admin.help
     conditional: false
     plans:
       - pro
-    title: WhatsApp, Help, and replay
+    title: Help is always here
     content: |
-      # Finish with Help
+      # Help is always here
 
-      Pro WhatsApp includes Clients, Catalog, Profile, Subscriptions, Access Control, Help, and access-code lookup. Help contains the authorized manual and is where you can replay this orientation.
-
-      Help navigation is read-only. It never submits forms, reveals credentials, changes data, or performs a WhatsApp action.
+      Find instructions for any TrackPal Pro section. You can also replay this orientation whenever you need it.
 ---
 
-# Help Center
+# Help
 
-The Help Center shows guidance for the tools included in your current plan and in your selected language.
+Search for a task, screen, or problem. TrackPal shows only the topics available in your current plan.
 
-## Find a topic
-
-Search for an action, state, error, or prerequisite. Starter Help includes Dashboard, Settings, WhatsApp, enabled code platforms, the central lookup mailbox, access control, profile, password, and cross-module access-code guidance. Pro-only Clients, Catalog, Subscriptions, reminder, timezone, and Public API administration are not shown to Starter users.
-
-## Replay the orientation
-
-The optional Starter orientation explains the operational map in about 2 to 3 minutes. Select Replay orientation tour when you want to see it again. Closing the tour requires confirmation before the skipped state is saved.
-
-Help navigation is read-only. Its links open authorized modules or Settings categories without saving forms, changing status, connecting services, revealing secrets, or starting a search.
+To take another tour of the application, select **Replay orientation tour**. You can close it and start again later from this page.

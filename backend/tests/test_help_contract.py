@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -56,7 +57,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     assert english_search["title"] in english_search["terms"]
     assert "mailbox" in english_search["terms"]
     assert "home" in english_search["terms"]
-    assert "central lookup mailbox" in english_search["terms"][-1]
+    assert "central mailbox" in english_search["terms"][-1]
     code_services = next(
         topic
         for topic in artifact["topics"]["en"]
@@ -123,7 +124,7 @@ def test_pro_tours_declare_initial_and_upgrade_sequences() -> None:
         "admin.settings.public-api",
     ]
     upgrade_content = " ".join(step["content"] for step in upgrade["steps"]).casefold()
-    for forbidden in ("starter", "dashboard", "whatsapp"):
+    for forbidden in ("starter", "dashboard"):
         assert forbidden not in upgrade_content
 
 
@@ -203,7 +204,7 @@ def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
         "activate",
         "deactivate",
         "delete",
-        "canonical",
+        "full username",
         "subscriptions",
     ):
         assert phrase in clients_body
@@ -222,7 +223,7 @@ def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
         assert phrase in catalog_body
 
     whatsapp_body = topics["tenant-admin.whatsapp"]["body"].lower()
-    for phrase in ("clients", "catalog", "subscriptions", "context shortcut"):
+    for phrase in ("clients", "catalog", "subscriptions", "private client menu"):
         assert phrase in whatsapp_body
 
 
@@ -390,6 +391,47 @@ def test_help_copy_avoids_internal_tenant_jargon() -> None:
                 visible_copy.extend((step["title"], step["content"]))
 
         assert "tenant" not in " ".join(visible_copy).casefold()
+
+
+def test_help_copy_uses_complete_trackpal_plan_names() -> None:
+    artifact = compile_help(SOURCE_DIR)
+
+    for locale in ("en", "es"):
+        visible_copy = []
+        for topic in artifact["topics"][locale]:
+            visible_copy.extend((topic["title"], topic["summary"], topic["body"]))
+        for release in artifact["tour_releases"][locale]:
+            for step in release["steps"]:
+                visible_copy.extend((step["title"], step["content"]))
+
+        joined = " ".join(visible_copy)
+        assert re.search(r"(?<!TrackPal )\b(?:Pro|Starter)\b", joined) is None
+
+
+def test_tour_copy_avoids_repetitive_safety_disclaimers() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    forbidden_by_locale = {
+        "en": (
+            "this tour",
+            "the tour only",
+            "the tour is read-only",
+            "this step opens",
+        ),
+        "es": (
+            "este recorrido",
+            "el recorrido solo",
+            "el recorrido es de solo lectura",
+            "este paso abre",
+        ),
+    }
+
+    for locale, forbidden_phrases in forbidden_by_locale.items():
+        tour_copy = " ".join(
+            step["content"]
+            for release in artifact["tour_releases"][locale]
+            for step in release["steps"]
+        ).casefold()
+        assert all(phrase not in tour_copy for phrase in forbidden_phrases)
 
 
 def test_frontend_i18n_copy_avoids_internal_tenant_jargon() -> None:

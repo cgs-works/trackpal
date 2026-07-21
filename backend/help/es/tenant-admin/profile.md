@@ -12,8 +12,8 @@ capabilities:
 route: /admin/settings
 help_targets:
   - admin.settings.profile
-title: Perfil
-summary: Actualiza la identidad y la información de contacto del negocio que usa TrackPal.
+title: Perfil del negocio
+summary: Mantén actualizados el nombre, el correo y el teléfono de tu negocio.
 search_tags:
   - perfil
   - nombre
@@ -38,33 +38,17 @@ tour:
     conditional: false
     plans:
       - starter
-    title: Configuración de la cuenta
+    title: Configura tu negocio
     content: |
-      # Configuración de la cuenta
+      # Configura tu negocio
 
-      Configuración reúne el mapa de tu cuenta. Idioma cambia el idioma del espacio de trabajo, Perfil contiene la identidad y el teléfono del negocio que se usa para preparar WhatsApp, y Contraseña cambia solo la contraseña del administrador que inició sesión.
-
-      Este paso abre el panel seguro de Perfil como un objetivo real. El recorrido nunca guarda un formulario, cambia una contraseña ni muestra valores sensibles.
+      En Perfil mantienes actualizados el nombre y teléfono del negocio. Desde Configuración también puedes cambiar el idioma y tu contraseña.
 ---
 
-# Perfil
+# Perfil del negocio
 
-Perfil guarda la identidad y los datos de contacto del negocio que los administradores usan para configurar TrackPal.
+Aquí guardas el nombre, el correo y el teléfono que TrackPal usa para identificar tu negocio.
 
-## Canal, requisitos y acciones
+Abre **Configuración > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.
 
-- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.
-- **Requisitos:** Inicia sesión como administrador y abre Configuración, luego Perfil.
-- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.
-
-## Resultados y estados
-
-Después de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.
-
-## Límites, consecuencias y recuperación
-
-Los valores del perfil identifican al negocio y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.
-
-## Límite de soporte
-
-Soporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón.
+Si aparece un error, corrige el campo señalado y vuelve a guardar. Recargar la página antes de guardar puede descartar tus cambios.

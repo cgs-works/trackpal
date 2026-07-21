@@ -10,8 +10,8 @@ capabilities:
   - client_whatsapp
 route: /client/dashboard
 help_targets: []
-title: Consola de Cliente en WhatsApp
-summary: Usa las acciones disponibles de WhatsApp sin confundirlas con los cambios de cuenta exclusivos de Web.
+title: TrackPal para clientes en WhatsApp
+summary: Consulta tu perfil, tus suscripciones y códigos de acceso desde el chat.
 search_tags:
   - WhatsApp
   - perfil
@@ -32,24 +32,12 @@ related_topics:
   - client.password
 ---
 
-# Consola de Cliente en WhatsApp
+# TrackPal para clientes en WhatsApp
 
-La consola de Cliente en WhatsApp es un canal separado y limitado para consultar información y solicitar una búsqueda de código de acceso mediante el flujo configurado por el proveedor.
+Tu proveedor puede darte acceso a un menú privado de TrackPal dentro de WhatsApp. Usa el teléfono asociado a tu cuenta y sigue las opciones que aparecen en el chat.
 
-## Canal, requisitos y acciones
+Desde ese menú puedes consultar tu perfil, revisar suscripciones activas, pedir un código de acceso cuando el servicio esté preparado y salir de la sesión.
 
-- **Canal:** WhatsApp. Tu proveedor debe tener una configuración Pro activa y un flujo de WhatsApp que reconozca tu cuenta de Cliente.
-- **Requisitos:** Usa el teléfono asociado a la cuenta de Cliente y sigue el menú enviado por el bot. El proveedor debe tener configurados el correo central y la plataforma habilitada necesarios para buscar códigos de acceso.
-- **Acciones:** Consulta tu perfil, consulta suscripciones activas, busca un código de acceso cuando la opción esté disponible y sal de la consola. Sigue las etiquetas actuales del menú en lugar de adivinar números.
+## Ten en cuenta
 
-## Límite exclusivo de Web
-
-Los cambios de contraseña son exclusivos de Web. Abre la página Perfil web para esa acción. WhatsApp no puede editar tu nombre, teléfono, proveedor, estado, suscripciones ni credenciales de servicios.
-
-## Resultados, navegación y recuperación
-
-Una solicitud correcta devuelve el perfil, la suscripción o el resultado de búsqueda permitido. Una configuración faltante, una suscripción no disponible, una entrada inválida o un tiempo de espera muestran un mensaje recuperable; sigue la indicación o inicia una sesión nueva. Usa la opción de salida del menú al terminar. No envíes contraseñas, credenciales, códigos de vinculación ni comandos privados arbitrarios al bot.
-
-## Límite de soporte
-
-El proveedor controla el acceso de Cliente a WhatsApp y la configuración de búsqueda del correo. Comparte con soporte solo el error visible y la hora aproximada; nunca envíes una contraseña, código de acceso, credencial de suscripción ni contenido privado del mensaje.
+Los cambios de contraseña se hacen únicamente desde Perfil en Web. Si una opción no aparece, la sesión vence o la búsqueda tarda demasiado, vuelve al menú e inténtalo otra vez. Si el problema continúa, comparte con tu proveedor el mensaje visible y la hora aproximada, sin enviar contraseñas ni códigos privados.

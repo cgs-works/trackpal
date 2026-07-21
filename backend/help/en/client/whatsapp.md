@@ -10,8 +10,8 @@ capabilities:
   - client_whatsapp
 route: /client/dashboard
 help_targets: []
-title: Client WhatsApp Console
-summary: Use the available WhatsApp actions without confusing them with Web-only account changes.
+title: TrackPal for clients in WhatsApp
+summary: Check your profile, subscriptions, and access codes from chat.
 search_tags:
   - WhatsApp
   - profile
@@ -32,24 +32,12 @@ related_topics:
   - client.password
 ---
 
-# Client WhatsApp Console
+# TrackPal for clients in WhatsApp
 
-The Client WhatsApp console is a separate, limited channel for viewing information and requesting an access-code lookup through the provider's configured flow.
+Your provider can give you access to a private TrackPal menu in WhatsApp. Use the phone linked to your account and follow the choices shown in chat.
 
-## Channel, prerequisites, and actions
+From this menu you can view your profile, check active subscriptions, request an access code when the service is ready, and exit the session.
 
-- **Channel:** WhatsApp. Your provider must have an active Pro setup and a WhatsApp flow that recognizes your Client account.
-- **Prerequisites:** Use the phone associated with the Client account and follow the menu sent by the bot. The provider must have the required mailbox and enabled platform configuration for access-code lookup.
-- **Actions:** View your profile, view active subscriptions, search for an access code when the option is available, and exit the console. Follow the current menu labels instead of guessing numbers.
+## Keep in mind
 
-## Web-only boundary
-
-Password changes are Web-only. Open the Web Profile page for that action. WhatsApp cannot edit your name, phone, provider, account status, subscriptions, or service credentials.
-
-## Results, navigation, and recovery
-
-A successful request returns the permitted profile, subscription, or lookup result. A missing configuration, unavailable subscription, invalid input, or timeout returns a recoverable message; follow the prompt or start a new session. Use the menu's exit option when finished. Do not send passwords, credentials, pairing codes, or arbitrary private commands to the bot.
-
-## Support boundary
-
-The provider controls Client WhatsApp access and the mailbox lookup configuration. Share only the visible error and approximate time with support, never a password, access code, subscription credential, or private message content.
+Password changes are available only from Profile on the Web. If an option is missing, the session expires, or a search times out, return to the menu and try again. If the issue continues, share the visible message and approximate time with your provider, without sending passwords or private codes.

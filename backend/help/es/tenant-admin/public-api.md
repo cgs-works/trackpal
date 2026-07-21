@@ -13,8 +13,8 @@ capabilities:
 route: /admin/settings
 help_targets:
   - admin.settings.public-api
-title: Publicar el catálogo mediante API pública
-summary: Prepara una integración de navegador de solo lectura y entrega instrucciones seguras a tu desarrollador.
+title: Publicar tu Catálogo en un sitio web
+summary: Prepara el Catálogo y entrega a tu desarrollador lo necesario para mostrarlo.
 search_tags:
   - API pública
   - Clave API
@@ -45,43 +45,25 @@ tour:
     conditional: false
     plans:
       - pro
-    title: API pública y ajustes Pro
+    title: Publica tu Catálogo
     content: |
-      # Nuevas herramientas de publicación Pro
+      # Lleva tu Catálogo a tu sitio web
 
-      Tu upgrade agrega la API pública de Catálogo de solo lectura. Junto con los nuevos controles Pro de zona horaria y recordatorios, completa las capacidades Pro que no estaban disponibles en tu plan anterior.
-
-      El recorrido es seguro e informativo: nunca crea, muestra, regenera, revoca ni copia una clave y nunca guarda un ajuste.
+      Prepara los servicios que quieres mostrar, registra tu sitio y entrega a tu desarrollador las instrucciones disponibles en Configuración.
 ---
 
-# Publicar el catálogo mediante API pública
+# Publicar tu Catálogo en un sitio web
 
-La API pública de catálogo permite mostrar los servicios y planes de tu negocio en un sitio web cuando esta función está incluida en el plan actual. Es **de solo lectura**: los visitantes pueden ver nombres de servicios y planes, pero no pueden cambiar datos de TrackPal ni ver credenciales. Este tema explica la configuración sin crear, mostrar, reemplazar ni eliminar una clave.
+Con **TrackPal Pro** puedes mostrar los servicios y planes de tu Catálogo en tu sitio web. Los visitantes solo pueden consultarlos; no pueden cambiar datos ni ver credenciales.
 
-## Prepara el Catálogo y los sitios autorizados
+## Qué debes preparar
 
-Primero prepara el Catálogo. Crea los servicios y planes que el sitio web debe mostrar y confirma sus nombres y orden en Catálogo. El endpoint público lee el Catálogo actual, por lo que los cambios posteriores aparecen sin copiar registros al sitio web.
+1. Revisa que el Catálogo tenga los servicios y planes correctos.
+2. En **Configuración > Clave API**, agrega cada sitio autorizado con su dirección exacta, por ejemplo `https://tienda.example.com`.
+3. Crea la clave y entrega a tu desarrollador el paquete de instrucciones y la clave por canales separados.
 
-Un sitio autorizado es el origen exacto del navegador donde funcionará el catálogo. Registra el esquema completo `http://` o `https://`, el host y el puerto opcional, por ejemplo `https://tienda.example.com` o `http://localhost:5173`. No agregues una ruta, query, fragmento, wildcard ni una URL de servidor. El `Origin` del navegador debe coincidir exactamente; el uso servidor a servidor está fuera de esta versión.
+No necesitas programar. El paquete incluye ejemplos para distintas tecnologías y usa `YOUR_PUBLIC_API_KEY` como marcador. Tu desarrollador debe reemplazarlo con la clave real y proteger `GET /api/v1/public/catalog` con rate-limit o WAF de Cloudflare.
 
-## Crea la clave y conecta el sitio
+## Si el sitio no muestra el Catálogo
 
-Abre Configuración, elige Clave API, agrega al menos un sitio autorizado y crea la clave. Mantén la clave fuera del control de versiones, capturas, chats públicos y logs del frontend. El paquete para desarrollador de este panel contiene el marcador `YOUR_PUBLIC_API_KEY` y ejemplos mantenidos para HTML + JavaScript, React, Vue, Svelte, Angular y Alpine.js. Nunca inserta la clave real de este negocio. Envía el paquete por separado y comparte la clave real mediante un canal seguro.
-
-La integración del navegador hace una solicitud `GET` a `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. El navegador envía `Origin` automáticamente. TrackPal devuelve el catálogo de solo lectura solo cuando la clave y el origen exacto son válidos. La ausencia de Origin, una clave desconocida, un origen distinto o una degradación a Starter producen una respuesta prohibida.
-
-Los ejemplos del paquete son referencias, no un manual REST completo. Elige el ejemplo que corresponda a la tecnología que ya usa el sitio. Los enlaces de Ayuda solo abren esta categoría de Configuración o Catálogo; nunca guardan el formulario ni llaman una operación de API.
-
-## Ciclo de vida y consecuencias
-
-Regenerar la clave reemplaza la anterior y conserva los sitios autorizados. Cada integración que use el valor anterior debe actualizarse, y el valor anterior deja de autorizar solicitudes. Revocar o eliminar la clave borra la configuración pública y desactiva el catálogo en los sitios conectados. Es irreversible desde el punto de vista de la integración; para volver a publicar tendrás que crear y compartir otra clave por separado.
-
-Cambiar un sitio autorizado afecta inmediatamente la autorización del navegador. Quitar un sitio no borra datos del Catálogo, pero ese sitio recibirá una respuesta prohibida hasta que su origen exacto vuelva a registrarse. El borrado del Catálogo es una acción destructiva separada con su propia vista previa de impacto.
-
-## Estados, protección y recuperación
-
-La ausencia de clave significa que todavía no se creó la integración pública. Un sitio vacío o inválido se rechaza antes de crear la clave. Una respuesta prohibida normalmente significa que no coinciden la clave, el `Origin`, el plan o el sitio registrado; verifica el esquema, host y puerto exactos sin agregar una ruta. Si falla una solicitud al Catálogo, confirma que el navegador está en un sitio autorizado y revisa el error visible antes de reintentar.
-
-Antes de exponerlo ampliamente en producción, protege `GET /api/v1/public/catalog` con una regla de rate limit o WAF de Cloudflare para todo el tráfico público. Cloudflare es el límite esperado contra abuso para esta ruta pública; no agregues como solución un rate limiter de aplicación, Redis o memoria.
-
-Este tema permanece oculto cuando el plan actual no incluye la publicación del catálogo en un sitio web. Una degradación pausa el acceso público, pero conserva la configuración de la clave para una futura reactivación Pro. Contacta a soporte con el endpoint público, el origen exacto, el estado de respuesta y el error visible no secreto; nunca envíes la Clave API.
+Comprueba que la dirección registrada coincida exactamente con el allowed origin del navegador. Regenerar la clave invalida la anterior; revocarla desactiva el Catálogo público. Nunca publiques la clave en capturas, repositorios o chats abiertos.

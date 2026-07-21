@@ -12,7 +12,7 @@ route: /client/dashboard
 help_targets:
   - client.dashboard
 title: Client Dashboard
-summary: See your provider, account status, and active subscription overview.
+summary: Check your subscriptions and account details in one place.
 search_tags:
   - dashboard
   - home
@@ -32,26 +32,18 @@ related_topics:
   - client.whatsapp
 ---
 
-# Client Dashboard
+# Your Dashboard
 
-The Client Dashboard is the read-only starting point for your TrackPal account with a Pro provider.
+This is a read-only summary of your account and the subscriptions your provider assigned to you.
 
-## Channel, prerequisites, and actions
+## What you can check
 
-- **Channel:** Web. Sign in with the Client account created by your provider.
-- **Prerequisites:** Your provider's TrackPal plan must include client access, and your account must be active.
-- **Actions:** Open Dashboard to see your name, provider, account, and active subscriptions. The page does not edit Client data.
+You will see your provider, account status, and each active subscription with its service, plan, and expiration date. If the list is empty, ask your provider whether your first subscription is ready.
 
-## Results and states
+## You can also use WhatsApp
 
-The summary shows the provider name and the number of subscriptions available to you. The subscription list shows each service, plan, status, start date, and expiration date. An empty list means your provider has not assigned an active subscription yet.
+If your provider enabled the client WhatsApp menu, you can check your profile, view subscriptions, and request an access code there. Always use the Web Profile page to change your password.
 
-Loading means TrackPal is retrieving current data. If the page cannot load, use Retry. An inactive account or a provider that has moved to Starter cannot use the Client session; contact the provider instead of trying to create another account.
+## If the page does not load
 
-## Web and WhatsApp
-
-Use the Web Dashboard for the complete read-only overview. WhatsApp has a separate Client console for profile, active subscriptions, access-code search, and exit. WhatsApp does not provide Client password changes.
-
-## Support boundary
-
-Your provider controls your Client access and subscriptions. Support can help investigate a persistent loading or sign-in error, but never send a password, access code, subscription credential, or private WhatsApp message.
+Select **Retry**. If your account is inactive or you cannot sign in, contact your provider. TrackPal never needs your password or service credentials to investigate a loading problem.

@@ -12,8 +12,8 @@ capabilities:
 route: /client/dashboard
 help_targets:
   - client.subscriptions
-title: Active Subscriptions
-summary: Understand the active service subscriptions assigned to your Client account.
+title: Your subscriptions
+summary: Review the services your provider keeps active for your account.
 search_tags:
   - subscriptions
   - service
@@ -32,24 +32,14 @@ related_topics:
   - client.whatsapp
 ---
 
-# Active Subscriptions
+# Your subscriptions
 
-The Dashboard lists the active subscriptions assigned to you by your provider.
+Each subscription shows its service, plan, status, start date, and expiration date.
 
-## Channel, prerequisites, and actions
+## Understand the status
 
-- **Channels:** Web and WhatsApp. Your provider must assign a subscription to your active Client account.
-- **Prerequisites:** Sign in on Web, or enter the Client WhatsApp console when your provider has made it available.
-- **Actions:** On Web, read the service, plan, status, start date, and expiration date. On WhatsApp, choose the active-subscriptions option shown by the console. Clients cannot create, renew, cancel, or reveal subscription credentials.
+- **Active:** the service is available according to your agreement with your provider.
+- **Expired or cancelled:** ask your provider whether it should be renewed or reactivated.
+- **No results:** there is no active subscription assigned to your account yet.
 
-## Results and states
-
-Active, pending, expired, or cancelled status is shown without allowing a Client to change it. An empty list means there are no active assignments. An expiration date close to today may show a remaining-days warning; ask the provider about renewal. Loading and failed states can be retried on Web.
-
-## Web-only and WhatsApp boundaries
-
-The Web Dashboard is the complete source for dates and provider information. WhatsApp is a convenient summary and does not change subscription data. Password changes are Web-only and are documented in Password change on Web.
-
-## Support boundary
-
-The provider owns subscription lifecycle decisions and any service credentials. Never send subscription credentials, access codes, or screenshots of private data to support.
+You can view a summary on the Web or in WhatsApp. Only your provider can create, renew, cancel, or reactivate a subscription. For support, share the service name and visible status, never a password or access code.

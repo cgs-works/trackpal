@@ -11,8 +11,8 @@ capabilities:
 route: /client/profile
 help_targets:
   - client.profile
-title: Perfil del cliente
-summary: Consulta la información de perfil y del proveedor asociada a tu cuenta de Cliente.
+title: Tu perfil
+summary: Consulta los datos que tu proveedor registró para tu cuenta.
 search_tags:
   - perfil
   - nombre
@@ -32,24 +32,10 @@ related_topics:
   - client.whatsapp
 ---
 
-# Perfil del cliente
+# Tu perfil
 
-Perfil es una vista de solo lectura de la información asociada a tu cuenta de Cliente.
+Perfil muestra tu nombre, usuario, teléfono, proveedor y estado de acceso.
 
-## Canal, requisitos y acciones
+Esta información es de consulta. Si necesitas corregir un dato, pídeselo a tu proveedor. También puedes ver un resumen desde WhatsApp cuando ese canal esté disponible.
 
-- **Canal:** Web. Abre Perfil desde la navegación de Cliente después de iniciar sesión.
-- **Requisitos:** El plan de TrackPal de tu proveedor debe incluir acceso para clientes y tu cuenta debe estar activa.
-- **Acciones:** Consulta tu nombre completo, usuario, teléfono cuando esté disponible, proveedor y estado. No puedes editar estos campos desde el perfil de Cliente.
-
-## Resultados y estados
-
-Un teléfono o proveedor vacío significa que esa información no está configurada o no está disponible. El estado activo indica que la cuenta puede usar las superficies de Cliente. Si falla la carga del perfil, usa Reintentar; no envíes formularios repetidamente porque Perfil no tiene una acción de guardado.
-
-## Web y WhatsApp
-
-La página Perfil web es la vista de solo lectura principal. WhatsApp puede mostrar un resumen del perfil durante una sesión de Cliente, pero WhatsApp no puede editar los campos. Pide al proveedor que corrija un nombre, teléfono o estado de acceso.
-
-## Límite de soporte
-
-Solo el proveedor puede actualizar la identidad y el acceso del Cliente. No compartas tu contraseña ni datos privados de tu cuenta en una solicitud de soporte.
+Si la página no carga, pulsa **Reintentar**. Para cambiar tu contraseña, usa la sección correspondiente dentro de Perfil y no compartas el valor actual con nadie.

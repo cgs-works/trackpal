@@ -12,8 +12,8 @@ capabilities:
 route: /client/dashboard
 help_targets:
   - client.subscriptions
-title: Suscripciones activas
-summary: Comprende las suscripciones de servicios asignadas a tu cuenta de Cliente.
+title: Tus suscripciones
+summary: Revisa los servicios que tu proveedor mantiene activos para tu cuenta.
 search_tags:
   - suscripciones
   - servicio
@@ -32,24 +32,14 @@ related_topics:
   - client.whatsapp
 ---
 
-# Suscripciones activas
+# Tus suscripciones
 
-El Dashboard muestra las suscripciones activas que tu proveedor te ha asignado.
+Cada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento.
 
-## Canal, requisitos y acciones
+## Qué significa cada estado
 
-- **Canales:** Web y WhatsApp. Tu proveedor debe asignar una suscripción a tu cuenta de Cliente activa.
-- **Requisitos:** Inicia sesión en Web o entra en la consola de Cliente de WhatsApp cuando tu proveedor la haya habilitado.
-- **Acciones:** En Web, consulta el servicio, plan, estado, fecha de inicio y vencimiento. En WhatsApp, elige la opción de suscripciones activas que muestre la consola. Los Clientes no pueden crear, renovar, cancelar ni revelar credenciales de suscripción.
+- **Activa:** puedes usar el servicio según lo acordado con tu proveedor.
+- **Expirada o cancelada:** consulta con tu proveedor si necesitas renovarla o reactivarla.
+- **Sin resultados:** todavía no hay una suscripción disponible para tu cuenta.
 
-## Resultados y estados
-
-El estado activo, pendiente, vencido o cancelado se muestra sin permitir que el Cliente lo cambie. Una lista vacía significa que no hay asignaciones activas. Si el vencimiento se acerca, puede aparecer una advertencia de días restantes; consulta al proveedor sobre la renovación. Los estados de carga y error pueden reintentarse en Web.
-
-## Límites de Web y WhatsApp
-
-El Dashboard web es la fuente completa para las fechas y la información del proveedor. WhatsApp ofrece un resumen y no modifica las suscripciones. Los cambios de contraseña son exclusivos de Web y se explican en Cambio de contraseña en Web.
-
-## Límite de soporte
-
-El proveedor decide el ciclo de vida de las suscripciones y controla las credenciales de los servicios. Nunca envíes credenciales, códigos de acceso ni capturas de datos privados a soporte.
+Puedes revisar un resumen desde Web o WhatsApp. Solo tu proveedor puede crear, renovar, cancelar o reactivar una suscripción. Si necesitas ayuda, comparte el nombre del servicio y el estado visible, nunca una contraseña o código de acceso.

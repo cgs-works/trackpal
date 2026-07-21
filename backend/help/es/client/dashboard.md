@@ -11,8 +11,8 @@ capabilities:
 route: /client/dashboard
 help_targets:
   - client.dashboard
-title: Dashboard de cliente
-summary: Consulta tu proveedor, el estado de tu cuenta y el resumen de tus suscripciones activas.
+title: Dashboard del cliente
+summary: Consulta tus suscripciones y la información de tu cuenta en un solo lugar.
 search_tags:
   - dashboard
   - inicio
@@ -32,26 +32,18 @@ related_topics:
   - client.whatsapp
 ---
 
-# Dashboard de cliente
+# Tu Dashboard
 
-El Dashboard de cliente es el punto de inicio de solo lectura para tu cuenta de TrackPal con un proveedor Pro.
+Aquí puedes consultar un resumen de tu cuenta y de las suscripciones que tu proveedor te ha asignado.
 
-## Canal, requisitos y acciones
+## Qué puedes consultar
 
-- **Canal:** Web. Inicia sesión con la cuenta de Cliente creada por tu proveedor.
-- **Requisitos:** El plan de TrackPal de tu proveedor debe incluir acceso para clientes y tu cuenta debe estar activa.
-- **Acciones:** Abre el Dashboard para consultar tu nombre, proveedor, cuenta y suscripciones activas. La página no modifica los datos del Cliente.
+Verás el nombre de tu proveedor, el estado de tu cuenta y cada suscripción activa con su servicio, plan y fecha de vencimiento. Si todavía no aparece ninguna, consulta con tu proveedor: puede que aún no haya terminado de prepararla.
 
-## Resultados y estados
+## También puedes usar WhatsApp
 
-El resumen muestra el nombre del proveedor y el número de suscripciones disponibles. La lista muestra cada servicio, plan, estado, fecha de inicio y vencimiento. Una lista vacía significa que tu proveedor todavía no te ha asignado una suscripción activa.
+Si tu proveedor habilitó WhatsApp para clientes, desde allí puedes consultar tu perfil, revisar suscripciones y pedir un código de acceso. Para cambiar tu contraseña, usa siempre la página Perfil en Web.
 
-Cargando significa que TrackPal está consultando los datos actuales. Si la página no carga, usa Reintentar. Una cuenta inactiva o un proveedor que cambió a Starter no puede usar la sesión de Cliente; contacta al proveedor en lugar de crear otra cuenta.
+## Si la información no carga
 
-## Web y WhatsApp
-
-Usa el Dashboard web para consultar el resumen completo de solo lectura. WhatsApp tiene una consola de Cliente separada para perfil, suscripciones activas, búsqueda de códigos de acceso y salida. WhatsApp no permite cambiar la contraseña del Cliente.
-
-## Límite de soporte
-
-Tu proveedor controla tu acceso y tus suscripciones. Soporte puede investigar un error persistente de carga o inicio de sesión, pero nunca envíes una contraseña, código de acceso, credencial de suscripción o mensaje privado de WhatsApp.
+Pulsa **Reintentar**. Si tu cuenta aparece inactiva o no puedes iniciar sesión, contacta a tu proveedor. TrackPal no necesita que compartas tu contraseña ni las credenciales de tus servicios para ayudarte.

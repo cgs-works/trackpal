@@ -11,8 +11,8 @@ capabilities:
 route: /client/profile
 help_targets:
   - client.profile
-title: Client Profile
-summary: Review the profile and provider information associated with your Client account.
+title: Your profile
+summary: Review the details your provider saved for your account.
 search_tags:
   - profile
   - name
@@ -32,24 +32,10 @@ related_topics:
   - client.whatsapp
 ---
 
-# Client Profile
+# Your profile
 
-Profile is a read-only view of the information associated with your Client account.
+Profile shows your name, username, phone, provider, and access status in a read-only view.
 
-## Channel, prerequisites, and actions
+Ask your provider to correct anything that is out of date. You can also see a profile summary in WhatsApp when that channel is available.
 
-- **Channel:** Web. Open Profile from the Client navigation after signing in.
-- **Prerequisites:** Your provider's TrackPal plan must include client access, and your account must be active.
-- **Actions:** Review your full name, username, phone when available, provider, and active status. You cannot edit these fields from the Client profile.
-
-## Results and states
-
-A blank phone or provider value means that information is not configured or is unavailable. An active status means the account can use the Client surfaces. If the profile request fails, use Retry; do not refresh by repeatedly submitting any form because Profile has no save action.
-
-## Web and WhatsApp
-
-The Web Profile page is the authoritative read-only view. WhatsApp can show a Client profile summary during a Client console session, but WhatsApp cannot edit profile fields. Ask the provider to correct a name, phone, or access status.
-
-## Support boundary
-
-Only the provider can update Client identity and access data. Do not share your password or private account details in a support request.
+If the page does not load, select **Retry**. To change your password, use the password section in Profile and keep your current password private.

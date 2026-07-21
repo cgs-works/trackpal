@@ -13,7 +13,7 @@ route: /admin/clients
 help_targets:
   - admin.clients
 title: Clients
-summary: Manage clients, their access, complete username, status, and subscriptions.
+summary: Create and manage accounts for the people who receive your services.
 search_tags:
   - clients
   - client search
@@ -45,58 +45,34 @@ tour:
       - pro
     title: Clients
     content: |
-      # Manage Clients safely
+      # Organize your clients
 
-      Clients is where you manage the people who receive your services. Review the list, search, and action group before creating, editing, activating, deactivating, or deleting anything.
-
-      This tour only highlights the real module. It never opens a form, changes a status, creates a client, or starts a deletion confirmation.
+      Create an account for each person who receives your services. From here you can find them, update access, and open subscriptions.
   - release_id: tenant-admin-pro-upgrade-1
     order: 1
     target: admin.clients
     conditional: false
     plans:
       - pro
-    title: Your new Clients section
+    title: Clients in TrackPal Pro
     content: |
-      # Clients are now available
+      # Meet Clients
 
-      Your upgrade adds Clients. Use this module to manage client identity and access, then open a client's subscriptions when the account is ready.
-
-      The tour is read-only: it does not create, edit, activate, deactivate, or delete a client.
+      You can now create accounts for the people who receive your services, manage their access, and open their subscriptions.
 ---
 
 # Clients
 
-Clients are the people who receive the services your business offers. Client management is available when it is included in your current plan, both on Web and in the corresponding WhatsApp menu.
+**TrackPal Pro** lets you create an account for each person who receives your services and manage their access on the Web or in WhatsApp.
 
-## Channel, prerequisites, and actions
+## Add a client
 
-- **Web:** Open Clients from the sidebar. Search by full name, canonical username, or phone; use Create to add a client, the edit action to change identity fields, the power action to activate or deactivate access, the subscriptions action to open that client's subscriptions, and the delete action for an inactive client.
-- **WhatsApp:** From the Pro main menu choose `1` Clients. Choose `1` to view clients or `2` to create one. Select a listed client to edit, deactivate, reactivate, or delete it. Use `9` to go back and `0` to cancel.
-- **Prerequisites:** Your current plan must include client management, and you must be signed in as the business administrator. To create a client, prepare a full name, a valid local username, a password of at least six characters, and an optional phone number.
+Select **Create client** and enter the name, a local username, a password with at least six characters, and an optional phone. TrackPal adds your business prefix to the username. Give the client the full username shown after saving, for example `t1_pepe`.
 
-## Create and canonical login
+## Manage access
 
-Enter the client's full name, local username, optional phone, and password, then save on Web or confirm the summary in WhatsApp. The local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores. TrackPal adds the business prefix and shows the complete (canonical) username, such as `t1_pepe`. Give the client this exact full username, not only the part you entered.
+Search by name, username, or phone. From each client you can edit details, deactivate or reactivate access, open subscriptions, and delete the account after it is inactive. Deactivation closes active sessions; reactivation allows a new sign-in.
 
-A successful creation adds an active client. A duplicate local username, canonical username, or phone is rejected and leaves the existing clients unchanged. Correct the field and try again. A missing or invalid name, username, phone, or password is a validation error; it does not create a partial client.
+In WhatsApp, open **Clients** from the **TrackPal Pro** menu. Use `9` to go back and `0` to cancel the current flow.
 
-## Search, edit, activate, and deactivate
-
-Search is a local filter over the loaded client list and does not change data. An empty list means no clients exist; an empty search result means the filter has no match. Clear the search or adjust the spelling and digits.
-
-Edit changes the full name, local username, or phone. Renaming the local username also updates the canonical login. A duplicate value or invalid field is rejected without applying the edit. Activate restores access for an inactive client. Deactivate changes the client to inactive and revokes that client's active Web sessions; the client must sign in again after reactivation.
-
-## Subscriptions and deletion
-
-Use the credit-card or subscriptions action on the client row to open Subscriptions already filtered to that client. This is a safe navigation link; it does not create, reveal, cancel, renew, or reactivate a subscription. The client topic is also related to the Subscriptions module for the full subscription workflow.
-
-An active client cannot be deleted. Deactivate it first. Deletion is permanent: it removes the client account and its login, cannot be undone, and is not a substitute for deactivation. Confirm the deletion only after checking that the selected client is correct. A cancelled dialog or a failed request leaves the client in its previous state.
-
-## WhatsApp validation and recovery
-
-The Pro WhatsApp flow validates each requested field and repeats the prompt for an invalid selection, empty name, empty username, short password, or invalid phone. At the confirmation prompt type `CONFIRM` or `CONFIRMAR` as shown; type `0` to cancel. A failed create, edit, activation, deactivation, or deletion keeps the previous data and can be retried. `9` returns to the preceding screen and `8` advances only when the prompt displays it.
-
-## Support boundary
-
-Support can help with a persistent validation or access error when given the visible field and message. Never share a client's password, generated password, access token, or subscription credentials in a ticket or chat.
+If a username or phone already exists, correct the highlighted value. Deletion is permanent, so confirm the client's name before continuing.

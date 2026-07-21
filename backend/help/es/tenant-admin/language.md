@@ -13,7 +13,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.language
 title: Idioma
-summary: Cambia el idioma que TrackPal usa para el espacio de trabajo de tu negocio.
+summary: Elige el idioma que usará tu negocio en TrackPal.
 search_tags:
   - idioma
   - locale
@@ -34,22 +34,8 @@ related_topics:
 
 # Idioma
 
-El Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para el espacio de trabajo de tu negocio activo.
+El idioma que guardes se aplicará a la navegación, Configuración, Ayuda y los mensajes de TrackPal para todo el negocio.
 
-## Canal, requisitos y acciones
+Abre **Configuración > Idioma**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.
 
-- **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.
-- **Requisitos:** Inicia sesión como administrador y abre Configuración. La categoría Idioma está disponible en Starter y Pro.
-- **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.
-
-## Resultados y estados
-
-La navegación, las etiquetas de Configuración y los temas de Ayuda usan el idioma seleccionado después de actualizarlo. Mientras guarda, el control está ocupado. La selección actual permanece visible al cargar la página. Si el idioma no puede cargarse o guardarse, el idioma anterior continúa activo y aparece un error.
-
-## Límites, consecuencias y recuperación
-
-El idioma seleccionado se aplica a toda la cuenta del negocio, no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.
-
-## Límite de soporte
-
-Soporte puede ayudarte si el selector o el catálogo siguen sin estar disponibles después de reintentar. Incluye el idioma seleccionado y el error visible, pero nunca una contraseña, código de vinculación, token o secreto del buzón.
+Este ajuste no traduce mensajes de servicios externos ni cambia tus datos, suscripciones o conexiones.

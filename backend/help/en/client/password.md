@@ -11,8 +11,8 @@ capabilities:
 route: /client/profile
 help_targets:
   - client.password
-title: Password Change on Web
-summary: Change your Client sign-in password from the Web Profile page.
+title: Change your password
+summary: Update the password you use to sign in to TrackPal from the Web.
 search_tags:
   - password
   - security
@@ -30,24 +30,16 @@ related_topics:
   - client.whatsapp
 ---
 
-# Password Change on Web
+# Change your password
 
-Client password changes are available only on the Web Profile page.
+You can update your password from **Profile** in the Web version of TrackPal.
 
-## Channel, prerequisites, and actions
+## Make the change
 
-- **Channel:** Web only. The WhatsApp Client console never changes a password.
-- **Prerequisites:** Sign in to your active client account, open Profile, and have your current password ready. The new password must be at least eight characters and the confirmation must match.
-- **Actions:** Enter the current password, enter and confirm the new password, then choose Update Password. TrackPal validates the fields before applying the change.
+Enter your current password, create a new one with at least eight characters, and enter it again. Then select **Update password**.
 
-## Results and recovery
+If a value does not match, TrackPal will show what needs attention and keep your current password unchanged. Password changes are Web only and are not available in WhatsApp.
 
-A successful update confirms that the password changed and clears the form. Missing fields, a short password, mismatched confirmation, or an incorrect current password leave the existing password unchanged. If the request fails, use Retry after checking the visible error. Do not try to change the password through WhatsApp.
+## If you forgot your current password
 
-## Consequences and security
-
-The change affects your Client Web sign-in account. It does not edit your profile, subscriptions, provider data, WhatsApp session, or service credentials. Choose a unique password and do not share it with the provider or support.
-
-## Support boundary
-
-Support can explain a visible validation error but cannot view, reset, or accept your password. If you cannot verify the current password, contact the provider through their supported channel.
+Contact your provider through the usual channel. Do not send your password in chat, email, or a support request.

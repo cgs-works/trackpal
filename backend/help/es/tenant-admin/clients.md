@@ -13,7 +13,7 @@ route: /admin/clients
 help_targets:
   - admin.clients
 title: Clientes
-summary: Gestiona clientes Pro, su acceso, estado, inicio de sesión canónico y suscripciones.
+summary: Crea y administra las cuentas de las personas que reciben tus servicios.
 search_tags:
   - clientes
   - buscar cliente
@@ -45,58 +45,34 @@ tour:
       - pro
     title: Clientes
     content: |
-      # Gestiona Clientes de forma segura
+      # Organiza tus clientes
 
-      Clientes es el lugar donde gestionas a las personas que reciben tus servicios. Revisa la lista, la búsqueda y el grupo de acciones antes de crear, editar, activar, desactivar o eliminar algo.
-
-      Este recorrido solo destaca el módulo real. Nunca abre un formulario, cambia un estado, crea un cliente ni inicia una confirmación de eliminación.
+      Crea una cuenta para cada persona que recibe tus servicios. Desde aquí puedes buscarla, actualizar su acceso y abrir sus suscripciones.
   - release_id: tenant-admin-pro-upgrade-1
     order: 1
     target: admin.clients
     conditional: false
     plans:
       - pro
-    title: Tu nuevo módulo Pro de Clientes
+    title: Clientes en TrackPal Pro
     content: |
-      # Clientes ahora está disponible
+      # Conoce Clientes
 
-      Tu upgrade agrega Clientes. Usa este módulo para gestionar la identidad y el acceso de clientes, y después abre las suscripciones de un cliente cuando la cuenta esté lista.
-
-      El recorrido es de solo lectura: no crea, edita, activa, desactiva ni elimina clientes.
+      Ahora puedes crear cuentas para las personas que reciben tus servicios, gestionar su acceso y abrir sus suscripciones.
 ---
 
 # Clientes
 
-Los clientes son las personas que reciben los servicios de tu negocio. Su gestión está disponible cuando esta función está incluida en tu plan actual, tanto en Web como en el menú correspondiente de WhatsApp.
+Con **TrackPal Pro** puedes crear una cuenta para cada persona que recibe tus servicios y gestionar su acceso desde Web o WhatsApp.
 
-## Canal, requisitos y acciones
+## Añadir un cliente
 
-- **Web:** Abre Clientes desde la barra lateral. Busca por nombre completo, usuario canónico o teléfono; usa Crear para agregar un cliente, la acción de editar para cambiar sus datos de identidad, el botón de estado para activar o desactivar el acceso, la acción de suscripciones para abrir las suscripciones de ese cliente y la acción de eliminar para un cliente inactivo.
-- **WhatsApp:** Desde el menú principal Pro elige `1` Clientes. Elige `1` para ver clientes o `2` para crear uno. Selecciona un cliente para editarlo, desactivarlo, reactivarlo o eliminarlo. Usa `9` para regresar y `0` para cancelar.
-- **Requisitos:** Tu plan actual debe incluir la gestión de clientes y debes iniciar sesión como administrador del negocio. Para crear un cliente prepara un nombre completo, un nombre de usuario local válido, una contraseña de al menos seis caracteres y un teléfono opcional.
+Pulsa **Crear cliente** y completa el nombre, un usuario local, una contraseña de al menos seis caracteres y, si lo tienes, el teléfono. TrackPal añadirá el prefijo de tu negocio al usuario. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.
 
-## Crear e inicio de sesión canónico
+## Gestionar su acceso
 
-Escribe el nombre completo, el nombre de usuario local, el teléfono opcional y la contraseña; luego guarda en Web o confirma el resumen en WhatsApp. El nombre de usuario local debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones bajos. TrackPal agrega el prefijo del negocio y muestra el nombre de usuario completo (canónico), por ejemplo `t1_pepe`. Entrega al cliente ese nombre exacto, no solo la parte que escribiste.
+Busca por nombre, usuario o teléfono. Desde cada cliente puedes editar sus datos, desactivar o reactivar el acceso, abrir sus suscripciones y eliminar la cuenta cuando esté inactiva. Desactivar cierra sus sesiones; reactivar le permite iniciar sesión otra vez.
 
-Una creación exitosa agrega un cliente activo. Un nombre de usuario local, usuario canónico o teléfono duplicado se rechaza y deja sin cambios a los clientes existentes. Corrige el campo y vuelve a intentarlo. Un nombre, usuario, teléfono o contraseña ausente o inválido es un error de validación; no crea un cliente parcial.
+En WhatsApp abre **Clientes** desde el menú de **TrackPal Pro**. Usa `9` para regresar y `0` para cancelar el flujo actual.
 
-## Buscar, editar, activar y desactivar
-
-La búsqueda es un filtro local sobre la lista cargada y no cambia datos. Una lista vacía significa que no existen clientes; un resultado vacío significa que el filtro no coincide. Limpia la búsqueda o corrige las letras y dígitos.
-
-Editar cambia el nombre completo, el nombre de usuario local o el teléfono. Al cambiar el nombre de usuario local también se actualiza el inicio de sesión canónico. Un valor duplicado o campo inválido se rechaza sin aplicar la edición. Activar restaura el acceso de un cliente inactivo. Desactivar cambia el cliente a inactivo y revoca sus sesiones Web activas; después de reactivarlo, el cliente debe iniciar sesión otra vez.
-
-## Suscripciones y eliminación
-
-Usa la acción de tarjeta o suscripciones de la fila del cliente para abrir Suscripciones filtradas por ese cliente. Es un enlace de navegación seguro: no crea, revela, cancela, renueva ni reactiva una suscripción. El topic de Clientes también se relaciona con el módulo Suscripciones para consultar el flujo completo.
-
-Un cliente activo no se puede eliminar. Primero desactívalo. Eliminar es permanente: borra la cuenta del cliente y su inicio de sesión, no se puede deshacer y no reemplaza la desactivación. Confirma solo después de comprobar que seleccionaste al cliente correcto. Cancelar el diálogo o un error de la solicitud deja al cliente en su estado anterior.
-
-## Validación y recuperación en WhatsApp
-
-El flujo de WhatsApp valida cada campo solicitado y repite el mensaje cuando hay una selección inválida, nombre vacío, usuario vacío, contraseña corta o teléfono inválido. En la confirmación escribe `CONFIRM` o `CONFIRMAR` como se muestre; escribe `0` para cancelar. Un error al crear, editar, activar, desactivar o eliminar conserva los datos anteriores y permite reintentar. `9` regresa a la pantalla anterior y `8` avanza solo cuando el mensaje lo muestra.
-
-## Límite de soporte
-
-Soporte puede ayudar con un error persistente de validación o acceso si compartes el campo y mensaje visibles. Nunca compartas en un ticket o chat la contraseña del cliente, una contraseña generada, un token ni credenciales de suscripciones.
+Si un usuario o teléfono ya existe, corrige el dato señalado. Eliminar una cuenta es permanente, así que confirma el nombre antes de continuar.
