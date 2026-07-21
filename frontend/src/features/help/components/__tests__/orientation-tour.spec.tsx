@@ -142,7 +142,10 @@ describe("OrientationTour", () => {
     });
     expect(joyrideState.props?.styles).toBeUndefined();
     expect(joyrideState.props?.steps).toEqual([
-      expect.objectContaining({ target: '[data-help-id="admin.dashboard"]' }),
+      expect.objectContaining({
+        target: '[data-help-id="admin.dashboard"]',
+        placement: "center",
+      }),
     ]);
   });
 

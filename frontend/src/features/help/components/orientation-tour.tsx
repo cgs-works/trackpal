@@ -402,6 +402,7 @@ export function OrientationTour() {
     () =>
       tour?.steps.map((step) => ({
         target: tourSelector(step.target),
+        placement: "center",
         title: step.title,
         content: step.content,
         data: { topic_id: step.topic_id },
