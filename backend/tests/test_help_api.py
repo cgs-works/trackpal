@@ -1,0 +1,99 @@
+import pytest
+from sqlalchemy import select
+
+from app.core.security import create_access_token
+from app.models import Tenant, TenantSettings
+
+pytestmark = pytest.mark.asyncio
+
+
+async def _login(client, username: str, password: str) -> dict[str, str]:
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": username, "password": password},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+async def test_tenant_admin_receives_localized_help_index_and_topic(
+    client, active_tenant_user, db_session
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    index_response = await client.get("/api/v1/help", headers=headers)
+    topic_response = await client.get(
+        "/api/v1/help/topics/tenant-admin.dashboard", headers=headers
+    )
+
+    assert index_response.status_code == 200
+    assert index_response.json()["locale"] == "es"
+    assert index_response.json()["topics"][0]["id"] == "tenant-admin.dashboard"
+    assert topic_response.status_code == 200
+    assert topic_response.json()["title"] == "Panel del negocio"
+    assert "panel" in topic_response.json()["body"].lower()
+    assert "frontmatter" not in topic_response.json()
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings.locale = "en"
+    await db_session.commit()
+
+    english_topic = await client.get(
+        "/api/v1/help/topics/tenant-admin.dashboard", headers=headers
+    )
+    assert english_topic.status_code == 200
+    assert english_topic.json()["title"] == "Business Dashboard"
+
+
+async def test_help_search_returns_only_authorized_private_content(
+    client, active_tenant_user
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    response = await client.get(
+        "/api/v1/help/search", params={"q": "buzón"}, headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["id"] == "tenant-admin.dashboard"
+    assert "buzón" in response.json()["results"][0]["excerpt"].lower()
+
+
+async def test_help_denies_unauthenticated_clients_and_master_support_context(
+    client, active_client_user, master_user, active_tenant_user, db_session
+):
+    unauthenticated = await client.get("/api/v1/help")
+    assert unauthenticated.status_code == 401
+
+    client_headers = await _login(
+        client, active_client_user.username, "client-password"
+    )
+    client_response = await client.get(
+        "/api/v1/help/topics/tenant-admin.dashboard", headers=client_headers
+    )
+    assert client_response.status_code == 404
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    support_token = create_access_token(
+        subject=str(master_user.id),
+        role="master",
+        active_tenant_id=str(tenant.id),
+    )
+    support_response = await client.get(
+        "/api/v1/help/topics/tenant-admin.dashboard",
+        headers={"Authorization": f"Bearer {support_token}"},
+    )
+    assert support_response.status_code == 404

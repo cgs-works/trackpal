@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "content_version": "help-tracer-1",
+  "frontend_target_contract_version": "1",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "topics": {
+    "en": [
+      {
+        "id": "tenant-admin.dashboard",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "dashboard",
+        "capabilities": [
+          "tenant_dashboard"
+        ],
+        "route": "/admin/dashboard",
+        "help_targets": [
+          "admin.dashboard"
+        ],
+        "title": "Business Dashboard",
+        "summary": "Understand your plan, operational status, and the services available to your business.",
+        "search_tags": [
+          "dashboard",
+          "plan",
+          "mailbox",
+          "access control"
+        ],
+        "synonyms": [
+          "home",
+          "overview"
+        ],
+        "related_topics": [],
+        "tour": null,
+        "body": "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes the parts of TrackPal that are available to your current plan.\n\n## What you can see\n\n- Your current plan: Starter or Pro.\n- The status of the central lookup mailbox.\n- The number of enabled code services.\n- The number of blocked WhatsApp identities in Access Control.\n- Pro businesses also see active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n\n## Web\n\nOpen Dashboard from the navigation to review these indicators before starting a task. A missing mailbox or an empty enabled-service count means access-code lookup is not ready yet; open the matching Settings area to continue setup.\n\n## WhatsApp\n\nThe Dashboard does not change WhatsApp settings. Use Settings to link WhatsApp and configure the prerequisites for access-code lookup, then use the Tenant Admin WhatsApp Console for the conversational actions available on your plan.\n\n## Expected result\n\nYou have a quick, read-only overview of your business status and know which module to open next. Dashboard information is refreshed from your Tenant data and does not create or change records."
+      }
+    ],
+    "es": [
+      {
+        "id": "tenant-admin.dashboard",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "dashboard",
+        "capabilities": [
+          "tenant_dashboard"
+        ],
+        "route": "/admin/dashboard",
+        "help_targets": [
+          "admin.dashboard"
+        ],
+        "title": "Panel del negocio",
+        "summary": "Consulta tu plan, el estado operativo y los servicios disponibles para tu negocio.",
+        "search_tags": [
+          "panel",
+          "plan",
+          "buzón",
+          "control de acceso"
+        ],
+        "synonyms": [
+          "inicio",
+          "resumen"
+        ],
+        "related_topics": [],
+        "tour": null,
+        "body": "# Panel del negocio\n\nEl Panel del negocio es el punto de partida para los Tenant Admins. Resume las partes de TrackPal disponibles para tu plan actual.\n\n## Qué puedes ver\n\n- Tu plan actual: Starter o Pro.\n- El estado del buzón central de búsqueda.\n- La cantidad de servicios de códigos habilitados.\n- La cantidad de identidades de WhatsApp bloqueadas en Control de acceso.\n- Los negocios Pro también ven clientes activos, servicios del catálogo, suscripciones activas y suscripciones próximas a vencer.\n\n## Web\n\nAbre Panel desde la navegación para revisar estos indicadores antes de iniciar una tarea. Un buzón faltante o una cantidad vacía de servicios habilitados significa que la búsqueda de códigos todavía no está lista; abre la sección correspondiente de Configuración para continuar.\n\n## WhatsApp\n\nEl Panel no cambia la configuración de WhatsApp. Usa Configuración para vincular WhatsApp y preparar los requisitos de búsqueda de códigos; después usa la Consola de Tenant Admin para las acciones conversacionales disponibles en tu plan.\n\n## Resultado esperado\n\nObtienes un resumen rápido, de solo lectura, del estado de tu negocio y sabes qué módulo abrir después. La información del Panel se actualiza con los datos de tu Tenant y no crea ni modifica registros."
+      }
+    ]
+  },
+  "search": {
+    "en": [
+      {
+        "id": "tenant-admin.dashboard",
+        "title": "Business Dashboard",
+        "terms": [
+          "Business Dashboard",
+          "Understand your plan, operational status, and the services available to your business.",
+          "dashboard",
+          "plan",
+          "mailbox",
+          "access control",
+          "home",
+          "overview",
+          "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes the parts of TrackPal that are available to your current plan.\n\n## What you can see\n\n- Your current plan: Starter or Pro.\n- The status of the central lookup mailbox.\n- The number of enabled code services.\n- The number of blocked WhatsApp identities in Access Control.\n- Pro businesses also see active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n\n## Web\n\nOpen Dashboard from the navigation to review these indicators before starting a task. A missing mailbox or an empty enabled-service count means access-code lookup is not ready yet; open the matching Settings area to continue setup.\n\n## WhatsApp\n\nThe Dashboard does not change WhatsApp settings. Use Settings to link WhatsApp and configure the prerequisites for access-code lookup, then use the Tenant Admin WhatsApp Console for the conversational actions available on your plan.\n\n## Expected result\n\nYou have a quick, read-only overview of your business status and know which module to open next. Dashboard information is refreshed from your Tenant data and does not create or change records."
+        ]
+      }
+    ],
+    "es": [
+      {
+        "id": "tenant-admin.dashboard",
+        "title": "Panel del negocio",
+        "terms": [
+          "Panel del negocio",
+          "Consulta tu plan, el estado operativo y los servicios disponibles para tu negocio.",
+          "panel",
+          "plan",
+          "buzón",
+          "control de acceso",
+          "inicio",
+          "resumen",
+          "# Panel del negocio\n\nEl Panel del negocio es el punto de partida para los Tenant Admins. Resume las partes de TrackPal disponibles para tu plan actual.\n\n## Qué puedes ver\n\n- Tu plan actual: Starter o Pro.\n- El estado del buzón central de búsqueda.\n- La cantidad de servicios de códigos habilitados.\n- La cantidad de identidades de WhatsApp bloqueadas en Control de acceso.\n- Los negocios Pro también ven clientes activos, servicios del catálogo, suscripciones activas y suscripciones próximas a vencer.\n\n## Web\n\nAbre Panel desde la navegación para revisar estos indicadores antes de iniciar una tarea. Un buzón faltante o una cantidad vacía de servicios habilitados significa que la búsqueda de códigos todavía no está lista; abre la sección correspondiente de Configuración para continuar.\n\n## WhatsApp\n\nEl Panel no cambia la configuración de WhatsApp. Usa Configuración para vincular WhatsApp y preparar los requisitos de búsqueda de códigos; después usa la Consola de Tenant Admin para las acciones conversacionales disponibles en tu plan.\n\n## Resultado esperado\n\nObtienes un resumen rápido, de solo lectura, del estado de tu negocio y sabes qué módulo abrir después. La información del Panel se actualiza con los datos de tu Tenant y no crea ni modifica registros."
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   CreditCard,
+  HelpCircle,
   LayoutDashboard,
   Package,
   Settings,
@@ -15,7 +16,8 @@ export type AdminNavigationPath =
   | "/admin/clients"
   | "/admin/catalog"
   | "/admin/subscriptions"
-  | "/admin/settings";
+  | "/admin/settings"
+  | "/admin/help";
 
 export type ClientNavigationPath = "/client/dashboard" | "/client/profile";
 
@@ -30,8 +32,11 @@ type NavigationItem<Path extends string> = {
 export type AdminNavigationItem = NavigationItem<AdminNavigationPath>;
 export type ClientNavigationItem = NavigationItem<ClientNavigationPath>;
 
-export function getAdminNavigationItems(showProNav: boolean): AdminNavigationItem[] {
-  const items = [
+export function getAdminNavigationItems(
+  showProNav: boolean,
+  showHelp = false,
+): AdminNavigationItem[] {
+  const items: AdminNavigationItem[] = [
     {
       to: "/admin/dashboard",
       label: t("frontend.dashboard.tenant.title"),
@@ -65,7 +70,16 @@ export function getAdminNavigationItems(showProNav: boolean): AdminNavigationIte
       icon: Settings,
       activeMatch: "prefix",
     },
-  ] satisfies AdminNavigationItem[];
+  ];
+
+  if (showHelp) {
+    items.push({
+      to: "/admin/help",
+      label: t("frontend.help.title"),
+      icon: HelpCircle,
+      activeMatch: "prefix",
+    });
+  }
 
   return items.filter((item) => showProNav || !item.proOnly);
 }

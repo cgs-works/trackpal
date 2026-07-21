@@ -9,6 +9,7 @@ import {
   getAdminNavigationItems,
 } from "@/components/layout/role-navigation";
 import { SupportBanner } from "@/features/admin/components/support-banner";
+import { isPrivateHelpEnabled } from "@/features/help/config";
 
 export function AdminLayout() {
   const { username, logout, role, tenantPlan, isMasterSupportContext } = useAuthStore();
@@ -17,7 +18,10 @@ export function AdminLayout() {
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
   const showProNav = !isStarterTenantAdmin || isMasterSupportContext;
   const sidebarItems = createSidebarItems(
-    getAdminNavigationItems(showProNav),
+    getAdminNavigationItems(
+      showProNav,
+      role === "tenant" && isPrivateHelpEnabled(),
+    ),
     location.pathname,
   );
 

@@ -28,6 +28,13 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
+| [User Help System](architecture/user-help-system.md) | Private Markdown compiler, authenticated Help API, plan-aware manuals, contextual help, and Tenant Admin orientation tours |
+
+## Architecture Decisions
+
+| File | Description |
+|------|-------------|
+| [Markdown Capability Registry for User Help](adr/0001-markdown-capability-registry-for-user-help.md) | Canonical Markdown topic source for in-app manuals, orientation tours, and CI capability contracts |
 
 ## Codebase
 
@@ -53,3 +60,4 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
 | [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone/LID handling, validation, and deployment constraints |
 | [Public API Catalog](project-pdr/public-api-catalog.md) | Implemented Pro-only public catalog API rules, UI scope, and Cloudflare rate-limit requirement |
+| [User Help Requirements](project-pdr/user-help-requirements.md) | Approved audiences, manual information architecture, tour sequences, privacy, fidelity, and release gates |

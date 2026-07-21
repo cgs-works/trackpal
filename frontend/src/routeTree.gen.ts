@@ -19,6 +19,7 @@ import { Route as ClientProfileRouteImport } from './routes/client/profile'
 import { Route as ClientDashboardRouteImport } from './routes/client/dashboard'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminHelpRouteImport } from './routes/admin/help'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminClientsRouteImport } from './routes/admin/clients'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
@@ -73,6 +74,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminHelpRoute = AdminHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/help': typeof AdminHelpRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/help': typeof AdminHelpRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/help': typeof AdminHelpRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/help'
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/help'
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/help'
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
@@ -263,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/help': {
+      id: '/admin/help'
+      path: '/help'
+      fullPath: '/admin/help'
+      preLoaderRoute: typeof AdminHelpRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/dashboard'
@@ -291,6 +310,7 @@ interface AdminRouteChildren {
   AdminCatalogRoute: typeof AdminCatalogRoute
   AdminClientsRoute: typeof AdminClientsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminHelpRoute: typeof AdminHelpRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
 }
@@ -299,6 +319,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCatalogRoute: AdminCatalogRoute,
   AdminClientsRoute: AdminClientsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminHelpRoute: AdminHelpRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSubscriptionsRoute: AdminSubscriptionsRoute,
 }

@@ -26,6 +26,17 @@ describe("role navigation model", () => {
     ]);
   });
 
+  it("adds Help only when the private Help release gate is enabled", () => {
+    expect(getAdminNavigationItems(false).map((item) => item.to)).not.toContain(
+      "/admin/help",
+    );
+    expect(getAdminNavigationItems(false, true).map((item) => item.to)).toEqual([
+      "/admin/dashboard",
+      "/admin/settings",
+      "/admin/help",
+    ]);
+  });
+
   it("keeps the Client destinations limited to Dashboard and Profile", () => {
     const items = getClientNavigationItems();
 
