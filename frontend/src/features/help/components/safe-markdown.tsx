@@ -1,5 +1,17 @@
+import type { ReactNode } from "react";
+
 interface SafeMarkdownProps {
   source: string;
+}
+
+function renderInlineMarkdown(value: string): ReactNode {
+  return value.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    ),
+  );
 }
 
 export function SafeMarkdown({ source }: SafeMarkdownProps) {
@@ -21,22 +33,29 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
                   : "font-heading text-xl font-semibold tracking-tight"
               }
             >
-              {heading[2]}
+              {renderInlineMarkdown(heading[2])}
             </Heading>
           );
         }
 
         if (lines.length > 0 && lines.every((line) => /^-\s+/.test(line))) {
           return (
-            <ul key={`list-${index}`} className="list-disc flex flex-col gap-2 pl-5 text-muted-foreground">
-              {lines.map((line) => <li key={line}>{line.replace(/^-\s+/, "")}</li>)}
+            <ul
+              key={`list-${index}`}
+              className="list-disc flex flex-col gap-2 pl-5 text-muted-foreground"
+            >
+              {lines.map((line, lineIndex) => (
+                <li key={`${line}-${lineIndex}`}>
+                  {renderInlineMarkdown(line.replace(/^-\s+/, ""))}
+                </li>
+              ))}
             </ul>
           );
         }
 
         return (
           <p key={`paragraph-${index}`} className="max-w-[70ch] leading-7 text-muted-foreground">
-            {lines.join(" ")}
+            {renderInlineMarkdown(lines.join(" "))}
           </p>
         );
       })}

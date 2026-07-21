@@ -22,9 +22,23 @@ ALLOWED_MODULES = {
     "settings",
     "help",
 }
-ALLOWED_CAPABILITIES = {"tenant_dashboard"}
-ALLOWED_ROUTES = {"/admin/dashboard"}
-ALLOWED_HELP_TARGETS = {"admin.dashboard"}
+ALLOWED_CAPABILITIES = {"tenant_dashboard", "tenant_settings", "tenant_whatsapp"}
+ALLOWED_ROUTES = {"/admin/dashboard", "/admin/settings"}
+ALLOWED_HELP_TARGETS = {
+    "admin.dashboard",
+    "admin.settings",
+    "admin.settings.language",
+    "admin.settings.reminders",
+    "admin.settings.timezone",
+    "admin.settings.public-api",
+    "admin.settings.whatsapp",
+    "admin.settings.code-services",
+    "admin.settings.mailbox",
+    "admin.settings.access-control",
+    "admin.settings.profile",
+    "admin.settings.password",
+}
+ALLOWED_SETTINGS_CATEGORIES = {"locale", "profile", "password", "whatsapp-link"}
 REQUIRED_FIELDS = {
     "id",
     "audience",
@@ -39,6 +53,8 @@ REQUIRED_FIELDS = {
     "search_tags",
     "synonyms",
     "related_topics",
+    "order",
+    "safe_navigation",
 }
 OPTIONAL_FIELDS = {"tour"}
 LOCALIZED_FIELDS = {"title", "summary", "search_tags", "synonyms"}
@@ -114,8 +130,8 @@ class HelpCompiler:
         }
         return {
             "schema_version": 1,
-            "content_version": "help-tracer-1",
-            "frontend_target_contract_version": "1",
+            "content_version": "help-common-modules-1",
+            "frontend_target_contract_version": "2",
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,
             "search": search_by_locale,
@@ -142,6 +158,8 @@ class HelpCompiler:
             "search_tags": _string_list(frontmatter, "search_tags", path),
             "synonyms": _string_list(frontmatter, "synonyms", path),
             "related_topics": _string_list(frontmatter, "related_topics", path),
+            "order": _positive_int(frontmatter, "order", path),
+            "safe_navigation": _safe_navigation(frontmatter, path),
             "tour": frontmatter.get("tour"),
             "body": body.strip(),
         }
@@ -184,6 +202,8 @@ class HelpCompiler:
         targets = _string_list(frontmatter, "help_targets", path)
         if not targets or any(target not in ALLOWED_HELP_TARGETS for target in targets):
             raise HelpValidationError(f"Unknown Help target in {path.name}")
+        _positive_int(frontmatter, "order", path)
+        _safe_navigation(frontmatter, path)
         for field in ("title", "summary"):
             if not _string(frontmatter, field, path).strip():
                 raise HelpValidationError(f"Empty {field} in {path.name}")
@@ -284,6 +304,39 @@ def _string_list(frontmatter: dict[str, Any], field: str, path: Path) -> list[st
             f"Frontmatter field {field} must be a string list in {path.name}"
         )
     return value
+
+
+def _positive_int(frontmatter: dict[str, Any], field: str, path: Path) -> int:
+    value = frontmatter.get(field)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise HelpValidationError(
+            f"Frontmatter field {field} must be a positive integer in {path.name}"
+        )
+    return value
+
+
+def _safe_navigation(frontmatter: dict[str, Any], path: Path) -> dict[str, str | None]:
+    value = frontmatter.get("safe_navigation")
+    if not isinstance(value, dict) or set(value) - {"route", "settings_category"}:
+        raise HelpValidationError(f"Invalid safe navigation in {path.name}")
+
+    route = value.get("route")
+    if not isinstance(route, str) or route not in ALLOWED_ROUTES:
+        raise HelpValidationError(f"Unknown safe navigation route in {path.name}")
+    declared_route = _string(frontmatter, "route", path)
+    if route != declared_route:
+        raise HelpValidationError(
+            f"Safe navigation route must match route in {path.name}"
+        )
+
+    settings_category = value.get("settings_category")
+    if settings_category is not None and (
+        route != "/admin/settings"
+        or not isinstance(settings_category, str)
+        or settings_category not in ALLOWED_SETTINGS_CATEGORIES
+    ):
+        raise HelpValidationError(f"Unknown settings category in {path.name}")
+    return {"route": route, "settings_category": settings_category}
 
 
 def _iter_strings(value: Any) -> Iterator[str]:

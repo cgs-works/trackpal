@@ -33,7 +33,10 @@ The public Vite bundle contains the Help client and presentation components, but
 - `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, and Spanish/English metadata drift.
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
 - Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
-- The Dashboard target is declared as `data-help-id="admin.dashboard"`. The current tracer renders a responsive Help Center with desktop topic navigation and a mobile topic Sheet.
+- The common Tenant Admin release includes mirrored Dashboard, Language, Profile, Password, and WhatsApp topics for Starter and Pro.
+- Dashboard and Settings use semantic targets such as `data-help-id="admin.dashboard"` and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
+- The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links.
+- The shared Tenant Admin layout provides contextual Help in a responsive Sheet. It resolves the most specific current target, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved.
 
 ## Canonical Markdown Source
 
@@ -50,6 +53,7 @@ A topic frontmatter contract must identify at least:
 - Module and capability IDs
 - Related route or Settings category
 - Stable `data-help-id` targets
+- Explicit navigation order and allow-listed safe navigation destination
 - Search tags and maintained synonyms
 - Related topic IDs
 - Optional Tour Release, order, target, safe preparation action, and conditional-target rule
@@ -195,8 +199,8 @@ Help may not:
 Help is non-critical to core TrackPal operations.
 
 - Help API failure leaves the application usable and exposes Retry in Help.
-- Manual content remains available when its artifact is authorized but its tour target-contract version differs from the frontend.
-- The tour remains disabled during version mismatch.
+- Manual content remains available when its artifact is authorized but its tour or contextual target-contract version differs from the frontend.
+- Contextual Help reports an unavailable target rather than guessing a topic during version mismatch; the tour remains disabled during version mismatch.
 - Unexpected missing required targets stop the tour safely and leave the Tour Release unseen.
 - Logout, login, role changes, and Tenant context changes clear Help indexes, topics, and tour state from frontend memory.
 - Private manual prose is not persisted to browser storage.
@@ -227,7 +231,7 @@ Backend API tests cover:
 
 Frontend unit and integration tests cover:
 
-- Help navigation and contextual Sheet behavior
+- Help navigation grouping, target resolution, safe navigation, and contextual Sheet behavior
 - cache clearing on authentication or Tenant changes
 - manual-visible/tour-disabled version mismatch
 - safe route and Settings preparation

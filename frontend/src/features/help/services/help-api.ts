@@ -1,11 +1,19 @@
 import api from "@/lib/api";
 
+export interface HelpSafeNavigation {
+  route: string;
+  settings_category: string | null;
+}
+
 export interface HelpTopicSummary {
   id: string;
   title: string;
   summary: string;
   module: string;
   route: string;
+  order: number;
+  help_targets: string[];
+  safe_navigation: HelpSafeNavigation;
 }
 
 export interface HelpIndexResponse {
@@ -25,6 +33,7 @@ export interface HelpSearchResult {
   title: string;
   module: string;
   route: string;
+  order: number;
   excerpt: string;
 }
 

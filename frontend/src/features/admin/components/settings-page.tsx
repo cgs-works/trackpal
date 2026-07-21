@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
+import { HELP_TARGETS, type HelpTargetId } from "@/features/help/help-targets";
 import { AccessControlSection } from "../components/access-control-section";
 import { CodeServicesSection } from "../components/code-services-section";
 import { LocaleSection } from "../components/locale-section";
@@ -17,28 +18,30 @@ import { ReminderSettingsSection } from "../components/reminder-settings-section
 import { TimezoneSection } from "../components/timezone-section";
 import { getProfile, type Profile } from "../services/settings-api";
 import { WhatsappLinkSection } from "../components/whatsapp-link-section";
+import type { SettingsCategoryId } from "../settings-categories";
 
-type SectionId = "reminders" | "locale" | "timezone" | "public-api" | "code-services" | "mailbox" | "access-control" | "profile" | "password" | "whatsapp-link";
+type SectionId = SettingsCategoryId;
 
 type SettingsSection = {
   id: SectionId;
   title: string;
   description: string;
   icon: typeof Bell;
+  helpTarget: HelpTargetId;
 };
 
 function buildSections(showProSettings: boolean): SettingsSection[] {
   return [
-    ...(showProSettings ? [{ id: "reminders" as const, title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell }] : []),
-    { id: "locale", title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe },
-    ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock }] : []),
-    ...(showProSettings ? [{ id: "public-api" as const, title: t("frontend.public_api.section_title"), description: t("frontend.public_api.description"), icon: KeyRound }] : []),
-        { id: "whatsapp-link", title: t("frontend.whatsapp_link.section_title"), description: t("frontend.whatsapp_link.section_description"), icon: MessageCircle },
-    { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield },
-    { id: "mailbox", title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail },
-    { id: "access-control", title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban },
-    { id: "profile", title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User },
-    { id: "password", title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock },
+    ...(showProSettings ? [{ id: "reminders" as const, title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell, helpTarget: HELP_TARGETS.reminders }] : []),
+    { id: "locale", title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe, helpTarget: HELP_TARGETS.language },
+    ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock, helpTarget: HELP_TARGETS.timezone }] : []),
+    ...(showProSettings ? [{ id: "public-api" as const, title: t("frontend.public_api.section_title"), description: t("frontend.public_api.description"), icon: KeyRound, helpTarget: HELP_TARGETS.publicApi }] : []),
+    { id: "whatsapp-link", title: t("frontend.whatsapp_link.section_title"), description: t("frontend.whatsapp_link.section_description"), icon: MessageCircle, helpTarget: HELP_TARGETS.whatsapp },
+    { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield, helpTarget: HELP_TARGETS.codeServices },
+    { id: "mailbox", title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail, helpTarget: HELP_TARGETS.mailbox },
+    { id: "access-control", title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban, helpTarget: HELP_TARGETS.accessControl },
+    { id: "profile", title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User, helpTarget: HELP_TARGETS.profile },
+    { id: "password", title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock, helpTarget: HELP_TARGETS.password },
   ];
 }
 
@@ -53,6 +56,7 @@ function CategoryList({ sections, activeSection, onSelect }: { sections: Setting
             key={section.id}
             type="button"
             aria-current={active ? "page" : undefined}
+            data-help-id={active ? section.helpTarget : undefined}
             onClick={() => onSelect(section.id)}
             className={cn(
               "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -71,12 +75,12 @@ function CategoryList({ sections, activeSection, onSelect }: { sections: Setting
   );
 }
 
-export function SettingsPage() {
+export function SettingsPage({ initialSection }: { initialSection?: SectionId } = {}) {
   const { role, tenantPlan, isMasterSupportContext } = useAuthStore();
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
   const showProSettings = !isStarterTenantAdmin || isMasterSupportContext;
   const sections = buildSections(showProSettings);
-  const [activeSection, setActiveSection] = useState<SectionId | null>(null);
+  const [activeSection, setActiveSection] = useState<SectionId | null>(initialSection ?? null);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -95,6 +99,12 @@ export function SettingsPage() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (initialSection) {
+      setActiveSection(initialSection);
+    }
+  }, [initialSection]);
 
   function selectSection(sectionId: SectionId) {
     setActiveSection(sectionId);
@@ -137,7 +147,10 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6">
+    <div
+      className="flex-1 p-4 md:p-6"
+      data-help-id={!activeConfig ? HELP_TARGETS.settings : undefined}
+    >
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -172,7 +185,11 @@ export function SettingsPage() {
             </Card>
           </aside>
 
-          <Card className="min-h-[32rem] overflow-hidden" aria-label={t("frontend.settings.active_panel")}>
+          <Card
+            className="min-h-[32rem] overflow-hidden"
+            aria-label={t("frontend.settings.active_panel")}
+            data-help-id={activeConfig?.helpTarget}
+          >
             {activeConfig ? (
               <>
                 <CardHeader className="border-b">

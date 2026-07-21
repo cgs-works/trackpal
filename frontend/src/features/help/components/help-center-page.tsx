@@ -27,8 +27,35 @@ import {
   type HelpTopicSummary,
 } from "../services/help-api";
 import { SafeMarkdown } from "./safe-markdown";
+import { resolveSafeHelpNavigation } from "../safe-navigation";
 
 type HelpListItem = HelpTopicSummary | HelpSearchResult;
+
+const HELP_MODULE_ORDER = [
+  "dashboard",
+  "clients",
+  "catalog",
+  "subscriptions",
+  "settings",
+  "help",
+] as const;
+
+const HELP_MODULE_LABEL_KEYS: Record<
+  (typeof HELP_MODULE_ORDER)[number],
+  string
+> = {
+  dashboard: "frontend.dashboard.tenant.title",
+  clients: "frontend.clients.section_title",
+  catalog: "frontend.catalog.section_title",
+  subscriptions: "frontend.subscriptions.title",
+  settings: "frontend.settings.section_title",
+  help: "frontend.help.title",
+};
+
+function moduleLabel(module: string): string {
+  const key = HELP_MODULE_LABEL_KEYS[module as keyof typeof HELP_MODULE_LABEL_KEYS];
+  return key ? t(key) : module;
+}
 
 function TopicList({
   topics,
@@ -43,25 +70,75 @@ function TopicList({
     return <p className="px-3 py-4 text-sm text-muted-foreground">{t("frontend.help.no_results")}</p>;
   }
 
+  const grouped = new Map<string, HelpListItem[]>();
+  for (const topic of topics) {
+    const group = grouped.get(topic.module) ?? [];
+    group.push(topic);
+    grouped.set(topic.module, group);
+  }
+  const modules = [
+    ...HELP_MODULE_ORDER.filter((module) => grouped.has(module)),
+    ...Array.from(grouped.keys()).filter(
+      (module) => !HELP_MODULE_ORDER.includes(module as (typeof HELP_MODULE_ORDER)[number]),
+    ),
+  ];
+
   return (
-    <div className="flex flex-col gap-1">
-      {topics.map((topic) => (
-        <Button
-          key={topic.id}
-          variant={selectedId === topic.id ? "secondary" : "ghost"}
-          className="h-auto justify-start whitespace-normal px-3 py-2 text-left"
-          aria-current={selectedId === topic.id ? "page" : undefined}
-          onClick={() => onSelect(topic.id)}
-        >
-          <span className="flex flex-col items-start gap-0.5">
-            <span>{topic.title}</span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {"excerpt" in topic ? topic.excerpt : topic.summary}
-            </span>
-          </span>
-        </Button>
+    <div className="flex flex-col gap-4">
+      {modules.map((module) => (
+        <section key={module} aria-labelledby={`help-module-${module}`}>
+          <h3
+            id={`help-module-${module}`}
+            className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            {moduleLabel(module)}
+          </h3>
+          <div className="flex flex-col gap-1">
+            {(grouped.get(module) ?? [])
+              .slice()
+              .sort((left, right) => left.order - right.order)
+              .map((topic) => (
+                <Button
+                  key={topic.id}
+                  variant={selectedId === topic.id ? "secondary" : "ghost"}
+                  className="h-auto justify-start whitespace-normal px-3 py-2 text-left"
+                  aria-current={selectedId === topic.id ? "page" : undefined}
+                  onClick={() => onSelect(topic.id)}
+                >
+                  <span className="flex flex-col items-start gap-0.5">
+                    <span>{topic.title}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {"excerpt" in topic ? topic.excerpt : topic.summary}
+                    </span>
+                  </span>
+                </Button>
+              ))}
+          </div>
+        </section>
       ))}
     </div>
+  );
+}
+
+export function SafeNavigationLink({ topic }: { topic: HelpTopic }) {
+  const destination = resolveSafeHelpNavigation(topic.safe_navigation);
+  if (!destination) {
+    return null;
+  }
+
+  const className = buttonVariants({ variant: "outline" });
+  if (destination.to === "/admin/settings") {
+    return (
+      <Link to={destination.to} search={destination.search} className={className}>
+        {t("frontend.help.go_to_module")}
+      </Link>
+    );
+  }
+
+  return (
+    <Link to={destination.to} className={className}>
+      {t("frontend.help.go_to_module")}
+    </Link>
   );
 }
 
@@ -245,16 +322,11 @@ export function HelpCenterPage() {
           {!loading && topic && (
             <article className="flex flex-col gap-6">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{t("frontend.dashboard.tenant.title")}</Badge>
+                <Badge variant="secondary">{moduleLabel(topic.module)}</Badge>
               </div>
               <SafeMarkdown source={topic.body} />
               <div>
-                <Link
-                  to="/admin/dashboard"
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  {t("frontend.help.go_to_module")}
-                </Link>
+                <SafeNavigationLink topic={topic} />
               </div>
             </article>
           )}

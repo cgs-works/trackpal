@@ -17,6 +17,11 @@ def _topic(topic_id: str, audience: str, plans: list[str], title: str) -> dict:
         "search_tags": ["starter-tag" if "starter" in topic_id else "pro-tag"],
         "synonyms": ["begin" if "starter" in topic_id else "premium"],
         "related_topics": [],
+        "order": 10,
+        "safe_navigation": {
+            "route": "/admin/dashboard",
+            "settings_category": None,
+        },
         "tour": None,
         "body": f"# {title}\n\nThis is the {topic_id} article.",
     }
@@ -34,7 +39,7 @@ def _catalog() -> HelpCatalog:
         {
             "schema_version": 1,
             "content_version": "test",
-            "frontend_target_contract_version": "1",
+            "frontend_target_contract_version": "2",
             "topics": {"en": topics},
             "search": {
                 "en": [
@@ -66,7 +71,14 @@ def test_catalog_filters_audience_and_plan_before_search_matching() -> None:
     assert [topic["id"] for topic in starter_topics] == ["tenant-admin.starter"]
     assert starter_search == []
     assert [result["id"] for result in client_search] == ["client.dashboard"]
-    assert set(client_search[0]) == {"id", "title", "module", "route", "excerpt"}
+    assert set(client_search[0]) == {
+        "id",
+        "title",
+        "module",
+        "route",
+        "order",
+        "excerpt",
+    }
 
 
 def test_catalog_search_matches_maintained_synonyms() -> None:

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "content_version": "help-tracer-1",
-  "frontend_target_contract_version": "1",
+  "content_version": "help-common-modules-1",
+  "frontend_target_contract_version": "2",
   "locales": [
     "en",
     "es"
@@ -39,9 +39,196 @@
           "home",
           "overview"
         ],
-        "related_topics": [],
+        "related_topics": [
+          "tenant-admin.language",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 10,
+        "safe_navigation": {
+          "route": "/admin/dashboard",
+          "settings_category": null
+        },
         "tour": null,
-        "body": "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes the parts of TrackPal that are available to your current plan.\n\n## What you can see\n\n- Your current plan: Starter or Pro.\n- The status of the central lookup mailbox.\n- The number of enabled code services.\n- The number of blocked WhatsApp identities in Access Control.\n- Pro businesses also see active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n\n## Web\n\nOpen Dashboard from the navigation to review these indicators before starting a task. A missing mailbox or an empty enabled-service count means access-code lookup is not ready yet; open the matching Settings area to continue setup.\n\n## WhatsApp\n\nThe Dashboard does not change WhatsApp settings. Use Settings to link WhatsApp and configure the prerequisites for access-code lookup, then use the Tenant Admin WhatsApp Console for the conversational actions available on your plan.\n\n## Expected result\n\nYou have a quick, read-only overview of your business status and know which module to open next. Dashboard information is refreshed from your Tenant data and does not create or change records."
+        "body": "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes what TrackPal can do for your business on the current plan.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. The dashboard is not a WhatsApp menu.\n- **Prerequisites:** Sign in as a Tenant Admin with an active Tenant. No setup is required to read the page.\n- **Actions:** Open Dashboard from the sidebar and use the read-only indicators to decide which module to open next.\n\n## Results and states\n\n- You see your Starter or Pro plan, central lookup mailbox status, enabled code-service count, and blocked WhatsApp identity count.\n- Pro also shows active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n- A loading state means TrackPal is refreshing Tenant data. An empty mailbox or zero enabled services means access-code lookup is not ready.\n- A failed load leaves the page without current metrics. Retry from the page and contact support if the error persists.\n\n## Limits, consequences, and recovery\n\nDashboard is read-only: viewing it creates no records and changes no settings. It does not link WhatsApp, enable platforms, configure a mailbox, or start a WhatsApp session. Open the matching Settings category to complete setup. If a module is missing from navigation, the current plan does not include it; Pro data remains preserved after a downgrade but Pro actions are unavailable.\n\n## Web and WhatsApp\n\nUse Web Dashboard for the overview. WhatsApp has its own Tenant Admin menu and session rules; use the WhatsApp topic for that flow. Dashboard values are refreshed from the active Tenant and can change after another administrator updates setup.\n\n## Support boundary\n\nSupport can help interpret a status, plan access, or a persistent loading error. Do not send passwords, pairing codes, access tokens, or mailbox credentials in a support request."
+      },
+      {
+        "id": "tenant-admin.language",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.language"
+        ],
+        "title": "Language",
+        "summary": "Change the language used by TrackPal for your business workspace.",
+        "search_tags": [
+          "language",
+          "locale",
+          "Spanish",
+          "English"
+        ],
+        "synonyms": [
+          "idioma",
+          "translation"
+        ],
+        "related_topics": [
+          "tenant-admin.dashboard",
+          "tenant-admin.profile",
+          "tenant-admin.password"
+        ],
+        "order": 20,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "locale"
+        },
+        "tour": null,
+        "body": "# Language\n\nLanguage controls the TrackPal interface and the private Help content for your active business workspace.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. WhatsApp replies follow the active locale but language is changed here.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings. The Language category is available on Starter and Pro.\n- **Actions:** Choose Language, select the available locale, and save the change. The page reloads the catalog after a successful save.\n\n## Results and states\n\nThe navigation, Settings labels, and Help topics use the selected language after the update. While saving, the control is busy. The current selection remains visible when the page loads. If the locale cannot be loaded or saved, the existing language remains active and an error is shown.\n\n## Limits, consequences, and recovery\n\nLanguage is a Tenant setting, so it applies to the business rather than only one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.\n\n## Support boundary\n\nSupport can help when the language selector or catalog remains unavailable after retrying. Include the selected locale and the visible error, but never include a password, pairing code, access token, or mailbox secret."
+      },
+      {
+        "id": "tenant-admin.password",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.password"
+        ],
+        "title": "Password",
+        "summary": "Change the Tenant Admin password without changing the business profile.",
+        "search_tags": [
+          "password",
+          "security",
+          "sign in",
+          "account security"
+        ],
+        "synonyms": [
+          "reset password",
+          "credentials"
+        ],
+        "related_topics": [
+          "tenant-admin.profile",
+          "tenant-admin.language"
+        ],
+        "order": 50,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "password"
+        },
+        "tour": null,
+        "body": "# Password\n\nUse Password in Settings to change the password for the signed-in Tenant Admin account.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Password changes are not available from the Tenant Admin WhatsApp console.\n- **Prerequisites:** Sign in with the account whose password you want to change and open Settings, then Password. You need the current password.\n- **Actions:** Enter the current password, enter a new password, confirm it, and save. TrackPal validates the new value before sending it.\n\n## Results and states\n\nA successful change confirms the update. While saving, the form is busy. Missing, incorrect, or mismatched values show a validation error and do not change the password. If the request fails, the existing password remains valid and the form can be retried.\n\n## Limits, consequences, and recovery\n\nChanging the password affects this Tenant Admin account, not other administrators, clients, mailbox credentials, or WhatsApp sessions. Use a new password that meets the minimum shown by the form and do not reuse a shared mailbox password. If you forget the current password or repeated retries fail, stop guessing and use the supported account recovery or contact the workspace owner; do not reveal the password to support.\n\n## Support boundary\n\nSupport can explain the visible validation or connection error, but cannot view, recover, or accept a password. Never put current or new passwords in a ticket, chat, screenshot, or Help search."
+      },
+      {
+        "id": "tenant-admin.profile",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.profile"
+        ],
+        "title": "Profile",
+        "summary": "Update the business identity and contact information used by TrackPal.",
+        "search_tags": [
+          "profile",
+          "name",
+          "email",
+          "phone",
+          "WhatsApp phone"
+        ],
+        "synonyms": [
+          "account details",
+          "business information"
+        ],
+        "related_topics": [
+          "tenant-admin.dashboard",
+          "tenant-admin.language",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 40,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "profile"
+        },
+        "tour": null,
+        "body": "# Profile\n\nProfile stores the business identity and contact details that Tenant Admins use to configure TrackPal.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Profile editing is not available as a WhatsApp action.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings, then Profile.\n- **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.\n\n## Results and states\n\nA successful save shows a confirmation and the updated values remain in the form. Loading means TrackPal is retrieving the current profile. Validation errors identify a value that must be corrected. A failed save leaves the previous profile on the server and keeps the local form available for recovery.\n\n## Limits, consequences, and recovery\n\nProfile values identify the Tenant and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.\n\n## Support boundary\n\nSupport can help with validation or a profile save that fails repeatedly. Share the field name and error message only. Do not share password values, WhatsApp pairing codes, API keys, or mailbox credentials."
+      },
+      {
+        "id": "tenant-admin.whatsapp",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_whatsapp"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.whatsapp"
+        ],
+        "title": "WhatsApp",
+        "summary": "Link the business WhatsApp instance and understand the Tenant Admin console.",
+        "search_tags": [
+          "WhatsApp",
+          "pairing code",
+          "QR code",
+          "linked devices",
+          "disconnect"
+        ],
+        "synonyms": [
+          "WhatsApp connection",
+          "link phone",
+          "bot"
+        ],
+        "related_topics": [
+          "tenant-admin.dashboard",
+          "tenant-admin.profile",
+          "tenant-admin.language"
+        ],
+        "order": 30,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "whatsapp-link"
+        },
+        "tour": null,
+        "body": "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting means pairing is still in progress. Disconnected or missing phone means the console is not ready. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use 0 to exit; follow the current menu for navigation and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
       }
     ],
     "es": [
@@ -76,9 +263,196 @@
           "inicio",
           "resumen"
         ],
-        "related_topics": [],
+        "related_topics": [
+          "tenant-admin.language",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 10,
+        "safe_navigation": {
+          "route": "/admin/dashboard",
+          "settings_category": null
+        },
         "tour": null,
-        "body": "# Panel del negocio\n\nEl Panel del negocio es el punto de partida para los Tenant Admins. Resume las partes de TrackPal disponibles para tu plan actual.\n\n## Qué puedes ver\n\n- Tu plan actual: Starter o Pro.\n- El estado del buzón central de búsqueda.\n- La cantidad de servicios de códigos habilitados.\n- La cantidad de identidades de WhatsApp bloqueadas en Control de acceso.\n- Los negocios Pro también ven clientes activos, servicios del catálogo, suscripciones activas y suscripciones próximas a vencer.\n\n## Web\n\nAbre Panel desde la navegación para revisar estos indicadores antes de iniciar una tarea. Un buzón faltante o una cantidad vacía de servicios habilitados significa que la búsqueda de códigos todavía no está lista; abre la sección correspondiente de Configuración para continuar.\n\n## WhatsApp\n\nEl Panel no cambia la configuración de WhatsApp. Usa Configuración para vincular WhatsApp y preparar los requisitos de búsqueda de códigos; después usa la Consola de Tenant Admin para las acciones conversacionales disponibles en tu plan.\n\n## Resultado esperado\n\nObtienes un resumen rápido, de solo lectura, del estado de tu negocio y sabes qué módulo abrir después. La información del Panel se actualiza con los datos de tu Tenant y no crea ni modifica registros."
+        "body": "# Dashboard de la empresa\n\nEl Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. El dashboard no es un menú de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.\n- **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.\n\n## Resultados y estados\n\n- Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.\n- Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.\n- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.\n- Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.\n\n## Límites, consecuencias y recuperación\n\nEl Dashboard es de solo lectura: verlo no crea registros ni cambia configuraciones. No vincula WhatsApp, habilita plataformas, configura un buzón ni inicia una sesión de WhatsApp. Abre la categoría correspondiente de Configuración para completar la preparación. Si un módulo no aparece en la navegación, el plan actual no lo incluye; los datos Pro se conservan después de bajar a Starter, pero las acciones Pro quedan inactivas.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.\n\n## Límite de soporte\n\nSoporte puede ayudarte a interpretar un estado, el acceso del plan o un error de carga persistente. No envíes contraseñas, códigos de vinculación, tokens ni credenciales del buzón en una solicitud."
+      },
+      {
+        "id": "tenant-admin.language",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.language"
+        ],
+        "title": "Idioma",
+        "summary": "Cambia el idioma que TrackPal usa para el espacio de trabajo de tu negocio.",
+        "search_tags": [
+          "idioma",
+          "locale",
+          "español",
+          "inglés"
+        ],
+        "synonyms": [
+          "lenguaje",
+          "traducción"
+        ],
+        "related_topics": [
+          "tenant-admin.dashboard",
+          "tenant-admin.profile",
+          "tenant-admin.password"
+        ],
+        "order": 20,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "locale"
+        },
+        "tour": null,
+        "body": "# Idioma\n\nEl Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para el espacio de trabajo de tu negocio activo.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración. La categoría Idioma está disponible en Starter y Pro.\n- **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.\n\n## Resultados y estados\n\nLa navegación, las etiquetas de Configuración y los temas de Ayuda usan el idioma seleccionado después de actualizarlo. Mientras guarda, el control está ocupado. La selección actual permanece visible al cargar la página. Si el idioma no puede cargarse o guardarse, el idioma anterior continúa activo y aparece un error.\n\n## Límites, consecuencias y recuperación\n\nEl idioma es una configuración del Tenant, por lo que aplica al negocio y no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.\n\n## Límite de soporte\n\nSoporte puede ayudarte si el selector o el catálogo siguen sin estar disponibles después de reintentar. Incluye el idioma seleccionado y el error visible, pero nunca una contraseña, código de vinculación, token o secreto del buzón."
+      },
+      {
+        "id": "tenant-admin.password",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.password"
+        ],
+        "title": "Contraseña",
+        "summary": "Cambia la contraseña de la cuenta Tenant Admin sin cambiar el perfil del negocio.",
+        "search_tags": [
+          "contraseña",
+          "seguridad",
+          "iniciar sesión",
+          "seguridad de cuenta"
+        ],
+        "synonyms": [
+          "restablecer contraseña",
+          "credenciales"
+        ],
+        "related_topics": [
+          "tenant-admin.profile",
+          "tenant-admin.language"
+        ],
+        "order": 50,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "password"
+        },
+        "tour": null,
+        "body": "# Contraseña\n\nUsa Contraseña en Configuración para cambiar la contraseña de la cuenta Tenant Admin con la que iniciaste sesión.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Los cambios de contraseña no están disponibles en la consola de WhatsApp del Tenant Admin.\n- **Requisitos:** Inicia sesión con la cuenta cuya contraseña quieres cambiar y abre Configuración, luego Contraseña. Necesitas la contraseña actual.\n- **Acciones:** Escribe la contraseña actual, una nueva contraseña, confírmala y guarda. TrackPal valida el nuevo valor antes de enviarlo.\n\n## Resultados y estados\n\nUn cambio exitoso confirma la actualización. Mientras guarda, el formulario está ocupado. Los valores faltantes, incorrectos o que no coinciden muestran un error de validación y no cambian la contraseña. Si falla la solicitud, la contraseña existente sigue siendo válida y puedes reintentar desde el formulario.\n\n## Límites, consecuencias y recuperación\n\nCambiar la contraseña afecta esta cuenta Tenant Admin, no a otros administradores, clientes, credenciales del buzón ni sesiones de WhatsApp. Usa una contraseña nueva que cumpla el mínimo mostrado por el formulario y no reutilices la contraseña de un buzón compartido. Si olvidaste la contraseña actual o fallan varios intentos, deja de probar y usa la recuperación disponible o contacta al propietario del espacio; no reveles la contraseña a soporte.\n\n## Límite de soporte\n\nSoporte puede explicar un error visible de validación o conexión, pero no puede ver, recuperar ni aceptar una contraseña. Nunca incluyas contraseñas actuales o nuevas en un ticket, chat, captura o búsqueda de Ayuda."
+      },
+      {
+        "id": "tenant-admin.profile",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.profile"
+        ],
+        "title": "Perfil",
+        "summary": "Actualiza la identidad y la información de contacto del negocio que usa TrackPal.",
+        "search_tags": [
+          "perfil",
+          "nombre",
+          "email",
+          "teléfono",
+          "teléfono de WhatsApp"
+        ],
+        "synonyms": [
+          "datos de cuenta",
+          "información del negocio"
+        ],
+        "related_topics": [
+          "tenant-admin.dashboard",
+          "tenant-admin.language",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 40,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "profile"
+        },
+        "tour": null,
+        "body": "# Perfil\n\nPerfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.\n- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.\n\n## Resultados y estados\n\nDespués de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.\n\n## Límites, consecuencias y recuperación\n\nLos valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.\n\n## Límite de soporte\n\nSoporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón."
+      },
+      {
+        "id": "tenant-admin.whatsapp",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_whatsapp"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.whatsapp"
+        ],
+        "title": "WhatsApp",
+        "summary": "Vincula el WhatsApp del negocio y entiende la consola de Tenant Admin.",
+        "search_tags": [
+          "WhatsApp",
+          "código de vinculación",
+          "código QR",
+          "dispositivos vinculados",
+          "desconectar"
+        ],
+        "synonyms": [
+          "conexión de WhatsApp",
+          "vincular teléfono",
+          "bot"
+        ],
+        "related_topics": [
+          "tenant-admin.dashboard",
+          "tenant-admin.profile",
+          "tenant-admin.language"
+        ],
+        "order": 30,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "whatsapp-link"
+        },
+        "tour": null,
+        "body": "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa 0 para salir; sigue el menú actual para navegar y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
       }
     ]
   },
@@ -96,7 +470,70 @@
           "access control",
           "home",
           "overview",
-          "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes the parts of TrackPal that are available to your current plan.\n\n## What you can see\n\n- Your current plan: Starter or Pro.\n- The status of the central lookup mailbox.\n- The number of enabled code services.\n- The number of blocked WhatsApp identities in Access Control.\n- Pro businesses also see active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n\n## Web\n\nOpen Dashboard from the navigation to review these indicators before starting a task. A missing mailbox or an empty enabled-service count means access-code lookup is not ready yet; open the matching Settings area to continue setup.\n\n## WhatsApp\n\nThe Dashboard does not change WhatsApp settings. Use Settings to link WhatsApp and configure the prerequisites for access-code lookup, then use the Tenant Admin WhatsApp Console for the conversational actions available on your plan.\n\n## Expected result\n\nYou have a quick, read-only overview of your business status and know which module to open next. Dashboard information is refreshed from your Tenant data and does not create or change records."
+          "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes what TrackPal can do for your business on the current plan.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. The dashboard is not a WhatsApp menu.\n- **Prerequisites:** Sign in as a Tenant Admin with an active Tenant. No setup is required to read the page.\n- **Actions:** Open Dashboard from the sidebar and use the read-only indicators to decide which module to open next.\n\n## Results and states\n\n- You see your Starter or Pro plan, central lookup mailbox status, enabled code-service count, and blocked WhatsApp identity count.\n- Pro also shows active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n- A loading state means TrackPal is refreshing Tenant data. An empty mailbox or zero enabled services means access-code lookup is not ready.\n- A failed load leaves the page without current metrics. Retry from the page and contact support if the error persists.\n\n## Limits, consequences, and recovery\n\nDashboard is read-only: viewing it creates no records and changes no settings. It does not link WhatsApp, enable platforms, configure a mailbox, or start a WhatsApp session. Open the matching Settings category to complete setup. If a module is missing from navigation, the current plan does not include it; Pro data remains preserved after a downgrade but Pro actions are unavailable.\n\n## Web and WhatsApp\n\nUse Web Dashboard for the overview. WhatsApp has its own Tenant Admin menu and session rules; use the WhatsApp topic for that flow. Dashboard values are refreshed from the active Tenant and can change after another administrator updates setup.\n\n## Support boundary\n\nSupport can help interpret a status, plan access, or a persistent loading error. Do not send passwords, pairing codes, access tokens, or mailbox credentials in a support request."
+        ]
+      },
+      {
+        "id": "tenant-admin.language",
+        "title": "Language",
+        "terms": [
+          "Language",
+          "Change the language used by TrackPal for your business workspace.",
+          "language",
+          "locale",
+          "Spanish",
+          "English",
+          "idioma",
+          "translation",
+          "# Language\n\nLanguage controls the TrackPal interface and the private Help content for your active business workspace.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. WhatsApp replies follow the active locale but language is changed here.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings. The Language category is available on Starter and Pro.\n- **Actions:** Choose Language, select the available locale, and save the change. The page reloads the catalog after a successful save.\n\n## Results and states\n\nThe navigation, Settings labels, and Help topics use the selected language after the update. While saving, the control is busy. The current selection remains visible when the page loads. If the locale cannot be loaded or saved, the existing language remains active and an error is shown.\n\n## Limits, consequences, and recovery\n\nLanguage is a Tenant setting, so it applies to the business rather than only one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.\n\n## Support boundary\n\nSupport can help when the language selector or catalog remains unavailable after retrying. Include the selected locale and the visible error, but never include a password, pairing code, access token, or mailbox secret."
+        ]
+      },
+      {
+        "id": "tenant-admin.password",
+        "title": "Password",
+        "terms": [
+          "Password",
+          "Change the Tenant Admin password without changing the business profile.",
+          "password",
+          "security",
+          "sign in",
+          "account security",
+          "reset password",
+          "credentials",
+          "# Password\n\nUse Password in Settings to change the password for the signed-in Tenant Admin account.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Password changes are not available from the Tenant Admin WhatsApp console.\n- **Prerequisites:** Sign in with the account whose password you want to change and open Settings, then Password. You need the current password.\n- **Actions:** Enter the current password, enter a new password, confirm it, and save. TrackPal validates the new value before sending it.\n\n## Results and states\n\nA successful change confirms the update. While saving, the form is busy. Missing, incorrect, or mismatched values show a validation error and do not change the password. If the request fails, the existing password remains valid and the form can be retried.\n\n## Limits, consequences, and recovery\n\nChanging the password affects this Tenant Admin account, not other administrators, clients, mailbox credentials, or WhatsApp sessions. Use a new password that meets the minimum shown by the form and do not reuse a shared mailbox password. If you forget the current password or repeated retries fail, stop guessing and use the supported account recovery or contact the workspace owner; do not reveal the password to support.\n\n## Support boundary\n\nSupport can explain the visible validation or connection error, but cannot view, recover, or accept a password. Never put current or new passwords in a ticket, chat, screenshot, or Help search."
+        ]
+      },
+      {
+        "id": "tenant-admin.profile",
+        "title": "Profile",
+        "terms": [
+          "Profile",
+          "Update the business identity and contact information used by TrackPal.",
+          "profile",
+          "name",
+          "email",
+          "phone",
+          "WhatsApp phone",
+          "account details",
+          "business information",
+          "# Profile\n\nProfile stores the business identity and contact details that Tenant Admins use to configure TrackPal.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Profile editing is not available as a WhatsApp action.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings, then Profile.\n- **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.\n\n## Results and states\n\nA successful save shows a confirmation and the updated values remain in the form. Loading means TrackPal is retrieving the current profile. Validation errors identify a value that must be corrected. A failed save leaves the previous profile on the server and keeps the local form available for recovery.\n\n## Limits, consequences, and recovery\n\nProfile values identify the Tenant and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.\n\n## Support boundary\n\nSupport can help with validation or a profile save that fails repeatedly. Share the field name and error message only. Do not share password values, WhatsApp pairing codes, API keys, or mailbox credentials."
+        ]
+      },
+      {
+        "id": "tenant-admin.whatsapp",
+        "title": "WhatsApp",
+        "terms": [
+          "WhatsApp",
+          "Link the business WhatsApp instance and understand the Tenant Admin console.",
+          "WhatsApp",
+          "pairing code",
+          "QR code",
+          "linked devices",
+          "disconnect",
+          "WhatsApp connection",
+          "link phone",
+          "bot",
+          "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting means pairing is still in progress. Disconnected or missing phone means the console is not ready. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use 0 to exit; follow the current menu for navigation and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
         ]
       }
     ],
@@ -113,7 +550,70 @@
           "control de acceso",
           "inicio",
           "resumen",
-          "# Panel del negocio\n\nEl Panel del negocio es el punto de partida para los Tenant Admins. Resume las partes de TrackPal disponibles para tu plan actual.\n\n## Qué puedes ver\n\n- Tu plan actual: Starter o Pro.\n- El estado del buzón central de búsqueda.\n- La cantidad de servicios de códigos habilitados.\n- La cantidad de identidades de WhatsApp bloqueadas en Control de acceso.\n- Los negocios Pro también ven clientes activos, servicios del catálogo, suscripciones activas y suscripciones próximas a vencer.\n\n## Web\n\nAbre Panel desde la navegación para revisar estos indicadores antes de iniciar una tarea. Un buzón faltante o una cantidad vacía de servicios habilitados significa que la búsqueda de códigos todavía no está lista; abre la sección correspondiente de Configuración para continuar.\n\n## WhatsApp\n\nEl Panel no cambia la configuración de WhatsApp. Usa Configuración para vincular WhatsApp y preparar los requisitos de búsqueda de códigos; después usa la Consola de Tenant Admin para las acciones conversacionales disponibles en tu plan.\n\n## Resultado esperado\n\nObtienes un resumen rápido, de solo lectura, del estado de tu negocio y sabes qué módulo abrir después. La información del Panel se actualiza con los datos de tu Tenant y no crea ni modifica registros."
+          "# Dashboard de la empresa\n\nEl Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. El dashboard no es un menú de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.\n- **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.\n\n## Resultados y estados\n\n- Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.\n- Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.\n- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.\n- Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.\n\n## Límites, consecuencias y recuperación\n\nEl Dashboard es de solo lectura: verlo no crea registros ni cambia configuraciones. No vincula WhatsApp, habilita plataformas, configura un buzón ni inicia una sesión de WhatsApp. Abre la categoría correspondiente de Configuración para completar la preparación. Si un módulo no aparece en la navegación, el plan actual no lo incluye; los datos Pro se conservan después de bajar a Starter, pero las acciones Pro quedan inactivas.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.\n\n## Límite de soporte\n\nSoporte puede ayudarte a interpretar un estado, el acceso del plan o un error de carga persistente. No envíes contraseñas, códigos de vinculación, tokens ni credenciales del buzón en una solicitud."
+        ]
+      },
+      {
+        "id": "tenant-admin.language",
+        "title": "Idioma",
+        "terms": [
+          "Idioma",
+          "Cambia el idioma que TrackPal usa para el espacio de trabajo de tu negocio.",
+          "idioma",
+          "locale",
+          "español",
+          "inglés",
+          "lenguaje",
+          "traducción",
+          "# Idioma\n\nEl Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para el espacio de trabajo de tu negocio activo.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración. La categoría Idioma está disponible en Starter y Pro.\n- **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.\n\n## Resultados y estados\n\nLa navegación, las etiquetas de Configuración y los temas de Ayuda usan el idioma seleccionado después de actualizarlo. Mientras guarda, el control está ocupado. La selección actual permanece visible al cargar la página. Si el idioma no puede cargarse o guardarse, el idioma anterior continúa activo y aparece un error.\n\n## Límites, consecuencias y recuperación\n\nEl idioma es una configuración del Tenant, por lo que aplica al negocio y no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.\n\n## Límite de soporte\n\nSoporte puede ayudarte si el selector o el catálogo siguen sin estar disponibles después de reintentar. Incluye el idioma seleccionado y el error visible, pero nunca una contraseña, código de vinculación, token o secreto del buzón."
+        ]
+      },
+      {
+        "id": "tenant-admin.password",
+        "title": "Contraseña",
+        "terms": [
+          "Contraseña",
+          "Cambia la contraseña de la cuenta Tenant Admin sin cambiar el perfil del negocio.",
+          "contraseña",
+          "seguridad",
+          "iniciar sesión",
+          "seguridad de cuenta",
+          "restablecer contraseña",
+          "credenciales",
+          "# Contraseña\n\nUsa Contraseña en Configuración para cambiar la contraseña de la cuenta Tenant Admin con la que iniciaste sesión.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Los cambios de contraseña no están disponibles en la consola de WhatsApp del Tenant Admin.\n- **Requisitos:** Inicia sesión con la cuenta cuya contraseña quieres cambiar y abre Configuración, luego Contraseña. Necesitas la contraseña actual.\n- **Acciones:** Escribe la contraseña actual, una nueva contraseña, confírmala y guarda. TrackPal valida el nuevo valor antes de enviarlo.\n\n## Resultados y estados\n\nUn cambio exitoso confirma la actualización. Mientras guarda, el formulario está ocupado. Los valores faltantes, incorrectos o que no coinciden muestran un error de validación y no cambian la contraseña. Si falla la solicitud, la contraseña existente sigue siendo válida y puedes reintentar desde el formulario.\n\n## Límites, consecuencias y recuperación\n\nCambiar la contraseña afecta esta cuenta Tenant Admin, no a otros administradores, clientes, credenciales del buzón ni sesiones de WhatsApp. Usa una contraseña nueva que cumpla el mínimo mostrado por el formulario y no reutilices la contraseña de un buzón compartido. Si olvidaste la contraseña actual o fallan varios intentos, deja de probar y usa la recuperación disponible o contacta al propietario del espacio; no reveles la contraseña a soporte.\n\n## Límite de soporte\n\nSoporte puede explicar un error visible de validación o conexión, pero no puede ver, recuperar ni aceptar una contraseña. Nunca incluyas contraseñas actuales o nuevas en un ticket, chat, captura o búsqueda de Ayuda."
+        ]
+      },
+      {
+        "id": "tenant-admin.profile",
+        "title": "Perfil",
+        "terms": [
+          "Perfil",
+          "Actualiza la identidad y la información de contacto del negocio que usa TrackPal.",
+          "perfil",
+          "nombre",
+          "email",
+          "teléfono",
+          "teléfono de WhatsApp",
+          "datos de cuenta",
+          "información del negocio",
+          "# Perfil\n\nPerfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.\n- **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.\n\n## Resultados y estados\n\nDespués de guardar correctamente aparece una confirmación y los valores actualizados permanecen en el formulario. Cargando significa que TrackPal está obteniendo el perfil actual. Los errores de validación indican un valor que debes corregir. Un error al guardar conserva el perfil anterior en el servidor y mantiene disponible el formulario local para recuperarlo.\n\n## Límites, consecuencias y recuperación\n\nLos valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.\n\n## Límite de soporte\n\nSoporte puede ayudarte con la validación o con un guardado que falle repetidamente. Comparte solo el nombre del campo y el mensaje de error. No compartas contraseñas, códigos de vinculación de WhatsApp, claves API ni credenciales del buzón."
+        ]
+      },
+      {
+        "id": "tenant-admin.whatsapp",
+        "title": "WhatsApp",
+        "terms": [
+          "WhatsApp",
+          "Vincula el WhatsApp del negocio y entiende la consola de Tenant Admin.",
+          "WhatsApp",
+          "código de vinculación",
+          "código QR",
+          "dispositivos vinculados",
+          "desconectar",
+          "conexión de WhatsApp",
+          "vincular teléfono",
+          "bot",
+          "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa 0 para salir; sigue el menú actual para navegar y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
         ]
       }
     ]

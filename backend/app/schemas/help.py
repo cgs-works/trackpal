@@ -1,12 +1,20 @@
 from pydantic import BaseModel, Field
 
 
+class HelpSafeNavigation(BaseModel):
+    route: str
+    settings_category: str | None = None
+
+
 class HelpTopicSummary(BaseModel):
     id: str
     title: str
     summary: str
     module: str
     route: str
+    order: int
+    help_targets: list[str] = Field(default_factory=list)
+    safe_navigation: HelpSafeNavigation
 
 
 class HelpIndexResponse(BaseModel):
@@ -26,6 +34,7 @@ class HelpSearchResult(BaseModel):
     title: str
     module: str
     route: str
+    order: int
     excerpt: str
 
 

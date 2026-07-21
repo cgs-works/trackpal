@@ -22,29 +22,40 @@ search_tags:
 synonyms:
   - inicio
   - resumen
-related_topics: []
+order: 10
+safe_navigation:
+  route: /admin/dashboard
+  settings_category: null
+related_topics:
+  - tenant-admin.language
+  - tenant-admin.whatsapp
 ---
 
-# Panel del negocio
+# Dashboard de la empresa
 
-El Panel del negocio es el punto de partida para los Tenant Admins. Resume las partes de TrackPal disponibles para tu plan actual.
+El Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.
 
-## Qué puedes ver
+## Canal, requisitos y acciones
 
-- Tu plan actual: Starter o Pro.
-- El estado del buzón central de búsqueda.
-- La cantidad de servicios de códigos habilitados.
-- La cantidad de identidades de WhatsApp bloqueadas en Control de acceso.
-- Los negocios Pro también ven clientes activos, servicios del catálogo, suscripciones activas y suscripciones próximas a vencer.
+- **Canal:** Web. El dashboard no es un menú de WhatsApp.
+- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.
+- **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.
 
-## Web
+## Resultados y estados
 
-Abre Panel desde la navegación para revisar estos indicadores antes de iniciar una tarea. Un buzón faltante o una cantidad vacía de servicios habilitados significa que la búsqueda de códigos todavía no está lista; abre la sección correspondiente de Configuración para continuar.
+- Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.
+- Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.
+- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.
+- Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.
 
-## WhatsApp
+## Límites, consecuencias y recuperación
 
-El Panel no cambia la configuración de WhatsApp. Usa Configuración para vincular WhatsApp y preparar los requisitos de búsqueda de códigos; después usa la Consola de Tenant Admin para las acciones conversacionales disponibles en tu plan.
+El Dashboard es de solo lectura: verlo no crea registros ni cambia configuraciones. No vincula WhatsApp, habilita plataformas, configura un buzón ni inicia una sesión de WhatsApp. Abre la categoría correspondiente de Configuración para completar la preparación. Si un módulo no aparece en la navegación, el plan actual no lo incluye; los datos Pro se conservan después de bajar a Starter, pero las acciones Pro quedan inactivas.
 
-## Resultado esperado
+## Web y WhatsApp
 
-Obtienes un resumen rápido, de solo lectura, del estado de tu negocio y sabes qué módulo abrir después. La información del Panel se actualiza con los datos de tu Tenant y no crea ni modifica registros.
+Usa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.
+
+## Límite de soporte
+
+Soporte puede ayudarte a interpretar un estado, el acceso del plan o un error de carga persistente. No envíes contraseñas, códigos de vinculación, tokens ni credenciales del buzón en una solicitud.

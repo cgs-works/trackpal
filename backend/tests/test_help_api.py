@@ -28,11 +28,40 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
 
     assert index_response.status_code == 200
     assert index_response.json()["locale"] == "es"
-    assert index_response.json()["topics"][0]["id"] == "tenant-admin.dashboard"
+    assert [topic["id"] for topic in index_response.json()["topics"]] == [
+        "tenant-admin.dashboard",
+        "tenant-admin.language",
+        "tenant-admin.whatsapp",
+        "tenant-admin.profile",
+        "tenant-admin.password",
+    ]
+    assert index_response.json()["topics"][1]["help_targets"] == [
+        "admin.settings.language"
+    ]
+    assert index_response.json()["topics"][1]["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "locale",
+    }
     assert topic_response.status_code == 200
     assert topic_response.json()["title"] == "Panel del negocio"
-    assert "panel" in topic_response.json()["body"].lower()
+    assert "dashboard" in topic_response.json()["body"].lower()
     assert "frontmatter" not in topic_response.json()
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    tenant.plan = "starter"
+    await db_session.commit()
+    starter_index = await client.get("/api/v1/help", headers=headers)
+    assert [topic["id"] for topic in starter_index.json()["topics"]] == [
+        "tenant-admin.dashboard",
+        "tenant-admin.language",
+        "tenant-admin.whatsapp",
+        "tenant-admin.profile",
+        "tenant-admin.password",
+    ]
 
     tenant = (
         await db_session.execute(
@@ -67,7 +96,7 @@ async def test_help_search_returns_only_authorized_private_content(
     result = response.json()["results"][0]
     assert result["id"] == "tenant-admin.dashboard"
     assert "buzón" in result["excerpt"].lower()
-    assert set(result) == {"id", "title", "module", "route", "excerpt"}
+    assert set(result) == {"id", "title", "module", "route", "order", "excerpt"}
 
 
 async def test_help_search_uses_locale_synonyms_and_returns_no_results(

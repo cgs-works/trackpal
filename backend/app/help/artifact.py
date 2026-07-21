@@ -90,11 +90,12 @@ class HelpCatalog:
     def _authorized_topics(
         self, locale: str, plan: str, audience: str
     ) -> list[dict[str, Any]]:
-        return [
+        topics = [
             topic
             for topic in self.artifact.get("topics", {}).get(locale, [])
             if topic["audience"] == audience and plan in topic["plans"]
         ]
+        return sorted(topics, key=lambda topic: (topic["order"], topic["id"]))
 
 
 @lru_cache(maxsize=1)
@@ -112,6 +113,9 @@ def _public_topic(topic: dict[str, Any]) -> dict[str, Any]:
         "summary": topic["summary"],
         "module": topic["module"],
         "route": topic["route"],
+        "order": topic["order"],
+        "help_targets": topic["help_targets"],
+        "safe_navigation": topic["safe_navigation"],
     }
 
 
@@ -121,6 +125,7 @@ def _public_search_topic(topic: dict[str, Any]) -> dict[str, Any]:
         "title": topic["title"],
         "module": topic["module"],
         "route": topic["route"],
+        "order": topic["order"],
     }
 
 

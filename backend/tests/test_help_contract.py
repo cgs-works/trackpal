@@ -14,12 +14,18 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
     assert artifact["schema_version"] == 1
-    assert artifact["content_version"] == "help-tracer-1"
-    assert artifact["frontend_target_contract_version"] == "1"
+    assert artifact["content_version"] == "help-common-modules-1"
+    assert artifact["frontend_target_contract_version"] == "2"
     assert set(artifact["locales"]) == {"en", "es"}
-    assert [topic["id"] for topic in artifact["topics"]["es"]] == [
-        "tenant-admin.dashboard"
+    expected_ids = [
+        "tenant-admin.dashboard",
+        "tenant-admin.language",
+        "tenant-admin.profile",
+        "tenant-admin.password",
+        "tenant-admin.whatsapp",
     ]
+    assert [topic["id"] for topic in artifact["topics"]["en"]] == sorted(expected_ids)
+    assert [topic["id"] for topic in artifact["topics"]["es"]] == sorted(expected_ids)
     assert artifact["topics"]["en"][0]["body"] != artifact["topics"]["es"][0]["body"]
 
     english_search = artifact["search"]["en"][0]
@@ -27,6 +33,10 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     assert "mailbox" in english_search["terms"]
     assert "home" in english_search["terms"]
     assert "central lookup mailbox" in english_search["terms"][-1]
+    assert artifact["topics"]["en"][1]["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "locale",
+    }
 
 
 def test_checked_in_artifact_matches_the_compiled_sources() -> None:

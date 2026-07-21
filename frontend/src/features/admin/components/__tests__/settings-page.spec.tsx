@@ -66,6 +66,10 @@ describe("SettingsPage", () => {
 
       await user.click(screen.getAllByText("frontend.access_control.section_title")[0]);
       expect(screen.getByText("access control section")).toBeInTheDocument();
+      expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
+        "data-help-id",
+        "admin.settings.access-control",
+      );
       expect(screen.queryByText("frontend.settings.guide_title")).not.toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "frontend.settings.cancel" }));

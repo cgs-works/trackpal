@@ -9,6 +9,7 @@ import {
   getAdminNavigationItems,
 } from "@/components/layout/role-navigation";
 import { SupportBanner } from "@/features/admin/components/support-banner";
+import { ContextualHelpSheet } from "@/features/help/components/contextual-help-sheet";
 import { isPrivateHelpEnabled } from "@/features/help/config";
 
 export function AdminLayout() {
@@ -17,6 +18,11 @@ export function AdminLayout() {
 
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
   const showProNav = !isStarterTenantAdmin || isMasterSupportContext;
+  const showContextualHelp =
+    role === "tenant" &&
+    isPrivateHelpEnabled() &&
+    (location.pathname === "/admin/dashboard" ||
+      location.pathname === "/admin/settings");
   const sidebarItems = createSidebarItems(
     getAdminNavigationItems(
       showProNav,
@@ -45,6 +51,11 @@ export function AdminLayout() {
 
       <main className="flex-1 overflow-y-auto">
         {isMasterSupportContext && tenantPlan === "starter" && <SupportBanner />}
+        {showContextualHelp && (
+          <div className="flex justify-end border-b px-4 py-2 sm:px-6">
+            <ContextualHelpSheet />
+          </div>
+        )}
         <Outlet />
       </main>
     </div>

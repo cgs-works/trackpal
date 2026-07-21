@@ -29,25 +29,31 @@ describe("HelpCenterPage", () => {
     });
     vi.mocked(getHelpIndex).mockResolvedValue({
       schema_version: 1,
-      content_version: "help-tracer-1",
-      frontend_target_contract_version: "1",
+      content_version: "help-common-modules-1",
+      frontend_target_contract_version: "2",
       locale: "en",
-      topics: [
-        {
-          id: "tenant-admin.dashboard",
-          title: "Business Dashboard",
-          summary: "Dashboard overview",
-          module: "dashboard",
-          route: "/admin/dashboard",
-        },
-      ],
-    });
+        topics: [
+          {
+            id: "tenant-admin.dashboard",
+            title: "Business Dashboard",
+            summary: "Dashboard overview",
+            module: "dashboard",
+            route: "/admin/dashboard",
+            order: 10,
+            help_targets: ["admin.dashboard"],
+            safe_navigation: { route: "/admin/dashboard", settings_category: null },
+          },
+        ],
+      });
     vi.mocked(getHelpTopic).mockResolvedValue({
       id: "tenant-admin.dashboard",
       title: "Business Dashboard",
       summary: "Dashboard overview",
       module: "dashboard",
       route: "/admin/dashboard",
+      order: 10,
+      help_targets: ["admin.dashboard"],
+      safe_navigation: { route: "/admin/dashboard", settings_category: null },
       body: "# Business Dashboard\n\nDashboard content.",
     });
   });
@@ -73,6 +79,7 @@ describe("HelpCenterPage", () => {
           title: "Business Dashboard",
           module: "dashboard",
           route: "/admin/dashboard",
+          order: 10,
           excerpt: "Dashboard overview",
         },
       ],
@@ -124,8 +131,8 @@ describe("HelpCenterPage", () => {
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce({
         schema_version: 1,
-        content_version: "help-tracer-1",
-        frontend_target_contract_version: "1",
+        content_version: "help-common-modules-1",
+        frontend_target_contract_version: "2",
         locale: "en",
         topics: [
           {
@@ -134,6 +141,9 @@ describe("HelpCenterPage", () => {
             summary: "Dashboard overview",
             module: "dashboard",
             route: "/admin/dashboard",
+            order: 10,
+            help_targets: ["admin.dashboard"],
+            safe_navigation: { route: "/admin/dashboard", settings_category: null },
           },
         ],
       });

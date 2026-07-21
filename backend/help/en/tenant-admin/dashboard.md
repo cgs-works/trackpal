@@ -22,29 +22,40 @@ search_tags:
 synonyms:
   - home
   - overview
-related_topics: []
+order: 10
+safe_navigation:
+  route: /admin/dashboard
+  settings_category: null
+related_topics:
+  - tenant-admin.language
+  - tenant-admin.whatsapp
 ---
 
 # Business Dashboard
 
-The Business Dashboard is the starting point for Tenant Admins. It summarizes the parts of TrackPal that are available to your current plan.
+The Business Dashboard is the starting point for Tenant Admins. It summarizes what TrackPal can do for your business on the current plan.
 
-## What you can see
+## Channel, prerequisites, and actions
 
-- Your current plan: Starter or Pro.
-- The status of the central lookup mailbox.
-- The number of enabled code services.
-- The number of blocked WhatsApp identities in Access Control.
-- Pro businesses also see active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.
+- **Channel:** Web. The dashboard is not a WhatsApp menu.
+- **Prerequisites:** Sign in as a Tenant Admin with an active Tenant. No setup is required to read the page.
+- **Actions:** Open Dashboard from the sidebar and use the read-only indicators to decide which module to open next.
 
-## Web
+## Results and states
 
-Open Dashboard from the navigation to review these indicators before starting a task. A missing mailbox or an empty enabled-service count means access-code lookup is not ready yet; open the matching Settings area to continue setup.
+- You see your Starter or Pro plan, central lookup mailbox status, enabled code-service count, and blocked WhatsApp identity count.
+- Pro also shows active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.
+- A loading state means TrackPal is refreshing Tenant data. An empty mailbox or zero enabled services means access-code lookup is not ready.
+- A failed load leaves the page without current metrics. Retry from the page and contact support if the error persists.
 
-## WhatsApp
+## Limits, consequences, and recovery
 
-The Dashboard does not change WhatsApp settings. Use Settings to link WhatsApp and configure the prerequisites for access-code lookup, then use the Tenant Admin WhatsApp Console for the conversational actions available on your plan.
+Dashboard is read-only: viewing it creates no records and changes no settings. It does not link WhatsApp, enable platforms, configure a mailbox, or start a WhatsApp session. Open the matching Settings category to complete setup. If a module is missing from navigation, the current plan does not include it; Pro data remains preserved after a downgrade but Pro actions are unavailable.
 
-## Expected result
+## Web and WhatsApp
 
-You have a quick, read-only overview of your business status and know which module to open next. Dashboard information is refreshed from your Tenant data and does not create or change records.
+Use Web Dashboard for the overview. WhatsApp has its own Tenant Admin menu and session rules; use the WhatsApp topic for that flow. Dashboard values are refreshed from the active Tenant and can change after another administrator updates setup.
+
+## Support boundary
+
+Support can help interpret a status, plan access, or a persistent loading error. Do not send passwords, pairing codes, access tokens, or mailbox credentials in a support request.

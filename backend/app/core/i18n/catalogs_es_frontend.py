@@ -525,6 +525,9 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.error_title": "La Ayuda no está disponible temporalmente",
     "frontend.help.error_description": "Tu espacio de trabajo sigue disponible. Intenta cargar la Ayuda otra vez.",
     "frontend.help.retry": "Reintentar",
-    "frontend.help.go_to_module": "Ir al Panel",
+    "frontend.help.go_to_module": "Ir al módulo",
+    "frontend.help.about_screen": "Ayuda sobre esta pantalla",
+    "frontend.help.contextual_description": "Lee la guía autorizada sin salir de esta pantalla.",
+    "frontend.help.contextual_error": "Esta pantalla aún no tiene un tema de Ayuda disponible.",
     "frontend.help.disabled": "La Ayuda no está habilitada para esta versión.",
 }

@@ -525,6 +525,9 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.error_title": "Help is temporarily unavailable",
     "frontend.help.error_description": "Your workspace is still usable. Try loading Help again.",
     "frontend.help.retry": "Retry",
-    "frontend.help.go_to_module": "Go to Dashboard",
+    "frontend.help.go_to_module": "Go to module",
+    "frontend.help.about_screen": "Help about this screen",
+    "frontend.help.contextual_description": "Read the authorized guidance without leaving this screen.",
+    "frontend.help.contextual_error": "This screen does not have an available Help topic yet.",
     "frontend.help.disabled": "Help is not enabled for this release.",
 }
