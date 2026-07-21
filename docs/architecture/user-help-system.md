@@ -25,12 +25,13 @@ React Help client
         └── React Joyride Orientation Tour
 ```
 
-The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact covers the common Tenant Admin topics, Pro Tenant Admin guides, and the separate Pro Client topics for Dashboard, read-only Profile, active Subscriptions, Web-only Password changes, and WhatsApp capabilities. The Public API topic links only to the safe Settings category and the Catalog; its Settings panel provides a localized, copyable developer handoff containing placeholder keys and all supported browser examples, never the Tenant's real key. The Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
+The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact covers the common Tenant Admin topics, Pro Tenant Admin guides, and the separate Pro Client topics for Dashboard, read-only Profile, active Subscriptions, Web-only Password changes, and WhatsApp capabilities. The Public API topic links only to the safe Settings category and the Catalog; its Settings panel provides a localized, copyable developer handoff containing placeholder keys and all supported browser examples, never the Tenant's real key. The single `VITE_PRIVATE_HELP_ENABLED` gate remains false by default and controls both Tenant Admin and Client navigation, contextual Help, and tours together until the full Help release and browser QA are complete.
 
 ## Tracer implementation
 
 - Markdown sources live under `backend/help/{en,es}/tenant-admin/` and are compiled by `backend/scripts/compile_help.py`.
-- `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, and Spanish/English metadata drift.
+- `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, Spanish/English metadata drift, and Client tour declarations.
+- `app.help.release` verifies the complete first-release topic, search, audience, and tour set. `uv run python -m scripts.verify_help_release` checks that the checked-in artifact matches the Markdown sources before publication.
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
 - Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
 - Tenant Admin orientation state uses `GET /api/v1/help/tour` for the first unseen eligible release, `GET /api/v1/help/tour/{release_id}/replay` for an explicit replay, and `POST /api/v1/help/tour/{release_id}/acknowledge` for a completed or confirmed skipped release. Acknowledgements are immutable and unique per Tenant and release.

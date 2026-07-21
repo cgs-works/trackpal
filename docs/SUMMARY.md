@@ -36,6 +36,12 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Markdown Capability Registry for User Help](adr/0001-markdown-capability-registry-for-user-help.md) | Canonical Markdown topic source for in-app manuals, orientation tours, and CI capability contracts |
 
+## Release Operations
+
+| File | Description |
+|------|-------------|
+| [Private Help Release Gate](releases/user-help-release.md) | Atomic release checklist, automated checks, manual browser QA matrix, and deliberate browser E2E deferral |
+
 ## Codebase
 
 | File | Description |

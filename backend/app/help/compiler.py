@@ -287,6 +287,10 @@ class HelpCompiler:
             raise HelpValidationError(
                 f"Client topic cannot use a Tenant Admin target in {path.name}"
             )
+        if audience == "client" and frontmatter.get("tour") is not None:
+            raise HelpValidationError(
+                f"Client topic cannot declare an orientation tour in {path.name}"
+            )
         for navigation in [_safe_navigation(frontmatter, path)] + _safe_navigation_list(
             frontmatter.get("safe_links", []), path
         ):

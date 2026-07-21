@@ -63,6 +63,7 @@ File-based routing via `@tanstack/router-plugin`. Árbol auto-generado en `src/r
 
 | `/client/dashboard` | `ClientDashboard` | `client` | — |
 | `/client/profile` | `ProfilePage` | `client` | — |
+| `/client/help` | `HelpCenterPage` | `client` | `VITE_PRIVATE_HELP_ENABLED=true` |
 
 Rutas Pro-only usan `PlanRouteGate` wrapper. Starter tenant admin ve 404 en estas rutas. Master en contexto de soporte bypass el gate.
 

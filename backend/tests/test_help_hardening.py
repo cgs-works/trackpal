@@ -42,6 +42,26 @@ def test_compiler_rejects_cross_audience_navigation(tmp_path: Path) -> None:
         compile_help(source_dir)
 
 
+def test_compiler_rejects_client_orientation_tours(tmp_path: Path) -> None:
+    source_dir = tmp_path / "help"
+    shutil.copytree(SOURCE_DIR, source_dir)
+
+    for locale in ("en", "es"):
+        path = source_dir / locale / "client" / "profile.md"
+        source = path.read_text(encoding="utf-8")
+        source = source.replace(
+            "related_topics:\n",
+            "tour:\n  release_id: client-tour\n  order: 1\n  target: client.profile\nrelated_topics:\n",
+            1,
+        )
+        path.write_text(source, encoding="utf-8")
+
+    with pytest.raises(
+        HelpValidationError, match="Client topic cannot declare an orientation tour"
+    ):
+        compile_help(source_dir)
+
+
 def test_artifact_validator_rejects_incompatible_schema_and_target_contract() -> None:
     artifact = compile_help(SOURCE_DIR)
 

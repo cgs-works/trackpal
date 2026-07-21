@@ -33,10 +33,12 @@ frontend/
 │   │   │   ├── clients.tsx       # Client management route (Pro-only, wrapped in PlanRouteGate)
 │   │   │   ├── catalog.tsx       # Catalog management route (Pro-only, wrapped in PlanRouteGate)
 │   │   │   ├── subscriptions.tsx # Subscriptions route (Pro-only, wrapped in PlanRouteGate)
-│   │   │   └── settings.tsx      # Settings route
+│   │   │   ├── settings.tsx      # Settings route
+│   │   │   └── help.tsx          # Private Tenant Admin Help route
 │   │   └── client/
 │   │       ├── dashboard.tsx     # Client dashboard route
-│   │       └── profile.tsx       # Client profile route
+│   │       ├── profile.tsx       # Client profile route
+│   │       └── help.tsx          # Private Client Help route
 │   ├── routeTree.gen.ts          # Auto-generated route tree (DO NOT EDIT)
 │   │
 │   ├── store/                    # Zustand stores
