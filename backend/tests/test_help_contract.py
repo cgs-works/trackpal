@@ -63,6 +63,13 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "route": "/admin/settings",
         "settings_category": "code-services",
     }
+    tracer = artifact["tour_releases"]["en"][0]
+    assert tracer["release_id"] == "tenant-admin-tracer-1"
+    assert [step["target"] for step in tracer["steps"]] == [
+        "admin.dashboard",
+        "admin.settings.language",
+        "admin.settings.whatsapp",
+    ]
 
 
 def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:

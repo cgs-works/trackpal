@@ -28,6 +28,7 @@ import {
 } from "../services/help-api";
 import { SafeMarkdown } from "./safe-markdown";
 import { resolveSafeHelpNavigation } from "../safe-navigation";
+import { requestHelpTourReplay } from "./orientation-tour";
 
 type HelpListItem = HelpTopicSummary | HelpSearchResult;
 export type HelpAudience = "tenant" | "client";
@@ -343,15 +344,27 @@ export function HelpCenterPage({
               <p className="text-muted-foreground">{t("frontend.help.subtitle")}</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            className="md:hidden"
-            aria-label={t("frontend.help.open_topics")}
-            onClick={() => setMobileTopicsOpen(true)}
-          >
-            <Menu data-icon="inline-start" />
-            {t("frontend.help.topics")}
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {audience === "tenant" && (
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="help-tour-replay"
+                onClick={requestHelpTourReplay}
+              >
+                {t("frontend.help.replay_tour")}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="md:hidden"
+              aria-label={t("frontend.help.open_topics")}
+              onClick={() => setMobileTopicsOpen(true)}
+            >
+              <Menu data-icon="inline-start" />
+              {t("frontend.help.topics")}
+            </Button>
+          </div>
         </div>
         <label className="relative block max-w-xl">
           <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />

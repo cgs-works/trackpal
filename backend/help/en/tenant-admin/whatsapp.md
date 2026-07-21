@@ -33,6 +33,11 @@ related_topics:
   - tenant-admin.dashboard
   - tenant-admin.profile
   - tenant-admin.language
+tour:
+  release_id: tenant-admin-tracer-1
+  order: 3
+  target: admin.settings.whatsapp
+  conditional: false
 ---
 
 # WhatsApp

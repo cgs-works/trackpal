@@ -16,6 +16,7 @@ from app.models.subscription import (
 )
 from app.models.tenant import Tenant
 from app.models.tenant_api_key import TenantApiKey
+from app.models.tenant_help_acknowledgement import TenantHelpAcknowledgement
 from app.models.tenant_settings import TenantSettings
 from app.models.tenant_code_service_selection import TenantCodeServiceSelection
 from app.models.tenant_mailbox import TenantMailbox
@@ -34,6 +35,7 @@ __all__ = [
     "Service",
     "Tenant",
     "TenantApiKey",
+    "TenantHelpAcknowledgement",
     "TenantSettings",
     "TenantCodeServiceSelection",
     "TenantMailbox",

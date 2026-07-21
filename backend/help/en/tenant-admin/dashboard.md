@@ -29,6 +29,11 @@ safe_navigation:
 related_topics:
   - tenant-admin.language
   - tenant-admin.whatsapp
+tour:
+  release_id: tenant-admin-tracer-1
+  order: 1
+  target: admin.dashboard
+  conditional: false
 ---
 
 # Business Dashboard

@@ -105,6 +105,7 @@ REQUIRED_FIELDS = {
 }
 OPTIONAL_FIELDS = {"safe_links", "tour"}
 LOCALIZED_FIELDS = {"title", "summary", "search_tags", "synonyms"}
+TOUR_RELEASE_PATTERN = re.compile(r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
 ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
 HTML_PATTERN = re.compile(r"(?is)<\s*(?:/?\s*[a-zA-Z][^>]*|!--|!doctype\b|\?.*?\?)")
 EXECUTABLE_PATTERN = re.compile(
@@ -157,6 +158,7 @@ class HelpCompiler:
 
         self._validate_metadata_parity(topics_by_locale)
         self._validate_related_topics(topics_by_locale)
+        tour_releases = self._compile_tour_releases(topics_by_locale)
 
         search_by_locale = {
             locale: [
@@ -182,6 +184,7 @@ class HelpCompiler:
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,
             "search": search_by_locale,
+            "tour_releases": tour_releases,
         }
 
     def _compile_topic(self, path: Path, locale: str) -> dict[str, Any]:
@@ -299,8 +302,19 @@ class HelpCompiler:
         }
         if unknown_tour_fields:
             raise HelpValidationError(f"Unknown tour fields in {path.name}")
-        if not isinstance(tour.get("release_id"), str) or not isinstance(
-            tour.get("order"), int
+        release_id = tour.get("release_id")
+        order = tour.get("order")
+        target = tour.get("target")
+        conditional = tour.get("conditional", False)
+        if (
+            not isinstance(release_id, str)
+            or not TOUR_RELEASE_PATTERN.fullmatch(release_id)
+            or not isinstance(order, int)
+            or isinstance(order, bool)
+            or order < 1
+            or not isinstance(target, str)
+            or target not in targets
+            or not isinstance(conditional, bool)
         ):
             raise HelpValidationError(f"Incomplete tour metadata in {path.name}")
 
@@ -324,6 +338,53 @@ class HelpCompiler:
                 raise HelpValidationError(
                     f"Topic metadata parity mismatch for {topic_id}: tour"
                 )
+
+    def _compile_tour_releases(
+        self, topics_by_locale: dict[str, list[dict[str, Any]]]
+    ) -> dict[str, list[dict[str, Any]]]:
+        releases_by_locale: dict[str, list[dict[str, Any]]] = {}
+        for locale, topics in topics_by_locale.items():
+            releases: dict[str, list[dict[str, Any]]] = {}
+            for topic in topics:
+                tour = topic["tour"]
+                if tour is None:
+                    continue
+                releases.setdefault(tour["release_id"], []).append(
+                    {
+                        "topic_id": topic["id"],
+                        "title": topic["title"],
+                        "content": topic["body"],
+                        "summary": topic["summary"],
+                        "route": topic["route"],
+                        "settings_category": topic["safe_navigation"][
+                            "settings_category"
+                        ],
+                        "target": tour["target"],
+                        "conditional": tour.get("conditional", False),
+                        "order": tour["order"],
+                        "plans": topic["plans"],
+                    }
+                )
+            releases_by_locale[locale] = []
+            for release_id, steps in sorted(releases.items()):
+                steps.sort(key=lambda step: (step["order"], step["topic_id"]))
+                if len(steps) > 7 or len({step["order"] for step in steps}) != len(
+                    steps
+                ):
+                    raise HelpValidationError(
+                        f"Tour release {release_id} must have 1-7 unique ordered steps"
+                    )
+                plans = sorted({plan for step in steps for plan in step["plans"]})
+                releases_by_locale[locale].append(
+                    {"release_id": release_id, "plans": plans, "steps": steps}
+                )
+        english = [release["release_id"] for release in releases_by_locale["en"]]
+        spanish = [release["release_id"] for release in releases_by_locale["es"]]
+        if english != spanish:
+            raise HelpValidationError(
+                "English and Spanish tour releases must have parity"
+            )
+        return releases_by_locale
 
     def _validate_related_topics(
         self, topics_by_locale: dict[str, list[dict[str, Any]]]

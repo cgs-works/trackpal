@@ -33,6 +33,8 @@ The public Vite bundle contains the Help client and presentation components, but
 - `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, and Spanish/English metadata drift.
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
 - Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
+- Tenant Admin orientation state uses `GET /api/v1/help/tour` for the first unseen eligible release, `GET /api/v1/help/tour/{release_id}/replay` for an explicit replay, and `POST /api/v1/help/tour/{release_id}/acknowledge` for a completed or confirmed skipped release. Acknowledgements are immutable and unique per Tenant and release.
+- The first internal tracer release is `tenant-admin-tracer-1`; its three steps are declared by the Dashboard, Language, and WhatsApp Markdown topics and target `data-help-id` contracts rather than translated labels or CSS selectors.
 - The common Tenant Admin release includes mirrored Dashboard, Language, Profile, Password, WhatsApp, Enabled code platforms, Central lookup mailbox, WhatsApp access control, and Activate access-code lookup topics for Starter and Pro.
 - The Pro extension includes mirrored Clients, Catalog, Client Subscriptions, reminder settings, timezone, first-Pro-Client, and subscription-expiration cross-module topics. Starter filtering is enforced before topic retrieval and search matching, so these topics do not appear in Starter Help.
 - Dashboard, Pro modules, and Settings use semantic targets such as `data-help-id="admin.dashboard"`, `data-help-id="admin.clients"`, `data-help-id="admin.catalog"`, `data-help-id="admin.subscriptions"`, `data-help-id="admin.settings.reminders"`, `data-help-id="admin.settings.timezone"`, and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
@@ -108,7 +110,7 @@ The API must not expose filesystem paths, raw frontmatter, unpublished topics, o
 
 Orientation state is Tenant-scoped because onboarding belongs to the business rather than an individual Tenant Admin.
 
-The state model records acknowledgements keyed by:
+The state model is persisted in `tenant_help_acknowledgements` and records acknowledgements keyed by:
 
 - Tenant
 - Tour Release ID

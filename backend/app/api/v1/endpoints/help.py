@@ -1,17 +1,35 @@
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.dependencies import CurrentUser, DbDep, resolve_locale
 from app.help import get_help_catalog
-from app.repositories import clients_repository, tenant_settings_repository
-from app.repositories import tenants_repository
+from app.models import TenantHelpAcknowledgement
+from app.repositories import clients_repository, tenant_help_repository
+from app.repositories import tenant_settings_repository, tenants_repository
 from app.schemas.help import (
     HelpIndexResponse,
     HelpSearchResponse,
     HelpTopicResponse,
+    HelpTourAcknowledgementRequest,
+    HelpTourAcknowledgementResponse,
+    HelpTourRelease,
 )
 
 router = APIRouter(prefix="/help", tags=["help"])
 help_catalog = get_help_catalog()
+
+
+async def _tenant_admin_context(
+    db: DbDep, current_user: CurrentUser
+) -> tuple[UUID, str, str]:
+    if current_user.role != "tenant":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    tenant = await tenants_repository.get_active_by_owner(db, current_user.id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    locale = await resolve_locale(db, tenant.id)
+    return tenant.id, tenant.plan, locale
 
 
 async def _help_context(db: DbDep, current_user: CurrentUser) -> tuple[str, str, str]:
@@ -78,3 +96,83 @@ async def search_help(
         "locale": locale,
         "results": help_catalog.search(locale, plan, q, audience),
     }
+
+
+def _tour_response(
+    release: dict,
+    locale: str,
+    plan: str,
+    acknowledgement: TenantHelpAcknowledgement | None = None,
+) -> HelpTourRelease:
+    return HelpTourRelease(
+        release_id=release["release_id"],
+        status=acknowledgement.status if acknowledgement else None,
+        acknowledged_at=(
+            acknowledgement.acknowledged_at.isoformat() if acknowledgement else None
+        ),
+        locale=locale,
+        plan=plan,
+        frontend_target_contract_version=help_catalog.artifact[
+            "frontend_target_contract_version"
+        ],
+        steps=release["steps"],
+    )
+
+
+@router.get("/tour", response_model=HelpTourRelease)
+async def get_unseen_tour(db: DbDep, current_user: CurrentUser) -> HelpTourRelease:
+    """Return the first eligible, unseen Tenant Admin tour release."""
+
+    tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    for release in help_catalog.tour_releases(locale, plan):
+        acknowledgement = await tenant_help_repository.get_acknowledgement(
+            db, tenant_id, release["release_id"]
+        )
+        if acknowledgement is None:
+            eligible_release = help_catalog.tour_release(
+                locale, plan, release["release_id"]
+            )
+            if eligible_release is not None:
+                return _tour_response(eligible_release, locale, plan)
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+
+@router.get("/tour/{release_id}/replay", response_model=HelpTourRelease)
+async def replay_tour(
+    release_id: str, db: DbDep, current_user: CurrentUser
+) -> HelpTourRelease:
+    """Return an eligible tour release regardless of acknowledgement state."""
+
+    tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    release = help_catalog.tour_release(locale, plan, release_id)
+    if release is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    acknowledgement = await tenant_help_repository.get_acknowledgement(
+        db, tenant_id, release_id
+    )
+    return _tour_response(release, locale, plan, acknowledgement)
+
+
+@router.post(
+    "/tour/{release_id}/acknowledge",
+    response_model=HelpTourAcknowledgementResponse,
+)
+async def acknowledge_tour(
+    release_id: str,
+    payload: HelpTourAcknowledgementRequest,
+    db: DbDep,
+    current_user: CurrentUser,
+) -> HelpTourAcknowledgementResponse:
+    """Persist one immutable, Tenant-scoped tour acknowledgement."""
+
+    tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    if help_catalog.tour_release(locale, plan, release_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    acknowledgement = await tenant_help_repository.acknowledge(
+        db, tenant_id, release_id, payload.status
+    )
+    return HelpTourAcknowledgementResponse(
+        release_id=acknowledgement.release_id,
+        status=acknowledgement.status,
+        acknowledged_at=acknowledgement.acknowledged_at.isoformat(),
+    )

@@ -11,6 +11,7 @@ import {
 import { SupportBanner } from "@/features/admin/components/support-banner";
 import { ContextualHelpSheet } from "@/features/help/components/contextual-help-sheet";
 import { isPrivateHelpEnabled } from "@/features/help/config";
+import { OrientationTour } from "@/features/help/components/orientation-tour";
 
 export function AdminLayout() {
   const { username, logout, role, tenantPlan, isMasterSupportContext } = useAuthStore();
@@ -60,6 +61,7 @@ export function AdminLayout() {
           </div>
         )}
         <Outlet />
+        <OrientationTour />
       </main>
     </div>
   );

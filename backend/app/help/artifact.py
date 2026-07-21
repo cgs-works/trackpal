@@ -47,6 +47,39 @@ class HelpCatalog:
                 }
         return None
 
+    def tour_releases(self, locale: str, plan: str) -> list[dict[str, Any]]:
+        return [
+            release
+            for release in self.artifact.get("tour_releases", {}).get(locale, [])
+            if plan in release["plans"]
+        ]
+
+    def tour_release(
+        self,
+        locale: str,
+        plan: str,
+        release_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        releases = self.tour_releases(locale, plan)
+        for release in releases:
+            if plan not in release["plans"]:
+                continue
+            if release_id is None or release["release_id"] == release_id:
+                return {
+                    "release_id": release["release_id"],
+                    "plans": release["plans"],
+                    "steps": [
+                        {
+                            key: value
+                            for key, value in step.items()
+                            if key not in {"plans"}
+                        }
+                        for step in release["steps"]
+                        if plan in step["plans"]
+                    ],
+                }
+        return None
+
     def search(
         self,
         locale: str,

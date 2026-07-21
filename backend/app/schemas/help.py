@@ -43,3 +43,35 @@ class HelpSearchResponse(BaseModel):
     query: str
     locale: str
     results: list[HelpSearchResult] = Field(default_factory=list)
+
+
+class HelpTourStep(BaseModel):
+    topic_id: str
+    title: str
+    content: str
+    summary: str
+    route: str
+    settings_category: str | None = None
+    target: str
+    conditional: bool = False
+    order: int
+
+
+class HelpTourRelease(BaseModel):
+    release_id: str
+    status: str | None = None
+    acknowledged_at: str | None = None
+    locale: str
+    plan: str
+    frontend_target_contract_version: str
+    steps: list[HelpTourStep] = Field(default_factory=list)
+
+
+class HelpTourAcknowledgementRequest(BaseModel):
+    status: str = Field(pattern="^(completed|skipped)$")
+
+
+class HelpTourAcknowledgementResponse(BaseModel):
+    release_id: str
+    status: str
+    acknowledged_at: str
