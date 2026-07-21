@@ -432,9 +432,11 @@ export function OrientationTour() {
           scrollDuration: reducedMotion ? 0 : 400,
           zIndex: 1000,
         }}
-        styles={{
-          spotlight: reducedMotion ? { className: "transition-none" } : undefined,
-        }}
+        styles={
+          reducedMotion
+            ? { spotlight: { className: "transition-none" } }
+            : undefined
+        }
       />
       <AlertDialog
         open={skipConfirmationOpen}

@@ -140,6 +140,7 @@ describe("OrientationTour", () => {
       overlayClickAction: false,
       dismissKeyAction: false,
     });
+    expect(joyrideState.props?.styles).toBeUndefined();
     expect(joyrideState.props?.steps).toEqual([
       expect.objectContaining({ target: '[data-help-id="admin.dashboard"]' }),
     ]);
@@ -232,6 +233,9 @@ describe("OrientationTour", () => {
         expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
       );
       expect(joyrideState.props?.options).toMatchObject({ scrollDuration: 0 });
+      expect(joyrideState.props?.styles).toEqual({
+        spotlight: { className: "transition-none" },
+      });
       expect(screen.getByTestId("help-tour-popover")).toHaveAttribute(
         "data-reduced-motion",
         "true",
