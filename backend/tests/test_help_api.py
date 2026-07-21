@@ -34,6 +34,10 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.whatsapp",
         "tenant-admin.profile",
         "tenant-admin.password",
+        "tenant-admin.code-services",
+        "tenant-admin.mailbox",
+        "tenant-admin.access-control",
+        "tenant-admin.activate-access-code-lookup",
     ]
     assert index_response.json()["topics"][1]["help_targets"] == [
         "admin.settings.language"
@@ -61,6 +65,10 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.whatsapp",
         "tenant-admin.profile",
         "tenant-admin.password",
+        "tenant-admin.code-services",
+        "tenant-admin.mailbox",
+        "tenant-admin.access-control",
+        "tenant-admin.activate-access-code-lookup",
     ]
 
     tenant = (
@@ -83,6 +91,31 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
     assert english_topic.json()["title"] == "Business Dashboard"
 
 
+async def test_help_topics_are_searchable_with_safe_cross_module_links(
+    client, active_tenant_user
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    search_response = await client.get(
+        "/api/v1/help/search", params={"q": "revocado"}, headers=headers
+    )
+    topic_response = await client.get(
+        "/api/v1/help/topics/tenant-admin.activate-access-code-lookup",
+        headers=headers,
+    )
+
+    assert search_response.status_code == 200
+    assert [result["id"] for result in search_response.json()["results"]] == [
+        "tenant-admin.mailbox"
+    ]
+    assert topic_response.status_code == 200
+    assert topic_response.json()["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "code-services",
+    }
+    assert topic_response.json()["help_targets"] == ["admin.settings"]
+
+
 async def test_help_search_returns_only_authorized_private_content(
     client, active_tenant_user
 ):
@@ -93,8 +126,13 @@ async def test_help_search_returns_only_authorized_private_content(
     )
 
     assert response.status_code == 200
-    result = response.json()["results"][0]
-    assert result["id"] == "tenant-admin.dashboard"
+    result_ids = [result["id"] for result in response.json()["results"]]
+    assert "tenant-admin.dashboard" in result_ids
+    result = next(
+        result
+        for result in response.json()["results"]
+        if result["id"] == "tenant-admin.dashboard"
+    )
     assert "buzón" in result["excerpt"].lower()
     assert set(result) == {"id", "title", "module", "route", "order", "excerpt"}
 

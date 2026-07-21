@@ -22,7 +22,15 @@ ALLOWED_MODULES = {
     "settings",
     "help",
 }
-ALLOWED_CAPABILITIES = {"tenant_dashboard", "tenant_settings", "tenant_whatsapp"}
+ALLOWED_CAPABILITIES = {
+    "tenant_access_code_lookup",
+    "tenant_access_control",
+    "tenant_code_services",
+    "tenant_dashboard",
+    "tenant_mailbox",
+    "tenant_settings",
+    "tenant_whatsapp",
+}
 ALLOWED_ROUTES = {"/admin/dashboard", "/admin/settings"}
 ALLOWED_HELP_TARGETS = {
     "admin.dashboard",
@@ -38,7 +46,18 @@ ALLOWED_HELP_TARGETS = {
     "admin.settings.profile",
     "admin.settings.password",
 }
-ALLOWED_SETTINGS_CATEGORIES = {"locale", "profile", "password", "whatsapp-link"}
+ALLOWED_SETTINGS_CATEGORIES = {
+    "access-control",
+    "code-services",
+    "locale",
+    "mailbox",
+    "password",
+    "profile",
+    "public-api",
+    "reminders",
+    "timezone",
+    "whatsapp-link",
+}
 REQUIRED_FIELDS = {
     "id",
     "audience",
@@ -130,7 +149,7 @@ class HelpCompiler:
         }
         return {
             "schema_version": 1,
-            "content_version": "help-common-modules-1",
+            "content_version": "help-access-code-workflows-1",
             "frontend_target_contract_version": "2",
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,

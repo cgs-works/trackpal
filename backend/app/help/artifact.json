@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "help-common-modules-1",
+  "content_version": "help-access-code-workflows-1",
   "frontend_target_contract_version": "2",
   "locales": [
     "en",
@@ -8,6 +8,149 @@
   ],
   "topics": {
     "en": [
+      {
+        "id": "tenant-admin.access-control",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_access_control"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.access-control"
+        ],
+        "title": "WhatsApp access control",
+        "summary": "Review, search, block, and unblock WhatsApp identities for the Tenant.",
+        "search_tags": [
+          "access control",
+          "blocked phone",
+          "blocked identity",
+          "unblock",
+          "WhatsApp block"
+        ],
+        "synonyms": [
+          "bot blocking",
+          "blocked contacts",
+          "deny access"
+        ],
+        "related_topics": [
+          "tenant-admin.whatsapp",
+          "tenant-admin.activate-access-code-lookup",
+          "tenant-admin.profile"
+        ],
+        "order": 80,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "access-control"
+        },
+        "tour": null,
+        "body": "# WhatsApp access control\n\nWhatsApp access control is the Tenant Admin list of identities that must not use the Tenant's WhatsApp bot. It protects the WhatsApp console and access-code flow; it is separate from a Client's portal account status.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for the full list and phone search; WhatsApp for the Tenant Admin's Access Control menu.\n- **Prerequisites:** Be a Tenant Admin. A phone or WhatsApp identity must be available to block. Blocking is available on Starter and Pro.\n- **Actions:** On Web, open Settings, choose Access control, search the list by phone digits, block a phone, or unblock an existing entry. In WhatsApp, Starter opens Access Control with `3` and Pro with `5`; choose `1` to list blocked identities or `2` to block a phone.\n\n## Results and states\n\n- **Loading:** TrackPal is retrieving blocked identities. Wait before deciding that the list is empty.\n- **Empty:** No identity is blocked, so Web shows the empty state and WhatsApp can show an empty list.\n- **Blocked:** The identity is denied access to the WhatsApp bot, including access-code requests and console actions.\n- **Unblocked:** Removing the entry allows the identity to use WhatsApp again when its other requirements are met.\n- **Duplicate:** Trying to block an identity that is already blocked leaves the existing entry unchanged.\n- **No search results:** A phone search can return no matching block; clear the search or check the digits.\n- **Error:** A failed list, block, or unblock request leaves the current state unchanged. Retry and contact support if it persists.\n\n## Web and WhatsApp actions\n\nThe Web list supports phone search without changing the stored blocks. In WhatsApp, use `9` to return to the main menu and `0` to cancel the current action. The bot block affects WhatsApp identity access; it does not log a Client out of the portal or change the Client's active/inactive account status.\n\n## Limits, consequences, and recovery\n\nBlocking prevents the identity from reaching the Tenant's WhatsApp console, requesting access codes, viewing WhatsApp profile information, or checking WhatsApp subscriptions. It does not delete the Client, deactivate the Client portal account, or remove subscriptions. Unblock the exact identity from Web or the WhatsApp list when access should be restored. If a phone is represented by a WhatsApp LID, use the identity shown by TrackPal and ask support for help rather than guessing a phone number.\n\n## Support boundary\n\nSupport can help identify a persistent block or identity mismatch. Share the visible phone or identity and the approximate time; never share a password, access code, pairing code, QR image, or mailbox credential."
+      },
+      {
+        "id": "tenant-admin.activate-access-code-lookup",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "tenant_access_code_lookup"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings"
+        ],
+        "title": "Activate access-code lookup",
+        "summary": "Connect the dependencies in order, then run the first safe WhatsApp code search.",
+        "search_tags": [
+          "activate access-code lookup",
+          "first code search",
+          "access-code setup",
+          "search prerequisites",
+          "code lookup recovery"
+        ],
+        "synonyms": [
+          "enable code search",
+          "first access code",
+          "code search setup"
+        ],
+        "related_topics": [
+          "tenant-admin.code-services",
+          "tenant-admin.mailbox",
+          "tenant-admin.whatsapp",
+          "tenant-admin.access-control"
+        ],
+        "order": 90,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "code-services"
+        },
+        "tour": null,
+        "body": "# Activate access-code lookup\n\nUse this path when the business wants to find a service access code from WhatsApp. Complete the dependencies in order; the lookup is available only after the linked WhatsApp instance, enabled platform, and central mailbox are ready.\n\n## Dependency chain\n\n1. **Link WhatsApp:** In Web Settings, configure the business phone in Profile, open WhatsApp, and pair with a pairing code or QR code. Wait for Connected. A disconnected or missing-phone state must be recovered before continuing.\n2. **Select a platform:** In Settings, open Enabled code platforms, select at least one globally active service, and save. If the list is loading, unavailable, or returns an error, wait or retry before testing a search.\n3. **Connect the mailbox:** In Settings, open Central lookup mailbox and connect Google, Microsoft, or custom IMAP. Run Test connection and continue only when the status is Connected. Pending, error, revoked, or timed-out connections need recovery in that category.\n4. **Start from the matching WhatsApp menu:** Starter uses `2` for Find Access Code. Pro uses `7`. Choose a listed service, enter the subscription email, and review it before confirming with `1`.\n5. **Handle the first result:** The search is pending while TrackPal checks recent mailbox messages. A found code or link is returned to the WhatsApp conversation. A not-found, duplicate, error, or timeout result tells you which recovery to use.\n\n## Navigation and safe recovery\n\nThe shared navigation contract uses `0` to cancel, while the current prompt labels `8` and `9` for page navigation or returning to the previous screen. On email confirmation, `2` corrects the email and `9` returns to the service list. Use `0` instead of sending credentials or abandoning a half-completed search. If the session times out, start the flow again from the plan menu.\n\n## States and recovery\n\n- **Pending:** Wait for the result instead of starting repeated searches. If it does not arrive, use the timeout recovery and check the mailbox status.\n- **Found:** Use the code promptly because service codes can expire. Treat a returned link as sensitive and open it only when expected.\n- **Not found:** Request a new code from the service, wait for the email, and try again with the correct service and subscription email.\n- **Duplicate:** Wait the displayed cooldown, then retry for the latest code instead of repeating immediately.\n- **Error:** Check that the mailbox is Connected and the selected platform is still available, then retry later.\n- **Timeout:** Check the provider and mailbox connection, then start a new search. Do not disconnect a healthy WhatsApp instance or mailbox as a first response.\n- **Missing prerequisites:** Return to Web Settings and complete the first missing dependency. Existing platform selections and business data are preserved when a connection is repaired.\n\n## Web and WhatsApp actions\n\nThe Web Help link opens Settings without saving forms, connecting or disconnecting a service, blocking an identity, or starting a search. The WhatsApp flow is the place where the search is requested; the guide never asks you to paste mailbox credentials, passwords, tokens, pairing codes, or QR images into chat.\n\n## Support boundary\n\nSupport can trace a persistent lookup error, timeout, or unexpected result when given the service, mailbox status, visible error, and approximate time. Never send the access code, email password, OAuth token, pairing code, or QR image in a support request."
+      },
+      {
+        "id": "tenant-admin.code-services",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_code_services"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.code-services"
+        ],
+        "title": "Enabled code platforms",
+        "summary": "Choose which supported services can be searched for access codes.",
+        "search_tags": [
+          "code services",
+          "access code",
+          "platform",
+          "provider",
+          "enabled service"
+        ],
+        "synonyms": [
+          "streaming services",
+          "services list",
+          "code providers"
+        ],
+        "related_topics": [
+          "tenant-admin.activate-access-code-lookup",
+          "tenant-admin.mailbox",
+          "tenant-admin.dashboard",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 60,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "code-services"
+        },
+        "tour": null,
+        "body": "# Enabled code platforms\n\nEnabled code platforms are the services that TrackPal can search when a Tenant Admin or a client requests an access code. The available list is controlled by the platform catalog and your Tenant selection.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web for configuration; WhatsApp for using the selected platforms in the access-code search.\n- **Prerequisites:** Be a Tenant Admin. The business WhatsApp instance and central lookup mailbox are separate prerequisites for completing a search.\n- **Actions:** Open Settings, choose Enabled code platforms, select the services that should be available, and save. Only globally active services can be selected.\n\n## Results and states\n\n- **Loading:** TrackPal is retrieving the platform list. Wait for the list before changing selections.\n- **Enabled:** A selected, globally active platform appears in the WhatsApp service list.\n- **Unavailable:** A platform marked globally inactive cannot be selected. It is not an error in your Tenant configuration.\n- **Missing:** If no platform is selected, access-code lookup cannot start and WhatsApp reports that code services are not configured.\n- **Error:** If the list or save request fails, keep the current selection, retry from Settings, and do not start repeated WhatsApp searches until the list is available.\n\n## Web and WhatsApp actions\n\nOn Web, selecting a platform changes which services appear in future searches; it does not search the mailbox or send a WhatsApp message. In WhatsApp, the Starter menu opens access-code search with `2` and the Pro menu opens it with `7`. The service list contains only the effective selection: Tenant-selected services that are still globally active.\n\n## Limits, consequences, and recovery\n\nThe list is limited to the services currently supported and globally active by TrackPal. Enabling a platform does not connect its provider account and does not create a client or subscription. If a platform becomes globally inactive, it is omitted from effective searches until it is available again. If lookup reports no configured services, return to this category, select an available platform, save, and start a new search.\n\n## Support boundary\n\nSupport can confirm whether a platform is globally available and investigate a persistent load or save error. Share the platform label and visible error only; never share mailbox credentials, access codes, passwords, or tokens."
+      },
       {
         "id": "tenant-admin.dashboard",
         "locale": "en",
@@ -94,6 +237,54 @@
         },
         "tour": null,
         "body": "# Language\n\nLanguage controls the TrackPal interface and the private Help content for your active business workspace.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. WhatsApp replies follow the active locale but language is changed here.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings. The Language category is available on Starter and Pro.\n- **Actions:** Choose Language, select the available locale, and save the change. The page reloads the catalog after a successful save.\n\n## Results and states\n\nThe navigation, Settings labels, and Help topics use the selected language after the update. While saving, the control is busy. The current selection remains visible when the page loads. If the locale cannot be loaded or saved, the existing language remains active and an error is shown.\n\n## Limits, consequences, and recovery\n\nLanguage is a Tenant setting, so it applies to the business rather than only one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.\n\n## Support boundary\n\nSupport can help when the language selector or catalog remains unavailable after retrying. Include the selected locale and the visible error, but never include a password, pairing code, access token, or mailbox secret."
+      },
+      {
+        "id": "tenant-admin.mailbox",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_mailbox"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.mailbox"
+        ],
+        "title": "Central lookup mailbox",
+        "summary": "Connect and test the mailbox that receives access-code emails.",
+        "search_tags": [
+          "mailbox",
+          "email inbox",
+          "OAuth",
+          "IMAP",
+          "connection test",
+          "access-code email"
+        ],
+        "synonyms": [
+          "code mailbox",
+          "central inbox",
+          "email connection"
+        ],
+        "related_topics": [
+          "tenant-admin.activate-access-code-lookup",
+          "tenant-admin.code-services",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 70,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "mailbox"
+        },
+        "tour": null,
+        "body": "# Central lookup mailbox\n\nThe central lookup mailbox is the inbox TrackPal checks for recent access-code emails. It is a business-level connection, not a client's personal mailbox.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web for setup, connection testing, and disconnection; WhatsApp uses the connected mailbox during access-code search.\n- **Prerequisites:** Be a Tenant Admin and have access to the mailbox. Choose Google or Microsoft OAuth, or provide a custom IMAP server, email, port, SSL setting, and mailbox password.\n- **Actions:** Open Settings, choose Central lookup mailbox, connect with OAuth or save the IMAP form, then use Test connection. The status must be Connected before a search can run.\n\n## Results and states\n\n- **Not configured or disconnected:** No mailbox is ready, so WhatsApp access-code search stops before the service list or reports that the mailbox is not configured.\n- **Pending:** An OAuth window or connection test is still in progress. Keep the window open and wait for the result instead of starting another connection.\n- **Connected:** The mailbox passed its connection setup and is available to the lookup worker.\n- **Error:** A failed test or provider error leaves an error status and may show the last connection error. Correct the configuration and test again.\n- **Revoked:** If an OAuth provider revokes permission, reconnect the provider. A revoked connection cannot be repaired by repeating a WhatsApp search.\n- **Timeout:** A slow provider or IMAP server can time out. Check the host, port, SSL setting, and provider availability before retrying.\n\n## Web and WhatsApp actions\n\nOn Web, OAuth opens a provider authorization window. IMAP saves the configuration before testing it. In WhatsApp, the lookup flow reads the central mailbox after the email is confirmed; it does not ask the user to send a mailbox password to the bot.\n\n## Limits, consequences, and recovery\n\nThe Tenant has one central lookup mailbox. Disconnecting it ends the mailbox connection, clears stored mailbox secrets, and makes access-code lookup unavailable until a new connection is completed; it does not remove enabled platforms, clients, subscriptions, or WhatsApp access-control entries. If a test fails, fix the visible provider settings and test again. If OAuth is revoked, reconnect it. Never disconnect a healthy mailbox just to recover a missing code; check the platform and email first.\n\n## Support boundary\n\nSupport can help with a persistent OAuth, IMAP, revoked, or timeout error. Share the provider, status, host and port when relevant, and the approximate time; never share an OAuth token, IMAP password, provider password, or access code."
       },
       {
         "id": "tenant-admin.password",
@@ -228,10 +419,153 @@
           "settings_category": "whatsapp-link"
         },
         "tour": null,
-        "body": "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting means pairing is still in progress. Disconnected or missing phone means the console is not ready. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use 0 to exit; follow the current menu for navigation and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
+        "body": "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
       }
     ],
     "es": [
+      {
+        "id": "tenant-admin.access-control",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_access_control"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.access-control"
+        ],
+        "title": "Control de acceso de WhatsApp",
+        "summary": "Revisa, busca, bloquea y desbloquea identidades de WhatsApp del Tenant.",
+        "search_tags": [
+          "control de acceso",
+          "teléfono bloqueado",
+          "identidad bloqueada",
+          "desbloquear",
+          "bloqueo de WhatsApp"
+        ],
+        "synonyms": [
+          "bloqueo del bot",
+          "contactos bloqueados",
+          "denegar acceso"
+        ],
+        "related_topics": [
+          "tenant-admin.whatsapp",
+          "tenant-admin.activate-access-code-lookup",
+          "tenant-admin.profile"
+        ],
+        "order": 80,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "access-control"
+        },
+        "tour": null,
+        "body": "# Control de acceso de WhatsApp\n\nEl Control de acceso de WhatsApp es la lista de identidades que un Tenant Admin impide usar el bot de WhatsApp del Tenant. Protege la consola y el flujo de códigos de acceso; es diferente del estado de la cuenta de un Cliente en el portal.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para ver la lista completa y buscar teléfonos; WhatsApp para el menú de Control de acceso del Tenant Admin.\n- **Requisitos:** Ser Tenant Admin. Debe existir un teléfono o una identidad de WhatsApp que quieras bloquear. El bloqueo está disponible en Starter y Pro.\n- **Acciones:** En Web, abre Configuración, elige Control de acceso, busca por los dígitos del teléfono, bloquea un teléfono o desbloquea una entrada existente. En WhatsApp, Starter abre Control de acceso con `3` y Pro con `5`; elige `1` para listar identidades bloqueadas o `2` para bloquear un teléfono.\n\n## Resultados y estados\n\n- **Cargando:** TrackPal está obteniendo las identidades bloqueadas. Espera antes de concluir que la lista está vacía.\n- **Vacío:** No hay identidades bloqueadas; Web muestra el estado vacío y WhatsApp puede mostrar una lista vacía.\n- **Bloqueado:** La identidad no puede entrar al bot de WhatsApp, pedir códigos de acceso ni usar acciones de la consola.\n- **Desbloqueado:** Al eliminar la entrada, la identidad puede volver a usar WhatsApp cuando cumple los demás requisitos.\n- **Duplicado:** Intentar bloquear una identidad ya bloqueada conserva la entrada existente.\n- **Sin resultados:** Una búsqueda por teléfono puede no encontrar un bloqueo; limpia la búsqueda o revisa los dígitos.\n- **Error:** Un fallo al listar, bloquear o desbloquear conserva el estado actual. Reintenta y contacta a soporte si continúa.\n\n## Acciones en Web y WhatsApp\n\nLa lista Web permite buscar teléfonos sin cambiar los bloqueos guardados. En WhatsApp, usa `9` para volver al menú principal y `0` para cancelar la acción actual. El bloqueo del bot afecta el acceso de la identidad a WhatsApp; no cierra la sesión del Cliente en el portal ni cambia el estado activo/inactivo de su cuenta.\n\n## Límites, consecuencias y recuperación\n\nBloquear impide que la identidad entre a la consola de WhatsApp del Tenant, solicite códigos de acceso, vea el perfil por WhatsApp o consulte suscripciones por WhatsApp. No elimina al Cliente, desactiva su cuenta del portal ni elimina suscripciones. Desbloquea la identidad exacta desde Web o desde la lista de WhatsApp cuando deba recuperar el acceso. Si un teléfono aparece como LID de WhatsApp, usa la identidad que muestra TrackPal y pide ayuda a soporte en vez de adivinar un teléfono.\n\n## Límite de soporte\n\nSoporte puede ayudarte a identificar un bloqueo persistente o una identidad que no coincide. Comparte el teléfono o identidad visible y la hora aproximada; nunca envíes una contraseña, código de acceso, código de vinculación, imagen QR ni credencial del buzón."
+      },
+      {
+        "id": "tenant-admin.activate-access-code-lookup",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "tenant_access_code_lookup"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings"
+        ],
+        "title": "Activar la búsqueda de códigos de acceso",
+        "summary": "Conecta las dependencias en orden y ejecuta la primera búsqueda segura desde WhatsApp.",
+        "search_tags": [
+          "activar búsqueda de códigos",
+          "primera búsqueda de código",
+          "configuración de códigos de acceso",
+          "requisitos de búsqueda",
+          "recuperación de búsqueda de códigos"
+        ],
+        "synonyms": [
+          "habilitar búsqueda de códigos",
+          "primer código de acceso",
+          "configurar búsqueda de códigos"
+        ],
+        "related_topics": [
+          "tenant-admin.code-services",
+          "tenant-admin.mailbox",
+          "tenant-admin.whatsapp",
+          "tenant-admin.access-control"
+        ],
+        "order": 90,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "code-services"
+        },
+        "tour": null,
+        "body": "# Activar la búsqueda de códigos de acceso\n\nUsa este camino cuando el negocio quiera encontrar un código de acceso de un servicio desde WhatsApp. Completa las dependencias en orden: la búsqueda solo está disponible después de vincular WhatsApp, habilitar una plataforma y preparar el buzón central.\n\n## Cadena de dependencias\n\n1. **Vincula WhatsApp:** En Configuración Web, configura el teléfono del negocio en Perfil, abre WhatsApp y vincula con un código de vinculación o código QR. Espera el estado Conectado. Un estado desconectado o un teléfono faltante debe recuperarse antes de continuar.\n2. **Selecciona una plataforma:** En Configuración, abre Plataformas de códigos habilitadas, selecciona al menos un servicio activo globalmente y guarda. Si la lista está cargando, no disponible o devuelve un error, espera o reintenta antes de probar una búsqueda.\n3. **Conecta el buzón:** En Configuración, abre Buzón central de consultas y conecta Google, Microsoft o IMAP personalizado. Usa Probar conexión y continúa solo cuando el estado sea Conectado. Una conexión pendiente, con error, revocada o con tiempo agotado necesita recuperación en esa categoría.\n4. **Inicia desde el menú de WhatsApp:** Starter usa `2` para Buscar código de acceso. Pro usa `7`. Elige un servicio listado, escribe el email de la suscripción y revísalo antes de confirmar con `1`.\n5. **Procesa el primer resultado:** La búsqueda queda pendiente mientras TrackPal revisa correos recientes del buzón. Un código o enlace encontrado se devuelve en la conversación de WhatsApp. Un resultado no encontrado, duplicado, con error o con tiempo agotado indica la recuperación correspondiente.\n\n## Navegación y recuperación segura\n\nEl contrato compartido de navegación usa `0` para cancelar, mientras el mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior. En la confirmación del email, `2` corrige el correo y `9` vuelve a la lista de servicios. Usa `0` en vez de enviar credenciales o abandonar una búsqueda a medias. Si la sesión expira, inicia el flujo otra vez desde el menú de tu plan.\n\n## Estados y recuperación\n\n- **Pendiente:** Espera el resultado en vez de iniciar búsquedas repetidas. Si no llega, aplica la recuperación de tiempo agotado y revisa el estado del buzón.\n- **Encontrado:** Usa pronto el código porque los códigos de los servicios pueden expirar. Trata un enlace devuelto como información sensible y ábrelo solo si lo esperabas.\n- **No encontrado:** Solicita un código nuevo en el servicio, espera el correo e inténtalo otra vez con el servicio y el email correctos.\n- **Duplicado:** Espera el tiempo de enfriamiento mostrado y vuelve a intentar para obtener el código más reciente, en vez de repetir inmediatamente.\n- **Error:** Comprueba que el buzón esté Conectado y que la plataforma seleccionada siga disponible; después reintenta.\n- **Tiempo de espera agotado:** Revisa el proveedor y la conexión del buzón y comienza una búsqueda nueva. No desconectes una instancia sana de WhatsApp ni el buzón como primera respuesta.\n- **Requisitos faltantes:** Vuelve a Configuración Web y completa la primera dependencia que falte. Las selecciones de plataformas y los datos del negocio se conservan al reparar una conexión.\n\n## Acciones en Web y WhatsApp\n\nEl enlace de Ayuda en Web abre Configuración sin guardar formularios, conectar o desconectar servicios, bloquear o desbloquear identidades ni iniciar una búsqueda. El flujo de WhatsApp es el lugar donde se solicita la búsqueda; esta guía nunca pide pegar credenciales del buzón, contraseñas, tokens, códigos de vinculación o imágenes QR en el chat.\n\n## Límite de soporte\n\nSoporte puede rastrear un error, tiempo de espera o resultado inesperado persistente si recibe el servicio, estado del buzón, error visible y hora aproximada. Nunca envíes el código de acceso, contraseña del correo, token OAuth, código de vinculación ni imagen QR en una solicitud de soporte."
+      },
+      {
+        "id": "tenant-admin.code-services",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_code_services"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.code-services"
+        ],
+        "title": "Plataformas de códigos habilitadas",
+        "summary": "Elige qué servicios compatibles pueden consultarse para buscar códigos de acceso.",
+        "search_tags": [
+          "servicios de código",
+          "código de acceso",
+          "plataforma",
+          "proveedor",
+          "servicio habilitado"
+        ],
+        "synonyms": [
+          "servicios de streaming",
+          "lista de servicios",
+          "proveedores de códigos"
+        ],
+        "related_topics": [
+          "tenant-admin.activate-access-code-lookup",
+          "tenant-admin.mailbox",
+          "tenant-admin.dashboard",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 60,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "code-services"
+        },
+        "tour": null,
+        "body": "# Plataformas de códigos habilitadas\n\nLas plataformas de códigos habilitadas son los servicios que TrackPal puede consultar cuando un Tenant Admin o un cliente solicita un código de acceso. La lista disponible depende del catálogo de plataformas y de la selección de tu Tenant.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web para configurar; WhatsApp para usar las plataformas seleccionadas en la búsqueda de códigos.\n- **Requisitos:** Ser Tenant Admin. La instancia de WhatsApp del negocio y el buzón central son requisitos separados para completar una búsqueda.\n- **Acciones:** Abre Configuración, elige Plataformas de códigos habilitadas, selecciona los servicios que deben estar disponibles y guarda. Solo puedes seleccionar servicios activos globalmente.\n\n## Resultados y estados\n\n- **Cargando:** TrackPal está obteniendo la lista de plataformas. Espera a que aparezca antes de cambiar selecciones.\n- **Habilitado:** Un servicio seleccionado y activo globalmente aparece en la lista de servicios de WhatsApp.\n- **No disponible:** Una plataforma marcada como inactiva globalmente no se puede seleccionar. No es un error de la configuración de tu Tenant.\n- **Faltante:** Si no seleccionas ninguna plataforma, la búsqueda de códigos no puede iniciar y WhatsApp informa que los servicios de códigos no están configurados.\n- **Error:** Si falla la carga o el guardado, conserva la selección actual, reintenta desde Configuración y no inicies búsquedas repetidas hasta que la lista esté disponible.\n\n## Acciones en Web y WhatsApp\n\nEn Web, seleccionar una plataforma cambia los servicios que aparecerán en búsquedas futuras; no consulta el buzón ni envía mensajes de WhatsApp. En WhatsApp, el menú Starter abre la búsqueda con `2` y el menú Pro con `7`. La lista solo contiene la selección efectiva: servicios elegidos por el Tenant que siguen activos globalmente.\n\n## Límites, consecuencias y recuperación\n\nLa lista está limitada a los servicios que TrackPal admite y que están activos globalmente. Habilitar una plataforma no conecta una cuenta del proveedor ni crea un cliente o una suscripción. Si una plataforma pasa a estar inactiva globalmente, se omite de las búsquedas hasta que vuelva a estar disponible. Si la búsqueda informa que no hay servicios configurados, vuelve a esta categoría, selecciona una plataforma disponible, guarda e inicia una búsqueda nueva.\n\n## Límite de soporte\n\nSoporte puede confirmar si una plataforma está disponible globalmente e investigar un error persistente de carga o guardado. Comparte solo la etiqueta de la plataforma y el error visible; nunca envíes credenciales del buzón, códigos de acceso, contraseñas ni tokens."
+      },
       {
         "id": "tenant-admin.dashboard",
         "locale": "es",
@@ -318,6 +652,54 @@
         },
         "tour": null,
         "body": "# Idioma\n\nEl Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para el espacio de trabajo de tu negocio activo.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración. La categoría Idioma está disponible en Starter y Pro.\n- **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.\n\n## Resultados y estados\n\nLa navegación, las etiquetas de Configuración y los temas de Ayuda usan el idioma seleccionado después de actualizarlo. Mientras guarda, el control está ocupado. La selección actual permanece visible al cargar la página. Si el idioma no puede cargarse o guardarse, el idioma anterior continúa activo y aparece un error.\n\n## Límites, consecuencias y recuperación\n\nEl idioma es una configuración del Tenant, por lo que aplica al negocio y no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.\n\n## Límite de soporte\n\nSoporte puede ayudarte si el selector o el catálogo siguen sin estar disponibles después de reintentar. Incluye el idioma seleccionado y el error visible, pero nunca una contraseña, código de vinculación, token o secreto del buzón."
+      },
+      {
+        "id": "tenant-admin.mailbox",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_mailbox"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.mailbox"
+        ],
+        "title": "Buzón central de consultas",
+        "summary": "Conecta y prueba el buzón que recibe los correos con códigos de acceso.",
+        "search_tags": [
+          "buzón",
+          "bandeja de entrada",
+          "OAuth",
+          "IMAP",
+          "prueba de conexión",
+          "correo de código"
+        ],
+        "synonyms": [
+          "buzón de códigos",
+          "bandeja central",
+          "conexión de correo"
+        ],
+        "related_topics": [
+          "tenant-admin.activate-access-code-lookup",
+          "tenant-admin.code-services",
+          "tenant-admin.whatsapp"
+        ],
+        "order": 70,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "mailbox"
+        },
+        "tour": null,
+        "body": "# Buzón central de consultas\n\nEl buzón central de consultas es la bandeja que TrackPal revisa para encontrar correos recientes con códigos de acceso. Es una conexión del negocio, no el buzón personal de un cliente.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web para configurar, probar la conexión y desconectar; WhatsApp usa el buzón conectado durante la búsqueda de códigos.\n- **Requisitos:** Ser Tenant Admin y tener acceso al buzón. Elige OAuth de Google o Microsoft, o proporciona un servidor IMAP personalizado, correo, puerto, SSL y contraseña del buzón.\n- **Acciones:** Abre Configuración, elige Buzón central de consultas, conecta con OAuth o guarda el formulario IMAP y usa Probar conexión. El estado debe ser Conectado antes de iniciar una búsqueda.\n\n## Resultados y estados\n\n- **No configurado o desconectado:** No hay un buzón listo; la búsqueda de códigos de WhatsApp se detiene antes de mostrar servicios o informa que el buzón no está configurado.\n- **Pendiente:** Una ventana OAuth o una prueba de conexión sigue en curso. Mantén la ventana abierta y espera el resultado en vez de iniciar otra conexión.\n- **Conectado:** El buzón completó la configuración de conexión y está disponible para el trabajador de búsqueda.\n- **Error:** Una prueba fallida o un error del proveedor deja un estado de error y puede mostrar el último error de conexión. Corrige la configuración y prueba de nuevo.\n- **Revocado:** Si el proveedor revoca el permiso OAuth, vuelve a conectar el proveedor. Una conexión revocada no se repara repitiendo una búsqueda de WhatsApp.\n- **Tiempo de espera agotado:** Un proveedor o servidor IMAP lento puede agotar el tiempo. Revisa host, puerto, SSL y disponibilidad del proveedor antes de reintentar.\n\n## Acciones en Web y WhatsApp\n\nEn Web, OAuth abre una ventana de autorización del proveedor. IMAP guarda la configuración antes de probarla. En WhatsApp, la búsqueda lee el buzón central después de confirmar el correo; nunca pide enviar la contraseña del buzón al bot.\n\n## Límites, consecuencias y recuperación\n\nEl Tenant tiene un buzón central. Desconectarlo termina la conexión, elimina los secretos guardados del buzón y deja indisponible la búsqueda de códigos hasta completar una conexión nueva; no elimina las plataformas habilitadas, clientes, suscripciones ni entradas de Control de acceso. Si una prueba falla, corrige la configuración visible y vuelve a probar. Si OAuth fue revocado, reconecta. Nunca desconectes un buzón sano solo para recuperar un código que no aparece; revisa primero la plataforma y el correo.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de OAuth, IMAP, revocación o tiempo de espera. Comparte el proveedor, estado, host y puerto cuando corresponda, y la hora aproximada; nunca envíes un token OAuth, contraseña IMAP, contraseña del proveedor ni código de acceso."
       },
       {
         "id": "tenant-admin.password",
@@ -452,12 +834,63 @@
           "settings_category": "whatsapp-link"
         },
         "tour": null,
-        "body": "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa 0 para salir; sigue el menú actual para navegar y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
+        "body": "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
       }
     ]
   },
   "search": {
     "en": [
+      {
+        "id": "tenant-admin.access-control",
+        "title": "WhatsApp access control",
+        "terms": [
+          "WhatsApp access control",
+          "Review, search, block, and unblock WhatsApp identities for the Tenant.",
+          "access control",
+          "blocked phone",
+          "blocked identity",
+          "unblock",
+          "WhatsApp block",
+          "bot blocking",
+          "blocked contacts",
+          "deny access",
+          "# WhatsApp access control\n\nWhatsApp access control is the Tenant Admin list of identities that must not use the Tenant's WhatsApp bot. It protects the WhatsApp console and access-code flow; it is separate from a Client's portal account status.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for the full list and phone search; WhatsApp for the Tenant Admin's Access Control menu.\n- **Prerequisites:** Be a Tenant Admin. A phone or WhatsApp identity must be available to block. Blocking is available on Starter and Pro.\n- **Actions:** On Web, open Settings, choose Access control, search the list by phone digits, block a phone, or unblock an existing entry. In WhatsApp, Starter opens Access Control with `3` and Pro with `5`; choose `1` to list blocked identities or `2` to block a phone.\n\n## Results and states\n\n- **Loading:** TrackPal is retrieving blocked identities. Wait before deciding that the list is empty.\n- **Empty:** No identity is blocked, so Web shows the empty state and WhatsApp can show an empty list.\n- **Blocked:** The identity is denied access to the WhatsApp bot, including access-code requests and console actions.\n- **Unblocked:** Removing the entry allows the identity to use WhatsApp again when its other requirements are met.\n- **Duplicate:** Trying to block an identity that is already blocked leaves the existing entry unchanged.\n- **No search results:** A phone search can return no matching block; clear the search or check the digits.\n- **Error:** A failed list, block, or unblock request leaves the current state unchanged. Retry and contact support if it persists.\n\n## Web and WhatsApp actions\n\nThe Web list supports phone search without changing the stored blocks. In WhatsApp, use `9` to return to the main menu and `0` to cancel the current action. The bot block affects WhatsApp identity access; it does not log a Client out of the portal or change the Client's active/inactive account status.\n\n## Limits, consequences, and recovery\n\nBlocking prevents the identity from reaching the Tenant's WhatsApp console, requesting access codes, viewing WhatsApp profile information, or checking WhatsApp subscriptions. It does not delete the Client, deactivate the Client portal account, or remove subscriptions. Unblock the exact identity from Web or the WhatsApp list when access should be restored. If a phone is represented by a WhatsApp LID, use the identity shown by TrackPal and ask support for help rather than guessing a phone number.\n\n## Support boundary\n\nSupport can help identify a persistent block or identity mismatch. Share the visible phone or identity and the approximate time; never share a password, access code, pairing code, QR image, or mailbox credential."
+        ]
+      },
+      {
+        "id": "tenant-admin.activate-access-code-lookup",
+        "title": "Activate access-code lookup",
+        "terms": [
+          "Activate access-code lookup",
+          "Connect the dependencies in order, then run the first safe WhatsApp code search.",
+          "activate access-code lookup",
+          "first code search",
+          "access-code setup",
+          "search prerequisites",
+          "code lookup recovery",
+          "enable code search",
+          "first access code",
+          "code search setup",
+          "# Activate access-code lookup\n\nUse this path when the business wants to find a service access code from WhatsApp. Complete the dependencies in order; the lookup is available only after the linked WhatsApp instance, enabled platform, and central mailbox are ready.\n\n## Dependency chain\n\n1. **Link WhatsApp:** In Web Settings, configure the business phone in Profile, open WhatsApp, and pair with a pairing code or QR code. Wait for Connected. A disconnected or missing-phone state must be recovered before continuing.\n2. **Select a platform:** In Settings, open Enabled code platforms, select at least one globally active service, and save. If the list is loading, unavailable, or returns an error, wait or retry before testing a search.\n3. **Connect the mailbox:** In Settings, open Central lookup mailbox and connect Google, Microsoft, or custom IMAP. Run Test connection and continue only when the status is Connected. Pending, error, revoked, or timed-out connections need recovery in that category.\n4. **Start from the matching WhatsApp menu:** Starter uses `2` for Find Access Code. Pro uses `7`. Choose a listed service, enter the subscription email, and review it before confirming with `1`.\n5. **Handle the first result:** The search is pending while TrackPal checks recent mailbox messages. A found code or link is returned to the WhatsApp conversation. A not-found, duplicate, error, or timeout result tells you which recovery to use.\n\n## Navigation and safe recovery\n\nThe shared navigation contract uses `0` to cancel, while the current prompt labels `8` and `9` for page navigation or returning to the previous screen. On email confirmation, `2` corrects the email and `9` returns to the service list. Use `0` instead of sending credentials or abandoning a half-completed search. If the session times out, start the flow again from the plan menu.\n\n## States and recovery\n\n- **Pending:** Wait for the result instead of starting repeated searches. If it does not arrive, use the timeout recovery and check the mailbox status.\n- **Found:** Use the code promptly because service codes can expire. Treat a returned link as sensitive and open it only when expected.\n- **Not found:** Request a new code from the service, wait for the email, and try again with the correct service and subscription email.\n- **Duplicate:** Wait the displayed cooldown, then retry for the latest code instead of repeating immediately.\n- **Error:** Check that the mailbox is Connected and the selected platform is still available, then retry later.\n- **Timeout:** Check the provider and mailbox connection, then start a new search. Do not disconnect a healthy WhatsApp instance or mailbox as a first response.\n- **Missing prerequisites:** Return to Web Settings and complete the first missing dependency. Existing platform selections and business data are preserved when a connection is repaired.\n\n## Web and WhatsApp actions\n\nThe Web Help link opens Settings without saving forms, connecting or disconnecting a service, blocking an identity, or starting a search. The WhatsApp flow is the place where the search is requested; the guide never asks you to paste mailbox credentials, passwords, tokens, pairing codes, or QR images into chat.\n\n## Support boundary\n\nSupport can trace a persistent lookup error, timeout, or unexpected result when given the service, mailbox status, visible error, and approximate time. Never send the access code, email password, OAuth token, pairing code, or QR image in a support request."
+        ]
+      },
+      {
+        "id": "tenant-admin.code-services",
+        "title": "Enabled code platforms",
+        "terms": [
+          "Enabled code platforms",
+          "Choose which supported services can be searched for access codes.",
+          "code services",
+          "access code",
+          "platform",
+          "provider",
+          "enabled service",
+          "streaming services",
+          "services list",
+          "code providers",
+          "# Enabled code platforms\n\nEnabled code platforms are the services that TrackPal can search when a Tenant Admin or a client requests an access code. The available list is controlled by the platform catalog and your Tenant selection.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web for configuration; WhatsApp for using the selected platforms in the access-code search.\n- **Prerequisites:** Be a Tenant Admin. The business WhatsApp instance and central lookup mailbox are separate prerequisites for completing a search.\n- **Actions:** Open Settings, choose Enabled code platforms, select the services that should be available, and save. Only globally active services can be selected.\n\n## Results and states\n\n- **Loading:** TrackPal is retrieving the platform list. Wait for the list before changing selections.\n- **Enabled:** A selected, globally active platform appears in the WhatsApp service list.\n- **Unavailable:** A platform marked globally inactive cannot be selected. It is not an error in your Tenant configuration.\n- **Missing:** If no platform is selected, access-code lookup cannot start and WhatsApp reports that code services are not configured.\n- **Error:** If the list or save request fails, keep the current selection, retry from Settings, and do not start repeated WhatsApp searches until the list is available.\n\n## Web and WhatsApp actions\n\nOn Web, selecting a platform changes which services appear in future searches; it does not search the mailbox or send a WhatsApp message. In WhatsApp, the Starter menu opens access-code search with `2` and the Pro menu opens it with `7`. The service list contains only the effective selection: Tenant-selected services that are still globally active.\n\n## Limits, consequences, and recovery\n\nThe list is limited to the services currently supported and globally active by TrackPal. Enabling a platform does not connect its provider account and does not create a client or subscription. If a platform becomes globally inactive, it is omitted from effective searches until it is available again. If lookup reports no configured services, return to this category, select an available platform, save, and start a new search.\n\n## Support boundary\n\nSupport can confirm whether a platform is globally available and investigate a persistent load or save error. Share the platform label and visible error only; never share mailbox credentials, access codes, passwords, or tokens."
+        ]
+      },
       {
         "id": "tenant-admin.dashboard",
         "title": "Business Dashboard",
@@ -486,6 +919,24 @@
           "idioma",
           "translation",
           "# Language\n\nLanguage controls the TrackPal interface and the private Help content for your active business workspace.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. WhatsApp replies follow the active locale but language is changed here.\n- **Prerequisites:** Sign in as a Tenant Admin and open Settings. The Language category is available on Starter and Pro.\n- **Actions:** Choose Language, select the available locale, and save the change. The page reloads the catalog after a successful save.\n\n## Results and states\n\nThe navigation, Settings labels, and Help topics use the selected language after the update. While saving, the control is busy. The current selection remains visible when the page loads. If the locale cannot be loaded or saved, the existing language remains active and an error is shown.\n\n## Limits, consequences, and recovery\n\nLanguage is a Tenant setting, so it applies to the business rather than only one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.\n\n## Support boundary\n\nSupport can help when the language selector or catalog remains unavailable after retrying. Include the selected locale and the visible error, but never include a password, pairing code, access token, or mailbox secret."
+        ]
+      },
+      {
+        "id": "tenant-admin.mailbox",
+        "title": "Central lookup mailbox",
+        "terms": [
+          "Central lookup mailbox",
+          "Connect and test the mailbox that receives access-code emails.",
+          "mailbox",
+          "email inbox",
+          "OAuth",
+          "IMAP",
+          "connection test",
+          "access-code email",
+          "code mailbox",
+          "central inbox",
+          "email connection",
+          "# Central lookup mailbox\n\nThe central lookup mailbox is the inbox TrackPal checks for recent access-code emails. It is a business-level connection, not a client's personal mailbox.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web for setup, connection testing, and disconnection; WhatsApp uses the connected mailbox during access-code search.\n- **Prerequisites:** Be a Tenant Admin and have access to the mailbox. Choose Google or Microsoft OAuth, or provide a custom IMAP server, email, port, SSL setting, and mailbox password.\n- **Actions:** Open Settings, choose Central lookup mailbox, connect with OAuth or save the IMAP form, then use Test connection. The status must be Connected before a search can run.\n\n## Results and states\n\n- **Not configured or disconnected:** No mailbox is ready, so WhatsApp access-code search stops before the service list or reports that the mailbox is not configured.\n- **Pending:** An OAuth window or connection test is still in progress. Keep the window open and wait for the result instead of starting another connection.\n- **Connected:** The mailbox passed its connection setup and is available to the lookup worker.\n- **Error:** A failed test or provider error leaves an error status and may show the last connection error. Correct the configuration and test again.\n- **Revoked:** If an OAuth provider revokes permission, reconnect the provider. A revoked connection cannot be repaired by repeating a WhatsApp search.\n- **Timeout:** A slow provider or IMAP server can time out. Check the host, port, SSL setting, and provider availability before retrying.\n\n## Web and WhatsApp actions\n\nOn Web, OAuth opens a provider authorization window. IMAP saves the configuration before testing it. In WhatsApp, the lookup flow reads the central mailbox after the email is confirmed; it does not ask the user to send a mailbox password to the bot.\n\n## Limits, consequences, and recovery\n\nThe Tenant has one central lookup mailbox. Disconnecting it ends the mailbox connection, clears stored mailbox secrets, and makes access-code lookup unavailable until a new connection is completed; it does not remove enabled platforms, clients, subscriptions, or WhatsApp access-control entries. If a test fails, fix the visible provider settings and test again. If OAuth is revoked, reconnect it. Never disconnect a healthy mailbox just to recover a missing code; check the platform and email first.\n\n## Support boundary\n\nSupport can help with a persistent OAuth, IMAP, revoked, or timeout error. Share the provider, status, host and port when relevant, and the approximate time; never share an OAuth token, IMAP password, provider password, or access code."
         ]
       },
       {
@@ -533,11 +984,62 @@
           "WhatsApp connection",
           "link phone",
           "bot",
-          "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting means pairing is still in progress. Disconnected or missing phone means the console is not ready. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use 0 to exit; follow the current menu for navigation and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
+          "# WhatsApp\n\nWhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web for setup; WhatsApp for the conversational console after linking.\n- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.\n- **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.\n\n## Results and states\n\nConnected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.\n\n## Web and WhatsApp actions\n\nOn Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.\n\n## Limits, consequences, and recovery\n\nOnly one configured business instance is used for this connection. Disconnecting ends the linked session and pauses WhatsApp actions until the phone is linked again; it does not delete clients, catalog entries, or subscriptions. If pairing expires, generate a new code or refresh the QR. If the phone is not configured, return to Profile. If a WhatsApp session times out, start it again from the menu. Do not repeatedly disconnect a healthy instance to fix an access-code lookup problem; check platforms and mailbox first.\n\n## Support boundary\n\nSupport can help with a persistent pairing, status, or session error. Share the instance status and approximate time, never a pairing code, QR image, token, password, or mailbox credential."
         ]
       }
     ],
     "es": [
+      {
+        "id": "tenant-admin.access-control",
+        "title": "Control de acceso de WhatsApp",
+        "terms": [
+          "Control de acceso de WhatsApp",
+          "Revisa, busca, bloquea y desbloquea identidades de WhatsApp del Tenant.",
+          "control de acceso",
+          "teléfono bloqueado",
+          "identidad bloqueada",
+          "desbloquear",
+          "bloqueo de WhatsApp",
+          "bloqueo del bot",
+          "contactos bloqueados",
+          "denegar acceso",
+          "# Control de acceso de WhatsApp\n\nEl Control de acceso de WhatsApp es la lista de identidades que un Tenant Admin impide usar el bot de WhatsApp del Tenant. Protege la consola y el flujo de códigos de acceso; es diferente del estado de la cuenta de un Cliente en el portal.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para ver la lista completa y buscar teléfonos; WhatsApp para el menú de Control de acceso del Tenant Admin.\n- **Requisitos:** Ser Tenant Admin. Debe existir un teléfono o una identidad de WhatsApp que quieras bloquear. El bloqueo está disponible en Starter y Pro.\n- **Acciones:** En Web, abre Configuración, elige Control de acceso, busca por los dígitos del teléfono, bloquea un teléfono o desbloquea una entrada existente. En WhatsApp, Starter abre Control de acceso con `3` y Pro con `5`; elige `1` para listar identidades bloqueadas o `2` para bloquear un teléfono.\n\n## Resultados y estados\n\n- **Cargando:** TrackPal está obteniendo las identidades bloqueadas. Espera antes de concluir que la lista está vacía.\n- **Vacío:** No hay identidades bloqueadas; Web muestra el estado vacío y WhatsApp puede mostrar una lista vacía.\n- **Bloqueado:** La identidad no puede entrar al bot de WhatsApp, pedir códigos de acceso ni usar acciones de la consola.\n- **Desbloqueado:** Al eliminar la entrada, la identidad puede volver a usar WhatsApp cuando cumple los demás requisitos.\n- **Duplicado:** Intentar bloquear una identidad ya bloqueada conserva la entrada existente.\n- **Sin resultados:** Una búsqueda por teléfono puede no encontrar un bloqueo; limpia la búsqueda o revisa los dígitos.\n- **Error:** Un fallo al listar, bloquear o desbloquear conserva el estado actual. Reintenta y contacta a soporte si continúa.\n\n## Acciones en Web y WhatsApp\n\nLa lista Web permite buscar teléfonos sin cambiar los bloqueos guardados. En WhatsApp, usa `9` para volver al menú principal y `0` para cancelar la acción actual. El bloqueo del bot afecta el acceso de la identidad a WhatsApp; no cierra la sesión del Cliente en el portal ni cambia el estado activo/inactivo de su cuenta.\n\n## Límites, consecuencias y recuperación\n\nBloquear impide que la identidad entre a la consola de WhatsApp del Tenant, solicite códigos de acceso, vea el perfil por WhatsApp o consulte suscripciones por WhatsApp. No elimina al Cliente, desactiva su cuenta del portal ni elimina suscripciones. Desbloquea la identidad exacta desde Web o desde la lista de WhatsApp cuando deba recuperar el acceso. Si un teléfono aparece como LID de WhatsApp, usa la identidad que muestra TrackPal y pide ayuda a soporte en vez de adivinar un teléfono.\n\n## Límite de soporte\n\nSoporte puede ayudarte a identificar un bloqueo persistente o una identidad que no coincide. Comparte el teléfono o identidad visible y la hora aproximada; nunca envíes una contraseña, código de acceso, código de vinculación, imagen QR ni credencial del buzón."
+        ]
+      },
+      {
+        "id": "tenant-admin.activate-access-code-lookup",
+        "title": "Activar la búsqueda de códigos de acceso",
+        "terms": [
+          "Activar la búsqueda de códigos de acceso",
+          "Conecta las dependencias en orden y ejecuta la primera búsqueda segura desde WhatsApp.",
+          "activar búsqueda de códigos",
+          "primera búsqueda de código",
+          "configuración de códigos de acceso",
+          "requisitos de búsqueda",
+          "recuperación de búsqueda de códigos",
+          "habilitar búsqueda de códigos",
+          "primer código de acceso",
+          "configurar búsqueda de códigos",
+          "# Activar la búsqueda de códigos de acceso\n\nUsa este camino cuando el negocio quiera encontrar un código de acceso de un servicio desde WhatsApp. Completa las dependencias en orden: la búsqueda solo está disponible después de vincular WhatsApp, habilitar una plataforma y preparar el buzón central.\n\n## Cadena de dependencias\n\n1. **Vincula WhatsApp:** En Configuración Web, configura el teléfono del negocio en Perfil, abre WhatsApp y vincula con un código de vinculación o código QR. Espera el estado Conectado. Un estado desconectado o un teléfono faltante debe recuperarse antes de continuar.\n2. **Selecciona una plataforma:** En Configuración, abre Plataformas de códigos habilitadas, selecciona al menos un servicio activo globalmente y guarda. Si la lista está cargando, no disponible o devuelve un error, espera o reintenta antes de probar una búsqueda.\n3. **Conecta el buzón:** En Configuración, abre Buzón central de consultas y conecta Google, Microsoft o IMAP personalizado. Usa Probar conexión y continúa solo cuando el estado sea Conectado. Una conexión pendiente, con error, revocada o con tiempo agotado necesita recuperación en esa categoría.\n4. **Inicia desde el menú de WhatsApp:** Starter usa `2` para Buscar código de acceso. Pro usa `7`. Elige un servicio listado, escribe el email de la suscripción y revísalo antes de confirmar con `1`.\n5. **Procesa el primer resultado:** La búsqueda queda pendiente mientras TrackPal revisa correos recientes del buzón. Un código o enlace encontrado se devuelve en la conversación de WhatsApp. Un resultado no encontrado, duplicado, con error o con tiempo agotado indica la recuperación correspondiente.\n\n## Navegación y recuperación segura\n\nEl contrato compartido de navegación usa `0` para cancelar, mientras el mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior. En la confirmación del email, `2` corrige el correo y `9` vuelve a la lista de servicios. Usa `0` en vez de enviar credenciales o abandonar una búsqueda a medias. Si la sesión expira, inicia el flujo otra vez desde el menú de tu plan.\n\n## Estados y recuperación\n\n- **Pendiente:** Espera el resultado en vez de iniciar búsquedas repetidas. Si no llega, aplica la recuperación de tiempo agotado y revisa el estado del buzón.\n- **Encontrado:** Usa pronto el código porque los códigos de los servicios pueden expirar. Trata un enlace devuelto como información sensible y ábrelo solo si lo esperabas.\n- **No encontrado:** Solicita un código nuevo en el servicio, espera el correo e inténtalo otra vez con el servicio y el email correctos.\n- **Duplicado:** Espera el tiempo de enfriamiento mostrado y vuelve a intentar para obtener el código más reciente, en vez de repetir inmediatamente.\n- **Error:** Comprueba que el buzón esté Conectado y que la plataforma seleccionada siga disponible; después reintenta.\n- **Tiempo de espera agotado:** Revisa el proveedor y la conexión del buzón y comienza una búsqueda nueva. No desconectes una instancia sana de WhatsApp ni el buzón como primera respuesta.\n- **Requisitos faltantes:** Vuelve a Configuración Web y completa la primera dependencia que falte. Las selecciones de plataformas y los datos del negocio se conservan al reparar una conexión.\n\n## Acciones en Web y WhatsApp\n\nEl enlace de Ayuda en Web abre Configuración sin guardar formularios, conectar o desconectar servicios, bloquear o desbloquear identidades ni iniciar una búsqueda. El flujo de WhatsApp es el lugar donde se solicita la búsqueda; esta guía nunca pide pegar credenciales del buzón, contraseñas, tokens, códigos de vinculación o imágenes QR en el chat.\n\n## Límite de soporte\n\nSoporte puede rastrear un error, tiempo de espera o resultado inesperado persistente si recibe el servicio, estado del buzón, error visible y hora aproximada. Nunca envíes el código de acceso, contraseña del correo, token OAuth, código de vinculación ni imagen QR en una solicitud de soporte."
+        ]
+      },
+      {
+        "id": "tenant-admin.code-services",
+        "title": "Plataformas de códigos habilitadas",
+        "terms": [
+          "Plataformas de códigos habilitadas",
+          "Elige qué servicios compatibles pueden consultarse para buscar códigos de acceso.",
+          "servicios de código",
+          "código de acceso",
+          "plataforma",
+          "proveedor",
+          "servicio habilitado",
+          "servicios de streaming",
+          "lista de servicios",
+          "proveedores de códigos",
+          "# Plataformas de códigos habilitadas\n\nLas plataformas de códigos habilitadas son los servicios que TrackPal puede consultar cuando un Tenant Admin o un cliente solicita un código de acceso. La lista disponible depende del catálogo de plataformas y de la selección de tu Tenant.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web para configurar; WhatsApp para usar las plataformas seleccionadas en la búsqueda de códigos.\n- **Requisitos:** Ser Tenant Admin. La instancia de WhatsApp del negocio y el buzón central son requisitos separados para completar una búsqueda.\n- **Acciones:** Abre Configuración, elige Plataformas de códigos habilitadas, selecciona los servicios que deben estar disponibles y guarda. Solo puedes seleccionar servicios activos globalmente.\n\n## Resultados y estados\n\n- **Cargando:** TrackPal está obteniendo la lista de plataformas. Espera a que aparezca antes de cambiar selecciones.\n- **Habilitado:** Un servicio seleccionado y activo globalmente aparece en la lista de servicios de WhatsApp.\n- **No disponible:** Una plataforma marcada como inactiva globalmente no se puede seleccionar. No es un error de la configuración de tu Tenant.\n- **Faltante:** Si no seleccionas ninguna plataforma, la búsqueda de códigos no puede iniciar y WhatsApp informa que los servicios de códigos no están configurados.\n- **Error:** Si falla la carga o el guardado, conserva la selección actual, reintenta desde Configuración y no inicies búsquedas repetidas hasta que la lista esté disponible.\n\n## Acciones en Web y WhatsApp\n\nEn Web, seleccionar una plataforma cambia los servicios que aparecerán en búsquedas futuras; no consulta el buzón ni envía mensajes de WhatsApp. En WhatsApp, el menú Starter abre la búsqueda con `2` y el menú Pro con `7`. La lista solo contiene la selección efectiva: servicios elegidos por el Tenant que siguen activos globalmente.\n\n## Límites, consecuencias y recuperación\n\nLa lista está limitada a los servicios que TrackPal admite y que están activos globalmente. Habilitar una plataforma no conecta una cuenta del proveedor ni crea un cliente o una suscripción. Si una plataforma pasa a estar inactiva globalmente, se omite de las búsquedas hasta que vuelva a estar disponible. Si la búsqueda informa que no hay servicios configurados, vuelve a esta categoría, selecciona una plataforma disponible, guarda e inicia una búsqueda nueva.\n\n## Límite de soporte\n\nSoporte puede confirmar si una plataforma está disponible globalmente e investigar un error persistente de carga o guardado. Comparte solo la etiqueta de la plataforma y el error visible; nunca envíes credenciales del buzón, códigos de acceso, contraseñas ni tokens."
+        ]
+      },
       {
         "id": "tenant-admin.dashboard",
         "title": "Panel del negocio",
@@ -566,6 +1068,24 @@
           "lenguaje",
           "traducción",
           "# Idioma\n\nEl Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para el espacio de trabajo de tu negocio activo.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.\n- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración. La categoría Idioma está disponible en Starter y Pro.\n- **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.\n\n## Resultados y estados\n\nLa navegación, las etiquetas de Configuración y los temas de Ayuda usan el idioma seleccionado después de actualizarlo. Mientras guarda, el control está ocupado. La selección actual permanece visible al cargar la página. Si el idioma no puede cargarse o guardarse, el idioma anterior continúa activo y aparece un error.\n\n## Límites, consecuencias y recuperación\n\nEl idioma es una configuración del Tenant, por lo que aplica al negocio y no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.\n\n## Límite de soporte\n\nSoporte puede ayudarte si el selector o el catálogo siguen sin estar disponibles después de reintentar. Incluye el idioma seleccionado y el error visible, pero nunca una contraseña, código de vinculación, token o secreto del buzón."
+        ]
+      },
+      {
+        "id": "tenant-admin.mailbox",
+        "title": "Buzón central de consultas",
+        "terms": [
+          "Buzón central de consultas",
+          "Conecta y prueba el buzón que recibe los correos con códigos de acceso.",
+          "buzón",
+          "bandeja de entrada",
+          "OAuth",
+          "IMAP",
+          "prueba de conexión",
+          "correo de código",
+          "buzón de códigos",
+          "bandeja central",
+          "conexión de correo",
+          "# Buzón central de consultas\n\nEl buzón central de consultas es la bandeja que TrackPal revisa para encontrar correos recientes con códigos de acceso. Es una conexión del negocio, no el buzón personal de un cliente.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web para configurar, probar la conexión y desconectar; WhatsApp usa el buzón conectado durante la búsqueda de códigos.\n- **Requisitos:** Ser Tenant Admin y tener acceso al buzón. Elige OAuth de Google o Microsoft, o proporciona un servidor IMAP personalizado, correo, puerto, SSL y contraseña del buzón.\n- **Acciones:** Abre Configuración, elige Buzón central de consultas, conecta con OAuth o guarda el formulario IMAP y usa Probar conexión. El estado debe ser Conectado antes de iniciar una búsqueda.\n\n## Resultados y estados\n\n- **No configurado o desconectado:** No hay un buzón listo; la búsqueda de códigos de WhatsApp se detiene antes de mostrar servicios o informa que el buzón no está configurado.\n- **Pendiente:** Una ventana OAuth o una prueba de conexión sigue en curso. Mantén la ventana abierta y espera el resultado en vez de iniciar otra conexión.\n- **Conectado:** El buzón completó la configuración de conexión y está disponible para el trabajador de búsqueda.\n- **Error:** Una prueba fallida o un error del proveedor deja un estado de error y puede mostrar el último error de conexión. Corrige la configuración y prueba de nuevo.\n- **Revocado:** Si el proveedor revoca el permiso OAuth, vuelve a conectar el proveedor. Una conexión revocada no se repara repitiendo una búsqueda de WhatsApp.\n- **Tiempo de espera agotado:** Un proveedor o servidor IMAP lento puede agotar el tiempo. Revisa host, puerto, SSL y disponibilidad del proveedor antes de reintentar.\n\n## Acciones en Web y WhatsApp\n\nEn Web, OAuth abre una ventana de autorización del proveedor. IMAP guarda la configuración antes de probarla. En WhatsApp, la búsqueda lee el buzón central después de confirmar el correo; nunca pide enviar la contraseña del buzón al bot.\n\n## Límites, consecuencias y recuperación\n\nEl Tenant tiene un buzón central. Desconectarlo termina la conexión, elimina los secretos guardados del buzón y deja indisponible la búsqueda de códigos hasta completar una conexión nueva; no elimina las plataformas habilitadas, clientes, suscripciones ni entradas de Control de acceso. Si una prueba falla, corrige la configuración visible y vuelve a probar. Si OAuth fue revocado, reconecta. Nunca desconectes un buzón sano solo para recuperar un código que no aparece; revisa primero la plataforma y el correo.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de OAuth, IMAP, revocación o tiempo de espera. Comparte el proveedor, estado, host y puerto cuando corresponda, y la hora aproximada; nunca envíes un token OAuth, contraseña IMAP, contraseña del proveedor ni código de acceso."
         ]
       },
       {
@@ -613,7 +1133,7 @@
           "conexión de WhatsApp",
           "vincular teléfono",
           "bot",
-          "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa 0 para salir; sigue el menú actual para navegar y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
+          "# WhatsApp\n\nWhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.\n- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.\n- **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.\n\n## Resultados y estados\n\nConectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.\n\n## Acciones en Web y WhatsApp\n\nEn Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.\n\n## Límites, consecuencias y recuperación\n\nSolo se usa una instancia configurada del negocio para esta conexión. Desconectar termina la sesión vinculada y pausa las acciones de WhatsApp hasta volver a vincular el teléfono; no elimina clientes, elementos del catálogo ni suscripciones. Si la vinculación expira, genera un código nuevo o actualiza el QR. Si falta el teléfono, vuelve a Perfil. Si una sesión de WhatsApp expira, iníciala de nuevo desde el menú. No desconectes una instancia sana repetidamente para corregir un problema de búsqueda de códigos; revisa primero las plataformas y el buzón.\n\n## Límite de soporte\n\nSoporte puede ayudarte con un error persistente de vinculación, estado o sesión. Comparte el estado de la instancia y la hora aproximada, nunca un código de vinculación, imagen QR, token, contraseña o credencial del buzón."
         ]
       }
     ]

@@ -14,29 +14,69 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
     assert artifact["schema_version"] == 1
-    assert artifact["content_version"] == "help-common-modules-1"
+    assert artifact["content_version"] == "help-access-code-workflows-1"
     assert artifact["frontend_target_contract_version"] == "2"
     assert set(artifact["locales"]) == {"en", "es"}
     expected_ids = [
+        "tenant-admin.access-control",
+        "tenant-admin.activate-access-code-lookup",
+        "tenant-admin.code-services",
         "tenant-admin.dashboard",
         "tenant-admin.language",
-        "tenant-admin.profile",
+        "tenant-admin.mailbox",
         "tenant-admin.password",
+        "tenant-admin.profile",
         "tenant-admin.whatsapp",
     ]
     assert [topic["id"] for topic in artifact["topics"]["en"]] == sorted(expected_ids)
     assert [topic["id"] for topic in artifact["topics"]["es"]] == sorted(expected_ids)
     assert artifact["topics"]["en"][0]["body"] != artifact["topics"]["es"][0]["body"]
 
-    english_search = artifact["search"]["en"][0]
+    english_search = next(
+        item
+        for item in artifact["search"]["en"]
+        if item["id"] == "tenant-admin.dashboard"
+    )
     assert english_search["title"] in english_search["terms"]
     assert "mailbox" in english_search["terms"]
     assert "home" in english_search["terms"]
     assert "central lookup mailbox" in english_search["terms"][-1]
     assert artifact["topics"]["en"][1]["safe_navigation"] == {
         "route": "/admin/settings",
-        "settings_category": "locale",
+        "settings_category": "code-services",
     }
+
+
+def test_access_code_topics_expose_cross_channel_contracts_and_states() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    assert topics["tenant-admin.code-services"]["help_targets"] == [
+        "admin.settings.code-services"
+    ]
+    assert topics["tenant-admin.mailbox"]["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "mailbox",
+    }
+    assert topics["tenant-admin.access-control"]["help_targets"] == [
+        "admin.settings.access-control"
+    ]
+    assert topics["tenant-admin.activate-access-code-lookup"]["help_targets"] == [
+        "admin.settings"
+    ]
+    assert topics["tenant-admin.activate-access-code-lookup"]["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "code-services",
+    }
+
+    access_code_body = topics["tenant-admin.activate-access-code-lookup"][
+        "body"
+    ].lower()
+    for state in ("pending", "found", "not found", "duplicate", "timeout"):
+        assert state in access_code_body
+    assert "0" in access_code_body
+    assert "8" in access_code_body
+    assert "9" in access_code_body
 
 
 def test_checked_in_artifact_matches_the_compiled_sources() -> None:

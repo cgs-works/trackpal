@@ -47,11 +47,11 @@ WhatsApp connects the business phone to TrackPal so the Tenant Admin bot can rec
 
 ## Results and states
 
-Connected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting means pairing is still in progress. Disconnected or missing phone means the console is not ready. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.
+Connected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.
 
 ## Web and WhatsApp actions
 
-On Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use 0 to exit; follow the current menu for navigation and do not send credentials to the bot.
+On Web, Settings is the safe place to pair, refresh a QR code, or review status. In WhatsApp, follow the plan menu shown by the bot. Starter exposes Profile, access-code search, Access Control, Help, and Exit. Pro also exposes Clients, Catalog, and Subscriptions. Use `0` to exit or cancel. The current prompt labels `8` and `9` for page navigation or returning to the previous screen; follow those labels and do not send credentials to the bot.
 
 ## Limits, consequences, and recovery
 

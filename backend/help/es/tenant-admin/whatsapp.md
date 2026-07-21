@@ -47,11 +47,11 @@ WhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant
 
 ## Resultados y estados
 
-Conectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.
+Conectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.
 
 ## Acciones en Web y WhatsApp
 
-En Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa 0 para salir; sigue el menú actual para navegar y no envíes credenciales al bot.
+En Web, Configuración es el lugar seguro para vincular, actualizar un código QR o revisar el estado. En WhatsApp, sigue el menú que muestra el bot según tu plan. Starter ofrece Perfil, búsqueda de códigos, Control de acceso, Ayuda y Salir. Pro también ofrece Clientes, Catálogo y Suscripciones. Usa `0` para salir o cancelar. El mensaje actual etiqueta `8` y `9` para navegar páginas o regresar a la pantalla anterior; sigue esas etiquetas y no envíes credenciales al bot.
 
 ## Límites, consecuencias y recuperación
 

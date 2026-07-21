@@ -33,9 +33,9 @@ The public Vite bundle contains the Help client and presentation components, but
 - `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, and Spanish/English metadata drift.
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
 - Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
-- The common Tenant Admin release includes mirrored Dashboard, Language, Profile, Password, and WhatsApp topics for Starter and Pro.
+- The common Tenant Admin release includes mirrored Dashboard, Language, Profile, Password, WhatsApp, Enabled code platforms, Central lookup mailbox, WhatsApp access control, and Activate access-code lookup topics for Starter and Pro.
 - Dashboard and Settings use semantic targets such as `data-help-id="admin.dashboard"` and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
-- The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links.
+- The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links. Access-code workflow topics link safely to the relevant Settings category without executing connection, disconnection, blocking, unblocking, or lookup actions.
 - The shared Tenant Admin layout provides contextual Help in a responsive Sheet. It resolves the most specific current target, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved.
 
 ## Canonical Markdown Source
@@ -175,7 +175,7 @@ All Help surfaces must support:
 
 ## Search
 
-The compiler creates locale-specific full-text data from authorized topic fields and Markdown text. Search includes maintained beginner-friendly synonyms without changing canonical product labels.
+The compiler creates locale-specific full-text data from authorized topic fields and Markdown text. Search includes maintained beginner-friendly synonyms without changing canonical product labels. The Tenant Admin cross-channel topics cover the dependency chain from WhatsApp linking through enabled platforms and mailbox readiness to access-code search, plus recovery states and WhatsApp access-control boundaries.
 
 The backend filters the searchable corpus by audience, plan, and locale before matching or constructing excerpts. Search results contain only authorized topic IDs, titles, matched excerpts, module labels, and routes into the Help Center.
 
