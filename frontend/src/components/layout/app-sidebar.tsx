@@ -1,8 +1,16 @@
 import { useState } from "react";
+import { type ToPathOption } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { t } from "@/i18n";
 import { NavItem } from "./sidebar-nav";
 import { BrandLogo } from "./brand-logo";
 
@@ -10,7 +18,8 @@ export interface SidebarItem {
   label: string
   icon: React.ReactNode
   active?: boolean
-  onSelect: () => void
+  to?: ToPathOption
+  onSelect?: () => void
 }
 
 interface SidebarContentProps {
@@ -35,7 +44,7 @@ function SidebarContent({
   onCloseMobile,
 }: SidebarContentProps) {
   function handleSelect(item: SidebarItem) {
-    item.onSelect();
+    item.onSelect?.();
     onCloseMobile?.();
   }
 
@@ -64,7 +73,10 @@ function SidebarContent({
             label={item.label}
             collapsed={collapsed}
             active={item.active}
-            onClick={() => handleSelect(item)}
+            to={item.to}
+            onClick={
+              item.to ? onCloseMobile : () => handleSelect(item)
+            }
           />
         ))}
       </nav>
@@ -79,7 +91,7 @@ function SidebarContent({
                 <ChevronLeft className="size-4 shrink-0" />
               )
             }
-            label="Collapse"
+            label={t("frontend.navigation.collapse")}
             collapsed={collapsed}
             onClick={onToggleCollapse}
           />
@@ -95,7 +107,7 @@ function SidebarContent({
 
         <NavItem
           icon={<LogOut className="size-4 shrink-0" />}
-          label="Logout"
+          label={t("frontend.dashboard.tenant.logout")}
           collapsed={collapsed}
           onClick={handleLogout}
         />
@@ -155,13 +167,23 @@ export function MobileSidebar({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           render={
-            <Button variant="ghost" size="icon" className="shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              aria-label={t("frontend.navigation.toggle_menu")}
+            >
               <Menu className="size-5" />
-              <span className="sr-only">Toggle menu</span>
+              <span className="sr-only">
+                {t("frontend.navigation.toggle_menu")}
+              </span>
             </Button>
           }
         />
         <SheetContent side="left" className="w-[240px] p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{t("frontend.navigation.menu_title")}</SheetTitle>
+          </SheetHeader>
           <SidebarContent
             brandName={brandName}
             collapsedBrandName={collapsedBrandName}

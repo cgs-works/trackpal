@@ -22,6 +22,10 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.dashboard.tenant.go_subscriptions": "Go to Subscriptions",
     "frontend.dashboard.tenant.exit_tenant": "Exit business context",
     "frontend.dashboard.tenant.logout": "Log out",
+    "frontend.navigation.collapse": "Collapse",
+    "frontend.navigation.toggle_menu": "Toggle menu",
+    "frontend.navigation.menu_title": "Navigation menu",
+
     "frontend.dashboard.expiring_soon": "Expiring in 7 days",
     "frontend.dashboard.plan": "Plan",
     "frontend.dashboard.client.title": "Client Dashboard",

@@ -229,8 +229,10 @@ Use shadcn/ui primitives from `@/components/ui/`. Customization via className pr
 ### Responsive design
 
 - Mobile-first with `md:` breakpoint for sidebar
-- Admin layout: sidebar hidden on mobile, header bar shown instead
-- Sheet component for mobile navigation
+- Tenant Admin and Client layouts share the role-aware navigation model and sidebar primitives
+- Desktop sidebars preserve each role's authorized route order and active states
+- Mobile headers expose an accessible menu trigger backed by the existing `Sheet`; navigation selection closes the Sheet and restores focus to the trigger
+
 
 ## File Structure Rules
 
@@ -274,15 +276,17 @@ Pro-only routes (`/admin/clients`, `/admin/catalog`, `/admin/subscriptions`) are
 
 ### Sidebar nav filtering
 
-`AdminLayout` filters nav items by `proOnly` flag. Starter admins only see Dashboard and Settings in the sidebar.
+The shared role-navigation model filters Tenant Admin items by the `proOnly` flag. Starter admins only see Dashboard and Settings in the sidebar; Master Support Context retains the full list.
+
 
 ### Settings section visibility
 
 SettingsPage conditionally includes sections: Reminder Settings, Timezone, and Public API are Pro-only; all other sections (Profile, Language, Code Services, Code Mailbox, Control de acceso, WhatsApp, Password) are available for all plans.
 
-## No Tests
+## Tests
 
-No frontend test files exist. Tests are not part of the current frontend setup. Backend has pytest coverage.
+Frontend behavior is covered with Vitest and Testing Library under `src/**/__tests__`. Run the suite with `npm test`; backend coverage remains under pytest.
+
 
 ## Linting
 

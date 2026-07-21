@@ -56,8 +56,9 @@ Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/
 
 - `__root.tsx` — Root layout: loads i18n catalog before rendering, renders `<Outlet>` + `<Toaster>` + devtools
 - `master.tsx` — Master layout with sidebar nav
-- `admin.tsx` — Admin layout with collapsible sidebar, plan-aware nav items, and support banner for Master support context
-- `client.tsx` — Client layout with sidebar nav
+- `admin.tsx` — Tenant Admin layout with shared collapsible desktop sidebar, plan-aware role navigation, and support banner for Master support context; mobile navigation opens in a Sheet
+- `client.tsx` — Client layout using the same shared role navigation and mobile Sheet
+
 
 ### Navigation Guard
 
@@ -216,10 +217,16 @@ Login form with pre-auth i18n via `usePublicI18n()`. Uses translated labels for 
 ### AdminLayout (`features/admin/layout/admin-layout.tsx`)
 
 Collapsible sidebar layout for tenant admin pages:
-- Sidebar: brand, nav items (Dashboard, Settings always visible; Clients, Catalog, Subscriptions shown only for Pro or Master support context), username, logout
-- Mobile: header bar with brand + logout
-- Content: `<Outlet>` renders child routes
-- When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`
+- Shared role-navigation model: Dashboard, Clients, Catalog, Subscriptions, and Settings remain in the existing order; Starter hides the Pro-only destinations and Master Support Context shows them.
+- Desktop sidebar: brand, authorized nav items, username, collapse control, and logout.
+- Mobile: the shared header exposes an accessible menu control that opens the authorized destinations in a focus-managed `Sheet`; selecting a destination closes the Sheet.
+- Content: `<Outlet>` renders child routes.
+- When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`.
+
+### ClientLayout (`features/client/layout/client-layout.tsx`)
+
+Client navigation uses the same role-navigation and sidebar primitives with only Dashboard and Profile. Desktop active states are exact route matches; mobile exposes both destinations through the same focus-managed `Sheet`.
+
 
 ### MasterLayout (`features/master/layout/master-layout.tsx`)
 
