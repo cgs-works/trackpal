@@ -45,6 +45,19 @@ tour:
       Ayuda contiene los temas del manual autorizados para tu plan Starter, incluidos WhatsApp, las plataformas habilitadas, el buzón central y el control de acceso. Usa el buscador para encontrar un tema sin perder tus datos actuales.
 
       Puedes repetir esta orientación desde Ayuda cuando quieras. Los enlaces del manual solo abren pantallas seguras; nunca envían formularios, muestran credenciales ni realizan acciones del producto.
+  - release_id: tenant-admin-pro-1
+    order: 7
+    target: admin.help
+    conditional: false
+    plans:
+      - pro
+    title: WhatsApp, Ayuda y repetición
+    content: |
+      # Termina en Ayuda
+
+      WhatsApp Pro incluye Clientes, Catálogo, Perfil, Suscripciones, Control de acceso, Ayuda y búsqueda de códigos de acceso. Ayuda contiene el manual autorizado y permite repetir esta orientación.
+
+      La navegación de Ayuda es de solo lectura. Nunca envía formularios, muestra credenciales, cambia datos ni ejecuta una acción de WhatsApp.
 ---
 
 # Ayuda

@@ -400,7 +400,30 @@
           "settings_category": null
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 4,
+            "target": "admin.catalog",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Catalog services and plans",
+            "content": "# Build the Catalog\n\nCatalog is where Pro services and plans are organized before subscriptions are assigned. Review the list and the safe action group; deletion always has an impact preview and confirmation outside this tour.\n\nThe tour only highlights the real module. It never creates, renames, deletes, or opens a destructive confirmation.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 2,
+            "target": "admin.catalog",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Your new Pro Catalog",
+            "content": "# Catalog is now available\n\nYour upgrade adds Catalog. Prepare services and plans here before assigning subscriptions to Clients.\n\nThe tour is read-only: it does not create, rename, delete, or preview a destructive change."
+          }
+        ],
         "body": "# Catalog\n\nThe Catalog is the Pro Tenant's list of services and plans. A service is the offering, and its plans are the selectable variants used when creating a subscription.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Open Catalog from the sidebar. Create a service, select it, create or rename its plans, rename a service, or open the delete preview before deleting a service or plan.\n- **WhatsApp:** From the Pro main menu choose `2` Catalog. With services, choose `1` to view them, `2` to create a service, or `3` to delete a service. Select a service to edit its name, view plans, create a plan, or delete a plan. With no services, the menu offers the first service creation directly.\n- **Prerequisites:** Catalog is Pro-only. To create a plan, create or select its service first. A catalog change does not create a client or subscription automatically.\n\n## Services, plans, and empty states\n\nA service can exist without plans. The service detail screen shows an empty plans state and offers Create plan; return with `9` or cancel with `0`. An empty service list means no services exist, so create the first service. An empty plan list means the selected service has no plans; it is not a loading failure.\n\nLists may paginate. Use `8` only when Next is displayed and `9` to go back. A loading state means TrackPal is retrieving the current catalog. A failed load or save leaves the prior catalog unchanged; retry after checking the visible error.\n\n## Create and rename\n\nEnter a non-empty service or plan name and save on Web, or answer the WhatsApp prompt. A successful result returns to a post-action prompt; choose `1` to return to the main menu. A blank name, invalid selection, duplicate name, or unavailable service is rejected and can be corrected without creating a partial record. Renaming changes the label only; it does not move plans or change existing subscriptions.\n\n## Deletion preview and consequences\n\nDeleting a service or plan is irreversible. Before confirmation, Web and WhatsApp show the delete impact preview. For a service, review the affected plan count, active subscriptions, historical subscriptions, total subscriptions, and the listed active subscription rows. For a plan, review the active, historical, and total subscription counts and rows. Historical subscriptions are included in the consequence summary even though they are no longer active.\n\nDeleting a service permanently removes that service, its plans, and all subscriptions attached to it. Deleting a plan permanently removes that plan and all subscriptions attached to it. Active subscriptions are not preserved or converted. Use the listed client, service, plan, and expiration details to verify the impact before proceeding.\n\nOn Web, type `DELETE` in the preview confirmation field. In WhatsApp, type `CONFIRM` or `CONFIRMAR` when prompted. Any other value shows a confirmation re-prompt; `0` cancels and `9` returns to selection. A cancelled preview or failed deletion does not mutate the catalog.\n\n## Limits, validation, and recovery\n\nOnly services that are globally active can be selected for access-code lookup; Catalog names do not enable a code platform. The Catalog does not reveal subscription credentials. If the preview cannot load, do not guess the impact or repeat the destructive action; retry the preview and contact support with the visible error.\n\n## Support boundary\n\nSupport can investigate a persistent catalog load, validation, preview, or deletion error. Share the affected service or plan name and visible counts only; never share subscription passwords, PINs, mailbox credentials, or access codes."
       },
       {
@@ -451,7 +474,30 @@
           "settings_category": null
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 3,
+            "target": "admin.clients",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Clients",
+            "content": "# Manage Clients safely\n\nClients is where you manage the people who receive your services. Review the list, search, and action group before creating, editing, activating, deactivating, or deleting anything.\n\nThis tour only highlights the real module. It never opens a form, changes a status, creates a client, or starts a deletion confirmation.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 1,
+            "target": "admin.clients",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Your new Pro Clients module",
+            "content": "# Clients are now available\n\nYour upgrade adds Clients. Use this module to manage client identity and access, then open a client's subscriptions when the account is ready.\n\nThe tour is read-only: it does not create, edit, activate, deactivate, or delete a client."
+          }
+        ],
         "body": "# Clients\n\nClients are the people who receive the services offered by a Pro Tenant. Client management is available only to Pro Tenant Admins on Web and in the Pro WhatsApp console.\n\n## Channel, prerequisites, and actions\n\n- **Web:** Open Clients from the sidebar. Search by full name, canonical username, or phone; use Create to add a client, the edit action to change identity fields, the power action to activate or deactivate access, the subscriptions action to open that client's subscriptions, and the delete action for an inactive client.\n- **WhatsApp:** From the Pro main menu choose `1` Clients. Choose `1` to view clients or `2` to create one. Select a listed client to edit, deactivate, reactivate, or delete it. Use `9` to go back and `0` to cancel.\n- **Prerequisites:** The Tenant must be on Pro and you must be its Tenant Admin. To create a client, prepare a full name, a valid local username, a password of at least six characters, and an optional phone number.\n\n## Create and canonical login\n\nEnter the client's full name, local username, optional phone, and password, then save on Web or confirm the summary in WhatsApp. The local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores. TrackPal combines it with the Tenant's immutable prefix to create the canonical login in the form `{client_prefix}_{local_username}`, such as `t1_pepe`. Give the client this full canonical login, not only the local portion.\n\nA successful creation adds an active client. A duplicate local username, canonical username, or phone is rejected and leaves the existing clients unchanged. Correct the field and try again. A missing or invalid name, username, phone, or password is a validation error; it does not create a partial client.\n\n## Search, edit, activate, and deactivate\n\nSearch is a local filter over the loaded client list and does not change data. An empty list means no clients exist; an empty search result means the filter has no match. Clear the search or adjust the spelling and digits.\n\nEdit changes the full name, local username, or phone. Renaming the local username also updates the canonical login. A duplicate value or invalid field is rejected without applying the edit. Activate restores access for an inactive client. Deactivate changes the client to inactive and revokes that client's active Web sessions; the client must sign in again after reactivation.\n\n## Subscriptions and deletion\n\nUse the credit-card or subscriptions action on the client row to open Subscriptions already filtered to that client. This is a safe navigation link; it does not create, reveal, cancel, renew, or reactivate a subscription. The client topic is also related to the Subscriptions module for the full subscription workflow.\n\nAn active client cannot be deleted. Deactivate it first. Deletion is permanent: it removes the client account and its login, cannot be undone, and is not a substitute for deactivation. Confirm the deletion only after checking that the selected client is correct. A cancelled dialog or a failed request leaves the client in its previous state.\n\n## WhatsApp validation and recovery\n\nThe Pro WhatsApp flow validates each requested field and repeats the prompt for an invalid selection, empty name, empty username, short password, or invalid phone. At the confirmation prompt type `CONFIRM` or `CONFIRMAR` as shown; type `0` to cancel. A failed create, edit, activation, deactivation, or deletion keeps the previous data and can be retried. `9` returns to the preceding screen and `8` advances only when the prompt displays it.\n\n## Support boundary\n\nSupport can help with a persistent validation or access error when given the visible field and message. Never share a client's password, generated password, access token, or subscription credentials in a ticket or chat."
       },
       {
@@ -565,7 +611,29 @@
               "starter"
             ],
             "title": "Dashboard and navigation",
-            "content": "# Your Starter workspace\n\nThe Dashboard shows your current plan and operational signals. Use the navigation to move between Dashboard, Settings, and Help. Starter exposes the modules included in your current plan.\n\nThe values here are read-only. The tour uses your real workspace and does not create demo data or change settings."
+            "content": "# Your Starter workspace\n\nThe Dashboard shows your current plan and operational signals. Use the navigation to move between Dashboard, Settings, and Help. Starter exposes the modules included in your current plan.\n\nThe values here are read-only. The tour uses your real workspace and does not create demo data or change settings.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 1,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Welcome to Pro",
+            "content": "# Welcome to Pro\n\nThis optional Pro orientation takes about 2 to 3 minutes. It maps the Pro modules and explains how Web, WhatsApp, subscriptions, reminders, and the Public API fit together.\n\nContinue with **Next**, or choose **Skip tour**. Skipping never blocks your workspace, and you can replay this orientation from Help.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 2,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Pro dashboard and navigation",
+            "content": "# Your Pro workspace\n\nThe Dashboard shows your current plan and operational signals. Pro adds Clients, Catalog, and Subscriptions to the navigation, while Settings and Help remain the safe starting points for configuration and guidance.\n\nThe values here are read-only. The tour uses your real workspace and does not create demo data or change settings."
           }
         ],
         "body": "# Business Dashboard\n\nThe Business Dashboard is the starting point for Tenant Admins. It summarizes what TrackPal can do for your business on the current plan.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. The dashboard is not a WhatsApp menu.\n- **Prerequisites:** Sign in as a Tenant Admin with an active Tenant. No setup is required to read the page.\n- **Actions:** Open Dashboard from the sidebar and use the read-only indicators to decide which module to open next.\n\n## Results and states\n\n- You see your Starter or Pro plan, central lookup mailbox status, enabled code-service count, and blocked WhatsApp identity count.\n- Pro also shows active Clients, Catalog services, active Subscriptions, and subscriptions expiring soon.\n- A loading state means TrackPal is refreshing Tenant data. An empty mailbox or zero enabled services means access-code lookup is not ready.\n- A failed load leaves the page without current metrics. Retry from the page and contact support if the error persists.\n\n## Limits, consequences, and recovery\n\nDashboard is read-only: viewing it creates no records and changes no settings. It does not link WhatsApp, enable platforms, configure a mailbox, or start a WhatsApp session. Open the matching Settings category to complete setup. If a module is missing from navigation, the current plan does not include it; Pro data remains preserved after a downgrade but Pro actions are unavailable.\n\n## Web and WhatsApp\n\nUse Web Dashboard for the overview. WhatsApp has its own Tenant Admin menu and session rules; use the WhatsApp topic for that flow. Dashboard values are refreshed from the active Tenant and can change after another administrator updates setup.\n\n## Support boundary\n\nSupport can help interpret a status, plan access, or a persistent loading error. Do not send passwords, pairing codes, access tokens, or mailbox credentials in a support request."
@@ -679,7 +747,18 @@
               "starter"
             ],
             "title": "Help and replay",
-            "content": "# Help and replay\n\nHelp contains the manual topics authorized for your Starter plan, including WhatsApp, enabled platforms, the central mailbox, and access control. Use the search box to find a topic without leaving your current data behind.\n\nYou can replay this orientation from Help at any time. Manual links only open safe screens; they never submit forms, reveal credentials, or perform product actions."
+            "content": "# Help and replay\n\nHelp contains the manual topics authorized for your Starter plan, including WhatsApp, enabled platforms, the central mailbox, and access control. Use the search box to find a topic without leaving your current data behind.\n\nYou can replay this orientation from Help at any time. Manual links only open safe screens; they never submit forms, reveal credentials, or perform product actions.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 7,
+            "target": "admin.help",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "WhatsApp, Help, and replay",
+            "content": "# Finish with Help\n\nPro WhatsApp includes Clients, Catalog, Profile, Subscriptions, Access Control, Help, and access-code lookup. Help contains the authorized manual and is where you can replay this orientation.\n\nHelp navigation is read-only. It never submits forms, reveals credentials, changes data, or performs a WhatsApp action."
           }
         ],
         "body": "# Help Center\n\nThe private Help Center is the place to read guidance that matches your Tenant Admin role, current plan, and language.\n\n## Find a topic\n\nSearch for an action, state, error, or prerequisite. Starter Help includes Dashboard, Settings, WhatsApp, enabled code platforms, the central lookup mailbox, access control, profile, password, and cross-module access-code guidance. Pro-only Clients, Catalog, Subscriptions, reminder, timezone, and Public API administration are not shown to Starter users.\n\n## Replay the orientation\n\nThe optional Starter orientation explains the operational map in about 2 to 3 minutes. Select Replay orientation tour when you want to see it again. Closing the tour requires confirmation before the skipped state is saved.\n\nHelp navigation is read-only. Its links open authorized modules or Settings categories without saving forms, changing status, connecting services, revealing secrets, or starting a search."
@@ -932,7 +1011,19 @@
             "settings_category": null
           }
         ],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 5,
+            "target": "admin.settings.public-api",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Public API and Pro settings",
+            "content": "# New Pro publishing tools\n\nYour upgrade adds the read-only Public API Catalog. Together with the new Pro timezone and reminder controls, it completes the Pro capabilities that were unavailable on your previous plan.\n\nThe tour is safe and informational: it never creates, reveals, regenerates, revokes, or copies a key, and it never saves a setting."
+          }
+        ],
         "body": "# Publish the Public API Catalog\n\nThe Public API Catalog lets a Pro Tenant publish its services and plans to a Tenant-owned browser frontend. It is **read-only**: the public payload contains service and plan IDs and names, not prices, availability, descriptions, credentials, or mutation controls. This topic is private Help for Tenant Admins; it does not create, reveal, regenerate, or revoke a key for you.\n\n## Prepare the Catalog and Allowed Origins\n\nFirst make the Catalog ready. Create the services and plans that the website should display, and confirm their names and order in Catalog. The public endpoint reads the current Catalog, so later Catalog changes are reflected without copying records into the website.\n\nAn Allowed Origin is the exact browser origin where the catalog will run. Register the complete `http://` or `https://` scheme, host, and optional port, such as `https://shop.example.com` or `http://localhost:5173`. Do not add a path, query string, fragment, wildcard, or a server URL. The browser's `Origin` must match exactly; server-to-server use is outside this version.\n\n## Create the key and connect the website\n\nOpen Settings, choose API Key, add at least one Allowed Origin, and create the key. Keep the key out of source control, screenshots, public chat, and frontend logs. The developer handoff package in this Settings panel contains a placeholder, `YOUR_PUBLIC_API_KEY`, and maintained examples for HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js. It never inserts this Tenant's real key. Send the package separately, then provide the real key through a secure channel.\n\nThe browser integration makes a `GET` request to `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. The browser supplies `Origin` automatically. TrackPal returns the read-only catalog only when both the key and exact origin are valid. A missing Origin, unknown key, non-matching origin, or Starter downgrade returns a forbidden response.\n\nThe handoff examples are reference snippets, not a full REST API manual. Select the example matching the site's existing technology. Help links only open this Settings category or Catalog; they never submit the form or call an API operation.\n\n## Lifecycle and consequences\n\nRegenerating the key replaces the old key and preserves the Allowed Origins. Every integration using the old value must be updated, and the old value stops authorizing requests. Revoking or deleting the key removes the public configuration and disables the catalog on connected websites. It is irreversible from the integration's point of view; a future key must be created and shared separately.\n\nChanging an Allowed Origin affects browser authorization immediately. Removing a site's origin does not delete Catalog data, but that site will receive a forbidden response until its exact origin is registered again. Catalog deletion remains a separate destructive operation with its own impact preview.\n\n## States, protection, and recovery\n\nA missing key means the public integration has not been created. An empty or invalid origin is rejected before key creation. A forbidden response usually means the key, `Origin`, plan, or registered origin does not match; verify the exact scheme, host, and port without adding a path. If a Catalog request fails, confirm the browser request is made from an authorized site and check the visible error before retrying.\n\nBefore broad production exposure, protect `GET /api/v1/public/catalog` with a Cloudflare rate-limit or WAF rule for all public traffic. Cloudflare protection is the expected abuse boundary for this public route; do not add an application, Redis, or in-memory rate limiter as a workaround.\n\nStarter Tenant Admins cannot retrieve, search, or invoke this topic. A downgrade pauses public access but preserves the key configuration for a future Pro reactivation. Contact support with the public endpoint, exact origin, response status, and visible non-secret error; never send the API Key itself."
       },
       {
@@ -981,7 +1072,19 @@
           "settings_category": "reminders"
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 4,
+            "target": "admin.settings.reminders",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Pro reminders and timezone",
+            "content": "# New Pro automation\n\nYour upgrade adds optional subscription reminders and the Pro timezone controls they use. Review the settings and the expiration guide before enabling automation.\n\nThe tour only opens the safe settings view. It never toggles reminders, saves warning days, sends messages, or changes subscription lifecycle state."
+          }
+        ],
         "body": "# Subscription reminder settings\n\nReminder settings control the optional WhatsApp notifications prepared for subscriptions that are approaching their expiry. The reminders are an opt-in feature: they remain off until a Pro Tenant Admin enables them. This is a Pro Tenant setting. It does not create, renew, cancel, or reactivate a subscription, and Help never saves the form for you.\n\n## Opt in and prerequisites\n\nOpen Settings, choose Subscription reminder settings, and turn on the reminders toggle when the Tenant is ready to use automated expiry notifications. Reminders are off by default. The Tenant must be Pro, the subscription must be active, and recipients need usable WhatsApp phone numbers. Starter Tenant Admins cannot see, retrieve, or search this topic; preserved subscription data is not changed by reminder automation while the Tenant is Starter.\n\nWhen reminders are disabled, no pending reminder payloads or reminder logs are generated for the Tenant. Saving the settings does not send a message immediately. The separate Subscriptions module remains the place for manual lifecycle actions.\n\n## Warning days and local time\n\nChoose one or more warning days before expiry. The default days are 7, 3, and 1; you can remove a default day or add another positive number. At least one warning day is required while reminders are enabled.\n\nSet the reminder time in the Tenant's local time. The time is a threshold: the backend can prepare that day's reminder once the local clock reaches the configured time. The timezone is shown here for reference and is edited in the separate Timezone category. Use the Timezone topic before changing this value if the business operates in another IANA timezone.\n\nA warning day is calculated from the Tenant-local calendar date, not by treating every day as a fixed UTC interval. The backend owns the local-time check, so the n8n transport schedule does not change the meaning of the configured time.\n\n## Recipients and custom messages\n\nChoose who should receive an eligible reminder:\n\n- **Tenant only:** send to the business WhatsApp phone.\n- **Client only:** send to the Client's WhatsApp phone.\n- **Both:** prepare one reminder for each available recipient.\n\nThe settings form also provides separate Tenant and Client custom-message fields. Keep the supported placeholders such as `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}`, and `{{expires_at}}` intact when editing them. The preview replaces sample values so you can check the wording before saving; do not put passwords, mailbox secrets, or access codes in a message.\n\nIf the selected recipient has no usable phone, that recipient is skipped. A failed save leaves the previous configuration in place. Correct the visible validation error for an empty warning-day list or invalid `HH:MM` time and save again.\n\n## Automation and recovery\n\nThe backend evaluates Pro tenants, active subscriptions, local warning days, local time, recipients, and duplicate protection. A separate n8n workflow polls approximately every 30 minutes, transports pending payloads to WhatsApp, and reports delivery success or failure. It does not decide the Tenant timezone or perform subscription lifecycle changes.\n\nA reminder can be pending, sent, or failed after retries. If no reminder appears, check the Pro plan, toggle, warning day, local time, Timezone setting, active status, expiry date, WhatsApp link, and recipient phone. Do not disconnect WhatsApp or reveal credentials as a first response. The expiration guide connects these checks with manual renewal, reactivation, cancellation, and automatic transitions.\n\n## Safe navigation and support boundary\n\nThe Help link opens Settings in the reminders category without saving, toggling, sending, or changing a setting. Support can inspect a persistent scheduling or delivery error using the visible status and approximate time. Never share a Client password, streaming password, profile PIN, mailbox credential, OAuth token, access code, or WhatsApp pairing secret."
       },
       {
@@ -1087,7 +1190,30 @@
           "settings_category": null
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 5,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Subscriptions and reminders",
+            "content": "# Operate subscriptions\n\nSubscriptions connects Clients to Catalog services and plans. Review statuses, dates, filters, lifecycle actions, credentials boundaries, and the separate reminder settings before taking an action.\n\nThis tour only highlights the real module. It never creates, edits, cancels, renews, reactivates, or reveals credentials.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 3,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Your new Pro Subscriptions module",
+            "content": "# Subscriptions are now available\n\nYour upgrade adds Subscriptions. Use the prepared Client and Catalog data here to manage service access and lifecycle decisions.\n\nThe tour is read-only: it does not create, edit, cancel, renew, reactivate, or reveal credentials."
+          }
+        ],
         "body": "# Client Subscriptions\n\nA Subscription connects one Client to one Catalog service and plan. It records the streaming email, optional profile details, start and expiry dates, and a lifecycle status. Open Subscriptions from the sidebar, or use the subscription action in a Client row to arrive with that Client selected.\n\n## Channels, prerequisites, and list filters\n\n- **Web:** The Pro Subscriptions page lists the Client, service, plan, streaming email, dates, and status. Filter by status, service, or Client; use the visible date and status values before choosing an action.\n- **WhatsApp:** From the Pro main menu choose `4` Subscriptions, then `1` View subscriptions. Choose Active, Expired, Cancelled, or All, select a row, and follow the displayed actions.\n- **Prerequisites:** The Tenant must be Pro. Creating requires an active Client plus an existing Catalog service and plan. Starter Tenant Admins cannot open or search this topic or module, although preserved Pro data is not deleted on downgrade.\n- **Expected result:** A successful create or update returns the subscription to the list with its current status and dates. A Help link only opens this explanation or the safe module route; it never submits a form.\n\n## Create and edit on Web\n\nChoose New subscription and select the Client, service, and plan. Enter the required streaming email. A streaming password is optional; a profile name and profile PIN are also optional, but a PIN requires a profile name. Choose a duration such as 1, 3, 6, or 9 months, 1 year, or a custom expiry date, then review the start and expiry dates before saving.\n\nEdit changes the fields exposed by the form. In edit mode the Client, service, and plan identify the existing relationship; blank password or PIN fields keep the stored value. A changed email, password, profile, duration, or date is not applied until the form saves successfully. A duplicate active subscription for the same Client, service, and streaming email may be reported so you can extend the existing expiry instead of creating another record.\n\n## WhatsApp creation, editing, and navigation\n\nFrom Subscriptions choose `2` Create subscription. Select the Client, service, and plan, enter the streaming email, optionally enter and confirm the streaming password, choose whether to add a profile name and PIN, select a duration, and enter a custom date when requested. The final creation summary shows the Client, service, plan, email, profile, duration, and dates; type `CONFIRM` or `CONFIRMAR` only after checking it.\n\nFor an existing row, the actions are `1` Edit, `2` Cancel, `3` Renew, and `4` Reactivate when the status allows it. Edit can change Client, service, plan, streaming email, streaming password, profile name, or profile PIN. Password and PIN changes are requested twice for confirmation. Use `8` for Next when a page offers it, `9` to go back, and `0` to cancel. Invalid selections keep the flow on its current step; a session timeout does not create a partial subscription.\n\n## Statuses, durations, and lifecycle actions\n\n- **Active:** The subscription is currently usable and can be edited, cancelled, or renewed. A reminder job considers only active subscriptions.\n- **Expired:** The expiry date has passed according to the Tenant's local end-of-day automation. It can be renewed or reactivated from the available actions.\n- **Cancelled:** Cancellation changes the status and records the cancellation time; it does not immediately delete the row. It can be reactivated with a new duration and dates.\n\nCancel requires a visible confirmation on Web or a `CONFIRM`/`CONFIRMAR` response in WhatsApp. Renew extends from the current expiry, while Reactivate starts the cancelled subscription again with a new duration or custom date. Both lifecycle actions show the proposed dates before confirmation. Automated expiration and later cleanup are explained in Manage subscription expirations.\n\n## Credentials, empty states, and recovery\n\nThe streaming email is not the same as a Client login. Use Reveal credentials on Web only when there is a legitimate operational reason; the dialog can show the stored streaming password and profile PIN. The WhatsApp subscription detail may include the stored access information for the authenticated Tenant Admin. Help never activates Reveal, opens a credential dialog, copies a secret, or exposes a credential through a module link.\n\nAn empty list can mean that no subscription matches the selected filters; it does not mean the Client or Catalog was deleted. A missing Client, service, or plan prevents creation. An invalid email, date, duration, selection, or confirmation leaves the existing record unchanged. If loading or a mutation fails, read the visible error and retry without sending credentials to support.\n\n## Support boundary\n\nSupport can investigate a persistent subscription or lifecycle error from the visible status, dates, and non-sensitive identifiers. Never share streaming passwords, profile PINs, Client passwords, mailbox credentials, access codes, or revealed credentials. Use the Reminder settings and Timezone topics for automated expiry notifications and local-date behavior."
       },
       {
@@ -1135,7 +1261,19 @@
           "settings_category": "timezone"
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 6,
+            "target": "admin.settings.timezone",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Pro Settings and safe setup",
+            "content": "# Settings keeps Pro operations connected\n\nSettings brings together language, timezone, Public API Key, enabled platforms, the central mailbox, access control, profile, password, and WhatsApp linking. Pro-only automation uses the Tenant timezone and reminder settings.\n\nThis step opens a safe informational category. The tour never saves settings, connects services, reveals keys, changes access, or opens a destructive confirmation."
+          }
+        ],
         "body": "# Tenant timezone\n\nThe Tenant timezone is a business setting, not a browser-only preference. TrackPal uses the selected IANA timezone to interpret local subscription dates and to schedule expiry reminders. It is available to Pro Tenant Admins; Starter Tenant Admins cannot see, retrieve, or search this topic. Master Support Context can inspect preserved Pro settings without changing the Tenant's plan.\n\n## Choose and save a timezone\n\nOpen Settings, choose Timezone, search the timezone picker by region or identifier, select the matching IANA value, and save. The default is `UTC`. The picker displays a human-readable label and its identifier so you can confirm the business location before saving. Locale and timezone are separate settings: changing one does not translate the other or change subscription data.\n\nSaving changes the Tenant-wide value used by future calculations. Help only opens the Timezone category; it does not select, save, or silently convert a value. If the list is loading, wait for it. If the save fails, the previous timezone remains in effect and the visible error can be retried.\n\n## What the timezone changes\n\n- Reminder warning days use the Tenant-local calendar date.\n- The reminder time is interpreted as local time and is checked by the backend before a pending reminder is created.\n- Subscription expiration cleanup uses the Tenant-local end of day before moving an active subscription to Expired.\n- WhatsApp subscription creation and reactivation use the Tenant timezone when preparing the start date and confirmation.\n- Dashboard and operational expiration information should be interpreted with the same Tenant-local calendar in mind.\n\nThe timezone does not create reminders, renew subscriptions, reactivate cancelled records, cancel a subscription, link WhatsApp, or reveal credentials. Use Subscriptions for manual actions and Reminder settings for opt-in and recipient choices.\n\n## States, boundaries, and recovery\n\nA missing or invalid value is handled defensively by backend services, but the supported picker values are valid IANA identifiers and should be preferred. Recheck the region after daylight-saving changes or when the business moves. A wrong timezone can make a warning day appear early or late without changing the stored expiry instant.\n\nThe setting applies to the active Tenant and should be confirmed after switching Tenant context. It does not change the Client's personal device clock, the mailbox provider's timestamps, or the absolute stored `starts_at` and `expires_at` instants. It changes how TrackPal evaluates those instants against the Tenant's local date.\n\n## Safe navigation and support boundary\n\nThe Help link opens Settings in the Timezone category without saving or opening a mutation dialog. Support can help verify the selected identifier and a visible scheduling or expiry error. Share the region, IANA value, and approximate time only; never share passwords, PINs, mailbox credentials, OAuth tokens, access codes, or WhatsApp pairing secrets."
       },
       {
@@ -1592,7 +1730,30 @@
           "settings_category": null
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 4,
+            "target": "admin.catalog",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Servicios y planes del Catálogo",
+            "content": "# Prepara el Catálogo\n\nCatálogo es el lugar donde organizas servicios y planes Pro antes de asignar suscripciones. Revisa la lista y el grupo de acciones seguras; una eliminación siempre tiene una vista previa del impacto y una confirmación fuera de este recorrido.\n\nEl recorrido solo destaca el módulo real. Nunca crea, renombra, elimina ni abre una confirmación destructiva.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 2,
+            "target": "admin.catalog",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Tu nuevo Catálogo Pro",
+            "content": "# Catálogo ahora está disponible\n\nTu upgrade agrega Catálogo. Prepara aquí los servicios y planes antes de asignar suscripciones a los Clientes.\n\nEl recorrido es de solo lectura: no crea, renombra, elimina ni muestra una vista previa destructiva."
+          }
+        ],
         "body": "# Catálogo\n\nEl Catálogo es la lista de servicios y planes del Tenant Pro. Un servicio es la oferta y sus planes son las variantes que se seleccionan al crear una suscripción.\n\n## Canal, requisitos y acciones\n\n- **Web:** Abre Catálogo desde la barra lateral. Crea un servicio, selecciónalo, crea o renombra sus planes, renombra un servicio o abre la vista previa de eliminación antes de borrar un servicio o plan.\n- **WhatsApp:** Desde el menú principal Pro elige `2` Catálogo. Con servicios, elige `1` para verlos, `2` para crear un servicio o `3` para eliminar un servicio. Selecciona un servicio para editar su nombre, ver planes, crear un plan o eliminar un plan. Sin servicios, el menú ofrece directamente crear el primero.\n- **Requisitos:** Catálogo es solo Pro. Para crear un plan, primero crea o selecciona su servicio. Un cambio del catálogo no crea automáticamente un cliente ni una suscripción.\n\n## Servicios, planes y estados vacíos\n\nUn servicio puede existir sin planes. La pantalla de detalle muestra el estado de planes vacío y ofrece Crear plan; regresa con `9` o cancela con `0`. Una lista de servicios vacía significa que no existen servicios, así que crea el primero. Una lista de planes vacía significa que el servicio seleccionado no tiene planes; no es un fallo de carga.\n\nLas listas pueden tener varias páginas. Usa `8` solo cuando se muestre Siguiente y `9` para regresar. Un estado de carga significa que TrackPal está obteniendo el catálogo actual. Un error de carga o guardado conserva el catálogo anterior; reintenta después de revisar el error visible.\n\n## Crear y renombrar\n\nEscribe un nombre de servicio o plan que no esté vacío y guarda en Web, o responde al mensaje de WhatsApp. Un resultado exitoso muestra un mensaje posterior; elige `1` para volver al menú principal. Un nombre vacío, selección inválida, nombre duplicado o servicio no disponible se rechaza y se puede corregir sin crear un registro parcial. Renombrar cambia solo la etiqueta; no mueve planes ni modifica suscripciones existentes.\n\n## Vista previa y consecuencias de eliminar\n\nEliminar un servicio o plan es irreversible. Antes de confirmar, Web y WhatsApp muestran la vista previa del impacto. Para un servicio revisa la cantidad de planes afectados, suscripciones activas, suscripciones históricas, total de suscripciones y las filas de suscripciones activas. Para un plan revisa las cantidades de suscripciones activas, históricas y totales, además de sus filas. Las suscripciones históricas aparecen en el resumen aunque ya no estén activas.\n\nEliminar un servicio borra permanentemente ese servicio, sus planes y todas las suscripciones asociadas. Eliminar un plan borra permanentemente ese plan y todas sus suscripciones asociadas. Las suscripciones activas no se conservan ni se convierten. Comprueba los datos de cliente, servicio, plan y vencimiento antes de continuar.\n\nEn Web escribe `DELETE` en el campo de confirmación de la vista previa. En WhatsApp escribe `CONFIRM` o `CONFIRMAR` cuando se solicite. Cualquier otro valor muestra otro mensaje de confirmación; `0` cancela y `9` regresa a la selección. Una vista previa cancelada o una eliminación fallida no modifica el catálogo.\n\n## Límites, validación y recuperación\n\nSolo los servicios globalmente activos pueden seleccionarse para la búsqueda de códigos; los nombres del Catálogo no habilitan una plataforma de códigos. El Catálogo no revela credenciales de suscripciones. Si la vista previa no carga, no adivines el impacto ni repitas la acción destructiva; reintenta la vista previa y contacta a soporte con el error visible.\n\n## Límite de soporte\n\nSoporte puede investigar un error persistente de carga, validación, vista previa o eliminación del catálogo. Comparte solo el nombre del servicio o plan y las cantidades visibles; nunca compartas contraseñas de suscripciones, PIN, credenciales del buzón ni códigos de acceso."
       },
       {
@@ -1643,7 +1804,30 @@
           "settings_category": null
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 3,
+            "target": "admin.clients",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Clientes",
+            "content": "# Gestiona Clientes de forma segura\n\nClientes es el lugar donde gestionas a las personas que reciben tus servicios. Revisa la lista, la búsqueda y el grupo de acciones antes de crear, editar, activar, desactivar o eliminar algo.\n\nEste recorrido solo destaca el módulo real. Nunca abre un formulario, cambia un estado, crea un cliente ni inicia una confirmación de eliminación.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 1,
+            "target": "admin.clients",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Tu nuevo módulo Pro de Clientes",
+            "content": "# Clientes ahora está disponible\n\nTu upgrade agrega Clientes. Usa este módulo para gestionar la identidad y el acceso de clientes, y después abre las suscripciones de un cliente cuando la cuenta esté lista.\n\nEl recorrido es de solo lectura: no crea, edita, activa, desactiva ni elimina clientes."
+          }
+        ],
         "body": "# Clientes\n\nLos clientes son las personas que reciben los servicios ofrecidos por un Tenant Pro. La gestión de clientes está disponible solo para Tenant Admins Pro en Web y en la consola de WhatsApp Pro.\n\n## Canal, requisitos y acciones\n\n- **Web:** Abre Clientes desde la barra lateral. Busca por nombre completo, usuario canónico o teléfono; usa Crear para agregar un cliente, la acción de editar para cambiar sus datos de identidad, el botón de estado para activar o desactivar el acceso, la acción de suscripciones para abrir las suscripciones de ese cliente y la acción de eliminar para un cliente inactivo.\n- **WhatsApp:** Desde el menú principal Pro elige `1` Clientes. Elige `1` para ver clientes o `2` para crear uno. Selecciona un cliente para editarlo, desactivarlo, reactivarlo o eliminarlo. Usa `9` para regresar y `0` para cancelar.\n- **Requisitos:** El Tenant debe tener plan Pro y tú debes ser su Tenant Admin. Para crear un cliente prepara un nombre completo, un nombre de usuario local válido, una contraseña de al menos seis caracteres y un teléfono opcional.\n\n## Crear e inicio de sesión canónico\n\nEscribe el nombre completo, el nombre de usuario local, el teléfono opcional y la contraseña; luego guarda en Web o confirma el resumen en WhatsApp. El nombre de usuario local debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones bajos. TrackPal lo combina con el prefijo inmutable del Tenant para crear el inicio de sesión canónico con la forma `{client_prefix}_{local_username}`, por ejemplo `t1_pepe`. Entrega al cliente ese inicio de sesión completo, no solo la parte local.\n\nUna creación exitosa agrega un cliente activo. Un nombre de usuario local, usuario canónico o teléfono duplicado se rechaza y deja sin cambios a los clientes existentes. Corrige el campo y vuelve a intentarlo. Un nombre, usuario, teléfono o contraseña ausente o inválido es un error de validación; no crea un cliente parcial.\n\n## Buscar, editar, activar y desactivar\n\nLa búsqueda es un filtro local sobre la lista cargada y no cambia datos. Una lista vacía significa que no existen clientes; un resultado vacío significa que el filtro no coincide. Limpia la búsqueda o corrige las letras y dígitos.\n\nEditar cambia el nombre completo, el nombre de usuario local o el teléfono. Al cambiar el nombre de usuario local también se actualiza el inicio de sesión canónico. Un valor duplicado o campo inválido se rechaza sin aplicar la edición. Activar restaura el acceso de un cliente inactivo. Desactivar cambia el cliente a inactivo y revoca sus sesiones Web activas; después de reactivarlo, el cliente debe iniciar sesión otra vez.\n\n## Suscripciones y eliminación\n\nUsa la acción de tarjeta o suscripciones de la fila del cliente para abrir Suscripciones filtradas por ese cliente. Es un enlace de navegación seguro: no crea, revela, cancela, renueva ni reactiva una suscripción. El topic de Clientes también se relaciona con el módulo Suscripciones para consultar el flujo completo.\n\nUn cliente activo no se puede eliminar. Primero desactívalo. Eliminar es permanente: borra la cuenta del cliente y su inicio de sesión, no se puede deshacer y no reemplaza la desactivación. Confirma solo después de comprobar que seleccionaste al cliente correcto. Cancelar el diálogo o un error de la solicitud deja al cliente en su estado anterior.\n\n## Validación y recuperación en WhatsApp\n\nEl flujo de WhatsApp valida cada campo solicitado y repite el mensaje cuando hay una selección inválida, nombre vacío, usuario vacío, contraseña corta o teléfono inválido. En la confirmación escribe `CONFIRM` o `CONFIRMAR` como se muestre; escribe `0` para cancelar. Un error al crear, editar, activar, desactivar o eliminar conserva los datos anteriores y permite reintentar. `9` regresa a la pantalla anterior y `8` avanza solo cuando el mensaje lo muestra.\n\n## Límite de soporte\n\nSoporte puede ayudar con un error persistente de validación o acceso si compartes el campo y mensaje visibles. Nunca compartas en un ticket o chat la contraseña del cliente, una contraseña generada, un token ni credenciales de suscripciones."
       },
       {
@@ -1757,7 +1941,29 @@
               "starter"
             ],
             "title": "Dashboard y navegación",
-            "content": "# Tu espacio Starter\n\nEl Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.\n\nEstos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones."
+            "content": "# Tu espacio Starter\n\nEl Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.\n\nEstos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 1,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Bienvenido a Pro",
+            "content": "# Bienvenido a Pro\n\nEsta orientación Pro es opcional y dura aproximadamente de 2 a 3 minutos. Explica los módulos Pro y cómo se relacionan Web, WhatsApp, las suscripciones, los recordatorios y la API pública.\n\nContinúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio y puedes repetir esta orientación desde Ayuda.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 2,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Dashboard y navegación Pro",
+            "content": "# Tu espacio Pro\n\nEl Dashboard muestra tu plan actual y las señales operativas. Pro agrega Clientes, Catálogo y Suscripciones a la navegación, mientras Configuración y Ayuda siguen siendo los puntos seguros para configurar y obtener orientación.\n\nLos valores aquí son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia ajustes."
           }
         ],
         "body": "# Dashboard de la empresa\n\nEl Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. El dashboard no es un menú de WhatsApp.\n- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.\n- **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.\n\n## Resultados y estados\n\n- Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.\n- Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.\n- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.\n- Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.\n\n## Límites, consecuencias y recuperación\n\nEl Dashboard es de solo lectura: verlo no crea registros ni cambia configuraciones. No vincula WhatsApp, habilita plataformas, configura un buzón ni inicia una sesión de WhatsApp. Abre la categoría correspondiente de Configuración para completar la preparación. Si un módulo no aparece en la navegación, el plan actual no lo incluye; los datos Pro se conservan después de bajar a Starter, pero las acciones Pro quedan inactivas.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.\n\n## Límite de soporte\n\nSoporte puede ayudarte a interpretar un estado, el acceso del plan o un error de carga persistente. No envíes contraseñas, códigos de vinculación, tokens ni credenciales del buzón en una solicitud."
@@ -1871,7 +2077,18 @@
               "starter"
             ],
             "title": "Ayuda y repetición",
-            "content": "# Ayuda y repetición\n\nAyuda contiene los temas del manual autorizados para tu plan Starter, incluidos WhatsApp, las plataformas habilitadas, el buzón central y el control de acceso. Usa el buscador para encontrar un tema sin perder tus datos actuales.\n\nPuedes repetir esta orientación desde Ayuda cuando quieras. Los enlaces del manual solo abren pantallas seguras; nunca envían formularios, muestran credenciales ni realizan acciones del producto."
+            "content": "# Ayuda y repetición\n\nAyuda contiene los temas del manual autorizados para tu plan Starter, incluidos WhatsApp, las plataformas habilitadas, el buzón central y el control de acceso. Usa el buscador para encontrar un tema sin perder tus datos actuales.\n\nPuedes repetir esta orientación desde Ayuda cuando quieras. Los enlaces del manual solo abren pantallas seguras; nunca envían formularios, muestran credenciales ni realizan acciones del producto.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 7,
+            "target": "admin.help",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "WhatsApp, Ayuda y repetición",
+            "content": "# Termina en Ayuda\n\nWhatsApp Pro incluye Clientes, Catálogo, Perfil, Suscripciones, Control de acceso, Ayuda y búsqueda de códigos de acceso. Ayuda contiene el manual autorizado y permite repetir esta orientación.\n\nLa navegación de Ayuda es de solo lectura. Nunca envía formularios, muestra credenciales, cambia datos ni ejecuta una acción de WhatsApp."
           }
         ],
         "body": "# Ayuda\n\nLa Ayuda privada es el lugar para leer orientación que coincide con tu rol Tenant Admin, tu plan actual y tu idioma.\n\n## Encuentra un tema\n\nBusca una acción, estado, error o requisito. La Ayuda Starter incluye Dashboard, Configuración, WhatsApp, plataformas de códigos habilitadas, buzón central, control de acceso, perfil, contraseña y la guía de búsqueda de códigos. Clientes, Catálogo, Suscripciones, recordatorios, zona horaria y administración de API pública, que son funciones Pro, no se muestran a usuarios Starter.\n\n## Repite la orientación\n\nLa orientación Starter opcional explica el mapa operativo en aproximadamente de 2 a 3 minutos. Elige Repetir recorrido de orientación cuando quieras verlo otra vez. Cerrar el recorrido requiere confirmación antes de guardar el estado omitido.\n\nLa navegación de Ayuda es de solo lectura. Sus enlaces abren módulos o categorías de Configuración autorizados sin guardar formularios, cambiar estados, conectar servicios, mostrar secretos ni iniciar una búsqueda."
@@ -2124,7 +2341,19 @@
             "settings_category": null
           }
         ],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 5,
+            "target": "admin.settings.public-api",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "API pública y ajustes Pro",
+            "content": "# Nuevas herramientas de publicación Pro\n\nTu upgrade agrega la API pública de Catálogo de solo lectura. Junto con los nuevos controles Pro de zona horaria y recordatorios, completa las capacidades Pro que no estaban disponibles en tu plan anterior.\n\nEl recorrido es seguro e informativo: nunca crea, muestra, regenera, revoca ni copia una clave y nunca guarda un ajuste."
+          }
+        ],
         "body": "# Publicar el catálogo mediante API pública\n\nLa API pública de catálogo permite que un Tenant Pro publique sus servicios y planes en un frontend web de su propiedad. Es **de solo lectura**: la respuesta pública contiene los identificadores y nombres de servicios y planes, no precios, disponibilidad, descripciones, credenciales ni controles de mutación. Este tema pertenece a la Ayuda privada para Tenant Admins; no crea, muestra, regenera ni revoca una clave por ti.\n\n## Prepara el Catálogo y los sitios autorizados\n\nPrimero prepara el Catálogo. Crea los servicios y planes que el sitio web debe mostrar y confirma sus nombres y orden en Catálogo. El endpoint público lee el Catálogo actual, por lo que los cambios posteriores aparecen sin copiar registros al sitio web.\n\nUn sitio autorizado es el origen exacto del navegador donde funcionará el catálogo. Registra el esquema completo `http://` o `https://`, el host y el puerto opcional, por ejemplo `https://tienda.example.com` o `http://localhost:5173`. No agregues una ruta, query, fragmento, wildcard ni una URL de servidor. El `Origin` del navegador debe coincidir exactamente; el uso servidor a servidor está fuera de esta versión.\n\n## Crea la clave y conecta el sitio\n\nAbre Configuración, elige Clave API, agrega al menos un sitio autorizado y crea la clave. Mantén la clave fuera del control de versiones, capturas, chats públicos y logs del frontend. El paquete para desarrollador de este panel contiene el marcador `YOUR_PUBLIC_API_KEY` y ejemplos mantenidos para HTML + JavaScript, React, Vue, Svelte, Angular y Alpine.js. Nunca inserta la clave real de este Tenant. Envía el paquete por separado y comparte la clave real mediante un canal seguro.\n\nLa integración del navegador hace una solicitud `GET` a `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. El navegador envía `Origin` automáticamente. TrackPal devuelve el catálogo de solo lectura solo cuando la clave y el origen exacto son válidos. La ausencia de Origin, una clave desconocida, un origen distinto o una degradación a Starter producen una respuesta prohibida.\n\nLos ejemplos del paquete son referencias, no un manual REST completo. Elige el ejemplo que corresponda a la tecnología que ya usa el sitio. Los enlaces de Ayuda solo abren esta categoría de Configuración o Catálogo; nunca guardan el formulario ni llaman una operación de API.\n\n## Ciclo de vida y consecuencias\n\nRegenerar la clave reemplaza la anterior y conserva los sitios autorizados. Cada integración que use el valor anterior debe actualizarse, y el valor anterior deja de autorizar solicitudes. Revocar o eliminar la clave borra la configuración pública y desactiva el catálogo en los sitios conectados. Es irreversible desde el punto de vista de la integración; para volver a publicar tendrás que crear y compartir otra clave por separado.\n\nCambiar un sitio autorizado afecta inmediatamente la autorización del navegador. Quitar un sitio no borra datos del Catálogo, pero ese sitio recibirá una respuesta prohibida hasta que su origen exacto vuelva a registrarse. El borrado del Catálogo es una acción destructiva separada con su propia vista previa de impacto.\n\n## Estados, protección y recuperación\n\nLa ausencia de clave significa que todavía no se creó la integración pública. Un sitio vacío o inválido se rechaza antes de crear la clave. Una respuesta prohibida normalmente significa que no coinciden la clave, el `Origin`, el plan o el sitio registrado; verifica el esquema, host y puerto exactos sin agregar una ruta. Si falla una solicitud al Catálogo, confirma que el navegador está en un sitio autorizado y revisa el error visible antes de reintentar.\n\nAntes de exponerlo ampliamente en producción, protege `GET /api/v1/public/catalog` con una regla de rate limit o WAF de Cloudflare para todo el tráfico público. Cloudflare es el límite esperado contra abuso para esta ruta pública; no agregues como solución un rate limiter de aplicación, Redis o memoria.\n\nLos Tenant Admins Starter no pueden recuperar, buscar ni invocar este tema. Una degradación pausa el acceso público, pero conserva la configuración de la clave para una futura reactivación Pro. Contacta a soporte con el endpoint público, el origen exacto, el estado de respuesta y el error visible no secreto; nunca envíes la Clave API."
       },
       {
@@ -2173,7 +2402,19 @@
           "settings_category": "reminders"
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 4,
+            "target": "admin.settings.reminders",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Recordatorios y zona horaria Pro",
+            "content": "# Nueva automatización Pro\n\nTu upgrade agrega recordatorios opcionales de suscripciones y los controles de zona horaria Pro que utilizan. Revisa los ajustes y la guía de vencimientos antes de activar la automatización.\n\nEl recorrido solo abre la vista segura de ajustes. Nunca activa recordatorios, guarda días de aviso, envía mensajes ni cambia el ciclo de vida de una suscripción."
+          }
+        ],
         "body": "# Ajustes de recordatorios de suscripciones\n\nLos ajustes de recordatorios controlan las notificaciones opcionales de WhatsApp que se preparan cuando una suscripción se acerca a su vencimiento. Los recordatorios son una función opt-in: permanecen desactivados hasta que un Tenant Admin Pro los activa. Es un ajuste de Tenant Pro. No crea, renueva, cancela ni reactiva suscripciones y Help nunca guarda el formulario por ti.\n\n## Activación y requisitos\n\nAbre Ajustes, elige Ajustes de recordatorios de suscripciones y activa el interruptor cuando el Tenant esté listo para usar notificaciones automáticas de vencimiento. Los recordatorios están desactivados por defecto. El Tenant debe ser Pro, la suscripción debe estar activa y los destinatarios necesitan teléfonos de WhatsApp utilizables. Los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic; la automatización no cambia los datos de suscripciones conservados mientras el Tenant sea Starter.\n\nCuando los recordatorios están desactivados, no se generan payloads pendientes ni registros de recordatorio para el Tenant. Guardar los ajustes no envía un mensaje inmediatamente. El módulo Suscripciones sigue siendo el lugar para las acciones manuales de ciclo de vida.\n\n## Días de aviso y hora local\n\nElige uno o más días de aviso antes del vencimiento. Los días predeterminados son 7, 3 y 1; puedes quitar un día predeterminado o agregar otro número positivo. Mientras los recordatorios estén activos se necesita al menos un día de aviso.\n\nConfigura la hora del recordatorio en la hora local del Tenant. La hora es un umbral: el backend puede preparar el recordatorio de ese día cuando el reloj local alcance la hora configurada. La zona horaria se muestra aquí como referencia y se edita en la categoría separada Zona horaria. Consulta ese topic antes de cambiarla si el negocio opera en otra zona horaria IANA.\n\nEl día de aviso se calcula con la fecha del calendario local del Tenant, no tratando cada día como un intervalo UTC fijo. El backend controla la comprobación de hora local, por lo que el horario de transporte de n8n no cambia el significado de la hora configurada.\n\n## Destinatarios y mensajes personalizados\n\nElige quién recibe un recordatorio elegible:\n\n- **Solo Tenant:** se envía al teléfono de WhatsApp del negocio.\n- **Solo Cliente:** se envía al teléfono de WhatsApp del Cliente.\n- **Ambos:** prepara un recordatorio para cada destinatario disponible.\n\nEl formulario también ofrece campos separados de mensaje personalizado para Tenant y Cliente. Conserva los placeholders admitidos como `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}` y `{{expires_at}}` al editarlos. La vista previa reemplaza valores de ejemplo para comprobar el texto antes de guardar; no incluyas contraseñas, secretos del buzón ni códigos de acceso en un mensaje.\n\nSi el destinatario elegido no tiene un teléfono utilizable, ese destinatario se omite. Un guardado fallido deja la configuración anterior. Corrige el error visible de una lista de días vacía o una hora `HH:MM` inválida y vuelve a guardar.\n\n## Automatización y recuperación\n\nEl backend evalúa los Tenant Pro, las suscripciones activas, los días de aviso locales, la hora local, los destinatarios y la protección contra duplicados. Un workflow separado de n8n consulta aproximadamente cada 30 minutos, transporta los payloads pendientes a WhatsApp e informa si se entregaron o fallaron. No decide la zona horaria del Tenant ni ejecuta cambios de ciclo de vida.\n\nUn recordatorio puede quedar pendiente, enviado o fallar después de los reintentos. Si no aparece un recordatorio, revisa el plan Pro, el interruptor, el día de aviso, la hora local, Zona horaria, el estado activo, la fecha de vencimiento, el enlace de WhatsApp y el teléfono del destinatario. No desconectes WhatsApp ni reveles credenciales como primera respuesta. La guía de vencimientos conecta estas comprobaciones con la renovación manual, la reactivación, la cancelación y las transiciones automáticas.\n\n## Navegación segura y límite de soporte\n\nEl enlace de Help abre Ajustes en la categoría de recordatorios sin guardar, activar, enviar ni cambiar un ajuste. Soporte puede revisar un error persistente de programación o entrega con el estado visible y la hora aproximada. Nunca compartas contraseña de Cliente, contraseña de streaming, PIN de perfil, credenciales del buzón, token OAuth, código de acceso ni secreto de vinculación de WhatsApp."
       },
       {
@@ -2279,7 +2520,30 @@
           "settings_category": null
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 5,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Suscripciones y recordatorios",
+            "content": "# Opera las suscripciones\n\nSuscripciones conecta Clientes con servicios y planes del Catálogo. Revisa estados, fechas, filtros, acciones de ciclo de vida, límites de credenciales y los ajustes separados de recordatorios antes de actuar.\n\nEste recorrido solo destaca el módulo real. Nunca crea, edita, cancela, renueva, reactiva ni muestra credenciales.\n"
+          },
+          {
+            "release_id": "tenant-admin-pro-upgrade-1",
+            "order": 3,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Tu nuevo módulo Pro de Suscripciones",
+            "content": "# Suscripciones ahora está disponible\n\nTu upgrade agrega Suscripciones. Usa aquí los datos preparados de Clientes y Catálogo para gestionar el acceso a servicios y las decisiones de ciclo de vida.\n\nEl recorrido es de solo lectura: no crea, edita, cancela, renueva, reactiva ni muestra credenciales."
+          }
+        ],
         "body": "# Suscripciones de clientes\n\nUna suscripción conecta a un Cliente con un servicio y plan del Catálogo. Guarda el email de streaming, los datos opcionales del perfil, las fechas de inicio y vencimiento y un estado de ciclo de vida. Abre Suscripciones desde la barra lateral o usa la acción de suscripciones en una fila de Clientes para llegar con ese Cliente seleccionado.\n\n## Canales, requisitos y filtros de la lista\n\n- **Web:** La página Pro de Suscripciones muestra Cliente, servicio, plan, email de streaming, fechas y estado. Filtra por estado, servicio o Cliente y revisa las fechas y el estado visibles antes de elegir una acción.\n- **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones y luego `1` Ver suscripciones. Elige Activas, Expiradas, Canceladas o Todas, selecciona una fila y sigue las acciones mostradas.\n- **Requisitos:** El Tenant debe ser Pro. Para crear se necesita un Cliente activo y un servicio y plan existentes en Catálogo. Un Tenant Admin Starter no puede abrir ni buscar este topic o módulo; los datos Pro conservados no se eliminan al degradar.\n- **Resultado esperado:** Una creación o actualización exitosa devuelve la suscripción a la lista con su estado y fechas actuales. Un enlace de Help solo abre esta explicación o la ruta segura del módulo; nunca envía un formulario.\n\n## Crear y editar en Web\n\nElige Nueva suscripción y selecciona Cliente, servicio y plan. Escribe el email de streaming requerido. La contraseña de streaming es opcional; el nombre y PIN de perfil también, pero el PIN necesita un nombre de perfil. Elige una duración como 1, 3, 6 o 9 meses, 1 año o una fecha de vencimiento personalizada, y revisa las fechas de inicio y vencimiento antes de guardar.\n\nEditar permite cambiar los campos expuestos por el formulario. En modo edición, Cliente, servicio y plan identifican la relación existente; dejar vacíos los campos de contraseña o PIN conserva el valor guardado. Un email, contraseña, perfil, duración o fecha nuevos no se aplican hasta guardar correctamente. Una suscripción activa duplicada para el mismo Cliente, servicio y email de streaming puede avisarte para extender el vencimiento existente en vez de crear otro registro.\n\n## Creación, edición y navegación en WhatsApp\n\nDesde Suscripciones elige `2` Crear suscripción. Selecciona Cliente, servicio y plan, escribe el email de streaming, introduce y confirma opcionalmente la contraseña, elige si agregar nombre y PIN de perfil, selecciona una duración y escribe una fecha personalizada cuando se solicite. El resumen final muestra Cliente, servicio, plan, email, perfil, duración y fechas; escribe `CONFIRMAR` o `CONFIRM` solo después de revisarlo.\n\nPara una fila existente, las acciones son `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar cuando el estado lo permite. Editar puede cambiar Cliente, servicio, plan, email de streaming, contraseña de streaming, nombre de perfil o PIN de perfil. Los cambios de contraseña y PIN se solicitan dos veces para confirmarlos. Usa `8` para Siguiente cuando una página lo ofrezca, `9` para Regresar y `0` para Cancelar. Una selección inválida mantiene el flujo en su paso; una sesión expirada no crea una suscripción parcial.\n\n## Estados, duraciones y acciones de ciclo de vida\n\n- **Activa:** La suscripción está utilizable y puede editarse, cancelarse o renovarse. El trabajo de recordatorios solo considera suscripciones activas.\n- **Expirada:** La fecha de vencimiento pasó según el cierre de día local del Tenant y la automatización. Puede renovarse o reactivarse desde las acciones disponibles.\n- **Cancelada:** Cancelar cambia el estado y registra la hora de cancelación; no elimina inmediatamente la fila. Puede reactivarse con nueva duración y fechas.\n\nCancelar requiere una confirmación visible en Web o una respuesta `CONFIRM`/`CONFIRMAR` en WhatsApp. Renovar extiende desde el vencimiento actual, mientras Reactivar vuelve a iniciar la suscripción cancelada con una duración o fecha personalizada. Ambas acciones muestran las fechas propuestas antes de confirmar. La expiración automática y la limpieza posterior se explican en Gestiona los vencimientos de suscripciones.\n\n## Credenciales, estados vacíos y recuperación\n\nEl email de streaming no es el mismo que el inicio de sesión del Cliente. Usa Revelar credenciales en Web solo cuando exista una razón operativa legítima; el diálogo puede mostrar la contraseña de streaming y el PIN de perfil guardados. El detalle de suscripción en WhatsApp puede incluir la información de acceso guardada para el Tenant Admin autenticado. Help nunca activa Revelar, abre un diálogo de credenciales, copia un secreto ni expone una credencial mediante un enlace de módulo.\n\nUna lista vacía puede significar que ninguna suscripción coincide con los filtros elegidos; no significa que se eliminó el Cliente o Catálogo. La falta de Cliente, servicio o plan impide crear. Un email, fecha, duración, selección o confirmación inválidos dejan el registro sin cambios. Si falla la carga o una modificación, revisa el error visible y reintenta sin enviar credenciales a soporte.\n\n## Límite de soporte\n\nSoporte puede investigar un error persistente de suscripción o ciclo de vida con el estado, fechas e identificadores no sensibles visibles. Nunca compartas contraseñas de streaming, PIN de perfil, contraseñas de Clientes, credenciales del buzón, códigos de acceso ni credenciales reveladas. Usa los topics de Ajustes de recordatorios y Zona horaria para las notificaciones automáticas y las fechas locales."
       },
       {
@@ -2327,7 +2591,19 @@
           "settings_category": "timezone"
         },
         "safe_links": [],
-        "tour": null,
+        "tour": [
+          {
+            "release_id": "tenant-admin-pro-1",
+            "order": 6,
+            "target": "admin.settings.timezone",
+            "conditional": false,
+            "plans": [
+              "pro"
+            ],
+            "title": "Configuración Pro y preparación segura",
+            "content": "# Configuración conecta las operaciones Pro\n\nConfiguración reúne idioma, zona horaria, Clave API pública, plataformas habilitadas, buzón central, control de acceso, perfil, contraseña y vinculación de WhatsApp. La automatización Pro usa la zona horaria del Tenant y los ajustes de recordatorios.\n\nEste paso abre una categoría informativa segura. El recorrido nunca guarda ajustes, conecta servicios, muestra claves, cambia accesos ni abre una confirmación destructiva."
+          }
+        ],
         "body": "# Zona horaria del Tenant\n\nLa zona horaria del Tenant es un ajuste del negocio, no una preferencia exclusiva del navegador. TrackPal usa la zona IANA elegida para interpretar fechas locales de suscripciones y programar recordatorios de vencimiento. Está disponible para Tenant Admin Pro; los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic. El Master Support Context puede revisar ajustes Pro conservados sin cambiar el plan del Tenant.\n\n## Elegir y guardar una zona horaria\n\nAbre Ajustes, elige Zona horaria, busca en el selector por región o identificador, selecciona el valor IANA correspondiente y guarda. El valor predeterminado es `UTC`. El selector muestra una etiqueta legible y su identificador para confirmar la ubicación del negocio antes de guardar. Idioma y zona horaria son ajustes separados: cambiar uno no traduce el otro ni modifica los datos de suscripciones.\n\nGuardar cambia el valor global del Tenant usado por los cálculos futuros. Help solo abre la categoría Zona horaria; no selecciona, guarda ni convierte un valor silenciosamente. Si la lista está cargando, espera. Si guardar falla, la zona horaria anterior sigue vigente y el error visible se puede reintentar.\n\n## Qué cambia la zona horaria\n\n- Los días de aviso de recordatorios usan la fecha del calendario local del Tenant.\n- La hora del recordatorio se interpreta como hora local y el backend la comprueba antes de crear un recordatorio pendiente.\n- La limpieza de vencimientos usa el final del día local del Tenant antes de pasar una suscripción activa a Expirada.\n- La creación y reactivación de suscripciones en WhatsApp usan la zona horaria del Tenant al preparar el inicio y la confirmación.\n- El dashboard y la información operativa de vencimientos deben interpretarse con el mismo calendario local del Tenant.\n\nLa zona horaria no crea recordatorios, renueva suscripciones, reactiva registros cancelados, cancela una suscripción, conecta WhatsApp ni revela credenciales. Usa Suscripciones para acciones manuales y Ajustes de recordatorios para activación y destinatarios.\n\n## Estados, límites y recuperación\n\nLos servicios backend manejan defensivamente un valor ausente o inválido, pero se deben preferir los identificadores IANA válidos del selector. Comprueba la región después de cambios de horario de verano o cuando el negocio se mude. Una zona horaria incorrecta puede hacer que un día de aviso parezca temprano o tarde sin cambiar el instante de vencimiento guardado.\n\nEl ajuste aplica al Tenant activo y debe confirmarse después de cambiar de Tenant en soporte. No cambia el reloj personal del Cliente, las marcas de tiempo del proveedor de correo ni los instantes absolutos `starts_at` y `expires_at` guardados. Cambia cómo TrackPal evalúa esos instantes respecto a la fecha local del Tenant.\n\n## Navegación segura y límite de soporte\n\nEl enlace de Help abre Ajustes en la categoría Zona horaria sin guardar ni abrir un diálogo de modificación. Soporte puede ayudar a verificar el identificador elegido y un error visible de programación o vencimiento. Comparte solo la región, el valor IANA y la hora aproximada; nunca compartas contraseñas, PIN, credenciales del buzón, tokens OAuth, códigos de acceso ni secretos de vinculación de WhatsApp."
       },
       {
@@ -3193,6 +3469,247 @@
   "tour_releases": {
     "en": [
       {
+        "release_id": "tenant-admin-pro-1",
+        "plans": [
+          "pro"
+        ],
+        "steps": [
+          {
+            "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Welcome to Pro",
+            "content": "# Welcome to Pro\n\nThis optional Pro orientation takes about 2 to 3 minutes. It maps the Pro modules and explains how Web, WhatsApp, subscriptions, reminders, and the Public API fit together.\n\nContinue with **Next**, or choose **Skip tour**. Skipping never blocks your workspace, and you can replay this orientation from Help.\n",
+            "summary": "Understand your plan, operational status, and the services available to your business.",
+            "route": "/admin/dashboard",
+            "settings_category": null,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "order": 1,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Pro dashboard and navigation",
+            "content": "# Your Pro workspace\n\nThe Dashboard shows your current plan and operational signals. Pro adds Clients, Catalog, and Subscriptions to the navigation, while Settings and Help remain the safe starting points for configuration and guidance.\n\nThe values here are read-only. The tour uses your real workspace and does not create demo data or change settings.",
+            "summary": "Understand your plan, operational status, and the services available to your business.",
+            "route": "/admin/dashboard",
+            "settings_category": null,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "order": 2,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.clients",
+            "related_topics": [
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Clients",
+            "content": "# Manage Clients safely\n\nClients is where you manage the people who receive your services. Review the list, search, and action group before creating, editing, activating, deactivating, or deleting anything.\n\nThis tour only highlights the real module. It never opens a form, changes a status, creates a client, or starts a deletion confirmation.\n",
+            "summary": "Manage Pro clients, their access, status, canonical login, and subscriptions.",
+            "route": "/admin/clients",
+            "settings_category": null,
+            "target": "admin.clients",
+            "conditional": false,
+            "order": 3,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.catalog",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions"
+            ],
+            "title": "Catalog services and plans",
+            "content": "# Build the Catalog\n\nCatalog is where Pro services and plans are organized before subscriptions are assigned. Review the list and the safe action group; deletion always has an impact preview and confirmation outside this tour.\n\nThe tour only highlights the real module. It never creates, renames, deletes, or opens a destructive confirmation.\n",
+            "summary": "Create and organize services and plans before assigning subscriptions to clients.",
+            "route": "/admin/catalog",
+            "settings_category": null,
+            "target": "admin.catalog",
+            "conditional": false,
+            "order": 4,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.subscriptions",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.catalog",
+              "tenant-admin.first-pro-client"
+            ],
+            "title": "Subscriptions and reminders",
+            "content": "# Operate subscriptions\n\nSubscriptions connects Clients to Catalog services and plans. Review statuses, dates, filters, lifecycle actions, credentials boundaries, and the separate reminder settings before taking an action.\n\nThis tour only highlights the real module. It never creates, edits, cancels, renews, reactivates, or reveals credentials.\n",
+            "summary": "Open and manage the subscriptions attached to a client, service, and plan.",
+            "route": "/admin/subscriptions",
+            "settings_category": null,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "order": 5,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.timezone",
+            "related_topics": [
+              "tenant-admin.reminders",
+              "tenant-admin.subscriptions",
+              "tenant-admin.subscription-expirations"
+            ],
+            "title": "Pro Settings and safe setup",
+            "content": "# Settings keeps Pro operations connected\n\nSettings brings together language, timezone, Public API Key, enabled platforms, the central mailbox, access control, profile, password, and WhatsApp linking. Pro-only automation uses the Tenant timezone and reminder settings.\n\nThis step opens a safe informational category. The tour never saves settings, connects services, reveals keys, changes access, or opens a destructive confirmation.",
+            "summary": "Set the IANA timezone used for local subscription dates, reminders, and expiration automation.",
+            "route": "/admin/settings",
+            "settings_category": "timezone",
+            "target": "admin.settings.timezone",
+            "conditional": false,
+            "order": 6,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.help",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.whatsapp",
+              "tenant-admin.activate-access-code-lookup"
+            ],
+            "title": "WhatsApp, Help, and replay",
+            "content": "# Finish with Help\n\nPro WhatsApp includes Clients, Catalog, Profile, Subscriptions, Access Control, Help, and access-code lookup. Help contains the authorized manual and is where you can replay this orientation.\n\nHelp navigation is read-only. It never submits forms, reveals credentials, changes data, or performs a WhatsApp action.",
+            "summary": "Find the private manual and replay the optional orientation tour.",
+            "route": "/admin/help",
+            "settings_category": null,
+            "target": "admin.help",
+            "conditional": false,
+            "order": 7,
+            "plans": [
+              "pro"
+            ]
+          }
+        ]
+      },
+      {
+        "release_id": "tenant-admin-pro-upgrade-1",
+        "plans": [
+          "pro"
+        ],
+        "steps": [
+          {
+            "topic_id": "tenant-admin.clients",
+            "related_topics": [
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Your new Pro Clients module",
+            "content": "# Clients are now available\n\nYour upgrade adds Clients. Use this module to manage client identity and access, then open a client's subscriptions when the account is ready.\n\nThe tour is read-only: it does not create, edit, activate, deactivate, or delete a client.",
+            "summary": "Manage Pro clients, their access, status, canonical login, and subscriptions.",
+            "route": "/admin/clients",
+            "settings_category": null,
+            "target": "admin.clients",
+            "conditional": false,
+            "order": 1,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.catalog",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions"
+            ],
+            "title": "Your new Pro Catalog",
+            "content": "# Catalog is now available\n\nYour upgrade adds Catalog. Prepare services and plans here before assigning subscriptions to Clients.\n\nThe tour is read-only: it does not create, rename, delete, or preview a destructive change.",
+            "summary": "Create and organize services and plans before assigning subscriptions to clients.",
+            "route": "/admin/catalog",
+            "settings_category": null,
+            "target": "admin.catalog",
+            "conditional": false,
+            "order": 2,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.subscriptions",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.catalog",
+              "tenant-admin.first-pro-client"
+            ],
+            "title": "Your new Pro Subscriptions module",
+            "content": "# Subscriptions are now available\n\nYour upgrade adds Subscriptions. Use the prepared Client and Catalog data here to manage service access and lifecycle decisions.\n\nThe tour is read-only: it does not create, edit, cancel, renew, reactivate, or reveal credentials.",
+            "summary": "Open and manage the subscriptions attached to a client, service, and plan.",
+            "route": "/admin/subscriptions",
+            "settings_category": null,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "order": 3,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.reminders",
+            "related_topics": [
+              "tenant-admin.subscriptions",
+              "tenant-admin.timezone",
+              "tenant-admin.subscription-expirations"
+            ],
+            "title": "Pro reminders and timezone",
+            "content": "# New Pro automation\n\nYour upgrade adds optional subscription reminders and the Pro timezone controls they use. Review the settings and the expiration guide before enabling automation.\n\nThe tour only opens the safe settings view. It never toggles reminders, saves warning days, sends messages, or changes subscription lifecycle state.",
+            "summary": "Opt in to expiry reminders and choose when, where, and how they are prepared.",
+            "route": "/admin/settings",
+            "settings_category": "reminders",
+            "target": "admin.settings.reminders",
+            "conditional": false,
+            "order": 4,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.public-api",
+            "related_topics": [
+              "tenant-admin.catalog",
+              "tenant-admin.first-pro-client"
+            ],
+            "title": "Public API and Pro settings",
+            "content": "# New Pro publishing tools\n\nYour upgrade adds the read-only Public API Catalog. Together with the new Pro timezone and reminder controls, it completes the Pro capabilities that were unavailable on your previous plan.\n\nThe tour is safe and informational: it never creates, reveals, regenerates, revokes, or copies a key, and it never saves a setting.",
+            "summary": "Prepare a read-only browser integration and hand safe implementation instructions to your developer.",
+            "route": "/admin/settings",
+            "settings_category": "public-api",
+            "target": "admin.settings.public-api",
+            "conditional": false,
+            "order": 5,
+            "plans": [
+              "pro"
+            ]
+          }
+        ]
+      },
+      {
         "release_id": "tenant-admin-starter-1",
         "plans": [
           "starter"
@@ -3200,6 +3717,10 @@
         "steps": [
           {
             "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
             "title": "Welcome to TrackPal",
             "content": "# Welcome to TrackPal\n\nThis optional Starter orientation takes about 2 to 3 minutes. It explains where the tools in your current plan live and how Web, WhatsApp, enabled platforms, and the central mailbox fit together.\n\nContinue with **Next**, or choose **Skip tour**. Skipping never blocks your workspace, and you can replay this orientation from Help.\n",
             "summary": "Understand your plan, operational status, and the services available to your business.",
@@ -3214,8 +3735,12 @@
           },
           {
             "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
             "title": "Dashboard and navigation",
-            "content": "# Your Starter workspace\n\nThe Dashboard shows your current plan and operational signals. Use the navigation to move between Dashboard, Settings, and Help. Starter exposes the modules included in your current plan.\n\nThe values here are read-only. The tour uses your real workspace and does not create demo data or change settings.",
+            "content": "# Your Starter workspace\n\nThe Dashboard shows your current plan and operational signals. Use the navigation to move between Dashboard, Settings, and Help. Starter exposes the modules included in your current plan.\n\nThe values here are read-only. The tour uses your real workspace and does not create demo data or change settings.\n",
             "summary": "Understand your plan, operational status, and the services available to your business.",
             "route": "/admin/dashboard",
             "settings_category": null,
@@ -3228,6 +3753,11 @@
           },
           {
             "topic_id": "tenant-admin.profile",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
             "title": "Account settings",
             "content": "# Account settings\n\nSettings keeps your account map in one place. Language changes the workspace language, Profile holds the business identity and phone used for WhatsApp preparation, and Password changes only the signed-in Tenant Admin password.\n\nThis step opens the safe Profile panel as a real target. The tour never saves a form, changes a password, or reveals sensitive values.",
             "summary": "Update the business identity and contact information used by TrackPal.",
@@ -3242,6 +3772,11 @@
           },
           {
             "topic_id": "tenant-admin.whatsapp",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.profile",
+              "tenant-admin.language"
+            ],
             "title": "WhatsApp on Web",
             "content": "# WhatsApp on Web\n\nUse Settings to review the business WhatsApp connection and understand the Starter console. The Web tour summarizes the plan-aware menu; it never controls the phone, starts pairing, refreshes a QR code, or disconnects an instance.\n\nWhatsApp access-code lookup also depends on an enabled platform and a connected central mailbox. Choose **Learn more** for the full WhatsApp manual topic.",
             "summary": "Link the business WhatsApp instance and understand the Tenant Admin console.",
@@ -3256,6 +3791,12 @@
           },
           {
             "topic_id": "tenant-admin.activate-access-code-lookup",
+            "related_topics": [
+              "tenant-admin.code-services",
+              "tenant-admin.mailbox",
+              "tenant-admin.whatsapp",
+              "tenant-admin.access-control"
+            ],
             "title": "Enabled platforms and mailbox",
             "content": "# Complete the access-code path\n\nEnable at least one available platform, connect and test the central mailbox, then use the Starter WhatsApp menu to request an access-code search. These are prerequisites, not demo steps: the tour does not toggle a platform, connect a mailbox, or start a search.\n\nEmpty lists and disconnected states are valid first states. Choose **Learn more** for the dependency order and safe recovery guidance.",
             "summary": "Connect the dependencies in order, then run the first safe WhatsApp code search.",
@@ -3270,6 +3811,11 @@
           },
           {
             "topic_id": "tenant-admin.access-control",
+            "related_topics": [
+              "tenant-admin.whatsapp",
+              "tenant-admin.activate-access-code-lookup",
+              "tenant-admin.profile"
+            ],
             "title": "Access control",
             "content": "# Access control\n\nSettings shows the identities blocked from the Tenant WhatsApp bot. An empty list is a valid state. The tour only highlights the first available action and explains the boundary; it never blocks, unblocks, searches, or opens a confirmation dialog.",
             "summary": "Review, search, block, and unblock WhatsApp identities for the Tenant.",
@@ -3284,8 +3830,13 @@
           },
           {
             "topic_id": "tenant-admin.help",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.whatsapp",
+              "tenant-admin.activate-access-code-lookup"
+            ],
             "title": "Help and replay",
-            "content": "# Help and replay\n\nHelp contains the manual topics authorized for your Starter plan, including WhatsApp, enabled platforms, the central mailbox, and access control. Use the search box to find a topic without leaving your current data behind.\n\nYou can replay this orientation from Help at any time. Manual links only open safe screens; they never submit forms, reveal credentials, or perform product actions.",
+            "content": "# Help and replay\n\nHelp contains the manual topics authorized for your Starter plan, including WhatsApp, enabled platforms, the central mailbox, and access control. Use the search box to find a topic without leaving your current data behind.\n\nYou can replay this orientation from Help at any time. Manual links only open safe screens; they never submit forms, reveal credentials, or perform product actions.\n",
             "summary": "Find the private manual and replay the optional orientation tour.",
             "route": "/admin/help",
             "settings_category": null,
@@ -3301,6 +3852,247 @@
     ],
     "es": [
       {
+        "release_id": "tenant-admin-pro-1",
+        "plans": [
+          "pro"
+        ],
+        "steps": [
+          {
+            "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Bienvenido a Pro",
+            "content": "# Bienvenido a Pro\n\nEsta orientación Pro es opcional y dura aproximadamente de 2 a 3 minutos. Explica los módulos Pro y cómo se relacionan Web, WhatsApp, las suscripciones, los recordatorios y la API pública.\n\nContinúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio y puedes repetir esta orientación desde Ayuda.\n",
+            "summary": "Consulta tu plan, el estado operativo y los servicios disponibles para tu negocio.",
+            "route": "/admin/dashboard",
+            "settings_category": null,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "order": 1,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Dashboard y navegación Pro",
+            "content": "# Tu espacio Pro\n\nEl Dashboard muestra tu plan actual y las señales operativas. Pro agrega Clientes, Catálogo y Suscripciones a la navegación, mientras Configuración y Ayuda siguen siendo los puntos seguros para configurar y obtener orientación.\n\nLos valores aquí son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia ajustes.",
+            "summary": "Consulta tu plan, el estado operativo y los servicios disponibles para tu negocio.",
+            "route": "/admin/dashboard",
+            "settings_category": null,
+            "target": "admin.dashboard",
+            "conditional": false,
+            "order": 2,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.clients",
+            "related_topics": [
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Clientes",
+            "content": "# Gestiona Clientes de forma segura\n\nClientes es el lugar donde gestionas a las personas que reciben tus servicios. Revisa la lista, la búsqueda y el grupo de acciones antes de crear, editar, activar, desactivar o eliminar algo.\n\nEste recorrido solo destaca el módulo real. Nunca abre un formulario, cambia un estado, crea un cliente ni inicia una confirmación de eliminación.\n",
+            "summary": "Gestiona clientes Pro, su acceso, estado, inicio de sesión canónico y suscripciones.",
+            "route": "/admin/clients",
+            "settings_category": null,
+            "target": "admin.clients",
+            "conditional": false,
+            "order": 3,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.catalog",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions"
+            ],
+            "title": "Servicios y planes del Catálogo",
+            "content": "# Prepara el Catálogo\n\nCatálogo es el lugar donde organizas servicios y planes Pro antes de asignar suscripciones. Revisa la lista y el grupo de acciones seguras; una eliminación siempre tiene una vista previa del impacto y una confirmación fuera de este recorrido.\n\nEl recorrido solo destaca el módulo real. Nunca crea, renombra, elimina ni abre una confirmación destructiva.\n",
+            "summary": "Crea y organiza servicios y planes antes de asignar suscripciones a clientes.",
+            "route": "/admin/catalog",
+            "settings_category": null,
+            "target": "admin.catalog",
+            "conditional": false,
+            "order": 4,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.subscriptions",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.catalog",
+              "tenant-admin.first-pro-client"
+            ],
+            "title": "Suscripciones y recordatorios",
+            "content": "# Opera las suscripciones\n\nSuscripciones conecta Clientes con servicios y planes del Catálogo. Revisa estados, fechas, filtros, acciones de ciclo de vida, límites de credenciales y los ajustes separados de recordatorios antes de actuar.\n\nEste recorrido solo destaca el módulo real. Nunca crea, edita, cancela, renueva, reactiva ni muestra credenciales.\n",
+            "summary": "Abre y gestiona las suscripciones asociadas a un cliente, servicio y plan.",
+            "route": "/admin/subscriptions",
+            "settings_category": null,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "order": 5,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.timezone",
+            "related_topics": [
+              "tenant-admin.reminders",
+              "tenant-admin.subscriptions",
+              "tenant-admin.subscription-expirations"
+            ],
+            "title": "Configuración Pro y preparación segura",
+            "content": "# Configuración conecta las operaciones Pro\n\nConfiguración reúne idioma, zona horaria, Clave API pública, plataformas habilitadas, buzón central, control de acceso, perfil, contraseña y vinculación de WhatsApp. La automatización Pro usa la zona horaria del Tenant y los ajustes de recordatorios.\n\nEste paso abre una categoría informativa segura. El recorrido nunca guarda ajustes, conecta servicios, muestra claves, cambia accesos ni abre una confirmación destructiva.",
+            "summary": "Define la zona horaria IANA usada para fechas locales, recordatorios y automatización de vencimientos.",
+            "route": "/admin/settings",
+            "settings_category": "timezone",
+            "target": "admin.settings.timezone",
+            "conditional": false,
+            "order": 6,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.help",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.whatsapp",
+              "tenant-admin.activate-access-code-lookup"
+            ],
+            "title": "WhatsApp, Ayuda y repetición",
+            "content": "# Termina en Ayuda\n\nWhatsApp Pro incluye Clientes, Catálogo, Perfil, Suscripciones, Control de acceso, Ayuda y búsqueda de códigos de acceso. Ayuda contiene el manual autorizado y permite repetir esta orientación.\n\nLa navegación de Ayuda es de solo lectura. Nunca envía formularios, muestra credenciales, cambia datos ni ejecuta una acción de WhatsApp.",
+            "summary": "Encuentra el manual privado y repite el recorrido de orientación opcional.",
+            "route": "/admin/help",
+            "settings_category": null,
+            "target": "admin.help",
+            "conditional": false,
+            "order": 7,
+            "plans": [
+              "pro"
+            ]
+          }
+        ]
+      },
+      {
+        "release_id": "tenant-admin-pro-upgrade-1",
+        "plans": [
+          "pro"
+        ],
+        "steps": [
+          {
+            "topic_id": "tenant-admin.clients",
+            "related_topics": [
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions",
+              "tenant-admin.whatsapp"
+            ],
+            "title": "Tu nuevo módulo Pro de Clientes",
+            "content": "# Clientes ahora está disponible\n\nTu upgrade agrega Clientes. Usa este módulo para gestionar la identidad y el acceso de clientes, y después abre las suscripciones de un cliente cuando la cuenta esté lista.\n\nEl recorrido es de solo lectura: no crea, edita, activa, desactiva ni elimina clientes.",
+            "summary": "Gestiona clientes Pro, su acceso, estado, inicio de sesión canónico y suscripciones.",
+            "route": "/admin/clients",
+            "settings_category": null,
+            "target": "admin.clients",
+            "conditional": false,
+            "order": 1,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.catalog",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.first-pro-client",
+              "tenant-admin.subscriptions"
+            ],
+            "title": "Tu nuevo Catálogo Pro",
+            "content": "# Catálogo ahora está disponible\n\nTu upgrade agrega Catálogo. Prepara aquí los servicios y planes antes de asignar suscripciones a los Clientes.\n\nEl recorrido es de solo lectura: no crea, renombra, elimina ni muestra una vista previa destructiva.",
+            "summary": "Crea y organiza servicios y planes antes de asignar suscripciones a clientes.",
+            "route": "/admin/catalog",
+            "settings_category": null,
+            "target": "admin.catalog",
+            "conditional": false,
+            "order": 2,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.subscriptions",
+            "related_topics": [
+              "tenant-admin.clients",
+              "tenant-admin.catalog",
+              "tenant-admin.first-pro-client"
+            ],
+            "title": "Tu nuevo módulo Pro de Suscripciones",
+            "content": "# Suscripciones ahora está disponible\n\nTu upgrade agrega Suscripciones. Usa aquí los datos preparados de Clientes y Catálogo para gestionar el acceso a servicios y las decisiones de ciclo de vida.\n\nEl recorrido es de solo lectura: no crea, edita, cancela, renueva, reactiva ni muestra credenciales.",
+            "summary": "Abre y gestiona las suscripciones asociadas a un cliente, servicio y plan.",
+            "route": "/admin/subscriptions",
+            "settings_category": null,
+            "target": "admin.subscriptions",
+            "conditional": false,
+            "order": 3,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.reminders",
+            "related_topics": [
+              "tenant-admin.subscriptions",
+              "tenant-admin.timezone",
+              "tenant-admin.subscription-expirations"
+            ],
+            "title": "Recordatorios y zona horaria Pro",
+            "content": "# Nueva automatización Pro\n\nTu upgrade agrega recordatorios opcionales de suscripciones y los controles de zona horaria Pro que utilizan. Revisa los ajustes y la guía de vencimientos antes de activar la automatización.\n\nEl recorrido solo abre la vista segura de ajustes. Nunca activa recordatorios, guarda días de aviso, envía mensajes ni cambia el ciclo de vida de una suscripción.",
+            "summary": "Activa los recordatorios de vencimiento y elige cuándo, dónde y cómo se preparan.",
+            "route": "/admin/settings",
+            "settings_category": "reminders",
+            "target": "admin.settings.reminders",
+            "conditional": false,
+            "order": 4,
+            "plans": [
+              "pro"
+            ]
+          },
+          {
+            "topic_id": "tenant-admin.public-api",
+            "related_topics": [
+              "tenant-admin.catalog",
+              "tenant-admin.first-pro-client"
+            ],
+            "title": "API pública y ajustes Pro",
+            "content": "# Nuevas herramientas de publicación Pro\n\nTu upgrade agrega la API pública de Catálogo de solo lectura. Junto con los nuevos controles Pro de zona horaria y recordatorios, completa las capacidades Pro que no estaban disponibles en tu plan anterior.\n\nEl recorrido es seguro e informativo: nunca crea, muestra, regenera, revoca ni copia una clave y nunca guarda un ajuste.",
+            "summary": "Prepara una integración de navegador de solo lectura y entrega instrucciones seguras a tu desarrollador.",
+            "route": "/admin/settings",
+            "settings_category": "public-api",
+            "target": "admin.settings.public-api",
+            "conditional": false,
+            "order": 5,
+            "plans": [
+              "pro"
+            ]
+          }
+        ]
+      },
+      {
         "release_id": "tenant-admin-starter-1",
         "plans": [
           "starter"
@@ -3308,6 +4100,10 @@
         "steps": [
           {
             "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
             "title": "Bienvenido a TrackPal",
             "content": "# Bienvenido a TrackPal\n\nEsta orientación Starter es opcional y dura aproximadamente de 2 a 3 minutos. Explica dónde están las herramientas de tu plan actual y cómo se relacionan Web, WhatsApp, las plataformas habilitadas y el buzón central.\n\nContinúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio de trabajo y puedes repetirlo desde Ayuda.\n",
             "summary": "Consulta tu plan, el estado operativo y los servicios disponibles para tu negocio.",
@@ -3322,8 +4118,12 @@
           },
           {
             "topic_id": "tenant-admin.dashboard",
+            "related_topics": [
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
             "title": "Dashboard y navegación",
-            "content": "# Tu espacio Starter\n\nEl Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.\n\nEstos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones.",
+            "content": "# Tu espacio Starter\n\nEl Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.\n\nEstos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones.\n",
             "summary": "Consulta tu plan, el estado operativo y los servicios disponibles para tu negocio.",
             "route": "/admin/dashboard",
             "settings_category": null,
@@ -3336,6 +4136,11 @@
           },
           {
             "topic_id": "tenant-admin.profile",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.language",
+              "tenant-admin.whatsapp"
+            ],
             "title": "Configuración de la cuenta",
             "content": "# Configuración de la cuenta\n\nConfiguración reúne el mapa de tu cuenta. Idioma cambia el idioma del espacio de trabajo, Perfil contiene la identidad y el teléfono del negocio que se usa para preparar WhatsApp, y Contraseña cambia solo la contraseña del Tenant Admin que inició sesión.\n\nEste paso abre el panel seguro de Perfil como un objetivo real. El recorrido nunca guarda un formulario, cambia una contraseña ni muestra valores sensibles.",
             "summary": "Actualiza la identidad y la información de contacto del negocio que usa TrackPal.",
@@ -3350,6 +4155,11 @@
           },
           {
             "topic_id": "tenant-admin.whatsapp",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.profile",
+              "tenant-admin.language"
+            ],
             "title": "WhatsApp en Web",
             "content": "# WhatsApp en Web\n\nUsa Configuración para revisar la conexión de WhatsApp del negocio y entender la consola Starter. El recorrido Web resume el menú según el plan; nunca controla el teléfono, inicia la vinculación, actualiza un código QR ni desconecta una instancia.\n\nLa búsqueda de códigos de acceso también depende de una plataforma habilitada y un buzón central conectado. Elige **Más información** para consultar el tema completo de WhatsApp.",
             "summary": "Vincula el WhatsApp del negocio y entiende la consola de Tenant Admin.",
@@ -3364,6 +4174,12 @@
           },
           {
             "topic_id": "tenant-admin.activate-access-code-lookup",
+            "related_topics": [
+              "tenant-admin.code-services",
+              "tenant-admin.mailbox",
+              "tenant-admin.whatsapp",
+              "tenant-admin.access-control"
+            ],
             "title": "Plataformas y buzón",
             "content": "# Completa la ruta de códigos de acceso\n\nHabilita al menos una plataforma disponible, conecta y prueba el buzón central y después usa el menú Starter de WhatsApp para solicitar una búsqueda de código. Son requisitos, no pasos de demostración: el recorrido no activa plataformas, conecta un buzón ni inicia una búsqueda.\n\nLas listas vacías y los estados desconectados son estados iniciales válidos. Elige **Más información** para consultar el orden de dependencias y la recuperación segura.",
             "summary": "Conecta las dependencias en orden y ejecuta la primera búsqueda segura desde WhatsApp.",
@@ -3378,6 +4194,11 @@
           },
           {
             "topic_id": "tenant-admin.access-control",
+            "related_topics": [
+              "tenant-admin.whatsapp",
+              "tenant-admin.activate-access-code-lookup",
+              "tenant-admin.profile"
+            ],
             "title": "Control de acceso",
             "content": "# Control de acceso\n\nConfiguración muestra las identidades bloqueadas para el bot de WhatsApp del Tenant. Una lista vacía es un estado válido. El recorrido solo resalta la primera acción disponible y explica el límite; nunca bloquea, desbloquea, busca ni abre una confirmación.",
             "summary": "Revisa, busca, bloquea y desbloquea identidades de WhatsApp del Tenant.",
@@ -3392,8 +4213,13 @@
           },
           {
             "topic_id": "tenant-admin.help",
+            "related_topics": [
+              "tenant-admin.dashboard",
+              "tenant-admin.whatsapp",
+              "tenant-admin.activate-access-code-lookup"
+            ],
             "title": "Ayuda y repetición",
-            "content": "# Ayuda y repetición\n\nAyuda contiene los temas del manual autorizados para tu plan Starter, incluidos WhatsApp, las plataformas habilitadas, el buzón central y el control de acceso. Usa el buscador para encontrar un tema sin perder tus datos actuales.\n\nPuedes repetir esta orientación desde Ayuda cuando quieras. Los enlaces del manual solo abren pantallas seguras; nunca envían formularios, muestran credenciales ni realizan acciones del producto.",
+            "content": "# Ayuda y repetición\n\nAyuda contiene los temas del manual autorizados para tu plan Starter, incluidos WhatsApp, las plataformas habilitadas, el buzón central y el control de acceso. Usa el buscador para encontrar un tema sin perder tus datos actuales.\n\nPuedes repetir esta orientación desde Ayuda cuando quieras. Los enlaces del manual solo abren pantallas seguras; nunca envían formularios, muestran credenciales ni realizan acciones del producto.\n",
             "summary": "Encuentra el manual privado y repite el recorrido de orientación opcional.",
             "route": "/admin/help",
             "settings_category": null,

@@ -64,7 +64,11 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "route": "/admin/settings",
         "settings_category": "code-services",
     }
-    tracer = artifact["tour_releases"]["en"][0]
+    tracer = next(
+        release
+        for release in artifact["tour_releases"]["en"]
+        if release["release_id"] == "tenant-admin-starter-1"
+    )
     assert tracer["release_id"] == "tenant-admin-starter-1"
     assert [step["target"] for step in tracer["steps"]] == [
         "admin.dashboard",
@@ -86,6 +90,39 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "public api",
     ):
         assert forbidden not in tour_content
+
+
+def test_pro_tours_declare_initial_and_upgrade_sequences() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    releases = {
+        release["release_id"]: release for release in artifact["tour_releases"]["en"]
+    }
+
+    initial = releases["tenant-admin-pro-1"]
+    assert initial["plans"] == ["pro"]
+    assert [step["target"] for step in initial["steps"]] == [
+        "admin.dashboard",
+        "admin.dashboard",
+        "admin.clients",
+        "admin.catalog",
+        "admin.subscriptions",
+        "admin.settings.timezone",
+        "admin.help",
+    ]
+    assert "tenant-admin.reminders" in initial["steps"][5]["related_topics"]
+
+    upgrade = releases["tenant-admin-pro-upgrade-1"]
+    assert upgrade["plans"] == ["pro"]
+    assert [step["target"] for step in upgrade["steps"]] == [
+        "admin.clients",
+        "admin.catalog",
+        "admin.subscriptions",
+        "admin.settings.reminders",
+        "admin.settings.public-api",
+    ]
+    upgrade_content = " ".join(step["content"] for step in upgrade["steps"]).casefold()
+    for forbidden in ("starter", "dashboard", "whatsapp"):
+        assert forbidden not in upgrade_content
 
 
 def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:

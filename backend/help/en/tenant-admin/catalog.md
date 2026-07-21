@@ -37,6 +37,33 @@ related_topics:
   - tenant-admin.clients
   - tenant-admin.first-pro-client
   - tenant-admin.subscriptions
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 4
+    target: admin.catalog
+    conditional: false
+    plans:
+      - pro
+    title: Catalog services and plans
+    content: |
+      # Build the Catalog
+
+      Catalog is where Pro services and plans are organized before subscriptions are assigned. Review the list and the safe action group; deletion always has an impact preview and confirmation outside this tour.
+
+      The tour only highlights the real module. It never creates, renames, deletes, or opens a destructive confirmation.
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 2
+    target: admin.catalog
+    conditional: false
+    plans:
+      - pro
+    title: Your new Pro Catalog
+    content: |
+      # Catalog is now available
+
+      Your upgrade adds Catalog. Prepare services and plans here before assigning subscriptions to Clients.
+
+      The tour is read-only: it does not create, rename, delete, or preview a destructive change.
 ---
 
 # Catalog

@@ -35,6 +35,33 @@ related_topics:
   - tenant-admin.clients
   - tenant-admin.catalog
   - tenant-admin.first-pro-client
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 5
+    target: admin.subscriptions
+    conditional: false
+    plans:
+      - pro
+    title: Subscriptions and reminders
+    content: |
+      # Operate subscriptions
+
+      Subscriptions connects Clients to Catalog services and plans. Review statuses, dates, filters, lifecycle actions, credentials boundaries, and the separate reminder settings before taking an action.
+
+      This tour only highlights the real module. It never creates, edits, cancels, renews, reactivates, or reveals credentials.
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 3
+    target: admin.subscriptions
+    conditional: false
+    plans:
+      - pro
+    title: Your new Pro Subscriptions module
+    content: |
+      # Subscriptions are now available
+
+      Your upgrade adds Subscriptions. Use the prepared Client and Catalog data here to manage service access and lifecycle decisions.
+
+      The tour is read-only: it does not create, edit, cancel, renew, reactivate, or reveal credentials.
 ---
 
 # Client Subscriptions

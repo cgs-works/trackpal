@@ -36,6 +36,33 @@ related_topics:
   - tenant-admin.first-pro-client
   - tenant-admin.subscriptions
   - tenant-admin.whatsapp
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 3
+    target: admin.clients
+    conditional: false
+    plans:
+      - pro
+    title: Clientes
+    content: |
+      # Gestiona Clientes de forma segura
+
+      Clientes es el lugar donde gestionas a las personas que reciben tus servicios. Revisa la lista, la búsqueda y el grupo de acciones antes de crear, editar, activar, desactivar o eliminar algo.
+
+      Este recorrido solo destaca el módulo real. Nunca abre un formulario, cambia un estado, crea un cliente ni inicia una confirmación de eliminación.
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 1
+    target: admin.clients
+    conditional: false
+    plans:
+      - pro
+    title: Tu nuevo módulo Pro de Clientes
+    content: |
+      # Clientes ahora está disponible
+
+      Tu upgrade agrega Clientes. Usa este módulo para gestionar la identidad y el acceso de clientes, y después abre las suscripciones de un cliente cuando la cuenta esté lista.
+
+      El recorrido es de solo lectura: no crea, edita, activa, desactiva ni elimina clientes.
 ---
 
 # Clientes

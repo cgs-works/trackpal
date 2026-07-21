@@ -33,6 +33,20 @@ related_topics:
   - tenant-admin.reminders
   - tenant-admin.subscriptions
   - tenant-admin.subscription-expirations
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 6
+    target: admin.settings.timezone
+    conditional: false
+    plans:
+      - pro
+    title: Pro Settings and safe setup
+    content: |
+      # Settings keeps Pro operations connected
+
+      Settings brings together language, timezone, Public API Key, enabled platforms, the central mailbox, access control, profile, password, and WhatsApp linking. Pro-only automation uses the Tenant timezone and reminder settings.
+
+      This step opens a safe informational category. The tour never saves settings, connects services, reveals keys, changes access, or opens a destructive confirmation.
 ---
 
 # Tenant timezone

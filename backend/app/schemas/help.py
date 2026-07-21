@@ -47,6 +47,7 @@ class HelpSearchResponse(BaseModel):
 
 class HelpTourStep(BaseModel):
     topic_id: str
+    related_topics: list[str] = Field(default_factory=list)
     title: str
     content: str
     summary: str

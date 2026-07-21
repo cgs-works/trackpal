@@ -56,6 +56,32 @@ tour:
       The Dashboard shows your current plan and operational signals. Use the navigation to move between Dashboard, Settings, and Help. Starter exposes the modules included in your current plan.
 
       The values here are read-only. The tour uses your real workspace and does not create demo data or change settings.
+  - release_id: tenant-admin-pro-1
+    order: 1
+    target: admin.dashboard
+    conditional: false
+    plans:
+      - pro
+    title: Welcome to Pro
+    content: |
+      # Welcome to Pro
+
+      This optional Pro orientation takes about 2 to 3 minutes. It maps the Pro modules and explains how Web, WhatsApp, subscriptions, reminders, and the Public API fit together.
+
+      Continue with **Next**, or choose **Skip tour**. Skipping never blocks your workspace, and you can replay this orientation from Help.
+  - release_id: tenant-admin-pro-1
+    order: 2
+    target: admin.dashboard
+    conditional: false
+    plans:
+      - pro
+    title: Pro dashboard and navigation
+    content: |
+      # Your Pro workspace
+
+      The Dashboard shows your current plan and operational signals. Pro adds Clients, Catalog, and Subscriptions to the navigation, while Settings and Help remain the safe starting points for configuration and guidance.
+
+      The values here are read-only. The tour uses your real workspace and does not create demo data or change settings.
 ---
 
 # Business Dashboard

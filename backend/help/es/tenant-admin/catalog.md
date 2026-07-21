@@ -37,6 +37,33 @@ related_topics:
   - tenant-admin.clients
   - tenant-admin.first-pro-client
   - tenant-admin.subscriptions
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 4
+    target: admin.catalog
+    conditional: false
+    plans:
+      - pro
+    title: Servicios y planes del Catálogo
+    content: |
+      # Prepara el Catálogo
+
+      Catálogo es el lugar donde organizas servicios y planes Pro antes de asignar suscripciones. Revisa la lista y el grupo de acciones seguras; una eliminación siempre tiene una vista previa del impacto y una confirmación fuera de este recorrido.
+
+      El recorrido solo destaca el módulo real. Nunca crea, renombra, elimina ni abre una confirmación destructiva.
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 2
+    target: admin.catalog
+    conditional: false
+    plans:
+      - pro
+    title: Tu nuevo Catálogo Pro
+    content: |
+      # Catálogo ahora está disponible
+
+      Tu upgrade agrega Catálogo. Prepara aquí los servicios y planes antes de asignar suscripciones a los Clientes.
+
+      El recorrido es de solo lectura: no crea, renombra, elimina ni muestra una vista previa destructiva.
 ---
 
 # Catálogo

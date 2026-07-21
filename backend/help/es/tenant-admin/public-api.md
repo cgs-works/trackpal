@@ -38,6 +38,20 @@ safe_links:
 related_topics:
   - tenant-admin.catalog
   - tenant-admin.first-pro-client
+tour:
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 5
+    target: admin.settings.public-api
+    conditional: false
+    plans:
+      - pro
+    title: API pública y ajustes Pro
+    content: |
+      # Nuevas herramientas de publicación Pro
+
+      Tu upgrade agrega la API pública de Catálogo de solo lectura. Junto con los nuevos controles Pro de zona horaria y recordatorios, completa las capacidades Pro que no estaban disponibles en tu plan anterior.
+
+      El recorrido es seguro e informativo: nunca crea, muestra, regenera, revoca ni copia una clave y nunca guarda un ajuste.
 ---
 
 # Publicar el catálogo mediante API pública

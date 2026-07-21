@@ -46,6 +46,7 @@ export interface HelpSearchResponse {
 
 export interface HelpTourStep {
   topic_id: string;
+  related_topics: string[];
   title: string;
   content: string;
   summary: string;

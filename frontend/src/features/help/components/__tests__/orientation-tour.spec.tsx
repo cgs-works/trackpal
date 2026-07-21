@@ -56,6 +56,7 @@ vi.mock("@/store/auth", () => ({
   useAuthStore: () => ({
     isAuthenticated: true,
     role: "tenant",
+    tenantPlan: "starter",
     isMasterSupportContext: false,
   }),
 }));
@@ -89,6 +90,7 @@ const release: HelpTourRelease = {
   steps: [
     {
       topic_id: "tenant-admin.dashboard",
+      related_topics: [],
       title: "Dashboard",
       content: "Dashboard guidance",
       summary: "Dashboard summary",

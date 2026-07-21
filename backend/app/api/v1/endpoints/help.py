@@ -18,6 +18,8 @@ from app.schemas.help import (
 
 router = APIRouter(prefix="/help", tags=["help"])
 help_catalog = get_help_catalog()
+STARTER_RELEASE_ID = "tenant-admin-starter-1"
+INITIAL_PRO_RELEASE_ID = "tenant-admin-pro-1"
 
 
 async def _tenant_admin_context(
@@ -59,6 +61,18 @@ async def _help_context(db: DbDep, current_user: CurrentUser) -> tuple[str, str,
         return "client", tenant.plan, locale
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+
+async def _initial_pro_release_is_suppressed(
+    db: DbDep, tenant_id: UUID, plan: str, release_id: str
+) -> bool:
+    if plan != "pro" or release_id != INITIAL_PRO_RELEASE_ID:
+        return False
+    return (
+        await tenant_help_repository.get_acknowledgement(
+            db, tenant_id, STARTER_RELEASE_ID
+        )
+    ) is not None
 
 
 @router.get("", response_model=HelpIndexResponse)
@@ -125,6 +139,10 @@ async def get_unseen_tour(db: DbDep, current_user: CurrentUser) -> HelpTourRelea
 
     tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
     for release in help_catalog.tour_releases(locale, plan):
+        if await _initial_pro_release_is_suppressed(
+            db, tenant_id, plan, release["release_id"]
+        ):
+            continue
         acknowledgement = await tenant_help_repository.get_acknowledgement(
             db, tenant_id, release["release_id"]
         )
@@ -144,6 +162,8 @@ async def replay_tour(
     """Return an eligible tour release regardless of acknowledgement state."""
 
     tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    if await _initial_pro_release_is_suppressed(db, tenant_id, plan, release_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     release = help_catalog.tour_release(locale, plan, release_id)
     if release is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -166,6 +186,8 @@ async def acknowledge_tour(
     """Persist one immutable, Tenant-scoped tour acknowledgement."""
 
     tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    if await _initial_pro_release_is_suppressed(db, tenant_id, plan, release_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if help_catalog.tour_release(locale, plan, release_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     acknowledgement = await tenant_help_repository.acknowledge(

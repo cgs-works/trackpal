@@ -56,6 +56,32 @@ tour:
       El Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.
 
       Estos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones.
+  - release_id: tenant-admin-pro-1
+    order: 1
+    target: admin.dashboard
+    conditional: false
+    plans:
+      - pro
+    title: Bienvenido a Pro
+    content: |
+      # Bienvenido a Pro
+
+      Esta orientación Pro es opcional y dura aproximadamente de 2 a 3 minutos. Explica los módulos Pro y cómo se relacionan Web, WhatsApp, las suscripciones, los recordatorios y la API pública.
+
+      Continúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio y puedes repetir esta orientación desde Ayuda.
+  - release_id: tenant-admin-pro-1
+    order: 2
+    target: admin.dashboard
+    conditional: false
+    plans:
+      - pro
+    title: Dashboard y navegación Pro
+    content: |
+      # Tu espacio Pro
+
+      El Dashboard muestra tu plan actual y las señales operativas. Pro agrega Clientes, Catálogo y Suscripciones a la navegación, mientras Configuración y Ayuda siguen siendo los puntos seguros para configurar y obtener orientación.
+
+      Los valores aquí son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia ajustes.
 ---
 
 # Dashboard de la empresa

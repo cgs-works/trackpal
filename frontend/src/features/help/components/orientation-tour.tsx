@@ -203,7 +203,7 @@ function tourSelector(target: string): string {
 }
 
 export function OrientationTour() {
-  const { isAuthenticated, role, isMasterSupportContext } = useAuthStore();
+  const { isAuthenticated, role, tenantPlan, isMasterSupportContext } = useAuthStore();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
   const [tour, setTour] = useState<HelpTourRelease | null>(null);
@@ -253,7 +253,7 @@ export function OrientationTour() {
       return;
     }
     void loadTour(getUnseenHelpTour);
-  }, [canRun, loadTour, stopTour]);
+  }, [canRun, loadTour, stopTour, tenantPlan]);
 
   useEffect(() => {
     if (!canRun) return;

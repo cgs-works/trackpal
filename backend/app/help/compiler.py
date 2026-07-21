@@ -337,6 +337,7 @@ class HelpCompiler:
                     releases.setdefault(tour["release_id"], []).append(
                         {
                             "topic_id": topic["id"],
+                            "related_topics": topic["related_topics"],
                             "title": tour.get("title", topic["title"]),
                             "content": tour.get("content", topic["body"]),
                             "summary": topic["summary"],
@@ -487,6 +488,10 @@ def _tour_entries(
             or not isinstance(tour_plans, list)
             or not tour_plans
             or any(plan not in ALLOWED_PLANS for plan in tour_plans)
+            or (
+                topic_plans is not None
+                and any(plan not in topic_plans for plan in tour_plans)
+            )
             or (title is not None and (not isinstance(title, str) or not title.strip()))
             or (
                 content is not None

@@ -35,6 +35,33 @@ related_topics:
   - tenant-admin.clients
   - tenant-admin.catalog
   - tenant-admin.first-pro-client
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 5
+    target: admin.subscriptions
+    conditional: false
+    plans:
+      - pro
+    title: Suscripciones y recordatorios
+    content: |
+      # Opera las suscripciones
+
+      Suscripciones conecta Clientes con servicios y planes del Catálogo. Revisa estados, fechas, filtros, acciones de ciclo de vida, límites de credenciales y los ajustes separados de recordatorios antes de actuar.
+
+      Este recorrido solo destaca el módulo real. Nunca crea, edita, cancela, renueva, reactiva ni muestra credenciales.
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 3
+    target: admin.subscriptions
+    conditional: false
+    plans:
+      - pro
+    title: Tu nuevo módulo Pro de Suscripciones
+    content: |
+      # Suscripciones ahora está disponible
+
+      Tu upgrade agrega Suscripciones. Usa aquí los datos preparados de Clientes y Catálogo para gestionar el acceso a servicios y las decisiones de ciclo de vida.
+
+      El recorrido es de solo lectura: no crea, edita, cancela, renueva, reactiva ni muestra credenciales.
 ---
 
 # Suscripciones de clientes

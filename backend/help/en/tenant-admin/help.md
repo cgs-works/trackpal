@@ -45,6 +45,19 @@ tour:
       Help contains the manual topics authorized for your Starter plan, including WhatsApp, enabled platforms, the central mailbox, and access control. Use the search box to find a topic without leaving your current data behind.
 
       You can replay this orientation from Help at any time. Manual links only open safe screens; they never submit forms, reveal credentials, or perform product actions.
+  - release_id: tenant-admin-pro-1
+    order: 7
+    target: admin.help
+    conditional: false
+    plans:
+      - pro
+    title: WhatsApp, Help, and replay
+    content: |
+      # Finish with Help
+
+      Pro WhatsApp includes Clients, Catalog, Profile, Subscriptions, Access Control, Help, and access-code lookup. Help contains the authorized manual and is where you can replay this orientation.
+
+      Help navigation is read-only. It never submits forms, reveals credentials, changes data, or performs a WhatsApp action.
 ---
 
 # Help Center

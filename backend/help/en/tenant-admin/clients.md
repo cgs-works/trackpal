@@ -36,6 +36,33 @@ related_topics:
   - tenant-admin.first-pro-client
   - tenant-admin.subscriptions
   - tenant-admin.whatsapp
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 3
+    target: admin.clients
+    conditional: false
+    plans:
+      - pro
+    title: Clients
+    content: |
+      # Manage Clients safely
+
+      Clients is where you manage the people who receive your services. Review the list, search, and action group before creating, editing, activating, deactivating, or deleting anything.
+
+      This tour only highlights the real module. It never opens a form, changes a status, creates a client, or starts a deletion confirmation.
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 1
+    target: admin.clients
+    conditional: false
+    plans:
+      - pro
+    title: Your new Pro Clients module
+    content: |
+      # Clients are now available
+
+      Your upgrade adds Clients. Use this module to manage client identity and access, then open a client's subscriptions when the account is ready.
+
+      The tour is read-only: it does not create, edit, activate, deactivate, or delete a client.
 ---
 
 # Clients

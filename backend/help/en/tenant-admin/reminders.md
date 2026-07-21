@@ -34,6 +34,20 @@ related_topics:
   - tenant-admin.subscriptions
   - tenant-admin.timezone
   - tenant-admin.subscription-expirations
+tour:
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 4
+    target: admin.settings.reminders
+    conditional: false
+    plans:
+      - pro
+    title: Pro reminders and timezone
+    content: |
+      # New Pro automation
+
+      Your upgrade adds optional subscription reminders and the Pro timezone controls they use. Review the settings and the expiration guide before enabling automation.
+
+      The tour only opens the safe settings view. It never toggles reminders, saves warning days, sends messages, or changes subscription lifecycle state.
 ---
 
 # Subscription reminder settings

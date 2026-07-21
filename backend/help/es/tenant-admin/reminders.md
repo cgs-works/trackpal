@@ -34,6 +34,20 @@ related_topics:
   - tenant-admin.subscriptions
   - tenant-admin.timezone
   - tenant-admin.subscription-expirations
+tour:
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 4
+    target: admin.settings.reminders
+    conditional: false
+    plans:
+      - pro
+    title: Recordatorios y zona horaria Pro
+    content: |
+      # Nueva automatización Pro
+
+      Tu upgrade agrega recordatorios opcionales de suscripciones y los controles de zona horaria Pro que utilizan. Revisa los ajustes y la guía de vencimientos antes de activar la automatización.
+
+      El recorrido solo abre la vista segura de ajustes. Nunca activa recordatorios, guarda días de aviso, envía mensajes ni cambia el ciclo de vida de una suscripción.
 ---
 
 # Ajustes de recordatorios de suscripciones

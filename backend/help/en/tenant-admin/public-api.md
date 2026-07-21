@@ -38,6 +38,20 @@ safe_links:
 related_topics:
   - tenant-admin.catalog
   - tenant-admin.first-pro-client
+tour:
+  - release_id: tenant-admin-pro-upgrade-1
+    order: 5
+    target: admin.settings.public-api
+    conditional: false
+    plans:
+      - pro
+    title: Public API and Pro settings
+    content: |
+      # New Pro publishing tools
+
+      Your upgrade adds the read-only Public API Catalog. Together with the new Pro timezone and reminder controls, it completes the Pro capabilities that were unavailable on your previous plan.
+
+      The tour is safe and informational: it never creates, reveals, regenerates, revokes, or copies a key, and it never saves a setting.
 ---
 
 # Publish the Public API Catalog

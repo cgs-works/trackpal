@@ -33,6 +33,20 @@ related_topics:
   - tenant-admin.reminders
   - tenant-admin.subscriptions
   - tenant-admin.subscription-expirations
+tour:
+  - release_id: tenant-admin-pro-1
+    order: 6
+    target: admin.settings.timezone
+    conditional: false
+    plans:
+      - pro
+    title: Configuración Pro y preparación segura
+    content: |
+      # Configuración conecta las operaciones Pro
+
+      Configuración reúne idioma, zona horaria, Clave API pública, plataformas habilitadas, buzón central, control de acceso, perfil, contraseña y vinculación de WhatsApp. La automatización Pro usa la zona horaria del Tenant y los ajustes de recordatorios.
+
+      Este paso abre una categoría informativa segura. El recorrido nunca guarda ajustes, conecta servicios, muestra claves, cambia accesos ni abre una confirmación destructiva.
 ---
 
 # Zona horaria del Tenant
