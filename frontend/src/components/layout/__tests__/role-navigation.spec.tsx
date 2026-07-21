@@ -46,6 +46,16 @@ describe("role navigation model", () => {
     ]);
   });
 
+  it("adds Help to the shared Client desktop and mobile navigation", () => {
+    const items = getClientNavigationItems(true);
+
+    expect(items.map((item) => item.to)).toEqual([
+      "/client/dashboard",
+      "/client/profile",
+      "/client/help",
+    ]);
+  });
+
   it("marks the matching route active while preserving nested admin routes", () => {
     const items = createSidebarItems(
       getAdminNavigationItems(true),

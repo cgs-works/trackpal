@@ -348,7 +348,7 @@ async def test_help_search_uses_locale_synonyms_and_returns_no_results(
     assert empty.json()["results"] == []
 
 
-async def test_help_denies_unauthenticated_clients_and_master_support_context(
+async def test_help_isolates_clients_and_denies_unauthenticated_and_master_context(
     client, active_client_user, master_user, active_tenant_user, db_session
 ):
     unauthenticated = await client.get("/api/v1/help")
@@ -362,19 +362,44 @@ async def test_help_denies_unauthenticated_clients_and_master_support_context(
         "/api/v1/help/search", params={"q": "dashboard"}, headers=client_headers
     )
     client_response = await client.get(
+        "/api/v1/help/topics/client.dashboard", headers=client_headers
+    )
+    tenant_admin_response = await client.get(
         "/api/v1/help/topics/tenant-admin.dashboard", headers=client_headers
     )
     assert client_index.status_code == 200
-    assert client_index.json()["topics"] == []
+    assert [topic["id"] for topic in client_index.json()["topics"]] == [
+        "client.dashboard",
+        "client.profile",
+        "client.subscriptions",
+        "client.password",
+        "client.whatsapp",
+    ]
     assert client_search.status_code == 200
-    assert client_search.json()["results"] == []
-    assert client_response.status_code == 404
+    assert [result["id"] for result in client_search.json()["results"]] == [
+        "client.dashboard",
+        "client.subscriptions",
+    ]
+    assert client_response.status_code == 200
+    assert client_response.json()["title"] == "Dashboard de cliente"
+    assert tenant_admin_response.status_code == 404
 
     tenant = (
         await db_session.execute(
             select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
         )
     ).scalar_one()
+    tenant.plan = "starter"
+    await db_session.commit()
+
+    starter_help = await client.get("/api/v1/help", headers=client_headers)
+    starter_login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": active_client_user.username, "password": "client-password"},
+    )
+    assert starter_help.status_code == 404
+    assert starter_login.status_code == 401
+
     support_token = create_access_token(
         subject=str(master_user.id),
         role="master",

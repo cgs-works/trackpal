@@ -14,6 +14,10 @@ export const HELP_TARGETS = {
   accessControl: "admin.settings.access-control",
   profile: "admin.settings.profile",
   password: "admin.settings.password",
+  clientDashboard: "client.dashboard",
+  clientProfile: "client.profile",
+  clientSubscriptions: "client.subscriptions",
+  clientPassword: "client.password",
 } as const;
 
 export type HelpTargetId = (typeof HELP_TARGETS)[keyof typeof HELP_TARGETS];

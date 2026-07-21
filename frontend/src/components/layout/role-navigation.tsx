@@ -19,7 +19,10 @@ export type AdminNavigationPath =
   | "/admin/settings"
   | "/admin/help";
 
-export type ClientNavigationPath = "/client/dashboard" | "/client/profile";
+export type ClientNavigationPath =
+  | "/client/dashboard"
+  | "/client/profile"
+  | "/client/help";
 
 type NavigationItem<Path extends string> = {
   to: Path;
@@ -84,8 +87,8 @@ export function getAdminNavigationItems(
   return items.filter((item) => showProNav || !item.proOnly);
 }
 
-export function getClientNavigationItems(): ClientNavigationItem[] {
-  const items = [
+export function getClientNavigationItems(showHelp = false): ClientNavigationItem[] {
+  const items: ClientNavigationItem[] = [
     {
       to: "/client/dashboard",
       label: t("frontend.dashboard.client.title"),
@@ -98,7 +101,16 @@ export function getClientNavigationItems(): ClientNavigationItem[] {
       icon: User,
       activeMatch: "exact",
     },
-  ] satisfies ClientNavigationItem[];
+  ];
+
+  if (showHelp) {
+    items.push({
+      to: "/client/help",
+      label: t("frontend.help.title"),
+      icon: HelpCircle,
+      activeMatch: "prefix",
+    });
+  }
 
   return items;
 }

@@ -28,6 +28,13 @@ describe("findActiveHelpTarget", () => {
     expect(findActiveHelpTarget(root)).toBe("admin.subscriptions");
   });
 
+  it("keeps Client targets separate from Tenant Admin targets", () => {
+    expect(HELP_TARGETS.clientDashboard).toBe("client.dashboard");
+    expect(HELP_TARGETS.clientProfile).toBe("client.profile");
+    expect(HELP_TARGETS.clientSubscriptions).toBe("client.subscriptions");
+    expect(HELP_TARGETS.clientPassword).toBe("client.password");
+  });
+
   it("ignores hidden targets", () => {
     const root = document.createElement("main");
     root.innerHTML = `

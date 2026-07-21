@@ -59,6 +59,52 @@ describe("ContextualHelpSheet", () => {
     vi.mocked(getHelpTopic).mockResolvedValue(topic);
   });
 
+  it("opens only the Client topic for a Client target", async () => {
+    vi.mocked(getHelpIndex).mockResolvedValue({
+      schema_version: 1,
+      content_version: "help-client-manual-1",
+      frontend_target_contract_version: "2",
+      locale: "en",
+      topics: [
+        {
+          id: "client.profile",
+          title: "Client Profile",
+          summary: "Client profile guidance",
+          module: "profile",
+          route: "/client/profile",
+          order: 20,
+          help_targets: ["client.profile"],
+          safe_navigation: { route: "/client/profile", settings_category: null },
+        },
+      ],
+    });
+    vi.mocked(getHelpTopic).mockResolvedValue({
+      id: "client.profile",
+      title: "Client Profile",
+      summary: "Client profile guidance",
+      module: "profile",
+      route: "/client/profile",
+      order: 20,
+      help_targets: ["client.profile"],
+      safe_navigation: { route: "/client/profile", settings_category: null },
+      body: "# Client Profile\n\nClient-only guidance.",
+    });
+
+    render(
+      <>
+        <section data-help-id="client.profile">
+          <p>Client profile</p>
+        </section>
+        <ContextualHelpSheet audience="client" />
+      </>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "frontend.help.about_screen" }));
+    await waitFor(() => expect(screen.getByText("Client-only guidance.")).toBeInTheDocument());
+    expect(getHelpTopic).toHaveBeenCalledWith("client.profile");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/client/profile");
+  });
+
   it("opens the exact authorized topic without losing local form state", async () => {
     const user = userEvent.setup();
     render(

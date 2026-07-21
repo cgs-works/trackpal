@@ -9,13 +9,34 @@ export type SafeHelpDestination =
   | { to: "/admin/clients" }
   | { to: "/admin/catalog" }
   | { to: "/admin/subscriptions" }
-  | { to: "/admin/settings"; search?: { category?: SettingsCategoryId } };
+  | { to: "/admin/settings"; search?: { category?: SettingsCategoryId } }
+  | { to: "/client/dashboard" }
+  | { to: "/client/profile" }
+  | { to: "/client/help" };
 
 export function resolveSafeHelpNavigation(
   navigation: HelpSafeNavigation,
+  audience: "tenant" | "client" = "tenant",
 ): SafeHelpDestination | null {
+  const isClientRoute = navigation.route.startsWith("/client/");
+  if ((audience === "client" && !isClientRoute) || (audience === "tenant" && isClientRoute)) {
+    return null;
+  }
+
   if (navigation.route === "/admin/dashboard" && navigation.settings_category === null) {
     return { to: "/admin/dashboard" };
+  }
+
+  if (navigation.route === "/client/dashboard" && navigation.settings_category === null) {
+    return { to: "/client/dashboard" };
+  }
+
+  if (navigation.route === "/client/profile" && navigation.settings_category === null) {
+    return { to: "/client/profile" };
+  }
+
+  if (navigation.route === "/client/help" && navigation.settings_category === null) {
+    return { to: "/client/help" };
   }
 
   if (navigation.settings_category === null) {

@@ -25,7 +25,7 @@ React Help client
         └── React Joyride Orientation Tour
 ```
 
-The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact now covers the common Tenant Admin topics plus the Pro Clients, Catalog, Client Subscriptions, reminder settings, timezone, Public API Catalog, first-Pro-Client, and subscription-expiration guide topics. The Public API topic links only to the safe Settings category and the Catalog; its Settings panel provides a localized, copyable developer handoff containing placeholder keys and all supported browser examples, never the Tenant's real key. The Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
+The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact covers the common Tenant Admin topics, Pro Tenant Admin guides, and the separate Pro Client topics for Dashboard, read-only Profile, active Subscriptions, Web-only Password changes, and WhatsApp capabilities. The Public API topic links only to the safe Settings category and the Catalog; its Settings panel provides a localized, copyable developer handoff containing placeholder keys and all supported browser examples, never the Tenant's real key. The Help navigation and page remain behind `VITE_PRIVATE_HELP_ENABLED=false` by default until the full Help release is complete.
 
 ## Tracer implementation
 
@@ -37,7 +37,7 @@ The public Vite bundle contains the Help client and presentation components, but
 - The Pro extension includes mirrored Clients, Catalog, Client Subscriptions, reminder settings, timezone, first-Pro-Client, and subscription-expiration cross-module topics. Starter filtering is enforced before topic retrieval and search matching, so these topics do not appear in Starter Help.
 - Dashboard, Pro modules, and Settings use semantic targets such as `data-help-id="admin.dashboard"`, `data-help-id="admin.clients"`, `data-help-id="admin.catalog"`, `data-help-id="admin.subscriptions"`, `data-help-id="admin.settings.reminders"`, `data-help-id="admin.settings.timezone"`, and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
 - The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links. Pro topics may expose multiple safe module links, while access-code workflow topics link safely to Settings categories; none executes connection, disconnection, blocking, unblocking, lookup, or mutation actions.
-- The shared Tenant Admin layout provides contextual Help in a responsive Sheet. It resolves the most specific current target, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved.
+- The shared Tenant Admin and Client layouts provide contextual Help in a responsive Sheet. Each role resolves only its own stable target contract, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved. Client sessions have no Orientation Tour.
 
 ## Canonical Markdown Source
 
@@ -83,7 +83,7 @@ The artifact is built once per application release. Runtime users never modify i
 The Help API applies the same authenticated identity and active Tenant context used by the product.
 
 - **Tenant Admin**: receives Tenant Admin topics filtered to the Tenant's current plan and locale.
-- **Client**: receives Client topics for the associated Pro Tenant and locale.
+- **Client**: receives only Client topics for the associated Pro Tenant and locale. Starter-associated Clients cannot authenticate, and a Client session never receives Tenant Admin topics or administrative routes.
 - **Master and Master Support Context**: receive no Tenant Admin or Client Help surface.
 - **Unauthenticated user**: receives no manual index, content, search data, or tour definition.
 

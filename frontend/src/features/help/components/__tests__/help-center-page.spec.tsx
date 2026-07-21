@@ -59,6 +59,50 @@ describe("HelpCenterPage", () => {
     });
   });
 
+  it("renders the authorized Client manual without Tenant Admin destinations", async () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      role: "client",
+    });
+    vi.mocked(getHelpIndex).mockResolvedValue({
+      schema_version: 1,
+      content_version: "help-client-manual-1",
+      frontend_target_contract_version: "2",
+      locale: "en",
+      topics: [
+        {
+          id: "client.dashboard",
+          title: "Client Dashboard",
+          summary: "Client overview",
+          module: "dashboard",
+          route: "/client/dashboard",
+          order: 10,
+          help_targets: ["client.dashboard"],
+          safe_navigation: { route: "/client/dashboard", settings_category: null },
+        },
+      ],
+    });
+    vi.mocked(getHelpTopic).mockResolvedValue({
+      id: "client.dashboard",
+      title: "Client Dashboard",
+      summary: "Client overview",
+      module: "dashboard",
+      route: "/client/dashboard",
+      order: 10,
+      help_targets: ["client.dashboard"],
+      safe_navigation: { route: "/client/dashboard", settings_category: null },
+      body: "# Client Dashboard\n\nClient-only content.",
+    });
+
+    render(<HelpCenterPage audience="client" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Client Dashboard" })).toBeInTheDocument();
+    });
+    expect(screen.getByText("Client-only content.")).toBeInTheDocument();
+    expect(screen.queryByText("Tenant Admin")).not.toBeInTheDocument();
+  });
+
   it("renders topic navigation and the authenticated article", async () => {
     render(<HelpCenterPage />);
 

@@ -32,8 +32,8 @@ describe("resolveSafeHelpNavigation", () => {
       resolveSafeHelpNavigation({
         route: "/admin/clients",
         settings_category: null,
-      }),
-    ).toEqual({ to: "/admin/clients" });
+      }, "client"),
+    ).toBeNull();
     expect(
       resolveSafeHelpNavigation({
         route: "/admin/catalog",
@@ -46,6 +46,33 @@ describe("resolveSafeHelpNavigation", () => {
         settings_category: null,
       }),
     ).toEqual({ to: "/admin/subscriptions" });
+  });
+
+  it("allows only Client destinations for Client topics", () => {
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/client/dashboard",
+        settings_category: null,
+      }, "client"),
+    ).toEqual({ to: "/client/dashboard" });
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/client/profile",
+        settings_category: null,
+      }, "client"),
+    ).toEqual({ to: "/client/profile" });
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/client/help",
+        settings_category: null,
+      }, "client"),
+    ).toEqual({ to: "/client/help" });
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/clients",
+        settings_category: null,
+      }),
+    ).toEqual({ to: "/admin/clients" });
   });
 
   it("rejects routes outside the navigation allowlist", () => {

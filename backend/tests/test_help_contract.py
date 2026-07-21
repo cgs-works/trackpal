@@ -14,7 +14,7 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
     assert artifact["schema_version"] == 1
-    assert artifact["content_version"] == "help-public-api-handoff-1"
+    assert artifact["content_version"] == "help-client-manual-1"
     assert artifact["frontend_target_contract_version"] == "2"
     assert set(artifact["locales"]) == {"en", "es"}
     expected_ids = [
@@ -35,6 +35,11 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "tenant-admin.subscription-expirations",
         "tenant-admin.subscriptions",
         "tenant-admin.timezone",
+        "client.dashboard",
+        "client.password",
+        "client.profile",
+        "client.subscriptions",
+        "client.whatsapp",
     ]
     assert [topic["id"] for topic in artifact["topics"]["en"]] == sorted(expected_ids)
     assert [topic["id"] for topic in artifact["topics"]["es"]] == sorted(expected_ids)
@@ -49,7 +54,12 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     assert "mailbox" in english_search["terms"]
     assert "home" in english_search["terms"]
     assert "central lookup mailbox" in english_search["terms"][-1]
-    assert artifact["topics"]["en"][1]["safe_navigation"] == {
+    code_services = next(
+        topic
+        for topic in artifact["topics"]["en"]
+        if topic["id"] == "tenant-admin.code-services"
+    )
+    assert code_services["safe_navigation"] == {
         "route": "/admin/settings",
         "settings_category": "code-services",
     }
@@ -61,6 +71,40 @@ def test_pro_topics_cover_client_catalog_and_first_client_contracts() -> None:
 
     assert topics["tenant-admin.clients"]["plans"] == ["pro"]
     assert topics["tenant-admin.clients"]["help_targets"] == ["admin.clients"]
+
+    client_topics = {
+        topic["id"]: topic
+        for topic in artifact["topics"]["en"]
+        if topic["audience"] == "client"
+    }
+    assert list(client_topics) == [
+        "client.dashboard",
+        "client.password",
+        "client.profile",
+        "client.subscriptions",
+        "client.whatsapp",
+    ]
+    assert all(topic["plans"] == ["pro"] for topic in client_topics.values())
+    assert client_topics["client.password"]["channels"] == ["web"]
+    assert client_topics["client.password"]["safe_navigation"] == {
+        "route": "/client/profile",
+        "settings_category": None,
+    }
+    assert client_topics["client.subscriptions"]["help_targets"] == [
+        "client.subscriptions"
+    ]
+    assert client_topics["client.whatsapp"]["help_targets"] == []
+
+    for topic_id, phrases in {
+        "client.dashboard": ("provider", "read-only", "WhatsApp"),
+        "client.profile": ("read-only", "provider", "WhatsApp"),
+        "client.subscriptions": ("active", "service", "expiration", "password"),
+        "client.password": ("Web only", "current password", "WhatsApp"),
+        "client.whatsapp": ("profile", "subscriptions", "access code", "exit"),
+    }.items():
+        body = client_topics[topic_id]["body"].lower()
+        assert all(phrase.lower() in body for phrase in phrases)
+
     assert topics["tenant-admin.clients"]["safe_navigation"] == {
         "route": "/admin/clients",
         "settings_category": None,

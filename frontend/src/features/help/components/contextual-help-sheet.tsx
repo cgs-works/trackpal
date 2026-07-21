@@ -22,7 +22,13 @@ import {
 import { SafeMarkdown } from "./safe-markdown";
 import { SafeNavigationLink } from "./help-center-page";
 
-export function ContextualHelpSheet() {
+type HelpAudience = "tenant" | "client";
+
+export function ContextualHelpSheet({
+  audience = "tenant",
+}: {
+  audience?: HelpAudience;
+}) {
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState<HelpTopic | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,7 +116,10 @@ export function ContextualHelpSheet() {
             {!loading && !error && topic && (
               <div className="flex flex-col gap-6">
                 <SafeMarkdown source={topic.body} />
-                <SafeNavigationLink topic={topic} />
+                <SafeNavigationLink
+                  topic={topic}
+                  audience={audience}
+                />
               </div>
             )}
           </div>

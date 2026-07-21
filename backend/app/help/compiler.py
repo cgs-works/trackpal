@@ -20,6 +20,9 @@ ALLOWED_MODULES = {
     "catalog",
     "subscriptions",
     "settings",
+    "profile",
+    "password",
+    "whatsapp",
     "help",
 }
 ALLOWED_CAPABILITIES = {
@@ -34,6 +37,11 @@ ALLOWED_CAPABILITIES = {
     "tenant_settings",
     "tenant_subscriptions",
     "tenant_whatsapp",
+    "client_dashboard",
+    "client_profile",
+    "client_subscriptions",
+    "client_password",
+    "client_whatsapp",
 }
 ALLOWED_ROUTES = {
     "/admin/dashboard",
@@ -41,6 +49,9 @@ ALLOWED_ROUTES = {
     "/admin/catalog",
     "/admin/subscriptions",
     "/admin/settings",
+    "/client/dashboard",
+    "/client/profile",
+    "/client/help",
 }
 ALLOWED_HELP_TARGETS = {
     "admin.dashboard",
@@ -58,6 +69,10 @@ ALLOWED_HELP_TARGETS = {
     "admin.settings.access-control",
     "admin.settings.profile",
     "admin.settings.password",
+    "client.dashboard",
+    "client.profile",
+    "client.subscriptions",
+    "client.password",
 }
 ALLOWED_SETTINGS_CATEGORIES = {
     "access-control",
@@ -162,7 +177,7 @@ class HelpCompiler:
         }
         return {
             "schema_version": 1,
-            "content_version": "help-public-api-handoff-1",
+            "content_version": "help-client-manual-1",
             "frontend_target_contract_version": "2",
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,
@@ -234,11 +249,32 @@ class HelpCompiler:
         route = _string(frontmatter, "route", path)
         if route not in ALLOWED_ROUTES:
             raise HelpValidationError(f"Unknown route in {path.name}: {route}")
+        audience = _string(frontmatter, "audience", path)
+        if audience == "tenant_admin" and not route.startswith("/admin/"):
+            raise HelpValidationError(
+                f"Tenant Admin topic must use an admin route in {path.name}"
+            )
+        if audience == "client" and not route.startswith("/client/"):
+            raise HelpValidationError(
+                f"Client topic must use a client route in {path.name}"
+            )
         targets = _string_list(frontmatter, "help_targets", path)
         if (module != "help" and not targets) or any(
             target not in ALLOWED_HELP_TARGETS for target in targets
         ):
             raise HelpValidationError(f"Unknown Help target in {path.name}")
+        if audience == "tenant_admin" and any(
+            target.startswith("client.") for target in targets
+        ):
+            raise HelpValidationError(
+                f"Tenant Admin topic cannot use a Client target in {path.name}"
+            )
+        if audience == "client" and any(
+            not target.startswith("client.") for target in targets
+        ):
+            raise HelpValidationError(
+                f"Client topic cannot use a Tenant Admin target in {path.name}"
+            )
         _positive_int(frontmatter, "order", path)
         _safe_navigation(frontmatter, path)
         _safe_navigation_list(frontmatter.get("safe_links", []), path)

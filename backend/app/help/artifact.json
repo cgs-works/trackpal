@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "content_version": "help-public-api-handoff-1",
+  "content_version": "help-client-manual-1",
   "frontend_target_contract_version": "2",
   "locales": [
     "en",
@@ -8,6 +8,228 @@
   ],
   "topics": {
     "en": [
+      {
+        "id": "client.dashboard",
+        "locale": "en",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "dashboard",
+        "capabilities": [
+          "client_dashboard"
+        ],
+        "route": "/client/dashboard",
+        "help_targets": [
+          "client.dashboard"
+        ],
+        "title": "Client Dashboard",
+        "summary": "See your provider, account status, and active subscription overview.",
+        "search_tags": [
+          "dashboard",
+          "home",
+          "provider",
+          "account"
+        ],
+        "synonyms": [
+          "home page",
+          "overview"
+        ],
+        "related_topics": [
+          "client.profile",
+          "client.subscriptions",
+          "client.password",
+          "client.whatsapp"
+        ],
+        "order": 10,
+        "safe_navigation": {
+          "route": "/client/dashboard",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Client Dashboard\n\nThe Client Dashboard is the read-only starting point for your TrackPal account with a Pro provider.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Sign in with the Client account created by your provider.\n- **Prerequisites:** The provider must have a Pro Tenant and your Client access must be active.\n- **Actions:** Open Dashboard to see your name, provider, account, and active subscriptions. The page does not edit Client data.\n\n## Results and states\n\nThe summary shows the provider name and the number of subscriptions available to you. The subscription list shows each service, plan, status, start date, and expiration date. An empty list means your provider has not assigned an active subscription yet.\n\nLoading means TrackPal is retrieving current data. If the page cannot load, use Retry. An inactive account or a provider that has moved to Starter cannot use the Client session; contact the provider instead of trying to create another account.\n\n## Web and WhatsApp\n\nUse the Web Dashboard for the complete read-only overview. WhatsApp has a separate Client console for profile, active subscriptions, access-code search, and exit. WhatsApp does not provide Client password changes.\n\n## Support boundary\n\nYour provider controls your Client access and subscriptions. Support can help investigate a persistent loading or sign-in error, but never send a password, access code, subscription credential, or private WhatsApp message."
+      },
+      {
+        "id": "client.password",
+        "locale": "en",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "password",
+        "capabilities": [
+          "client_password"
+        ],
+        "route": "/client/profile",
+        "help_targets": [
+          "client.password"
+        ],
+        "title": "Password Change on Web",
+        "summary": "Change your Client sign-in password from the Web Profile page.",
+        "search_tags": [
+          "password",
+          "security",
+          "sign in",
+          "credentials"
+        ],
+        "synonyms": [
+          "change login",
+          "reset password"
+        ],
+        "related_topics": [
+          "client.profile",
+          "client.whatsapp"
+        ],
+        "order": 40,
+        "safe_navigation": {
+          "route": "/client/profile",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Password Change on Web\n\nClient password changes are available only on the Web Profile page.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web only. The WhatsApp Client console never changes a password.\n- **Prerequisites:** Sign in to an active Pro Client account, open Profile, and know the current password. The new password must be at least eight characters and the confirmation must match.\n- **Actions:** Enter the current password, enter and confirm the new password, then choose Update Password. TrackPal validates the fields before applying the change.\n\n## Results and recovery\n\nA successful update confirms that the password changed and clears the form. Missing fields, a short password, mismatched confirmation, or an incorrect current password leave the existing password unchanged. If the request fails, use Retry after checking the visible error. Do not try to change the password through WhatsApp.\n\n## Consequences and security\n\nThe change affects your Client Web sign-in account. It does not edit your profile, subscriptions, provider data, WhatsApp session, or service credentials. Choose a unique password and do not share it with the provider or support.\n\n## Support boundary\n\nSupport can explain a visible validation error but cannot view, reset, or accept your password. If you cannot verify the current password, contact the provider through their supported channel."
+      },
+      {
+        "id": "client.profile",
+        "locale": "en",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "profile",
+        "capabilities": [
+          "client_profile"
+        ],
+        "route": "/client/profile",
+        "help_targets": [
+          "client.profile"
+        ],
+        "title": "Client Profile",
+        "summary": "Review the profile and provider information associated with your Client account.",
+        "search_tags": [
+          "profile",
+          "name",
+          "username",
+          "phone",
+          "provider"
+        ],
+        "synonyms": [
+          "account details",
+          "personal information"
+        ],
+        "related_topics": [
+          "client.dashboard",
+          "client.password",
+          "client.whatsapp"
+        ],
+        "order": 20,
+        "safe_navigation": {
+          "route": "/client/profile",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Client Profile\n\nProfile is a read-only view of the information associated with your Client account.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Open Profile from the Client navigation after signing in.\n- **Prerequisites:** Your Client account must be active under a Pro Tenant.\n- **Actions:** Review your full name, username, phone when available, provider, and active status. You cannot edit these fields from the Client profile.\n\n## Results and states\n\nA blank phone or provider value means that information is not configured or is unavailable. An active status means the account can use the Client surfaces. If the profile request fails, use Retry; do not refresh by repeatedly submitting any form because Profile has no save action.\n\n## Web and WhatsApp\n\nThe Web Profile page is the authoritative read-only view. WhatsApp can show a Client profile summary during a Client console session, but WhatsApp cannot edit profile fields. Ask the provider to correct a name, phone, or access status.\n\n## Support boundary\n\nOnly the provider can update Client identity and access data. Do not share your password or private account details in a support request."
+      },
+      {
+        "id": "client.subscriptions",
+        "locale": "en",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "subscriptions",
+        "capabilities": [
+          "client_subscriptions"
+        ],
+        "route": "/client/dashboard",
+        "help_targets": [
+          "client.subscriptions"
+        ],
+        "title": "Active Subscriptions",
+        "summary": "Understand the active service subscriptions assigned to your Client account.",
+        "search_tags": [
+          "subscriptions",
+          "service",
+          "plan",
+          "expiration",
+          "status"
+        ],
+        "synonyms": [
+          "memberships",
+          "access plans"
+        ],
+        "related_topics": [
+          "client.dashboard",
+          "client.whatsapp"
+        ],
+        "order": 30,
+        "safe_navigation": {
+          "route": "/client/dashboard",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Active Subscriptions\n\nThe Dashboard lists the active subscriptions assigned to you by your provider.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web and WhatsApp. Your provider must assign a subscription to your active Client account.\n- **Prerequisites:** Sign in on Web, or enter the Client WhatsApp console when your provider has made it available.\n- **Actions:** On Web, read the service, plan, status, start date, and expiration date. On WhatsApp, choose the active-subscriptions option shown by the console. Clients cannot create, renew, cancel, or reveal subscription credentials.\n\n## Results and states\n\nActive, pending, expired, or cancelled status is shown without allowing a Client to change it. An empty list means there are no active assignments. An expiration date close to today may show a remaining-days warning; ask the provider about renewal. Loading and failed states can be retried on Web.\n\n## Web-only and WhatsApp boundaries\n\nThe Web Dashboard is the complete source for dates and provider information. WhatsApp is a convenient summary and does not change subscription data. Password changes are Web-only and are documented in Password change on Web.\n\n## Support boundary\n\nThe provider owns subscription lifecycle decisions and any service credentials. Never send subscription credentials, access codes, or screenshots of private data to support."
+      },
+      {
+        "id": "client.whatsapp",
+        "locale": "en",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "client_whatsapp"
+        ],
+        "route": "/client/dashboard",
+        "help_targets": [],
+        "title": "Client WhatsApp Console",
+        "summary": "Use the available WhatsApp actions without confusing them with Web-only account changes.",
+        "search_tags": [
+          "WhatsApp",
+          "profile",
+          "subscriptions",
+          "access code",
+          "exit"
+        ],
+        "synonyms": [
+          "chat menu",
+          "bot menu"
+        ],
+        "related_topics": [
+          "client.dashboard",
+          "client.profile",
+          "client.subscriptions",
+          "client.password"
+        ],
+        "order": 50,
+        "safe_navigation": {
+          "route": "/client/dashboard",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Client WhatsApp Console\n\nThe Client WhatsApp console is a separate, limited channel for viewing information and requesting an access-code lookup through the provider's configured flow.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** WhatsApp. Your provider must have an active Pro setup and a WhatsApp flow that recognizes your Client account.\n- **Prerequisites:** Use the phone associated with the Client account and follow the menu sent by the bot. The provider must have the required mailbox and enabled platform configuration for access-code lookup.\n- **Actions:** View your profile, view active subscriptions, search for an access code when the option is available, and exit the console. Follow the current menu labels instead of guessing numbers.\n\n## Web-only boundary\n\nPassword changes are Web-only. Open the Web Profile page for that action. WhatsApp cannot edit your name, phone, provider, account status, subscriptions, or service credentials.\n\n## Results, navigation, and recovery\n\nA successful request returns the permitted profile, subscription, or lookup result. A missing configuration, unavailable subscription, invalid input, or timeout returns a recoverable message; follow the prompt or start a new session. Use the menu's exit option when finished. Do not send passwords, credentials, pairing codes, or arbitrary private commands to the bot.\n\n## Support boundary\n\nThe provider controls Client WhatsApp access and the mailbox lookup configuration. Share only the visible error and approximate time with support, never a password, access code, subscription credential, or private message content."
+      },
       {
         "id": "tenant-admin.access-control",
         "locale": "en",
@@ -849,6 +1071,228 @@
       }
     ],
     "es": [
+      {
+        "id": "client.dashboard",
+        "locale": "es",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "dashboard",
+        "capabilities": [
+          "client_dashboard"
+        ],
+        "route": "/client/dashboard",
+        "help_targets": [
+          "client.dashboard"
+        ],
+        "title": "Dashboard de cliente",
+        "summary": "Consulta tu proveedor, el estado de tu cuenta y el resumen de tus suscripciones activas.",
+        "search_tags": [
+          "dashboard",
+          "inicio",
+          "proveedor",
+          "cuenta"
+        ],
+        "synonyms": [
+          "página de inicio",
+          "resumen"
+        ],
+        "related_topics": [
+          "client.profile",
+          "client.subscriptions",
+          "client.password",
+          "client.whatsapp"
+        ],
+        "order": 10,
+        "safe_navigation": {
+          "route": "/client/dashboard",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Dashboard de cliente\n\nEl Dashboard de cliente es el punto de inicio de solo lectura para tu cuenta de TrackPal con un proveedor Pro.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Inicia sesión con la cuenta de Cliente creada por tu proveedor.\n- **Requisitos:** El proveedor debe tener un Tenant Pro y tu acceso de Cliente debe estar activo.\n- **Acciones:** Abre el Dashboard para consultar tu nombre, proveedor, cuenta y suscripciones activas. La página no modifica los datos del Cliente.\n\n## Resultados y estados\n\nEl resumen muestra el nombre del proveedor y el número de suscripciones disponibles. La lista muestra cada servicio, plan, estado, fecha de inicio y vencimiento. Una lista vacía significa que tu proveedor todavía no te ha asignado una suscripción activa.\n\nCargando significa que TrackPal está consultando los datos actuales. Si la página no carga, usa Reintentar. Una cuenta inactiva o un proveedor que cambió a Starter no puede usar la sesión de Cliente; contacta al proveedor en lugar de crear otra cuenta.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen completo de solo lectura. WhatsApp tiene una consola de Cliente separada para perfil, suscripciones activas, búsqueda de códigos de acceso y salida. WhatsApp no permite cambiar la contraseña del Cliente.\n\n## Límite de soporte\n\nTu proveedor controla tu acceso y tus suscripciones. Soporte puede investigar un error persistente de carga o inicio de sesión, pero nunca envíes una contraseña, código de acceso, credencial de suscripción o mensaje privado de WhatsApp."
+      },
+      {
+        "id": "client.password",
+        "locale": "es",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "password",
+        "capabilities": [
+          "client_password"
+        ],
+        "route": "/client/profile",
+        "help_targets": [
+          "client.password"
+        ],
+        "title": "Cambio de contraseña en Web",
+        "summary": "Cambia la contraseña de inicio de sesión de Cliente desde la página Perfil web.",
+        "search_tags": [
+          "contraseña",
+          "seguridad",
+          "inicio de sesión",
+          "credenciales"
+        ],
+        "synonyms": [
+          "cambiar acceso",
+          "restablecer contraseña"
+        ],
+        "related_topics": [
+          "client.profile",
+          "client.whatsapp"
+        ],
+        "order": 40,
+        "safe_navigation": {
+          "route": "/client/profile",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Cambio de contraseña en Web\n\nLos cambios de contraseña del Cliente están disponibles únicamente en la página Perfil web.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Solo Web. La consola de Cliente de WhatsApp nunca cambia una contraseña.\n- **Requisitos:** Inicia sesión con una cuenta de Cliente Pro activa, abre Perfil y conoce la contraseña actual. La nueva contraseña debe tener al menos ocho caracteres y la confirmación debe coincidir.\n- **Acciones:** Escribe la contraseña actual, escribe y confirma la nueva, y elige Actualizar contraseña. TrackPal valida los campos antes de aplicar el cambio.\n\n## Resultados y recuperación\n\nUna actualización correcta confirma el cambio y limpia el formulario. Un campo vacío, una contraseña corta, una confirmación distinta o una contraseña actual incorrecta dejan la contraseña anterior sin cambios. Si falla la solicitud, revisa el error visible y reintenta. No intentes cambiar la contraseña desde WhatsApp.\n\n## Consecuencias y seguridad\n\nEl cambio afecta tu cuenta de inicio de sesión web de Cliente. No modifica tu perfil, suscripciones, datos del proveedor, sesión de WhatsApp ni credenciales de servicios. Elige una contraseña única y no la compartas con el proveedor ni con soporte.\n\n## Límite de soporte\n\nSoporte puede explicar un error visible de validación, pero no puede ver, restablecer ni aceptar tu contraseña. Si no puedes verificar la contraseña actual, contacta al proveedor por su canal habilitado."
+      },
+      {
+        "id": "client.profile",
+        "locale": "es",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "profile",
+        "capabilities": [
+          "client_profile"
+        ],
+        "route": "/client/profile",
+        "help_targets": [
+          "client.profile"
+        ],
+        "title": "Perfil del cliente",
+        "summary": "Consulta la información de perfil y del proveedor asociada a tu cuenta de Cliente.",
+        "search_tags": [
+          "perfil",
+          "nombre",
+          "usuario",
+          "teléfono",
+          "proveedor"
+        ],
+        "synonyms": [
+          "datos de cuenta",
+          "información personal"
+        ],
+        "related_topics": [
+          "client.dashboard",
+          "client.password",
+          "client.whatsapp"
+        ],
+        "order": 20,
+        "safe_navigation": {
+          "route": "/client/profile",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Perfil del cliente\n\nPerfil es una vista de solo lectura de la información asociada a tu cuenta de Cliente.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Abre Perfil desde la navegación de Cliente después de iniciar sesión.\n- **Requisitos:** Tu cuenta de Cliente debe estar activa en un Tenant Pro.\n- **Acciones:** Consulta tu nombre completo, usuario, teléfono cuando esté disponible, proveedor y estado. No puedes editar estos campos desde el perfil de Cliente.\n\n## Resultados y estados\n\nUn teléfono o proveedor vacío significa que esa información no está configurada o no está disponible. El estado activo indica que la cuenta puede usar las superficies de Cliente. Si falla la carga del perfil, usa Reintentar; no envíes formularios repetidamente porque Perfil no tiene una acción de guardado.\n\n## Web y WhatsApp\n\nLa página Perfil web es la vista de solo lectura principal. WhatsApp puede mostrar un resumen del perfil durante una sesión de Cliente, pero WhatsApp no puede editar los campos. Pide al proveedor que corrija un nombre, teléfono o estado de acceso.\n\n## Límite de soporte\n\nSolo el proveedor puede actualizar la identidad y el acceso del Cliente. No compartas tu contraseña ni datos privados de tu cuenta en una solicitud de soporte."
+      },
+      {
+        "id": "client.subscriptions",
+        "locale": "es",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web",
+          "whatsapp"
+        ],
+        "module": "subscriptions",
+        "capabilities": [
+          "client_subscriptions"
+        ],
+        "route": "/client/dashboard",
+        "help_targets": [
+          "client.subscriptions"
+        ],
+        "title": "Suscripciones activas",
+        "summary": "Comprende las suscripciones de servicios asignadas a tu cuenta de Cliente.",
+        "search_tags": [
+          "suscripciones",
+          "servicio",
+          "plan",
+          "vencimiento",
+          "estado"
+        ],
+        "synonyms": [
+          "membresías",
+          "planes de acceso"
+        ],
+        "related_topics": [
+          "client.dashboard",
+          "client.whatsapp"
+        ],
+        "order": 30,
+        "safe_navigation": {
+          "route": "/client/dashboard",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Suscripciones activas\n\nEl Dashboard muestra las suscripciones activas que tu proveedor te ha asignado.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web y WhatsApp. Tu proveedor debe asignar una suscripción a tu cuenta de Cliente activa.\n- **Requisitos:** Inicia sesión en Web o entra en la consola de Cliente de WhatsApp cuando tu proveedor la haya habilitado.\n- **Acciones:** En Web, consulta el servicio, plan, estado, fecha de inicio y vencimiento. En WhatsApp, elige la opción de suscripciones activas que muestre la consola. Los Clientes no pueden crear, renovar, cancelar ni revelar credenciales de suscripción.\n\n## Resultados y estados\n\nEl estado activo, pendiente, vencido o cancelado se muestra sin permitir que el Cliente lo cambie. Una lista vacía significa que no hay asignaciones activas. Si el vencimiento se acerca, puede aparecer una advertencia de días restantes; consulta al proveedor sobre la renovación. Los estados de carga y error pueden reintentarse en Web.\n\n## Límites de Web y WhatsApp\n\nEl Dashboard web es la fuente completa para las fechas y la información del proveedor. WhatsApp ofrece un resumen y no modifica las suscripciones. Los cambios de contraseña son exclusivos de Web y se explican en Cambio de contraseña en Web.\n\n## Límite de soporte\n\nEl proveedor decide el ciclo de vida de las suscripciones y controla las credenciales de los servicios. Nunca envíes credenciales, códigos de acceso ni capturas de datos privados a soporte."
+      },
+      {
+        "id": "client.whatsapp",
+        "locale": "es",
+        "audience": "client",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "whatsapp"
+        ],
+        "module": "help",
+        "capabilities": [
+          "client_whatsapp"
+        ],
+        "route": "/client/dashboard",
+        "help_targets": [],
+        "title": "Consola de Cliente en WhatsApp",
+        "summary": "Usa las acciones disponibles de WhatsApp sin confundirlas con los cambios de cuenta exclusivos de Web.",
+        "search_tags": [
+          "WhatsApp",
+          "perfil",
+          "suscripciones",
+          "código de acceso",
+          "salir"
+        ],
+        "synonyms": [
+          "menú de chat",
+          "menú del bot"
+        ],
+        "related_topics": [
+          "client.dashboard",
+          "client.profile",
+          "client.subscriptions",
+          "client.password"
+        ],
+        "order": 50,
+        "safe_navigation": {
+          "route": "/client/dashboard",
+          "settings_category": null
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Consola de Cliente en WhatsApp\n\nLa consola de Cliente en WhatsApp es un canal separado y limitado para consultar información y solicitar una búsqueda de código de acceso mediante el flujo configurado por el proveedor.\n\n## Canal, requisitos y acciones\n\n- **Canal:** WhatsApp. Tu proveedor debe tener una configuración Pro activa y un flujo de WhatsApp que reconozca tu cuenta de Cliente.\n- **Requisitos:** Usa el teléfono asociado a la cuenta de Cliente y sigue el menú enviado por el bot. El proveedor debe tener configurados el correo central y la plataforma habilitada necesarios para buscar códigos de acceso.\n- **Acciones:** Consulta tu perfil, consulta suscripciones activas, busca un código de acceso cuando la opción esté disponible y sal de la consola. Sigue las etiquetas actuales del menú en lugar de adivinar números.\n\n## Límite exclusivo de Web\n\nLos cambios de contraseña son exclusivos de Web. Abre la página Perfil web para esa acción. WhatsApp no puede editar tu nombre, teléfono, proveedor, estado, suscripciones ni credenciales de servicios.\n\n## Resultados, navegación y recuperación\n\nUna solicitud correcta devuelve el perfil, la suscripción o el resultado de búsqueda permitido. Una configuración faltante, una suscripción no disponible, una entrada inválida o un tiempo de espera muestran un mensaje recuperable; sigue la indicación o inicia una sesión nueva. Usa la opción de salida del menú al terminar. No envíes contraseñas, credenciales, códigos de vinculación ni comandos privados arbitrarios al bot.\n\n## Límite de soporte\n\nEl proveedor controla el acceso de Cliente a WhatsApp y la configuración de búsqueda del correo. Comparte con soporte solo el error visible y la hora aproximada; nunca envíes una contraseña, código de acceso, credencial de suscripción ni contenido privado del mensaje."
+      },
       {
         "id": "tenant-admin.access-control",
         "locale": "es",
@@ -1693,6 +2137,84 @@
   "search": {
     "en": [
       {
+        "id": "client.dashboard",
+        "title": "Client Dashboard",
+        "terms": [
+          "Client Dashboard",
+          "See your provider, account status, and active subscription overview.",
+          "dashboard",
+          "home",
+          "provider",
+          "account",
+          "home page",
+          "overview",
+          "# Client Dashboard\n\nThe Client Dashboard is the read-only starting point for your TrackPal account with a Pro provider.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Sign in with the Client account created by your provider.\n- **Prerequisites:** The provider must have a Pro Tenant and your Client access must be active.\n- **Actions:** Open Dashboard to see your name, provider, account, and active subscriptions. The page does not edit Client data.\n\n## Results and states\n\nThe summary shows the provider name and the number of subscriptions available to you. The subscription list shows each service, plan, status, start date, and expiration date. An empty list means your provider has not assigned an active subscription yet.\n\nLoading means TrackPal is retrieving current data. If the page cannot load, use Retry. An inactive account or a provider that has moved to Starter cannot use the Client session; contact the provider instead of trying to create another account.\n\n## Web and WhatsApp\n\nUse the Web Dashboard for the complete read-only overview. WhatsApp has a separate Client console for profile, active subscriptions, access-code search, and exit. WhatsApp does not provide Client password changes.\n\n## Support boundary\n\nYour provider controls your Client access and subscriptions. Support can help investigate a persistent loading or sign-in error, but never send a password, access code, subscription credential, or private WhatsApp message."
+        ]
+      },
+      {
+        "id": "client.password",
+        "title": "Password Change on Web",
+        "terms": [
+          "Password Change on Web",
+          "Change your Client sign-in password from the Web Profile page.",
+          "password",
+          "security",
+          "sign in",
+          "credentials",
+          "change login",
+          "reset password",
+          "# Password Change on Web\n\nClient password changes are available only on the Web Profile page.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web only. The WhatsApp Client console never changes a password.\n- **Prerequisites:** Sign in to an active Pro Client account, open Profile, and know the current password. The new password must be at least eight characters and the confirmation must match.\n- **Actions:** Enter the current password, enter and confirm the new password, then choose Update Password. TrackPal validates the fields before applying the change.\n\n## Results and recovery\n\nA successful update confirms that the password changed and clears the form. Missing fields, a short password, mismatched confirmation, or an incorrect current password leave the existing password unchanged. If the request fails, use Retry after checking the visible error. Do not try to change the password through WhatsApp.\n\n## Consequences and security\n\nThe change affects your Client Web sign-in account. It does not edit your profile, subscriptions, provider data, WhatsApp session, or service credentials. Choose a unique password and do not share it with the provider or support.\n\n## Support boundary\n\nSupport can explain a visible validation error but cannot view, reset, or accept your password. If you cannot verify the current password, contact the provider through their supported channel."
+        ]
+      },
+      {
+        "id": "client.profile",
+        "title": "Client Profile",
+        "terms": [
+          "Client Profile",
+          "Review the profile and provider information associated with your Client account.",
+          "profile",
+          "name",
+          "username",
+          "phone",
+          "provider",
+          "account details",
+          "personal information",
+          "# Client Profile\n\nProfile is a read-only view of the information associated with your Client account.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** Web. Open Profile from the Client navigation after signing in.\n- **Prerequisites:** Your Client account must be active under a Pro Tenant.\n- **Actions:** Review your full name, username, phone when available, provider, and active status. You cannot edit these fields from the Client profile.\n\n## Results and states\n\nA blank phone or provider value means that information is not configured or is unavailable. An active status means the account can use the Client surfaces. If the profile request fails, use Retry; do not refresh by repeatedly submitting any form because Profile has no save action.\n\n## Web and WhatsApp\n\nThe Web Profile page is the authoritative read-only view. WhatsApp can show a Client profile summary during a Client console session, but WhatsApp cannot edit profile fields. Ask the provider to correct a name, phone, or access status.\n\n## Support boundary\n\nOnly the provider can update Client identity and access data. Do not share your password or private account details in a support request."
+        ]
+      },
+      {
+        "id": "client.subscriptions",
+        "title": "Active Subscriptions",
+        "terms": [
+          "Active Subscriptions",
+          "Understand the active service subscriptions assigned to your Client account.",
+          "subscriptions",
+          "service",
+          "plan",
+          "expiration",
+          "status",
+          "memberships",
+          "access plans",
+          "# Active Subscriptions\n\nThe Dashboard lists the active subscriptions assigned to you by your provider.\n\n## Channel, prerequisites, and actions\n\n- **Channels:** Web and WhatsApp. Your provider must assign a subscription to your active Client account.\n- **Prerequisites:** Sign in on Web, or enter the Client WhatsApp console when your provider has made it available.\n- **Actions:** On Web, read the service, plan, status, start date, and expiration date. On WhatsApp, choose the active-subscriptions option shown by the console. Clients cannot create, renew, cancel, or reveal subscription credentials.\n\n## Results and states\n\nActive, pending, expired, or cancelled status is shown without allowing a Client to change it. An empty list means there are no active assignments. An expiration date close to today may show a remaining-days warning; ask the provider about renewal. Loading and failed states can be retried on Web.\n\n## Web-only and WhatsApp boundaries\n\nThe Web Dashboard is the complete source for dates and provider information. WhatsApp is a convenient summary and does not change subscription data. Password changes are Web-only and are documented in Password change on Web.\n\n## Support boundary\n\nThe provider owns subscription lifecycle decisions and any service credentials. Never send subscription credentials, access codes, or screenshots of private data to support."
+        ]
+      },
+      {
+        "id": "client.whatsapp",
+        "title": "Client WhatsApp Console",
+        "terms": [
+          "Client WhatsApp Console",
+          "Use the available WhatsApp actions without confusing them with Web-only account changes.",
+          "WhatsApp",
+          "profile",
+          "subscriptions",
+          "access code",
+          "exit",
+          "chat menu",
+          "bot menu",
+          "# Client WhatsApp Console\n\nThe Client WhatsApp console is a separate, limited channel for viewing information and requesting an access-code lookup through the provider's configured flow.\n\n## Channel, prerequisites, and actions\n\n- **Channel:** WhatsApp. Your provider must have an active Pro setup and a WhatsApp flow that recognizes your Client account.\n- **Prerequisites:** Use the phone associated with the Client account and follow the menu sent by the bot. The provider must have the required mailbox and enabled platform configuration for access-code lookup.\n- **Actions:** View your profile, view active subscriptions, search for an access code when the option is available, and exit the console. Follow the current menu labels instead of guessing numbers.\n\n## Web-only boundary\n\nPassword changes are Web-only. Open the Web Profile page for that action. WhatsApp cannot edit your name, phone, provider, account status, subscriptions, or service credentials.\n\n## Results, navigation, and recovery\n\nA successful request returns the permitted profile, subscription, or lookup result. A missing configuration, unavailable subscription, invalid input, or timeout returns a recoverable message; follow the prompt or start a new session. Use the menu's exit option when finished. Do not send passwords, credentials, pairing codes, or arbitrary private commands to the bot.\n\n## Support boundary\n\nThe provider controls Client WhatsApp access and the mailbox lookup configuration. Share only the visible error and approximate time with support, never a password, access code, subscription credential, or private message content."
+        ]
+      },
+      {
         "id": "tenant-admin.access-control",
         "title": "WhatsApp access control",
         "terms": [
@@ -1996,6 +2518,84 @@
       }
     ],
     "es": [
+      {
+        "id": "client.dashboard",
+        "title": "Dashboard de cliente",
+        "terms": [
+          "Dashboard de cliente",
+          "Consulta tu proveedor, el estado de tu cuenta y el resumen de tus suscripciones activas.",
+          "dashboard",
+          "inicio",
+          "proveedor",
+          "cuenta",
+          "página de inicio",
+          "resumen",
+          "# Dashboard de cliente\n\nEl Dashboard de cliente es el punto de inicio de solo lectura para tu cuenta de TrackPal con un proveedor Pro.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Inicia sesión con la cuenta de Cliente creada por tu proveedor.\n- **Requisitos:** El proveedor debe tener un Tenant Pro y tu acceso de Cliente debe estar activo.\n- **Acciones:** Abre el Dashboard para consultar tu nombre, proveedor, cuenta y suscripciones activas. La página no modifica los datos del Cliente.\n\n## Resultados y estados\n\nEl resumen muestra el nombre del proveedor y el número de suscripciones disponibles. La lista muestra cada servicio, plan, estado, fecha de inicio y vencimiento. Una lista vacía significa que tu proveedor todavía no te ha asignado una suscripción activa.\n\nCargando significa que TrackPal está consultando los datos actuales. Si la página no carga, usa Reintentar. Una cuenta inactiva o un proveedor que cambió a Starter no puede usar la sesión de Cliente; contacta al proveedor en lugar de crear otra cuenta.\n\n## Web y WhatsApp\n\nUsa el Dashboard web para consultar el resumen completo de solo lectura. WhatsApp tiene una consola de Cliente separada para perfil, suscripciones activas, búsqueda de códigos de acceso y salida. WhatsApp no permite cambiar la contraseña del Cliente.\n\n## Límite de soporte\n\nTu proveedor controla tu acceso y tus suscripciones. Soporte puede investigar un error persistente de carga o inicio de sesión, pero nunca envíes una contraseña, código de acceso, credencial de suscripción o mensaje privado de WhatsApp."
+        ]
+      },
+      {
+        "id": "client.password",
+        "title": "Cambio de contraseña en Web",
+        "terms": [
+          "Cambio de contraseña en Web",
+          "Cambia la contraseña de inicio de sesión de Cliente desde la página Perfil web.",
+          "contraseña",
+          "seguridad",
+          "inicio de sesión",
+          "credenciales",
+          "cambiar acceso",
+          "restablecer contraseña",
+          "# Cambio de contraseña en Web\n\nLos cambios de contraseña del Cliente están disponibles únicamente en la página Perfil web.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Solo Web. La consola de Cliente de WhatsApp nunca cambia una contraseña.\n- **Requisitos:** Inicia sesión con una cuenta de Cliente Pro activa, abre Perfil y conoce la contraseña actual. La nueva contraseña debe tener al menos ocho caracteres y la confirmación debe coincidir.\n- **Acciones:** Escribe la contraseña actual, escribe y confirma la nueva, y elige Actualizar contraseña. TrackPal valida los campos antes de aplicar el cambio.\n\n## Resultados y recuperación\n\nUna actualización correcta confirma el cambio y limpia el formulario. Un campo vacío, una contraseña corta, una confirmación distinta o una contraseña actual incorrecta dejan la contraseña anterior sin cambios. Si falla la solicitud, revisa el error visible y reintenta. No intentes cambiar la contraseña desde WhatsApp.\n\n## Consecuencias y seguridad\n\nEl cambio afecta tu cuenta de inicio de sesión web de Cliente. No modifica tu perfil, suscripciones, datos del proveedor, sesión de WhatsApp ni credenciales de servicios. Elige una contraseña única y no la compartas con el proveedor ni con soporte.\n\n## Límite de soporte\n\nSoporte puede explicar un error visible de validación, pero no puede ver, restablecer ni aceptar tu contraseña. Si no puedes verificar la contraseña actual, contacta al proveedor por su canal habilitado."
+        ]
+      },
+      {
+        "id": "client.profile",
+        "title": "Perfil del cliente",
+        "terms": [
+          "Perfil del cliente",
+          "Consulta la información de perfil y del proveedor asociada a tu cuenta de Cliente.",
+          "perfil",
+          "nombre",
+          "usuario",
+          "teléfono",
+          "proveedor",
+          "datos de cuenta",
+          "información personal",
+          "# Perfil del cliente\n\nPerfil es una vista de solo lectura de la información asociada a tu cuenta de Cliente.\n\n## Canal, requisitos y acciones\n\n- **Canal:** Web. Abre Perfil desde la navegación de Cliente después de iniciar sesión.\n- **Requisitos:** Tu cuenta de Cliente debe estar activa en un Tenant Pro.\n- **Acciones:** Consulta tu nombre completo, usuario, teléfono cuando esté disponible, proveedor y estado. No puedes editar estos campos desde el perfil de Cliente.\n\n## Resultados y estados\n\nUn teléfono o proveedor vacío significa que esa información no está configurada o no está disponible. El estado activo indica que la cuenta puede usar las superficies de Cliente. Si falla la carga del perfil, usa Reintentar; no envíes formularios repetidamente porque Perfil no tiene una acción de guardado.\n\n## Web y WhatsApp\n\nLa página Perfil web es la vista de solo lectura principal. WhatsApp puede mostrar un resumen del perfil durante una sesión de Cliente, pero WhatsApp no puede editar los campos. Pide al proveedor que corrija un nombre, teléfono o estado de acceso.\n\n## Límite de soporte\n\nSolo el proveedor puede actualizar la identidad y el acceso del Cliente. No compartas tu contraseña ni datos privados de tu cuenta en una solicitud de soporte."
+        ]
+      },
+      {
+        "id": "client.subscriptions",
+        "title": "Suscripciones activas",
+        "terms": [
+          "Suscripciones activas",
+          "Comprende las suscripciones de servicios asignadas a tu cuenta de Cliente.",
+          "suscripciones",
+          "servicio",
+          "plan",
+          "vencimiento",
+          "estado",
+          "membresías",
+          "planes de acceso",
+          "# Suscripciones activas\n\nEl Dashboard muestra las suscripciones activas que tu proveedor te ha asignado.\n\n## Canal, requisitos y acciones\n\n- **Canales:** Web y WhatsApp. Tu proveedor debe asignar una suscripción a tu cuenta de Cliente activa.\n- **Requisitos:** Inicia sesión en Web o entra en la consola de Cliente de WhatsApp cuando tu proveedor la haya habilitado.\n- **Acciones:** En Web, consulta el servicio, plan, estado, fecha de inicio y vencimiento. En WhatsApp, elige la opción de suscripciones activas que muestre la consola. Los Clientes no pueden crear, renovar, cancelar ni revelar credenciales de suscripción.\n\n## Resultados y estados\n\nEl estado activo, pendiente, vencido o cancelado se muestra sin permitir que el Cliente lo cambie. Una lista vacía significa que no hay asignaciones activas. Si el vencimiento se acerca, puede aparecer una advertencia de días restantes; consulta al proveedor sobre la renovación. Los estados de carga y error pueden reintentarse en Web.\n\n## Límites de Web y WhatsApp\n\nEl Dashboard web es la fuente completa para las fechas y la información del proveedor. WhatsApp ofrece un resumen y no modifica las suscripciones. Los cambios de contraseña son exclusivos de Web y se explican en Cambio de contraseña en Web.\n\n## Límite de soporte\n\nEl proveedor decide el ciclo de vida de las suscripciones y controla las credenciales de los servicios. Nunca envíes credenciales, códigos de acceso ni capturas de datos privados a soporte."
+        ]
+      },
+      {
+        "id": "client.whatsapp",
+        "title": "Consola de Cliente en WhatsApp",
+        "terms": [
+          "Consola de Cliente en WhatsApp",
+          "Usa las acciones disponibles de WhatsApp sin confundirlas con los cambios de cuenta exclusivos de Web.",
+          "WhatsApp",
+          "perfil",
+          "suscripciones",
+          "código de acceso",
+          "salir",
+          "menú de chat",
+          "menú del bot",
+          "# Consola de Cliente en WhatsApp\n\nLa consola de Cliente en WhatsApp es un canal separado y limitado para consultar información y solicitar una búsqueda de código de acceso mediante el flujo configurado por el proveedor.\n\n## Canal, requisitos y acciones\n\n- **Canal:** WhatsApp. Tu proveedor debe tener una configuración Pro activa y un flujo de WhatsApp que reconozca tu cuenta de Cliente.\n- **Requisitos:** Usa el teléfono asociado a la cuenta de Cliente y sigue el menú enviado por el bot. El proveedor debe tener configurados el correo central y la plataforma habilitada necesarios para buscar códigos de acceso.\n- **Acciones:** Consulta tu perfil, consulta suscripciones activas, busca un código de acceso cuando la opción esté disponible y sal de la consola. Sigue las etiquetas actuales del menú en lugar de adivinar números.\n\n## Límite exclusivo de Web\n\nLos cambios de contraseña son exclusivos de Web. Abre la página Perfil web para esa acción. WhatsApp no puede editar tu nombre, teléfono, proveedor, estado, suscripciones ni credenciales de servicios.\n\n## Resultados, navegación y recuperación\n\nUna solicitud correcta devuelve el perfil, la suscripción o el resultado de búsqueda permitido. Una configuración faltante, una suscripción no disponible, una entrada inválida o un tiempo de espera muestran un mensaje recuperable; sigue la indicación o inicia una sesión nueva. Usa la opción de salida del menú al terminar. No envíes contraseñas, credenciales, códigos de vinculación ni comandos privados arbitrarios al bot.\n\n## Límite de soporte\n\nEl proveedor controla el acceso de Cliente a WhatsApp y la configuración de búsqueda del correo. Comparte con soporte solo el error visible y la hora aproximada; nunca envíes una contraseña, código de acceso, credencial de suscripción ni contenido privado del mensaje."
+        ]
+      },
       {
         "id": "tenant-admin.access-control",
         "title": "Control de acceso de WhatsApp",

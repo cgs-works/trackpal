@@ -50,6 +50,7 @@ Routes defined in `src/routes/`:
 | `admin.tsx` → `admin/help.tsx` | `/admin/help` | `HelpCenterPage` (private release-gated) | Required | `tenant` |
 | `client.tsx` → `client/dashboard.tsx` | `/client/dashboard` | `ClientDashboard` | Required | `client` |
 | `client.tsx` → `client/profile.tsx` | `/client/profile` | `ProfilePage` | Required | `client` |
+| `client.tsx` → `client/help.tsx` | `/client/help` | `HelpCenterPage` (private release-gated) | Required | `client` |
 
 Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/admin/clients`, `/admin/catalog`, `/admin/subscriptions`). Master support context bypasses this frontend gate to inspect preserved Pro data.
 
@@ -58,7 +59,7 @@ Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/
 - `__root.tsx` — Root layout: loads i18n catalog before rendering, renders `<Outlet>` + `<Toaster>` + devtools
 - `master.tsx` — Master layout with sidebar nav
 - `admin.tsx` — Tenant Admin layout with shared collapsible desktop sidebar, plan-aware role navigation, contextual Help on Dashboard, Pro modules, and Settings, and support banner for Master support context; mobile navigation opens in a Sheet
-- `client.tsx` — Client layout using the same shared role navigation and mobile Sheet
+- `client.tsx` — Client layout using the same shared role navigation and mobile Sheet; when private Help is enabled it exposes Dashboard, Profile, and Help only, plus contextual Help on Client screens
 
 
 ### Navigation Guard
@@ -226,7 +227,7 @@ Collapsible sidebar layout for tenant admin pages:
 
 ### ClientLayout (`features/client/layout/client-layout.tsx`)
 
-Client navigation uses the same role-navigation and sidebar primitives with only Dashboard and Profile. Desktop active states are exact route matches; mobile exposes both destinations through the same focus-managed `Sheet`.
+Client navigation uses the same role-navigation and sidebar primitives. When private Help is enabled it exposes only Dashboard, Profile, and Help, with Help last before account/logout. Desktop active states are exact route matches; mobile exposes the same authorized destinations through the focus-managed `Sheet`. Contextual Help is available on the Dashboard and Profile screens and never starts an Orientation Tour.
 
 
 ### MasterLayout (`features/master/layout/master-layout.tsx`)

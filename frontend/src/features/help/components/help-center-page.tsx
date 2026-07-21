@@ -30,30 +30,51 @@ import { SafeMarkdown } from "./safe-markdown";
 import { resolveSafeHelpNavigation } from "../safe-navigation";
 
 type HelpListItem = HelpTopicSummary | HelpSearchResult;
+export type HelpAudience = "tenant" | "client";
 
-const HELP_MODULE_ORDER = [
+type HelpModule =
+  | "dashboard"
+  | "clients"
+  | "catalog"
+  | "subscriptions"
+  | "settings"
+  | "profile"
+  | "password"
+  | "help";
+
+const ADMIN_HELP_MODULE_ORDER: HelpModule[] = [
   "dashboard",
   "clients",
   "catalog",
   "subscriptions",
   "settings",
   "help",
-] as const;
+];
 
-const HELP_MODULE_LABEL_KEYS: Record<
-  (typeof HELP_MODULE_ORDER)[number],
-  string
-> = {
+const CLIENT_HELP_MODULE_ORDER: HelpModule[] = [
+  "dashboard",
+  "profile",
+  "subscriptions",
+  "password",
+  "help",
+];
+
+const HELP_MODULE_LABEL_KEYS: Record<HelpModule, string> = {
   dashboard: "frontend.dashboard.tenant.title",
   clients: "frontend.clients.section_title",
   catalog: "frontend.catalog.section_title",
   subscriptions: "frontend.subscriptions.title",
   settings: "frontend.settings.section_title",
+  profile: "frontend.dashboard.client.profile",
+  password: "frontend.dashboard.client.change_password",
   help: "frontend.help.title",
 };
 
-function moduleLabel(module: string): string {
-  const key = HELP_MODULE_LABEL_KEYS[module as keyof typeof HELP_MODULE_LABEL_KEYS];
+function moduleLabel(module: string, audience: HelpAudience): string {
+  if (audience === "client" && module === "dashboard") {
+    return t("frontend.dashboard.client.title");
+  }
+  const key = HELP_MODULE_LABEL_KEYS[module as HelpModule];
   return key ? t(key) : module;
 }
 
@@ -61,10 +82,12 @@ function TopicList({
   topics,
   selectedId,
   onSelect,
+  audience,
 }: {
   topics: HelpListItem[];
   selectedId: string | null;
   onSelect: (topicId: string) => void;
+  audience: HelpAudience;
 }) {
   if (topics.length === 0) {
     return <p className="px-3 py-4 text-sm text-muted-foreground">{t("frontend.help.no_results")}</p>;
@@ -76,10 +99,12 @@ function TopicList({
     group.push(topic);
     grouped.set(topic.module, group);
   }
+  const moduleOrder =
+    audience === "client" ? CLIENT_HELP_MODULE_ORDER : ADMIN_HELP_MODULE_ORDER;
   const modules = [
-    ...HELP_MODULE_ORDER.filter((module) => grouped.has(module)),
+    ...moduleOrder.filter((module) => grouped.has(module)),
     ...Array.from(grouped.keys()).filter(
-      (module) => !HELP_MODULE_ORDER.includes(module as (typeof HELP_MODULE_ORDER)[number]),
+      (module) => !moduleOrder.includes(module as HelpModule),
     ),
   ];
 
@@ -91,7 +116,7 @@ function TopicList({
             id={`help-module-${module}`}
             className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            {moduleLabel(module)}
+            {moduleLabel(module, audience)}
           </h3>
           <div className="flex flex-col gap-1">
             {(grouped.get(module) ?? [])
@@ -120,7 +145,10 @@ function TopicList({
   );
 }
 
-function safeNavigationLabel(destination: ReturnType<typeof resolveSafeHelpNavigation>): string {
+function safeNavigationLabel(
+  destination: ReturnType<typeof resolveSafeHelpNavigation>,
+  audience: HelpAudience,
+): string {
   if (!destination) {
     return "";
   }
@@ -134,18 +162,33 @@ function safeNavigationLabel(destination: ReturnType<typeof resolveSafeHelpNavig
           ? "frontend.catalog.section_title"
           : destination.to === "/admin/subscriptions"
             ? "frontend.subscriptions.title"
-            : "frontend.settings.section_title";
-  return `${t("frontend.help.go_to_module")}: ${t(moduleKey)}`;
+            : destination.to === "/admin/settings"
+              ? "frontend.settings.section_title"
+              : destination.to === "/client/profile"
+                ? "frontend.dashboard.client.profile"
+                : destination.to === "/client/help"
+                  ? "frontend.help.title"
+                  : audience === "client"
+                    ? "frontend.dashboard.client.title"
+                    : "frontend.dashboard.tenant.title";
+  const label = t(moduleKey);
+  return `${t("frontend.help.go_to_module")}: ${label}`;
 }
 
-function SafeNavigationAnchor({ navigation }: { navigation: HelpTopic["safe_navigation"] }) {
-  const destination = resolveSafeHelpNavigation(navigation);
+function SafeNavigationAnchor({
+  navigation,
+  audience,
+}: {
+  navigation: HelpTopic["safe_navigation"];
+  audience: HelpAudience;
+}) {
+  const destination = resolveSafeHelpNavigation(navigation, audience);
   if (!destination) {
     return null;
   }
 
   const className = buttonVariants({ variant: "outline" });
-  const label = safeNavigationLabel(destination);
+  const label = safeNavigationLabel(destination, audience);
   if (destination.to === "/admin/settings") {
     return (
       <Link to={destination.to} search={destination.search} className={className}>
@@ -161,7 +204,13 @@ function SafeNavigationAnchor({ navigation }: { navigation: HelpTopic["safe_navi
   );
 }
 
-export function SafeNavigationLink({ topic }: { topic: HelpTopic }) {
+export function SafeNavigationLink({
+  topic,
+  audience = "tenant",
+}: {
+  topic: HelpTopic;
+  audience?: HelpAudience;
+}) {
   const navigations = [topic.safe_navigation, ...(topic.safe_links ?? [])];
   return (
     <div className="flex flex-wrap gap-2">
@@ -169,14 +218,20 @@ export function SafeNavigationLink({ topic }: { topic: HelpTopic }) {
         <SafeNavigationAnchor
           key={`${navigation.route}-${navigation.settings_category ?? "root"}-${index}`}
           navigation={navigation}
+          audience={audience}
         />
       ))}
     </div>
   );
 }
 
-export function HelpCenterPage() {
+export function HelpCenterPage({
+  audience = "tenant",
+}: {
+  audience?: HelpAudience;
+}) {
   const { isAuthenticated, role } = useAuthStore();
+  const expectedRole = audience === "client" ? "client" : "tenant";
   const [index, setIndex] = useState<HelpIndexResponse | null>(null);
   const [topic, setTopic] = useState<HelpTopic | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -218,10 +273,10 @@ export function HelpCenterPage() {
   }, [loadTopic]);
 
   useEffect(() => {
-    if (isPrivateHelpEnabled() && isAuthenticated && role === "tenant") {
+    if (isPrivateHelpEnabled() && isAuthenticated && role === expectedRole) {
       void loadIndex();
     }
-  }, [isAuthenticated, loadIndex, role]);
+  }, [expectedRole, isAuthenticated, loadIndex, role]);
 
   async function handleSearch(value: string) {
     const requestId = ++searchRequestId.current;
@@ -262,7 +317,7 @@ export function HelpCenterPage() {
   );
   const hasError = error || searchError;
 
-  if (!isAuthenticated || role !== "tenant") {
+  if (!isAuthenticated || role !== expectedRole) {
     return <Navigate to="/login" replace />;
   }
 
@@ -345,7 +400,7 @@ export function HelpCenterPage() {
           <Card className="sticky top-6 shadow-none">
             <CardHeader><CardTitle className="text-base">{t("frontend.help.topics")}</CardTitle></CardHeader>
             <CardContent className="p-2 pt-0">
-              {loading ? <Skeleton className="h-20 w-full" /> : <TopicList topics={topics} selectedId={topic?.id ?? null} onSelect={selectTopic} />}
+              {loading ? <Skeleton className="h-20 w-full" /> : <TopicList topics={topics} selectedId={topic?.id ?? null} onSelect={selectTopic} audience={audience} />}
             </CardContent>
           </Card>
         </aside>
@@ -355,11 +410,11 @@ export function HelpCenterPage() {
           {!loading && topic && (
             <article className="flex flex-col gap-6">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{moduleLabel(topic.module)}</Badge>
+                <Badge variant="secondary">{moduleLabel(topic.module, audience)}</Badge>
               </div>
               <SafeMarkdown source={topic.body} />
               <div>
-                <SafeNavigationLink topic={topic} />
+                <SafeNavigationLink topic={topic} audience={audience} />
               </div>
             </article>
           )}
@@ -379,7 +434,7 @@ export function HelpCenterPage() {
             <SheetTitle>{t("frontend.help.topics")}</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto px-2 pb-4">
-            <TopicList topics={topics} selectedId={topic?.id ?? null} onSelect={selectTopic} />
+            <TopicList topics={topics} selectedId={topic?.id ?? null} onSelect={selectTopic} audience={audience} />
           </div>
         </SheetContent>
       </Sheet>

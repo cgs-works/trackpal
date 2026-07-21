@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { t } from "@/i18n";
+import { HELP_TARGETS } from "@/features/help/help-targets";
 import {
   getProfile,
   changePassword,
@@ -154,7 +155,7 @@ export function ProfilePage() {
             </div>
 
             {/* Profile Information Card */}
-            <Card>
+            <Card data-help-id={HELP_TARGETS.clientProfile}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <User className="size-5 text-muted-foreground" />
@@ -224,7 +225,7 @@ export function ProfilePage() {
             </Card>
 
             {/* Password Change Card */}
-            <Card>
+            <Card data-help-id={HELP_TARGETS.clientPassword}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Shield className="size-5 text-muted-foreground" />
