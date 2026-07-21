@@ -32,7 +32,7 @@ The public Vite bundle contains the Help client and presentation components, but
 - Markdown sources live under `backend/help/{en,es}/tenant-admin/` and are compiled by `backend/scripts/compile_help.py`.
 - `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, and Spanish/English metadata drift.
 - The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
-- Authenticated Tenant Admins use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. The API returns 404 for Clients, Master users, and Master Support Context.
+- Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
 - The Dashboard target is declared as `data-help-id="admin.dashboard"`. The current tracer renders a responsive Help Center with desktop topic navigation and a mobile topic Sheet.
 
 ## Canonical Markdown Source
@@ -173,7 +173,7 @@ All Help surfaces must support:
 
 The compiler creates locale-specific full-text data from authorized topic fields and Markdown text. Search includes maintained beginner-friendly synonyms without changing canonical product labels.
 
-The backend filters the searchable corpus by role, plan, and locale before returning results. Search results contain only authorized topic IDs, titles, matched excerpts, module labels, and routes into the Help Center.
+The backend filters the searchable corpus by audience, plan, and locale before matching or constructing excerpts. Search results contain only authorized topic IDs, titles, matched excerpts, module labels, and routes into the Help Center.
 
 ## Safe Navigation
 

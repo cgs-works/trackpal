@@ -20,10 +20,18 @@ export interface HelpTopic extends HelpTopicSummary {
   body: string;
 }
 
+export interface HelpSearchResult {
+  id: string;
+  title: string;
+  module: string;
+  route: string;
+  excerpt: string;
+}
+
 export interface HelpSearchResponse {
   query: string;
   locale: string;
-  results: Array<HelpTopicSummary & { excerpt: string }>;
+  results: HelpSearchResult[];
 }
 
 export async function getHelpIndex(): Promise<HelpIndexResponse> {

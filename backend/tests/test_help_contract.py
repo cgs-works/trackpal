@@ -22,6 +22,12 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
     ]
     assert artifact["topics"]["en"][0]["body"] != artifact["topics"]["es"][0]["body"]
 
+    english_search = artifact["search"]["en"][0]
+    assert english_search["title"] in english_search["terms"]
+    assert "mailbox" in english_search["terms"]
+    assert "home" in english_search["terms"]
+    assert "central lookup mailbox" in english_search["terms"][-1]
+
 
 def test_checked_in_artifact_matches_the_compiled_sources() -> None:
     checked_in = json.loads(ARTIFACT_PATH.read_text(encoding="utf-8"))

@@ -88,7 +88,7 @@ schemas  core       models
 | `app/core/input_validation/` | Validación centralizada de campos |
 | `app/core/redis_client/` | Gestión HA de Redis con failover |
 | `app/help/` | Compiled private Help artifact and strict bilingual Markdown contract |
-| `app/api/v1/endpoints/help.py` | Authenticated, locale-aware Tenant Admin Help index, topic, and search API |
+| `app/api/v1/endpoints/help.py` | Authenticated, role/plan/locale-aware Help index, topic, and search API |
 
 
 ## Convenciones clave

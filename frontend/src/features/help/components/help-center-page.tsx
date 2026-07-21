@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "@tanstack/react-router";
-import { BookOpen, Menu, Search } from "lucide-react";
+import { BookOpen, Menu, Search, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,17 +22,20 @@ import {
   getHelpTopic,
   searchHelp,
   type HelpIndexResponse,
+  type HelpSearchResult,
   type HelpTopic,
   type HelpTopicSummary,
 } from "../services/help-api";
 import { SafeMarkdown } from "./safe-markdown";
+
+type HelpListItem = HelpTopicSummary | HelpSearchResult;
 
 function TopicList({
   topics,
   selectedId,
   onSelect,
 }: {
-  topics: HelpTopicSummary[];
+  topics: HelpListItem[];
   selectedId: string | null;
   onSelect: (topicId: string) => void;
 }) {
@@ -52,7 +55,9 @@ function TopicList({
         >
           <span className="flex flex-col items-start gap-0.5">
             <span>{topic.title}</span>
-            <span className="text-xs font-normal text-muted-foreground">{topic.summary}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {"excerpt" in topic ? topic.excerpt : topic.summary}
+            </span>
           </span>
         </Button>
       ))}
@@ -65,10 +70,12 @@ export function HelpCenterPage() {
   const [index, setIndex] = useState<HelpIndexResponse | null>(null);
   const [topic, setTopic] = useState<HelpTopic | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<HelpTopicSummary[] | null>(null);
+  const [searchResults, setSearchResults] = useState<HelpSearchResult[] | null>(null);
+  const [searchError, setSearchError] = useState(false);
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const searchRequestId = useRef(0);
 
   const loadTopic = useCallback(async (topicId: string) => {
     setError(false);
@@ -80,8 +87,12 @@ export function HelpCenterPage() {
   }, []);
 
   const loadIndex = useCallback(async () => {
+    searchRequestId.current += 1;
     setLoading(true);
     setError(false);
+    setSearchError(false);
+    setSearchQuery("");
+    setSearchResults(null);
     try {
       const nextIndex = await getHelpIndex();
       setIndex(nextIndex);
@@ -103,16 +114,30 @@ export function HelpCenterPage() {
   }, [isAuthenticated, loadIndex, role]);
 
   async function handleSearch(value: string) {
+    const requestId = ++searchRequestId.current;
     setSearchQuery(value);
+    setSearchError(false);
     if (!value.trim()) {
       setSearchResults(null);
+      setTopic(null);
+      const firstTopic = index?.topics[0];
+      if (firstTopic) {
+        await loadTopic(firstTopic.id);
+      }
       return;
     }
+
+    setTopic(null);
     try {
       const response = await searchHelp(value);
-      setSearchResults(response.results);
+      if (requestId === searchRequestId.current) {
+        setSearchResults(response.results);
+      }
     } catch {
-      setSearchResults([]);
+      if (requestId === searchRequestId.current) {
+        setSearchResults([]);
+        setSearchError(true);
+      }
     }
   }
 
@@ -121,10 +146,11 @@ export function HelpCenterPage() {
     void loadTopic(topicId);
   }
 
-  const topics = useMemo(
+  const topics = useMemo<HelpListItem[]>(
     () => searchResults ?? index?.topics ?? [],
     [index?.topics, searchResults],
   );
+  const hasError = error || searchError;
 
   if (!isAuthenticated || role !== "tenant") {
     return <Navigate to="/login" replace />;
@@ -169,17 +195,35 @@ export function HelpCenterPage() {
             onChange={(event) => void handleSearch(event.target.value)}
             placeholder={t("frontend.help.search_placeholder")}
             aria-label={t("frontend.help.search")}
-            className="h-10 pl-9"
+            className="h-10 pl-9 pr-9"
           />
+          {searchQuery && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute top-1/2 right-1 size-8 -translate-y-1/2"
+              aria-label={t("frontend.help.clear_search")}
+              onClick={() => void handleSearch("")}
+            >
+              <X aria-hidden="true" />
+            </Button>
+          )}
         </label>
       </header>
 
-      {error && (
+      {hasError && (
         <Alert variant="destructive">
           <AlertTitle>{t("frontend.help.error_title")}</AlertTitle>
           <AlertDescription className="flex items-center justify-between gap-3">
             {t("frontend.help.error_description")}
-            <Button variant="outline" size="sm" onClick={() => void loadIndex()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                void (searchError ? handleSearch(searchQuery) : loadIndex())
+              }
+            >
               {t("frontend.help.retry")}
             </Button>
           </AlertDescription>
@@ -214,7 +258,13 @@ export function HelpCenterPage() {
               </div>
             </article>
           )}
-          {!loading && !topic && !error && <p className="text-muted-foreground">{t("frontend.help.no_results")}</p>}
+          {!loading && !topic && !hasError && (
+            <p className="text-muted-foreground">
+              {searchResults && searchResults.length > 0
+                ? t("frontend.help.select_topic")
+                : t("frontend.help.no_results")}
+            </p>
+          )}
         </main>
       </div>
 

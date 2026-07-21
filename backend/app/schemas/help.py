@@ -21,7 +21,11 @@ class HelpTopicResponse(HelpTopicSummary):
     body: str
 
 
-class HelpSearchResult(HelpTopicSummary):
+class HelpSearchResult(BaseModel):
+    id: str
+    title: str
+    module: str
+    route: str
     excerpt: str
 
 

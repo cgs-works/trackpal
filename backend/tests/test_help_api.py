@@ -64,8 +64,51 @@ async def test_help_search_returns_only_authorized_private_content(
     )
 
     assert response.status_code == 200
-    assert response.json()["results"][0]["id"] == "tenant-admin.dashboard"
-    assert "buzón" in response.json()["results"][0]["excerpt"].lower()
+    result = response.json()["results"][0]
+    assert result["id"] == "tenant-admin.dashboard"
+    assert "buzón" in result["excerpt"].lower()
+    assert set(result) == {"id", "title", "module", "route", "excerpt"}
+
+
+async def test_help_search_uses_locale_synonyms_and_returns_no_results(
+    client, active_tenant_user, db_session
+):
+    headers = await _login(client, "tenant", "tenant-password")
+
+    spanish = await client.get(
+        "/api/v1/help/search", params={"q": "inicio"}, headers=headers
+    )
+    assert spanish.status_code == 200
+    assert [result["id"] for result in spanish.json()["results"]] == [
+        "tenant-admin.dashboard"
+    ]
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+        )
+    ).scalar_one()
+    settings.locale = "en"
+    await db_session.commit()
+
+    english = await client.get(
+        "/api/v1/help/search", params={"q": "overview"}, headers=headers
+    )
+    empty = await client.get(
+        "/api/v1/help/search", params={"q": "does-not-exist"}, headers=headers
+    )
+    assert english.status_code == 200
+    assert english.json()["locale"] == "en"
+    assert [result["id"] for result in english.json()["results"]] == [
+        "tenant-admin.dashboard"
+    ]
+    assert empty.status_code == 200
+    assert empty.json()["results"] == []
 
 
 async def test_help_denies_unauthenticated_clients_and_master_support_context(
@@ -77,9 +120,17 @@ async def test_help_denies_unauthenticated_clients_and_master_support_context(
     client_headers = await _login(
         client, active_client_user.username, "client-password"
     )
+    client_index = await client.get("/api/v1/help", headers=client_headers)
+    client_search = await client.get(
+        "/api/v1/help/search", params={"q": "dashboard"}, headers=client_headers
+    )
     client_response = await client.get(
         "/api/v1/help/topics/tenant-admin.dashboard", headers=client_headers
     )
+    assert client_index.status_code == 200
+    assert client_index.json()["topics"] == []
+    assert client_search.status_code == 200
+    assert client_search.json()["results"] == []
     assert client_response.status_code == 404
 
     tenant = (
@@ -96,4 +147,10 @@ async def test_help_denies_unauthenticated_clients_and_master_support_context(
         "/api/v1/help/topics/tenant-admin.dashboard",
         headers={"Authorization": f"Bearer {support_token}"},
     )
+    support_search = await client.get(
+        "/api/v1/help/search",
+        params={"q": "dashboard"},
+        headers={"Authorization": f"Bearer {support_token}"},
+    )
     assert support_response.status_code == 404
+    assert support_search.status_code == 404
