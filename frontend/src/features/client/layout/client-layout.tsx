@@ -12,7 +12,7 @@ import { ContextualHelpSheet } from "@/features/help/components/contextual-help-
 import { isPrivateHelpEnabled } from "@/features/help/config";
 
 export function ClientLayout() {
-  const { username, logout, role } = useAuthStore();
+  const { username, logout, user, role, activeTenantId } = useAuthStore();
   const location = useLocation();
   const showContextualHelp =
     role === "client" &&
@@ -23,6 +23,7 @@ export function ClientLayout() {
     getClientNavigationItems(isPrivateHelpEnabled()),
     location.pathname,
   );
+  const helpSessionKey = `${user?.id ?? "anonymous"}:${role}:${activeTenantId ?? "none"}`;
 
   function handleLogout() {
     void logout();
@@ -42,7 +43,7 @@ export function ClientLayout() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main key={helpSessionKey} className="flex-1 overflow-y-auto">
         {showContextualHelp && (
           <div className="flex justify-end border-b px-4 py-2 sm:px-6">
             <ContextualHelpSheet audience="client" />

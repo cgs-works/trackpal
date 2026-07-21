@@ -11,6 +11,8 @@ from typing import Any
 import yaml
 
 SUPPORTED_LOCALES = ("en", "es")
+ARTIFACT_SCHEMA_VERSION = 1
+FRONTEND_TARGET_CONTRACT_VERSION = "2"
 ALLOWED_AUDIENCES = {"tenant_admin", "client"}
 ALLOWED_PLANS = {"starter", "pro"}
 ALLOWED_CHANNELS = {"web", "whatsapp"}
@@ -180,9 +182,9 @@ class HelpCompiler:
             for locale, topics in topics_by_locale.items()
         }
         return {
-            "schema_version": 1,
+            "schema_version": ARTIFACT_SCHEMA_VERSION,
             "content_version": "help-client-manual-1",
-            "frontend_target_contract_version": "2",
+            "frontend_target_contract_version": FRONTEND_TARGET_CONTRACT_VERSION,
             "locales": list(SUPPORTED_LOCALES),
             "topics": topics_by_locale,
             "search": search_by_locale,
@@ -285,6 +287,20 @@ class HelpCompiler:
             raise HelpValidationError(
                 f"Client topic cannot use a Tenant Admin target in {path.name}"
             )
+        for navigation in [_safe_navigation(frontmatter, path)] + _safe_navigation_list(
+            frontmatter.get("safe_links", []), path
+        ):
+            navigation_route = navigation["route"]
+            if audience == "tenant_admin" and not navigation_route.startswith(
+                "/admin/"
+            ):
+                raise HelpValidationError(
+                    f"Tenant Admin topic cannot navigate to a Client route in {path.name}"
+                )
+            if audience == "client" and not navigation_route.startswith("/client/"):
+                raise HelpValidationError(
+                    f"Client topic cannot navigate to a Tenant Admin route in {path.name}"
+                )
         _positive_int(frontmatter, "order", path)
         _safe_navigation(frontmatter, path)
         _safe_navigation_list(frontmatter.get("safe_links", []), path)
@@ -360,6 +376,10 @@ class HelpCompiler:
                     raise HelpValidationError(
                         f"Tour release {release_id} must have 1-7 unique ordered steps"
                     )
+                if [step["order"] for step in steps] != list(range(1, len(steps) + 1)):
+                    raise HelpValidationError(
+                        f"Tour release {release_id} steps must be ordered from 1"
+                    )
                 plans = sorted({plan for step in steps for plan in step["plans"]})
                 releases_by_locale[locale].append(
                     {"release_id": release_id, "plans": plans, "steps": steps}
@@ -388,7 +408,47 @@ class HelpCompiler:
 def compile_help(source_dir: Path) -> dict[str, Any]:
     """Compile the Help source directory into a JSON-serializable artifact."""
 
-    return HelpCompiler(source_dir).compile()
+    artifact = HelpCompiler(source_dir).compile()
+    validate_artifact(artifact)
+    return artifact
+
+
+def validate_artifact(
+    artifact: dict[str, Any], *, allow_target_contract_mismatch: bool = False
+) -> None:
+    """Validate the versioned artifact contract before it can be published."""
+
+    if not isinstance(artifact, dict):
+        raise HelpValidationError("Help artifact must be a mapping")
+    if artifact.get("schema_version") != ARTIFACT_SCHEMA_VERSION:
+        raise HelpValidationError(
+            "Incompatible Help artifact schema version: "
+            f"{artifact.get('schema_version')!r}"
+        )
+    if (
+        not allow_target_contract_mismatch
+        and artifact.get("frontend_target_contract_version")
+        != FRONTEND_TARGET_CONTRACT_VERSION
+    ):
+        raise HelpValidationError(
+            "Incompatible Help frontend target contract version: "
+            f"{artifact.get('frontend_target_contract_version')!r}"
+        )
+    if not isinstance(artifact.get("frontend_target_contract_version"), str):
+        raise HelpValidationError("Help artifact target contract version is missing")
+    if set(artifact.get("locales", [])) != set(SUPPORTED_LOCALES):
+        raise HelpValidationError(
+            "Help artifact locales do not match the supported locales"
+        )
+    for key in ("content_version", "topics", "search", "tour_releases"):
+        if key not in artifact:
+            raise HelpValidationError(f"Help artifact is missing {key}")
+    for locale in SUPPORTED_LOCALES:
+        for key in ("topics", "search", "tour_releases"):
+            if locale not in artifact[key]:
+                raise HelpValidationError(
+                    f"Help artifact is missing {locale} {key} data"
+                )
 
 
 def _split_frontmatter(path: Path) -> tuple[dict[str, Any], str]:

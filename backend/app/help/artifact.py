@@ -133,9 +133,12 @@ class HelpCatalog:
 
 @lru_cache(maxsize=1)
 def get_help_catalog() -> HelpCatalog:
-    """Load the generated artifact once per process."""
+    """Load and validate the generated artifact once per process."""
+
+    from app.help.compiler import validate_artifact
 
     artifact = json.loads(ARTIFACT_PATH.read_text(encoding="utf-8"))
+    validate_artifact(artifact, allow_target_contract_mismatch=True)
     return HelpCatalog(artifact)
 
 

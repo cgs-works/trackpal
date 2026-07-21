@@ -480,6 +480,8 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.support_banner.title": "Support mode",
     "frontend.support_banner.starter_badge": "Starter tenant",
     "frontend.support_banner.description": "You are viewing the full Pro admin surface as Master support. Starter tenant admins cannot see these Pro-only modules.",
+    "frontend.plan.downgrade_title": "Pro features are paused",
+    "frontend.plan.downgrade_description": "Your Pro data is preserved. Pro modules and related automation are paused while this workspace is on Starter.",
     # WhatsApp Link
     "frontend.whatsapp_link.section_title": "WhatsApp",
     "frontend.whatsapp_link.section_description": "Connect your WhatsApp instance for bot and notifications.",

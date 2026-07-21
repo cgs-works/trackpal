@@ -202,12 +202,13 @@ Help may not:
 
 Help is non-critical to core TrackPal operations.
 
-- Help API failure leaves the application usable and exposes Retry in Help.
+- Help API failure leaves the application usable and exposes Retry in Help; no tour starts and no acknowledgement is written.
 - Manual content remains available when its artifact is authorized but its tour or contextual target-contract version differs from the frontend.
 - Contextual Help reports an unavailable target rather than guessing a topic during version mismatch; the tour remains disabled during version mismatch.
-- Unexpected missing required targets stop the tour safely and leave the Tour Release unseen.
-- Logout, login, role changes, and Tenant context changes clear Help indexes, topics, and tour state from frontend memory.
-- Private manual prose is not persisted to browser storage.
+- Unexpected missing required targets stop the tour safely and leave the Tour Release unseen. Only steps explicitly marked conditional may be skipped.
+- Logout, login, role changes, Tenant context changes, and plan changes remount the private Help surfaces so indexes, topics, and tour state do not survive the session boundary.
+- A Pro-to-Starter transition shows the preserved-data and paused-automation notice, serves the Starter-filtered manual, and suppresses the downgrade-session tour.
+- Private manual prose is not persisted to browser storage or included in public frontend assets.
 
 ## Contract Validation
 
@@ -220,7 +221,7 @@ Build and CI validation covers:
 - Spanish/English parity
 - Known roles, plans, channels, modules, actions, routes, and targets
 - Internal links, safe module destinations, and navigation allow-list
-- Tour Release ordering, maximum seven steps, and eligibility
+- Tour Release ordering from step one, maximum seven steps, and eligibility
 - Artifact schema and target-contract versions
 
 Backend API tests cover:

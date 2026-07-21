@@ -8,13 +8,23 @@ import {
   createSidebarItems,
   getAdminNavigationItems,
 } from "@/components/layout/role-navigation";
+import { DowngradeBanner } from "@/features/admin/components/downgrade-banner";
 import { SupportBanner } from "@/features/admin/components/support-banner";
 import { ContextualHelpSheet } from "@/features/help/components/contextual-help-sheet";
 import { isPrivateHelpEnabled } from "@/features/help/config";
 import { OrientationTour } from "@/features/help/components/orientation-tour";
 
 export function AdminLayout() {
-  const { username, logout, role, tenantPlan, isMasterSupportContext } = useAuthStore();
+  const {
+    username,
+    logout,
+    user,
+    role,
+    activeTenantId,
+    tenantPlan,
+    planDowngraded,
+    isMasterSupportContext,
+  } = useAuthStore();
   const location = useLocation();
 
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
@@ -34,6 +44,7 @@ export function AdminLayout() {
     ),
     location.pathname,
   );
+  const helpSessionKey = `${user?.id ?? "anonymous"}:${role}:${activeTenantId ?? "none"}:${tenantPlan ?? "none"}:${planDowngraded}`;
 
   function handleLogout() {
     void logout();
@@ -53,8 +64,11 @@ export function AdminLayout() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main key={helpSessionKey} className="flex-1 overflow-y-auto">
         {isMasterSupportContext && tenantPlan === "starter" && <SupportBanner />}
+        {role === "tenant" && planDowngraded && tenantPlan === "starter" && (
+          <DowngradeBanner />
+        )}
         {showContextualHelp && (
           <div className="flex justify-end border-b px-4 py-2 sm:px-6">
             <ContextualHelpSheet />

@@ -203,9 +203,22 @@ function tourSelector(target: string): string {
 }
 
 export function OrientationTour() {
-  const { isAuthenticated, role, tenantPlan, isMasterSupportContext } = useAuthStore();
+  const {
+    isAuthenticated,
+    role,
+    tenantPlan,
+    planDowngraded,
+    isMasterSupportContext,
+  } = useAuthStore();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
+  const requestVersion = useMemo(() => {
+    let current = 0;
+    return {
+      next: () => ++current,
+      isCurrent: (version: number) => version === current,
+    };
+  }, []);
   const [tour, setTour] = useState<HelpTourRelease | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [running, setRunning] = useState(false);
@@ -217,19 +230,28 @@ export function OrientationTour() {
     isPrivateHelpEnabled() &&
     isAuthenticated &&
     role === "tenant" &&
-    !isMasterSupportContext;
+    !isMasterSupportContext &&
+    !planDowngraded;
 
   const stopTour = useCallback(() => {
+    requestVersion.next();
     setRunning(false);
     setTargetReady(false);
     setTour(null);
     setStepIndex(0);
-  }, []);
+    setSkipConfirmationOpen(false);
+  }, [requestVersion]);
 
   const loadTour = useCallback(
     async (loader: () => Promise<HelpTourRelease>) => {
+      const version = requestVersion.next();
+      setRunning(false);
+      setTargetReady(false);
+      setTour(null);
+      setStepIndex(0);
       try {
         const nextTour = await loader();
+        if (!requestVersion.isCurrent(version)) return;
         if (
           nextTour.frontend_target_contract_version !==
           HELP_TARGET_CONTRACT_VERSION
@@ -244,7 +266,7 @@ export function OrientationTour() {
         // Help is optional and must not make the product unavailable.
       }
     },
-    [],
+    [requestVersion],
   );
 
   useEffect(() => {
@@ -347,17 +369,14 @@ export function OrientationTour() {
       setAcknowledging(true);
       try {
         await acknowledgeHelpTour(tour.release_id, status);
-        setRunning(false);
-        setTargetReady(false);
-        setTour(null);
-        setSkipConfirmationOpen(false);
+        stopTour();
       } catch {
         toast.error(t("frontend.help.tour_acknowledge_error"));
       } finally {
         setAcknowledging(false);
       }
     },
-    [acknowledging, tour],
+    [acknowledging, stopTour, tour],
   );
 
   const handleEvent: EventHandler = useCallback(

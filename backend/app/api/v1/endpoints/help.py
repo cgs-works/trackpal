@@ -1,9 +1,12 @@
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.dependencies import CurrentUser, DbDep, resolve_locale
 from app.help import get_help_catalog
+from app.help.artifact import HelpCatalog
+from app.help.compiler import HelpValidationError
 from app.models import TenantHelpAcknowledgement
 from app.repositories import clients_repository, tenant_help_repository
 from app.repositories import tenant_settings_repository, tenants_repository
@@ -17,9 +20,26 @@ from app.schemas.help import (
 )
 
 router = APIRouter(prefix="/help", tags=["help"])
-help_catalog = get_help_catalog()
 STARTER_RELEASE_ID = "tenant-admin-starter-1"
 INITIAL_PRO_RELEASE_ID = "tenant-admin-pro-1"
+
+
+def _get_help_catalog() -> HelpCatalog:
+    """Load Help inside the API boundary so a bad artifact cannot stop the app."""
+
+    try:
+        return get_help_catalog()
+    except (
+        OSError,
+        json.JSONDecodeError,
+        HelpValidationError,
+        KeyError,
+        TypeError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Help is temporarily unavailable",
+        ) from exc
 
 
 async def _tenant_admin_context(
@@ -80,7 +100,7 @@ async def get_help_index(db: DbDep, current_user: CurrentUser) -> HelpIndexRespo
     """Return the private Help navigation for the authenticated audience."""
 
     audience, plan, locale = await _help_context(db, current_user)
-    return help_catalog.index(locale, plan, audience)
+    return _get_help_catalog().index(locale, plan, audience)
 
 
 @router.get("/topics/{topic_id}", response_model=HelpTopicResponse)
@@ -90,7 +110,7 @@ async def get_help_topic(
     """Return one localized topic when its audience and plan are authorized."""
 
     audience, plan, locale = await _help_context(db, current_user)
-    topic = help_catalog.topic(locale, plan, topic_id, audience)
+    topic = _get_help_catalog().topic(locale, plan, topic_id, audience)
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return topic
@@ -108,11 +128,12 @@ async def search_help(
     return {
         "query": q,
         "locale": locale,
-        "results": help_catalog.search(locale, plan, q, audience),
+        "results": _get_help_catalog().search(locale, plan, q, audience),
     }
 
 
 def _tour_response(
+    catalog: HelpCatalog,
     release: dict,
     locale: str,
     plan: str,
@@ -126,7 +147,7 @@ def _tour_response(
         ),
         locale=locale,
         plan=plan,
-        frontend_target_contract_version=help_catalog.artifact[
+        frontend_target_contract_version=catalog.artifact[
             "frontend_target_contract_version"
         ],
         steps=release["steps"],
@@ -138,7 +159,8 @@ async def get_unseen_tour(db: DbDep, current_user: CurrentUser) -> HelpTourRelea
     """Return the first eligible, unseen Tenant Admin tour release."""
 
     tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
-    for release in help_catalog.tour_releases(locale, plan):
+    catalog = _get_help_catalog()
+    for release in catalog.tour_releases(locale, plan):
         if await _initial_pro_release_is_suppressed(
             db, tenant_id, plan, release["release_id"]
         ):
@@ -147,11 +169,9 @@ async def get_unseen_tour(db: DbDep, current_user: CurrentUser) -> HelpTourRelea
             db, tenant_id, release["release_id"]
         )
         if acknowledgement is None:
-            eligible_release = help_catalog.tour_release(
-                locale, plan, release["release_id"]
-            )
+            eligible_release = catalog.tour_release(locale, plan, release["release_id"])
             if eligible_release is not None:
-                return _tour_response(eligible_release, locale, plan)
+                return _tour_response(catalog, eligible_release, locale, plan)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
 
@@ -162,15 +182,16 @@ async def replay_tour(
     """Return an eligible tour release regardless of acknowledgement state."""
 
     tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    catalog = _get_help_catalog()
     if await _initial_pro_release_is_suppressed(db, tenant_id, plan, release_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    release = help_catalog.tour_release(locale, plan, release_id)
+    release = catalog.tour_release(locale, plan, release_id)
     if release is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     acknowledgement = await tenant_help_repository.get_acknowledgement(
         db, tenant_id, release_id
     )
-    return _tour_response(release, locale, plan, acknowledgement)
+    return _tour_response(catalog, release, locale, plan, acknowledgement)
 
 
 @router.post(
@@ -186,9 +207,10 @@ async def acknowledge_tour(
     """Persist one immutable, Tenant-scoped tour acknowledgement."""
 
     tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    catalog = _get_help_catalog()
     if await _initial_pro_release_is_suppressed(db, tenant_id, plan, release_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    if help_catalog.tour_release(locale, plan, release_id) is None:
+    if catalog.tour_release(locale, plan, release_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     acknowledgement = await tenant_help_repository.acknowledge(
         db, tenant_id, release_id, payload.status
