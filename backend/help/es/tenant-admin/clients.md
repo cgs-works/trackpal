@@ -67,17 +67,17 @@ tour:
 
 # Clientes
 
-Los clientes son las personas que reciben los servicios ofrecidos por un Tenant Pro. La gestión de clientes está disponible solo para Tenant Admins Pro en Web y en la consola de WhatsApp Pro.
+Los clientes son las personas que reciben los servicios de tu negocio. Su gestión está disponible cuando esta función está incluida en tu plan actual, tanto en Web como en el menú correspondiente de WhatsApp.
 
 ## Canal, requisitos y acciones
 
 - **Web:** Abre Clientes desde la barra lateral. Busca por nombre completo, usuario canónico o teléfono; usa Crear para agregar un cliente, la acción de editar para cambiar sus datos de identidad, el botón de estado para activar o desactivar el acceso, la acción de suscripciones para abrir las suscripciones de ese cliente y la acción de eliminar para un cliente inactivo.
 - **WhatsApp:** Desde el menú principal Pro elige `1` Clientes. Elige `1` para ver clientes o `2` para crear uno. Selecciona un cliente para editarlo, desactivarlo, reactivarlo o eliminarlo. Usa `9` para regresar y `0` para cancelar.
-- **Requisitos:** El Tenant debe tener plan Pro y tú debes ser su Tenant Admin. Para crear un cliente prepara un nombre completo, un nombre de usuario local válido, una contraseña de al menos seis caracteres y un teléfono opcional.
+- **Requisitos:** Tu plan actual debe incluir la gestión de clientes y debes iniciar sesión como administrador del negocio. Para crear un cliente prepara un nombre completo, un nombre de usuario local válido, una contraseña de al menos seis caracteres y un teléfono opcional.
 
 ## Crear e inicio de sesión canónico
 
-Escribe el nombre completo, el nombre de usuario local, el teléfono opcional y la contraseña; luego guarda en Web o confirma el resumen en WhatsApp. El nombre de usuario local debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones bajos. TrackPal lo combina con el prefijo inmutable del Tenant para crear el inicio de sesión canónico con la forma `{client_prefix}_{local_username}`, por ejemplo `t1_pepe`. Entrega al cliente ese inicio de sesión completo, no solo la parte local.
+Escribe el nombre completo, el nombre de usuario local, el teléfono opcional y la contraseña; luego guarda en Web o confirma el resumen en WhatsApp. El nombre de usuario local debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones bajos. TrackPal agrega el prefijo del negocio y muestra el nombre de usuario completo (canónico), por ejemplo `t1_pepe`. Entrega al cliente ese nombre exacto, no solo la parte que escribiste.
 
 Una creación exitosa agrega un cliente activo. Un nombre de usuario local, usuario canónico o teléfono duplicado se rechaza y deja sin cambios a los clientes existentes. Corrige el campo y vuelve a intentarlo. Un nombre, usuario, teléfono o contraseña ausente o inválido es un error de validación; no crea un cliente parcial.
 

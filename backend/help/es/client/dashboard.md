@@ -39,7 +39,7 @@ El Dashboard de cliente es el punto de inicio de solo lectura para tu cuenta de 
 ## Canal, requisitos y acciones
 
 - **Canal:** Web. Inicia sesión con la cuenta de Cliente creada por tu proveedor.
-- **Requisitos:** El proveedor debe tener un Tenant Pro y tu acceso de Cliente debe estar activo.
+- **Requisitos:** El plan de TrackPal de tu proveedor debe incluir acceso para clientes y tu cuenta debe estar activa.
 - **Acciones:** Abre el Dashboard para consultar tu nombre, proveedor, cuenta y suscripciones activas. La página no modifica los datos del Cliente.
 
 ## Resultados y estados

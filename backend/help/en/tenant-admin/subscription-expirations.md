@@ -42,13 +42,13 @@ related_topics:
 
 # Manage subscription expirations
 
-Expiration management joins three Pro surfaces: Subscriptions for manual action, Timezone for the Tenant-local calendar, and Subscription reminder settings for optional WhatsApp automation. The guide is informational. Its links open safe screens only; Help never creates, edits, cancels, renews, reactivates, reveals, or deletes a subscription.
+Expiration management connects three sections included with subscription management: Subscriptions for manual actions, Timezone for the business's local calendar, and Subscription reminder settings for optional WhatsApp messages. The guide is informational. Its links open safe screens only; Help never creates, edits, cancels, renews, reactivates, reveals, or deletes a subscription.
 
 ## Prepare the operational calendar
 
-1. Open Timezone and confirm the business IANA timezone. TrackPal uses it for local dates, reminder thresholds, and the end-of-day boundary used by cleanup.
-2. Open Subscription reminder settings and decide whether to opt in. If enabled, select warning days such as 7, 3, and 1, set the local reminder time, choose Tenant, Client, or Both recipients, and review custom-message placeholders.
-3. Open Subscriptions and check the Client, service, plan, status, start date, expiry date, and stored email. The Tenant must be Pro for subscription data and automation to be operational.
+1. Open Timezone and confirm the region that matches the business location. TrackPal uses it for local dates, reminder thresholds, and the end-of-day boundary used by cleanup.
+2. Open Subscription reminder settings and decide whether to turn them on. If enabled, select warning days such as 7, 3, and 1, set the local reminder time, choose Administrators, Clients, or Both, and review the details TrackPal will fill into the custom message.
+3. Open Subscriptions and check the Client, service, plan, status, start date, expiry date, and stored email. The current plan must include subscription management for these tools to be available.
 
 The timezone and reminder links are safe navigation: they select a Settings category but do not save a form or send a message. A Help link into Subscriptions does not open a credential reveal dialog.
 
@@ -62,11 +62,11 @@ In WhatsApp, use Pro menu `4`, choose the status filter, select the subscription
 
 ## Automated transitions and reminders
 
-When reminders are enabled, the backend checks only active Pro subscriptions. It calculates days until expiry from the Tenant-local date, waits until the local reminder time, prepares one payload per eligible recipient, and deduplicates the same subscription, warning day, recipient, and local date. n8n polls about every 30 minutes only to transport pending payloads and report success or failure.
+When reminders are enabled, TrackPal checks active subscriptions using the business's local date and reminder time. It prepares one message for each selected recipient and prevents duplicate reminders for the same subscription and day. The check runs approximately every 30 minutes and reports whether WhatsApp delivered each message.
 
-Cleanup is separate from reminder delivery. It uses the Tenant-local end of day when deciding whether an already-passed expiry should transition. When a cleanup run sees an eligible active subscription, it becomes Expired and an event is recorded. An Expired subscription that remains expired for at least 7 days is automatically moved to Cancelled. A Cancelled subscription older than 30 days is deleted by cleanup. These transitions are automation, not actions performed by Help or by an n8n reminder message.
+Automatic status updates are separate from reminder delivery. At the end of the business's local day, a subscription whose expiry date has passed becomes Expired. After at least 7 days it automatically becomes Cancelled, and after more than 30 days in Cancelled status it is deleted. Help and reminder messages never perform these changes themselves.
 
-Disabling reminders stops new reminder payloads and logs, but it does not pause or delete subscriptions. Downgrading a Tenant to Starter preserves Pro rows and settings while subscription, reminder, and cleanup jobs ignore that Tenant. Upgrading back to Pro makes the preserved data available again subject to its current status and dates.
+Turning reminders off stops new reminder messages but does not pause or delete subscriptions. Changing to a plan without subscription management preserves the saved information while these automatic processes remain paused. The information becomes available again if the business returns to an eligible plan, subject to its current status and dates.
 
 ## Expiry states and recovery
 

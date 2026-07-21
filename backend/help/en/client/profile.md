@@ -39,7 +39,7 @@ Profile is a read-only view of the information associated with your Client accou
 ## Channel, prerequisites, and actions
 
 - **Channel:** Web. Open Profile from the Client navigation after signing in.
-- **Prerequisites:** Your Client account must be active under a Pro Tenant.
+- **Prerequisites:** Your provider's TrackPal plan must include client access, and your account must be active.
 - **Actions:** Review your full name, username, phone when available, provider, and active status. You cannot edit these fields from the Client profile.
 
 ## Results and states

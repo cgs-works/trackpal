@@ -72,7 +72,7 @@ Una suscripción conecta a un Cliente con un servicio y plan del Catálogo. Guar
 
 - **Web:** La página Pro de Suscripciones muestra Cliente, servicio, plan, email de streaming, fechas y estado. Filtra por estado, servicio o Cliente y revisa las fechas y el estado visibles antes de elegir una acción.
 - **WhatsApp:** Desde el menú principal Pro elige `4` Suscripciones y luego `1` Ver suscripciones. Elige Activas, Expiradas, Canceladas o Todas, selecciona una fila y sigue las acciones mostradas.
-- **Requisitos:** El Tenant debe ser Pro. Para crear se necesita un Cliente activo y un servicio y plan existentes en Catálogo. Un Tenant Admin Starter no puede abrir ni buscar este topic o módulo; los datos Pro conservados no se eliminan al degradar.
+- **Requisitos:** El plan actual debe incluir la gestión de suscripciones. Para crear se necesita un Cliente activo y un servicio y plan existentes en Catálogo. Si el plan actual no incluye esta sección, permanece oculta mientras se conservan los datos guardados anteriormente.
 - **Resultado esperado:** Una creación o actualización exitosa devuelve la suscripción a la lista con su estado y fechas actuales. Un enlace de Help solo abre esta explicación o la ruta segura del módulo; nunca envía un formulario.
 
 ## Crear y editar en Web
@@ -90,14 +90,14 @@ Para una fila existente, las acciones son `1` Editar, `2` Cancelar, `3` Renovar 
 ## Estados, duraciones y acciones de ciclo de vida
 
 - **Activa:** La suscripción está utilizable y puede editarse, cancelarse o renovarse. El trabajo de recordatorios solo considera suscripciones activas.
-- **Expirada:** La fecha de vencimiento pasó según el cierre de día local del Tenant y la automatización. Puede renovarse o reactivarse desde las acciones disponibles.
+- **Expirada:** La fecha de vencimiento pasó según el cierre de día local del negocio y la automatización. Puede renovarse o reactivarse desde las acciones disponibles.
 - **Cancelada:** Cancelar cambia el estado y registra la hora de cancelación; no elimina inmediatamente la fila. Puede reactivarse con nueva duración y fechas.
 
 Cancelar requiere una confirmación visible en Web o una respuesta `CONFIRM`/`CONFIRMAR` en WhatsApp. Renovar extiende desde el vencimiento actual, mientras Reactivar vuelve a iniciar la suscripción cancelada con una duración o fecha personalizada. Ambas acciones muestran las fechas propuestas antes de confirmar. La expiración automática y la limpieza posterior se explican en Gestiona los vencimientos de suscripciones.
 
 ## Credenciales, estados vacíos y recuperación
 
-El email de streaming no es el mismo que el inicio de sesión del Cliente. Usa Revelar credenciales en Web solo cuando exista una razón operativa legítima; el diálogo puede mostrar la contraseña de streaming y el PIN de perfil guardados. El detalle de suscripción en WhatsApp puede incluir la información de acceso guardada para el Tenant Admin autenticado. Help nunca activa Revelar, abre un diálogo de credenciales, copia un secreto ni expone una credencial mediante un enlace de módulo.
+El email de streaming no es el mismo que el inicio de sesión del Cliente. Usa Revelar credenciales en Web solo cuando exista una razón operativa legítima; el diálogo puede mostrar la contraseña de streaming y el PIN de perfil guardados. El detalle de suscripción en WhatsApp puede incluir la información de acceso guardada para el administrador autenticado. Help nunca activa Revelar, abre un diálogo de credenciales, copia un secreto ni expone una credencial mediante un enlace de módulo.
 
 Una lista vacía puede significar que ninguna suscripción coincide con los filtros elegidos; no significa que se eliminó el Cliente o Catálogo. La falta de Cliente, servicio o plan impide crear. Un email, fecha, duración, selección o confirmación inválidos dejan el registro sin cambios. Si falla la carga o una modificación, revisa el error visible y reintenta sin enviar credenciales a soporte.
 

@@ -246,6 +246,7 @@ export function HelpCenterPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const searchRequestId = useRef(0);
+  const articleStartRef = useRef<HTMLElement>(null);
 
   const loadTopic = useCallback(async (topicId: string) => {
     setError(false);
@@ -313,9 +314,17 @@ export function HelpCenterPage({
     }
   }
 
-  function selectTopic(topicId: string) {
+  async function selectTopic(topicId: string) {
     setMobileTopicsOpen(false);
-    void loadTopic(topicId);
+    await loadTopic(topicId);
+    window.requestAnimationFrame(() => {
+      articleStartRef.current?.scrollIntoView({
+        block: "start",
+        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    });
   }
 
   const topics = useMemo<HelpListItem[]>(
@@ -339,7 +348,7 @@ export function HelpCenterPage({
 
   return (
     <div
-      className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 sm:p-6 lg:p-8"
+      className="mx-auto flex w-full max-w-screen-2xl flex-col gap-5 p-4 sm:p-6 lg:p-8"
       data-help-id={audience === "tenant" ? "admin.help" : undefined}
     >
       <header className="flex flex-col gap-4">
@@ -427,7 +436,7 @@ export function HelpCenterPage({
           </Card>
         </aside>
 
-        <main aria-live="polite" className="min-w-0">
+        <main ref={articleStartRef} aria-live="polite" className="min-w-0 scroll-mt-6">
           {loading && <Skeleton className="h-80 w-full rounded-xl" />}
           {!loading && topic && (
             <article className="flex flex-col gap-6">

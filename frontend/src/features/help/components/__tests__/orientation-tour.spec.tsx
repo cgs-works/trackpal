@@ -1,5 +1,5 @@
 import { createElement, type ComponentType } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -179,8 +179,30 @@ describe("OrientationTour", () => {
       ),
     );
 
-    requestHelpTourReplay();
-    await waitFor(() => expect(replayHelpTour).toHaveBeenCalledWith(release.release_id));
+    act(() => requestHelpTourReplay());
+    await waitFor(() => expect(replayHelpTour).toHaveBeenCalledWith());
+  });
+
+  it("replays the latest eligible tour after the unseen tour was acknowledged", async () => {
+    vi.mocked(getUnseenHelpTour).mockRejectedValue(new Error("not found"));
+    vi.mocked(replayHelpTour).mockResolvedValue(release);
+
+    render(
+      <>
+        <div data-help-id="admin.dashboard" />
+        <OrientationTour />
+      </>,
+    );
+
+    await waitFor(() => expect(getUnseenHelpTour).toHaveBeenCalledOnce());
+    expect(screen.queryByTestId("help-tour-popover")).not.toBeInTheDocument();
+
+    act(() => requestHelpTourReplay());
+
+    await waitFor(() => expect(replayHelpTour).toHaveBeenCalledWith());
+    await waitFor(() =>
+      expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+    );
   });
 
   it("replaces tour motion when the user prefers reduced motion", async () => {

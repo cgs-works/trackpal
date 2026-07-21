@@ -113,6 +113,87 @@ describe("HelpCenterPage", () => {
     expect(screen.getByText("Dashboard content.")).toBeInTheDocument();
   });
 
+  it("uses the wider Help layout and justified article copy", async () => {
+    const { container } = render(<HelpCenterPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Dashboard content.")).toBeInTheDocument();
+    });
+
+    expect(container.querySelector('[data-help-id="admin.help"]')).toHaveClass("max-w-screen-2xl");
+    expect(screen.getByText("Dashboard content.")).toHaveClass("max-w-[80ch]", "text-justify");
+  });
+
+  it("scrolls to the article start after selecting a topic", async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    vi.mocked(getHelpIndex).mockResolvedValue({
+      schema_version: 1,
+      content_version: "help-common-modules-1",
+      frontend_target_contract_version: "2",
+      locale: "en",
+      topics: [
+        {
+          id: "tenant-admin.dashboard",
+          title: "Business Dashboard",
+          summary: "Dashboard overview",
+          module: "dashboard",
+          route: "/admin/dashboard",
+          order: 10,
+          help_targets: ["admin.dashboard"],
+          safe_navigation: { route: "/admin/dashboard", settings_category: null },
+        },
+        {
+          id: "tenant-admin.mailbox",
+          title: "Central mailbox",
+          summary: "Mailbox overview",
+          module: "settings",
+          route: "/admin/settings",
+          order: 20,
+          help_targets: ["admin.settings.mailbox"],
+          safe_navigation: { route: "/admin/settings", settings_category: "mailbox" },
+        },
+      ],
+    });
+    vi.mocked(getHelpTopic)
+      .mockResolvedValueOnce({
+        id: "tenant-admin.dashboard",
+        title: "Business Dashboard",
+        summary: "Dashboard overview",
+        module: "dashboard",
+        route: "/admin/dashboard",
+        order: 10,
+        help_targets: ["admin.dashboard"],
+        safe_navigation: { route: "/admin/dashboard", settings_category: null },
+        body: "# Business Dashboard\n\nDashboard content.",
+      })
+      .mockResolvedValueOnce({
+        id: "tenant-admin.mailbox",
+        title: "Central mailbox",
+        summary: "Mailbox overview",
+        module: "settings",
+        route: "/admin/settings",
+        order: 20,
+        help_targets: ["admin.settings.mailbox"],
+        safe_navigation: { route: "/admin/settings", settings_category: "mailbox" },
+        body: "# Central mailbox\n\nMailbox content.",
+      });
+
+    render(<HelpCenterPage />);
+    await waitFor(() => expect(screen.getByText("Dashboard content.")).toBeInTheDocument());
+    scrollIntoView.mockClear();
+
+    await userEvent.click(screen.getAllByRole("button", { name: /Central mailbox/ })[0]);
+
+    await waitFor(() => expect(screen.getByText("Mailbox content.")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "smooth" }),
+    );
+  });
+
   it("renders all safe module links for the first Pro Client guide", () => {
     const topic: HelpTopic = {
       id: "tenant-admin.first-pro-client",

@@ -13,7 +13,7 @@ capabilities:
   - tenant_subscriptions
 route: /admin/catalog
 help_targets: []
-title: Set up your first Pro Client
+title: Set up your first client
 summary: Follow the safe order from Catalog preparation to a client's first subscription.
 search_tags:
   - first client
@@ -40,9 +40,9 @@ related_topics:
   - tenant-admin.subscriptions
 ---
 
-# Set up your first Pro Client
+# Set up your first client
 
-Use this order when a new Pro Tenant is ready to serve its first person. The guide is informational and its links only open authorized modules; Help never creates records or submits a form for you.
+Use this order when your business is ready to serve its first client. The guide is informational and its links only open authorized modules; Help never creates records or submits a form for you.
 
 ## 1. Prepare the Catalog
 
@@ -52,7 +52,7 @@ Open Catalog and create the service you offer. Select that service and create at
 
 Open Clients and choose Create. Enter the full name, a valid local username, the optional phone, and a password. Save the form and copy the generated canonical login pattern `{client_prefix}_{local_username}` for the person. Search for the new client and verify that its status is active.
 
-If a local username or phone already exists, correct the value instead of retrying with duplicate data. Do not send the client's password to the person through an unsafe channel. The client can use the canonical login only while the Tenant is Pro and the account is active.
+If a local username or phone already exists, correct the value instead of retrying with duplicate data. Do not send the client's password to the person through an unsafe channel. The client can use the complete username only while the current plan includes client access and the account is active.
 
 ## 3. Open Client Subscriptions
 

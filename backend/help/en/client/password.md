@@ -37,7 +37,7 @@ Client password changes are available only on the Web Profile page.
 ## Channel, prerequisites, and actions
 
 - **Channel:** Web only. The WhatsApp Client console never changes a password.
-- **Prerequisites:** Sign in to an active Pro Client account, open Profile, and know the current password. The new password must be at least eight characters and the confirmation must match.
+- **Prerequisites:** Sign in to your active client account, open Profile, and have your current password ready. The new password must be at least eight characters and the confirmation must match.
 - **Actions:** Enter the current password, enter and confirm the new password, then choose Update Password. TrackPal validates the fields before applying the change.
 
 ## Results and recovery

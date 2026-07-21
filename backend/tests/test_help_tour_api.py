@@ -70,10 +70,13 @@ async def test_tenant_admin_receives_unseen_tracer_and_can_complete_idempotently
     replay = await client.get(
         "/api/v1/help/tour/tenant-admin-starter-1/replay", headers=headers
     )
+    latest_replay = await client.get("/api/v1/help/tour/replay", headers=headers)
 
     assert no_longer_unseen.status_code == 404
     assert replay.status_code == 200
     assert replay.json()["status"] == "completed"
+    assert latest_replay.status_code == 200
+    assert latest_replay.json()["release_id"] == "tenant-admin-starter-1"
 
     rows = (
         (
@@ -187,6 +190,9 @@ async def test_starter_to_pro_upgrade_skips_initial_pro_tour_even_when_starter_w
     )
     assert acknowledged.status_code == 200
     assert (await client.get("/api/v1/help/tour", headers=headers)).status_code == 404
+    latest_replay = await client.get("/api/v1/help/tour/replay", headers=headers)
+    assert latest_replay.status_code == 200
+    assert latest_replay.json()["release_id"] == "tenant-admin-pro-upgrade-1"
     assert (
         await client.get("/api/v1/help/tour/tenant-admin-pro-1/replay", headers=headers)
     ).status_code == 404

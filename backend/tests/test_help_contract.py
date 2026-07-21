@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from app.core.i18n.catalogs_en_frontend import _CATALOG_EN_FRONTEND
+from app.core.i18n.catalogs_es_frontend import _CATALOG_ES_FRONTEND
 from app.help.artifact import ARTIFACT_PATH
 from app.help.compiler import HelpValidationError, compile_help
 
@@ -295,13 +297,13 @@ def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts(
     }
     reminders_body = reminders["body"].lower()
     for phrase in (
-        "opt-in",
+        "turn this feature on",
         "warning days",
         "local time",
         "recipients",
         "custom message",
         "automation",
-        "pro",
+        "current plan",
     ):
         assert phrase in reminders_body
 
@@ -312,7 +314,13 @@ def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts(
         "settings_category": "timezone",
     }
     timezone_body = timezone["body"].lower()
-    for phrase in ("iana", "local date", "reminder", "expiration", "pro"):
+    for phrase in (
+        "region",
+        "local calendar",
+        "reminder",
+        "expiration",
+        "current plan",
+    ):
         assert phrase in timezone_body
 
     expiration = topics["tenant-admin.subscription-expirations"]
@@ -368,6 +376,42 @@ def test_access_code_topics_expose_cross_channel_contracts_and_states() -> None:
     assert "0" in access_code_body
     assert "8" in access_code_body
     assert "9" in access_code_body
+
+
+def test_help_copy_avoids_internal_tenant_jargon() -> None:
+    artifact = compile_help(SOURCE_DIR)
+
+    for locale in ("en", "es"):
+        visible_copy = []
+        for topic in artifact["topics"][locale]:
+            visible_copy.extend((topic["title"], topic["summary"], topic["body"]))
+        for release in artifact["tour_releases"][locale]:
+            for step in release["steps"]:
+                visible_copy.extend((step["title"], step["content"]))
+
+        assert "tenant" not in " ".join(visible_copy).casefold()
+
+
+def test_frontend_i18n_copy_avoids_internal_tenant_jargon() -> None:
+    for catalog in (_CATALOG_EN_FRONTEND, _CATALOG_ES_FRONTEND):
+        assert "tenant" not in " ".join(catalog.values()).casefold()
+
+
+def test_mailbox_help_explains_imap_as_an_oauth_alternative() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics_by_locale = {
+        locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
+        for locale in ("en", "es")
+    }
+
+    assert (
+        "you can choose imap as an alternative"
+        in topics_by_locale["en"]["tenant-admin.mailbox"]["body"].casefold()
+    )
+    assert (
+        "puedes elegir imap como alternativa"
+        in topics_by_locale["es"]["tenant-admin.mailbox"]["body"].casefold()
+    )
 
 
 def test_checked_in_artifact_matches_the_compiled_sources() -> None:

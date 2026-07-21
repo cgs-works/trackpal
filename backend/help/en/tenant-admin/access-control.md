@@ -14,7 +14,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.access-control
 title: WhatsApp access control
-summary: Review, search, block, and unblock WhatsApp identities for the Tenant.
+summary: Review, search, block, and unblock WhatsApp identities for the business.
 search_tags:
   - access control
   - blocked phone
@@ -44,17 +44,17 @@ tour:
     content: |
       # Access control
 
-      Settings shows the identities blocked from the Tenant WhatsApp bot. An empty list is a valid state. The tour only highlights the first available action and explains the boundary; it never blocks, unblocks, searches, or opens a confirmation dialog.
+      Settings shows the people and numbers blocked from the business WhatsApp account. An empty list is a valid state. The tour only highlights the first available action and explains the boundary; it never blocks, unblocks, searches, or opens a confirmation dialog.
 ---
 
 # WhatsApp access control
 
-WhatsApp access control is the Tenant Admin list of identities that must not use the Tenant's WhatsApp bot. It protects the WhatsApp console and access-code flow; it is separate from a Client's portal account status.
+WhatsApp access control is the list administrators use to prevent specific people or numbers from using the business's WhatsApp menu. It protects the WhatsApp console and access-code flow; it is separate from a Client's portal account status.
 
 ## Channel, prerequisites, and actions
 
-- **Channels:** Web for the full list and phone search; WhatsApp for the Tenant Admin's Access Control menu.
-- **Prerequisites:** Be a Tenant Admin. A phone or WhatsApp identity must be available to block. Blocking is available on Starter and Pro.
+- **Channels:** Web for the full list and phone search; WhatsApp for the Access Control option in the administrator menu.
+- **Prerequisites:** Sign in to the business administrator account. You need the phone number or WhatsApp entry you want to block. Blocking is available on Starter and Pro.
 - **Actions:** On Web, open Settings, choose Access control, search the list by phone digits, block a phone, or unblock an existing entry. In WhatsApp, Starter opens Access Control with `3` and Pro with `5`; choose `1` to list blocked identities or `2` to block a phone.
 
 ## Results and states
@@ -73,7 +73,7 @@ The Web list supports phone search without changing the stored blocks. In WhatsA
 
 ## Limits, consequences, and recovery
 
-Blocking prevents the identity from reaching the Tenant's WhatsApp console, requesting access codes, viewing WhatsApp profile information, or checking WhatsApp subscriptions. It does not delete the Client, deactivate the Client portal account, or remove subscriptions. Unblock the exact identity from Web or the WhatsApp list when access should be restored. If a phone is represented by a WhatsApp LID, use the identity shown by TrackPal and ask support for help rather than guessing a phone number.
+Blocking prevents the identity from reaching the business's WhatsApp console, requesting access codes, viewing WhatsApp profile information, or checking WhatsApp subscriptions. It does not delete the Client, deactivate the Client portal account, or remove subscriptions. Unblock the exact identity from Web or the WhatsApp list when access should be restored. If TrackPal shows an unfamiliar WhatsApp identifier instead of a phone number, use the entry shown on screen and ask support for help rather than guessing a number.
 
 ## Support boundary
 

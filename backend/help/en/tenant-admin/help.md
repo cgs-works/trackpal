@@ -62,7 +62,7 @@ tour:
 
 # Help Center
 
-The private Help Center is the place to read guidance that matches your Tenant Admin role, current plan, and language.
+The Help Center shows guidance for the tools included in your current plan and in your selected language.
 
 ## Find a topic
 

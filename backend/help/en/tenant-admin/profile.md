@@ -42,19 +42,19 @@ tour:
     content: |
       # Account settings
 
-      Settings keeps your account map in one place. Language changes the workspace language, Profile holds the business identity and phone used for WhatsApp preparation, and Password changes only the signed-in Tenant Admin password.
+      Settings keeps your account map in one place. Language changes the workspace language, Profile holds the business identity and phone used for WhatsApp preparation, and Password changes only the signed-in administrator password.
 
       This step opens the safe Profile panel as a real target. The tour never saves a form, changes a password, or reveals sensitive values.
 ---
 
 # Profile
 
-Profile stores the business identity and contact details that Tenant Admins use to configure TrackPal.
+Profile stores the business identity and contact details that administrators use to configure TrackPal.
 
 ## Channel, prerequisites, and actions
 
 - **Channel:** Web. Profile editing is not available as a WhatsApp action.
-- **Prerequisites:** Sign in as a Tenant Admin and open Settings, then Profile.
+- **Prerequisites:** Sign in as an administrator and open Settings, then Profile.
 - **Actions:** Review the business name, email, and phone fields; change the permitted values; select Save Profile.
 
 ## Results and states
@@ -63,7 +63,7 @@ A successful save shows a confirmation and the updated values remain in the form
 
 ## Limits, consequences, and recovery
 
-Profile values identify the Tenant and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.
+Profile values identify the business and may supply the WhatsApp phone prerequisite. Saving does not link or disconnect WhatsApp, send a message, change the password, or modify client data. Use a phone number that belongs to the business and follows the format shown by the form. If the save fails, correct validation messages and retry without refreshing; refreshing may discard unsaved local edits.
 
 ## Support boundary
 

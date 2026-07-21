@@ -13,7 +13,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.password
 title: Password
-summary: Change the Tenant Admin password without changing the business profile.
+summary: Change your sign-in password without changing the business profile.
 search_tags:
   - password
   - security
@@ -33,11 +33,11 @@ related_topics:
 
 # Password
 
-Use Password in Settings to change the password for the signed-in Tenant Admin account.
+Use Password in Settings to change the password for the account you are currently using.
 
 ## Channel, prerequisites, and actions
 
-- **Channel:** Web. Password changes are not available from the Tenant Admin WhatsApp console.
+- **Channel:** Web. Password changes are not available from the administrator WhatsApp console.
 - **Prerequisites:** Sign in with the account whose password you want to change and open Settings, then Password. You need the current password.
 - **Actions:** Enter the current password, enter a new password, confirm it, and save. TrackPal validates the new value before sending it.
 
@@ -47,7 +47,7 @@ A successful change confirms the update. While saving, the form is busy. Missing
 
 ## Limits, consequences, and recovery
 
-Changing the password affects this Tenant Admin account, not other administrators, clients, mailbox credentials, or WhatsApp sessions. Use a new password that meets the minimum shown by the form and do not reuse a shared mailbox password. If you forget the current password or repeated retries fail, stop guessing and use the supported account recovery or contact the workspace owner; do not reveal the password to support.
+Changing the password affects only the account you are currently using, not other administrators, clients, mailbox passwords, or WhatsApp sessions. Use a new password that meets the minimum shown by the form and do not reuse a shared mailbox password. If you forget the current password or repeated retries fail, stop guessing and use the supported account recovery or contact the workspace owner; do not reveal the password to support.
 
 ## Support boundary
 

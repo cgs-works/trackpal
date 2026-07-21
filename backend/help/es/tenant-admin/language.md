@@ -39,7 +39,7 @@ El Idioma controla la interfaz de TrackPal y el contenido de Ayuda privada para 
 ## Canal, requisitos y acciones
 
 - **Canal:** Web. Las respuestas de WhatsApp siguen el idioma activo, pero el cambio se hace aquí.
-- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración. La categoría Idioma está disponible en Starter y Pro.
+- **Requisitos:** Inicia sesión como administrador y abre Configuración. La categoría Idioma está disponible en Starter y Pro.
 - **Acciones:** Elige Idioma, selecciona el idioma disponible y guarda el cambio. La página vuelve a cargar el catálogo después de guardar correctamente.
 
 ## Resultados y estados
@@ -48,7 +48,7 @@ La navegación, las etiquetas de Configuración y los temas de Ayuda usan el idi
 
 ## Límites, consecuencias y recuperación
 
-El idioma es una configuración del Tenant, por lo que aplica al negocio y no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.
+El idioma seleccionado se aplica a toda la cuenta del negocio, no solo a una pestaña o a un administrador. No traduce mensajes de proveedores externos ni cambia credenciales, suscripciones o la vinculación de WhatsApp. Si la selección no persiste, recarga la página, confirma que la solicitud pueda llegar a TrackPal e intenta de nuevo. No borres una sesión activa ni cambies credenciales del buzón para recuperar un error de idioma.
 
 ## Límite de soporte
 

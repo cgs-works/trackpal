@@ -40,9 +40,9 @@ related_topics:
   - tenant-admin.subscriptions
 ---
 
-# Configura tu primer Cliente Pro
+# Configura tu primer cliente
 
-Usa este orden cuando un Tenant Pro nuevo esté listo para atender a su primera persona. La guía es informativa y sus enlaces solo abren módulos autorizados; Help nunca crea registros ni envía un formulario por ti.
+Usa este orden cuando tu negocio esté listo para atender a su primer cliente. La guía es informativa y sus enlaces solo abren módulos autorizados; Help nunca crea registros ni envía un formulario por ti.
 
 ## 1. Prepara el Catálogo
 
@@ -52,7 +52,7 @@ Abre Catálogo y crea el servicio que ofreces. Selecciona ese servicio y crea al
 
 Abre Clientes y elige Crear. Escribe el nombre completo, un nombre de usuario local válido, el teléfono opcional y una contraseña. Guarda el formulario y copia para la persona el patrón de inicio de sesión canónico `{client_prefix}_{local_username}`. Busca el nuevo cliente y verifica que su estado sea activo.
 
-Si el usuario local o teléfono ya existe, corrige el valor en vez de repetir datos duplicados. No envíes la contraseña del cliente por un canal inseguro. El cliente solo puede usar el inicio de sesión canónico mientras el Tenant sea Pro y la cuenta esté activa.
+Si el usuario local o teléfono ya existe, corrige el valor en vez de repetir datos duplicados. No envíes la contraseña del cliente por un canal inseguro. El cliente solo puede usar el nombre de usuario completo mientras el plan actual incluya acceso para clientes y la cuenta esté activa.
 
 ## 3. Abre las suscripciones del Cliente
 

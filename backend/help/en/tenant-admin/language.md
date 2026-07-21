@@ -39,7 +39,7 @@ Language controls the TrackPal interface and the private Help content for your a
 ## Channel, prerequisites, and actions
 
 - **Channel:** Web. WhatsApp replies follow the active locale but language is changed here.
-- **Prerequisites:** Sign in as a Tenant Admin and open Settings. The Language category is available on Starter and Pro.
+- **Prerequisites:** Sign in as an administrator and open Settings. The Language category is available on Starter and Pro.
 - **Actions:** Choose Language, select the available locale, and save the change. The page reloads the catalog after a successful save.
 
 ## Results and states
@@ -48,7 +48,7 @@ The navigation, Settings labels, and Help topics use the selected language after
 
 ## Limits, consequences, and recovery
 
-Language is a Tenant setting, so it applies to the business rather than only one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.
+The selected language applies to the whole business account, not only to one browser tab or one administrator. It does not translate messages from external providers and does not change credentials, subscriptions, or WhatsApp linking. If the selection does not persist, reload the page, confirm the request can reach TrackPal, and try again. Do not clear a working session or change mailbox credentials to recover a language error.
 
 ## Support boundary
 

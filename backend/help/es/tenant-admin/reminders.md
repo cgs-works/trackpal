@@ -26,6 +26,7 @@ synonyms:
   - alertas de vencimiento
   - notificaciones de renovación
   - avisos de expiración
+  - opt-in
 order: 140
 safe_navigation:
   route: /admin/settings
@@ -52,37 +53,37 @@ tour:
 
 # Ajustes de recordatorios de suscripciones
 
-Los ajustes de recordatorios controlan las notificaciones opcionales de WhatsApp que se preparan cuando una suscripción se acerca a su vencimiento. Los recordatorios son una función opt-in: permanecen desactivados hasta que un Tenant Admin Pro los activa. Es un ajuste de Tenant Pro. No crea, renueva, cancela ni reactiva suscripciones y Help nunca guarda el formulario por ti.
+Los ajustes de recordatorios controlan las notificaciones opcionales de WhatsApp para suscripciones próximas a vencer. Tú decides si quieres activar esta función y solo aparece cuando los recordatorios están incluidos en el plan actual. Activarla no crea, renueva, cancela ni reactiva suscripciones, y Ayuda nunca guarda el formulario por ti.
 
 ## Activación y requisitos
 
-Abre Ajustes, elige Ajustes de recordatorios de suscripciones y activa el interruptor cuando el Tenant esté listo para usar notificaciones automáticas de vencimiento. Los recordatorios están desactivados por defecto. El Tenant debe ser Pro, la suscripción debe estar activa y los destinatarios necesitan teléfonos de WhatsApp utilizables. Los Tenant Admin Starter no pueden ver, recuperar ni buscar este topic; la automatización no cambia los datos de suscripciones conservados mientras el Tenant sea Starter.
+Abre Configuración, elige Ajustes de recordatorios de suscripciones y activa los recordatorios cuando el negocio esté listo para usar avisos automáticos de vencimiento. Están desactivados por defecto. El plan actual debe incluir recordatorios, la suscripción debe estar activa y cada destinatario necesita un teléfono de WhatsApp válido. Cambiar a un plan sin recordatorios detiene los nuevos avisos, pero no elimina los datos guardados de las suscripciones.
 
-Cuando los recordatorios están desactivados, no se generan payloads pendientes ni registros de recordatorio para el Tenant. Guardar los ajustes no envía un mensaje inmediatamente. El módulo Suscripciones sigue siendo el lugar para las acciones manuales de ciclo de vida.
+Cuando los recordatorios están desactivados, TrackPal no prepara ni envía nuevos mensajes de recordatorio para el negocio. Guardar los ajustes no envía un mensaje inmediatamente. El módulo Suscripciones sigue siendo el lugar para las acciones manuales de ciclo de vida.
 
 ## Días de aviso y hora local
 
 Elige uno o más días de aviso antes del vencimiento. Los días predeterminados son 7, 3 y 1; puedes quitar un día predeterminado o agregar otro número positivo. Mientras los recordatorios estén activos se necesita al menos un día de aviso.
 
-Configura la hora del recordatorio en la hora local del Tenant. La hora es un umbral: el backend puede preparar el recordatorio de ese día cuando el reloj local alcance la hora configurada. La zona horaria se muestra aquí como referencia y se edita en la categoría separada Zona horaria. Consulta ese topic antes de cambiarla si el negocio opera en otra zona horaria IANA.
+Configura la hora del recordatorio según la hora local del negocio. TrackPal puede preparar el aviso del día cuando el reloj local alcanza la hora elegida. La zona horaria aparece aquí como referencia y se cambia en la sección independiente Zona horaria.
 
-El día de aviso se calcula con la fecha del calendario local del Tenant, no tratando cada día como un intervalo UTC fijo. El backend controla la comprobación de hora local, por lo que el horario de transporte de n8n no cambia el significado de la hora configurada.
+El día de aviso se calcula con la fecha local del negocio. TrackPal controla este horario automáticamente para que la hora seleccionada conserve el mismo significado para tu negocio.
 
 ## Destinatarios y mensajes personalizados
 
 Elige quién recibe un recordatorio elegible:
 
-- **Solo Tenant:** se envía al teléfono de WhatsApp del negocio.
+- **Solo administradores:** se envía al teléfono de WhatsApp del negocio.
 - **Solo Cliente:** se envía al teléfono de WhatsApp del Cliente.
 - **Ambos:** prepara un recordatorio para cada destinatario disponible.
 
-El formulario también ofrece campos separados de mensaje personalizado para Tenant y Cliente. Conserva los placeholders admitidos como `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}` y `{{expires_at}}` al editarlos. La vista previa reemplaza valores de ejemplo para comprobar el texto antes de guardar; no incluyas contraseñas, secretos del buzón ni códigos de acceso en un mensaje.
+El formulario ofrece mensajes personalizados separados para administradores y clientes. Las palabras entre llaves dobles, como `{{client_name}}`, `{{service_name}}`, `{{days}}`, `{{streaming_email}}` y `{{expires_at}}`, son datos que TrackPal completa automáticamente; no las cambies ni las elimines. Usa la vista previa para revisar el texto y nunca incluyas contraseñas ni códigos de acceso.
 
 Si el destinatario elegido no tiene un teléfono utilizable, ese destinatario se omite. Un guardado fallido deja la configuración anterior. Corrige el error visible de una lista de días vacía o una hora `HH:MM` inválida y vuelve a guardar.
 
 ## Automatización y recuperación
 
-El backend evalúa los Tenant Pro, las suscripciones activas, los días de aviso locales, la hora local, los destinatarios y la protección contra duplicados. Un workflow separado de n8n consulta aproximadamente cada 30 minutos, transporta los payloads pendientes a WhatsApp e informa si se entregaron o fallaron. No decide la zona horaria del Tenant ni ejecuta cambios de ciclo de vida.
+TrackPal revisa aproximadamente cada 30 minutos las suscripciones activas que necesitan un recordatorio. Usa los días de aviso, la hora local, los destinatarios y la protección contra duplicados, y luego informa si WhatsApp entregó el mensaje. Esta automatización no cambia el estado ni las fechas de la suscripción.
 
 Un recordatorio puede quedar pendiente, enviado o fallar después de los reintentos. Si no aparece un recordatorio, revisa el plan Pro, el interruptor, el día de aviso, la hora local, Zona horaria, el estado activo, la fecha de vencimiento, el enlace de WhatsApp y el teléfono del destinatario. No desconectes WhatsApp ni reveles credenciales como primera respuesta. La guía de vencimientos conecta estas comprobaciones con la renovación manual, la reactivación, la cancelación y las transiciones automáticas.
 

@@ -13,7 +13,7 @@ route: /admin/clients
 help_targets:
   - admin.clients
 title: Clients
-summary: Manage Pro clients, their access, status, canonical login, and subscriptions.
+summary: Manage clients, their access, complete username, status, and subscriptions.
 search_tags:
   - clients
   - client search
@@ -56,7 +56,7 @@ tour:
     conditional: false
     plans:
       - pro
-    title: Your new Pro Clients module
+    title: Your new Clients section
     content: |
       # Clients are now available
 
@@ -67,17 +67,17 @@ tour:
 
 # Clients
 
-Clients are the people who receive the services offered by a Pro Tenant. Client management is available only to Pro Tenant Admins on Web and in the Pro WhatsApp console.
+Clients are the people who receive the services your business offers. Client management is available when it is included in your current plan, both on Web and in the corresponding WhatsApp menu.
 
 ## Channel, prerequisites, and actions
 
 - **Web:** Open Clients from the sidebar. Search by full name, canonical username, or phone; use Create to add a client, the edit action to change identity fields, the power action to activate or deactivate access, the subscriptions action to open that client's subscriptions, and the delete action for an inactive client.
 - **WhatsApp:** From the Pro main menu choose `1` Clients. Choose `1` to view clients or `2` to create one. Select a listed client to edit, deactivate, reactivate, or delete it. Use `9` to go back and `0` to cancel.
-- **Prerequisites:** The Tenant must be on Pro and you must be its Tenant Admin. To create a client, prepare a full name, a valid local username, a password of at least six characters, and an optional phone number.
+- **Prerequisites:** Your current plan must include client management, and you must be signed in as the business administrator. To create a client, prepare a full name, a valid local username, a password of at least six characters, and an optional phone number.
 
 ## Create and canonical login
 
-Enter the client's full name, local username, optional phone, and password, then save on Web or confirm the summary in WhatsApp. The local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores. TrackPal combines it with the Tenant's immutable prefix to create the canonical login in the form `{client_prefix}_{local_username}`, such as `t1_pepe`. Give the client this full canonical login, not only the local portion.
+Enter the client's full name, local username, optional phone, and password, then save on Web or confirm the summary in WhatsApp. The local username must start with a lowercase letter and contain only lowercase letters, digits, and underscores. TrackPal adds the business prefix and shows the complete (canonical) username, such as `t1_pepe`. Give the client this exact full username, not only the part you entered.
 
 A successful creation adds an active client. A duplicate local username, canonical username, or phone is rejected and leaves the existing clients unchanged. Correct the field and try again. A missing or invalid name, username, phone, or password is a validation error; it does not create a partial client.
 

@@ -40,9 +40,9 @@ tour:
     content: |
       # Bienvenido a TrackPal
 
-      Esta orientación Starter es opcional y dura aproximadamente de 2 a 3 minutos. Explica dónde están las herramientas de tu plan actual y cómo se relacionan Web, WhatsApp, las plataformas habilitadas y el buzón central.
+      Esta orientación es opcional y dura aproximadamente de 2 a 3 minutos. Explica dónde están las herramientas incluidas en tu plan actual y cómo se relacionan el panel web, WhatsApp, las plataformas habilitadas y el buzón central.
 
-      Continúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio de trabajo y puedes repetirlo desde Ayuda.
+      Continúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu panel de control y puedes repetirlo desde Ayuda.
   - release_id: tenant-admin-starter-1
     order: 2
     target: admin.dashboard
@@ -51,54 +51,54 @@ tour:
       - starter
     title: Dashboard y navegación
     content: |
-      # Tu espacio Starter
+      # Tu panel de control
 
-      El Dashboard muestra tu plan actual y las señales operativas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Starter muestra los módulos incluidos en tu plan actual.
+      El Dashboard muestra tu plan actual y el estado general de las herramientas. Usa la navegación para moverte entre Dashboard, Configuración y Ayuda. Allí solo aparecen las secciones incluidas en tu plan actual.
 
-      Estos valores son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia configuraciones.
+      Estos valores son de solo lectura. El recorrido usa la información real de tu negocio y no crea datos de demostración ni cambia configuraciones.
   - release_id: tenant-admin-pro-1
     order: 1
     target: admin.dashboard
     conditional: false
     plans:
       - pro
-    title: Bienvenido a Pro
+    title: Bienvenido a TrackPal
     content: |
-      # Bienvenido a Pro
+      # Bienvenido a TrackPal
 
-      Esta orientación Pro es opcional y dura aproximadamente de 2 a 3 minutos. Explica los módulos Pro y cómo se relacionan Web, WhatsApp, las suscripciones, los recordatorios y la API pública.
+      Esta orientación es opcional y dura aproximadamente de 2 a 3 minutos. Explica las herramientas incluidas en tu plan y cómo se relacionan el panel web, WhatsApp, las suscripciones, los recordatorios y la publicación de tu catálogo en un sitio web.
 
-      Continúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu espacio y puedes repetir esta orientación desde Ayuda.
+      Continúa con **Siguiente** o elige **Omitir recorrido**. Omitirlo nunca bloquea tu panel de control y puedes repetir esta orientación desde Ayuda.
   - release_id: tenant-admin-pro-1
     order: 2
     target: admin.dashboard
     conditional: false
     plans:
       - pro
-    title: Dashboard y navegación Pro
+    title: Dashboard y navegación
     content: |
-      # Tu espacio Pro
+      # Tu panel de control
 
-      El Dashboard muestra tu plan actual y las señales operativas. Pro agrega Clientes, Catálogo y Suscripciones a la navegación, mientras Configuración y Ayuda siguen siendo los puntos seguros para configurar y obtener orientación.
+      El Dashboard muestra tu plan actual y el estado general de las herramientas. Según tu plan, la navegación también incluye Clientes, Catálogo y Suscripciones. Configuración reúne los ajustes de tu negocio y Ayuda explica cada sección.
 
-      Los valores aquí son de solo lectura. El recorrido usa tu espacio real y no crea datos de demostración ni cambia ajustes.
+      Los valores aquí son de solo lectura. El recorrido usa la información real de tu negocio y no crea datos de demostración ni cambia ajustes.
 ---
 
-# Dashboard de la empresa
+# Dashboard
 
-El Dashboard de la empresa es el punto de partida para los Tenant Admins. Resume lo que TrackPal puede hacer para tu negocio según el plan actual.
+El Dashboard es el punto de partida de tu panel de control. Resume lo que TrackPal puede hacer para tu negocio según tu plan actual.
 
 ## Canal, requisitos y acciones
 
 - **Canal:** Web. El dashboard no es un menú de WhatsApp.
-- **Requisitos:** Inicia sesión como Tenant Admin con un Tenant activo. No necesitas configurar nada para leer la página.
+- **Requisitos:** Inicia sesión como administrador con un negocio activo. No necesitas configurar nada para leer la página.
 - **Acciones:** Abre Dashboard desde la barra lateral y usa los indicadores de solo lectura para decidir qué módulo abrir después.
 
 ## Resultados y estados
 
 - Ves tu plan Starter o Pro, el estado del buzón central de búsqueda, la cantidad de servicios de códigos habilitados y la cantidad de identidades de WhatsApp bloqueadas.
 - Pro también muestra clientes activos, servicios del Catálogo, suscripciones activas y suscripciones próximas a vencer.
-- Un estado de carga significa que TrackPal está actualizando los datos del Tenant. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.
+- Un estado de carga significa que TrackPal está actualizando los datos del negocio. Un buzón vacío o cero servicios habilitados significa que la búsqueda de códigos aún no está lista.
 - Si falla la carga, la página queda sin métricas actuales. Reintenta desde la página y contacta a soporte si el error persiste.
 
 ## Límites, consecuencias y recuperación
@@ -107,7 +107,7 @@ El Dashboard es de solo lectura: verlo no crea registros ni cambia configuracion
 
 ## Web y WhatsApp
 
-Usa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de Tenant Admin y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el Tenant activo y pueden cambiar después de que otro administrador modifique la configuración.
+Usa el Dashboard web para consultar el resumen. WhatsApp tiene su propio menú de administrador y reglas de sesión; usa el tema de WhatsApp para ese flujo. Los valores del Dashboard se actualizan con el negocio activo y pueden cambiar después de que otro administrador modifique la configuración.
 
 ## Límite de soporte
 

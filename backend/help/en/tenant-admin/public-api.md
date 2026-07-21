@@ -56,7 +56,7 @@ tour:
 
 # Publish the Public API Catalog
 
-The Public API Catalog lets a Pro Tenant publish its services and plans to a Tenant-owned browser frontend. It is **read-only**: the public payload contains service and plan IDs and names, not prices, availability, descriptions, credentials, or mutation controls. This topic is private Help for Tenant Admins; it does not create, reveal, regenerate, or revoke a key for you.
+The Public API Catalog lets your business show its services and plans on a website when this feature is included in the current plan. It is **read-only**: visitors can see service and plan names, but cannot change TrackPal data or view credentials. This Help topic explains the setup without creating, showing, replacing, or removing a key.
 
 ## Prepare the Catalog and Allowed Origins
 
@@ -66,7 +66,7 @@ An Allowed Origin is the exact browser origin where the catalog will run. Regist
 
 ## Create the key and connect the website
 
-Open Settings, choose API Key, add at least one Allowed Origin, and create the key. Keep the key out of source control, screenshots, public chat, and frontend logs. The developer handoff package in this Settings panel contains a placeholder, `YOUR_PUBLIC_API_KEY`, and maintained examples for HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js. It never inserts this Tenant's real key. Send the package separately, then provide the real key through a secure channel.
+Open Settings, choose API Key, add at least one Allowed Origin, and create the key. Keep the key out of source control, screenshots, public chat, and frontend logs. The developer handoff package in this Settings panel contains a placeholder, `YOUR_PUBLIC_API_KEY`, and maintained examples for HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js. It never inserts this business's real key. Send the package separately, then provide the real key through a secure channel.
 
 The browser integration makes a `GET` request to `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. The browser supplies `Origin` automatically. TrackPal returns the read-only catalog only when both the key and exact origin are valid. A missing Origin, unknown key, non-matching origin, or Starter downgrade returns a forbidden response.
 
@@ -84,4 +84,4 @@ A missing key means the public integration has not been created. An empty or inv
 
 Before broad production exposure, protect `GET /api/v1/public/catalog` with a Cloudflare rate-limit or WAF rule for all public traffic. Cloudflare protection is the expected abuse boundary for this public route; do not add an application, Redis, or in-memory rate limiter as a workaround.
 
-Starter Tenant Admins cannot retrieve, search, or invoke this topic. A downgrade pauses public access but preserves the key configuration for a future Pro reactivation. Contact support with the public endpoint, exact origin, response status, and visible non-secret error; never send the API Key itself.
+This topic is hidden when the current plan does not include website catalog publishing. A downgrade pauses public access but preserves the key configuration for a future Pro reactivation. Contact support with the public endpoint, exact origin, response status, and visible non-secret error; never send the API Key itself.

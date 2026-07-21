@@ -42,19 +42,19 @@ tour:
     content: |
       # Configuración de la cuenta
 
-      Configuración reúne el mapa de tu cuenta. Idioma cambia el idioma del espacio de trabajo, Perfil contiene la identidad y el teléfono del negocio que se usa para preparar WhatsApp, y Contraseña cambia solo la contraseña del Tenant Admin que inició sesión.
+      Configuración reúne el mapa de tu cuenta. Idioma cambia el idioma del espacio de trabajo, Perfil contiene la identidad y el teléfono del negocio que se usa para preparar WhatsApp, y Contraseña cambia solo la contraseña del administrador que inició sesión.
 
       Este paso abre el panel seguro de Perfil como un objetivo real. El recorrido nunca guarda un formulario, cambia una contraseña ni muestra valores sensibles.
 ---
 
 # Perfil
 
-Perfil guarda la identidad y los datos de contacto del negocio que los Tenant Admins usan para configurar TrackPal.
+Perfil guarda la identidad y los datos de contacto del negocio que los administradores usan para configurar TrackPal.
 
 ## Canal, requisitos y acciones
 
 - **Canal:** Web. Editar el perfil no está disponible como acción de WhatsApp.
-- **Requisitos:** Inicia sesión como Tenant Admin y abre Configuración, luego Perfil.
+- **Requisitos:** Inicia sesión como administrador y abre Configuración, luego Perfil.
 - **Acciones:** Revisa los campos de nombre del negocio, email y teléfono; cambia los valores permitidos y selecciona Guardar perfil.
 
 ## Resultados y estados
@@ -63,7 +63,7 @@ Después de guardar correctamente aparece una confirmación y los valores actual
 
 ## Límites, consecuencias y recuperación
 
-Los valores del perfil identifican al Tenant y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.
+Los valores del perfil identifican al negocio y pueden proporcionar el requisito del teléfono de WhatsApp. Guardar no vincula ni desconecta WhatsApp, no envía mensajes, no cambia la contraseña ni modifica datos de clientes. Usa un número que pertenezca al negocio y siga el formato mostrado por el formulario. Si guardar falla, corrige los mensajes de validación y reintenta sin actualizar la página; actualizarla puede descartar cambios locales sin guardar.
 
 ## Límite de soporte
 

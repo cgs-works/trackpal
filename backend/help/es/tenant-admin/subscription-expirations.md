@@ -42,13 +42,13 @@ related_topics:
 
 # Gestiona los vencimientos de suscripciones
 
-La gestión de vencimientos une tres superficies Pro: Suscripciones para acciones manuales, Zona horaria para el calendario local del Tenant y Ajustes de recordatorios para la automatización opcional de WhatsApp. Esta guía es informativa. Sus enlaces solo abren pantallas seguras; Help nunca crea, edita, cancela, renueva, reactiva, revela ni elimina una suscripción.
+La gestión de vencimientos conecta tres secciones incluidas con las suscripciones: Suscripciones para acciones manuales, Zona horaria para el calendario local del negocio y Ajustes de recordatorios para los mensajes opcionales de WhatsApp. Esta guía es informativa. Sus enlaces solo abren pantallas seguras; Help nunca crea, edita, cancela, renueva, reactiva, revela ni elimina una suscripción.
 
 ## Preparar el calendario operativo
 
-1. Abre Zona horaria y confirma la zona IANA del negocio. TrackPal la usa para fechas locales, umbrales de recordatorios y el límite de final de día de la limpieza.
-2. Abre Ajustes de recordatorios de suscripciones y decide si activarlos. Si los activas, elige días de aviso como 7, 3 y 1, define la hora local, selecciona destinatarios Tenant, Cliente o Ambos y revisa los placeholders del mensaje personalizado.
-3. Abre Suscripciones y revisa Cliente, servicio, plan, estado, fecha de inicio, fecha de vencimiento y email guardado. El Tenant debe ser Pro para que los datos y la automatización de suscripciones estén operativos.
+1. Abre Zona horaria y confirma la región que corresponde a la ubicación del negocio. TrackPal la usa para fechas locales, umbrales de recordatorios y el límite de final de día de la limpieza.
+2. Abre Ajustes de recordatorios de suscripciones y decide si activarlos. Si los activas, elige días de aviso como 7, 3 y 1, define la hora local, selecciona Administradores, Clientes o Ambos y revisa los datos que TrackPal completará en el mensaje personalizado.
+3. Abre Suscripciones y revisa Cliente, servicio, plan, estado, fecha de inicio, fecha de vencimiento y email guardado. El plan actual debe incluir la gestión de suscripciones para que estas herramientas estén disponibles.
 
 Los enlaces de zona horaria y recordatorios son navegación segura: seleccionan una categoría de Ajustes, pero no guardan un formulario ni envían un mensaje. Un enlace de Help a Suscripciones no abre un diálogo para revelar credenciales.
 
@@ -62,11 +62,11 @@ En WhatsApp usa el menú Pro `4`, elige el filtro de estado, selecciona la suscr
 
 ## Transiciones y recordatorios automáticos
 
-Cuando los recordatorios están activos, el backend solo comprueba suscripciones activas de Tenant Pro. Calcula los días hasta el vencimiento desde la fecha local del Tenant, espera hasta la hora local, prepara un payload por destinatario elegible y evita duplicados de la misma suscripción, día de aviso, destinatario y fecha local. n8n consulta aproximadamente cada 30 minutos solo para transportar payloads pendientes e informar éxito o fallo.
+Cuando los recordatorios están activos, TrackPal revisa las suscripciones activas usando la fecha y la hora local del negocio. Prepara un mensaje para cada destinatario elegido y evita duplicados para la misma suscripción y día. La revisión ocurre aproximadamente cada 30 minutos e informa si WhatsApp entregó cada mensaje.
 
-La limpieza es independiente del envío de recordatorios. Usa el final del día local del Tenant para decidir si un vencimiento ya pasado debe cambiar de estado. Cuando una ejecución de limpieza encuentra una suscripción activa elegible, la convierte en Expirada y registra un evento. Una suscripción Expirada que permanece así al menos 7 días pasa automáticamente a Cancelada. Una suscripción Cancelada con más de 30 días se elimina mediante la limpieza. Estas transiciones son automatización, no acciones que Help ni un mensaje de recordatorio de n8n ejecuten.
+Los cambios automáticos de estado son independientes del envío de recordatorios. Al terminar el día local del negocio, una suscripción cuya fecha ya pasó cambia a Expirada. Después de al menos 7 días pasa automáticamente a Cancelada y, tras más de 30 días en ese estado, se elimina. Ayuda y los mensajes de recordatorio nunca ejecutan estos cambios por sí mismos.
 
-Desactivar recordatorios detiene nuevos payloads y registros, pero no pausa ni elimina suscripciones. Degradar un Tenant a Starter conserva las filas y ajustes Pro mientras los trabajos de suscripciones, recordatorios y limpieza ignoran ese Tenant. Al volver a Pro, los datos conservados están disponibles otra vez según su estado y fechas actuales.
+Desactivar los recordatorios detiene los nuevos mensajes, pero no pausa ni elimina suscripciones. Cambiar a un plan sin gestión de suscripciones conserva la información mientras estos procesos automáticos permanecen pausados. Los datos vuelven a estar disponibles si el negocio regresa a un plan compatible, según su estado y fechas actuales.
 
 ## Estados de vencimiento y recuperación
 

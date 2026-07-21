@@ -14,7 +14,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.whatsapp
 title: WhatsApp
-summary: Link the business WhatsApp instance and understand the Tenant Admin console.
+summary: Link the business WhatsApp account and understand its administration menu.
 search_tags:
   - WhatsApp
   - pairing code
@@ -51,17 +51,17 @@ tour:
 
 # WhatsApp
 
-WhatsApp connects the business phone to TrackPal so the Tenant Admin bot can receive console messages and send replies.
+WhatsApp connects the business phone to TrackPal so administrators can use the private menu and TrackPal can send replies.
 
 ## Channel, prerequisites, and actions
 
 - **Channels:** Web for setup; WhatsApp for the conversational console after linking.
-- **Prerequisites:** Be a Tenant Admin, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.
+- **Prerequisites:** Be an administrator, open Settings, and configure a phone in Profile. Keep the phone with WhatsApp available while pairing. Access-code lookup also needs enabled platforms and a central mailbox.
 - **Actions:** Open WhatsApp in Settings, choose Pairing Code or QR Code, complete linking in WhatsApp under Linked Devices, and wait for Connected. Use the visible disconnect action only when you intentionally want to end the link.
 
 ## Results and states
 
-Connected means TrackPal can use the linked instance for the Tenant Admin console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.
+Connected means TrackPal can use the linked instance for the administrator console and notifications. Connecting or pending means pairing is still in progress. Disconnected or missing phone means the console is not ready. If WhatsApp revokes the linked device, the instance returns to a disconnected state and must be paired again. A pairing code expires and a QR code may need refreshing. A successful link shows the instance status; a failed or timed-out attempt leaves the previous connection unchanged and can be retried.
 
 ## Web and WhatsApp actions
 
@@ -73,11 +73,11 @@ The Pro main menu is `1` Clients, `2` Catalog, `3` My Profile, `4` Subscriptions
 
 Each Pro flow validates selections and values before changing data. Invalid numbers, empty names, duplicate values, invalid phones, short passwords, and unavailable records show a recoverable validation message and keep the flow at the current step. Destructive Client or Catalog actions show a summary or impact preview and require `CONFIRM` or `CONFIRMAR`; any other response re-prompts and `0` cancels. A session timeout closes the flow without applying a partial mutation.
 
-## Pro Client Context Shortcut boundaries
+## Client quick-access menu
 
-A Pro Tenant Admin can use `menu` or `/menu` from the private admin chat when the message targets a remote contact. TrackPal replies to the admin's private chat; the remote contact cannot see or operate the administrative menu. The shortcut can show client details, create or edit a client, activate or deactivate access, delete only an inactive client, and open that client's subscriptions. It does not expose the admin menu to the contact, edit a phone from the shortcut, reveal credentials automatically, or let the contact perform administrative actions.
+When client management is included in the current plan, an administrator can use `menu` or `/menu` from the private admin chat when the message targets a remote contact. TrackPal replies to the admin's private chat; the remote contact cannot see or operate the administrative menu. The shortcut can show client details, create or edit a client, activate or deactivate access, delete only an inactive client, and open that client's subscriptions. It does not expose the admin menu to the contact, edit a phone from the shortcut, reveal credentials automatically, or let the contact perform administrative actions.
 
-Only one Client Context Shortcut may be active for an admin at a time. Send `0` in the private admin chat to close it before starting another. Do not send arbitrary messages to a remote contact expecting a shortcut: only `menu` or `/menu` starts it, and an already open context rejects collisions safely. The shortcut's block or unblock notifications to the contact are generic; the admin receives the management confirmation privately.
+Only one client quick-access menu may be active for an administrator at a time. Send `0` in the private admin chat to close it before starting another. Do not send arbitrary messages to a remote contact expecting a shortcut: only `menu` or `/menu` starts it, and an already open context rejects collisions safely. The shortcut's block or unblock notifications to the contact are generic; the admin receives the management confirmation privately.
 
 ## Limits, consequences, and recovery
 

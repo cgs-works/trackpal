@@ -14,7 +14,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.access-control
 title: Control de acceso de WhatsApp
-summary: Revisa, busca, bloquea y desbloquea identidades de WhatsApp del Tenant.
+summary: Revisa, busca, bloquea y desbloquea identidades de WhatsApp del negocio.
 search_tags:
   - control de acceso
   - teléfono bloqueado
@@ -44,17 +44,17 @@ tour:
     content: |
       # Control de acceso
 
-      Configuración muestra las identidades bloqueadas para el bot de WhatsApp del Tenant. Una lista vacía es un estado válido. El recorrido solo resalta la primera acción disponible y explica el límite; nunca bloquea, desbloquea, busca ni abre una confirmación.
+      Configuración muestra las personas y números bloqueados en el WhatsApp del negocio. Una lista vacía es un estado válido. El recorrido solo resalta la primera acción disponible y explica el límite; nunca bloquea, desbloquea, busca ni abre una confirmación.
 ---
 
 # Control de acceso de WhatsApp
 
-El Control de acceso de WhatsApp es la lista de identidades que un Tenant Admin impide usar el bot de WhatsApp del Tenant. Protege la consola y el flujo de códigos de acceso; es diferente del estado de la cuenta de un Cliente en el portal.
+El Control de acceso de WhatsApp es la lista que los administradores usan para impedir que determinadas personas o números entren al menú de WhatsApp del negocio. Protege la consola y el flujo de códigos de acceso; es diferente del estado de la cuenta de un Cliente en el portal.
 
 ## Canal, requisitos y acciones
 
-- **Canales:** Web para ver la lista completa y buscar teléfonos; WhatsApp para el menú de Control de acceso del Tenant Admin.
-- **Requisitos:** Ser Tenant Admin. Debe existir un teléfono o una identidad de WhatsApp que quieras bloquear. El bloqueo está disponible en Starter y Pro.
+- **Canales:** Web para ver la lista completa y buscar teléfonos; WhatsApp para la opción Control de acceso del menú de administración.
+- **Requisitos:** Inicia sesión con la cuenta de administración del negocio. Necesitas el teléfono o la entrada de WhatsApp que quieras bloquear. El bloqueo está disponible en Starter y Pro.
 - **Acciones:** En Web, abre Configuración, elige Control de acceso, busca por los dígitos del teléfono, bloquea un teléfono o desbloquea una entrada existente. En WhatsApp, Starter abre Control de acceso con `3` y Pro con `5`; elige `1` para listar identidades bloqueadas o `2` para bloquear un teléfono.
 
 ## Resultados y estados
@@ -73,7 +73,7 @@ La lista Web permite buscar teléfonos sin cambiar los bloqueos guardados. En Wh
 
 ## Límites, consecuencias y recuperación
 
-Bloquear impide que la identidad entre a la consola de WhatsApp del Tenant, solicite códigos de acceso, vea el perfil por WhatsApp o consulte suscripciones por WhatsApp. No elimina al Cliente, desactiva su cuenta del portal ni elimina suscripciones. Desbloquea la identidad exacta desde Web o desde la lista de WhatsApp cuando deba recuperar el acceso. Si un teléfono aparece como LID de WhatsApp, usa la identidad que muestra TrackPal y pide ayuda a soporte en vez de adivinar un teléfono.
+Bloquear impide que la identidad entre a la consola de WhatsApp del negocio, solicite códigos de acceso, vea el perfil por WhatsApp o consulte suscripciones por WhatsApp. No elimina al Cliente, desactiva su cuenta del portal ni elimina suscripciones. Desbloquea la identidad exacta desde Web o desde la lista de WhatsApp cuando deba recuperar el acceso. Si TrackPal muestra un identificador de WhatsApp desconocido en vez de un teléfono, usa la entrada que aparece en pantalla y pide ayuda a soporte en vez de adivinar un número.
 
 ## Límite de soporte
 

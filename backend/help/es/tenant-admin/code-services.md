@@ -38,25 +38,25 @@ related_topics:
 
 # Plataformas de códigos habilitadas
 
-Las plataformas de códigos habilitadas son los servicios que TrackPal puede consultar cuando un Tenant Admin o un cliente solicita un código de acceso. La lista disponible depende del catálogo de plataformas y de la selección de tu Tenant.
+Las plataformas de códigos habilitadas son los servicios que TrackPal puede consultar cuando un administrador o un cliente solicita un código de acceso. La lista disponible depende del catálogo de plataformas y de la selección de tu negocio.
 
 ## Canal, requisitos y acciones
 
 - **Canal:** Web para configurar; WhatsApp para usar las plataformas seleccionadas en la búsqueda de códigos.
-- **Requisitos:** Ser Tenant Admin. La instancia de WhatsApp del negocio y el buzón central son requisitos separados para completar una búsqueda.
+- **Requisitos:** Ser administrador. La instancia de WhatsApp del negocio y el buzón central son requisitos separados para completar una búsqueda.
 - **Acciones:** Abre Configuración, elige Plataformas de códigos habilitadas, selecciona los servicios que deben estar disponibles y guarda. Solo puedes seleccionar servicios activos globalmente.
 
 ## Resultados y estados
 
 - **Cargando:** TrackPal está obteniendo la lista de plataformas. Espera a que aparezca antes de cambiar selecciones.
 - **Habilitado:** Un servicio seleccionado y activo globalmente aparece en la lista de servicios de WhatsApp.
-- **No disponible:** Una plataforma marcada como inactiva globalmente no se puede seleccionar. No es un error de la configuración de tu Tenant.
+- **No disponible:** Una plataforma marcada como inactiva globalmente no se puede seleccionar. No es un error de la configuración de tu negocio.
 - **Faltante:** Si no seleccionas ninguna plataforma, la búsqueda de códigos no puede iniciar y WhatsApp informa que los servicios de códigos no están configurados.
 - **Error:** Si falla la carga o el guardado, conserva la selección actual, reintenta desde Configuración y no inicies búsquedas repetidas hasta que la lista esté disponible.
 
 ## Acciones en Web y WhatsApp
 
-En Web, seleccionar una plataforma cambia los servicios que aparecerán en búsquedas futuras; no consulta el buzón ni envía mensajes de WhatsApp. En WhatsApp, el menú Starter abre la búsqueda con `2` y el menú Pro con `7`. La lista solo contiene la selección efectiva: servicios elegidos por el Tenant que siguen activos globalmente.
+En Web, seleccionar una plataforma cambia los servicios que aparecerán en búsquedas futuras; no consulta el buzón ni envía mensajes de WhatsApp. En WhatsApp, el menú Starter abre la búsqueda con `2` y el menú Pro con `7`. La lista solo contiene la selección efectiva: servicios elegidos por el negocio que siguen activos globalmente.
 
 ## Límites, consecuencias y recuperación
 

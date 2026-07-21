@@ -13,7 +13,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.password
 title: Contraseña
-summary: Cambia la contraseña de la cuenta Tenant Admin sin cambiar el perfil del negocio.
+summary: Cambia tu contraseña de acceso sin modificar el perfil del negocio.
 search_tags:
   - contraseña
   - seguridad
@@ -33,11 +33,11 @@ related_topics:
 
 # Contraseña
 
-Usa Contraseña en Configuración para cambiar la contraseña de la cuenta Tenant Admin con la que iniciaste sesión.
+Usa Contraseña en Configuración para cambiar la contraseña de la cuenta que estás usando.
 
 ## Canal, requisitos y acciones
 
-- **Canal:** Web. Los cambios de contraseña no están disponibles en la consola de WhatsApp del Tenant Admin.
+- **Canal:** Web. Los cambios de contraseña no están disponibles en la consola de WhatsApp del administrador.
 - **Requisitos:** Inicia sesión con la cuenta cuya contraseña quieres cambiar y abre Configuración, luego Contraseña. Necesitas la contraseña actual.
 - **Acciones:** Escribe la contraseña actual, una nueva contraseña, confírmala y guarda. TrackPal valida el nuevo valor antes de enviarlo.
 
@@ -47,7 +47,7 @@ Un cambio exitoso confirma la actualización. Mientras guarda, el formulario est
 
 ## Límites, consecuencias y recuperación
 
-Cambiar la contraseña afecta esta cuenta Tenant Admin, no a otros administradores, clientes, credenciales del buzón ni sesiones de WhatsApp. Usa una contraseña nueva que cumpla el mínimo mostrado por el formulario y no reutilices la contraseña de un buzón compartido. Si olvidaste la contraseña actual o fallan varios intentos, deja de probar y usa la recuperación disponible o contacta al propietario del espacio; no reveles la contraseña a soporte.
+Cambiar la contraseña afecta solo a la cuenta que estás usando, no a otros administradores, clientes, contraseñas del buzón ni sesiones de WhatsApp. Usa una contraseña nueva que cumpla el mínimo mostrado por el formulario y no reutilices la contraseña de un buzón compartido. Si olvidaste la contraseña actual o fallan varios intentos, deja de probar y usa la recuperación disponible o contacta al propietario del espacio; no reveles la contraseña a soporte.
 
 ## Límite de soporte
 

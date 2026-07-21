@@ -68,7 +68,7 @@ tour:
 
 # Catálogo
 
-El Catálogo es la lista de servicios y planes del Tenant Pro. Un servicio es la oferta y sus planes son las variantes que se seleccionan al crear una suscripción.
+El Catálogo contiene los servicios y planes que ofrece tu negocio cuando esta función está incluida en tu plan actual. Un servicio es la oferta y sus planes son las variantes que se seleccionan al crear una suscripción.
 
 ## Canal, requisitos y acciones
 

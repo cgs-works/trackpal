@@ -39,7 +39,7 @@ The Client Dashboard is the read-only starting point for your TrackPal account w
 ## Channel, prerequisites, and actions
 
 - **Channel:** Web. Sign in with the Client account created by your provider.
-- **Prerequisites:** The provider must have a Pro Tenant and your Client access must be active.
+- **Prerequisites:** Your provider's TrackPal plan must include client access, and your account must be active.
 - **Actions:** Open Dashboard to see your name, provider, account, and active subscriptions. The page does not edit Client data.
 
 ## Results and states

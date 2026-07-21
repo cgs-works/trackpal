@@ -62,7 +62,7 @@ tour:
 
 # Ayuda
 
-La Ayuda privada es el lugar para leer orientación que coincide con tu rol Tenant Admin, tu plan actual y tu idioma.
+La Ayuda muestra orientación sobre las herramientas incluidas en tu plan actual y en el idioma seleccionado.
 
 ## Encuentra un tema
 

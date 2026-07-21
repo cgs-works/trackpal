@@ -39,7 +39,7 @@ Perfil es una vista de solo lectura de la información asociada a tu cuenta de C
 ## Canal, requisitos y acciones
 
 - **Canal:** Web. Abre Perfil desde la navegación de Cliente después de iniciar sesión.
-- **Requisitos:** Tu cuenta de Cliente debe estar activa en un Tenant Pro.
+- **Requisitos:** El plan de TrackPal de tu proveedor debe incluir acceso para clientes y tu cuenta debe estar activa.
 - **Acciones:** Consulta tu nombre completo, usuario, teléfono cuando esté disponible, proveedor y estado. No puedes editar estos campos desde el perfil de Cliente.
 
 ## Resultados y estados

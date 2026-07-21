@@ -68,7 +68,7 @@ tour:
 
 # Catalog
 
-The Catalog is the Pro Tenant's list of services and plans. A service is the offering, and its plans are the selectable variants used when creating a subscription.
+The Catalog contains the services and plans your business offers when this feature is included in your current plan. A service is the offering, and its plans are the selectable variants used when creating a subscription.
 
 ## Channel, prerequisites, and actions
 

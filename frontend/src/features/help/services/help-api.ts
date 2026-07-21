@@ -95,8 +95,9 @@ export async function getUnseenHelpTour(): Promise<HelpTourRelease> {
   return data;
 }
 
-export async function replayHelpTour(releaseId: string): Promise<HelpTourRelease> {
-  const { data } = await api.get<HelpTourRelease>(`/help/tour/${releaseId}/replay`);
+export async function replayHelpTour(releaseId?: string): Promise<HelpTourRelease> {
+  const path = releaseId ? `/help/tour/${releaseId}/replay` : "/help/tour/replay";
+  const { data } = await api.get<HelpTourRelease>(path);
   return data;
 }
 

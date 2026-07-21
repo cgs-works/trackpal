@@ -282,12 +282,9 @@ export function OrientationTour() {
   useEffect(() => {
     if (!canRun) return;
     const handleReplay = () => {
-      void loadTour(async () => {
-        const current = tour;
-        if (current) return replayHelpTour(current.release_id);
-        const unseen = await getUnseenHelpTour();
-        return replayHelpTour(unseen.release_id);
-      });
+      void loadTour(() =>
+        tour ? replayHelpTour(tour.release_id) : replayHelpTour(),
+      );
     };
     window.addEventListener(HELP_TOUR_REPLAY_EVENT, handleReplay);
     return () => window.removeEventListener(HELP_TOUR_REPLAY_EVENT, handleReplay);

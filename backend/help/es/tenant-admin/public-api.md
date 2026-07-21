@@ -56,7 +56,7 @@ tour:
 
 # Publicar el catálogo mediante API pública
 
-La API pública de catálogo permite que un Tenant Pro publique sus servicios y planes en un frontend web de su propiedad. Es **de solo lectura**: la respuesta pública contiene los identificadores y nombres de servicios y planes, no precios, disponibilidad, descripciones, credenciales ni controles de mutación. Este tema pertenece a la Ayuda privada para Tenant Admins; no crea, muestra, regenera ni revoca una clave por ti.
+La API pública de catálogo permite mostrar los servicios y planes de tu negocio en un sitio web cuando esta función está incluida en el plan actual. Es **de solo lectura**: los visitantes pueden ver nombres de servicios y planes, pero no pueden cambiar datos de TrackPal ni ver credenciales. Este tema explica la configuración sin crear, mostrar, reemplazar ni eliminar una clave.
 
 ## Prepara el Catálogo y los sitios autorizados
 
@@ -66,7 +66,7 @@ Un sitio autorizado es el origen exacto del navegador donde funcionará el catá
 
 ## Crea la clave y conecta el sitio
 
-Abre Configuración, elige Clave API, agrega al menos un sitio autorizado y crea la clave. Mantén la clave fuera del control de versiones, capturas, chats públicos y logs del frontend. El paquete para desarrollador de este panel contiene el marcador `YOUR_PUBLIC_API_KEY` y ejemplos mantenidos para HTML + JavaScript, React, Vue, Svelte, Angular y Alpine.js. Nunca inserta la clave real de este Tenant. Envía el paquete por separado y comparte la clave real mediante un canal seguro.
+Abre Configuración, elige Clave API, agrega al menos un sitio autorizado y crea la clave. Mantén la clave fuera del control de versiones, capturas, chats públicos y logs del frontend. El paquete para desarrollador de este panel contiene el marcador `YOUR_PUBLIC_API_KEY` y ejemplos mantenidos para HTML + JavaScript, React, Vue, Svelte, Angular y Alpine.js. Nunca inserta la clave real de este negocio. Envía el paquete por separado y comparte la clave real mediante un canal seguro.
 
 La integración del navegador hace una solicitud `GET` a `/api/v1/public/catalog?api_key=YOUR_PUBLIC_API_KEY`. El navegador envía `Origin` automáticamente. TrackPal devuelve el catálogo de solo lectura solo cuando la clave y el origen exacto son válidos. La ausencia de Origin, una clave desconocida, un origen distinto o una degradación a Starter producen una respuesta prohibida.
 
@@ -84,4 +84,4 @@ La ausencia de clave significa que todavía no se creó la integración pública
 
 Antes de exponerlo ampliamente en producción, protege `GET /api/v1/public/catalog` con una regla de rate limit o WAF de Cloudflare para todo el tráfico público. Cloudflare es el límite esperado contra abuso para esta ruta pública; no agregues como solución un rate limiter de aplicación, Redis o memoria.
 
-Los Tenant Admins Starter no pueden recuperar, buscar ni invocar este tema. Una degradación pausa el acceso público, pero conserva la configuración de la clave para una futura reactivación Pro. Contacta a soporte con el endpoint público, el origen exacto, el estado de respuesta y el error visible no secreto; nunca envíes la Clave API.
+Este tema permanece oculto cuando el plan actual no incluye la publicación del catálogo en un sitio web. Una degradación pausa el acceso público, pero conserva la configuración de la clave para una futura reactivación Pro. Contacta a soporte con el endpoint público, el origen exacto, el estado de respuesta y el error visible no secreto; nunca envíes la Clave API.

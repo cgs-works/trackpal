@@ -175,6 +175,40 @@ async def get_unseen_tour(db: DbDep, current_user: CurrentUser) -> HelpTourRelea
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
 
+@router.get("/tour/replay", response_model=HelpTourRelease)
+async def replay_latest_tour(db: DbDep, current_user: CurrentUser) -> HelpTourRelease:
+    """Return the most recently acknowledged eligible tour, or the first eligible tour."""
+
+    tenant_id, plan, locale = await _tenant_admin_context(db, current_user)
+    catalog = _get_help_catalog()
+    fallback: tuple[dict, TenantHelpAcknowledgement | None] | None = None
+    latest: tuple[dict, TenantHelpAcknowledgement] | None = None
+
+    for candidate in catalog.tour_releases(locale, plan):
+        release_id = candidate["release_id"]
+        if await _initial_pro_release_is_suppressed(db, tenant_id, plan, release_id):
+            continue
+        release = catalog.tour_release(locale, plan, release_id)
+        if release is None:
+            continue
+        acknowledgement = await tenant_help_repository.get_acknowledgement(
+            db, tenant_id, release_id
+        )
+        if fallback is None:
+            fallback = (release, acknowledgement)
+        if acknowledgement is not None and (
+            latest is None
+            or acknowledgement.acknowledged_at > latest[1].acknowledged_at
+        ):
+            latest = (release, acknowledgement)
+
+    selected = latest or fallback
+    if selected is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    release, acknowledgement = selected
+    return _tour_response(catalog, release, locale, plan, acknowledgement)
+
+
 @router.get("/tour/{release_id}/replay", response_model=HelpTourRelease)
 async def replay_tour(
     release_id: str, db: DbDep, current_user: CurrentUser

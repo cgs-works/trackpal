@@ -14,7 +14,7 @@ route: /admin/settings
 help_targets:
   - admin.settings.whatsapp
 title: WhatsApp
-summary: Vincula el WhatsApp del negocio y entiende la consola de Tenant Admin.
+summary: Vincula el WhatsApp del negocio y conoce su menú de administración.
 search_tags:
   - WhatsApp
   - código de vinculación
@@ -51,17 +51,17 @@ tour:
 
 # WhatsApp
 
-WhatsApp conecta el teléfono del negocio con TrackPal para que el bot de Tenant Admin reciba mensajes de consola y envíe respuestas.
+WhatsApp conecta el teléfono del negocio con TrackPal para que los administradores usen el menú privado y TrackPal pueda enviar respuestas.
 
 ## Canal, requisitos y acciones
 
 - **Canales:** Web para la configuración; WhatsApp para la consola conversacional después de vincularlo.
-- **Requisitos:** Sé Tenant Admin, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.
+- **Requisitos:** Sé administrador, abre Configuración y configura un teléfono en Perfil. Ten el teléfono con WhatsApp disponible durante la vinculación. La búsqueda de códigos también necesita plataformas habilitadas y un buzón central.
 - **Acciones:** Abre WhatsApp en Configuración, elige Código de vinculación o Código QR, completa la vinculación en Dispositivos vinculados de WhatsApp y espera el estado Conectado. Usa Desconectar solo cuando quieras terminar la vinculación intencionalmente.
 
 ## Resultados y estados
 
-Conectado significa que TrackPal puede usar la instancia vinculada para la consola de Tenant Admin y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.
+Conectado significa que TrackPal puede usar la instancia vinculada para la consola de administrador y las notificaciones. Conectando o pendiente significa que la vinculación sigue en curso. Desconectado o sin teléfono significa que la consola no está lista. Si WhatsApp revoca el dispositivo vinculado, la instancia vuelve al estado desconectado y debe vincularse otra vez. Un código de vinculación expira y un código QR puede necesitar actualización. Una vinculación exitosa muestra el estado de la instancia; un intento fallido o expirado conserva la conexión anterior y puede reintentarse.
 
 ## Acciones en Web y WhatsApp
 
@@ -73,11 +73,11 @@ El menú principal Pro es `1` Clientes, `2` Catálogo, `3` Mi perfil, `4` Suscri
 
 Cada flujo Pro valida las selecciones y valores antes de cambiar datos. Números inválidos, nombres vacíos, valores duplicados, teléfonos inválidos, contraseñas cortas y registros no disponibles muestran un mensaje de validación recuperable y mantienen el flujo en el paso actual. Las acciones destructivas de Clientes o Catálogo muestran un resumen o vista previa del impacto y requieren `CONFIRM` o `CONFIRMAR`; otra respuesta vuelve a pedir confirmación y `0` cancela. Una sesión expirada cierra el flujo sin aplicar una mutación parcial.
 
-## Límites del Client Context Shortcut Pro
+## Menú rápido de clientes
 
-Un Tenant Admin Pro puede usar `menu` o `/menu` desde el chat privado de administración cuando el mensaje apunta a un contacto remoto. TrackPal responde al chat privado del administrador; el contacto remoto no puede ver ni operar el menú administrativo. El acceso directo puede mostrar datos del cliente, crear o editar un cliente, activar o desactivar su acceso, eliminar solo un cliente inactivo y abrir sus suscripciones. No muestra el menú de administración al contacto, no permite editar un teléfono desde el acceso directo, no revela credenciales automáticamente ni permite que el contacto realice acciones administrativas.
+Cuando el plan actual incluye la gestión de clientes, un administrador puede usar `menu` o `/menu` desde el chat privado de administración cuando el mensaje apunta a un contacto remoto. TrackPal responde al chat privado del administrador; el contacto remoto no puede ver ni operar el menú administrativo. El acceso directo puede mostrar datos del cliente, crear o editar un cliente, activar o desactivar su acceso, eliminar solo un cliente inactivo y abrir sus suscripciones. No muestra el menú de administración al contacto, no permite editar un teléfono desde el acceso directo, no revela credenciales automáticamente ni permite que el contacto realice acciones administrativas.
 
-Solo puede existir un Client Context Shortcut activo por administrador. Envía `0` en el chat privado de administración para cerrarlo antes de iniciar otro. No envíes mensajes arbitrarios a un contacto remoto esperando abrir el acceso directo: solo `menu` o `/menu` lo inicia y un contexto ya abierto rechaza colisiones de forma segura. Las notificaciones de bloqueo o desbloqueo para el contacto son genéricas; el administrador recibe la confirmación de gestión en privado.
+Solo puede existir un menú rápido de clientes activo por administrador. Envía `0` en el chat privado de administración para cerrarlo antes de iniciar otro. No envíes mensajes arbitrarios a un contacto remoto esperando abrir el acceso directo: solo `menu` o `/menu` lo inicia y un contexto ya abierto rechaza colisiones de forma segura. Las notificaciones de bloqueo o desbloqueo para el contacto son genéricas; el administrador recibe la confirmación de gestión en privado.
 
 ## Límites, consecuencias y recuperación
 
