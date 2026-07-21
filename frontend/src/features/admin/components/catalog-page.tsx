@@ -509,7 +509,7 @@ export function CatalogPage() {
   }
 
   return (
-    <div className="flex-1 p-6">
+    <div className="flex-1 p-6" data-help-id="admin.catalog">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div>

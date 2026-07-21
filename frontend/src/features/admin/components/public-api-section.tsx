@@ -21,6 +21,7 @@ import { getApiError } from "@/lib/api-errors";
 import { useSettingsStore } from "@/store/settings";
 
 const LANGUAGES = ["html", "react", "vue", "svelte", "angular", "alpine"] as const;
+const API_KEY_PLACEHOLDER = "YOUR_PUBLIC_API_KEY";
 const TOOLTIP = "frontend.public_api.tooltip";
 
 type Language = (typeof LANGUAGES)[number];
@@ -69,7 +70,7 @@ export function PublicApiSection() {
   }, [load]);
 
   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-  const example = useMemo(() => buildExample(language, baseUrl, publicApiKey?.api_key ?? "tpk_TU_CLAVE_API"), [baseUrl, language, publicApiKey]);
+  const example = useMemo(() => buildExample(language, baseUrl), [baseUrl, language]);
 
   async function save(nextOrigins = origins) {
     setSaving(true);
@@ -122,6 +123,15 @@ export function PublicApiSection() {
     }
   }
 
+  async function handleCopyHandoff() {
+    try {
+      await navigator.clipboard.writeText(buildDeveloperHandoffPackage(baseUrl, origins));
+      toast.success(t("frontend.public_api.handoff_copied"));
+    } catch (error) {
+      toast.error(getApiError(error, t("frontend.public_api.error_load")));
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -146,6 +156,7 @@ export function PublicApiSection() {
     setLanguage,
     handleAddSite,
     handleCopy,
+    handleCopyHandoff,
     handleCreate,
     handleRevoke,
     save,
@@ -169,6 +180,7 @@ type VariantProps = {
   setLanguage: (value: Language) => void;
   handleAddSite: () => void;
   handleCopy: () => void;
+  handleCopyHandoff: () => Promise<void>;
   handleCreate: (event: React.FormEvent) => void;
   handleRevoke: () => void;
   save: () => Promise<void>;
@@ -269,12 +281,18 @@ function SitesEditor({ origins, originInput, saving, setOriginInput, setOrigins,
   );
 }
 
-function DeveloperTabs({ language, example, setLanguage }: VariantProps) {
+function DeveloperTabs({ language, example, setLanguage, handleCopyHandoff }: VariantProps) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
-      <div>
-        <Label>{t("frontend.public_api.developer_title")}</Label>
-        <p className="text-xs text-muted-foreground">{t("frontend.public_api.browser_only_warning")}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <Label>{t("frontend.public_api.developer_title")}</Label>
+          <p className="text-xs text-muted-foreground">{t("frontend.public_api.browser_only_warning")}</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => void handleCopyHandoff()}>
+          <Copy data-icon="inline-start" />
+          {t("frontend.public_api.copy_handoff")}
+        </Button>
       </div>
       <div className="flex flex-wrap gap-2">
         {LANGUAGES.map((item) => (
@@ -322,8 +340,27 @@ function DangerZone({ revoking, handleRevoke }: VariantProps) {
   );
 }
 
-function buildExample(language: Language, baseUrl: string, key: string): string {
-  const url = `${baseUrl}/public/catalog?api_key=${key}`;
+export function buildDeveloperHandoffPackage(baseUrl: string, origins: string[]): string {
+  const originList = origins.length > 0 ? origins.join(", ") : t("frontend.public_api.handoff_no_origins");
+  const examples = LANGUAGES.flatMap((language) => [
+    t(`frontend.public_api.lang_${language}`),
+    buildExample(language, baseUrl),
+    "",
+  ]);
+
+  return [
+    t("frontend.public_api.handoff_title"),
+    t("frontend.public_api.handoff_instructions"),
+    `${t("frontend.public_api.handoff_endpoint")}: ${baseUrl}/public/catalog`,
+    `${t("frontend.public_api.handoff_origins")}: ${originList}`,
+    `${t("frontend.public_api.handoff_key")}: ${API_KEY_PLACEHOLDER}`,
+    "",
+    ...examples,
+  ].join("\n");
+}
+
+function buildExample(language: Language, baseUrl: string): string {
+  const url = `${baseUrl}/public/catalog?api_key=${API_KEY_PLACEHOLDER}`;
   if (language === "react") return `useEffect(() => {\n  fetch("${url}")\n    .then((res) => res.json())\n    .then(setCatalog);\n}, []);`;
   if (language === "vue") return `<script setup>\nimport { onMounted, ref } from "vue";\n\nconst catalog = ref(null);\n\nonMounted(async () => {\n  catalog.value = await fetch("${url}").then((res) => res.json());\n});\n</script>`;
   if (language === "svelte") return `<script>\n  import { onMount } from "svelte";\n\n  let catalog;\n\n  onMount(async () => {\n    catalog = await fetch("${url}").then((res) => res.json());\n  });\n</script>`;

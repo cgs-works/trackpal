@@ -50,9 +50,10 @@
 2. Error input shows error message and re-prompts current step (does not reset conversation)
 3. Inactivity timeout clears session from Redis; next message starts fresh from main menu
 4. Master menu: 1=Ver empresas, 2=Crear empresa, 3=Desactivar empresa, 4=Eliminar empresa, 5=Ayuda, 0=Cancelar/Cerrar sesion
-5. Tenant console: 1=Clientes, 2=Catalogo, 3=Mi Perfil, 4=Suscripciones, 5=Ayuda, 0=Cancelar, 9=Volver (in subflows), 8=Siguiente (pagination)
-6. Client console: 1=Ver perfil, 2=Ver suscripciones, 3=Buscar codigo de acceso, 0=Cancelar
-7. Tenant access code retrieval: select service → enter email → system creates lookup job → polling loop until code extracted, or error, or user exits
+5. Starter Tenant Admin console: 1=Mi perfil, 2=Buscar código de acceso, 3=Control de acceso, 4=Ayuda, 0=Salir
+6. Pro Tenant Admin console: 1=Clientes, 2=Catálogo, 3=Mi perfil, 4=Suscripciones, 5=Control de acceso, 6=Ayuda, 7=Buscar código de acceso, 0=Salir
+7. Client console: 1=Ver perfil, 2=Ver suscripciones activas, 3=Buscar código de acceso, 0=Cancelar
+8. Tenant Admin access code retrieval: select service → enter and confirm email → system creates lookup job → polling loop until code extracted, an error occurs, or the user exits
 8. Shared module `app/services/whatsapp_navigation.py` implements the contract with `is_cancel()`, `is_back()`, `is_next()` and screen-stack helpers
 
 ## Contingency Reply Policy (Redis Degradation)

@@ -16,9 +16,11 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MasterDashboardRouteImport } from './routes/master/dashboard'
 import { Route as ClientProfileRouteImport } from './routes/client/profile'
+import { Route as ClientHelpRouteImport } from './routes/client/help'
 import { Route as ClientDashboardRouteImport } from './routes/client/dashboard'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminHelpRouteImport } from './routes/admin/help'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminClientsRouteImport } from './routes/admin/clients'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
@@ -58,6 +60,11 @@ const ClientProfileRoute = ClientProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => ClientRoute,
 } as any)
+const ClientHelpRoute = ClientHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => ClientRoute,
+} as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -71,6 +78,11 @@ const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHelpRoute = AdminHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -98,9 +110,11 @@ export interface FileRoutesByFullPath {
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/help': typeof AdminHelpRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
@@ -113,9 +127,11 @@ export interface FileRoutesByTo {
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/help': typeof AdminHelpRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
@@ -129,9 +145,11 @@ export interface FileRoutesById {
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/help': typeof AdminHelpRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
 }
@@ -146,9 +164,11 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/help'
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
+    | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
   fileRoutesByTo: FileRoutesByTo
@@ -161,9 +181,11 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/help'
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
+    | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
   id:
@@ -176,9 +198,11 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/help'
     | '/admin/settings'
     | '/admin/subscriptions'
     | '/client/dashboard'
+    | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
   fileRoutesById: FileRoutesById
@@ -242,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientProfileRouteImport
       parentRoute: typeof ClientRoute
     }
+    '/client/help': {
+      id: '/client/help'
+      path: '/help'
+      fullPath: '/client/help'
+      preLoaderRoute: typeof ClientHelpRouteImport
+      parentRoute: typeof ClientRoute
+    }
     '/client/dashboard': {
       id: '/client/dashboard'
       path: '/dashboard'
@@ -261,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/help': {
+      id: '/admin/help'
+      path: '/help'
+      fullPath: '/admin/help'
+      preLoaderRoute: typeof AdminHelpRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dashboard': {
@@ -291,6 +329,7 @@ interface AdminRouteChildren {
   AdminCatalogRoute: typeof AdminCatalogRoute
   AdminClientsRoute: typeof AdminClientsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminHelpRoute: typeof AdminHelpRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
 }
@@ -299,6 +338,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCatalogRoute: AdminCatalogRoute,
   AdminClientsRoute: AdminClientsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminHelpRoute: AdminHelpRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSubscriptionsRoute: AdminSubscriptionsRoute,
 }
@@ -307,11 +347,13 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ClientRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientHelpRoute: typeof ClientHelpRoute
   ClientProfileRoute: typeof ClientProfileRoute
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
+  ClientHelpRoute: ClientHelpRoute,
   ClientProfileRoute: ClientProfileRoute,
 }
 

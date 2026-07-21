@@ -66,6 +66,10 @@ describe("SettingsPage", () => {
 
       await user.click(screen.getAllByText("frontend.access_control.section_title")[0]);
       expect(screen.getByText("access control section")).toBeInTheDocument();
+      expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
+        "data-help-id",
+        "admin.settings.access-control",
+      );
       expect(screen.queryByText("frontend.settings.guide_title")).not.toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "frontend.settings.cancel" }));
@@ -144,6 +148,30 @@ describe("SettingsPage", () => {
       await user.click(screen.getByText("frontend.whatsapp_link.section_title"));
 
       expect(screen.getByText("whatsapp link section")).toBeInTheDocument();
+    });
+
+    it("exposes contextual targets for Pro reminder and timezone categories", async () => {
+      mockUseAuthStore.mockReturnValue({
+        role: "tenant",
+        tenantPlan: "pro",
+        isMasterSupportContext: false,
+      });
+
+      const user = userEvent.setup();
+      render(<SettingsPage />);
+
+      await user.click(screen.getByText("frontend.subscriptions.reminder_settings_title"));
+      expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
+        "data-help-id",
+        "admin.settings.reminders",
+      );
+
+      await user.click(screen.getByRole("button", { name: "frontend.settings.cancel" }));
+      await user.click(screen.getByText("frontend.subscriptions.timezone"));
+      expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
+        "data-help-id",
+        "admin.settings.timezone",
+      );
     });
   });
 });

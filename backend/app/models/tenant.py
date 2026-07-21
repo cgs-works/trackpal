@@ -68,6 +68,11 @@ class Tenant(Base, TimestampMixin):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    help_acknowledgements = relationship(
+        "TenantHelpAcknowledgement",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def full_name(self) -> str:

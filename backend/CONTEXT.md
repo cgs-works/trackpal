@@ -15,11 +15,13 @@
 | Término | Definición |
 |---------|------------|
 | **Tenant** | Entidad que presta servicios. Tiene su propia instancia de Evolution WhatsApp, catálogo, clientes y suscripciones. Un tenant es un "empresa" en el sistema. Cada tenant tiene un **plan** (starter o pro) que determina qué módulos puede usar. |
+| **Tenant Admin** | The person who operates a Tenant through TrackPal's administrative interfaces. Use **Tenant** for the business entity, never for the person. |
+| **Tenant Onboarding Status** | The tenant-wide record of orientation-tour releases that were completed or skipped. It belongs to the Tenant rather than to an individual Tenant Admin. |
 | **Master** | Operador principal. Gestiona el ciclo de vida de tenants via WhatsApp Console y web dashboard. Solo hay una instancia. Puede **switchear** a un tenant específico para soporte; en ese contexto ve la UI completa sin restricciones de plan. |
-| **Client** | Cliente final de un tenant. Login compuesto: `{client_prefix}_{local_username}`. Solo puede ver perfil y cambiar contraseña. En tenants Starter, el login de client retorna 401 genérico (datos preservados, pero no accesibles). |
+| **Client** | End customer of a Tenant. Uses the canonical login `{client_prefix}_{local_username}` and has read-only access to profile and active subscription information, Web password changes, and WhatsApp access-code lookup. Client access is unavailable while the Tenant is on Starter, although its data is preserved. |
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
-| **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant y Client. |
-| **Client Context Shortcut** | Sesión privada de WhatsApp que permite al Tenant gestionar un contacto remoto desde su chat privado de admin. El contacto remoto no ve el menú; las acciones del menú se aceptan solo desde el chat privado del Tenant. |
+| **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant Admin y Client. |
+| **Client Context Shortcut** | A private WhatsApp session in which a Tenant Admin manages a remote contact from the admin's own chat. The remote contact cannot see or operate the administrative menu. |
 | **Catalog** | Servicios y planes que un tenant ofrece. Cada servicio tiene planes identificables por nombre; precios, disponibilidad y metadata no forman parte del catálogo v1. |
 | **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados y no permite mutaciones. |
 | **Public API Key** | Credencial tenant-scoped que habilita el Public API Catalog. Es visible para el tenant, revocable y regenerable; una key activa representa una integración pública de catálogo. Implementation table: `tenant_api_keys`. One row per tenant, plain-text `api_key`, JSON `allowed_origins`. |
@@ -85,6 +87,9 @@ schemas  core       models
 | `app/core/i18n/` | Motor de localización (en/es) con catálogos en memoria |
 | `app/core/input_validation/` | Validación centralizada de campos |
 | `app/core/redis_client/` | Gestión HA de Redis con failover |
+| `app/help/` | Compiled private Help artifact and strict bilingual Markdown contract |
+| `app/api/v1/endpoints/help.py` | Authenticated, role/plan/locale-aware Help index, topic, and search API |
+
 
 ## Convenciones clave
 

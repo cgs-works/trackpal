@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { t } from "@/i18n";
+import { HELP_TARGETS } from "@/features/help/help-targets";
 import {
   fetchClientDashboard,
   type ClientDashboardData,
@@ -211,7 +212,7 @@ export function DashboardPage() {
         {!isLoading && !error && dashboard && (
           <>
             {/* Header */}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4" data-help-id={HELP_TARGETS.clientDashboard}>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">
                   {t("frontend.dashboard.client.title")}
@@ -272,7 +273,7 @@ export function DashboardPage() {
             </div>
 
             {/* Subscriptions */}
-            <Card>
+            <Card data-help-id={HELP_TARGETS.clientSubscriptions}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CreditCard className="size-5 text-muted-foreground" />

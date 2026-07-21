@@ -17,6 +17,7 @@ interface AuthState {
   user: UserInfo | null
   activeTenantId: string | null
   tenantPlan: TenantPlan | null
+  planDowngraded: boolean
   isMasterSupportContext: boolean
   isAuthenticated: boolean
   role: string | null
@@ -68,12 +69,13 @@ function clearTokenData() {
 
 const initial = loadFromStorage();
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token: initial.token,
   refreshToken: initial.refreshToken,
   user: initial.user,
   activeTenantId: initial.activeTenantId,
   tenantPlan: initial.tenantPlan,
+  planDowngraded: false,
   isMasterSupportContext: initial.user?.role === "master" && !!initial.activeTenantId,
   isAuthenticated: !!initial.token,
   role: initial.user?.role || null,
@@ -81,6 +83,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (username, password) => {
     const data = await loginApi(username, password);
+    const current = get();
+    const planDowngraded =
+      current.user?.id === data.user.id &&
+      current.activeTenantId === data.active_tenant_id &&
+      current.tenantPlan === "pro" &&
+      data.tenant_plan === "starter";
     saveTokenData(data);
     // Clear caches on new login
     useSettingsStore.getState().clearSettingsCache();
@@ -91,6 +99,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: data.user,
       activeTenantId: data.active_tenant_id,
       tenantPlan: data.tenant_plan,
+      planDowngraded,
       isMasterSupportContext: data.user.role === "master" && !!data.active_tenant_id,
       isAuthenticated: true,
       role: data.user.role,
@@ -118,6 +127,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       activeTenantId: null,
       tenantPlan: null,
+      planDowngraded: false,
       isMasterSupportContext: false,
       isAuthenticated: false,
       role: null,
@@ -137,6 +147,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: data.user,
       activeTenantId: data.active_tenant_id,
       tenantPlan: data.tenant_plan,
+      planDowngraded: false,
       isMasterSupportContext: data.user.role === "master" && !!data.active_tenant_id,
       isAuthenticated: true,
       role: data.user.role,
@@ -146,12 +157,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setTenantPlan: (plan) => {
+    const previousPlan = get().tenantPlan;
     // ponytail: support context depends on role + tenant, not plan.
     if (plan) {
       localStorage.setItem("tenantPlan", plan);
     } else {
       localStorage.removeItem("tenantPlan");
     }
-    set({ tenantPlan: plan });
+    set({
+      tenantPlan: plan,
+      planDowngraded: previousPlan === "pro" && plan === "starter",
+    });
   },
 }));

@@ -20,19 +20,29 @@ Master interacts via WhatsApp chatbot to:
 
 ### Tenant Console (WhatsApp)
 
-Tenant admins interact via WhatsApp chatbot to:
-1. **Manage clients** — List, create, edit, deactivate, reactivate, delete own clients
-2. **Manage catalog** — View and edit service and plan names
-3. **Manage profile** — View and edit own profile data, change password
-4. **Manage subscriptions** — List, create, edit, cancel, renew, reactivate, reveal credentials
-5. **Access code retrieval** — Multi-step mailbox lookup dialog: select service → enter email → poll for extraction code. Supports mailbox configuration check, IMAP/OAuth mailbox connect, provider-based mail polling with Netflix OTP URL resolution
+Tenant Admin capabilities are plan-aware:
+
+- **Starter**: manage own profile and language, search for access codes, manage WhatsApp access blocks, view help, and exit the console.
+- **Pro**: all Starter capabilities plus client, catalog, and subscription management.
+
+The implemented Pro menu supports:
+1. **Manage clients** — List, create, edit, deactivate, reactivate, and delete own clients
+2. **Manage catalog** — List, create, rename, and delete services and plans
+3. **Manage profile** — View and edit identity data, change password, and change language
+4. **Manage subscriptions** — List, filter, create, edit, cancel, renew, and reactivate subscriptions
+5. **Manage access control** — List blocked identities, block a phone, and unblock through the client-management flows
+6. **View help** — Review menu and navigation commands
+7. **Access code retrieval** — Select a configured service, confirm the target email, and poll the connected mailbox for an extraction result
 
 ### Client WhatsApp Console (read-only)
 
-Resolved inside tenant instance scope. Clients can:
-1. **View own profile** — Read-only name, phone, username, status
-2. **Change own password** — Password update with current-password confirmation
-3. **Exit session** — Returns `status="closed"` so n8n closes Evolution session
+Resolved inside a Pro tenant instance scope. Clients can:
+1. **View own profile** — Read-only name, provider, phone, and status
+2. **View active subscriptions** — Read-only service, plan, dates, and status
+3. **Search for an access code** — Enter the tenant's mailbox lookup flow for an enabled service
+4. **Exit session** — Returns `status="closed"` so n8n closes the Evolution session
+
+Client password changes are available through the authenticated Web Dashboard, not the Client WhatsApp Console.
 
 ### Web Dashboard
 
@@ -78,15 +88,15 @@ Programmatic access for frontend SPA and n8n integration:
 | Role | Capabilities |
 |------|-------------|
 | **Master** | Full access via WhatsApp Console + REST API + Web Dashboard. Manages all tenants, global code-service activation, system config. One instance. |
-| **Tenant** | Manages own profile, catalog, clients, subscriptions, mailbox config, and code-service selection via REST API, WhatsApp Tenant Console, and Web Dashboard. Unlimited tenants. |
-| **Client** | Read-only profile view and password management via REST API and WhatsApp Client Console. Tenant-prefixed login (`{prefix}_{local_username}`). |
+| **Tenant Admin** | Operates one tenant through plan-aware Web and WhatsApp administration. Starter covers profile, WhatsApp, mailbox code lookup, code-service selection, and access control; Pro adds clients, catalog, subscriptions, reminders, timezone, and Public API Catalog. |
+| **Client** | For Pro tenants, views own profile and active subscriptions through Web and WhatsApp, searches for access codes through WhatsApp, and changes password through Web. Uses a tenant-prefixed login (`{prefix}_{local_username}`). |
 
 ## User Interaction Channels
 
 | Channel | Master | Tenant | Client |
 |---------|--------|--------|--------|
-| WhatsApp Console | Full admin (CRUD tenants) | Full admin (clients, catalog, subs, access codes) | Read-only profile + password |
-| Web Dashboard | Tenant list + CRUD + global code-services | Profile, catalog, clients, subs, mailbox, code-services | Profile + password |
+| WhatsApp Console | Full admin (CRUD tenants) | Plan-aware administration: profile, access codes, access control, and help; Pro also includes clients, catalog, and subscriptions | Read-only profile and active subscriptions, plus access-code search |
+| Web Dashboard | Tenant list + CRUD + global code-services | Plan-aware profile, WhatsApp, mailbox, code-services, access control, catalog, clients, subscriptions, reminders, and Public API settings | Read-only profile and active subscriptions, plus password change |
 | REST API | Full | Self-scoped | Read-only self |
 | Mailbox Ingestion | N/A | Configure mailbox, access code retrieval | N/A |
 

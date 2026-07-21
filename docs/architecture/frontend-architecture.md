@@ -47,8 +47,10 @@ Routes defined in `src/routes/`:
 | `admin.tsx` → `admin/catalog.tsx` | `/admin/catalog` | `CatalogPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/subscriptions.tsx` | `/admin/subscriptions` | `SubscriptionsPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/settings.tsx` | `/admin/settings` | `SettingsPage` | Required | `tenant` |
+| `admin.tsx` → `admin/help.tsx` | `/admin/help` | `HelpCenterPage` (private release-gated) | Required | `tenant` |
 | `client.tsx` → `client/dashboard.tsx` | `/client/dashboard` | `ClientDashboard` | Required | `client` |
 | `client.tsx` → `client/profile.tsx` | `/client/profile` | `ProfilePage` | Required | `client` |
+| `client.tsx` → `client/help.tsx` | `/client/help` | `HelpCenterPage` (private release-gated) | Required | `client` |
 
 Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/admin/clients`, `/admin/catalog`, `/admin/subscriptions`). Master support context bypasses this frontend gate to inspect preserved Pro data.
 
@@ -56,8 +58,9 @@ Starter tenant admins see 404 for direct navigation to Pro-only admin routes (`/
 
 - `__root.tsx` — Root layout: loads i18n catalog before rendering, renders `<Outlet>` + `<Toaster>` + devtools
 - `master.tsx` — Master layout with sidebar nav
-- `admin.tsx` — Admin layout with collapsible sidebar, plan-aware nav items, and support banner for Master support context
-- `client.tsx` — Client layout with sidebar nav
+- `admin.tsx` — Tenant Admin layout with shared collapsible desktop sidebar, plan-aware role navigation, contextual Help on Dashboard, Pro modules, and Settings, and support banner for Master support context; mobile navigation opens in a Sheet
+- `client.tsx` — Client layout using the same shared role navigation and mobile Sheet; when private Help is enabled it exposes Dashboard, Profile, and Help only, plus contextual Help on Client screens
+
 
 ### Navigation Guard
 
@@ -216,10 +219,16 @@ Login form with pre-auth i18n via `usePublicI18n()`. Uses translated labels for 
 ### AdminLayout (`features/admin/layout/admin-layout.tsx`)
 
 Collapsible sidebar layout for tenant admin pages:
-- Sidebar: brand, nav items (Dashboard, Settings always visible; Clients, Catalog, Subscriptions shown only for Pro or Master support context), username, logout
-- Mobile: header bar with brand + logout
-- Content: `<Outlet>` renders child routes
-- When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`
+- Shared role-navigation model: Dashboard, Clients, Catalog, Subscriptions, and Settings remain in the existing order; Starter hides the Pro-only destinations and Master Support Context shows them.
+- Desktop sidebar: brand, authorized nav items, username, collapse control, and logout.
+- Mobile: the shared header exposes an accessible menu control that opens the authorized destinations in a focus-managed `Sheet`; selecting a destination closes the Sheet.
+- Content: `<Outlet>` renders child routes.
+- When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`.
+
+### ClientLayout (`features/client/layout/client-layout.tsx`)
+
+Client navigation uses the same role-navigation and sidebar primitives. When private Help is enabled it exposes only Dashboard, Profile, and Help, with Help last before account/logout. Desktop active states are exact route matches; mobile exposes the same authorized destinations through the focus-managed `Sheet`. Contextual Help is available on the Dashboard and Profile screens and never starts an Orientation Tour.
+
 
 ### MasterLayout (`features/master/layout/master-layout.tsx`)
 

@@ -1,0 +1,269 @@
+# User Help System Architecture
+
+## Purpose
+
+This document explains the approved architecture for TrackPal's private Markdown-backed manuals and Tenant Admin Orientation Tour. Product behavior and content requirements are defined in [User Help and Tenant Orientation Requirements](../project-pdr/user-help-requirements.md). The source-of-truth decision is recorded in [ADR-0001](../adr/0001-markdown-capability-registry-for-user-help.md).
+
+## System Boundary
+
+```text
+Repository Markdown topics
+        │
+        ▼
+Build validator and compiler
+        │
+        ├── validates capability contracts and locale parity
+        └── emits versioned private Help artifact
+                         │
+                         ▼
+Authenticated Help API ────────── Tenant Help state
+        │                         (acknowledged Tour Releases)
+        ▼
+React Help client
+        ├── Help Center and full-text search
+        ├── Contextual Help Sheet
+        └── React Joyride Orientation Tour
+```
+
+The public Vite bundle contains the Help client and presentation components, but not manual prose or private search data. The checked-in private artifact covers the common Tenant Admin topics, Pro Tenant Admin guides, and the separate Pro Client topics for Dashboard, read-only Profile, active Subscriptions, Web-only Password changes, and WhatsApp capabilities. The Public API topic links only to the safe Settings category and the Catalog; its Settings panel provides a localized, copyable developer handoff containing placeholder keys and all supported browser examples, never the Tenant's real key. The single `VITE_PRIVATE_HELP_ENABLED` gate remains false by default and controls both Tenant Admin and Client navigation, contextual Help, and tours together until the full Help release and browser QA are complete.
+
+## Tracer implementation
+
+- Markdown sources live under `backend/help/{en,es}/tenant-admin/` and are compiled by `backend/scripts/compile_help.py`.
+- `app.help.compiler` rejects unknown frontmatter, unsafe Markdown, duplicate IDs, invalid routes or targets, Spanish/English metadata drift, and Client tour declarations.
+- `app.help.release` verifies the complete first-release topic, search, audience, and tour set. `uv run python -m scripts.verify_help_release` checks that the checked-in artifact matches the Markdown sources before publication.
+- The generated artifact is private backend data at `backend/app/help/artifact.json`; it is never imported by the frontend build.
+- Authenticated Tenant Admins and Clients use `GET /api/v1/help`, `GET /api/v1/help/topics/{topic_id}`, and `GET /api/v1/help/search`. Each operation filters by the caller's audience, Tenant plan, and locale; Master users and Master Support Context receive 404.
+- Tenant Admin orientation state uses `GET /api/v1/help/tour` for the first unseen eligible release, `GET /api/v1/help/tour/{release_id}/replay` for an explicit replay, and `POST /api/v1/help/tour/{release_id}/acknowledge` for a completed or confirmed skipped release. Acknowledgements are immutable and unique per Tenant and release.
+- The Starter orientation release is `tenant-admin-starter-1`; its seven ordered steps are declared by the Dashboard, Profile, WhatsApp, access-code, access-control, and Help Markdown topics and target `data-help-id` contracts rather than translated labels or CSS selectors. Tour metadata may declare plan eligibility and localized copy separately from the manual body.
+- The initial Pro orientation release is `tenant-admin-pro-1` and follows the approved seven-step Pro order: welcome, Dashboard, Clients, Catalog, Subscriptions, Pro Settings, and WhatsApp/Help replay. A Starter-to-Pro upgrade uses `tenant-admin-pro-upgrade-1`, which contains only the newly available Pro modules and controls. When the Tenant has a Starter acknowledgement, the Help API suppresses the initial Pro release and serves the upgrade release instead, even when the Starter acknowledgement status is `skipped`.
+- The common Tenant Admin manual includes mirrored Dashboard, Language, Profile, Password, WhatsApp, Enabled code platforms, Central lookup mailbox, WhatsApp access control, and Activate access-code lookup topics for Starter and Pro.
+- The Pro extension manual includes mirrored Clients, Catalog, Client Subscriptions, reminder settings, timezone, first-Pro-Client, and subscription-expiration cross-module topics. Starter filtering is enforced before topic retrieval and search matching, so these topics do not appear in Starter Help.
+- Dashboard, Pro modules, and Settings use semantic targets such as `data-help-id="admin.dashboard"`, `data-help-id="admin.clients"`, `data-help-id="admin.catalog"`, `data-help-id="admin.subscriptions"`, `data-help-id="admin.settings.reminders"`, `data-help-id="admin.settings.timezone"`, and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
+- The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links. Pro topics may expose multiple safe module links, while access-code workflow topics link safely to Settings categories; none executes connection, disconnection, blocking, unblocking, lookup, or mutation actions.
+- The shared Tenant Admin and Client layouts provide contextual Help in a responsive Sheet. Each role resolves only its own stable target contract, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved. Client sessions have no Orientation Tour.
+
+## Canonical Markdown Source
+
+Help topics use safe Markdown with strict frontmatter. Raw HTML, scripts, MDX, and executable components are rejected.
+
+Spanish and English live in mirrored directories and share the same topic IDs, metadata shape, capability references, links, and Tour Release membership. Localized prose, headings, search synonyms, and tour copy may differ.
+
+A topic frontmatter contract must identify at least:
+
+- Stable topic ID
+- Audience: `tenant_admin` or `client`
+- Eligible plans
+- Channels: Web, WhatsApp, or both
+- Module and capability IDs
+- Related route or Settings category
+- Stable `data-help-id` targets, including `admin.help`
+- Explicit navigation order and one or more allow-listed safe navigation destinations
+- Search tags and maintained synonyms
+- Related topic IDs
+- Optional Tour Release entries with order, target, plan eligibility, localized copy, safe preparation action, and conditional-target rule
+
+The compiler treats IDs and visibility metadata as product contracts. Prose remains human-authored Markdown.
+
+## Compiled Help Artifact
+
+The build produces a versioned artifact containing:
+
+- Artifact schema version
+- Content version or source revision
+- Localized authorized-topic payloads
+- Role and plan visibility metadata
+- Module navigation trees
+- Full-text search index data
+- Internal-link graph
+- Contextual-help target map
+- Tour Release definitions and steps
+- Expected frontend target-contract version
+
+The artifact is built once per application release. Runtime users never modify it.
+
+## Authentication and Authorization
+
+The Help API applies the same authenticated identity and active Tenant context used by the product.
+
+- **Tenant Admin**: receives Tenant Admin topics filtered to the Tenant's current plan and locale.
+- **Client**: receives only Client topics for the associated Pro Tenant and locale. Starter-associated Clients cannot authenticate, and a Client session never receives Tenant Admin topics or administrative routes.
+- **Master and Master Support Context**: receive no Tenant Admin or Client Help surface.
+- **Unauthenticated user**: receives no manual index, content, search data, or tour definition.
+
+Authorization is enforced by the backend. Frontend filtering is presentation only and must not be treated as a security boundary.
+
+## API Responsibilities
+
+The private API should expose cohesive user-facing operations rather than raw repository files:
+
+- Get the authorized Help navigation and artifact compatibility metadata
+- Get one authorized localized topic
+- Search authorized localized topics
+- Get an eligible unseen Tour Release
+- Replay an eligible Tour Release from Help
+- Mark a Tour Release completed or skipped for the active Tenant
+
+Topic and search endpoints must return not-found behavior for content outside the caller's role or plan, consistent with existing plan gates.
+
+The API must not expose filesystem paths, raw frontmatter, unpublished topics, or another Tenant's Help state.
+
+## Tenant Help State
+
+Orientation state is Tenant-scoped because onboarding belongs to the business rather than an individual Tenant Admin.
+
+The state model is persisted in `tenant_help_acknowledgements` and records acknowledgements keyed by:
+
+- Tenant
+- Tour Release ID
+- Status: completed or skipped
+- Acknowledgement timestamp
+
+A unique Tenant and Tour Release constraint prevents duplicate acknowledgements. Closing after confirmation records skipped. Unexpected failures, missing required targets, Help API errors, and artifact incompatibility record nothing.
+
+Initial Starter, initial Pro, Starter-to-Pro, and future feature-announcement tours are separate Tour Releases. Eligibility is declared in the compiled artifact and evaluated against plan and acknowledged releases.
+
+## Frontend Surfaces
+
+### Routes
+
+Tenant Admin and Client layouts receive dedicated authenticated Help Center routes. Help appears at the bottom of each role's navigation before account/logout.
+
+The existing mobile layouts need a shared role-aware navigation drawer because their current headers do not expose module navigation. The drawer must render the same authorized destinations as desktop, including Help.
+
+### Help Center
+
+The Help Center consumes the authorized navigation tree, search endpoint, and topic endpoint. It uses:
+
+- A topic navigator and search area
+- A readable article column
+- An optional wide-screen on-page table of contents
+- A mobile topic Sheet
+- Safe “Go to module” navigation
+
+### Contextual Help
+
+Visible screens and Settings categories declare stable `data-help-id` values. “Help about this screen” resolves the current target to an authorized topic and opens it in a side Sheet without navigating away or unmounting the active form.
+
+### Orientation Tour
+
+React Joyride 3 is the tour engine. TrackPal owns the custom tooltip, styling, route coordination, safe panel preparation, lifecycle handling, and mobile Sheet presentation.
+
+The coordinator must:
+
+1. Fetch one eligible Tour Release after Tenant Admin authentication.
+2. Confirm artifact and frontend target-contract compatibility.
+3. Resolve the current plan and viewport sequence.
+4. Navigate to the step route.
+5. Open only a declared safe view or Settings category.
+6. Wait for the stable `data-help-id` target.
+7. Display the step or apply its explicit conditional-target rule.
+8. Acknowledge only explicit completion or confirmed skip.
+
+Tour steps never call mutation services or secret-reveal operations.
+
+## Responsive and Accessible Behavior
+
+Desktop tour steps use anchored popovers. Mobile steps spotlight the target while rendering content and controls in a bottom Sheet.
+
+All Help surfaces must support:
+
+- Keyboard-only navigation
+- Focus restoration after closing Help or the tour
+- Visible focus rings
+- Semantic headings and landmarks
+- Screen-reader names for tour progress and controls
+- WCAG 2.2 AA contrast
+- Non-color-only status communication
+- Longer Spanish and English labels
+- Reduced motion, including disabling or replacing spotlight transitions
+
+## Search
+
+The compiler creates locale-specific full-text data from authorized topic fields and Markdown text. Search includes maintained beginner-friendly synonyms without changing canonical product labels. The Tenant Admin cross-channel topics cover the dependency chain from WhatsApp linking through enabled platforms and mailbox readiness to access-code search, plus recovery states and WhatsApp access-control boundaries.
+
+The backend filters the searchable corpus by audience, plan, and locale before matching or constructing excerpts. Search results contain only authorized topic IDs, titles, matched excerpts, module labels, and routes into the Help Center.
+
+## Safe Navigation
+
+A Help topic may navigate to an authorized route, optionally request that a safe Settings category open, and declare additional safe module links. The navigation contract is declarative and allow-listed; the frontend rejects unknown routes and never calls mutation services from these links.
+
+Help may not:
+
+- Submit forms
+- Persist edits
+- Create or delete records
+- Change status
+- Reveal credentials
+- Connect or disconnect integrations
+- Generate or revoke keys
+- Open destructive confirmations
+
+## Failure Isolation
+
+Help is non-critical to core TrackPal operations.
+
+- Help API failure leaves the application usable and exposes Retry in Help; no tour starts and no acknowledgement is written.
+- Manual content remains available when its artifact is authorized but its tour or contextual target-contract version differs from the frontend.
+- Contextual Help reports an unavailable target rather than guessing a topic during version mismatch; the tour remains disabled during version mismatch.
+- Unexpected missing required targets stop the tour safely and leave the Tour Release unseen. Only steps explicitly marked conditional may be skipped.
+- Logout, login, role changes, Tenant context changes, and plan changes remount the private Help surfaces so indexes, topics, and tour state do not survive the session boundary.
+- A Pro-to-Starter transition shows the preserved-data and paused-automation notice, serves the Starter-filtered manual, and suppresses the downgrade-session tour.
+- Private manual prose is not persisted to browser storage or included in public frontend assets.
+
+## Contract Validation
+
+The highest automated test seam is the compiled Help artifact and its authenticated API behavior. This one seam validates the authoring source, authorization, plan filtering, locale parity, links, search, and Tour Release definitions without coupling tests to Markdown parser internals.
+
+Build and CI validation covers:
+
+- Frontmatter schema and safe-Markdown policy
+- Unique and known IDs
+- Spanish/English parity
+- Known roles, plans, channels, modules, actions, routes, and targets
+- Internal links, safe module destinations, and navigation allow-list
+- Tour Release ordering from step one, maximum seven steps, and eligibility
+- Artifact schema and target-contract versions
+
+Backend API tests cover:
+
+- Tenant Admin Starter/Pro filtering
+- Client filtering
+- denial for Master, Master Support Context, unauthenticated users, and wrong-plan topics
+- search authorization
+- unseen, completed, skipped, replayed, upgrade, and update Tour Releases
+- idempotent acknowledgement
+- Help API failure isolation
+
+Frontend unit and integration tests cover:
+
+- Help navigation grouping, target resolution, safe navigation, and contextual Sheet behavior
+- cache clearing on authentication or Tenant changes
+- manual-visible/tour-disabled version mismatch
+- safe route and Settings preparation
+- completion and confirmed-skip callbacks
+- desktop popover and mobile Sheet state
+- reduced-motion and keyboard behavior where jsdom can verify it
+
+The approved first version uses mandatory manual browser QA instead of automated E2E. Manual QA is therefore a release gate, not optional verification.
+
+## Implementation Sequence
+
+1. Complete a code-backed capability inventory and reconcile stale project documentation.
+2. Define the Markdown frontmatter and artifact schemas and add the build validator/compiler.
+3. Add Tenant-scoped Tour Release acknowledgement storage and authenticated Help API operations.
+4. Add Help state management, routes, full-text search, Help Center, and contextual Sheet.
+5. Add the shared Admin/Client mobile navigation drawer and stable `data-help-id` contracts.
+6. Integrate React Joyride with route-aware, plan-aware, responsive sequences.
+7. Author mirrored Spanish/English Tenant Admin and Client topics from implemented behavior.
+8. Add contract, API, and frontend tests.
+9. Complete the mandatory manual QA matrix before exposing the atomic release.
+
+## Related Documentation
+
+- [User Help and Tenant Orientation Requirements](../project-pdr/user-help-requirements.md)
+- [ADR-0001: Use Markdown topics as the canonical user-help capability registry](../adr/0001-markdown-capability-registry-for-user-help.md)
+- [Frontend Architecture](frontend-architecture.md)
+- [WhatsApp Console Flow](whatsapp-console-flow.md)
+- [Product Goals](../project-pdr/product-goals.md)
+- [Business Rules](../project-pdr/business-rules.md)
