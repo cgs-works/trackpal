@@ -9,9 +9,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 
 import pytest
-from sqlalchemy import select
 
-from app.models import Tenant
 from app.repositories import export_jobs_repository
 from app.services.export_storage import FakeExportStorageAdapter
 
@@ -64,8 +62,10 @@ def fake_step_up_limiter():
     class _AlwaysAllow:
         async def check(self, actor_id: str) -> None:
             pass
+
         async def record_failure(self, actor_id: str) -> None:
             pass
+
         async def record_success(self, actor_id: str) -> None:
             pass
 
@@ -78,7 +78,9 @@ def fake_step_up_limiter():
 # ── POST /me/export ────────────────────────────────────────────
 
 
-async def test_request_export_creates_pending_job(client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter):
+async def test_request_export_creates_pending_job(
+    client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter
+):
     """A Tenant Admin can request an export and gets a pending job back."""
     headers = await _tenant_headers(client)
     resp = await client.post("/api/v1/me/export", headers=headers)
@@ -104,7 +106,10 @@ async def test_request_export_rejects_client_user(client, active_client_user):
     """Client users cannot request an export."""
     login = await client.post(
         "/api/v1/auth/login",
-        json={"username": f"{active_client_user.username}", "password": "client-password"},
+        json={
+            "username": f"{active_client_user.username}",
+            "password": "client-password",
+        },
     )
     assert login.status_code == 200
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
@@ -115,7 +120,9 @@ async def test_request_export_rejects_client_user(client, active_client_user):
 # ── GET /me/export ─────────────────────────────────────────────
 
 
-async def test_get_export_status_returns_latest(client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter):
+async def test_get_export_status_returns_latest(
+    client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter
+):
     """GET /me/export returns the latest job for the current tenant."""
     headers = await _tenant_headers(client)
 
@@ -141,7 +148,9 @@ async def test_get_export_status_when_no_job(client, db_session, active_tenant_u
 # ── GET /me/export/download ────────────────────────────────────
 
 
-async def test_download_returns_presigned_url_when_ready(client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter):
+async def test_download_returns_presigned_url_when_ready(
+    client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter
+):
     """GET /me/export/download returns a download URL when a ready job exists."""
     headers = await _tenant_headers(client)
 
@@ -151,13 +160,11 @@ async def test_download_returns_presigned_url_when_ready(client, db_session, act
     job_id = uuid.UUID(create.json()["id"])
 
     # Manually set job to ready
-    tenant_result = await db_session.execute(
-        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
-    )
-    tenant = tenant_result.scalar_one()
     now = datetime.now(timezone.utc)
     await export_jobs_repository.update_status(
-        db_session, job_id, "ready",
+        db_session,
+        job_id,
+        "ready",
         r2_key="test-key-123",
         artifact_size_bytes=1024,
         expires_at=now + timedelta(hours=72),
@@ -175,7 +182,9 @@ async def test_download_returns_presigned_url_when_ready(client, db_session, act
     assert "test-key-123" in body["download_url"]
 
 
-async def test_download_returns_404_when_no_ready_job(client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter):
+async def test_download_returns_404_when_no_ready_job(
+    client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter
+):
     """GET /me/export/download returns 404 when no ready job exists."""
     headers = await _tenant_headers(client)
     resp = await client.get("/api/v1/me/export/download", headers=headers)

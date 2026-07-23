@@ -17,7 +17,8 @@ import logging
 import re
 import zipfile
 from collections.abc import Sequence
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from app.core.database import AsyncSessionLocal
@@ -561,7 +562,9 @@ async def _build_zip(
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("client-data.csv", csv_bytes)
 
-        csv_content = _build_service_catalog_csv(services or [], plans_by_service or {}, tz)
+        csv_content = _build_service_catalog_csv(
+            services or [], plans_by_service or {}, tz
+        )
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("service-catalog.csv", csv_bytes)
 
@@ -611,9 +614,6 @@ async def _process_job_with_session(
 
     Supports retry with backoff and cancellation checkpoints.
     """
-    from app.models.export_job import ExportJob as ExportJobModel
-    from uuid import UUID as UUIDType
-
     for attempt in range(job.max_attempts):
         # ── Cancellation checkpoint ──
         if await _is_cancelled(db, job.id):
@@ -656,17 +656,20 @@ async def _process_job_with_session(
                 return
 
             # Query catalog
-            services, plans_by_service = await catalog_repository.list_services_with_plans(
-                db, job.tenant_id
-            )
+            (
+                services,
+                plans_by_service,
+            ) = await catalog_repository.list_services_with_plans(db, job.tenant_id)
 
             # ── Cancellation checkpoint ──
             if await _is_cancelled(db, job.id):
                 return
 
             # Query subscription records
-            subscription_rows = await catalog_repository.list_all_subscriptions_for_export(
-                db, job.tenant_id
+            subscription_rows = (
+                await catalog_repository.list_all_subscriptions_for_export(
+                    db, job.tenant_id
+                )
             )
 
             # ── Cancellation checkpoint ──
@@ -700,7 +703,9 @@ async def _process_job_with_session(
                 try:
                     await storage.delete(r2_key)
                 except Exception:
-                    logger.warning("Failed to purge partial upload %s after cancel", r2_key)
+                    logger.warning(
+                        "Failed to purge partial upload %s after cancel", r2_key
+                    )
                 return
 
             # Atomic replacement: mark ready and purge previous
@@ -721,7 +726,12 @@ async def _process_job_with_session(
             return  # success
 
         except Exception:
-            logger.exception("Export job %s attempt %d/%d failed", job.id, attempt + 1, job.max_attempts)
+            logger.exception(
+                "Export job %s attempt %d/%d failed",
+                job.id,
+                attempt + 1,
+                job.max_attempts,
+            )
             await export_jobs_repository.increment_attempts(db, job.id)
 
             is_last_attempt = attempt + 1 >= job.max_attempts
@@ -735,8 +745,14 @@ async def _process_job_with_session(
                 return
 
             # Backoff before retry
-            backoff_seconds = _RETRY_BACKOFF_BASE * (5 ** attempt)
-            logger.info("Retrying job %s in %ds (attempt %d/%d)", job.id, backoff_seconds, attempt + 2, job.max_attempts)
+            backoff_seconds = _RETRY_BACKOFF_BASE * (5**attempt)
+            logger.info(
+                "Retrying job %s in %ds (attempt %d/%d)",
+                job.id,
+                backoff_seconds,
+                attempt + 2,
+                job.max_attempts,
+            )
 
             # Check cancellation during backoff in 1s intervals
             for _ in range(backoff_seconds):
