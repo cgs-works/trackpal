@@ -4,6 +4,7 @@ TrackPal implementation queue.
 
 ## Status Tags
 
+- `[bug]` — eligible urgent defect; may omit spec and then uses `specs/TEMPLATE.md ## Testing Plan`.
 - `[ready]` — eligible for implementation when linked to a non-draft spec.
 - `[draft]` — reviewed ticket awaiting spec promotion through `to-ready`.
 - `[blocked]` — not eligible until every listed blocker is complete.
