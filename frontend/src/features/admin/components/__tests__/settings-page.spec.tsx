@@ -20,6 +20,14 @@ vi.mock("../../services/settings-api", () => ({
     email: "demo@example.com",
     phone: "12015550000",
   }),
+  getTenantProfile: vi.fn().mockResolvedValue({
+    id: "tenant-1",
+    full_name: "Demo Tenant",
+    email: "demo@example.com",
+    phone: "12015550000",
+  }),
+  updateProfile: vi.fn(),
+  updateTenantProfile: vi.fn(),
 }));
 
 vi.mock("../reminder-settings-section", () => ({ ReminderSettingsSection: () => <div>reminders section</div> }));
@@ -29,8 +37,7 @@ vi.mock("../public-api-section", () => ({ PublicApiSection: () => <div>public ap
 vi.mock("../code-services-section", () => ({ CodeServicesSection: () => <div>code services section</div> }));
 vi.mock("../mailbox-section", () => ({ MailboxSection: () => <div>mailbox section</div> }));
 vi.mock("../access-control-section", () => ({ AccessControlSection: () => <div>access control section</div> }));
-vi.mock("../profile-section", () => ({ ProfileSection: () => <div>profile section</div> }));
-vi.mock("../password-section", () => ({ PasswordSection: () => <div>password section</div> }));
+vi.mock("../my-account-section", () => ({ MyAccountSection: () => <div>my account section</div> }));
 vi.mock("../whatsapp-link-section", () => ({ WhatsappLinkSection: () => <div>whatsapp link section</div> }));
 
 describe("SettingsPage", () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Ban, Bell, Clock, Globe, KeyRound, Lock, Mail, MessageCircle, Shield, User } from "lucide-react";
+import { Ban, Bell, Clock, Globe, KeyRound, Mail, MessageCircle, Shield, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -11,12 +11,11 @@ import { AccessControlSection } from "../components/access-control-section";
 import { CodeServicesSection } from "../components/code-services-section";
 import { LocaleSection } from "../components/locale-section";
 import { MailboxSection } from "../components/mailbox-section";
-import { PasswordSection } from "../components/password-section";
-import { ProfileSection } from "../components/profile-section";
+import { MyAccountSection } from "../components/my-account-section";
 import { PublicApiSection } from "../components/public-api-section";
 import { ReminderSettingsSection } from "../components/reminder-settings-section";
 import { TimezoneSection } from "../components/timezone-section";
-import { getProfile, type Profile } from "../services/settings-api";
+import { getProfile, getTenantProfile, type Profile } from "../services/settings-api";
 import { WhatsappLinkSection } from "../components/whatsapp-link-section";
 import type { SettingsCategoryId } from "../settings-categories";
 
@@ -40,8 +39,7 @@ function buildSections(showProSettings: boolean): SettingsSection[] {
     { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield, helpTarget: HELP_TARGETS.codeServices },
     { id: "mailbox", title: t("frontend.mailbox.section_title"), description: t("frontend.mailbox.section_heading"), icon: Mail, helpTarget: HELP_TARGETS.mailbox },
     { id: "access-control", title: t("frontend.access_control.section_title"), description: t("frontend.access_control.section_description"), icon: Ban, helpTarget: HELP_TARGETS.accessControl },
-    { id: "profile", title: t("frontend.profile.section_title"), description: t("frontend.profile.section_heading"), icon: User, helpTarget: HELP_TARGETS.profile },
-    { id: "password", title: t("frontend.dashboard.client.change_password"), description: t("frontend.dashboard.client.change_password"), icon: Lock, helpTarget: HELP_TARGETS.password },
+    { id: "my-account", title: t("frontend.my_account.section_title"), description: t("frontend.my_account.section_heading"), icon: UserCircle, helpTarget: HELP_TARGETS.myAccount },
   ];
 }
 
@@ -88,13 +86,13 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
 
   const loadProfile = useCallback(async () => {
     try {
-      const data = await getProfile();
+      const data = isMasterSupportContext ? await getTenantProfile() : await getProfile();
       setProfile(data);
       setProfileError(null);
     } catch {
       setProfileError(t("frontend.profile.error_update"));
     }
-  }, []);
+  }, [isMasterSupportContext]);
 
   useEffect(() => {
     loadProfile();
@@ -119,7 +117,7 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
         return <LocaleSection />;
       case "timezone":
         return <TimezoneSection />;
-      case "profile":
+      case "my-account":
         if (profileError) {
           return (
             <div className="flex flex-col items-center gap-4 py-8 text-center">
@@ -130,9 +128,7 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
             </div>
           );
         }
-        return profile ? <ProfileSection profile={profile} onProfileUpdate={setProfile} /> : null;
-      case "password":
-        return <PasswordSection />;
+        return profile ? <MyAccountSection profile={profile} onProfileUpdate={setProfile} /> : null;
       case "mailbox":
         return <MailboxSection />;
       case "access-control":

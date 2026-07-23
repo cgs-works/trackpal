@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.dependencies import CurrentUser, DbDep
+from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep
 from app.core.database import restore_rls_context
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
@@ -114,6 +114,91 @@ async def update_profile(payload: ProfileUpdate, db: DbDep, current_user: Curren
         )
     locale, timezone = await _resolve_profile_settings(db, current_user, profile)
     return _profile_response(current_user, profile, locale=locale, timezone=timezone)
+
+
+async def _tenant_profile_response(
+    tenant, *, locale: str | None = None, timezone: str | None = None
+) -> ProfileResponse:
+    """Build a ProfileResponse from a Tenant model (for Master support context)."""
+    owner = getattr(tenant, "owner", None)
+    return ProfileResponse(
+        role="tenant",
+        username=owner.username if owner else "",
+        name=tenant.name,
+        full_name=tenant.full_name,
+        tenant_id=tenant.id,
+        tenant_name=tenant.name,
+        client_prefix=tenant.client_prefix,
+        locale=locale,
+        timezone=timezone,
+        email=tenant.email,
+        phone=tenant.phone,
+        is_active=tenant.is_active,
+        created_at=tenant.created_at,
+        updated_at=tenant.updated_at,
+    )
+
+
+@router.get("/tenant-profile", response_model=ProfileResponse)
+async def get_tenant_profile(
+    db: DbDep,
+    current_user: CurrentUser,
+    active_tenant_id: ActiveTenantId,
+):
+    """Get the active tenant's profile (Master support context only)."""
+    if current_user.role != "master":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Master users can access this endpoint",
+        )
+    profile = await profile_service.get_tenant_profile_by_id(db, active_tenant_id)
+    if profile is None:
+        locale = await _resolve_profile_locale(db, current_user)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.profile_not_found"),
+        )
+    locale = await tenant_settings_repository.resolve_locale(db, active_tenant_id)
+    timezone = await tenant_settings_repository.resolve_timezone(db, active_tenant_id)
+    return _tenant_profile_response(profile, locale=locale, timezone=timezone)
+
+
+@router.put("/tenant-profile", response_model=ProfileResponse)
+async def update_tenant_profile(
+    payload: ProfileUpdate,
+    db: DbDep,
+    current_user: CurrentUser,
+    active_tenant_id: ActiveTenantId,
+):
+    """Update the active tenant's profile (Master support context only)."""
+    if current_user.role != "master":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Master users can access this endpoint",
+        )
+    try:
+        profile = await profile_service.update_tenant_profile_by_id(
+            db, active_tenant_id, payload
+        )
+    except UserFacingError as exc:
+        locale = await _resolve_profile_locale(db, current_user)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=translate_error(locale, exc)
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    if profile is None:
+        locale = await _resolve_profile_locale(db, current_user)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_t(locale, "errors.profile_not_found"),
+        )
+    locale = await tenant_settings_repository.resolve_locale(db, active_tenant_id)
+    timezone = await tenant_settings_repository.resolve_timezone(db, active_tenant_id)
+    return _tenant_profile_response(profile, locale=locale, timezone=timezone)
 
 
 @router.put("/password", response_model=dict)

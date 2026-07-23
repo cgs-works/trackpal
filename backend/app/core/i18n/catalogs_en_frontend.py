@@ -451,6 +451,14 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.subscriptions.reminders_desc": "Send WhatsApp messages before subscriptions expire",
     "frontend.subscriptions.recipients": "Recipients",
     "frontend.subscriptions.client_name": "Client Name",
+    # My Account
+    "frontend.my_account.section_title": "My Account",
+    "frontend.my_account.section_heading": "Manage your account settings",
+    "frontend.my_account.tab_profile": "Profile",
+    "frontend.my_account.tab_security": "Security",
+    "frontend.my_account.tab_data": "Data",
+    "frontend.my_account.data_empty_title": "Export and manage your business data",
+    "frontend.my_account.data_empty_description": "Download a complete snapshot of your business or request account deletion. These features will be available soon.",
     # Profile (new keys)
     "frontend.profile.passwords_dont_match": "Passwords do not match",
     "frontend.profile.password_min_length": "Minimum 8 characters",

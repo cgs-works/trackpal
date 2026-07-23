@@ -88,6 +88,17 @@ export async function changePassword(payload: PasswordChange): Promise<void> {
   await api.put("/me/password", payload);
 }
 
+// Master Support Context: read/update the selected tenant's profile
+export async function getTenantProfile(): Promise<Profile> {
+  const { data } = await api.get("/me/tenant-profile");
+  return data;
+}
+
+export async function updateTenantProfile(payload: ProfileUpdate): Promise<Profile> {
+  const { data } = await api.put("/me/tenant-profile", payload);
+  return data;
+}
+
 // ── Tenant Settings ───────────────────────────────────────────
 export interface TenantSettings {
   tenant_id: string;
