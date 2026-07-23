@@ -22,7 +22,6 @@ from app.models import Client as ClientModel
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.repositories import export_jobs_repository, sessions_repository
-from app.repositories.tenants_repository import resolve_locale
 from app.services import export_service
 from app.services.evolution_client import evolution_client
 from app.services.export_storage import (
@@ -162,6 +161,168 @@ async def _cleanup_redis_sessions(profile: Tenant) -> None:
             profile.id,
             exc_info=True,
         )
+
+
+async def delete_tenant_as_master(
+    db: AsyncSession,
+    tenant_id: UUID,
+    master_user: User,
+    password: str,
+    destructive_word: str,
+    locale: str,
+    limiter: StepUpRateLimiter | None,
+) -> dict:
+    """Permanently delete an inactive Tenant as Master.
+
+    Args:
+        db: Database session.
+        tenant_id: The tenant to delete.
+        master_user: The Master requesting deletion.
+        password: Current Master password for step-up authentication.
+        destructive_word: Locale-aware destructive word (DELETE/ELIMINAR).
+        locale: Master locale for destructive word validation.
+        limiter: Step-up rate limiter (may be None if Redis unavailable).
+
+    Returns:
+        A dict with ``success: True`` on completion.
+
+    Raises:
+        ValueError: Validation errors (active tenant, wrong word, etc.)
+        StepUpError: Rate limit exceeded for password attempts.
+        RuntimeError: External cleanup failures that preserve the tenant.
+    """
+    # ── 1. Load tenant with owner ──────────────────────────────
+    result = await db.execute(
+        select(Tenant).options(selectinload(Tenant.owner)).where(Tenant.id == tenant_id)
+    )
+    profile = result.scalar_one_or_none()
+
+    if profile is None:
+        raise ValueError("Tenant not found")
+
+    if profile.is_active:
+        raise ValueError("Cannot delete active tenant. Deactivate first.")
+
+    owner_user: User = profile.owner  # type: ignore[assignment]
+    actor_user_id = master_user.id
+
+    # ── 2. Step-up authentication ─────────────────────────────
+    if limiter is not None:
+        try:
+            await limiter.check(str(actor_user_id))
+        except StepUpError as exc:
+            raise StepUpError(str(exc)) from exc
+
+    if not verify_password(password, master_user.password_hash):
+        if limiter is not None:
+            try:
+                await limiter.record_failure(str(actor_user_id))
+            except StepUpError:
+                pass
+        raise ValueError("Invalid password or confirmation word")
+
+    if not await _validate_destructive_word(destructive_word, locale):
+        if limiter is not None:
+            try:
+                await limiter.record_failure(str(actor_user_id))
+            except StepUpError:
+                pass
+        raise ValueError("Invalid password or confirmation word")
+
+    if limiter is not None:
+        try:
+            await limiter.record_success(str(actor_user_id))
+        except StepUpError:
+            pass
+
+    logger.info(
+        "Master tenant deletion initiated actor=%s tenant=%s",
+        actor_user_id,
+        tenant_id,
+    )
+
+    # ── 3. Cancel in-progress export (wait up to 30s) ─────────
+    cancel_ok, cancel_err = await _cancel_export_and_wait(
+        db,
+        tenant_id,
+        actor_user_id,
+    )
+    if not cancel_ok:
+        raise RuntimeError(cancel_err or "Export cancellation timed out. Try again.")
+
+    # ── 4. Purge R2 objects (fail-closed) ─────────────────────
+    r2_err = await _purge_export_storage(db, tenant_id)
+    if r2_err:
+        raise RuntimeError(r2_err)
+
+    # ── 5. Delete Evolution instance (idempotent, fail-closed) ─
+    evo_err = await _delete_evolution_instance(profile)
+    if evo_err:
+        raise RuntimeError(evo_err)
+
+    # ── 6. Best-effort Redis session cleanup ──────────────────
+    await _cleanup_redis_sessions(profile)
+
+    # ── 7. Database deletion ──────────────────────────────────
+    # Purge export jobs explicitly (FK cascade works in PostgreSQL
+    # but SQLite tests need this before the cascade).
+    await export_jobs_repository.purge_tenant_jobs(db, tenant_id)
+
+    # Delete all client users for this tenant explicitly since
+    # Client -> User has no ORM cascade and SQLite doesn't enforce
+    # FK cascades.
+    clients = await db.execute(
+        select(ClientModel).where(ClientModel.tenant_id == tenant_id)
+    )
+    for client in clients.scalars().all():
+        if client.owner_user_id != actor_user_id:
+            user_to_delete = await db.get(User, client.owner_user_id)
+            if user_to_delete is not None:
+                await db.delete(user_to_delete)
+
+    # Delete the owner User — this cascade-deletes the Tenant (via
+    # owned_tenant relationship) and the Tenant cascade-deletes all
+    # owned records (Clients, Services, Plans, Settings,
+    # Mailbox, etc.) via FK ondelete=CASCADE.
+    previous_context = get_rls_context(db)
+    try:
+        await sessions_repository.revoke_all_for_user(db, owner_user.id)
+        await db.flush()
+        await db.delete(owner_user)
+        await db.flush()
+    finally:
+        if previous_context is not None:
+            await set_rls_context(
+                db,
+                previous_context["user_id"],
+                previous_context["role"],
+                previous_context["active_tenant_id"],
+            )
+
+    # ── 8. Commit final ───────────────────────────────────────
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.error(
+            "Final database commit failed after external cleanup tenant=%s: %s",
+            tenant_id,
+            exc,
+        )
+        raise RuntimeError(
+            "Account deletion could not be finalised. "
+            "Please try again \u2014 external resources have been cleaned up."
+        ) from exc
+
+    await restore_rls_context(db)
+
+    logger.info(
+        "Master tenant deletion succeeded actor=%s tenant=%s",
+        actor_user_id,
+        tenant_id,
+    )
+
+    return {"success": True}
 
 
 async def delete_tenant_account(
@@ -333,5 +494,6 @@ async def delete_tenant_account(
 
 __all__ = [
     "delete_tenant_account",
+    "delete_tenant_as_master",
     "CANCEL_WAIT_SECONDS",
 ]

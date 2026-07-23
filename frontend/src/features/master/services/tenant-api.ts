@@ -54,6 +54,18 @@ export async function deleteTenant(id: string): Promise<void> {
   await api.delete(`/tenants/${id}`)
 }
 
+export async function masterDeleteTenant(
+  tenantId: string,
+  password: string,
+  destructive_word: string,
+): Promise<{ success: boolean }> {
+  const { data } = await api.post(`/tenants/${tenantId}/delete`, {
+    password,
+    destructive_word,
+  });
+  return data;
+}
+
 export async function activateTenant(id: string): Promise<void> {
   await api.patch(`/tenants/${id}/activate`)
 }

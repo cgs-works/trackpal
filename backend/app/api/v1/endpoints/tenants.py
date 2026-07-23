@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 
 from app.api.dependencies import DbDep, MasterUser
 from app.schemas.tenant import (
@@ -10,10 +11,20 @@ from app.schemas.tenant import (
     TenantResponse,
     TenantUpdate,
 )
+from app.services import export_service
+from app.services.step_up_limiter import StepUpError
 from app.services.tenant_service import TenantService
+from app.services.tenant_service.deletion import delete_tenant_as_master
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 tenant_service = TenantService()
+
+
+class MasterDeleteTenantRequest(BaseModel):
+    """Password step-up payload for Master tenant deletion."""
+
+    password: str
+    destructive_word: str
 
 
 def _tenant_response(profile) -> TenantResponse:
@@ -102,17 +113,54 @@ async def activate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
     return _tenant_response(profile)
 
 
-@router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
+@router.post("/{tenant_id}/delete", status_code=status.HTTP_200_OK)
+async def master_delete_tenant(
+    tenant_id: UUID,
+    payload: MasterDeleteTenantRequest,
+    db: DbDep,
+    current_user: MasterUser,
+):
+    """Permanently delete an inactive Tenant as Master.
+
+    Requires:
+    - Master role.
+    - Current Master password for step-up authentication.
+    - Locale-aware destructive word (DELETE / ELIMINAR).
+    - The target Tenant must be inactive (deactivate first).
+
+    Uses the shared three-attempt/fifteen-minute step-up limiter.
+    External cleanup (R2, Evolution) runs before database deletion
+    and preserves the tenant on failure for safe retry.
+    """
+    # Resolve Master locale (default en)
+    locale = "en"
+
+    limiter = export_service.get_limiter()
+
     try:
-        deleted = await tenant_service.delete_tenant(db, tenant_id)
+        result = await delete_tenant_as_master(
+            db=db,
+            tenant_id=tenant_id,
+            master_user=current_user,
+            password=payload.password,
+            destructive_word=payload.destructive_word,
+            locale=locale,
+            limiter=limiter,
+        )
+    except StepUpError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
         ) from exc
 
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
-        )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return result

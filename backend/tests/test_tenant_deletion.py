@@ -14,7 +14,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from app.models import Client, ExportJob, Plan, Service, Tenant, User
+from app.models import Tenant, User
 from app.repositories import export_jobs_repository
 from app.services.export_storage import FakeExportStorageAdapter
 
@@ -673,3 +673,283 @@ async def test_delete_account_rejects_cross_tenant(
         select(Tenant).where(Tenant.id == tenant2_id)
     )
     assert tenant2_check.scalar_one_or_none() is not None
+
+
+# ── POST /tenants/{tenant_id}/delete (Master Tenant Deletion) ────
+
+
+async def _tenant_id_from_user(db_session, user):
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+    return tenant.id
+
+
+async def _master_delete(
+    client, tenant_id, password="master-password", destructive_word="DELETE"
+):
+    headers = await _master_headers(client)
+    return await client.post(
+        f"/api/v1/tenants/{tenant_id}/delete",
+        json={"password": password, "destructive_word": destructive_word},
+        headers=headers,
+    )
+
+
+async def test_master_delete_requires_authentication(client):
+    """Unauthenticated requests receive 401."""
+    resp = await client.post(
+        "/api/v1/tenants/00000000-0000-0000-0000-000000000000/delete",
+        json={"password": "x", "destructive_word": "DELETE"},
+    )
+    assert resp.status_code == 401
+
+
+async def test_master_delete_requires_master_role(
+    client, db_session, master_user, active_tenant_user, fake_export_storage, fake_step_up_limiter
+):
+    """Tenant users cannot use Master deletion endpoint."""
+    tenant_id = await _tenant_id_from_user(db_session, active_tenant_user)
+    # Login as tenant and try to use the Master deletion endpoint
+    tenant_headers = await _tenant_headers(client)
+    resp = await client.post(
+        f"/api/v1/tenants/{tenant_id}/delete",
+        json={"password": "tenant-password", "destructive_word": "ELIMINAR"},
+        headers=tenant_headers,
+    )
+    assert resp.status_code == 403, resp.text
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_rejects_active_tenant(
+    client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter
+):
+    """Active tenant cannot be deleted by Master."""
+    tenant_id = await _tenant_id_from_user(db_session, active_tenant_user)
+    resp = await _master_delete(client, tenant_id)
+    assert resp.status_code == 401, resp.text
+    assert "Cannot delete active tenant" in resp.json()["detail"]
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_succeeds_for_inactive_tenant(
+    client, db_session, deactivated_tenant_user, fake_export_storage, fake_step_up_limiter
+):
+    """Master can delete an inactive tenant with valid password + destructive word."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+    resp = await _master_delete(client, tenant_id)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"success": True}
+
+    # Verify tenant and owner user are gone
+    tenant_check = await db_session.execute(
+        select(Tenant).where(Tenant.id == tenant_id)
+    )
+    assert tenant_check.scalar_one_or_none() is None
+
+    owner_check = await db_session.execute(
+        select(User).where(User.id == deactivated_tenant_user.id)
+    )
+    assert owner_check.scalar_one_or_none() is None
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_wrong_password(
+    client, db_session, deactivated_tenant_user, fake_export_storage, fake_step_up_limiter
+):
+    """Wrong Master password returns 401."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+    resp = await _master_delete(client, tenant_id, password="wrong-password")
+    assert resp.status_code == 401, resp.text
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_wrong_destructive_word(
+    client, db_session, deactivated_tenant_user, fake_export_storage, fake_step_up_limiter
+):
+    """Wrong destructive word returns 401."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+    resp = await _master_delete(client, tenant_id, destructive_word="ELIMINAR")
+    assert resp.status_code == 401, resp.text
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_cancels_export(
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+):
+    """An active export is cancelled before Master deletion."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+
+    # Create an export job for the tenant
+    job = await export_jobs_repository.create(
+        db_session,
+        tenant_id=tenant_id,
+        requested_by=deactivated_tenant_user.id,
+        actor_role="tenant",
+    )
+    assert job.status == "pending"
+
+    resp = await _master_delete(client, tenant_id)
+    assert resp.status_code == 200, resp.text
+
+    # Verify export jobs are purged
+    jobs = await export_jobs_repository.get_all_for_tenant(db_session, tenant_id)
+    assert len(jobs) == 0
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_purges_r2_objects(
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+):
+    """R2 objects are purged before database deletion."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+
+    now = datetime.now(timezone.utc)
+    job = await export_jobs_repository.create(
+        db_session,
+        tenant_id=tenant_id,
+        requested_by=deactivated_tenant_user.id,
+        actor_role="tenant",
+    )
+    await export_jobs_repository.update_status(
+        db_session,
+        job.id,
+        "ready",
+        r2_key="master-delete-test-key",
+        artifact_size_bytes=100,
+        expires_at=now + timedelta(hours=72),
+        clear_lease=True,
+    )
+    await fake_export_storage.upload("master-delete-test-key", b"test-data")
+
+    # Verify object exists before deletion
+    meta = await fake_export_storage.get_metadata("master-delete-test-key")
+    assert meta.size_bytes == 9
+
+    resp = await _master_delete(client, tenant_id)
+    assert resp.status_code == 200, resp.text
+
+    # Verify object was purged
+    with pytest.raises(Exception):
+        await fake_export_storage.get_metadata("master-delete-test-key")
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_evolution_failure_preserves_tenant(
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+    monkeypatch,
+):
+    """Evolution failure preserves the tenant for retry."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+
+    async def _fail_delete(*args, **kwargs):
+        raise RuntimeError("Evolution API unavailable")
+
+    monkeypatch.setattr(
+        "app.services.evolution_client.evolution_client.delete_instance",
+        _fail_delete,
+    )
+
+    # Give the tenant an Evolution instance
+    result = await db_session.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+    tenant.evolution_instance_name = "test-instance"
+    await db_session.commit()
+
+    resp = await _master_delete(client, tenant_id)
+    assert resp.status_code == 409, resp.text
+
+    # Tenant should still exist
+    tenant_check = await db_session.execute(
+        select(Tenant).where(Tenant.id == tenant_id)
+    )
+    assert tenant_check.scalar_one_or_none() is not None
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_r2_failure_preserves_tenant(
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+):
+    """R2 failure preserves the tenant for retry."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+
+    now = datetime.now(timezone.utc)
+    job = await export_jobs_repository.create(
+        db_session,
+        tenant_id=tenant_id,
+        requested_by=deactivated_tenant_user.id,
+        actor_role="tenant",
+    )
+    await export_jobs_repository.update_status(
+        db_session,
+        job.id,
+        "ready",
+        r2_key="failing-key",
+        artifact_size_bytes=100,
+        expires_at=now + timedelta(hours=72),
+        clear_lease=True,
+    )
+
+    from app.services.export_storage._exceptions import StorageOperationError
+
+    async def _fail_delete(key):
+        raise StorageOperationError("R2 unavailable")
+
+    fake_export_storage.delete = _fail_delete  # type: ignore[method-assign]
+
+    resp = await _master_delete(client, tenant_id)
+    assert resp.status_code == 409, resp.text
+
+    tenant_check = await db_session.execute(
+        select(Tenant).where(Tenant.id == tenant_id)
+    )
+    assert tenant_check.scalar_one_or_none() is not None
+
+
+@pytest.mark.usefixtures("master_user")
+async def test_master_delete_step_up_rate_limit(
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+):
+    """Three failed attempts block further attempts."""
+    tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
+    headers = await _master_headers(client)
+
+    # Three wrong attempts
+    for _ in range(3):
+        resp = await client.post(
+            f"/api/v1/tenants/{tenant_id}/delete",
+            json={"password": "wrong", "destructive_word": "DELETE"},
+            headers=headers,
+        )
+        assert resp.status_code == 401
+
+    # Fourth attempt should be rate-limited
+    resp = await client.post(
+        f"/api/v1/tenants/{tenant_id}/delete",
+        json={"password": "master-password", "destructive_word": "DELETE"},
+        headers=headers,
+    )
+    assert resp.status_code == 429, resp.text

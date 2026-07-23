@@ -593,4 +593,12 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.my_account.danger_deleting": "Deleting account…",
     "frontend.my_account.danger_error": "Could not delete account. Please try again.",
     "frontend.my_account.danger_redirect": "Account deleted successfully",
+    # Master Dashboard Tenant Deletion
+    "frontend.master.delete_tenant_title": "Delete business?",
+    "frontend.master.delete_tenant_description": "This will permanently delete {name} and all associated data including clients, catalog, subscriptions, and settings. This action cannot be undone.",
+    "frontend.master.delete_tenant_confirm_button": "Delete permanently",
+    "frontend.master.delete_success": "Business deleted successfully",
+    "frontend.master.delete_redirect_help": "To delete this business, go to the Master Dashboard and deactivate it first, then use the delete action from the business list.",
 }
+
+

@@ -320,10 +320,19 @@ async def test_tenant_delete_removes_client_users(
         headers=auth_headers,
     )
 
-    delete_response = await client.delete(
-        f"/api/v1/tenants/{active_tenant_user.id}", headers=auth_headers
+    # Find the real tenant ID for the user
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
     )
-    assert delete_response.status_code == 204
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+
+    delete_response = await client.post(
+        f"/api/v1/tenants/{tenant.id}/delete",
+        json={"password": "master-password", "destructive_word": "DELETE"},
+        headers=auth_headers,
+    )
+    assert delete_response.status_code == 200, delete_response.text
 
     result = await db_session.execute(select(User).where(User.id == client_user_id))
     assert result.scalar_one_or_none() is None

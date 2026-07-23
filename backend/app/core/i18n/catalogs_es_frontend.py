@@ -593,4 +593,12 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.my_account.danger_deleting": "Eliminando cuenta…",
     "frontend.my_account.danger_error": "No se pudo eliminar la cuenta. Intenta de nuevo.",
     "frontend.my_account.danger_redirect": "Cuenta eliminada exitosamente",
+    # Master Dashboard Tenant Deletion
+    "frontend.master.delete_tenant_title": "\u00bfEliminar empresa?",
+    "frontend.master.delete_tenant_description": "Esto eliminar\u00e1 permanentemente {name} y todos los datos asociados, incluyendo clientes, cat\u00e1logo, suscripciones y configuraci\u00f3n. Esta acci\u00f3n no se puede deshacer.",
+    "frontend.master.delete_tenant_confirm_button": "Eliminar permanentemente",
+    "frontend.master.delete_success": "Empresa eliminada exitosamente",
+    "frontend.master.delete_redirect_help": "Para eliminar esta empresa, ve al Dashboard Master, desact\u00edvala primero y luego usa la acci\u00f3n de eliminar desde la lista de empresas.",
 }
+
+

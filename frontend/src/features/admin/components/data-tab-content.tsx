@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +47,8 @@ export function DataTabContent() {
     download,
     reset,
   } = useExportStore();
+
+  const { isMasterSupportContext } = useAuthStore();
 
   const [downloading, setDownloading] = useState(false);
   const initialLoadDone = useRef(false);
@@ -183,97 +186,107 @@ export function DataTabContent() {
 
         <Separator className="my-6" />
 
-        {/* Danger zone */}
-        <div className="w-full max-w-md rounded-lg border border-destructive/50 p-4">
-          <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
-            <Trash2 className="size-4" />
-            {t("frontend.my_account.danger_title")}
-          </h4>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t("frontend.my_account.danger_description")}
-          </p>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="mt-3"
-            onClick={handleDeleteClick}
-          >
-            {t("frontend.my_account.danger_delete_button")}
-          </Button>
-        </div>
-
-        {/* Delete confirmation dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {t("frontend.my_account.danger_confirm_title")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("frontend.my_account.danger_confirm_description")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="delete-password">
-                  {t("frontend.my_account.danger_password_label")}
-                </Label>
-                <Input
-                  id="delete-password"
-                  type="password"
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  disabled={deleting}
-                  autoFocus
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="delete-confirm-word">
-                  {t("frontend.my_account.danger_destructive_word_label", {
-                    word: destructiveWord,
-                  })}
-                </Label>
-                <Input
-                  id="delete-confirm-word"
-                  type="text"
-                  value={deleteConfirmWord}
-                  onChange={(e) => setDeleteConfirmWord(e.target.value)}
-                  placeholder={destructiveWord}
-                  disabled={deleting}
-                />
-              </div>
-              {deleteError && (
-                <p className="text-sm text-destructive">{deleteError}</p>
-              )}
+        {isMasterSupportContext ? (
+          /* Master Support Context — guide back to Dashboard */
+          <div className="w-full max-w-md rounded-lg border p-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              {t("frontend.master.delete_redirect_help")}
+            </p>
+          </div>
+        ) : (
+          /* Danger zone — Tenant Admin self-service deletion */
+          <>
+            <div className="w-full max-w-md rounded-lg border border-destructive/50 p-4">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                <Trash2 className="size-4" />
+                {t("frontend.my_account.danger_title")}
+              </h4>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("frontend.my_account.danger_description")}
+              </p>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="mt-3"
+                onClick={handleDeleteClick}
+              >
+                {t("frontend.my_account.danger_delete_button")}
+              </Button>
             </div>
 
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>
-                {t("frontend.common.cancel")}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                disabled={
-                  deleting ||
-                  !deletePassword ||
-                  deleteConfirmWord !== destructiveWord
-                }
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleting ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    {t("frontend.my_account.danger_deleting")}
-                  </>
-                ) : (
-                  t("frontend.my_account.danger_confirm_button")
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {t("frontend.my_account.danger_confirm_title")}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("frontend.my_account.danger_confirm_description")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="delete-password">
+                      {t("frontend.my_account.danger_password_label")}
+                    </Label>
+                    <Input
+                      id="delete-password"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      disabled={deleting}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="delete-confirm-word">
+                      {t("frontend.my_account.danger_destructive_word_label", {
+                        word: destructiveWord,
+                      })}
+                    </Label>
+                    <Input
+                      id="delete-confirm-word"
+                      type="text"
+                      value={deleteConfirmWord}
+                      onChange={(e) => setDeleteConfirmWord(e.target.value)}
+                      placeholder={destructiveWord}
+                      disabled={deleting}
+                    />
+                  </div>
+                  {deleteError && (
+                    <p className="text-sm text-destructive">{deleteError}</p>
+                  )}
+                </div>
+
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>
+                    {t("frontend.common.cancel")}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteConfirm}
+                    disabled={
+                      deleting ||
+                      !deletePassword ||
+                      deleteConfirmWord !== destructiveWord
+                    }
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        {t("frontend.my_account.danger_deleting")}
+                      </>
+                    ) : (
+                      t("frontend.my_account.danger_confirm_button")
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        )}
       </div>
     );
   }
@@ -490,97 +503,107 @@ export function DataTabContent() {
 
       <Separator className="my-6" />
 
-      {/* Danger zone */}
-      <div className="w-full max-w-md rounded-lg border border-destructive/50 p-4">
-        <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
-          <Trash2 className="size-4" />
-          {t("frontend.my_account.danger_title")}
-        </h4>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t("frontend.my_account.danger_description")}
-        </p>
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          className="mt-3"
-          onClick={handleDeleteClick}
-        >
-          {t("frontend.my_account.danger_delete_button")}
-        </Button>
-      </div>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("frontend.my_account.danger_confirm_title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("frontend.my_account.danger_confirm_description")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="delete-password">
-                {t("frontend.my_account.danger_password_label")}
-              </Label>
-              <Input
-                id="delete-password"
-                type="password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                disabled={deleting}
-                autoFocus
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="delete-confirm-word">
-                {t("frontend.my_account.danger_destructive_word_label", {
-                  word: destructiveWord,
-                })}
-              </Label>
-              <Input
-                id="delete-confirm-word"
-                type="text"
-                value={deleteConfirmWord}
-                onChange={(e) => setDeleteConfirmWord(e.target.value)}
-                placeholder={destructiveWord}
-                disabled={deleting}
-              />
-            </div>
-            {deleteError && (
-              <p className="text-sm text-destructive">{deleteError}</p>
-            )}
+      {isMasterSupportContext ? (
+        /* Master Support Context — guide back to Dashboard */
+        <div className="w-full max-w-md rounded-lg border p-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            {t("frontend.master.delete_redirect_help")}
+          </p>
+        </div>
+      ) : (
+        /* Danger zone — Tenant Admin self-service deletion */
+        <>
+          <div className="w-full max-w-md rounded-lg border border-destructive/50 p-4">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+              <Trash2 className="size-4" />
+              {t("frontend.my_account.danger_title")}
+            </h4>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("frontend.my_account.danger_description")}
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="mt-3"
+              onClick={handleDeleteClick}
+            >
+              {t("frontend.my_account.danger_delete_button")}
+            </Button>
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>
-              {t("frontend.common.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={
-                deleting ||
-                !deletePassword ||
-                deleteConfirmWord !== destructiveWord
-              }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  {t("frontend.my_account.danger_deleting")}
-                </>
-              ) : (
-                t("frontend.my_account.danger_confirm_button")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {t("frontend.my_account.danger_confirm_title")}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("frontend.my_account.danger_confirm_description")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="delete-password">
+                    {t("frontend.my_account.danger_password_label")}
+                  </Label>
+                  <Input
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    disabled={deleting}
+                    autoFocus
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="delete-confirm-word">
+                    {t("frontend.my_account.danger_destructive_word_label", {
+                      word: destructiveWord,
+                    })}
+                  </Label>
+                  <Input
+                    id="delete-confirm-word"
+                    type="text"
+                    value={deleteConfirmWord}
+                    onChange={(e) => setDeleteConfirmWord(e.target.value)}
+                    placeholder={destructiveWord}
+                    disabled={deleting}
+                  />
+                </div>
+                {deleteError && (
+                  <p className="text-sm text-destructive">{deleteError}</p>
+                )}
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>
+                  {t("frontend.common.cancel")}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteConfirm}
+                  disabled={
+                    deleting ||
+                    !deletePassword ||
+                    deleteConfirmWord !== destructiveWord
+                  }
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      {t("frontend.my_account.danger_deleting")}
+                    </>
+                  ) : (
+                    t("frontend.my_account.danger_confirm_button")
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }
