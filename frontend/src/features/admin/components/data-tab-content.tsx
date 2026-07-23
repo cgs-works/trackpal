@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Shield,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,10 +18,8 @@ export function DataTabContent() {
   const {
     job,
     requesting,
-    statusLoading,
     downloadLoading,
     cancelling,
-    downloadUrl,
     error,
     requestExport,
     refreshStatus,

@@ -9,12 +9,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Pencil, Trash2, Power, Settings } from "lucide-react";
+import { Database, Pencil, Trash2, Power, Settings } from "lucide-react";
 import type { Tenant } from "../services/tenant-api";
 
 interface BusinessTableProps {
   tenants: Tenant[]
   onEdit: (tenant: Tenant) => void
+  onExport: (tenant: Tenant) => void
   onDelete: (tenant: Tenant) => void
   onToggleStatus: (tenant: Tenant) => void
   onManageCatalog: (tenant: Tenant) => void
@@ -42,6 +43,7 @@ function PlanBadge({ plan }: { plan: Tenant["plan"] }) {
 export function BusinessTable({
   tenants,
   onEdit,
+  onExport,
   onDelete,
   onToggleStatus,
   onManageCatalog,
@@ -96,6 +98,10 @@ export function BusinessTable({
                       <Settings className="size-3.5" />
                       <span className="sr-only">Manage catalog</span>
                     </Button>
+                    <Button variant="ghost" size="sm" onClick={() => onExport(tenant)} title="Export data">
+                      <Database className="size-3.5" />
+                      <span className="sr-only">Export data</span>
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => onToggleStatus(tenant)} title={tenant.is_active ? "Deactivate" : "Activate"}>
                       <Power className="size-3.5" />
                       <span className="sr-only">{tenant.is_active ? "Deactivate" : "Activate"}</span>
@@ -139,7 +145,7 @@ export function BusinessTable({
               <p>Instance: {tenant.evolution_instance_name || "—"}</p>
             </div>
             <Separator />
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <Button variant="ghost" size="sm" onClick={() => onEdit(tenant)}>
                 <Pencil className="size-3.5 mr-1" />
                 Edit
@@ -147,6 +153,10 @@ export function BusinessTable({
               <Button variant="ghost" size="sm" onClick={() => onManageCatalog(tenant)}>
                 <Settings className="size-3.5 mr-1" />
                 Catalog
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onExport(tenant)}>
+                <Database className="size-3.5 mr-1" />
+                Export
               </Button>
               <Button variant="ghost" size="sm" onClick={() => onToggleStatus(tenant)}>
                 <Power className="size-3.5 mr-1" />

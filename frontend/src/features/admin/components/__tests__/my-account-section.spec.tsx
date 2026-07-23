@@ -32,6 +32,13 @@ const mockProfile = {
   phone: "12015550000",
   role: "tenant",
   username: "tenant",
+  name: null,
+  tenant_id: null,
+  tenant_name: null,
+  client_prefix: null,
+  locale: null,
+  timezone: null,
+  is_active: true,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
 };

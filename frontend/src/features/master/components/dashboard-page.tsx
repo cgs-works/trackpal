@@ -10,6 +10,7 @@ import { SummaryCards } from "./summary-cards";
 import { BusinessTable } from "./business-table";
 import { BusinessFormDialog, getEmptyForm, type BusinessForm } from "./business-form-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+import { ExportDialog } from "./export-dialog";
 import { EmptyState } from "./empty-state";
 import {
   fetchTenants,
@@ -54,6 +55,7 @@ export function DashboardPage() {
   const [formError, setFormError] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
+  const [exportTarget, setExportTarget] = useState<Tenant | null>(null);
 
   /* ── Data loading ─────────────────────────────────────────────── */
 
@@ -180,6 +182,10 @@ export function DashboardPage() {
 
   /* ── Actions ───────────────────────────────────────────────────── */
 
+  function handleExport(tenant: Tenant) {
+    setExportTarget(tenant);
+  }
+
   async function toggleStatus(tenant: Tenant) {
     try {
       if (tenant.is_active) {
@@ -254,6 +260,7 @@ export function DashboardPage() {
             <BusinessTable
               tenants={filteredTenants}
               onEdit={openEdit}
+              onExport={handleExport}
               onDelete={setDeleteTarget}
               onToggleStatus={toggleStatus}
               onManageCatalog={manageCatalog}
@@ -279,6 +286,15 @@ export function DashboardPage() {
         businessName={deleteTarget?.full_name || ""}
         onConfirm={confirmDelete}
       />
+
+      {exportTarget && (
+        <ExportDialog
+          open={!!exportTarget}
+          onOpenChange={(o) => { if (!o) setExportTarget(null) }}
+          tenantId={exportTarget.id}
+          tenantName={exportTarget.full_name}
+        />
+      )}
     </div>
   );
 }

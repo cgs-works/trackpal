@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     public_api_key,
     public_catalog,
     tenants,
+    tenant_export,
     tenant_settings,
     subscriptions,
     whatsapp_link,
@@ -27,6 +28,7 @@ api_router.include_router(auth.router)
 api_router.include_router(integrations.router)
 api_router.include_router(mailbox.router)
 api_router.include_router(tenants.router)
+api_router.include_router(tenant_export.router)
 api_router.include_router(tenant_settings.router)
 api_router.include_router(access_control.router)
 api_router.include_router(clients.router)
