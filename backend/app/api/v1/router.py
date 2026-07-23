@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     clients,
     code_services,
     dashboard,
+    export,
     help,
     i18n,
     integrations,
@@ -34,6 +35,7 @@ api_router.include_router(code_services.router)
 api_router.include_router(i18n.router)
 api_router.include_router(help.router)
 api_router.include_router(me.router)
+api_router.include_router(export.router)
 
 api_router.include_router(public_api_key.router)
 api_router.include_router(public_catalog.router)

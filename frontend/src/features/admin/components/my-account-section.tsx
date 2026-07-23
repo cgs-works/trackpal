@@ -1,8 +1,8 @@
-import { Database } from "lucide-react";
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
 import { PasswordSection } from "../components/password-section";
 import { ProfileSection } from "../components/profile-section";
+import { DataTabContent } from "../components/data-tab-content";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type Profile,
@@ -64,19 +64,7 @@ export function MyAccountSection({
       )}
 
       <TabsContent value="data" className="pt-6">
-        <div className="flex flex-col items-center gap-4 py-12 text-center">
-          <div className="flex size-16 items-center justify-center rounded-full bg-muted">
-            <Database className="size-8 text-muted-foreground" />
-          </div>
-          <div className="max-w-md space-y-2">
-            <h3 className="text-lg font-semibold">
-              {t("frontend.my_account.data_empty_title")}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("frontend.my_account.data_empty_description")}
-            </p>
-          </div>
-        </div>
+        <DataTabContent />
       </TabsContent>
     </Tabs>
   );

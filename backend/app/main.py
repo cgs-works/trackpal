@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.encryption import validate_encryption_key
 from app.core.metrics import metrics
 from app.core.redis_client import close_redis, get_redis_manager, init_redis
+from app.services.export_worker import export_worker_loop
 from app.services.mailbox_cleanup import cleanup_loop
 from app.services.mail_lookup_worker import worker_loop
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 _worker_task: asyncio.Task | None = None
 _cleanup_task: asyncio.Task | None = None
+_export_worker_task: asyncio.Task | None = None
 
 
 class PublicCatalogCORS(CORSMiddleware):
@@ -42,7 +44,7 @@ class PublicCatalogCORS(CORSMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _worker_task, _cleanup_task
+    global _worker_task, _cleanup_task, _export_worker_task
 
     # Startup
     validate_encryption_key()
@@ -52,21 +54,20 @@ async def lifespan(app: FastAPI):
     manager = get_redis_manager()
     _worker_task = asyncio.create_task(worker_loop(manager))
     _cleanup_task = asyncio.create_task(cleanup_loop())
-    logger.info("Mailbox worker + cleanup background tasks started")
+    _export_worker_task = asyncio.create_task(export_worker_loop())
+    logger.info("Background tasks started")
 
     yield
 
     # Shutdown
-    if _worker_task is not None:
-        _worker_task.cancel()
-    if _cleanup_task is not None:
-        _cleanup_task.cancel()
-    if _worker_task is not None or _cleanup_task is not None:
-        await asyncio.gather(
-            *[t for t in (_worker_task, _cleanup_task) if t is not None],
-            return_exceptions=True,
-        )
-        logger.info("Mailbox background tasks stopped")
+    _tasks = []
+    for t in (_worker_task, _cleanup_task, _export_worker_task):
+        if t is not None:
+            t.cancel()
+            _tasks.append(t)
+    if _tasks:
+        await asyncio.gather(*_tasks, return_exceptions=True)
+        logger.info("Background tasks stopped")
 
     await close_redis()
 

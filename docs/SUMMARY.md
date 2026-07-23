@@ -42,12 +42,6 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Private Help Release Gate](releases/user-help-release.md) | Atomic release checklist, automated checks, manual browser QA matrix, and deliberate browser E2E deferral |
 
-## Research
-
-| File | Description |
-|------|-------------|
-| [Tenant Account Deletion and Data Export](research/tenant-account-deletion-and-data-export.md) | Primary-source legal, security, lifecycle, and TrackPal-specific findings for Tenant offboarding and export |
-
 ## Codebase
 
 | File | Description |

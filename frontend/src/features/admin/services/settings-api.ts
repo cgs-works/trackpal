@@ -190,6 +190,47 @@ export async function updateTenantCodeServices(
   return data;
 }
 
+// ── Tenant Data Export ────────────────────────────────────────
+export type ExportJobStatus = "pending" | "processing" | "ready" | "failed" | "cancelled";
+
+export interface ExportJobStatusResponse {
+  id: string;
+  status: ExportJobStatus;
+  created_at: string;
+  ready_at: string | null;
+  expires_at: string | null;
+  artifact_size_bytes: number | null;
+  error_code: string | null;
+  error_detail: string | null;
+  attempt: number;
+  max_attempts: number;
+}
+
+export interface ExportDownloadResponse {
+  download_url: string;
+  expires_in: number;
+}
+
+export async function requestExport(): Promise<ExportJobStatusResponse> {
+  const { data } = await api.post("/me/export");
+  return data;
+}
+
+export async function getExportStatus(): Promise<ExportJobStatusResponse | null> {
+  try {
+    const { data } = await api.get("/me/export");
+    return data;
+  } catch (err: any) {
+    if (err?.response?.status === 204) return null;
+    throw err;
+  }
+}
+
+export async function getExportDownloadUrl(): Promise<ExportDownloadResponse> {
+  const { data } = await api.get("/me/export/download");
+  return data;
+}
+
 // ── Public API Key ────────────────────────────────────────────
 export interface PublicApiKeyConfig {
   tenant_id: string;

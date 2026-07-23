@@ -16,6 +16,8 @@
 |---------|------------|
 | **Tenant** | Entidad que presta servicios. Tiene su propia instancia de Evolution WhatsApp, catálogo, clientes y suscripciones. Un tenant es un "empresa" en el sistema. Cada tenant tiene un **plan** (starter o pro) que determina qué módulos puede usar. |
 | **Tenant Admin** | The person who operates a Tenant through TrackPal's administrative interfaces. Use **Tenant** for the business entity, never for the person. |
+| **Tenant Deletion** | The irreversible removal of a Tenant as a business entity, including its sole Tenant Admin identity and tenant-owned domain data. It is distinct from deactivation. Avoid the ambiguous term “account deletion.” |
+| **Tenant Data Export** | A portable snapshot of a Tenant's selected business records, expressed through a stable business-facing schema independent of TrackPal's persistence model. It excludes authentication, integration, mailbox, and subscription secrets. |
 | **Tenant Onboarding Status** | The tenant-wide record of orientation-tour releases that were completed or skipped. It belongs to the Tenant rather than to an individual Tenant Admin. |
 | **Master** | Operador principal. Gestiona el ciclo de vida de tenants via WhatsApp Console y web dashboard. Solo hay una instancia. Puede **switchear** a un tenant específico para soporte; en ese contexto ve la UI completa sin restricciones de plan. |
 | **Client** | End customer of a Tenant. Uses the canonical login `{client_prefix}_{local_username}` and has read-only access to profile and active subscription information, Web password changes, and WhatsApp access-code lookup. Client access is unavailable while the Tenant is on Starter, although its data is preserved. |

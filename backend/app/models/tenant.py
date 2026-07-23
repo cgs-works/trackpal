@@ -73,6 +73,11 @@ class Tenant(Base, TimestampMixin):
         back_populates="tenant",
         cascade="all, delete-orphan",
     )
+    export_jobs = relationship(
+        "ExportJob",
+        back_populates="tenant",
+        passive_deletes=True,
+    )
 
     @property
     def full_name(self) -> str:
