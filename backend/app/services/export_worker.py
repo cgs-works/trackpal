@@ -1,4 +1,11 @@
-"""Export worker — claims pending ExportJobs, builds ZIP, uploads to R2."""
+"""Export worker — claims pending ExportJobs, builds ZIP, honours cancellation, uploads to R2.
+
+Supports:
+- 30-minute recoverable lease (anti-duplicate-claim).
+- 3 retries with exponential backoff (5s, 25s, 125s).
+- Cancellation checkpoints before each expensive operation.
+- Atomic replacement: new-ready purges the previous R2 object.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +17,7 @@ import logging
 import re
 import zipfile
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from app.core.database import AsyncSessionLocal
@@ -28,13 +35,17 @@ from app.repositories import (
     export_jobs_repository,
     tenants_repository,
 )
-from app.services.export_service import get_storage
+from app.services.export_service import (
+    confirm_replacement_ready,
+    get_storage,
+)
 from app.services.export_storage import generate_random_export_key
 
 logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_S = 5
 _MAX_RETRIES = 3
+_RETRY_BACKOFF_BASE = 5  # seconds
 
 
 # ── Helpers ────────────────────────────────────────────────────
@@ -59,11 +70,7 @@ def _format_timestamp(dt: datetime | None, tz_name: str) -> str:
 
 
 def _neutralize_csv_value(value: str) -> str:
-    """Neutralize formula-injection prefixes in CSV values.
-
-    Prefix values that could be interpreted as spreadsheet formulas
-    with a tab character.
-    """
+    """Neutralize formula-injection prefixes in CSV values."""
     if value and value[0] in ("=", "+", "-", "@", "\t", "\r", "\n", "|", "%"):
         return "\t" + value
     return value
@@ -79,12 +86,7 @@ def _build_service_catalog_csv(
     plans_by_service: dict,
     tz: str,
 ) -> str:
-    """Build service-catalog.csv content.
-
-    One row per Service/Plan pair.  Services without Plans emit one row
-    with empty Plan fields.  Sorted by service_name then plan_name.
-    Internal identifiers are never serialized.
-    """
+    """Build service-catalog.csv content."""
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
@@ -112,7 +114,6 @@ def _build_service_catalog_csv(
                     ]
                 )
         else:
-            # Service without Plans — one row with empty Plan fields
             writer.writerow(
                 [
                     _neutralize_csv_value(svc.name),
@@ -130,11 +131,7 @@ def _build_subscription_snapshot_csv(
     rows: list[tuple[Subscription, Client, Service, Plan]],
     tz: str,
 ) -> str:
-    """Build subscription-snapshot.csv content.
-
-    Sorted by started_on descending.  Encrypted streaming passwords and
-    profile PINs are never selected or serialized.
-    """
+    """Build subscription-snapshot.csv content."""
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
@@ -208,11 +205,7 @@ def _build_account_profile_csv(tenant: Tenant, locale: str, tz: str) -> str:
 
 
 def _build_client_data_csv(clients: Sequence[Client], tz: str) -> str:
-    """Build client-data.csv content.
-
-    Clients are sorted by login_username.  Internal identifiers,
-    passwords, and WhatsApp LIDs are never serialized.
-    """
+    """Build client-data.csv content."""
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
@@ -241,12 +234,7 @@ def _build_client_data_csv(clients: Sequence[Client], tz: str) -> str:
 
 
 def _build_blocked_phones_csv(blocks: Sequence[BlockedClient], tz: str) -> str:
-    """Build blocked-phones.csv content.
-
-    Only blocks that have a phone value are included — LID-only blocks
-    are deliberately omitted.  Rows sorted by phone.
-    """
-    # Exclude LID-only blocks (no phone)
+    """Build blocked-phones.csv content."""
     phone_blocks = [b for b in blocks if b.phone]
     phone_blocks.sort(key=lambda b: b.phone or "")
 
@@ -280,7 +268,6 @@ def _build_json(
     subscription_rows: list[tuple[Subscription, Client, Service, Plan]] | None = None,
 ) -> str:
     """Build trackpal-data.json content."""
-    # Build client records
     client_records = []
     if clients:
         for c in sorted(clients, key=lambda c: c.username or ""):
@@ -295,7 +282,6 @@ def _build_json(
                 }
             )
 
-    # Build blocked-phone records (exclude LID-only)
     phone_block_records = []
     if blocked_phones:
         phone_blocks = [b for b in blocked_phones if b.phone]
@@ -308,7 +294,6 @@ def _build_json(
                 }
             )
 
-    # Build service-catalog records (nested: services with their plans)
     catalog_records = []
     if services:
         for svc in services:
@@ -330,7 +315,6 @@ def _build_json(
                 }
             )
 
-    # Build subscription-snapshot records
     subscription_records = []
     if subscription_rows:
         for sub, client, svc, plan in subscription_rows:
@@ -352,7 +336,6 @@ def _build_json(
                 }
             )
 
-    # Count total plans across all services
     catalog_plan_count = 0
     if services:
         for svc in services:
@@ -570,32 +553,26 @@ async def _build_zip(
     """Build the export ZIP for the given tenant."""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        # account-profile.csv
         csv_content = _build_account_profile_csv(tenant, locale, tz)
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("account-profile.csv", csv_bytes)
 
-        # client-data.csv
         csv_content = _build_client_data_csv(clients or [], tz)
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("client-data.csv", csv_bytes)
 
-        # service-catalog.csv
         csv_content = _build_service_catalog_csv(services or [], plans_by_service or {}, tz)
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("service-catalog.csv", csv_bytes)
 
-        # subscription-snapshot.csv
         csv_content = _build_subscription_snapshot_csv(subscription_rows or [], tz)
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("subscription-snapshot.csv", csv_bytes)
 
-        # blocked-phones.csv
         csv_content = _build_blocked_phones_csv(blocked_phones or [], tz)
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("blocked-phones.csv", csv_bytes)
 
-        # trackpal-data.json
         json_content = _build_json(
             tenant,
             locale,
@@ -608,14 +585,22 @@ async def _build_zip(
         )
         zf.writestr("trackpal-data.json", json_content.encode("utf-8"))
 
-        # README.txt
         readme_content = _build_readme(locale)
         zf.writestr("README.txt", readme_content.encode("utf-8"))
 
     return buffer.getvalue()
 
 
-# ── Worker ─────────────────────────────────────────────────────
+# ── Cancellation check ─────────────────────────────────────────
+
+
+async def _is_cancelled(db: AsyncSessionLocal, job_id: UUID) -> bool:
+    """Check if a job has been cancelled (polled by the worker)."""
+    job = await export_jobs_repository.get_by_id(db, job_id)
+    return job is None or job.status == "cancelled"
+
+
+# ── Worker processing ─────────────────────────────────────────
 
 
 async def _process_job_with_session(
@@ -624,91 +609,149 @@ async def _process_job_with_session(
 ) -> None:
     """Process one export job with a given DB session.
 
-    This is the core processing seam — testable without touching the
-    real worker loop or database connection lifecycle.
+    Supports retry with backoff and cancellation checkpoints.
     """
-    try:
-        # Fetch tenant with owner
-        tenant = await tenants_repository.get(db, job.tenant_id)
-        if tenant is None:
-            logger.warning("Tenant %s not found for job %s", job.tenant_id, job.id)
+    from app.models.export_job import ExportJob as ExportJobModel
+    from uuid import UUID as UUIDType
+
+    for attempt in range(job.max_attempts):
+        # ── Cancellation checkpoint ──
+        if await _is_cancelled(db, job.id):
+            logger.info("Export job %s was cancelled — aborting", job.id)
+            return
+
+        try:
+            # Fetch tenant with owner
+            tenant = await tenants_repository.get(db, job.tenant_id)
+            if tenant is None:
+                logger.warning("Tenant %s not found for job %s", job.tenant_id, job.id)
+                await export_jobs_repository.update_status(
+                    db,
+                    job.id,
+                    "failed",
+                    error_code="TENANT_NOT_FOUND",
+                )
+                return
+
+            # ── Cancellation checkpoint ──
+            if await _is_cancelled(db, job.id):
+                return
+
+            # Resolve locale and timezone
+            from app.repositories import tenant_settings_repository
+
+            locale = await tenant_settings_repository.resolve_locale(db, job.tenant_id)
+            tz = await tenant_settings_repository.resolve_timezone(db, job.tenant_id)
+
+            # ── Cancellation checkpoint ──
+            if await _is_cancelled(db, job.id):
+                return
+
+            # Query clients and blocked phones
+            clients = await clients_repository.get_clients_with_user(db, job.tenant_id)
+            all_blocks = await blocked_clients_repository.list_active(db, job.tenant_id)
+
+            # ── Cancellation checkpoint ──
+            if await _is_cancelled(db, job.id):
+                return
+
+            # Query catalog
+            services, plans_by_service = await catalog_repository.list_services_with_plans(
+                db, job.tenant_id
+            )
+
+            # ── Cancellation checkpoint ──
+            if await _is_cancelled(db, job.id):
+                return
+
+            # Query subscription records
+            subscription_rows = await catalog_repository.list_all_subscriptions_for_export(
+                db, job.tenant_id
+            )
+
+            # ── Cancellation checkpoint ──
+            if await _is_cancelled(db, job.id):
+                return
+
+            # Build ZIP
+            zip_bytes = await _build_zip(
+                tenant,
+                locale,
+                tz,
+                clients=clients,
+                blocked_phones=all_blocks,
+                services=services,
+                plans_by_service=plans_by_service,
+                subscription_rows=subscription_rows,
+            )
+
+            # ── Cancellation checkpoint ──
+            if await _is_cancelled(db, job.id):
+                return
+
+            # Upload to R2
+            storage = get_storage()
+            r2_key = generate_random_export_key()
+            await storage.upload(r2_key, zip_bytes, content_type="application/zip")
+
+            # ── Cancellation checkpoint (post-upload, pre-commit) ──
+            if await _is_cancelled(db, job.id):
+                # Purge the partial upload
+                try:
+                    await storage.delete(r2_key)
+                except Exception:
+                    logger.warning("Failed to purge partial upload %s after cancel", r2_key)
+                return
+
+            # Atomic replacement: mark ready and purge previous
+            await confirm_replacement_ready(
+                db,
+                job.id,
+                tenant_id=job.tenant_id,
+                r2_key=r2_key,
+                artifact_size_bytes=len(zip_bytes),
+            )
+
+            logger.info(
+                "Export job %s completed — key=%s size=%d",
+                job.id,
+                r2_key,
+                len(zip_bytes),
+            )
+            return  # success
+
+        except Exception:
+            logger.exception("Export job %s attempt %d/%d failed", job.id, attempt + 1, job.max_attempts)
+            await export_jobs_repository.increment_attempts(db, job.id)
+
+            is_last_attempt = attempt + 1 >= job.max_attempts
+            if is_last_attempt:
+                await export_jobs_repository.update_status(
+                    db,
+                    job.id,
+                    "failed",
+                    error_code="GENERATION_ERROR",
+                )
+                return
+
+            # Backoff before retry
+            backoff_seconds = _RETRY_BACKOFF_BASE * (5 ** attempt)
+            logger.info("Retrying job %s in %ds (attempt %d/%d)", job.id, backoff_seconds, attempt + 2, job.max_attempts)
+
+            # Check cancellation during backoff in 1s intervals
+            for _ in range(backoff_seconds):
+                await asyncio.sleep(1)
+                if await _is_cancelled(db, job.id):
+                    logger.info("Export job %s cancelled during backoff", job.id)
+                    return
+
+            # Reset to pending for retry
             await export_jobs_repository.update_status(
                 db,
                 job.id,
-                "failed",
-                error_code="TENANT_NOT_FOUND",
+                "pending",
+                clear_lease=True,
             )
-            return
-
-        # Resolve locale and timezone
-        from app.repositories import tenant_settings_repository
-
-        locale = await tenant_settings_repository.resolve_locale(db, job.tenant_id)
-        tz = await tenant_settings_repository.resolve_timezone(db, job.tenant_id)
-
-        # Query clients and blocked phones (only those with phones)
-        clients = await clients_repository.get_clients_with_user(db, job.tenant_id)
-        all_blocks = await blocked_clients_repository.list_active(db, job.tenant_id)
-
-        # Query catalog (services and plans)
-        services, plans_by_service = await catalog_repository.list_services_with_plans(
-            db, job.tenant_id
-        )
-
-        # Query subscription records for export
-        subscription_rows = (
-            await catalog_repository.list_all_subscriptions_for_export(
-                db, job.tenant_id
-            )
-        )
-
-        # Build ZIP
-        zip_bytes = await _build_zip(
-            tenant,
-            locale,
-            tz,
-            clients=clients,
-            blocked_phones=all_blocks,
-            services=services,
-            plans_by_service=plans_by_service,
-            subscription_rows=subscription_rows,
-        )
-
-        # Upload to R2
-        storage = get_storage()
-        r2_key = generate_random_export_key()
-        await storage.upload(r2_key, zip_bytes, content_type="application/zip")
-
-        # Transition to ready
-        now = datetime.now(timezone.utc)
-        from app.services.export_service import EXPORT_TTL_HOURS
-
-        await export_jobs_repository.update_status(
-            db,
-            job.id,
-            "ready",
-            r2_key=r2_key,
-            artifact_size_bytes=len(zip_bytes),
-            expires_at=now + __import__("datetime").timedelta(hours=EXPORT_TTL_HOURS),
-            clear_lease=True,
-        )
-
-        logger.info(
-            "Export job %s completed — key=%s size=%d",
-            job.id,
-            r2_key,
-            len(zip_bytes),
-        )
-
-    except Exception:
-        logger.exception("Export job %s failed", job.id)
-        # Increment attempts via update
-        await export_jobs_repository.update_status(
-            db,
-            job.id,
-            "failed",
-            error_code="GENERATION_ERROR",
-        )
 
 
 async def _process_job(job: ExportJob) -> None:

@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.encryption import validate_encryption_key
 from app.core.metrics import metrics
 from app.core.redis_client import close_redis, get_redis_manager, init_redis
+from app.services.export_cleanup_worker import export_cleanup_loop
 from app.services.export_worker import export_worker_loop
 from app.services.mailbox_cleanup import cleanup_loop
 from app.services.mail_lookup_worker import worker_loop
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 _worker_task: asyncio.Task | None = None
 _cleanup_task: asyncio.Task | None = None
 _export_worker_task: asyncio.Task | None = None
+_export_cleanup_task: asyncio.Task | None = None
 
 
 class PublicCatalogCORS(CORSMiddleware):
@@ -44,7 +46,7 @@ class PublicCatalogCORS(CORSMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _worker_task, _cleanup_task, _export_worker_task
+    global _worker_task, _cleanup_task, _export_worker_task, _export_cleanup_task
 
     # Startup
     validate_encryption_key()
@@ -55,13 +57,14 @@ async def lifespan(app: FastAPI):
     _worker_task = asyncio.create_task(worker_loop(manager))
     _cleanup_task = asyncio.create_task(cleanup_loop())
     _export_worker_task = asyncio.create_task(export_worker_loop())
+    _export_cleanup_task = asyncio.create_task(export_cleanup_loop())
     logger.info("Background tasks started")
 
     yield
 
     # Shutdown
     _tasks = []
-    for t in (_worker_task, _cleanup_task, _export_worker_task):
+    for t in (_worker_task, _cleanup_task, _export_worker_task, _export_cleanup_task):
         if t is not None:
             t.cancel()
             _tasks.append(t)

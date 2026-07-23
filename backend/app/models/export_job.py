@@ -80,6 +80,17 @@ class ExportJob(Base, TimestampMixin):
     # ── Error ──────────────────────────────────────────────────
     error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # ── Cooldown ───────────────────────────────────────────────
+    cooldown_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # ── Actor attribution ──────────────────────────────────────
+    actor_role: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     # ── Replacement chain ──────────────────────────────────────
     replaced_job_id: Mapped[uuid.UUID | None] = mapped_column(

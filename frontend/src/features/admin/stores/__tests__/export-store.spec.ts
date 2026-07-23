@@ -11,6 +11,7 @@ vi.mock("@/features/admin/services/settings-api", async () => {
     requestExport: vi.fn(),
     getExportStatus: vi.fn(),
     getExportDownloadUrl: vi.fn(),
+    cancelExport: vi.fn(),
   };
 });
 
@@ -29,6 +30,11 @@ const mockPending = {
   error_detail: null,
   attempt: 0,
   max_attempts: 3,
+  cooldown_until: null,
+  actor_role: "tenant",
+  replaced_job_id: null,
+  replacement_job_id: null,
+  previous_ready: null,
 };
 
 const mockReady = {
@@ -42,6 +48,23 @@ const mockReady = {
   error_detail: null,
   attempt: 1,
   max_attempts: 3,
+  cooldown_until: "2026-07-02T00:01:00Z",
+  actor_role: "tenant",
+  replaced_job_id: null,
+  replacement_job_id: null,
+  previous_ready: null,
+};
+
+const mockReadyWithReplacement = {
+  ...mockReady,
+  id: "job-3",
+  replacement_job_id: "job-4",
+  previous_ready: {
+    id: "job-2",
+    ready_at: "2026-07-01T00:01:00Z",
+    artifact_size_bytes: 10240,
+    expires_at: "2026-07-04T00:01:00Z",
+  },
 };
 
 describe("useExportStore", () => {
@@ -57,6 +80,7 @@ describe("useExportStore", () => {
     expect(state.requesting).toBe(false);
     expect(state.statusLoading).toBe(false);
     expect(state.downloadLoading).toBe(false);
+    expect(state.cancelling).toBe(false);
     expect(state.downloadUrl).toBeNull();
     expect(state.error).toBeNull();
   });
@@ -117,6 +141,33 @@ describe("useExportStore", () => {
     expect(state.requesting).toBe(false);
   });
 
+  it("cancelExport calls API and refreshes status", async () => {
+    vi.mocked(api.cancelExport).mockResolvedValueOnce({
+      status: "cancelled",
+      id: "job-1",
+    });
+    vi.mocked(api.getExportStatus).mockResolvedValueOnce(mockPending);
+
+    await useExportStore.getState().cancelExport();
+
+    expect(api.cancelExport).toHaveBeenCalledTimes(1);
+    // Should have refreshed status after cancel
+    expect(api.getExportStatus).toHaveBeenCalledTimes(1);
+    expect(useExportStore.getState().cancelling).toBe(false);
+    expect(useExportStore.getState().error).toBeNull();
+  });
+
+  it("cancelExport handles API error", async () => {
+    const apiError = { response: { data: { detail: "Cannot cancel" } } };
+    vi.mocked(api.cancelExport).mockRejectedValueOnce(apiError);
+
+    await useExportStore.getState().cancelExport();
+
+    const state = useExportStore.getState();
+    expect(state.error).toBe("Cannot cancel");
+    expect(state.cancelling).toBe(false);
+  });
+
   it("download returns URL for ready jobs", async () => {
     vi.mocked(api.getExportDownloadUrl).mockResolvedValueOnce({
       download_url: "https://r2.example.com/export.zip",
@@ -161,6 +212,33 @@ describe("useExportStore", () => {
     expect(useExportStore.getState()._pollTimer).toBeNull();
   });
 
+  it("stores actor_role from enriched response", async () => {
+    vi.mocked(api.getExportStatus).mockResolvedValueOnce(mockReady);
+
+    await useExportStore.getState().refreshStatus();
+
+    expect(useExportStore.getState().job?.actor_role).toBe("tenant");
+  });
+
+  it("stores cooldown_until from enriched response", async () => {
+    vi.mocked(api.getExportStatus).mockResolvedValueOnce(mockReady);
+
+    await useExportStore.getState().refreshStatus();
+
+    expect(useExportStore.getState().job?.cooldown_until).toBe(
+      "2026-07-02T00:01:00Z",
+    );
+  });
+
+  it("stores previous_ready when replacement is pending", async () => {
+    vi.mocked(api.getExportStatus).mockResolvedValueOnce(mockReadyWithReplacement);
+
+    await useExportStore.getState().refreshStatus();
+
+    expect(useExportStore.getState().job?.previous_ready).toBeDefined();
+    expect(useExportStore.getState().job?.previous_ready?.id).toBe("job-2");
+  });
+
   it("reset clears everything", async () => {
     vi.mocked(api.getExportStatus).mockResolvedValueOnce(mockReady);
     await useExportStore.getState().refreshStatus();
@@ -171,6 +249,7 @@ describe("useExportStore", () => {
     expect(state.job).toBeNull();
     expect(state._pollTimer).toBeNull();
     expect(state.downloadUrl).toBeNull();
+    expect(state.cancelling).toBe(false);
     expect(state.error).toBeNull();
   });
 });

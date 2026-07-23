@@ -1,5 +1,16 @@
 import { useEffect, useCallback, useState, useRef } from "react";
-import { Database, Download, Loader2, FileArchive, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Database,
+  Download,
+  Loader2,
+  FileArchive,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Shield,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { useExportStore } from "../stores/export-store";
@@ -10,10 +21,12 @@ export function DataTabContent() {
     requesting,
     statusLoading,
     downloadLoading,
+    cancelling,
     downloadUrl,
     error,
     requestExport,
     refreshStatus,
+    cancelExport: storeCancelExport,
     download,
     reset,
   } = useExportStore();
@@ -36,20 +49,50 @@ export function DataTabContent() {
     await requestExport();
   }, [requestExport]);
 
+  const handleCancelExport = useCallback(async () => {
+    await storeCancelExport();
+  }, [storeCancelExport]);
+
   const handleDownload = useCallback(async () => {
     const url = await download();
     if (url) {
       setDownloading(true);
-      // Open in new tab (or trigger download via anchor)
       const anchor = document.createElement("a");
       anchor.href = url;
       anchor.target = "_blank";
       anchor.rel = "noopener noreferrer";
       anchor.click();
-      // Reset downloading state after a short delay
       setTimeout(() => setDownloading(false), 2000);
     }
   }, [download]);
+
+  // ── Actor label ─────────────────────────────────────────────
+  const actorLabel = () => {
+    if (!job?.actor_role) return null;
+    return job.actor_role === "master"
+      ? t("frontend.my_account.data_actor_support")
+      : t("frontend.my_account.data_actor_you");
+  };
+
+  // ── Cooldown info ───────────────────────────────────────────
+  const cooldownInfo = () => {
+    if (!job?.cooldown_until) return null;
+    const cooldown = new Date(job.cooldown_until);
+    const now = new Date();
+    if (cooldown <= now) return null;
+    const hours = Math.ceil((cooldown.getTime() - now.getTime()) / (1000 * 60 * 60));
+    return t("frontend.my_account.data_cooldown", { hours: String(hours) });
+  };
+
+  // ── Expiry info ─────────────────────────────────────────────
+  const expiryInfo = () => {
+    if (!job?.expires_at) return null;
+    const expires = new Date(job.expires_at);
+    const now = new Date();
+    if (expires <= now) return null;
+    const hours = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60));
+    return t("frontend.my_account.data_expires_in", { hours: String(hours) });
+  };
 
   // ── No job exists (empty state) ─────────────────────────────
   if (!job) {
@@ -99,7 +142,7 @@ export function DataTabContent() {
       case "failed":
         return <AlertCircle className="size-10 text-destructive" />;
       case "cancelled":
-        return <AlertCircle className="size-10 text-muted-foreground" />;
+        return <XCircle className="size-10 text-muted-foreground" />;
     }
   };
 
@@ -144,10 +187,28 @@ export function DataTabContent() {
             {statusLabel()}
           </span>
         </div>
+
+        {/* Actor attribution */}
+        {actorLabel() && (
+          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+            <User className="size-3" />
+            <span>{actorLabel()}</span>
+          </div>
+        )}
+
+        {/* Artifact size */}
         {job.artifact_size_bytes != null && (
           <p className="text-xs text-muted-foreground">
             {formatBytes(job.artifact_size_bytes)}
           </p>
+        )}
+
+        {/* Expiry info */}
+        {expiryInfo() && (
+          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+            <Clock className="size-3" />
+            <span>{expiryInfo()}</span>
+          </div>
         )}
       </div>
 
@@ -155,8 +216,9 @@ export function DataTabContent() {
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <div className="flex gap-3">
-        {job.status === "ready" && (
+      <div className="flex flex-wrap justify-center gap-3">
+        {/* Download current */}
+        {job.status === "ready" && !job.replacement_job_id && (
           <Button
             type="button"
             onClick={handleDownload}
@@ -176,6 +238,73 @@ export function DataTabContent() {
           </Button>
         )}
 
+        {/* Download ready but replacement in flight — download previous */}
+        {job.status === "ready" && job.replacement_job_id && (
+          <Button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloadLoading || downloading}
+            variant="outline"
+          >
+            {downloadLoading || downloading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                {t("frontend.my_account.data_downloading")}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 size-4" />
+                {t("frontend.my_account.data_download_previous")}
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Previous ready available for download during replacement */}
+        {job.previous_ready && (job.status === "pending" || job.status === "processing") && (
+          <Button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloadLoading || downloading}
+            variant="outline"
+          >
+            {downloadLoading || downloading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                {t("frontend.my_account.data_downloading")}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 size-4" />
+                {t("frontend.my_account.data_download_previous")}
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Cancel */}
+        {(job.status === "pending" || job.status === "processing") && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleCancelExport}
+            disabled={cancelling}
+          >
+            {cancelling ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                {t("frontend.my_account.data_cancelling")}
+              </>
+            ) : (
+              <>
+                <XCircle className="mr-2 size-4" />
+                {t("frontend.my_account.data_cancel")}
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Retry after failure or cancellation */}
         {job.status === "failed" || job.status === "cancelled" ? (
           <Button
             type="button"
@@ -195,6 +324,15 @@ export function DataTabContent() {
         ) : null}
       </div>
 
+      {/* Cooldown notice */}
+      {cooldownInfo() && job.status === "ready" && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="size-3" />
+          <span>{cooldownInfo()}</span>
+        </div>
+      )}
+
+      {/* Processing indicator */}
       {(job.status === "pending" || job.status === "processing") && (
         <p className="text-xs text-muted-foreground">
           <FileArchive className="mr-1 inline size-3" />

@@ -473,6 +473,13 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.my_account.data_empty_title": "Exporta tu perfil de cuenta",
     "frontend.my_account.data_empty_description": "Descarga una copia completa de tu cuenta. Las exportaciones están disponibles una vez cada 24 horas y se eliminan después de 72 horas.",
     "frontend.my_account.data_empty_action": "Solicitar exportación",
+    "frontend.my_account.data_cancel": "Cancelar exportación",
+    "frontend.my_account.data_cancelling": "Cancelando…",
+    "frontend.my_account.data_download_previous": "Descargar versión anterior",
+    "frontend.my_account.data_expires_in": "Disponible por {hours} horas más",
+    "frontend.my_account.data_cooldown": "Próxima exportación disponible en {hours} horas",
+    "frontend.my_account.data_actor_you": "Generado por ti",
+    "frontend.my_account.data_actor_support": "Generado por Soporte",
     # Profile (new keys)
     "frontend.profile.passwords_dont_match": "Las contraseñas no coinciden",
     "frontend.profile.password_min_length": "Mínimo 8 caracteres",

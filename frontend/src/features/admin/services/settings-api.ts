@@ -193,8 +193,16 @@ export async function updateTenantCodeServices(
 // ── Tenant Data Export ────────────────────────────────────────
 export type ExportJobStatus = "pending" | "processing" | "ready" | "failed" | "cancelled";
 
+export interface PreviousReadyInfo {
+  id: string;
+  ready_at: string | null;
+  artifact_size_bytes: number | null;
+  expires_at: string | null;
+}
+
 export interface ExportJobStatusResponse {
   id: string;
+  tenant_id?: string;
   status: ExportJobStatus;
   created_at: string;
   ready_at: string | null;
@@ -204,11 +212,30 @@ export interface ExportJobStatusResponse {
   error_detail: string | null;
   attempt: number;
   max_attempts: number;
+  /** @deprecated Use `attempts` instead */
+  attempts?: number;
+  /** When the job transitioned to failed (for 72h cleanup display) */
+  failed_at?: string | null;
+  /** When the 24h cooldown expires (ISO 8601) */
+  cooldown_until?: string | null;
+  /** Role of the actor who requested the job: "tenant" or "master" */
+  actor_role?: string | null;
+  /** ID of the job this one replaces (if any) */
+  replaced_job_id?: string | null;
+  /** ID of the job that replaces this one (if any) */
+  replacement_job_id?: string | null;
+  /** Previous ready artifact details, available if a replacement is pending */
+  previous_ready?: PreviousReadyInfo | null;
 }
 
 export interface ExportDownloadResponse {
   download_url: string;
   expires_in: number;
+}
+
+export interface ExportCancelResponse {
+  status: string;
+  id: string;
 }
 
 export async function requestExport(): Promise<ExportJobStatusResponse> {
@@ -228,6 +255,11 @@ export async function getExportStatus(): Promise<ExportJobStatusResponse | null>
 
 export async function getExportDownloadUrl(): Promise<ExportDownloadResponse> {
   const { data } = await api.get("/me/export/download");
+  return data;
+}
+
+export async function cancelExport(): Promise<ExportCancelResponse> {
+  const { data } = await api.post("/me/export/cancel");
   return data;
 }
 

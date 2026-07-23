@@ -3,6 +3,7 @@ import {
   requestExport as apiRequestExport,
   getExportStatus as apiGetExportStatus,
   getExportDownloadUrl as apiGetExportDownloadUrl,
+  cancelExport as apiCancelExport,
   type ExportJobStatusResponse,
   type ExportJobStatus,
 } from "@/features/admin/services/settings-api";
@@ -18,6 +19,8 @@ interface ExportState {
   statusLoading: boolean;
   /** True while fetching the download URL. */
   downloadLoading: boolean;
+  /** True while cancelling. */
+  cancelling: boolean;
   /** Download URL once acquired, null initially or on error. */
   downloadUrl: string | null;
   /** User-facing error message, or null. */
@@ -27,6 +30,8 @@ interface ExportState {
   refreshStatus: () => Promise<void>;
   /** Request a new export. */
   requestExport: () => Promise<void>;
+  /** Cancel the current in-progress export. */
+  cancelExport: () => Promise<void>;
   /** Get a fresh download URL and return it. */
   download: () => Promise<string | null>;
   /** Start polling when a job is pending/processing. */
@@ -49,6 +54,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
   requesting: false,
   statusLoading: false,
   downloadLoading: false,
+  cancelling: false,
   downloadUrl: null,
   error: null,
 
@@ -85,6 +91,19 @@ export const useExportStore = create<ExportState>((set, get) => ({
     } catch (err: any) {
       const msg = err?.response?.data?.detail || "Could not request export.";
       set({ error: msg, requesting: false });
+    }
+  },
+
+  cancelExport: async () => {
+    set({ cancelling: true, error: null });
+    try {
+      await apiCancelExport();
+      // Refresh status to reflect cancellation
+      await get().refreshStatus();
+      set({ cancelling: false, error: null });
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || "Could not cancel export.";
+      set({ error: msg, cancelling: false });
     }
   },
 
@@ -137,6 +156,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
       requesting: false,
       statusLoading: false,
       downloadLoading: false,
+      cancelling: false,
       downloadUrl: null,
       error: null,
     });

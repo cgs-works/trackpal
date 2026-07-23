@@ -1,4 +1,4 @@
-"""Tenant Data Export endpoints — request, status, and download."""
+"""Tenant Data Export endpoints — request, status, cancel, and download."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ async def request_export(
     """Request a new Tenant Data Export.
 
     Requires password step-up authentication (handled separately).
+    Enforces 24-hour cooldown and links replacement chain.
     Creates a pending ExportJob that a background worker will process.
     """
     # Enforce role: only tenant and master (in support context) can export
@@ -41,18 +42,30 @@ async def request_export(
                 detail=str(exc),
             ) from exc
 
-    job = await export_service.request_export(
-        db,
-        tenant_id=active_tenant_id,
-        actor_id=current_user.id,
-    )
+    try:
+        job = await export_service.request_export(
+            db,
+            tenant_id=active_tenant_id,
+            actor_id=current_user.id,
+            actor_role=current_user.role,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
 
-    return {
-        "id": str(job.id),
-        "tenant_id": str(job.tenant_id),
-        "status": job.status,
-        "created_at": job.created_at.isoformat() if job.created_at else None,
-    }
+    # Build response from the service's enriched format
+    enriched = await export_service.get_current_export(db, tenant_id=active_tenant_id)
+    if enriched is None:
+        return {
+            "id": str(job.id),
+            "tenant_id": str(job.tenant_id),
+            "status": job.status,
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+        }
+
+    return enriched
 
 
 @router.get("")
@@ -61,30 +74,56 @@ async def get_export_status(
     current_user: CurrentUser,
     active_tenant_id: ActiveTenantId,
 ):
-    """Get the latest export status for the current tenant.
+    """Get the latest export status with enriched metadata.
 
     Returns 204 No Content when no export job exists.
     """
-    job = await export_service.get_current_export(
+    enriched = await export_service.get_current_export(
         db,
         tenant_id=active_tenant_id,
     )
-    if job is None:
+    if enriched is None:
         raise HTTPException(status_code=status.HTTP_204_NO_CONTENT)
 
-    return {
-        "id": str(job.id),
-        "tenant_id": str(job.tenant_id),
-        "status": job.status,
-        "attempts": job.attempts,
-        "max_attempts": job.max_attempts,
-        "error_code": job.error_code,
-        "artifact_size_bytes": job.artifact_size_bytes,
-        "ready_at": job.ready_at.isoformat() if job.ready_at else None,
-        "expires_at": job.expires_at.isoformat() if job.expires_at else None,
-        "created_at": job.created_at.isoformat() if job.created_at else None,
-        "updated_at": job.updated_at.isoformat() if job.updated_at else None,
-    }
+    return enriched
+
+
+@router.post("/cancel")
+async def cancel_export(
+    db: DbDep,
+    current_user: CurrentUser,
+    active_tenant_id: ActiveTenantId,
+):
+    """Cancel the current pending or processing export.
+
+    Only pending or processing jobs can be cancelled.  Partial uploads
+    from a processing job are purged from storage.
+    """
+    if current_user.role not in ("tenant", "master"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Tenant Admins and Master can cancel exports",
+        )
+
+    job = await export_service.cancel_export(
+        db,
+        tenant_id=active_tenant_id,
+        actor_id=current_user.id,
+    )
+    if job is None:
+        # Could be no job or job not in cancellable state
+        latest = await export_service.get_current_export(db, tenant_id=active_tenant_id)
+        if latest is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No export job to cancel",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot cancel export in state '{latest['status']}'",
+        )
+
+    return {"status": "cancelled", "id": str(job.id)}
 
 
 @router.get("/download")
@@ -96,15 +135,16 @@ async def download_export(
     """Get a presigned download URL for the latest ready export.
 
     Returns 404 when no ready export exists.
+    URL expiry is capped to min(15 minutes, remaining object lifetime).
     """
-    url = await export_service.get_download_url(
+    result = await export_service.get_download_url(
         db,
         tenant_id=active_tenant_id,
     )
-    if url is None:
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No ready export available",
         )
 
-    return {"url": url}
+    return result

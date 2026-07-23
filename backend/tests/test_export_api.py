@@ -170,8 +170,9 @@ async def test_download_returns_presigned_url_when_ready(client, db_session, act
     resp = await client.get("/api/v1/me/export/download", headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert "url" in body
-    assert "test-key-123" in body["url"]
+    assert "download_url" in body
+    assert "expires_in" in body
+    assert "test-key-123" in body["download_url"]
 
 
 async def test_download_returns_404_when_no_ready_job(client, db_session, active_tenant_user, fake_export_storage, fake_step_up_limiter):
