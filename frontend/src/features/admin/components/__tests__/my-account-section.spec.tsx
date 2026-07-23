@@ -5,6 +5,7 @@ import { MyAccountSection } from "../my-account-section";
 
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
+  getLocale: () => "en",
 }));
 
 const mockUseAuthStore = vi.fn();

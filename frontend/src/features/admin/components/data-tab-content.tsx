@@ -9,10 +9,29 @@ import {
   XCircle,
   Clock,
   User,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { t } from "@/i18n";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { t, getLocale } from "@/i18n";
 import { useExportStore } from "../stores/export-store";
+import {
+  deleteAccount,
+  type DeleteAccountRequest,
+} from "../services/settings-api";
+
 
 export function DataTabContent() {
   const {
@@ -30,6 +49,15 @@ export function DataTabContent() {
 
   const [downloading, setDownloading] = useState(false);
   const initialLoadDone = useRef(false);
+
+  // ── Deletion state ──────────────────────────────────────────
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmWord, setDeleteConfirmWord] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const destructiveWord = getLocale() === "es" ? "ELIMINAR" : "DELETE";
 
   // Fetch current job status on mount
   useEffect(() => {
@@ -62,6 +90,35 @@ export function DataTabContent() {
       setTimeout(() => setDownloading(false), 2000);
     }
   }, [download]);
+
+  // ── Deletion handlers ───────────────────────────────────────
+  const handleDeleteClick = useCallback(() => {
+    setDeletePassword("");
+    setDeleteConfirmWord("");
+    setDeleteError(null);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deletePassword || !deleteConfirmWord) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount({
+        password: deletePassword,
+        destructive_word: deleteConfirmWord,
+      });
+      // Success — redirect to login
+      window.location.href = "/login?deleted=1";
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        t("frontend.my_account.danger_error");
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  }, [deletePassword, deleteConfirmWord]);
 
   // ── Actor label ─────────────────────────────────────────────
   const actorLabel = () => {
@@ -123,6 +180,100 @@ export function DataTabContent() {
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}
+
+        <Separator className="my-6" />
+
+        {/* Danger zone */}
+        <div className="w-full max-w-md rounded-lg border border-destructive/50 p-4">
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+            <Trash2 className="size-4" />
+            {t("frontend.my_account.danger_title")}
+          </h4>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("frontend.my_account.danger_description")}
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="mt-3"
+            onClick={handleDeleteClick}
+          >
+            {t("frontend.my_account.danger_delete_button")}
+          </Button>
+        </div>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("frontend.my_account.danger_confirm_title")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("frontend.my_account.danger_confirm_description")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="delete-password">
+                  {t("frontend.my_account.danger_password_label")}
+                </Label>
+                <Input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  disabled={deleting}
+                  autoFocus
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="delete-confirm-word">
+                  {t("frontend.my_account.danger_destructive_word_label", {
+                    word: destructiveWord,
+                  })}
+                </Label>
+                <Input
+                  id="delete-confirm-word"
+                  type="text"
+                  value={deleteConfirmWord}
+                  onChange={(e) => setDeleteConfirmWord(e.target.value)}
+                  placeholder={destructiveWord}
+                  disabled={deleting}
+                />
+              </div>
+              {deleteError && (
+                <p className="text-sm text-destructive">{deleteError}</p>
+              )}
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>
+                {t("frontend.common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                disabled={
+                  deleting ||
+                  !deletePassword ||
+                  deleteConfirmWord !== destructiveWord
+                }
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    {t("frontend.my_account.danger_deleting")}
+                  </>
+                ) : (
+                  t("frontend.my_account.danger_confirm_button")
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -336,6 +487,100 @@ export function DataTabContent() {
           {t("frontend.my_account.data_status_processing")}
         </p>
       )}
+
+      <Separator className="my-6" />
+
+      {/* Danger zone */}
+      <div className="w-full max-w-md rounded-lg border border-destructive/50 p-4">
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+          <Trash2 className="size-4" />
+          {t("frontend.my_account.danger_title")}
+        </h4>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t("frontend.my_account.danger_description")}
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="mt-3"
+          onClick={handleDeleteClick}
+        >
+          {t("frontend.my_account.danger_delete_button")}
+        </Button>
+      </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("frontend.my_account.danger_confirm_title")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("frontend.my_account.danger_confirm_description")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="delete-password">
+                {t("frontend.my_account.danger_password_label")}
+              </Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                disabled={deleting}
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="delete-confirm-word">
+                {t("frontend.my_account.danger_destructive_word_label", {
+                  word: destructiveWord,
+                })}
+              </Label>
+              <Input
+                id="delete-confirm-word"
+                type="text"
+                value={deleteConfirmWord}
+                onChange={(e) => setDeleteConfirmWord(e.target.value)}
+                placeholder={destructiveWord}
+                disabled={deleting}
+              />
+            </div>
+            {deleteError && (
+              <p className="text-sm text-destructive">{deleteError}</p>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              {t("frontend.common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={
+                deleting ||
+                !deletePassword ||
+                deleteConfirmWord !== destructiveWord
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {t("frontend.my_account.danger_deleting")}
+                </>
+              ) : (
+                t("frontend.my_account.danger_confirm_button")
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

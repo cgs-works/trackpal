@@ -107,4 +107,6 @@ _CATALOG_EN_GENERAL: Final[dict[str, str]] = {
     "profile.updated.success": "Perfil actualizado correctamente.",
     "profile.password.updated": "Contraseña actualizada correctamente.",
     "profile.locale.updated": "Idioma actualizado a {locale_name}.",
+    # ── Tenant self-service deletion ──────────────────────────
+    "errors.tenant_deletion_denied": "Only Tenant Admins can delete their account.",
 }

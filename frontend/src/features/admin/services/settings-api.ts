@@ -190,6 +190,25 @@ export async function updateTenantCodeServices(
   return data;
 }
 
+// ── Tenant self-service deletion ────────────────────────────────
+
+export interface DeleteAccountRequest {
+  password: string;
+  destructive_word: string;
+}
+
+export interface DeleteAccountResponse {
+  success: boolean;
+}
+
+export async function deleteAccount(
+  payload: DeleteAccountRequest
+): Promise<DeleteAccountResponse> {
+  const { data } = await api.post("/me/delete-account", payload);
+  return data;
+}
+
+
 // ── Tenant Data Export ────────────────────────────────────────
 export type ExportJobStatus = "pending" | "processing" | "ready" | "failed" | "cancelled";
 

@@ -581,4 +581,16 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.tour_confirm_skip": "Skip tour",
     "frontend.help.tour_acknowledge_error": "The tour could not save its state. Your workspace is still available; try again later.",
     "frontend.help.replay_tour": "Replay orientation tour",
+    # ── Tenant self-service deletion ──────────────────────────
+    "frontend.my_account.danger_title": "Danger zone",
+    "frontend.my_account.danger_description": "Permanently delete your account and all associated data. This action cannot be undone.",
+    "frontend.my_account.danger_delete_button": "Delete account permanently",
+    "frontend.my_account.danger_confirm_title": "Delete account",
+    "frontend.my_account.danger_confirm_description": "This will permanently delete your account, clients, catalog, subscriptions, settings, and all stored data. Export your data first if you want a copy.",
+    "frontend.my_account.danger_password_label": "Enter your current password",
+    "frontend.my_account.danger_destructive_word_label": "Type {word} to confirm",
+    "frontend.my_account.danger_confirm_button": "Delete permanently",
+    "frontend.my_account.danger_deleting": "Deleting account…",
+    "frontend.my_account.danger_error": "Could not delete account. Please try again.",
+    "frontend.my_account.danger_redirect": "Account deleted successfully",
 }

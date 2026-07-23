@@ -581,4 +581,16 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.tour_confirm_skip": "Omitir recorrido",
     "frontend.help.tour_acknowledge_error": "No se pudo guardar el estado del recorrido. Tu espacio de trabajo sigue disponible; inténtalo más tarde.",
     "frontend.help.replay_tour": "Repetir recorrido de orientación",
+    # ── Tenant self-service deletion ──────────────────────────
+    "frontend.my_account.danger_title": "Zona de peligro",
+    "frontend.my_account.danger_description": "Elimina permanentemente tu cuenta y todos los datos asociados. Esta acción no se puede deshacer.",
+    "frontend.my_account.danger_delete_button": "Eliminar cuenta permanentemente",
+    "frontend.my_account.danger_confirm_title": "Eliminar cuenta",
+    "frontend.my_account.danger_confirm_description": "Esto eliminará permanentemente tu cuenta, clientes, catálogo, suscripciones, configuración y todos los datos almacenados. Exporta tus datos primero si deseas una copia.",
+    "frontend.my_account.danger_password_label": "Ingresa tu contraseña actual",
+    "frontend.my_account.danger_destructive_word_label": "Escribe {word} para confirmar",
+    "frontend.my_account.danger_confirm_button": "Eliminar permanentemente",
+    "frontend.my_account.danger_deleting": "Eliminando cuenta…",
+    "frontend.my_account.danger_error": "No se pudo eliminar la cuenta. Intenta de nuevo.",
+    "frontend.my_account.danger_redirect": "Cuenta eliminada exitosamente",
 }

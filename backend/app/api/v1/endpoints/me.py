@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 
 from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep
 from app.core.database import restore_rls_context
@@ -6,7 +7,10 @@ from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
 from app.repositories import tenant_settings_repository
 from app.schemas.me import PasswordChange, ProfileResponse, ProfileUpdate
+from app.services import export_service
 from app.services.profile_service import ProfileService
+from app.services.step_up_limiter import StepUpError
+from app.services.tenant_service.deletion import delete_tenant_account
 
 router = APIRouter(prefix="/me", tags=["me"])
 profile_service = ProfileService()
@@ -215,3 +219,69 @@ async def change_password(
             detail=_t(locale, "errors.incorrect_old_password"),
         )
     return {"message": "Password updated successfully"}
+
+
+class DeleteAccountRequest(BaseModel):
+    """Password step-up payload for Tenant Admin self-deletion."""
+
+    password: str
+    destructive_word: str
+
+
+@router.post("/delete-account", status_code=status.HTTP_200_OK)
+async def delete_account(
+    payload: DeleteAccountRequest,
+    db: DbDep,
+    current_user: CurrentUser,
+    active_tenant_id: ActiveTenantId,
+):
+    """Permanently delete the active Tenant and all owned data.
+
+    Requires:
+    - Tenant Admin role (Client and Master are denied).
+    - Current password for step-up authentication.
+    - Locale-aware destructive word (DELETE / ELIMINAR).
+    - Active tenant (deactivated tenants require Master assistance).
+
+    Uses the shared three-attempt/fifteen-minute step-up limiter.
+    External cleanup (R2, Evolution) runs before database deletion
+    and preserves the tenant on failure for safe retry.
+    """
+    if current_user.role != "tenant":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Tenant Admins can delete their account",
+        )
+
+    # Resolve locale for destructive word validation
+    locale = await tenant_settings_repository.resolve_locale(db, active_tenant_id)
+
+    limiter = export_service.get_limiter()
+
+    try:
+        result = await delete_tenant_account(
+            db=db,
+            tenant_id=active_tenant_id,
+            actor_user_id=current_user.id,
+            password=payload.password,
+            destructive_word=payload.destructive_word,
+            locale=locale,
+            limiter=limiter,
+        )
+    except StepUpError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    return result
