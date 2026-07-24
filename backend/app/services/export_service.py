@@ -18,7 +18,6 @@ from app.models.export_job import ExportJob
 from app.repositories import export_jobs_repository
 from app.services.export_storage import (
     ExportStorageAdapter,
-    FakeExportStorageAdapter,
     StorageObjectNotFoundError,
     StorageOperationError,
 )
@@ -49,9 +48,8 @@ def configure_export_service(
 
 
 def get_storage() -> ExportStorageAdapter:
-    global _export_storage
     if _export_storage is None:
-        _export_storage = FakeExportStorageAdapter()
+        raise RuntimeError("Export storage is not configured")
     return _export_storage
 
 

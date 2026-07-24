@@ -13,9 +13,12 @@ from app.core.encryption import validate_encryption_key
 from app.core.metrics import metrics
 from app.core.redis_client import close_redis, get_redis_manager, init_redis
 from app.services.export_cleanup_worker import export_cleanup_loop
+from app.services.export_service import configure_export_service
+from app.services.export_storage import ExportStorageConfig, R2ExportStorageAdapter
 from app.services.export_worker import export_worker_loop
 from app.services.mailbox_cleanup import cleanup_loop
 from app.services.mail_lookup_worker import worker_loop
+from app.services.step_up_limiter import StepUpRateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,13 @@ class PublicCatalogCORS(CORSMiddleware):
         await super().__call__(scope, receive, send)
 
 
+def _configure_export_runtime() -> None:
+    storage_config = ExportStorageConfig.from_settings(settings)
+    storage = R2ExportStorageAdapter(storage_config)
+    limiter = StepUpRateLimiter(get_redis_manager())
+    configure_export_service(storage, limiter)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _worker_task, _cleanup_task, _export_worker_task, _export_cleanup_task
@@ -51,6 +61,7 @@ async def lifespan(app: FastAPI):
     # Startup
     validate_encryption_key()
     await init_redis()
+    _configure_export_runtime()
 
     # Start background tasks
     manager = get_redis_manager()
