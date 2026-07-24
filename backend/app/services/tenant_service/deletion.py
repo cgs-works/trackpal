@@ -88,7 +88,6 @@ async def _purge_export_storage(
     Deletes all export artifacts (current, previous, partial uploads).
     Returns ``None`` on success, or an error message on failure.
     """
-    storage = export_service.get_storage()
     jobs = await export_jobs_repository.get_all_for_tenant(db, tenant_id)
     keys_to_delete: set[str] = set()
 
@@ -96,6 +95,10 @@ async def _purge_export_storage(
         if job.r2_key:
             keys_to_delete.add(job.r2_key)
 
+    if not keys_to_delete:
+        return None
+
+    storage = export_service.get_storage()
     for key in keys_to_delete:
         try:
             await storage.delete(key)
