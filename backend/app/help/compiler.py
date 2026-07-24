@@ -26,6 +26,7 @@ ALLOWED_MODULES = {
     "password",
     "whatsapp",
     "help",
+    "data",
 }
 ALLOWED_CAPABILITIES = {
     "tenant_access_code_lookup",
@@ -39,6 +40,8 @@ ALLOWED_CAPABILITIES = {
     "tenant_settings",
     "tenant_subscriptions",
     "tenant_whatsapp",
+    "tenant_data_export",
+    "tenant_delete_account",
     "client_dashboard",
     "client_profile",
     "client_subscriptions",
@@ -72,6 +75,9 @@ ALLOWED_HELP_TARGETS = {
     "admin.settings.access-control",
     "admin.settings.profile",
     "admin.settings.password",
+    "admin.settings.my-account",
+    "admin.settings.data-tab",
+    "admin.settings.danger-zone",
     "admin.help",
     "client.dashboard",
     "client.profile",
@@ -81,6 +87,7 @@ ALLOWED_HELP_TARGETS = {
 ALLOWED_SETTINGS_CATEGORIES = {
     "access-control",
     "code-services",
+    "data",
     "locale",
     "mailbox",
     "password",

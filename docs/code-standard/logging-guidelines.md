@@ -36,6 +36,15 @@ Do **not** dump full payload bodies with personal data.
 - Full phone numbers if unnecessary.
 - Raw request bodies containing sensitive data.
 - Secret env vars from `app/core/config.py` values.
+- **Tenant Data Export/Deletion secrets**: confirmation words (DELETE/ELIMINAR), step-up passwords, signed download URLs, object contents, exported field values, decrypted values, R2 object keys containing PII.
+
+## Export and Deletion Logging Rules
+
+Tenant Data Export and Tenant Deletion follow strict safe-actor metadata logging:
+
+- **Always log**: job state transitions (pending → processing → ready/failed/cancelled), deletion attempts and outcomes, actor ID, Tenant ID, record counts, attempt counts, duration, safe error codes.
+- **Never log**: passwords, confirmation words, signed URLs, object contents, exported field values, decrypted values, object keys that could reveal account identity.
+- External cleanup (R2, Evolution) failures are logged with safe error context without exposing object keys or bucket structure.
 
 ## Anti-Patterns
 

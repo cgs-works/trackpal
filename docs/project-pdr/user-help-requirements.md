@@ -50,6 +50,9 @@ All plans:
 - WhatsApp access control: list, search, block, and unblock
 - Profile identity fields
 - Password change
+- **My Account / Data**
+  - **Tenant Data Export**: request, status polling, cancel, download (presigned URL), previous version, cooldown, expiry
+  - **Account deletion**: irreversible self-deletion with password + destructive word (ELIMINAR/DELETE)
 
 Pro only:
 
@@ -135,8 +138,13 @@ Cross-module how-to guides supplement the module index instead of replacing it.
    - Set up the first Pro Client
    - Manage subscription expirations
    - Publish the Public API Catalog
-8. States, limits, security, and troubleshooting
-9. Module and action reference
+8. **My Account / Data** (all plans)
+   - **Tenant Data Export**: scope, format, exclusions, 24-hour cooldown, 72-hour availability, download, cancellation
+   - **Account deletion**: irreversible scope, prerequisite data export, password + destructive word, external cleanup
+9. States, limits, security, and troubleshooting
+   - Export and deletion step-up rate limits
+   - Active-system deletion vs backup/log retention
+10. Module and action reference
 
 The Public API Catalog chapter includes a developer handoff appendix. The Tenant Admin can copy a package of instructions and code snippets to share through an external channel. TrackPal must never insert the Tenant's actual Public API Key into that package automatically.
 

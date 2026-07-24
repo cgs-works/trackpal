@@ -13,6 +13,8 @@ REQUIRED_TOPIC_IDS = frozenset(
         "tenant-admin.activate-access-code-lookup",
         "tenant-admin.code-services",
         "tenant-admin.dashboard",
+        "tenant-admin.data-export",
+        "tenant-admin.delete-account",
         "tenant-admin.help",
         "tenant-admin.language",
         "tenant-admin.mailbox",

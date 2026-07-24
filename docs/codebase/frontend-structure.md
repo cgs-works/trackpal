@@ -46,6 +46,9 @@ frontend/
 │   │   ├── catalog.ts            # Cache: services, plans, clients with dedup
 │   │   └── settings.ts           # Cache: tenant/reminder settings, timezones, mailbox
 │   │
+│   ├── features/admin/stores/     # Feature-specific stores
+│   │   └── export-store.ts       # Export job state: status polling, request, cancel, download, reset
+│   │
 │   ├── lib/                      # Shared utilities
 │   │   ├── api.ts                # Axios singleton: base URL, JWT interceptor, 401 handler
 │   │   └── utils.ts              # cn() helper (clsx + tailwind-merge)
@@ -92,6 +95,8 @@ frontend/
 │       │   │   ├── plan-route-gate.tsx       # Pro-only route guard component
 │       │   │   ├── support-banner.tsx        # Master support context alert
 │       │   │   ├── not-found-page.tsx        # 404 for blocked Pro routes
+│       │   │   ├── my-account-section.tsx    # My Account with role-aware tabs (Profile, Security, Data)
+│       │   │   ├── data-tab-content.tsx      # Export status/actions + self-service deletion danger zone
 │       │   │   ├── clients-page.tsx
 │       │   │   ├── client-table.tsx
 │       │   │   ├── client-form-dialog.tsx
@@ -116,10 +121,11 @@ frontend/
 │       │       ├── client-api.ts
 │       │       ├── catalog-api.ts
 │       │       ├── subscription-api.ts
-│       │       ├── settings-api.ts
+│       │       ├── settings-api.ts            # updateProfile, deleteAccount (self-service Tenant Deletion)
 │       │       ├── reminder-api.ts
 │       │       ├── dashboard-api.ts           # getTenantDashboard() with plan
-│       │       └── access-control-api.ts      # list/create/delete access blocks
+│       │       ├── access-control-api.ts      # list/create/delete access blocks
+│       │       └── export-api.ts              # requestExport, getExportStatus, cancelExport, downloadExport
 │       │
 │       ├── master/               # Master admin feature
 │       │   ├── layout/
@@ -130,6 +136,8 @@ frontend/
 │       │   │   ├── business-form-dialog.tsx   # Plan selector (Starter/Pro)
 │       │   │   ├── code-services-dialog.tsx
 │       │   │   ├── delete-confirm-dialog.tsx
+│       │   │   ├── export-dialog.tsx          # Master export for active/inactive Tenant
+│       │   │   ├── master-delete-dialog.tsx   # Master deletion with step-up + destructive word
 │       │   │   ├── empty-state.tsx
 │       │   │   └── summary-cards.tsx
 │       │   └── services/

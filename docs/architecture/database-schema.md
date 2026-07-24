@@ -260,6 +260,34 @@ Tenant-scoped block for unregistered WhatsApp identities that should not receive
 
 Constraints: at least one identity field required (phone or whatsapp_lid) enforced at the repository layer. Indexes: `(tenant_id, phone)` and `(tenant_id, whatsapp_lid)`.
 
+### `ExportJob` — `export_jobs` table
+
+Tenant-scoped durable export job and artifact metadata. Contains no ZIP bytes or exported record values.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| tenant_id | UUID | FK → tenants.id CASCADE |
+| status | VARCHAR(50) | `pending`, `processing`, `ready`, `failed`, `cancelled` |
+| requested_by | UUID | Actor (User ID) who created the job |
+| actor_role | VARCHAR(10) | `tenant` or `master` |
+| attempt_count | INT | Default 0, max 3 retries before terminal failure |
+| last_error_code | VARCHAR(100) | Safe error code for terminal failures |
+| lease_expires_at | TIMESTAMPTZ | Nullable, 30-minute recoverable lease for processing claim |
+| cooldown_until | TIMESTAMPTZ | 24-hour cooldown boundary after generation |
+| replaced_job_id | UUID | Nullable FK → export_jobs.id (replacement chain) |
+| r2_storage_key | VARCHAR(255) | Nullable, random non-PII object key for ready artifact |
+| r2_content_disposition | VARCHAR(500) | Nullable, stored content-disposition filename |
+| ready_at | TIMESTAMPTZ | When object became available for download |
+| expires_at | TIMESTAMPTZ | 72 hours from ready_at; logical expiry boundary |
+| created_at / updated_at | TIMESTAMPTZ | From TimestampMixin |
+
+Constraints:
+- FK cascades: tenant deletion cascades to all export jobs
+- One logical current job per Tenant (enforced in application logic, not unique constraint)
+
+RLS policies restrict access to the owning tenant and master role.
+
 ### `CodeServiceGlobalStatus` -- `code_service_global_status`
 
 Global governance table for code-extraction services.
@@ -319,6 +347,8 @@ Alembic migrations:
 21. `d011fe74cab0` — Create `tenant_settings` table, backfill locale/timezone from `tenants` and `subscription_reminder_settings`, drop `tenants.locale` and `subscription_reminder_settings.timezone`, enable RLS
 22. `e011fe74cab1` — Add `plan` column to `tenants` with default `pro`, backfill existing tenants
 23. `e013fe74cab3` — Delete inactive `blocked_clients` rows and drop `blocked_clients.is_active`; row existence now represents an active block
+24. `e014fe74cab4` — Add `tenant_help_acknowledgements` table for tour release acknowledgment storage
+25. `e015fe74cab5` — Add `export_jobs` table with tenant FK, status, timestamps, lease, cooldown, replacement chain, R2 storage key, ready/expiry lifecycle, and RLS policies
 
 ## Key Constraints
 

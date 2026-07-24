@@ -105,6 +105,15 @@ const { t } = usePublicI18n();
 - On login: `login()` action loads catalog
 - On locale change: component calls `loadCatalog()` after save
 
+## Export Store (`features/admin/stores/export-store.ts`)
+
+Manages Tenant Data Export state for the My Account Data tab:
+
+- **Polling pattern**: `refreshStatus()` is called on Data tab mount and periodically (every 30 seconds) while the tab is visible.
+- **Step-up dialogs**: Export generation and deletion trigger separate password/destructive-word dialogs. The export request and deletion API calls include the step-up inputs.
+- **Previous version preservation**: The store tracks both the current and previous ready export versions so the UI can offer "Download previous version" while a replacement is in progress.
+- **Cache clearing**: `reset()` is called on Data tab unmount. On logout and deletion, auth and all stores are fully cleared.
+
 ## State Management (Zustand)
 
 ### Store creation

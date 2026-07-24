@@ -10,8 +10,10 @@ TrackPal is a multi-tenant platform for managing WhatsApp-based service delivery
       |                 [Redis HA]             [Alembic Migrations]
       |                      |
       |                 [Evolution] ---> [n8n Webhook]
-                                         |
-                                     [WhatsApp]
+      |                      |            |
+      |                 [Cloudflare R2]  [WhatsApp]
+      |                 (diagnostic +
+      |                  export private)
 ```
 
 - **Frontend**: React 19 + TypeScript SPA with Zustand, TanStack Router, Tailwind CSS hosted on Cloudflare Pages
@@ -36,3 +38,7 @@ TrackPal is a multi-tenant platform for managing WhatsApp-based service delivery
 - **Input validation**: Centralized policy module used by REST API schemas and WhatsApp console flows
 - **Canonical phone format**: All phone numbers stored as digits-only (no `+` prefix, no JID suffixes)
 - **I18n architecture**: Python backend is source-of-truth for all translations; backend i18n engine at `app/core/i18n/` with `t(locale, key)`; `UserFacingError` with `translate_error()` for API error localization; WhatsApp console uses `ContextVar`-based per-message locale; frontend fetches merged catalog via `/i18n/catalog`; n8n is pure transport (no translation logic)
+- **Isolated storage boundaries**: Cloudflare R2 split into public diagnostic bucket (`trackpal-debug`) and private export bucket (`trackpal-exports-private`) — never sharing credentials or public URLs
+- **Password step-up for sensitive operations**: Export generation and Tenant Deletion require current password re-entry with a shared three-attempt/fifteen-minute rate limiter; fails closed when Redis HA is unavailable
+- **External-first deletion**: R2 purge and Evolution deletion run before database commit; failure preserves the Tenant for safe retry
+- **Fail-closed cleanup**: Export and deletion operations fail closed when external resources cannot be confirmed as cleaned up; no partial deletion without explanation
