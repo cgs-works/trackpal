@@ -17,6 +17,7 @@ from ._protocol import ExportStorageAdapter, ExportStorageMetadata
 logger = logging.getLogger(__name__)
 
 _BOTO_CONFIG = BotoConfig(
+    signature_version="s3v4",
     connect_timeout=5,
     read_timeout=10,
     retries={"max_attempts": 2, "mode": "standard"},

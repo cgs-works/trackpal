@@ -8,12 +8,15 @@ Verifies:
 5. Isolation/non-crossing between public diagnostic R2 config and private export storage config.
 """
 
+from urllib.parse import parse_qs, urlsplit
+
 import pytest
 
 from app.core.config import Settings
 from app.services.export_storage import (
     ExportStorageConfig,
     FakeExportStorageAdapter,
+    R2ExportStorageAdapter,
     StorageObjectNotFoundError,
     StorageOperationError,
     generate_random_export_key,
@@ -99,6 +102,27 @@ class TestRandomObjectKeyGeneration:
         key = generate_random_export_key()
         # Should be alphanumeric or hyphen/underscore or hex/uuid
         assert all(c.isalnum() or c in "-_/" for c in key)
+
+
+class TestR2ExportStorageAdapter:
+    async def test_presigned_get_uses_signature_v4(self):
+        adapter = R2ExportStorageAdapter(
+            ExportStorageConfig(
+                access_key_id="test-access-key",
+                secret_access_key="test-secret-key",
+                bucket_name="trackpal-exports-private",
+                endpoint_url="https://account.r2.cloudflarestorage.com",
+            )
+        )
+
+        url = await adapter.generate_presigned_get(
+            key="exports/test.zip",
+            expires_in_seconds=900,
+        )
+        query = parse_qs(urlsplit(url).query)
+
+        assert query["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
+        assert "AWSAccessKeyId" not in query
 
 
 class TestFakeExportStorageAdapter:
