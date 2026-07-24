@@ -117,5 +117,6 @@ When `EVOLUTION_API_KEY` or `EVOLUTION_API_URL` are empty, all management method
 ### Tenant Lifecycle Integration
 
 - **Create tenant**: `create_instance` + `register_webhook` + encrypt & store instance token are called inside `TenantService.create_tenant()`. If any Evolution Go call fails, the tenant creation is rolled back.
-- **Delete tenant**: `delete_instance` is called inside `TenantService.delete_tenant()`. The tenant must be inactive before deletion.
+- **Delete tenant (Master)**: `delete_instance` is called inside the deletion coordinator (`tenant_service/deletion.py`). The tenant must be inactive before deletion. The call is idempotent (404 is handled gracefully). Failure preserves the Tenant for retry.
+- **Delete tenant (Tenant Admin self-service)**: Same deletion coordinator is used, but the tenant is active. External-first order: R2 purge → Evolution deletion → database commit.
 - **Update tenant**: Changing `evolution_instance_name` only updates the database value; it does NOT recreate or rename the instance in Evolution Go.

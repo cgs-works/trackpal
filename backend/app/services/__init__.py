@@ -4,6 +4,16 @@ from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService
 from app.services.client_service import ClientService
 from app.services.contingency_reply_policy import ContingencyReplyPolicy
+from app.services.export_storage import (
+    ExportStorageAdapter,
+    ExportStorageConfig,
+    ExportStorageMetadata,
+    FakeExportStorageAdapter,
+    R2ExportStorageAdapter,
+    StorageObjectNotFoundError,
+    StorageOperationError,
+    generate_random_export_key,
+)
 from app.services.profile_service import ProfileService
 from app.services.tenant_console_protocols import (
     CatalogServiceProtocol,
@@ -28,7 +38,15 @@ __all__ = [
     "ClientService",
     "ClientServiceProtocol",
     "ContingencyReplyPolicy",
+    "ExportStorageAdapter",
+    "ExportStorageConfig",
+    "ExportStorageMetadata",
+    "FakeExportStorageAdapter",
     "ProfileService",
+    "R2ExportStorageAdapter",
+    "StorageObjectNotFoundError",
+    "StorageOperationError",
+    "generate_random_export_key",
     "TenantService",
     "WhatsAppConsoleService",
     "WhatsAppMasterConsoleFacade",

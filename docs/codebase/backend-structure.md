@@ -5,13 +5,6 @@ backend/
 ├── app/                          # Application package
 │   ├── __init__.py
 │   ├── main.py                   # FastAPI app entrypoint
-│   ├── api/
-│   │   ├── __init__.py
-│   │   ├── dependencies.py       # get_current_user, require_role, verify_n8n_api_key_header
-│   │   └── v1/
-│   │       ├── __init__.py
-│   │       ├── router.py         # Aggregates all endpoint routers
-│   │       └── endpoints/
 │   │           ├── __init__.py
 │   │           ├── auth.py
 │   │           ├── catalog.py
@@ -19,9 +12,12 @@ backend/
 │   │           ├── code_services.py   # Code-services governance (global + tenant)
 │   │           ├── access_control.py  # Tenant access-control blocks (list, create, delete)
 │   │           ├── dashboard.py
+│   │           ├── export.py          # Tenant Data Export self-service endpoints (/me/export/*)
+│   │           ├── tenant_export.py   # Master-scoped Tenant Data Export (/tenants/{id}/export/*)
+│   │           ├── help.py
 │   │           ├── i18n.py       # GET /i18n/catalog
-│   │           ├── me.py
-│   │           ├── tenants.py
+│   │           ├── me.py              # Includes /me/delete-account (Tenant Admin self-deletion)
+│   │           ├── tenants.py         # Updated: /tenants/{id}/delete with step-up + destructive word
 │   │           ├── integrations/ # Package: adapter, console (split), identify, mail lookups
 │   │           │   ├── __init__.py
 │   │           │   ├── adapter.py
@@ -74,6 +70,7 @@ backend/
 │   │   ├── base.py
 │   │   ├── client.py
 │   │   ├── blocked_client.py               # Tenant-scoped blocked clients for unregistered identities (renamed from client_messaging_block)
+│   │   ├── export_job.py                   # Tenant-scoped export job/artifact metadata
 │   │   ├── code_service_global_status.py    # Global code-service activation
 │   │   ├── tenant_mailbox.py
 │   │   ├── tenant_code_service_selection.py # Per-tenant code-service selection
@@ -92,6 +89,7 @@ backend/
 │   │   ├── blocked_clients_repository.py   # Blocked client CRUD + block enforcement (renamed from client_messaging_block_repository)
 │   │   ├── clients_repository.py
 │   │   ├── code_services_repository.py      # Code-service global + tenant data
+│   │   ├── export_jobs_repository.py         # Export job CRUD, cooldown checks, lifecycle transitions
 │   │   ├── mailbox_config_repository.py
 │   │   ├── mailbox_dedupe_repository.py
 │   │   ├── mailbox_lookup_repository.py
@@ -132,8 +130,21 @@ backend/
 │       ├── profile_service/
 │       ├── subscription_job_service/
 │       ├── subscription_service/
+│       ├── export_service.py           # Tenant Data Export orchestration: create, claim, cancel, finalise
+│       ├── export_worker.py            # Background worker that builds ZIP and uploads to R2
+│       ├── export_cleanup_worker.py    # Periodic cleanup of expired export objects
+│       ├── export_storage/             # Storage adapter: R2 private upload, metadata, delete, presigned GET
+│       │   ├── __init__.py
+│       │   ├── _config.py
+│       │   ├── _exceptions.py
+│       │   ├── _fake.py
+│       │   ├── _keys.py
+│       │   ├── _protocol.py
+│       │   └── _r2.py
+│       ├── step_up_limiter.py          # Three-attempt/fifteen-minute rate limiter for export/deletion step-up
 │       ├── tenant_console_protocols/
 │       ├── tenant_service/
+│       │   └── deletion.py             # Tenant self-deletion and Master deletion coordinator: export cancel, R2 purge, Evolution delete, DB cascade, session teardown
 │       ├── whatsapp_auth_session_service/
 │       ├── whatsapp_client_console_facade/  # Client WhatsApp console (read-only)
 │       ├── whatsapp_console_service/
@@ -143,6 +154,8 @@ backend/
 │       ├── whatsapp_link_service.py     # Tenant WhatsApp self-linking orchestration
 │       ├── whatsapp_navigation.py       # Shared navigation helpers (is_cancel, is_back, is_next, screen stack)
 │       └── whatsapp_tenant_console_service/ # Includes codigo_flow.py, access_control_flow.py for mailbox lookup + access control
+│       ├── e014fe74cab4_add_tenant_help_acknowledgements.py  # Tour release acknowledgement storage
+│       ├── e015fe74cab5_add_export_jobs.py                     # Tenant data export job/artifact table
 ├── alembic/
 │   ├── env.py
 │   ├── script.py.mako

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     clients,
     code_services,
     dashboard,
+    export,
     help,
     i18n,
     integrations,
@@ -16,6 +17,7 @@ from app.api.v1.endpoints import (
     public_api_key,
     public_catalog,
     tenants,
+    tenant_export,
     tenant_settings,
     subscriptions,
     whatsapp_link,
@@ -26,6 +28,7 @@ api_router.include_router(auth.router)
 api_router.include_router(integrations.router)
 api_router.include_router(mailbox.router)
 api_router.include_router(tenants.router)
+api_router.include_router(tenant_export.router)
 api_router.include_router(tenant_settings.router)
 api_router.include_router(access_control.router)
 api_router.include_router(clients.router)
@@ -34,6 +37,7 @@ api_router.include_router(code_services.router)
 api_router.include_router(i18n.router)
 api_router.include_router(help.router)
 api_router.include_router(me.router)
+api_router.include_router(export.router)
 
 api_router.include_router(public_api_key.router)
 api_router.include_router(public_catalog.router)

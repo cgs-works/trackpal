@@ -52,6 +52,24 @@ class Settings(BaseSettings):
     r2_endpoint_url: str = ""
     r2_public_url: str = ""
 
+    # Export storage — dedicated private R2 for Tenant Data Export
+    # Must NEVER fall back to or share config with the public diagnostic R2 bucket.
+    export_r2_access_key_id: str = ""
+    export_r2_secret_access_key: str = ""
+    export_r2_bucket_name: str = ""
+    export_r2_endpoint_url: str = ""
+    export_signed_url_ttl_seconds: int = 900
+
+    @property
+    def is_export_storage_configured(self) -> bool:
+        """True when all required export-storage fields are non-empty."""
+        return bool(
+            self.export_r2_access_key_id
+            and self.export_r2_secret_access_key
+            and self.export_r2_bucket_name
+            and self.export_r2_endpoint_url
+        )
+
     # Mailbox lookup defaults
     mailbox_lookup_timeout_seconds: int = 20
     mailbox_lookup_window_minutes: int = 5

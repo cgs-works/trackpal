@@ -9,13 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SummaryCards } from "./summary-cards";
 import { BusinessTable } from "./business-table";
 import { BusinessFormDialog, getEmptyForm, type BusinessForm } from "./business-form-dialog";
-import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+import { MasterDeleteDialog } from "./master-delete-dialog";
+import { ExportDialog } from "./export-dialog";
 import { EmptyState } from "./empty-state";
 import {
   fetchTenants,
   createTenant,
   updateTenant,
-  deleteTenant,
   activateTenant,
   deactivateTenant,
   type Tenant,
@@ -54,6 +54,7 @@ export function DashboardPage() {
   const [formError, setFormError] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
+  const [exportTarget, setExportTarget] = useState<Tenant | null>(null);
 
   /* ── Data loading ─────────────────────────────────────────────── */
 
@@ -180,6 +181,10 @@ export function DashboardPage() {
 
   /* ── Actions ───────────────────────────────────────────────────── */
 
+  function handleExport(tenant: Tenant) {
+    setExportTarget(tenant);
+  }
+
   async function toggleStatus(tenant: Tenant) {
     try {
       if (tenant.is_active) {
@@ -195,17 +200,8 @@ export function DashboardPage() {
     }
   }
 
-  async function confirmDelete() {
-    if (!deleteTarget) return;
-    try {
-      await deleteTenant(deleteTarget.id);
-      toast.success("Business deleted");
-      setDeleteTarget(null);
-      await loadTenants();
-    } catch (error) {
-      toast.error(getApiError(error, "Unable to delete business"));
-      setDeleteTarget(null);
-    }
+  async function onDeleteSuccess() {
+    await loadTenants();
   }
 
   async function manageCatalog(tenant: Tenant) {
@@ -254,6 +250,7 @@ export function DashboardPage() {
             <BusinessTable
               tenants={filteredTenants}
               onEdit={openEdit}
+              onExport={handleExport}
               onDelete={setDeleteTarget}
               onToggleStatus={toggleStatus}
               onManageCatalog={manageCatalog}
@@ -273,12 +270,24 @@ export function DashboardPage() {
         error={formError}
       />
 
-      <DeleteConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => { if (!o) setDeleteTarget(null) }}
-        businessName={deleteTarget?.full_name || ""}
-        onConfirm={confirmDelete}
-      />
+      {deleteTarget && (
+        <MasterDeleteDialog
+          open={!!deleteTarget}
+          onOpenChange={(o) => { if (!o) setDeleteTarget(null) }}
+          tenantId={deleteTarget.id}
+          tenantName={deleteTarget.full_name}
+          onSuccess={onDeleteSuccess}
+        />
+      )}
+
+      {exportTarget && (
+        <ExportDialog
+          open={!!exportTarget}
+          onOpenChange={(o) => { if (!o) setExportTarget(null) }}
+          tenantId={exportTarget.id}
+          tenantName={exportTarget.full_name}
+        />
+      )}
     </div>
   );
 }

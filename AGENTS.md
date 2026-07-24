@@ -6,7 +6,7 @@
 
 ### Testing
 
-**Backend (pytest)**: `cd backend && uv run pytest`
+**Backend (pytest)**: `cd backend && uv run pytest` (timeout 600s for full suite — ~4 min)
 - Framework: pytest 9 + pytest-asyncio, SQLite in-memory.
 - Fixtures: `backend/tests/conftest.py`
 - Mocking: Evolution API disabled via `evolution_client.api_key = ""`

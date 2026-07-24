@@ -29,6 +29,8 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
     assert index_response.status_code == 200
     assert index_response.json()["locale"] == "es"
     assert [topic["id"] for topic in index_response.json()["topics"]] == [
+        "tenant-admin.data-export",
+        "tenant-admin.delete-account",
         "tenant-admin.dashboard",
         "tenant-admin.language",
         "tenant-admin.whatsapp",
@@ -48,10 +50,10 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.subscription-expirations",
         "tenant-admin.help",
     ]
-    assert index_response.json()["topics"][1]["help_targets"] == [
+    assert index_response.json()["topics"][3]["help_targets"] == [
         "admin.settings.language"
     ]
-    assert index_response.json()["topics"][1]["safe_navigation"] == {
+    assert index_response.json()["topics"][3]["safe_navigation"] == {
         "route": "/admin/settings",
         "settings_category": "locale",
     }
@@ -69,6 +71,8 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
     await db_session.commit()
     starter_index = await client.get("/api/v1/help", headers=headers)
     assert [topic["id"] for topic in starter_index.json()["topics"]] == [
+        "tenant-admin.data-export",
+        "tenant-admin.delete-account",
         "tenant-admin.dashboard",
         "tenant-admin.language",
         "tenant-admin.whatsapp",
@@ -313,10 +317,12 @@ async def test_help_search_uses_locale_synonyms_and_returns_no_results(
         "/api/v1/help/search", params={"q": "inicio"}, headers=headers
     )
     assert spanish.status_code == 200
-    assert [result["id"] for result in spanish.json()["results"]] == [
+    assert {result["id"] for result in spanish.json()["results"]} == {
         "tenant-admin.clients",
+        "tenant-admin.data-export",
+        "tenant-admin.delete-account",
         "tenant-admin.dashboard",
-    ]
+    }
 
     tenant = (
         await db_session.execute(

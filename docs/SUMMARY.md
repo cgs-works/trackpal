@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master manages tenant lifecycle; Tenant admins manage clients, catalog, profile, and subscriptions. Backend is Python/FastAPI with PostgreSQL and Redis HA. Frontend is React 19 + TypeScript SPA with Zustand, TanStack Router, and Tailwind CSS.
+TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master manages tenant lifecycle; Tenant admins manage clients, catalog, profile, and subscriptions. Tenant Admins can export their business data and permanently self-delete their Tenant. Backend is Python/FastAPI with PostgreSQL and Redis HA. Frontend is React 19 + TypeScript SPA with Zustand, TanStack Router, and Tailwind CSS.
 
 ## Agent Context Guide
 
@@ -29,24 +29,23 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
 | [User Help System](architecture/user-help-system.md) | Private Markdown compiler, authenticated Help API, plan-aware manuals, contextual help, and Tenant Admin orientation tours |
+| [Tenant Data Export](architecture/tenant-data-export.md) | Export contract, job lifecycle, CSV/JSON formats, exclusions, storage boundary, and presigned download |
+| [Tenant Deletion](architecture/tenant-deletion.md) | Self-service deletion, Master deletion, external cleanup, fail-closed guarantees, and session teardown |
 
 ## Architecture Decisions
 
 | File | Description |
 |------|-------------|
 | [Markdown Capability Registry for User Help](adr/0001-markdown-capability-registry-for-user-help.md) | Canonical Markdown topic source for in-app manuals, orientation tours, and CI capability contracts |
+| [Immediate Confirmed Tenant Deletion](adr/0002-immediate-confirmed-tenant-deletion.md) | Tenant Admin irreversible self-deletion without grace period or Master approval |
+| [Tenant Data Export Domain Contract](adr/0003-tenant-export-domain-contract.md) | Stable business-facing export contract with semantic field names, independent of persistence model |
 
 ## Release Operations
 
 | File | Description |
 |------|-------------|
 | [Private Help Release Gate](releases/user-help-release.md) | Atomic release checklist, automated checks, manual browser QA matrix, and deliberate browser E2E deferral |
-
-## Research
-
-| File | Description |
-|------|-------------|
-| [Tenant Account Deletion and Data Export](research/tenant-account-deletion-and-data-export.md) | Primary-source legal, security, lifecycle, and TrackPal-specific findings for Tenant offboarding and export |
+| [Offboarding Release Gate](releases/offboarding-release.md) | Tenant Data Export and Deletion release checklist, role/plan/locale/browser matrices, and private-bucket operational checks |
 
 ## Codebase
 
@@ -54,7 +53,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Backend Structure](codebase/backend-structure.md) | Backend directory tree, entry points, and key modules |
 | [Frontend Structure](codebase/frontend-structure.md) | Frontend directory tree, entry points, and key modules |
-| [Frontend Components](codebase/frontend-components.md) | Reusable panels, including Catalog CRUD with delete preview confirmation, and their responsibilities |
+| [Frontend Components](codebase/frontend-components.md) | Reusable panels, including My Account, Catalog CRUD with delete preview confirmation, and their responsibilities |
 
 ## Code Standard
 
@@ -62,7 +61,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Backend Conventions](code-standard/backend-conventions.md) | Python conventions, testing, security, Redis, and n8n patterns |
 | [Error Handling](code-standard/error-handling.md) | Error types, propagation, i18n-aware exception mapping |
-| [Logging Guidelines](code-standard/logging-guidelines.md) | Log levels, structured context, secrets policy |
+| [Logging Guidelines](code-standard/logging-guidelines.md) | Log levels, structured context, secrets policy — including export/deletion safe-actor metadata rules |
 | [Frontend Conventions](code-standard/frontend-conventions.md) | React 19, Zustand, TanStack Router, Tailwind CSS, and i18n conventions |
 
 ## Project PDR
@@ -70,6 +69,6 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | File | Description |
 |------|-------------|
 | [Product Goals](project-pdr/product-goals.md) | Core use cases, user roles, and non-goals |
-| [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone/LID handling, validation, and deployment constraints |
+| [Business Rules](project-pdr/business-rules.md) | Lifecycle, auth, phone/LID handling, validation, export lifecycle, Tenant Admin self-deletion, and deployment constraints |
 | [Public API Catalog](project-pdr/public-api-catalog.md) | Implemented Pro-only public catalog API rules, UI scope, and Cloudflare rate-limit requirement |
 | [User Help Requirements](project-pdr/user-help-requirements.md) | Approved audiences, manual information architecture, tour sequences, privacy, fidelity, and release gates |

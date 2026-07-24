@@ -13,7 +13,7 @@ export const HELP_TARGETS = {
   mailbox: "admin.settings.mailbox",
   accessControl: "admin.settings.access-control",
   profile: "admin.settings.profile",
-  password: "admin.settings.password",
+  myAccount: "admin.settings.my-account",
   help: "admin.help",
   clientDashboard: "client.dashboard",
   clientProfile: "client.profile",

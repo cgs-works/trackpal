@@ -120,6 +120,8 @@ Contract tests in `test_whatsapp_console_navigation_contract.py` scan all source
 | `session:admin:{phone}` | Tenant conversation state | 15 min (configurable) |
 | `wa:client_ctx:{admin_phone}` | Client Context Shortcut session state | 5 min |
 | `session:unreg:{phone}` or `session:unreg:{lid}` | Unauthenticated code lookup session state (unregistered identity) | 15 min (configurable) |
+| `stepup:fail:{user_id}` | Consecutive step-up failure counter (export/deletion) | 15 min window |
+| `stepup:lock:{user_id}` | Step-up lockout marker after threshold | 15 min |
 
 ## n8n Integration Conventions
 
@@ -146,3 +148,6 @@ Contract tests in `test_whatsapp_console_navigation_contract.py` scan all source
 - Tenant-scoped queries must filter by `tenant_id` in application code.
 - Postgres/Supabase tenant-scoped operations must set transaction-local RLS context before SQL using dotted GUC names only: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`.
 - Master catalog operations require explicit switched tenant context. Do not infer tenant scope from arbitrary request payload IDs.
+- Export jobs (`export_jobs`) have RLS policies restricting access to the owning tenant and master role.
+- Master export operations (`/tenants/{tenant_id}/export/*`) set internal RLS context via `set_internal_rls_context()` before accessing tenant-owned data.
+- Tenant Data Export uses an isolated storage adapter (`app/services/export_storage/`) with a dedicated private R2 bucket — never the public diagnostic bucket.

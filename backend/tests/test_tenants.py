@@ -203,26 +203,53 @@ async def test_activate_tenant(client, auth_headers, deactivated_tenant_user):
 
 
 async def test_delete_tenant_inactive_only(
-    client, auth_headers, deactivated_tenant_user
+    client, auth_headers, deactivated_tenant_user, db_session
 ):
-    response = await client.delete(
-        f"/api/v1/tenants/{deactivated_tenant_user.id}", headers=auth_headers
+    from app.models import Tenant
+    from sqlalchemy import select
+
+    # Find the real tenant ID for the deactivated user
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == deactivated_tenant_user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+
+    response = await client.post(
+        f"/api/v1/tenants/{tenant.id}/delete",
+        json={"password": "master-password", "destructive_word": "DELETE"},
+        headers=auth_headers,
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200, response.text
+    assert response.json() == {"success": True}
 
     get_response = await client.get(
-        f"/api/v1/tenants/{deactivated_tenant_user.id}", headers=auth_headers
+        f"/api/v1/tenants/{tenant.id}", headers=auth_headers
     )
     assert get_response.status_code == 404
 
 
-async def test_delete_active_tenant_fails(client, auth_headers, active_tenant_user):
-    response = await client.delete(
-        f"/api/v1/tenants/{active_tenant_user.id}", headers=auth_headers
+async def test_delete_active_tenant_fails(
+    client, auth_headers, active_tenant_user, db_session
+):
+    from app.models import Tenant
+    from sqlalchemy import select
+
+    # Find the real tenant ID for the active user
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
+    tenant = result.scalar_one_or_none()
+    assert tenant is not None
+
+    response = await client.post(
+        f"/api/v1/tenants/{tenant.id}/delete",
+        json={"password": "master-password", "destructive_word": "DELETE"},
+        headers=auth_headers,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 401
     assert response.json()["detail"] == "Cannot delete active tenant. Deactivate first."
 
 

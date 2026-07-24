@@ -125,7 +125,7 @@ class TestAuthAndAuthorization:
     async def test_client_role_returns_403(self, client: AsyncClient, db_session):
         """Client role is explicitly forbidden."""
         from app.core.security import get_password_hash
-        from app.models import Client, Tenant, TenantSettings, User
+        from app.models import Client, Tenant, User
 
         suffix = uuid.uuid4().hex[:8]
         tuser = User(

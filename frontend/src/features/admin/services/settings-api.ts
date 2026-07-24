@@ -88,6 +88,17 @@ export async function changePassword(payload: PasswordChange): Promise<void> {
   await api.put("/me/password", payload);
 }
 
+// Master Support Context: read/update the selected tenant's profile
+export async function getTenantProfile(): Promise<Profile> {
+  const { data } = await api.get("/me/tenant-profile");
+  return data;
+}
+
+export async function updateTenantProfile(payload: ProfileUpdate): Promise<Profile> {
+  const { data } = await api.put("/me/tenant-profile", payload);
+  return data;
+}
+
 // ── Tenant Settings ───────────────────────────────────────────
 export interface TenantSettings {
   tenant_id: string;
@@ -176,6 +187,98 @@ export async function updateTenantCodeServices(
   const { data } = await api.put("/code-services/tenants/current", {
     service_keys: serviceKeys,
   });
+  return data;
+}
+
+// ── Tenant self-service deletion ────────────────────────────────
+
+export interface DeleteAccountRequest {
+  password: string;
+  destructive_word: string;
+}
+
+export interface DeleteAccountResponse {
+  success: boolean;
+}
+
+export async function deleteAccount(
+  payload: DeleteAccountRequest
+): Promise<DeleteAccountResponse> {
+  const { data } = await api.post("/me/delete-account", payload);
+  return data;
+}
+
+
+// ── Tenant Data Export ────────────────────────────────────────
+export type ExportJobStatus = "pending" | "processing" | "ready" | "failed" | "cancelled";
+
+export interface PreviousReadyInfo {
+  id: string;
+  ready_at: string | null;
+  artifact_size_bytes: number | null;
+  expires_at: string | null;
+}
+
+export interface ExportJobStatusResponse {
+  id: string;
+  tenant_id?: string;
+  status: ExportJobStatus;
+  created_at: string;
+  ready_at: string | null;
+  expires_at: string | null;
+  artifact_size_bytes: number | null;
+  error_code: string | null;
+  error_detail: string | null;
+  attempt: number;
+  max_attempts: number;
+  /** @deprecated Use `attempts` instead */
+  attempts?: number;
+  /** When the job transitioned to failed (for 72h cleanup display) */
+  failed_at?: string | null;
+  /** When the 24h cooldown expires (ISO 8601) */
+  cooldown_until?: string | null;
+  /** Role of the actor who requested the job: "tenant" or "master" */
+  actor_role?: string | null;
+  /** ID of the job this one replaces (if any) */
+  replaced_job_id?: string | null;
+  /** ID of the job that replaces this one (if any) */
+  replacement_job_id?: string | null;
+  /** Previous ready artifact details, available if a replacement is pending */
+  previous_ready?: PreviousReadyInfo | null;
+}
+
+export interface ExportDownloadResponse {
+  download_url: string;
+  expires_in: number;
+}
+
+export interface ExportCancelResponse {
+  status: string;
+  id: string;
+}
+
+export async function requestExport(): Promise<ExportJobStatusResponse> {
+  const { data } = await api.post("/me/export");
+  return data;
+}
+
+export async function getExportStatus(): Promise<ExportJobStatusResponse | null> {
+  try {
+    const { data } = await api.get("/me/export");
+    return data;
+  } catch (err: any) {
+    if (err?.response?.status === 204) return null;
+    throw err;
+  }
+}
+
+export async function getExportDownloadUrl(): Promise<ExportDownloadResponse> {
+  const { data } = await api.get("/me/export/download");
+  return data;
+}
+
+export async function cancelExport(): Promise<ExportCancelResponse> {
+  const { data } = await api.post("/me/export/cancel");
   return data;
 }
 

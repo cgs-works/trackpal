@@ -13,9 +13,10 @@ import {
 interface ProfileSectionProps {
   profile: Profile;
   onProfileUpdate: (profile: Profile) => void;
+  onSave?: (payload: ProfileUpdate) => Promise<Profile>;
 }
 
-export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps) {
+export function ProfileSection({ profile, onProfileUpdate, onSave }: ProfileSectionProps) {
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [email, setEmail] = useState(profile.email || "");
   const [phone, setPhone] = useState(profile.phone || "");
@@ -36,7 +37,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
         email: email || undefined,
         phone: phone || undefined,
       };
-      const updated = await updateProfile(payload);
+      const updated = onSave ? await onSave(payload) : await updateProfile(payload);
       onProfileUpdate(updated);
       toast.success(t("frontend.profile.saved"));
     } catch (err) {

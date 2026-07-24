@@ -46,7 +46,7 @@ Routes defined in `src/routes/`:
 | `admin.tsx` → `admin/clients.tsx` | `/admin/clients` | `ClientsPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/catalog.tsx` | `/admin/catalog` | `CatalogPage` (Pro-only) | Required | `tenant` |
 | `admin.tsx` → `admin/subscriptions.tsx` | `/admin/subscriptions` | `SubscriptionsPage` (Pro-only) | Required | `tenant` |
-| `admin.tsx` → `admin/settings.tsx` | `/admin/settings` | `SettingsPage` | Required | `tenant` |
+| `admin.tsx` → `admin/settings.tsx` | `/admin/settings` | `SettingsPage` with My Account tabs | Required | `tenant` |
 | `admin.tsx` → `admin/help.tsx` | `/admin/help` | `HelpCenterPage` (private release-gated) | Required | `tenant` |
 | `client.tsx` → `client/dashboard.tsx` | `/client/dashboard` | `ClientDashboard` | Required | `client` |
 | `client.tsx` → `client/profile.tsx` | `/client/profile` | `ProfilePage` | Required | `client` |
@@ -109,12 +109,25 @@ Caches reference data (services, plans, clients):
 - **Dedup**: In-flight promise deduplication
 - **Actions**: `loadServices()`, `loadPlans(serviceId)`, `loadClients()`, `invalidateServices()`, `invalidatePlans(serviceId?)`, `invalidateClients()`, `clearAll()`
 
+### `exportStore` (`features/admin/stores/export-store.ts`)
+
+Manages Tenant Data Export state for the My Account Data tab:
+
+- **State**: `job` (current export with status, timestamps, actor attribution, cooldown, expiry, download URL), `requesting`, `downloadLoading`, `cancelling`, `error`
+- **Polling**: `refreshStatus()` fetches current job; called on mount and periodically while Data tab is open
+- **Actions**:
+  - `requestExport()` — POST to `/me/export` with password step-up
+  - `refreshStatus()` — GET `/me/export` current status
+  - `cancelExport()` — POST `/me/export/cancel` to cancel pending/processing job
+  - `download()` — GET `/me/export/download` presigned URL and trigger browser download
+  - `reset()` — Clear all state (on unmount)
+
 ### Cache Invalidation Pattern
 
 All stores are invalidated on:
-- `login()` — clears settings + catalog stores
-- `logout()` — clears settings + catalog stores
-- `switchTenant()` — clears settings + catalog stores
+- `login()` — clears settings + catalog + export stores
+- `logout()` — clears settings + catalog + export stores; redirects to login after Tenant Admin deletion
+- `switchTenant()` — clears settings + catalog + export stores
 
 Individual CRUD operations invalidate their specific cache:
 - Client create/update/delete → `invalidateClients()`
@@ -240,6 +253,27 @@ Sidebar layout for master pages:
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 
 `SettingsPage` renders tenant settings as a flat category list plus a single active detail panel. No category opens by default; the panel shows a guide message until the user selects a category. Desktop uses a lateral category menu, mobile uses a `Sheet` category picker, long sections scroll inside the detail panel, and the common Cancelar action closes the active section so unsaved local edits are discarded by unmounting the section component.
+
+**Settings now includes My Account as the first category**, replacing the old separate Profile and Password categories. My Account uses role-aware horizontal tabs:
+
+| Tab | Tenant Admin | Master Support Context |
+|-----|-------------|------------------------|
+| Profile | Full profile (identity fields) | Target business profile (reads/updates selected Tenant, not Master identity) |
+| Security | Password change | Not rendered |
+| Data | Export status/actions + self-service deletion | Export status/actions only (no Security tab, no deletion action) |
+
+**Data tab** (`DataTabContent`):
+- Displays current export job status (empty, pending, processing, ready, failed, cancelled)
+- Polls status while Data tab is open
+- Request new export button (triggers password step-up dialog)
+- Cancel pending/processing export
+- Download ready export via presigned URL
+- Download previous version while replacement is in progress
+- Actor attribution: localized "You" / "Support" labels
+- Cooldown display with remaining time
+- Expiry countdown for ready exports
+- Danger zone (Tenant Admin only): self-service deletion with password + destructive word dialog
+- Master Support Context: replaces danger zone with guidance back to Master Dashboard
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 

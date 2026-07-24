@@ -16,7 +16,7 @@ Master interacts via WhatsApp chatbot to:
 3. **Edit tenants** — Update tenant fields (name, email, phone, Evolution instance)
 4. **Deactivate tenants** — Disable tenant login and identification, revoke active sessions
 5. **Reactivate tenants** — Restore deactivated tenants
-6. **Delete tenants** — Permanently remove inactive tenants plus their Evolution instance and all cascaded data
+6. **Delete tenants** — Permanently remove inactive tenants plus their Evolution instance and all cascaded data. **Note**: Master deletion now requires password step-up and locale-aware destructive word confirmation (ELIMINAR/DELETE)
 
 ### Tenant Console (WhatsApp)
 
@@ -46,8 +46,8 @@ Client password changes are available through the authenticated Web Dashboard, n
 
 ### Web Dashboard
 
-- **Master Dashboard** (`/master/dashboard`): Full tenant management UI (CRUD, activate/deactivate, delete) with summary cards and modal forms. Includes global code-service activation panel.
-- **Tenant Dashboard** (`/admin/dashboard`): Self-service profile + password management, catalog panel, client management panel, subscriptions page, mailbox config panel, code-service selection panel, access-control settings, and WhatsApp self-linking configuration.
+- **Master Dashboard** (`/master/dashboard`): Full tenant management UI (CRUD, activate/deactivate, delete) with summary cards and modal forms. Includes global code-service activation panel. Master can export data for any active or inactive Tenant directly from the Dashboard.
+- **Tenant Dashboard** (`/admin/dashboard`): Self-service profile + password management, catalog panel, client management panel, subscriptions page, mailbox config panel, code-service selection panel, access-control settings, WhatsApp self-linking configuration, My Account with Data tab for Tenant Data Export and Tenant Admin self-service deletion.
 - **Client Dashboard** (`/client/dashboard`): Read-only profile view and password change for end-customers.
 
 ### Mailbox Ingestion (automated)
@@ -75,20 +75,23 @@ Master can globally toggle supported code-extraction services (e.g. netflix, hbo
 Programmatic access for frontend SPA and n8n integration:
 - JWT-based authentication with access/refresh token rotation and logout revocation
 - Role-based authorization (master vs tenant vs client)
-- Full tenant CRUD with Evolution instance lifecycle
+- Full tenant CRUD with Evolution instance lifecycle (deletion requires password step-up and destructive word)
 - Catalog management (services, plans), Client management, Subscriptions
 - Mailbox config (OAuth + IMAP), Mail lookup jobs (n8n-facing)
 - Code-services governance (global + tenant)
 - WhatsApp self-linking lifecycle management (status, pairing code, QR, disconnect) for Starter and Pro tenants
 - I18n catalog endpoint (en/es)
 - Dashboard (role-aware response assembly)
+- **Tenant Data Export**: self-service (`/me/export/*`) and Master-scoped (`/tenants/{id}/export/*`) endpoints with password step-up
+- **Tenant Admin self-deletion**: `/me/delete-account` with password step-up and destructive word confirmation
+- **Master Tenant Deletion**: `/tenants/{id}/delete` with password step-up and destructive word confirmation
 
 ## User Roles
 
 | Role | Capabilities |
 |------|-------------|
-| **Master** | Full access via WhatsApp Console + REST API + Web Dashboard. Manages all tenants, global code-service activation, system config. One instance. |
-| **Tenant Admin** | Operates one tenant through plan-aware Web and WhatsApp administration. Starter covers profile, WhatsApp, mailbox code lookup, code-service selection, and access control; Pro adds clients, catalog, subscriptions, reminders, timezone, and Public API Catalog. |
+| **Master** | Full access via WhatsApp Console + REST API + Web Dashboard. Manages all tenants, global code-service activation, system config. One instance. Can export active or inactive Tenant data. Deletes inactive Tenants with password step-up and destructive word confirmation. |
+| **Tenant Admin** | Operates one tenant through plan-aware Web and WhatsApp administration. Starter covers profile, WhatsApp, mailbox code lookup, code-service selection, and access control; Pro adds clients, catalog, subscriptions, reminders, timezone, and Public API Catalog. Can export business data (all plans) and permanently self-delete the Tenant (My Account Data tab, password step-up + destructive word). |
 | **Client** | For Pro tenants, views own profile and active subscriptions through Web and WhatsApp, searches for access codes through WhatsApp, and changes password through Web. Uses a tenant-prefixed login (`{prefix}_{local_username}`). |
 
 ## User Interaction Channels
@@ -110,3 +113,9 @@ Programmatic access for frontend SPA and n8n integration:
 - Payment processing: No billing amounts, invoices, or credits tracked in the subscription system
 - Evolution instance renaming: Changing `evolution_instance_name` does not recreate or rename the instance
 - Webhook for mail delivery: Delivery is pull-based via n8n polling job status; no push webhook
+- **WhatsApp Console export or deletion**: Self-service export and deletion are Web Dashboard capabilities only
+- **Email or WhatsApp delivery of export**: Exports are downloaded via authenticated Web session only
+- **Export restoration or import**: The export contract is not designed as an import contract
+- **Revoking provider OAuth grants**: Local credentials are deleted; Google/Microsoft grants are not revoked
+- **Grace period or recovery window**: Tenant Admin deletion is immediate with no pending-deletion state
+- **Selective infrastructure cleanup**: Backups and logs follow operational retention; no per-Tenant purge

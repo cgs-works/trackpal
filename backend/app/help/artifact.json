@@ -498,7 +498,7 @@
             "content": "# Meet Clients\n\nYou can now create accounts for the people who receive your services, manage their access, and open their subscriptions."
           }
         ],
-        "body": "# Clients\n\n**TrackPal Pro** lets you create an account for each person who receives your services and manage their access on the Web or in WhatsApp.\n\n## Add a client\n\nSelect **Create client** and enter the name, a local username, a password with at least six characters, and an optional phone. TrackPal adds your business prefix to the username. Give the client the full username shown after saving, for example `t1_pepe`.\n\n## Manage access\n\nSearch by name, username, or phone. From each client you can edit details, deactivate or reactivate access, open subscriptions, and delete the account after it is inactive. Deactivation closes active sessions; reactivation allows a new sign-in.\n\nIn WhatsApp, open **Clients** from the **TrackPal Pro** menu. Use `9` to go back and `0` to cancel the current flow.\n\nIf a username or phone already exists, correct the highlighted value. Deletion is permanent, so confirm the client's name before continuing."
+        "body": "# Clients\n\n**TrackPal Pro** lets you create an account for each person who receives your services and manage their access on the Web or in WhatsApp.\n\n## Add a client\n\nSelect **Create client** and enter the name, a username, a password with at least six characters, and a phone (international format). TrackPal adds your business prefix to the username, you cannot change your prefix. Give the client the full username shown after saving, for example `t1_pepe`.\n\n## Manage access\n\nSearch by name, username, or phone. From each client you can edit details, deactivate or reactivate access, open subscriptions, and delete the account after it is inactive. Deactivation closes active sessions; reactivation allows a new sign-in.\n\nIn WhatsApp, open **Clients** from the **TrackPal Pro** menu. Use `9` to go back and `0` to cancel the current flow.\n\nIf a username or phone already exists, correct the highlighted value. Deletion is permanent, so confirm the client's name before continuing."
       },
       {
         "id": "tenant-admin.code-services",
@@ -637,6 +637,118 @@
           }
         ],
         "body": "# Dashboard\n\nThe Dashboard gives you a quick view of your business in TrackPal.\n\n## What you will see\n\nEvery account shows the central mailbox status, enabled platforms, and blocked WhatsApp access. **TrackPal Pro** also shows clients, Catalog services, active subscriptions, and upcoming expirations.\n\nUse these numbers to choose your next step: finish a setup, handle a subscription, or review an integration.\n\n## If something looks wrong\n\nA zero can be normal when a feature has not been set up yet. If the page does not load, try again. If the error continues, share the visible message with support, not passwords or codes."
+      },
+      {
+        "id": "tenant-admin.data-export",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "data",
+        "capabilities": [
+          "tenant_data_export"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.my-account",
+          "admin.settings.data-tab"
+        ],
+        "title": "Data Export",
+        "summary": "Request and download a point-in-time snapshot of your account data as a ZIP with CSV and JSON files.",
+        "search_tags": [
+          "export",
+          "download",
+          "backup",
+          "data",
+          "offboarding",
+          "snapshot"
+        ],
+        "synonyms": [
+          "data export",
+          "download bundle",
+          "download data",
+          "account copy",
+          "save my data"
+        ],
+        "related_topics": [
+          "tenant-admin.delete-account",
+          "tenant-admin.dashboard",
+          "tenant-admin.help"
+        ],
+        "order": 4,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "data"
+        },
+        "safe_links": [
+          {
+            "route": "/admin/settings",
+            "settings_category": "data"
+          }
+        ],
+        "tour": null,
+        "body": "# Data Export\n\nYou can download a point-in-time snapshot of your TrackPal account data. The export is a ZIP file containing CSV spreadsheets and a JSON document with your account profile, client accounts, service catalog, subscription records, and blocked phone list.\n\n## What's included\n\n| File | Contents |\n|------|----------|\n| `account-profile.csv` | Your account name, contact email, WhatsApp phone, login username, current plan, language, and time zone |\n| `client-data.csv` | Client name, login username, phone, account status, registration and last update dates |\n| `service-catalog.csv` | Service name, creation and update dates, plan name and plan dates. Services without plans appear with empty plan fields |\n| `subscription-snapshot.csv` | Client name and login, service, plan, streaming email and profile name, duration, start, expiry, cancellation dates, status, record timestamps |\n| `blocked-phones.csv` | Blocked phone numbers and the date they were blocked |\n| `trackpal-data.json` | Same data in JSON format with machine-readable structure |\n| `README.txt` | Explanation of every file and field in your language |\n\n## What's never included\n\nFor your security, the export intentionally excludes:\n\n- Passwords (your login, client accounts, streaming subscriptions)\n- Profile PINs and any sign that a password or PIN is set\n- Mailbox login credentials, OAuth tokens, or app passwords\n- Evolution API tokens or Public API Keys\n- Internal database IDs or technical identifiers\n- WhatsApp LID-only identities from access control\n- Subscription change history, reminder logs, or delivery records\n- Mailbox lookup jobs or delivery logs\n\nTimestamp values use your account time zone. The ZIP filename includes your account name and the generation date.\n\n## How to request an export\n\n1. Go to **Settings > My Account > Data**.\n2. Enter your current password when prompted.\n3. The system creates your export. Status changes from **Pending** to **Processing** to **Ready**.\n4. When ready, click **Download ZIP** to save the file.\n\nStatus updates automatically while the Data tab is open.\n\n## Limits\n\n- **Cooldown**: One new export every 24 hours. The countdown shows when the next export is available.\n- **Availability**: A ready export remains downloadable for 72 hours. After that, it is automatically deleted.\n- **Replacement**: Requesting a new export while one is ready keeps the previous version available until the new one is generated.\n\n## Cancellation\n\nYou can cancel a pending or processing export. If you cancel while processing, any partial upload is discarded. The previous ready version (if any) remains available.\n\n## Related\n\n- [Account Deletion](delete-account.md) — Permanently delete your account"
+      },
+      {
+        "id": "tenant-admin.delete-account",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "data",
+        "capabilities": [
+          "tenant_delete_account"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.my-account",
+          "admin.settings.data-tab",
+          "admin.settings.danger-zone"
+        ],
+        "title": "Account Deletion",
+        "summary": "Permanently delete your TrackPal account and all associated data. This action is immediate and irreversible.",
+        "search_tags": [
+          "delete",
+          "remove",
+          "cancel",
+          "close account",
+          "offboarding"
+        ],
+        "synonyms": [
+          "delete account",
+          "close account",
+          "cancel account",
+          "remove account",
+          "leave trackpal"
+        ],
+        "related_topics": [
+          "tenant-admin.data-export",
+          "tenant-admin.dashboard",
+          "tenant-admin.help"
+        ],
+        "order": 5,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "data"
+        },
+        "safe_links": [
+          {
+            "route": "/admin/settings",
+            "settings_category": "data"
+          }
+        ],
+        "tour": null,
+        "body": "# Account Deletion\n\nYou can permanently delete your TrackPal account and all associated data. This action is immediate and irreversible — there is no grace period or recovery window.\n\n## What gets deleted\n\n- Your account and login credentials\n- All client accounts and their login access\n- Your service catalog and all plans\n- All subscription records and their history\n- Mailbox configuration and stored credentials\n- Blocked phone list\n- Saved preferences (language, time zone)\n- Any pending or saved data exports\n- Your WhatsApp Evolution instance\n\n## What is NOT deleted by this action\n\n- **Provider OAuth grants**: Google and Microsoft access grants are not revoked. You can manage these from your provider's security settings.\n- **Infrastructure backups**: Operational backups and logs follow their standard retention policies. They are used only for disaster recovery and are not accessible after deletion.\n- **Ephemeral sessions**: Any active WhatsApp or Web sessions expire within minutes.\n\n## Before you delete\n\nConsider downloading a [Data Export](data-export.md) first. The export gives you a portable copy of your account profile, clients, catalog, and subscription records.\n\nDeletion is available even without an export — the export step is optional.\n\n## How to delete your account\n\n1. Go to **Settings > My Account > Data**.\n2. Scroll to the **Danger zone** at the bottom.\n3. Click **Delete account permanently**.\n4. Enter your current password.\n5. Type **DELETE** (or **ELIMINAR** if your account is in Spanish) to confirm.\n6. Click **Delete permanently**.\n\nAfter successful deletion, you are signed out and redirected to the login page. You cannot sign in again with this account.\n\n## What happens during deletion\n\n1. Any in-progress export is cancelled.\n2. Stored export files are permanently removed.\n3. Your Evolution WhatsApp instance is deleted.\n4. Your account and all data are removed from the active database.\n5. Your Web session is cleared.\n\nIf external cleanup (export removal, Evolution deletion) fails, the account is preserved and you can try again. This prevents partial deletion.\n\n## Related\n\n- [Data Export](data-export.md) — Download your data before deleting"
       },
       {
         "id": "tenant-admin.first-pro-client",
@@ -1828,7 +1940,7 @@
             "content": "# Conoce Clientes\n\nAhora puedes crear cuentas para las personas que reciben tus servicios, gestionar su acceso y abrir sus suscripciones."
           }
         ],
-        "body": "# Clientes\n\nCon **TrackPal Pro** puedes crear una cuenta para cada persona que recibe tus servicios y gestionar su acceso desde Web o WhatsApp.\n\n## Añadir un cliente\n\nPulsa **Crear cliente** y completa el nombre, un usuario local, una contraseña de al menos seis caracteres y, si lo tienes, el teléfono. TrackPal añadirá el prefijo de tu negocio al usuario. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.\n\n## Gestionar su acceso\n\nBusca por nombre, usuario o teléfono. Desde cada cliente puedes editar sus datos, desactivar o reactivar el acceso, abrir sus suscripciones y eliminar la cuenta cuando esté inactiva. Desactivar cierra sus sesiones; reactivar le permite iniciar sesión otra vez.\n\nEn WhatsApp abre **Clientes** desde el menú de **TrackPal Pro**. Usa `9` para regresar y `0` para cancelar el flujo actual.\n\nSi un usuario o teléfono ya existe, corrige el dato señalado. Eliminar una cuenta es permanente, así que confirma el nombre antes de continuar."
+        "body": "# Clientes\n\nCon **TrackPal Pro** puedes crear una cuenta para cada persona que recibe tus servicios y gestionar su acceso desde Web o WhatsApp.\n\n## Añadir un cliente\n\nPulsa **Crear cliente** y completa el nombre, un nombre de usuario, una contraseña de al menos seis caracteres y el teléfono (formato internacional). TrackPal añadirá el prefijo de tu negocio al usuario, no puedes cambiar tu prefijo. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.\n\n## Gestionar su acceso\n\nBusca por nombre, usuario o teléfono. Desde cada cliente puedes editar sus datos, desactivar o reactivar el acceso, abrir sus suscripciones y eliminar la cuenta cuando esté inactiva. Desactivar cierra sus sesiones; reactivar le permite iniciar sesión otra vez.\n\nEn WhatsApp abre **Clientes** desde el menú de **TrackPal Pro**. Usa `9` para regresar y `0` para cancelar el flujo actual.\n\nSi un usuario o teléfono ya existe, corrige el dato señalado. Eliminar una cuenta es permanente, así que confirma el nombre antes de continuar."
       },
       {
         "id": "tenant-admin.code-services",
@@ -1967,6 +2079,117 @@
           }
         ],
         "body": "# Dashboard\n\nEl Dashboard te da una vista rápida de tu negocio en TrackPal.\n\n## Qué verás\n\nTodas las cuentas muestran el estado del buzón central, las plataformas habilitadas y los accesos de WhatsApp bloqueados. Con **TrackPal Pro** también verás clientes, servicios del Catálogo, suscripciones activas y próximos vencimientos.\n\nUsa estos datos para decidir tu siguiente paso: completar una configuración, atender una suscripción o revisar una integración.\n\n## Si algo no cuadra\n\nUn valor en cero puede ser correcto si todavía no has configurado esa función. Si la página no carga, inténtalo de nuevo. Si el error continúa, comparte con soporte el mensaje visible, no contraseñas ni códigos."
+      },
+      {
+        "id": "tenant-admin.data-export",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "data",
+        "capabilities": [
+          "tenant_data_export"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.my-account",
+          "admin.settings.data-tab"
+        ],
+        "title": "Exportación de datos",
+        "summary": "Solicita y descarga una copia puntual de los datos de tu cuenta como un ZIP con archivos CSV y JSON.",
+        "search_tags": [
+          "exportar",
+          "descargar",
+          "respaldo",
+          "datos",
+          "descarga",
+          "exportación"
+        ],
+        "synonyms": [
+          "descarga de datos",
+          "paquete de datos",
+          "descargar datos",
+          "copia de datos"
+        ],
+        "related_topics": [
+          "tenant-admin.delete-account",
+          "tenant-admin.dashboard",
+          "tenant-admin.help"
+        ],
+        "order": 4,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "data"
+        },
+        "safe_links": [
+          {
+            "route": "/admin/settings",
+            "settings_category": "data"
+          }
+        ],
+        "tour": null,
+        "body": "# Exportación de datos\n\nPuedes descargar una copia puntual de los datos de tu cuenta de TrackPal. La exportación es un archivo ZIP que contiene hojas de cálculo CSV y un documento JSON con tu perfil de cuenta, clientes, catálogo de servicios, registros de suscripciones y lista de teléfonos bloqueados.\n\n## Qué incluye\n\n| Archivo | Contenido |\n|---------|-----------|\n| `account-profile.csv` | Nombre de tu cuenta, correo de contacto, teléfono WhatsApp, nombre de usuario, plan actual, idioma y zona horaria |\n| `client-data.csv` | Nombre del cliente, nombre de usuario, teléfono, estado de la cuenta, fechas de registro y última actualización |\n| `service-catalog.csv` | Nombre del servicio, fechas de creación y actualización, nombre del plan y fechas del plan. Los servicios sin planes aparecen con campos de plan vacíos |\n| `subscription-snapshot.csv` | Nombre y usuario del cliente, servicio, plan, correo y perfil de la cuenta de streaming, duración, fechas de inicio, vencimiento y cancelación, estado, marcas de tiempo |\n| `blocked-phones.csv` | Teléfonos bloqueados y la fecha en que fueron bloqueados |\n| `trackpal-data.json` | Los mismos datos en formato JSON con estructura legible por máquina |\n| `README.txt` | Explicación de cada archivo y campo en tu idioma |\n\n## Qué nunca se incluye\n\nPor tu seguridad, la exportación excluye intencionalmente:\n\n- Contraseñas (tu inicio de sesión, cuentas de clientes, suscripciones de streaming)\n- PINs de perfil y cualquier indicación de que una contraseña o PIN está configurado\n- Credenciales de inicio de sesión del correo, tokens OAuth o contraseñas de aplicación\n- Tokens de Evolution API o Claves de API Pública\n- Identificadores internos de base de datos o identificadores técnicos\n- Identidades solo LID de WhatsApp del control de acceso\n- Historial de cambios de suscripciones, registros de recordatorios o registros de entrega\n- Trabajos de búsqueda en el correo o registros de entrega\n\nLos valores de fecha y hora usan tu zona horaria. El nombre del archivo ZIP incluye el nombre de tu cuenta y la fecha de generación.\n\n## Cómo solicitar una exportación\n\n1. Ve a **Configuración > Mi cuenta > Datos**.\n2. Ingresa tu contraseña actual cuando se te solicite.\n3. El sistema crea tu exportación. El estado cambia de **Pendiente** a **Procesando** a **Listo**.\n4. Cuando esté listo, haz clic en **Descargar ZIP** para guardar el archivo.\n\nEl estado se actualiza automáticamente mientras la pestaña Datos esté abierta.\n\n## Límites\n\n- **Tiempo de espera**: Una nueva exportación cada 24 horas. La cuenta regresiva muestra cuándo estará disponible la próxima.\n- **Disponibilidad**: Una exportación lista permanece descargable durante 72 horas. Después de eso, se elimina automáticamente.\n- **Reemplazo**: Solicitar una nueva exportación mientras una está lista mantiene la versión anterior disponible hasta que se genere la nueva.\n\n## Cancelación\n\nPuedes cancelar una exportación pendiente o en proceso. Si cancelas durante el procesamiento, cualquier carga parcial se descarta. La versión anterior lista (si existe) permanece disponible.\n\n## Relacionados\n\n- [Eliminación de cuenta](delete-account.md) — Elimina permanentemente tu cuenta"
+      },
+      {
+        "id": "tenant-admin.delete-account",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "data",
+        "capabilities": [
+          "tenant_delete_account"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.my-account",
+          "admin.settings.data-tab",
+          "admin.settings.danger-zone"
+        ],
+        "title": "Eliminación de cuenta",
+        "summary": "Elimina permanentemente tu cuenta de TrackPal y todos los datos asociados. Esta acción es inmediata e irreversible.",
+        "search_tags": [
+          "eliminar",
+          "borrar",
+          "cancelar",
+          "cerrar cuenta",
+          "salir"
+        ],
+        "synonyms": [
+          "eliminar cuenta",
+          "cerrar cuenta",
+          "cancelar cuenta",
+          "borrar cuenta",
+          "salir de la plataforma"
+        ],
+        "related_topics": [
+          "tenant-admin.data-export",
+          "tenant-admin.dashboard",
+          "tenant-admin.help"
+        ],
+        "order": 5,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "data"
+        },
+        "safe_links": [
+          {
+            "route": "/admin/settings",
+            "settings_category": "data"
+          }
+        ],
+        "tour": null,
+        "body": "# Eliminación de cuenta\n\nPuedes eliminar permanentemente tu cuenta de TrackPal y todos los datos asociados. Esta acción es inmediata e irreversible — no hay período de gracia ni ventana de recuperación.\n\n## Qué se elimina\n\n- Tu cuenta y credenciales de inicio de sesión\n- Todas las cuentas de clientes y su acceso\n- Tu catálogo de servicios y todos los planes\n- Todos los registros de suscripciones y su historial\n- La configuración del correo y las credenciales almacenadas\n- La lista de teléfonos bloqueados\n- Las preferencias guardadas (idioma, zona horaria)\n- Cualquier exportación de datos pendiente o guardada\n- Tu instancia de WhatsApp Evolution\n\n## Qué NO se elimina con esta acción\n\n- **Concesiones OAuth del proveedor**: Los permisos de Google y Microsoft no se revocan. Puedes gestionarlos desde la configuración de seguridad de tu proveedor.\n- **Respaldos de infraestructura**: Las copias de seguridad operativas y los registros siguen sus políticas de retención estándar. Se usan solo para recuperación de desastres y no son accesibles después de la eliminación.\n- **Sesiones efímeras**: Cualquier sesión activa de WhatsApp o Web expira en minutos.\n\n## Antes de eliminar\n\nConsidera descargar una [Exportación de datos](data-export.md) primero. La exportación te da una copia portátil de tu perfil de cuenta, clientes, catálogo y registros de suscripciones.\n\nLa eliminación está disponible incluso sin una exportación — el paso de exportación es opcional.\n\n## Cómo eliminar tu cuenta\n\n1. Ve a **Configuración > Mi cuenta > Datos**.\n2. Desplázate hasta la **Zona de peligro** al final.\n3. Haz clic en **Eliminar cuenta permanentemente**.\n4. Ingresa tu contraseña actual.\n5. Escribe **ELIMINAR** para confirmar.\n6. Haz clic en **Eliminar permanentemente**.\n\nDespués de la eliminación exitosa, se te cerrará la sesión y serás redirigido a la página de inicio de sesión. No podrás iniciar sesión nuevamente con esta cuenta.\n\n## Qué sucede durante la eliminación\n\n1. Cualquier exportación en curso se cancela.\n2. Los archivos de exportación almacenados se eliminan permanentemente.\n3. Tu instancia de WhatsApp Evolution se elimina.\n4. Tu cuenta y todos los datos se eliminan de la base de datos activa.\n5. Tu sesión web se limpia.\n\nSi la limpieza externa (eliminación de exportación, eliminación de Evolution) falla, la cuenta se conserva y puedes intentarlo de nuevo. Esto evita una eliminación parcial.\n\n## Relacionados\n\n- [Exportación de datos](data-export.md) — Descarga tus datos antes de eliminar"
       },
       {
         "id": "tenant-admin.first-pro-client",
@@ -2824,7 +3047,7 @@
           "customers",
           "users",
           "client accounts",
-          "# Clients\n\n**TrackPal Pro** lets you create an account for each person who receives your services and manage their access on the Web or in WhatsApp.\n\n## Add a client\n\nSelect **Create client** and enter the name, a local username, a password with at least six characters, and an optional phone. TrackPal adds your business prefix to the username. Give the client the full username shown after saving, for example `t1_pepe`.\n\n## Manage access\n\nSearch by name, username, or phone. From each client you can edit details, deactivate or reactivate access, open subscriptions, and delete the account after it is inactive. Deactivation closes active sessions; reactivation allows a new sign-in.\n\nIn WhatsApp, open **Clients** from the **TrackPal Pro** menu. Use `9` to go back and `0` to cancel the current flow.\n\nIf a username or phone already exists, correct the highlighted value. Deletion is permanent, so confirm the client's name before continuing."
+          "# Clients\n\n**TrackPal Pro** lets you create an account for each person who receives your services and manage their access on the Web or in WhatsApp.\n\n## Add a client\n\nSelect **Create client** and enter the name, a username, a password with at least six characters, and a phone (international format). TrackPal adds your business prefix to the username, you cannot change your prefix. Give the client the full username shown after saving, for example `t1_pepe`.\n\n## Manage access\n\nSearch by name, username, or phone. From each client you can edit details, deactivate or reactivate access, open subscriptions, and delete the account after it is inactive. Deactivation closes active sessions; reactivation allows a new sign-in.\n\nIn WhatsApp, open **Clients** from the **TrackPal Pro** menu. Use `9` to go back and `0` to cancel the current flow.\n\nIf a username or phone already exists, correct the highlighted value. Deletion is permanent, so confirm the client's name before continuing."
         ]
       },
       {
@@ -2857,6 +3080,45 @@
           "home",
           "overview",
           "# Dashboard\n\nThe Dashboard gives you a quick view of your business in TrackPal.\n\n## What you will see\n\nEvery account shows the central mailbox status, enabled platforms, and blocked WhatsApp access. **TrackPal Pro** also shows clients, Catalog services, active subscriptions, and upcoming expirations.\n\nUse these numbers to choose your next step: finish a setup, handle a subscription, or review an integration.\n\n## If something looks wrong\n\nA zero can be normal when a feature has not been set up yet. If the page does not load, try again. If the error continues, share the visible message with support, not passwords or codes."
+        ]
+      },
+      {
+        "id": "tenant-admin.data-export",
+        "title": "Data Export",
+        "terms": [
+          "Data Export",
+          "Request and download a point-in-time snapshot of your account data as a ZIP with CSV and JSON files.",
+          "export",
+          "download",
+          "backup",
+          "data",
+          "offboarding",
+          "snapshot",
+          "data export",
+          "download bundle",
+          "download data",
+          "account copy",
+          "save my data",
+          "# Data Export\n\nYou can download a point-in-time snapshot of your TrackPal account data. The export is a ZIP file containing CSV spreadsheets and a JSON document with your account profile, client accounts, service catalog, subscription records, and blocked phone list.\n\n## What's included\n\n| File | Contents |\n|------|----------|\n| `account-profile.csv` | Your account name, contact email, WhatsApp phone, login username, current plan, language, and time zone |\n| `client-data.csv` | Client name, login username, phone, account status, registration and last update dates |\n| `service-catalog.csv` | Service name, creation and update dates, plan name and plan dates. Services without plans appear with empty plan fields |\n| `subscription-snapshot.csv` | Client name and login, service, plan, streaming email and profile name, duration, start, expiry, cancellation dates, status, record timestamps |\n| `blocked-phones.csv` | Blocked phone numbers and the date they were blocked |\n| `trackpal-data.json` | Same data in JSON format with machine-readable structure |\n| `README.txt` | Explanation of every file and field in your language |\n\n## What's never included\n\nFor your security, the export intentionally excludes:\n\n- Passwords (your login, client accounts, streaming subscriptions)\n- Profile PINs and any sign that a password or PIN is set\n- Mailbox login credentials, OAuth tokens, or app passwords\n- Evolution API tokens or Public API Keys\n- Internal database IDs or technical identifiers\n- WhatsApp LID-only identities from access control\n- Subscription change history, reminder logs, or delivery records\n- Mailbox lookup jobs or delivery logs\n\nTimestamp values use your account time zone. The ZIP filename includes your account name and the generation date.\n\n## How to request an export\n\n1. Go to **Settings > My Account > Data**.\n2. Enter your current password when prompted.\n3. The system creates your export. Status changes from **Pending** to **Processing** to **Ready**.\n4. When ready, click **Download ZIP** to save the file.\n\nStatus updates automatically while the Data tab is open.\n\n## Limits\n\n- **Cooldown**: One new export every 24 hours. The countdown shows when the next export is available.\n- **Availability**: A ready export remains downloadable for 72 hours. After that, it is automatically deleted.\n- **Replacement**: Requesting a new export while one is ready keeps the previous version available until the new one is generated.\n\n## Cancellation\n\nYou can cancel a pending or processing export. If you cancel while processing, any partial upload is discarded. The previous ready version (if any) remains available.\n\n## Related\n\n- [Account Deletion](delete-account.md) — Permanently delete your account"
+        ]
+      },
+      {
+        "id": "tenant-admin.delete-account",
+        "title": "Account Deletion",
+        "terms": [
+          "Account Deletion",
+          "Permanently delete your TrackPal account and all associated data. This action is immediate and irreversible.",
+          "delete",
+          "remove",
+          "cancel",
+          "close account",
+          "offboarding",
+          "delete account",
+          "close account",
+          "cancel account",
+          "remove account",
+          "leave trackpal",
+          "# Account Deletion\n\nYou can permanently delete your TrackPal account and all associated data. This action is immediate and irreversible — there is no grace period or recovery window.\n\n## What gets deleted\n\n- Your account and login credentials\n- All client accounts and their login access\n- Your service catalog and all plans\n- All subscription records and their history\n- Mailbox configuration and stored credentials\n- Blocked phone list\n- Saved preferences (language, time zone)\n- Any pending or saved data exports\n- Your WhatsApp Evolution instance\n\n## What is NOT deleted by this action\n\n- **Provider OAuth grants**: Google and Microsoft access grants are not revoked. You can manage these from your provider's security settings.\n- **Infrastructure backups**: Operational backups and logs follow their standard retention policies. They are used only for disaster recovery and are not accessible after deletion.\n- **Ephemeral sessions**: Any active WhatsApp or Web sessions expire within minutes.\n\n## Before you delete\n\nConsider downloading a [Data Export](data-export.md) first. The export gives you a portable copy of your account profile, clients, catalog, and subscription records.\n\nDeletion is available even without an export — the export step is optional.\n\n## How to delete your account\n\n1. Go to **Settings > My Account > Data**.\n2. Scroll to the **Danger zone** at the bottom.\n3. Click **Delete account permanently**.\n4. Enter your current password.\n5. Type **DELETE** (or **ELIMINAR** if your account is in Spanish) to confirm.\n6. Click **Delete permanently**.\n\nAfter successful deletion, you are signed out and redirected to the login page. You cannot sign in again with this account.\n\n## What happens during deletion\n\n1. Any in-progress export is cancelled.\n2. Stored export files are permanently removed.\n3. Your Evolution WhatsApp instance is deleted.\n4. Your account and all data are removed from the active database.\n5. Your Web session is cleared.\n\nIf external cleanup (export removal, Evolution deletion) fails, the account is preserved and you can try again. This prevents partial deletion.\n\n## Related\n\n- [Data Export](data-export.md) — Download your data before deleting"
         ]
       },
       {
@@ -3222,7 +3484,7 @@
           "usuarios",
           "cuentas de clientes",
           "consumidores",
-          "# Clientes\n\nCon **TrackPal Pro** puedes crear una cuenta para cada persona que recibe tus servicios y gestionar su acceso desde Web o WhatsApp.\n\n## Añadir un cliente\n\nPulsa **Crear cliente** y completa el nombre, un usuario local, una contraseña de al menos seis caracteres y, si lo tienes, el teléfono. TrackPal añadirá el prefijo de tu negocio al usuario. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.\n\n## Gestionar su acceso\n\nBusca por nombre, usuario o teléfono. Desde cada cliente puedes editar sus datos, desactivar o reactivar el acceso, abrir sus suscripciones y eliminar la cuenta cuando esté inactiva. Desactivar cierra sus sesiones; reactivar le permite iniciar sesión otra vez.\n\nEn WhatsApp abre **Clientes** desde el menú de **TrackPal Pro**. Usa `9` para regresar y `0` para cancelar el flujo actual.\n\nSi un usuario o teléfono ya existe, corrige el dato señalado. Eliminar una cuenta es permanente, así que confirma el nombre antes de continuar."
+          "# Clientes\n\nCon **TrackPal Pro** puedes crear una cuenta para cada persona que recibe tus servicios y gestionar su acceso desde Web o WhatsApp.\n\n## Añadir un cliente\n\nPulsa **Crear cliente** y completa el nombre, un nombre de usuario, una contraseña de al menos seis caracteres y el teléfono (formato internacional). TrackPal añadirá el prefijo de tu negocio al usuario, no puedes cambiar tu prefijo. Entrega al cliente el nombre completo que aparece al guardar, por ejemplo `t1_pepe`.\n\n## Gestionar su acceso\n\nBusca por nombre, usuario o teléfono. Desde cada cliente puedes editar sus datos, desactivar o reactivar el acceso, abrir sus suscripciones y eliminar la cuenta cuando esté inactiva. Desactivar cierra sus sesiones; reactivar le permite iniciar sesión otra vez.\n\nEn WhatsApp abre **Clientes** desde el menú de **TrackPal Pro**. Usa `9` para regresar y `0` para cancelar el flujo actual.\n\nSi un usuario o teléfono ya existe, corrige el dato señalado. Eliminar una cuenta es permanente, así que confirma el nombre antes de continuar."
         ]
       },
       {
@@ -3255,6 +3517,44 @@
           "inicio",
           "resumen",
           "# Dashboard\n\nEl Dashboard te da una vista rápida de tu negocio en TrackPal.\n\n## Qué verás\n\nTodas las cuentas muestran el estado del buzón central, las plataformas habilitadas y los accesos de WhatsApp bloqueados. Con **TrackPal Pro** también verás clientes, servicios del Catálogo, suscripciones activas y próximos vencimientos.\n\nUsa estos datos para decidir tu siguiente paso: completar una configuración, atender una suscripción o revisar una integración.\n\n## Si algo no cuadra\n\nUn valor en cero puede ser correcto si todavía no has configurado esa función. Si la página no carga, inténtalo de nuevo. Si el error continúa, comparte con soporte el mensaje visible, no contraseñas ni códigos."
+        ]
+      },
+      {
+        "id": "tenant-admin.data-export",
+        "title": "Exportación de datos",
+        "terms": [
+          "Exportación de datos",
+          "Solicita y descarga una copia puntual de los datos de tu cuenta como un ZIP con archivos CSV y JSON.",
+          "exportar",
+          "descargar",
+          "respaldo",
+          "datos",
+          "descarga",
+          "exportación",
+          "descarga de datos",
+          "paquete de datos",
+          "descargar datos",
+          "copia de datos",
+          "# Exportación de datos\n\nPuedes descargar una copia puntual de los datos de tu cuenta de TrackPal. La exportación es un archivo ZIP que contiene hojas de cálculo CSV y un documento JSON con tu perfil de cuenta, clientes, catálogo de servicios, registros de suscripciones y lista de teléfonos bloqueados.\n\n## Qué incluye\n\n| Archivo | Contenido |\n|---------|-----------|\n| `account-profile.csv` | Nombre de tu cuenta, correo de contacto, teléfono WhatsApp, nombre de usuario, plan actual, idioma y zona horaria |\n| `client-data.csv` | Nombre del cliente, nombre de usuario, teléfono, estado de la cuenta, fechas de registro y última actualización |\n| `service-catalog.csv` | Nombre del servicio, fechas de creación y actualización, nombre del plan y fechas del plan. Los servicios sin planes aparecen con campos de plan vacíos |\n| `subscription-snapshot.csv` | Nombre y usuario del cliente, servicio, plan, correo y perfil de la cuenta de streaming, duración, fechas de inicio, vencimiento y cancelación, estado, marcas de tiempo |\n| `blocked-phones.csv` | Teléfonos bloqueados y la fecha en que fueron bloqueados |\n| `trackpal-data.json` | Los mismos datos en formato JSON con estructura legible por máquina |\n| `README.txt` | Explicación de cada archivo y campo en tu idioma |\n\n## Qué nunca se incluye\n\nPor tu seguridad, la exportación excluye intencionalmente:\n\n- Contraseñas (tu inicio de sesión, cuentas de clientes, suscripciones de streaming)\n- PINs de perfil y cualquier indicación de que una contraseña o PIN está configurado\n- Credenciales de inicio de sesión del correo, tokens OAuth o contraseñas de aplicación\n- Tokens de Evolution API o Claves de API Pública\n- Identificadores internos de base de datos o identificadores técnicos\n- Identidades solo LID de WhatsApp del control de acceso\n- Historial de cambios de suscripciones, registros de recordatorios o registros de entrega\n- Trabajos de búsqueda en el correo o registros de entrega\n\nLos valores de fecha y hora usan tu zona horaria. El nombre del archivo ZIP incluye el nombre de tu cuenta y la fecha de generación.\n\n## Cómo solicitar una exportación\n\n1. Ve a **Configuración > Mi cuenta > Datos**.\n2. Ingresa tu contraseña actual cuando se te solicite.\n3. El sistema crea tu exportación. El estado cambia de **Pendiente** a **Procesando** a **Listo**.\n4. Cuando esté listo, haz clic en **Descargar ZIP** para guardar el archivo.\n\nEl estado se actualiza automáticamente mientras la pestaña Datos esté abierta.\n\n## Límites\n\n- **Tiempo de espera**: Una nueva exportación cada 24 horas. La cuenta regresiva muestra cuándo estará disponible la próxima.\n- **Disponibilidad**: Una exportación lista permanece descargable durante 72 horas. Después de eso, se elimina automáticamente.\n- **Reemplazo**: Solicitar una nueva exportación mientras una está lista mantiene la versión anterior disponible hasta que se genere la nueva.\n\n## Cancelación\n\nPuedes cancelar una exportación pendiente o en proceso. Si cancelas durante el procesamiento, cualquier carga parcial se descarta. La versión anterior lista (si existe) permanece disponible.\n\n## Relacionados\n\n- [Eliminación de cuenta](delete-account.md) — Elimina permanentemente tu cuenta"
+        ]
+      },
+      {
+        "id": "tenant-admin.delete-account",
+        "title": "Eliminación de cuenta",
+        "terms": [
+          "Eliminación de cuenta",
+          "Elimina permanentemente tu cuenta de TrackPal y todos los datos asociados. Esta acción es inmediata e irreversible.",
+          "eliminar",
+          "borrar",
+          "cancelar",
+          "cerrar cuenta",
+          "salir",
+          "eliminar cuenta",
+          "cerrar cuenta",
+          "cancelar cuenta",
+          "borrar cuenta",
+          "salir de la plataforma",
+          "# Eliminación de cuenta\n\nPuedes eliminar permanentemente tu cuenta de TrackPal y todos los datos asociados. Esta acción es inmediata e irreversible — no hay período de gracia ni ventana de recuperación.\n\n## Qué se elimina\n\n- Tu cuenta y credenciales de inicio de sesión\n- Todas las cuentas de clientes y su acceso\n- Tu catálogo de servicios y todos los planes\n- Todos los registros de suscripciones y su historial\n- La configuración del correo y las credenciales almacenadas\n- La lista de teléfonos bloqueados\n- Las preferencias guardadas (idioma, zona horaria)\n- Cualquier exportación de datos pendiente o guardada\n- Tu instancia de WhatsApp Evolution\n\n## Qué NO se elimina con esta acción\n\n- **Concesiones OAuth del proveedor**: Los permisos de Google y Microsoft no se revocan. Puedes gestionarlos desde la configuración de seguridad de tu proveedor.\n- **Respaldos de infraestructura**: Las copias de seguridad operativas y los registros siguen sus políticas de retención estándar. Se usan solo para recuperación de desastres y no son accesibles después de la eliminación.\n- **Sesiones efímeras**: Cualquier sesión activa de WhatsApp o Web expira en minutos.\n\n## Antes de eliminar\n\nConsidera descargar una [Exportación de datos](data-export.md) primero. La exportación te da una copia portátil de tu perfil de cuenta, clientes, catálogo y registros de suscripciones.\n\nLa eliminación está disponible incluso sin una exportación — el paso de exportación es opcional.\n\n## Cómo eliminar tu cuenta\n\n1. Ve a **Configuración > Mi cuenta > Datos**.\n2. Desplázate hasta la **Zona de peligro** al final.\n3. Haz clic en **Eliminar cuenta permanentemente**.\n4. Ingresa tu contraseña actual.\n5. Escribe **ELIMINAR** para confirmar.\n6. Haz clic en **Eliminar permanentemente**.\n\nDespués de la eliminación exitosa, se te cerrará la sesión y serás redirigido a la página de inicio de sesión. No podrás iniciar sesión nuevamente con esta cuenta.\n\n## Qué sucede durante la eliminación\n\n1. Cualquier exportación en curso se cancela.\n2. Los archivos de exportación almacenados se eliminan permanentemente.\n3. Tu instancia de WhatsApp Evolution se elimina.\n4. Tu cuenta y todos los datos se eliminan de la base de datos activa.\n5. Tu sesión web se limpia.\n\nSi la limpieza externa (eliminación de exportación, eliminación de Evolution) falla, la cuenta se conserva y puedes intentarlo de nuevo. Esto evita una eliminación parcial.\n\n## Relacionados\n\n- [Exportación de datos](data-export.md) — Descarga tus datos antes de eliminar"
         ]
       },
       {

@@ -8,8 +8,11 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 
 `SettingsPage` renders tenant settings as a flat category list plus a single active detail panel. No category opens by default; the panel shows a guide message until the user selects a category. Desktop uses a lateral category menu, mobile uses a `Sheet` category picker, long sections scroll inside the detail panel, and the common Cancelar action closes the active section so unsaved local edits are discarded by unmounting the section component.
 
+**The first category is My Account**, replacing the old separate Profile and Password entries. It uses role-aware horizontal tabs.
+
 | Section | Component | Data Source |
 |---------|-----------|-------------|
+| My Account | `MyAccountSection` (tabs) | Profile + Export APIs |
 | Reminder Settings | `ReminderSettingsSection` (inline panel) | `settingsStore.reminderSettings` |
 | Language | `LocaleSection` | `settingsStore.tenantSettings` |
 | Timezone | `TimezoneSection` | `settingsStore.tenantSettings` + `timezoneOptions` |
@@ -18,8 +21,38 @@ React 19 components using TypeScript, shadcn/ui (Radix), and Tailwind CSS. Organ
 | Public API Catalog | `PublicApiSection` | Public API Key management API |
 | WhatsApp | `WhatsappLinkSection` | Status polling, pairing code, or QR code |
 | Control de acceso | `AccessControlSection` | API direct |
-| Profile | `ProfileSection` | `getProfile()` API |
-| Password | `PasswordSection` | API direct |
+| Profile | `ProfileSection` (inside My Account) | `getProfile()` API |
+| Password | `PasswordSection` (inside My Account Security tab) | API direct |
+
+### MyAccountSection (`features/admin/components/my-account-section.tsx`)
+
+Role-aware horizontal tabs inside Settings. Renders different content based on role and context:
+
+| Tab | Tenant Admin | Master Support Context |
+|-----|-------------|------------------------|
+| Profile | `ProfileSection` — identity fields | `ProfileSection` with `updateTenantProfile()` targeting selected business |
+| Security | `PasswordSection` — password change | Not rendered |
+| Data | `DataTabContent` — export status/actions + deletion danger zone | `DataTabContent` — export status/actions only (no danger zone) |
+
+### DataTabContent (`features/admin/components/data-tab-content.tsx`)
+
+Data tab for Tenant Data Export and self-service Tenant Deletion. Connected to `useExportStore` for state management.
+
+**Export section:**
+- Empty state with description and "Request export" button (triggers password dialog)
+- Status display: pending, processing (with spinner), ready (with download button), failed (with retry option), cancelled
+- Previous version download while replacement is pending
+- Actor attribution: localized "You" / "Support" label
+- Cooldown countdown, expiry countdown
+- Cancel button for pending/processing jobs
+- Login to download (or navigate to Data tab)
+
+**Danger zone (Tenant Admin only):**
+- Description of irreversible deletion scope
+- "Delete account permanently" button opens confirmation dialog
+- Dialog requires current password + locale-aware destructive word (ELIMINAR/DELETE)
+- Loading state, error display, successful redirect to login
+- Master Support Context replaces danger zone with guidance to Master Dashboard
 
 ### ProfileSection (`features/admin/components/profile-section.tsx`)
 

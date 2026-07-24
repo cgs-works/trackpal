@@ -6,9 +6,16 @@
 2. Active tenant can be deactivated; this revokes all active refresh sessions for all users belonging to that tenant
 3. Deactivated tenant cannot log in (REST or WhatsApp) or be identified by phone
 4. Deactivated tenant can be reactivated; login reverts to normal behavior
-5. Only inactive tenants can be deleted
-6. Deleting a tenant is permanent: removes Evolution instance via API, cascades to delete all owned data (clients, catalog, subscriptions, mailbox config, lookup jobs, settings)
-7. Changing `evolution_instance_name` does not recreate or rename the Evolution instance (field is for reference only)
+5. Only inactive tenants can be deleted by Master
+6. Active tenants can be self-deleted by Tenant Admin (immediate, no grace period)
+7. Deleting a tenant is permanent: cancels in-flight exports, purges R2 artifacts, removes Evolution instance via API, cascades to delete all owned data (clients, catalog, subscriptions, subscriptions events/logs, mailbox config, lookup jobs, settings, export jobs, blocked clients, code-service selections, help acknowledgements)
+8. Tenant Admin self-deletion: requires current password + locale-aware destructive word (ELIMINAR/DELETE); fail-closed on external cleanup (R2, Evolution)
+9. Master deletion: requires prior deactivation + password step-up + destructive word; same external-first cleanup contract
+10. Master Support Context does not expose self-service deletion action; guides back to Master Dashboard
+11. Deleting a tenant does not revoke Google/Microsoft OAuth grants (local credentials are destroyed)
+12. Redis session cleanup after deletion is best-effort (keys expire in 5 minutes)
+13. Changing `evolution_instance_name` does not recreate or rename the Evolution instance (field is for reference only)
+14. No application tombstone is retained after deletion
 
 ## Client Lifecycle
 
@@ -165,6 +172,28 @@ All field validation goes through centralized `app/core/input_validation/`:
 7. Regeneration replaces the key and preserves Allowed Origins; revocation deletes the public API configuration.
 8. The public payload includes only service and plan `id` + `name` values. Pricing, availability, descriptions, and metadata are out of scope.
 9. Production abuse protection for the public catalog route belongs at Cloudflare rate limiting/WAF, not app-level rate limiting in v1.
+
+## Tenant Data Export Lifecycle
+
+1. Export is available to Tenant Admin (own active Tenant) and Master (any active or inactive Tenant)
+2. Export generation requires password re-entry (step-up) with a shared three-attempt/fifteen-minute rate limiter
+3. Fails closed when Redis HA cannot enforce the step-up limiter
+4. One current job per Tenant; a new request replaces the previous pending/processing/ready job
+5. 24-hour cooldown between new generations, shared across Tenant Admin and Master
+6. Export is independent of the current plan (Starter exports include preserved Pro data)
+7. Export bundle contains CSV files, JSON document, and localized README inside one ZIP
+8. Field names are stable English business-facing names, not database column names
+9. CSV uses UTF-8 BOM with formula-injection neutralization; JSON uses UTF-8 with `null` for missing values
+10. Ready objects are available for 72 hours from `ready_at`; TrackPal stops signing and deletes the object at expiry
+11. Presigned download URLs have a 15-minute lifetime, capped to remaining object lifetime
+12. Download does not require password reauthentication
+13. Previous ready artifact remains downloadable while a replacement is pending
+14. A failed or cancelled replacement leaves the previous ready artifact available until its own expiry
+15. Worker has a 30-minute recoverable lease; transient failures retry 3 times with backoff
+16. Authorized actors can cancel pending/processing exports; workers honor cancellation checkpoints
+17. Tenant Data Export uses a dedicated private Cloudflare R2 bucket (never the public diagnostic bucket)
+18. Export object keys are random, non-PII identifiers
+19. Logs record safe job transitions, actor ID, Tenant ID, counts, and outcome — never passwords, signed URLs, exported values, or object content
 
 ## Subscription Lifecycle
 

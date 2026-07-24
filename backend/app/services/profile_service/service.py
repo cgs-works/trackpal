@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import UserFacingError
@@ -8,7 +10,7 @@ from app.core.input_validation import (
     validate_password_policy,
 )
 from app.core.security import get_password_hash, verify_password
-from app.repositories import profiles_repository, users_repository
+from app.repositories import profiles_repository, tenants_repository, users_repository
 from app.models import Client, MasterProfile, Tenant, User
 from app.schemas.me import ProfileUpdate
 
@@ -68,6 +70,53 @@ class ProfileService:
 
         await db.commit()
         return await self.get_profile(db, user)
+
+    async def get_tenant_profile_by_id(
+        self, db: AsyncSession, tenant_id: UUID
+    ) -> Tenant | None:
+        """Get a tenant profile by its id (for Master support context)."""
+        return await tenants_repository.get(db, tenant_id)
+
+    async def update_tenant_profile_by_id(
+        self, db: AsyncSession, tenant_id: UUID, payload: ProfileUpdate
+    ) -> Tenant | None:
+        """Update a tenant profile by its id (for Master support context)."""
+        profile = await self.get_tenant_profile_by_id(db, tenant_id)
+        if profile is None:
+            return None
+
+        update_data = payload.model_dump(exclude_unset=True)
+
+        # Defensive normalization at service layer
+        if "full_name" in update_data and update_data["full_name"] is not None:
+            update_data["full_name"] = validate_full_name(update_data["full_name"])
+        if "email" in update_data:
+            update_data["email"] = validate_email(update_data["email"])
+        if "phone" in update_data:
+            if update_data["phone"] is not None:
+                update_data["phone"] = validate_phone(update_data["phone"])
+
+        # Duplicate phone check (skip if same value)
+        if "phone" in update_data and update_data["phone"] != profile.phone:
+            if update_data["phone"] is not None:
+                existing = await users_repository.get_by_phone(
+                    db, update_data["phone"]
+                )
+                if existing and existing[0].id != profile.owner_user_id:
+                    raise UserFacingError("profile_phone_registered")
+
+        # Map frontend field names to Tenant model fields
+        field_mapping = {
+            "full_name": "name",
+            "email": "email",
+            "phone": "whatsapp_phone",
+        }
+        for frontend_field, model_field in field_mapping.items():
+            if frontend_field in update_data:
+                setattr(profile, model_field, update_data[frontend_field])
+
+        await db.commit()
+        return await self.get_tenant_profile_by_id(db, tenant_id)
 
     async def change_password(
         self, db: AsyncSession, user: User, old_password: str, new_password: str

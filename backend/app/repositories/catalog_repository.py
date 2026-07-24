@@ -255,6 +255,51 @@ async def list_active_subscription_rows_for_plan(
     return list(result.all())
 
 
+# ── Export helpers ────────────────────────────────────────────────────────────
+
+
+async def list_services_with_plans(
+    db: AsyncSession, tenant_id: UUID
+) -> tuple[list[Service], dict[UUID, list[Plan]]]:
+    """List services (sorted by name) and plans grouped by service_id.
+
+    Returns (services, plans_by_service_id).  Plans within each group are
+    sorted by name.  Services without plans have an empty list.
+    """
+    services = await list_services(db, tenant_id)
+    result = await db.execute(
+        select(Plan)
+        .where(Plan.tenant_id == tenant_id)
+        .order_by(func.lower(Plan.name).asc(), Plan.created_at.asc())
+    )
+    plans = list(result.scalars().all())
+    plans_by_service: dict[UUID, list[Plan]] = {}
+    for p in plans:
+        plans_by_service.setdefault(p.service_id, []).append(p)
+    return services, plans_by_service
+
+
+async def list_all_subscriptions_for_export(
+    db: AsyncSession, tenant_id: UUID
+) -> list[tuple[Subscription, Client, Service, Plan]]:
+    """List all subscriptions (all statuses) for export, sorted by started_on descending.
+
+    Returns (Subscription, Client, Service, Plan) tuples with no filtering on
+    subscription status — expired, cancelled, and active records are included.
+    Encrypted columns (streaming_password_encrypted, profile_pin_encrypted) are
+    never selected.
+    """
+    result = await db.execute(
+        select(Subscription, Client, Service, Plan)
+        .join(Client, Client.id == Subscription.client_id)
+        .join(Service, Service.id == Subscription.service_id)
+        .join(Plan, Plan.id == Subscription.plan_id)
+        .where(Subscription.tenant_id == tenant_id)
+        .order_by(Subscription.starts_at.desc(), Subscription.created_at.desc())
+    )
+    return list(result.all())
+
+
 # ── Cascade delete helpers ─────────────────────────────────────────────────
 
 
@@ -310,6 +355,8 @@ __all__ = [
     "count_subscriptions_for_all_plans",
     "list_active_subscription_rows_for_service",
     "list_active_subscription_rows_for_plan",
+    "list_services_with_plans",
+    "list_all_subscriptions_for_export",
     "delete_subscriptions_for_service",
     "delete_subscriptions_for_plan",
     "delete_plans_for_service",

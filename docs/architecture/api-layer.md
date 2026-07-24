@@ -32,8 +32,12 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
 | `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
 | `/api/v1/access-control/*` | `app.api.v1.endpoints.access_control` | access-control | JWT + active tenant context |
-| `/api/v1/public/catalog` (planned) | Public API Catalog endpoint | public-catalog | Public API Key + exact `Origin` |
-| `/api/v1/public-api-key/*` (planned) | Public API Key management | public-api-key | JWT + Pro tenant or master support context |
+| `/api/v1/public/catalog` | Public API Catalog endpoint | public-catalog | Public API Key + exact `Origin` |
+| `/api/v1/public-api-key/*` | Public API Key management | public-api-key | JWT + Pro tenant or master support context |
+| `/api/v1/me/export` | Tenant Data Export self-service (request, status, cancel, download) | export | JWT + tenant or master (step-up) |
+| `/api/v1/me/delete-account` | Tenant Admin self-service deletion | delete-account | JWT + tenant (step-up + destructive word) |
+| `/api/v1/tenants/{tenant_id}/export` | Master-scoped Tenant Data Export (request, status, cancel, download) | tenant-export | JWT + master (step-up) |
+| `/api/v1/tenants/{tenant_id}/delete` | Master Tenant deletion of inactive Tenant | tenants | JWT + master (step-up + destructive word) |
 
 ### Public API Catalog
 
@@ -86,6 +90,7 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 - `GET /api/v1/me` — Get current user profile, includes `locale` and `timezone` read-only projections from `TenantSettings`
 - `PUT /api/v1/me` — Update own profile fields (identity fields only: name, email, phone; **not** locale or timezone)
 - `PUT /api/v1/me/password` — Change password
+- `POST /api/v1/me/delete-account` — **New**: Tenant Admin permanently deletes own active Tenant. See Tenant Deletion section below.
 
 Client role receives readonly profile data from `GET /api/v1/me`; profile edits are rejected, but password change remains allowed.
 
@@ -99,7 +104,7 @@ Client role receives readonly profile data from `GET /api/v1/me`; profile edits 
 - `PUT /api/v1/tenants/{id}` — Update tenant fields
 - `PATCH /api/v1/tenants/{id}/deactivate` — Deactivate tenant + revoke sessions
 - `PATCH /api/v1/tenants/{id}/activate` — Reactivate tenant
-- `DELETE /api/v1/tenants/{id}` — Delete inactive tenant + Evolution instance
+- `DELETE /api/v1/tenants/{id}` — **Updated**: Delete inactive tenant with password step-up and locale-aware destructive word confirmation. No longer a simple one-click delete. External-first cleanup (R2, Evolution).
 
 Tenant prefix edits update client technical usernames transactionally.
 
@@ -172,6 +177,37 @@ Note: Timezone is no longer part of subscription-settings. Timezone is managed v
 - `GET /api/v1/access-control/blocks` — List active blocked identities for the current tenant. Auth: JWT + active tenant context.
 - `POST /api/v1/access-control/blocks` — Block a phone number. Auth: JWT + active tenant context.
 - `DELETE /api/v1/access-control/blocks/{block_id}` — Unblock an identity. Auth: JWT + active tenant context.
+
+### Tenant Data Export Endpoints
+
+Self-service endpoints (tenant or master in support context):
+
+- `POST /api/v1/me/export` — Request a new Tenant Data Export. Requires password step-up via shared three-attempt/fifteen-minute rate limiter. Enforces 24-hour cooldown. Returns the current export status or 409 on cooldown. Auth: JWT + tenant or master.
+- `GET /api/v1/me/export` — Get the latest export job with enriched metadata (status, timestamps, actor attribution, expiry, cooldown, previous version). Returns 204 No Content when no export exists. Auth: JWT + tenant or master.
+- `POST /api/v1/me/export/cancel` — Cancel the current pending or processing export. Purges partial uploads from storage. Returns 404 if no job, 409 if job not cancellable. Auth: JWT + tenant or master.
+- `GET /api/v1/me/export/download` — Get a presigned download URL valid for 15 minutes (capped to object lifetime). No password reauthentication required. Returns 404 if no ready export. Auth: JWT + tenant or master.
+
+Master-scoped endpoints (target Tenant by ID):
+
+- `POST /api/v1/tenants/{tenant_id}/export` — Request export for specified Tenant (active or inactive). Requires Master password step-up. Auth: JWT + master.
+- `GET /api/v1/tenants/{tenant_id}/export` — Get export status for specified Tenant. Auth: JWT + master.
+- `POST /api/v1/tenants/{tenant_id}/export/cancel` — Cancel export for specified Tenant. Auth: JWT + master.
+- `GET /api/v1/tenants/{tenant_id}/export/download` — Get presigned download URL for specified Tenant. Auth: JWT + master.
+
+### Tenant Deletion Endpoints
+
+- `POST /api/v1/me/delete-account` — Tenant Admin permanently deletes own active Tenant. Requires password step-up + locale-aware destructive word (ELIMINAR/DELETE). External-first cleanup (R2, Evolution) before DB commit. Returns success and redirect info or error. Auth: JWT + tenant.
+- `POST /api/v1/tenants/{tenant_id}/delete` — Master deletes an inactive Tenant. Requires password step-up + destructive word. Same external-first, fail-closed cleanup contract. Auth: JWT + master.
+
+### Step-up Authentication Common Contract
+
+Both export generation and deletion use the same shared mechanism:
+- Current actor password required
+- Three failed attempts per actor in a sliding fifteen-minute window
+- Successful attempt resets counter
+- Fails closed when Redis HA cannot enforce the limiter
+- One generic localized error returned regardless of which input (password vs destructive word) was wrong
+- No password, confirmation word, or signed URL is ever logged
 
 
 ### Plan-aware tenant access

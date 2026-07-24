@@ -6,8 +6,7 @@ export const SETTINGS_CATEGORY_IDS = [
   "code-services",
   "mailbox",
   "access-control",
-  "profile",
-  "password",
+  "my-account",
   "whatsapp-link",
 ] as const;
 
