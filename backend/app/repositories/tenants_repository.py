@@ -1,6 +1,7 @@
 """Tenant repository — tenant table queries."""
 
 import uuid
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.phone import normalize_phone
-from app.models import Client, Tenant
+from app.models import DemoTenantStatus, Tenant
 from app.repositories import tenant_settings_repository
 
 
@@ -53,10 +54,11 @@ async def get_active(db: AsyncSession, tenant_id: UUID) -> Tenant | None:
 
 
 async def get_all(db: AsyncSession) -> tuple[list[Tenant], dict]:
-    """Get all tenants ordered by creation time with summary stats."""
+    """Get all production tenants ordered by creation time with summary stats."""
     result = await db.execute(
         select(Tenant)
         .options(selectinload(Tenant.owner))
+        .where(Tenant.is_demo.is_(False))
         .order_by(Tenant.created_at.desc())
     )
     profiles = list(result.scalars().all())
@@ -64,6 +66,53 @@ async def get_all(db: AsyncSession) -> tuple[list[Tenant], dict]:
     active = sum(1 for p in profiles if p.is_active)
     inactive = total - active
     return profiles, {"total": total, "active": active, "inactive": inactive}
+
+
+async def get_demos(
+    db: AsyncSession,
+    *,
+    status: DemoTenantStatus | None = None,
+    now: datetime | None = None,
+) -> list[Tenant]:
+    """List Demo Tenants, optionally filtering their derived lifecycle status."""
+    stmt = (
+        select(Tenant)
+        .options(selectinload(Tenant.owner))
+        .where(Tenant.is_demo.is_(True))
+        .order_by(Tenant.created_at.desc())
+    )
+
+    if status is not None:
+        current_time = now or datetime.now(timezone.utc)
+        if status is DemoTenantStatus.PENDING:
+            stmt = stmt.where(Tenant.demo_activated_at.is_(None))
+        elif status is DemoTenantStatus.ACTIVE:
+            stmt = stmt.where(
+                Tenant.demo_activated_at.is_not(None),
+                Tenant.demo_expires_at > current_time,
+            )
+        elif status is DemoTenantStatus.EXPIRED:
+            stmt = stmt.where(Tenant.demo_expires_at <= current_time)
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_demo(db: AsyncSession, tenant_id: UUID) -> Tenant | None:
+    """Get a Demo Tenant by id without matching production Tenants."""
+    result = await db.execute(
+        select(Tenant)
+        .options(selectinload(Tenant.owner))
+        .where(Tenant.id == tenant_id, Tenant.is_demo.is_(True))
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_expired_demos(
+    db: AsyncSession, *, now: datetime | None = None
+) -> list[Tenant]:
+    """Find Demo Tenants whose persisted expiration has passed."""
+    return await get_demos(db, status=DemoTenantStatus.EXPIRED, now=now)
 
 
 async def get_by_id_or_owner(db: AsyncSession, tenant_id: UUID) -> Tenant | None:
@@ -77,10 +126,14 @@ async def get_by_id_or_owner(db: AsyncSession, tenant_id: UUID) -> Tenant | None
 
 
 async def get_stats(db: AsyncSession) -> dict:
-    """Get tenant stats: total, active, inactive counts."""
-    total = await db.execute(select(func.count()).select_from(Tenant))
+    """Get production tenant stats, excluding Demo Tenants."""
+    total = await db.execute(
+        select(func.count()).select_from(Tenant).where(Tenant.is_demo.is_(False))
+    )
     active = await db.execute(
-        select(func.count()).select_from(Tenant).where(Tenant.is_active)
+        select(func.count())
+        .select_from(Tenant)
+        .where(Tenant.is_demo.is_(False), Tenant.is_active)
     )
     t = total.scalar_one()
     a = active.scalar_one()
@@ -201,6 +254,9 @@ __all__ = [
     "get_active_by_owner",
     "get_active",
     "get_all",
+    "get_demos",
+    "get_demo",
+    "get_expired_demos",
     "get_by_id_or_owner",
     "get_stats",
     "resolve_locale_by_owner",

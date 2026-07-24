@@ -17,6 +17,15 @@
 13. Changing `evolution_instance_name` does not recreate or rename the Evolution instance (field is for reference only)
 14. No application tombstone is retained after deletion
 
+## Demo Tenant Lifecycle
+
+1. Demo Tenant identity is orthogonal to the Starter/Pro plan and is distinguished by `tenants.is_demo`; production Tenants remain `is_demo = false` after migration.
+2. A Pending Demo Tenant has no activation or expiration timestamps. Active and Expired status is derived from the paired timestamps and authoritative server time; status is not stored as a second enum.
+3. Demo activation and expiration timestamps must be both null or both present, and expiration must be later than activation.
+4. Production Tenants cannot carry Demo lifecycle timestamps or a Demo credentials/session version other than the production default of `1`.
+5. Demo identity persistence does not require Tenant Settings, business records, mailbox, Evolution, Public API, export, or other integration rows.
+6. Production tenant list and metric queries exclude Demo Tenants; dedicated Demo queries filter by `is_demo` and can efficiently find expiration records.
+
 ## Client Lifecycle
 
 1. Client created by a Tenant (or Master in tenant context) and linked to that tenant

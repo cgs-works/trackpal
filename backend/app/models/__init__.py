@@ -14,7 +14,7 @@ from app.models.subscription import (
     SubscriptionReminderLog,
     SubscriptionReminderSettings,
 )
-from app.models.tenant import Tenant
+from app.models.tenant import DemoTenantStatus, Tenant
 from app.models.tenant_api_key import TenantApiKey
 from app.models.export_job import ExportJob
 from app.models.tenant_help_acknowledgement import TenantHelpAcknowledgement
@@ -35,6 +35,7 @@ __all__ = [
     "RefreshSession",
     "Service",
     "Tenant",
+    "DemoTenantStatus",
     "TenantApiKey",
     "ExportJob",
     "TenantHelpAcknowledgement",
