@@ -28,10 +28,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { t, getLocale } from "@/i18n";
 import { useExportStore } from "../stores/export-store";
-import {
-  deleteAccount,
-  type DeleteAccountRequest,
-} from "../services/settings-api";
+import { deleteAccount } from "../services/settings-api";
 
 
 export function DataTabContent() {
