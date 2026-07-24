@@ -1,4 +1,6 @@
 import os
+from datetime import datetime, timedelta, timezone
+
 from cryptography.fernet import Fernet
 
 # Set up a valid DATA_ENCRYPTION_KEY for testing before app or config is loaded
@@ -92,6 +94,81 @@ async def active_tenant_user(db_session):
     db_session.add(tenant)
     await db_session.flush()
     db_session.add(TenantSettings(tenant_id=tenant.id, locale="es"))
+    await db_session.commit()
+    return user
+
+
+@pytest_asyncio.fixture
+async def pending_demo_user(db_session):
+    user = User(
+        username="pending-demo",
+        password_hash=get_password_hash("demo-password"),
+        role="tenant",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        Tenant(
+            owner_user_id=user.id,
+            client_prefix="dmo01",
+            name="Pending Demo",
+            plan="starter",
+            is_active=True,
+            is_demo=True,
+        )
+    )
+    await db_session.commit()
+    return user
+
+
+@pytest_asyncio.fixture
+async def active_demo_user(db_session):
+    user = User(
+        username="active-demo",
+        password_hash=get_password_hash("demo-password"),
+        role="tenant",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    activated_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    db_session.add(
+        Tenant(
+            owner_user_id=user.id,
+            client_prefix="dmo02",
+            name="Active Demo",
+            plan="pro",
+            is_active=True,
+            is_demo=True,
+            demo_activated_at=activated_at,
+            demo_expires_at=activated_at + timedelta(hours=48),
+        )
+    )
+    await db_session.commit()
+    return user
+
+
+@pytest_asyncio.fixture
+async def expired_demo_user(db_session):
+    user = User(
+        username="expired-demo",
+        password_hash=get_password_hash("demo-password"),
+        role="tenant",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    activated_at = datetime.now(timezone.utc) - timedelta(hours=49)
+    db_session.add(
+        Tenant(
+            owner_user_id=user.id,
+            client_prefix="dmo03",
+            name="Expired Demo",
+            plan="starter",
+            is_active=True,
+            is_demo=True,
+            demo_activated_at=activated_at,
+            demo_expires_at=activated_at + timedelta(hours=48),
+        )
+    )
     await db_session.commit()
     return user
 

@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "runtime_contract": {
+    "source_docs": [],
+    "verification_gates": [
+      {
+        "name": "Backend test suite",
+        "command": "cd backend && uv run pytest"
+      },
+      {
+        "name": "Frontend test suite",
+        "command": "cd frontend && npm test -- --run"
+      },
+      {
+        "name": "Frontend lint",
+        "command": "cd frontend && npm run lint"
+      },
+      {
+        "name": "Frontend typecheck and build",
+        "command": "cd frontend && npm run build"
+      }
+    ],
+    "require_progress_append": true,
+    "require_one_item_per_iteration": true,
+    "require_commit": true
+  },
+  "items": [
+    {
+      "category": "functional",
+      "description": "Implement GitHub issue #123 exactly as specified by its live issue body and acceptance criteria.",
+      "steps": [
+        "Read issue #123 with gh and confirm its dependencies against the current repository state.",
+        "Load and follow the implement skill with issue #123 as the ticket input.",
+        "Implement, test, document, review, and verify every acceptance criterion in issue #123 without beginning another issue."
+      ],
+      "passes": false,
+      "regression_notes": "Implementation and backend verification complete, but the mandatory frontend lint gate is blocked by pre-existing errors in frontend/src/features/admin/components/mailbox-section.tsx (loadMailboxData accessed before declaration and React Compiler memoization preservation). No frontend files were changed for #123."
+    },
+    {
+      "category": "functional",
+      "description": "Implement GitHub issue #124 exactly as specified by its live issue body and acceptance criteria.",
+      "steps": [
+        "Read issue #124 with gh and confirm its dependencies against the current repository state.",
+        "Load and follow the implement skill with issue #124 as the ticket input.",
+        "Implement, test, document, review, and verify every acceptance criterion in issue #124 without beginning another issue."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Implement GitHub issue #125 exactly as specified by its live issue body and acceptance criteria.",
+      "steps": [
+        "Read issue #125 with gh and confirm its dependencies against the current repository state.",
+        "Load and follow the implement skill with issue #125 as the ticket input.",
+        "Implement, test, document, review, and verify every acceptance criterion in issue #125 without beginning another issue."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    },
+    {
+      "category": "functional",
+      "description": "Implement GitHub issue #112 exactly as specified by its live issue body and acceptance criteria.",
+      "steps": [
+        "Read issue #112 with gh and confirm its dependencies against the current repository state.",
+        "Load and follow the implement skill with issue #112 as the ticket input.",
+        "Implement, test, document, review, and verify every acceptance criterion in issue #112 without beginning another issue."
+      ],
+      "passes": false,
+      "regression_notes": ""
+    }
+  ]
+}

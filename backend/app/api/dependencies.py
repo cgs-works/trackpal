@@ -15,6 +15,7 @@ from app.repositories import (
     users_repository,
 )
 from app.models import User
+from app.services.demo_lifecycle_service import DemoAuthError, ensure_demo_request
 
 
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
@@ -60,6 +61,22 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account is deactivated",
             )
+        raw_demo_version = payload.get("demo_credentials_version")
+        try:
+            demo_version = (
+                int(raw_demo_version) if raw_demo_version is not None else None
+            )
+        except (TypeError, ValueError):
+            raise credentials_exception from None
+        try:
+            await ensure_demo_request(db, user, credential_version=demo_version)
+        except DemoAuthError as exc:
+            code_status = (
+                status.HTTP_410_GONE
+                if exc.code == "demo_ended"
+                else status.HTTP_401_UNAUTHORIZED
+            )
+            raise HTTPException(status_code=code_status, detail=exc.code) from exc
     if user.role == "client":
         raw_tenant_id = payload.get("active_tenant_id")
         if not raw_tenant_id:
@@ -158,9 +175,7 @@ async def get_pro_tenant_id(
         return tenant_id
     tenant = await tenants_repository.get_active(db, tenant_id)
     if tenant is None or tenant.plan != TENANT_PLAN_PRO:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return tenant_id
 
 

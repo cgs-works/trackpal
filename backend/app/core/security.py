@@ -26,6 +26,7 @@ def create_access_token(
     role: str,
     expires_delta: timedelta | None = None,
     active_tenant_id: str | None = None,
+    demo_credentials_version: int | None = None,
 ) -> str:
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
@@ -33,10 +34,16 @@ def create_access_token(
     payload = {"sub": subject, "role": role, "exp": expire, "type": "access"}
     if active_tenant_id:
         payload["active_tenant_id"] = active_tenant_id
+    if demo_credentials_version is not None:
+        payload["demo_credentials_version"] = demo_credentials_version
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
-def create_refresh_token(subject: str, expires_delta: timedelta | None = None) -> str:
+def create_refresh_token(
+    subject: str,
+    expires_delta: timedelta | None = None,
+    demo_credentials_version: int | None = None,
+) -> str:
     if expires_delta is None:
         expires_delta = timedelta(days=settings.refresh_token_expire_days)
     expire = datetime.now(timezone.utc) + expires_delta
@@ -46,6 +53,8 @@ def create_refresh_token(subject: str, expires_delta: timedelta | None = None) -
         "type": "refresh",
         "jti": generate_secure_token(),
     }
+    if demo_credentials_version is not None:
+        payload["demo_credentials_version"] = demo_credentials_version
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 

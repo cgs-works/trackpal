@@ -80,10 +80,11 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 
 ### Auth Endpoints
 
-- `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens
-- `POST /api/v1/auth/refresh` — Exchange refresh token for new token pair
-- `POST /api/v1/auth/logout` — Revoke refresh token
-- `POST /api/v1/auth/switch-tenant` — Master switches into an active tenant context (set `tenant_id`) or exits context (set `tenant_id: null`) and receives new token with/without `active_tenant_id`
+- `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens. Demo responses include only immutable lifecycle metadata (`is_demo`, plan, status, activation/expiry, credential version, and `server_time`); successful first login atomically starts the 48-hour evaluation.
+- `POST /api/v1/auth/refresh` — Exchange refresh token for new token pair while preserving Demo lifecycle timestamps and checking credential version and current status
+- `POST /api/v1/auth/logout` — Revoke refresh token; expired Demo Tenants are removed on this first relevant request
+- `GET|POST /api/v1/auth/heartbeat` — Authenticated lifecycle-only check returning Demo status, credential version, timestamps, plan, and authoritative server time
+- `POST /api/v1/auth/switch-tenant` — Master switches into an active production tenant context (set `tenant_id`) or exits context (set `tenant_id: null`) and receives new token with/without `active_tenant_id`; Demo Tenants cannot enter Master Support Context
 
 ### Me Endpoints (self-profile)
 

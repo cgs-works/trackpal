@@ -1,8 +1,10 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
 from app.core.tenant_plan import TenantPlan
+from app.models import DemoTenantStatus
 
 
 class LoginRequest(BaseModel):
@@ -29,6 +31,22 @@ class TokenResponse(BaseModel):
     user: UserInfo
     active_tenant_id: UUID | None = None
     tenant_plan: TenantPlan | None = None
+    is_demo: bool = False
+    demo_status: DemoTenantStatus | None = None
+    demo_activated_at: datetime | None = None
+    demo_expires_at: datetime | None = None
+    demo_credentials_version: int | None = None
+    server_time: datetime
+
+
+class DemoHeartbeatResponse(BaseModel):
+    is_demo: bool
+    tenant_plan: TenantPlan | None = None
+    demo_status: DemoTenantStatus | None = None
+    demo_activated_at: datetime | None = None
+    demo_expires_at: datetime | None = None
+    demo_credentials_version: int | None = None
+    server_time: datetime
 
 
 class RefreshRequest(BaseModel):

@@ -25,6 +25,10 @@
 4. Production Tenants cannot carry Demo lifecycle timestamps or a Demo credentials/session version other than the production default of `1`.
 5. Demo identity persistence does not require Tenant Settings, business records, mailbox, Evolution, Public API, export, or other integration rows.
 6. Production tenant list and metric queries exclude Demo Tenants; dedicated Demo queries filter by `is_demo` and can efficiently find expiration records.
+7. Demo authentication activates a Pending Demo Tenant only after password verification; activation and expiry are written once as an atomic 48-hour window and are never extended by login, refresh, logout, or password replacement.
+8. Login, refresh, and the lifecycle heartbeat expose only immutable Demo metadata and authoritative server time. Heartbeat and authenticated requests check the persisted credential version and current lifecycle status.
+9. Replacing Demo credentials revokes refresh sessions and increments the credential version while preserving lifecycle timestamps; older access and refresh sessions return `demo_credentials_replaced`.
+10. The first request at or after Demo expiry deletes the Demo Tenant and returns `demo_ended`; no background scheduler is required. Demo Tenants cannot enter Master Support Context.
 
 ## Client Lifecycle
 
