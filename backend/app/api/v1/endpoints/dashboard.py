@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.dependencies import CurrentUser, DbDep
+from app.api.dependencies import DemoGuardedUser, DbDep
 from app.schemas.dashboard import (
     ClientDashboardResponse,
     MasterDashboardResponse,
@@ -18,7 +18,7 @@ dashboard_service = DashboardService()
     | TenantDashboardResponse
     | ClientDashboardResponse,
 )
-async def get_dashboard(db: DbDep, current_user: CurrentUser):
+async def get_dashboard(db: DbDep, current_user: DemoGuardedUser):
     dashboard = await dashboard_service.get_dashboard(db, current_user)
     if dashboard is None:
         raise HTTPException(

@@ -13,6 +13,7 @@ from app.core.database import (
     set_internal_tenant_rls_context,
     set_rls_context,
 )
+from app.core.demo_guardrail import assert_demo_operation_allowed
 from app.core.input_validation import (
     validate_client_prefix,
     validate_email,
@@ -159,8 +160,7 @@ async def update_tenant(
     profile = await get_tenant(db, tenant_id)
     if profile is None:
         return None
-    if profile.is_demo:
-        raise ValueError("Demo Tenant must be managed through the Demo Tenant API")
+    assert_demo_operation_allowed(profile, operation="tenant_update")
 
     update_data = payload.model_dump(exclude_unset=True)
 
@@ -219,8 +219,7 @@ async def delete_tenant(db: AsyncSession, tenant_id: UUID) -> bool:
     profile = await get_tenant(db, tenant_id)
     if profile is None:
         return False
-    if profile.is_demo:
-        raise ValueError("Demo Tenant must be managed through the Demo Tenant API")
+    assert_demo_operation_allowed(profile, operation="tenant_delete")
     if profile.is_active:
         raise ValueError("Cannot delete active tenant. Deactivate first.")
 

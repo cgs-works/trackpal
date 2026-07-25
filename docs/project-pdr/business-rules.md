@@ -36,6 +36,13 @@
 14. Master Demo deletion is idempotent across Pending, Active, and Expired states and performs no unprovisioned Evolution, mailbox, n8n, Public API, export, or storage cleanup.
 15. Production Tenant update, activation, deactivation, and deletion routes reject Demo Tenants; Demo name and plan are immutable.
 
+## Demo Guardrails
+
+1. Demo JWTs cannot reach production dashboard, profile mutation, tenant settings, Clients, Catalog, Subscriptions, mailbox, WhatsApp/Evolution, n8n, Public API, export, or self-deletion operations.
+2. Guardrail rejections use the stable `demo_operation_blocked` code and happen before persistence, queueing, OAuth/provider exchange, or external-client calls.
+3. Authentication, refresh/logout, real password change, Help/i18n reads, and lifecycle heartbeat remain reachable for Demo Accounts.
+4. Production tenant mutation, Master export, and Master destructive flows reject Demo Tenants before step-up or cleanup work begins.
+
 ## Client Lifecycle
 
 1. Client created by a Tenant (or Master in tenant context) and linked to that tenant

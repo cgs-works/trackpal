@@ -8,10 +8,11 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.demo_guardrail import assert_demo_operation_allowed
 from app.core.encryption import decrypt_value, encrypt_value
 from app.core.metrics import metrics
 from app.models import TenantMailbox
-from app.repositories import mailbox_config_repository
+from app.repositories import mailbox_config_repository, tenants_repository
 from app.schemas.mailbox import OAuthStartResponse
 
 from .google import InvalidGrantError
@@ -101,6 +102,10 @@ class MailboxOAuthService:
         state_provider = payload["provider"]
         if state_provider != provider:
             raise ValueError(f"State provider mismatch: {state_provider} != {provider}")
+
+        tenant = await tenants_repository.get(db, tenant_id)
+        if tenant is not None:
+            assert_demo_operation_allowed(tenant, operation="mailbox_oauth_callback")
 
         mailbox = await mailbox_config_repository.get_by_tenant(db, tenant_id)
 

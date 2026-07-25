@@ -6,6 +6,10 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, set_internal_rls_context, set_rls_context
+from app.core.demo_guardrail import (
+    DemoGuardrailError,
+    assert_demo_operation_allowed,
+)
 from app.core.security import decode_token, verify_n8n_api_key
 from app.core.tenant_plan import TENANT_PLAN_PRO, TenantPlan
 from app.repositories import (
@@ -16,6 +20,7 @@ from app.repositories import (
 )
 from app.models import User
 from app.services.demo_lifecycle_service import DemoAuthError, ensure_demo_request
+
 
 
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
@@ -93,10 +98,34 @@ async def get_current_user(
     return user
 
 
+async def require_demo_guardrail(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    """Allow only production identities to use production-only endpoints."""
+    if current_user.role != "tenant":
+        return current_user
+
+    tenant = await tenants_repository.get_by_owner(db, current_user.id)
+    if tenant is None:
+        return current_user
+    try:
+        assert_demo_operation_allowed(tenant, operation="authenticated_endpoint")
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.code,
+        ) from exc
+    return current_user
+
+
+
+
 async def get_active_tenant_id(
     token: Annotated[str, Depends(oauth2_scheme)],
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_demo_guardrail)],
 ) -> UUID:
     payload = decode_token(token)
     if current_user.role == "client":
@@ -127,11 +156,19 @@ async def get_active_tenant_id(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid tenant context"
         ) from None
-    if await tenants_repository.get_active(db, tenant_id) is None:
+    tenant = await tenants_repository.get_active(db, tenant_id)
+    if tenant is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Active tenant context required",
         )
+    try:
+        assert_demo_operation_allowed(tenant, operation="tenant_scoped")
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.code,
+        ) from exc
     await set_rls_context(db, str(current_user.id), current_user.role, str(tenant_id))
     return tenant_id
 
@@ -140,6 +177,7 @@ async def get_current_tenant_plan(
     token: Annotated[str, Depends(oauth2_scheme)],
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_demo_guardrail)],
 ) -> TenantPlan | None:
     payload = decode_token(token)
     if current_user.role == "tenant":
@@ -162,6 +200,14 @@ async def get_current_tenant_plan(
                 detail="Invalid tenant context",
             ) from None
         tenant = await tenants_repository.get_active(db, tenant_id)
+        if tenant is not None:
+            try:
+                assert_demo_operation_allowed(tenant, operation="tenant_settings")
+            except DemoGuardrailError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=exc.code,
+                ) from exc
         return tenant.plan if tenant else None  # type: ignore[return-value]
     return None
 
@@ -212,6 +258,7 @@ async def set_api_key_rls_context(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+DemoGuardedUser = Annotated[User, Depends(require_demo_guardrail)]
 MasterUser = Annotated[User, Depends(require_role("master"))]
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 ApiKeyDbDep = Annotated[AsyncSession, Depends(set_api_key_rls_context)]

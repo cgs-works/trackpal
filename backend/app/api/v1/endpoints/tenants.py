@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.api.dependencies import DbDep, MasterUser
+from app.core.demo_guardrail import DemoGuardrailError
 from app.schemas.tenant import (
     TenantCreate,
     TenantListResponse,
@@ -81,6 +82,10 @@ async def update_tenant(
 ):
     try:
         profile = await tenant_service.update_tenant(db, tenant_id, payload)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -97,6 +102,10 @@ async def update_tenant(
 async def deactivate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
     try:
         profile = await tenant_service.deactivate_tenant(db, tenant_id)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -112,6 +121,10 @@ async def deactivate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser
 async def activate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
     try:
         profile = await tenant_service.activate_tenant(db, tenant_id)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -157,6 +170,10 @@ async def master_delete_tenant(
             locale=locale,
             limiter=limiter,
         )
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
     except StepUpError as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

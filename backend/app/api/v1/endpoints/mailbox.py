@@ -13,6 +13,7 @@ from app.api.v1.endpoints._mailbox_helpers import (
     test_mailbox_connection as _run_mailbox_test,
 )
 from app.core.encryption import encrypt_value
+from app.core.demo_guardrail import DemoGuardrailError
 from app.core.metrics import metrics
 from app.models import TenantMailbox
 from app.repositories import mailbox_config_repository
@@ -207,6 +208,11 @@ async def oauth_callback(
 
     try:
         await oauth_service.complete_oauth(db, provider, code, state)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.code,
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

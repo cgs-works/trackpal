@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import restore_rls_context
+from app.core.demo_guardrail import assert_demo_operation_allowed
 from app.core.tenant_plan import TENANT_PLAN_PRO
 from app.models import TenantApiKey
 from app.repositories import (
@@ -124,6 +125,7 @@ class PublicApiKeyService:
         tenant = await tenants_repository.get_active(db, key.tenant_id)
         if tenant is None or tenant.plan != TENANT_PLAN_PRO:
             return None
+        assert_demo_operation_allowed(tenant, operation="public_catalog")
 
         services = await catalog_repository.list_services(db, key.tenant_id)
         service_list: list[PublicCatalogService] = []

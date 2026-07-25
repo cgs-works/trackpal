@@ -256,7 +256,7 @@ async def test_demo_owner_cannot_mutate_name_or_use_production_deletion(
         json={"full_name": "Changed Demo"},
         headers=demo_headers,
     )
-    assert update.status_code == 409
+    assert update.status_code == 403
 
     from app.services.tenant_service import deletion
 
@@ -273,7 +273,7 @@ async def test_demo_owner_cannot_mutate_name_or_use_production_deletion(
         headers=demo_headers,
     )
 
-    assert delete.status_code == 409
+    assert delete.status_code == 403
     tenant = await db_session.get(Tenant, UUID(credentials["id"]))
     assert tenant is not None
     assert tenant.name == "Immutable Demo"
@@ -353,9 +353,9 @@ async def test_production_mutation_routes_cannot_change_or_deactivate_demo(
         f"/api/v1/tenants/{tenant_id}/activate", headers=headers
     )
 
-    assert update.status_code == 409
-    assert activate.status_code == 409
-    assert deactivate.status_code == 409
+    assert update.status_code == 403
+    assert activate.status_code == 403
+    assert deactivate.status_code == 403
     tenant = await db_session.get(Tenant, UUID(tenant_id))
     assert tenant.name == "Acme Demo"
     assert tenant.plan == "starter"
