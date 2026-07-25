@@ -245,10 +245,12 @@ Client navigation uses the same role-navigation and sidebar primitives. When pri
 
 ### MasterLayout (`features/master/layout/master-layout.tsx`)
 
-Sidebar layout for master pages:
-- Summary cards: total, active, inactive tenant counts
-- Business table with CRUD actions
-- Manage catalog action switches into tenant support context
+Sidebar layout for master pages. The Master dashboard keeps lifecycle work separated into accessible `Production` and `Demos` tabs:
+- **Production** renders the existing summary cards, search, tenant rows, exports, status actions, deletion, and support-context actions. Demo Tenants are excluded from its rows and counts even if a stale response contains them.
+- **Demos** uses the lifecycle-only `/demos/` API. It renders no workspace preview, activity feed, last-seen fields, summary cards, or usage telemetry.
+- Demo creation accepts only a name and Starter/Pro plan (Starter by default). Credential creation/replacement responses show the plaintext password once with independent username/password copy actions; dismissing the dialog clears it.
+- Pending, Active, and Expired lifecycle rows expose status-specific actions. Credential replacement is disabled for Expired rows, while deletion is confirmable for every status. Desktop tables have responsive mobile card lists.
+- Manage catalog action switches into tenant support context for production Tenants only.
 
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 

@@ -12,6 +12,7 @@ export interface Tenant {
   username: string
   created_at: string
   plan: TenantPlan
+  is_demo?: boolean
 }
 
 export interface TenantMeta {
