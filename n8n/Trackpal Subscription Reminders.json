@@ -1,13 +1,12 @@
 {
-  "name": "TrackPal Subscription Reminders",
+  "name": "Trackpal Subscription Reminders",
   "nodes": [
     {
       "parameters": {
         "rule": {
           "interval": [
             {
-              "field": "minutes",
-              "minutesInterval": 30
+              "triggerAtHour": 12
             }
           ]
         }
@@ -39,6 +38,11 @@
               "name": "evolution_api_url",
               "type": "string",
               "value": "https://rs-evoapi.wilfredocamacho.dev"
+            },
+            {
+              "name": "evolution_api_key",
+              "type": "string",
+              "value": "placeholder"
             },
             {
               "name": "default_instance",
@@ -140,7 +144,7 @@
     },
     {
       "parameters": {
-        "amount": "={{ $('Config').first().json.message_delay_seconds }}"
+        "amount": 2
       },
       "id": "d6e7f8a9-0b1c-2d3e-4f5a-6b7c8d9e0f1a",
       "name": "Wait",
@@ -150,18 +154,18 @@
         1440,
         304
       ],
-      "webhookId": "48dea8c3-2c6c-4b58-a01f-373d4771b0f1"
+      "webhookId": "64168043-97a6-4910-a587-9e28034182e8"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "{{ $('Config').first().json.evolution_api_url }}/send/text",
+        "url": "={{ $('Config').first().json.evolution_api_url }}/message/sendText/{{ $json.evolution_instance_name || $('Config').first().json.default_instance }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{ $json.evolution_instance_token }}"
+              "value": "={{ $('Config').first().json.evolution_api_key }}"
             }
           ]
         },
@@ -188,7 +192,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const sendResponse = $input.first()?.json || {};\nconst original = $('SplitInBatches').item.json;\nconst hasError = sendResponse.error !== undefined && sendResponse.error !== null;\nconst statusValue = sendResponse.status ? String(sendResponse.status).toLowerCase() : '';\nconst statusCode = Number(sendResponse.statusCode ?? sendResponse.code ?? 0);\nconst hasKey = Boolean(sendResponse.key || sendResponse.messageId || sendResponse.id || sendResponse?.message?.key?.id);\nconst successStatus = ['success', 'sent', 'pending', 'ok'];\nconst evolutionSuccess = !hasError && (hasKey || successStatus.includes(statusValue) || (Number.isFinite(statusCode) && statusCode >= 200 && statusCode < 300));\nreturn [{ json: { ...original, _evolutionSuccess: evolutionSuccess, _evolutionResponse: sendResponse } }];"
+        "jsCode": "const sendResponse = $input.first().json;\nconst original = $('SplitInBatches').item.json;\nconst hasError = sendResponse.error !== undefined && sendResponse.error !== null;\nconst statusIsError = sendResponse.status && String(sendResponse.status).toLowerCase() === 'error';\nconst evolutionSuccess = !hasError && !statusIsError;\nreturn [{ json: { ...original, _evolutionSuccess: evolutionSuccess, _evolutionResponse: sendResponse } }];"
       },
       "id": "f8a9b0c1-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
       "name": "Evaluate Result",
@@ -442,14 +446,14 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "e4a43f37-3cd4-466b-b908-9cebdf6b3350",
+  "versionId": "bebb01b7-9696-4ace-a587-4f36ca68d8e5",
   "meta": {
     "instanceId": "3a9ddc93932fcd7821c6e13a050d0af56c3c9456de8be4d2e7e266d4e0cdbf67"
   },

@@ -16,6 +16,11 @@
 |---------|------------|
 | **Tenant** | Entidad que presta servicios. Tiene su propia instancia de Evolution WhatsApp, catálogo, clientes y suscripciones. Un tenant es un "empresa" en el sistema. Cada tenant tiene un **plan** (starter o pro) que determina qué módulos puede usar. |
 | **Tenant Admin** | The person who operates a Tenant through TrackPal's administrative interfaces. Use **Tenant** for the business entity, never for the person. |
+| **Demo Tenant** | A disposable Tenant created by the Master for one prospect's non-extendable 48-hour evaluation, beginning with the first successful Demo Credentials login. It exposes the immutable Master-selected Starter or Pro capability set but only authentication and lifecycle state in the backend, cannot enter Master Support Context, and never converts into a production Tenant. |
+| **Pending Demo Tenant** | A Demo Tenant whose prospect has not logged in, so its evaluation clock has not started. It remains pending until activation or manual deletion by the Master. |
+| **Expired Demo Tenant** | A Demo Tenant whose evaluation has ended and can no longer be used. It awaits removal by the next request or by the Master. |
+| **Demo Credentials** | System-generated username and one-time-revealed password shared with the prospect. Password replacement revokes sessions without changing the evaluation clock. |
+| **Demo Guardrail** | The boundary that prevents a Demo Tenant from reaching real business persistence, external integrations, Public API Catalog access, Tenant Data Export, or self-deletion. Demo business operations remain browser-local. |
 | **Tenant Deletion** | The irreversible removal of a Tenant as a business entity, including its sole Tenant Admin identity and tenant-owned domain data. It is distinct from deactivation. Avoid the ambiguous term “account deletion.” |
 | **Tenant Data Export** | A portable snapshot of a Tenant's selected business records, expressed through a stable business-facing schema independent of TrackPal's persistence model. It excludes authentication, integration, mailbox, and subscription secrets. |
 | **Tenant Onboarding Status** | The tenant-wide record of orientation-tour releases that were completed or skipped. It belongs to the Tenant rather than to an individual Tenant Admin. |
