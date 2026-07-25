@@ -202,6 +202,8 @@ async def delete_tenant_as_master(
 
     if profile is None:
         raise ValueError("Tenant not found")
+    if profile.is_demo:
+        raise ValueError("Demo Tenant must be managed through the Demo Tenant API")
 
     if profile.is_active:
         raise ValueError("Cannot delete active tenant. Deactivate first.")

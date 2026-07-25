@@ -20,6 +20,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/clients/*` | `app.api.v1.endpoints.clients` | clients | JWT + tenant context |
 | `/api/v1/me/*` | `app.api.v1.endpoints.me` | me | JWT bearer |
 | `/api/v1/tenants/*` | `app.api.v1.endpoints.tenants` | tenants | JWT + master role |
+| `/api/v1/demos/*` | `app.api.v1.endpoints.demos` | demos | JWT + master role |
 | `/api/v1/integrations/*` | `app.api.v1.endpoints.integrations` | integrations | X-API-Key header |
 | `/api/v1/dashboard` | `app.api.v1.endpoints.dashboard` | dashboard | JWT bearer |
 | `/api/v1/i18n/*` | `app.api.v1.endpoints.i18n` | i18n | JWT bearer |
@@ -38,6 +39,27 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/me/delete-account` | Tenant Admin self-service deletion | delete-account | JWT + tenant (step-up + destructive word) |
 | `/api/v1/tenants/{tenant_id}/export` | Master-scoped Tenant Data Export (request, status, cancel, download) | tenant-export | JWT + master (step-up) |
 | `/api/v1/tenants/{tenant_id}/delete` | Master Tenant deletion of inactive Tenant | tenants | JWT + master (step-up + destructive word) |
+
+### Demo Tenant Endpoints (master-only)
+
+- `POST /api/v1/demos/` — Create a Pending Demo Tenant from only an immutable name and explicit Starter/Pro plan. Generates a validator-compatible username and cryptographically strong password; the plaintext password is returned once.
+- `GET /api/v1/demos/` — List Demo Tenants with lifecycle-only identity, plan, username, derived status, timestamps, authoritative server time, and remaining seconds. Production Tenants and prospect/workspace telemetry are excluded.
+- `POST /api/v1/demos/{demo_id}/credentials` — Replace credentials for Pending or Active demos, revoke all refresh sessions, increment the credential version, and preserve the original evaluation window. Expired demos return `demo_ended`.
+- `DELETE /api/v1/demos/{demo_id}` — Idempotently delete a Pending, Active, or Expired Demo Tenant identity and its sessions without invoking production external cleanup.
+
+Demo Tenant name and plan are immutable. Production tenant mutation routes reject Demo Tenants.
+
+### Tenants Endpoints (master-only)
+
+- `POST /api/v1/tenants/` — Create tenant + Evolution instance
+- `GET /api/v1/tenants/` — List all tenants with counts
+- `GET /api/v1/tenants/{id}` — Get tenant detail
+- `PUT /api/v1/tenants/{id}` — Update tenant fields
+- `PATCH /api/v1/tenants/{id}/deactivate` — Deactivate tenant + revoke sessions
+- `PATCH /api/v1/tenants/{id}/activate` — Reactivate tenant
+- `DELETE /api/v1/tenants/{id}` — **Updated**: Delete inactive tenant with password step-up and locale-aware destructive word confirmation. No longer a simple one-click delete. External-first cleanup (R2, Evolution).
+
+Tenant prefix edits update client technical usernames transactionally.
 
 ### Public API Catalog
 

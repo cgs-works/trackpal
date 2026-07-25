@@ -23,7 +23,12 @@ from app.core.input_validation import (
 from app.core.encryption import encrypt_value
 from app.core.redis_client import get_redis_manager
 from app.core.security import get_password_hash
-from app.repositories import clients_repository, sessions_repository, tenants_repository, users_repository
+from app.repositories import (
+    clients_repository,
+    sessions_repository,
+    tenants_repository,
+    users_repository,
+)
 from app.models import Tenant, TenantSettings, User
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.services.client_service import ClientService
@@ -109,7 +114,9 @@ async def create_tenant(
     return created_profile, plain_password if auto_generated else None
 
 
-async def _run_pro_to_starter_downgrade_effects(db: AsyncSession, profile: Tenant) -> None:
+async def _run_pro_to_starter_downgrade_effects(
+    db: AsyncSession, profile: Tenant
+) -> None:
     """Side effects when a tenant downgrades from pro to starter."""
     await sessions_repository.revoke_all_for_tenant_clients(db, profile.id)
     await db.commit()
@@ -117,13 +124,20 @@ async def _run_pro_to_starter_downgrade_effects(db: AsyncSession, profile: Tenan
     phone = validate_phone(profile.whatsapp_phone) if profile.whatsapp_phone else None
     manager = get_redis_manager()
     if manager is not None and phone:
+
         async def _delete_admin_session(client):
             await client.delete(f"session:admin:{phone}")
 
         try:
-            await manager.execute("clear_admin_session_on_downgrade", _delete_admin_session)
+            await manager.execute(
+                "clear_admin_session_on_downgrade", _delete_admin_session
+            )
         except Exception:
-            logger.warning("Failed to clear admin WhatsApp session during downgrade tenant=%s", profile.id, exc_info=True)
+            logger.warning(
+                "Failed to clear admin WhatsApp session during downgrade tenant=%s",
+                profile.id,
+                exc_info=True,
+            )
 
     if profile.evolution_instance_name and phone:
         try:
@@ -132,7 +146,11 @@ async def _run_pro_to_starter_downgrade_effects(db: AsyncSession, profile: Tenan
                 remote_jid=f"{phone}@s.whatsapp.net",
             )
         except Exception:
-            logger.warning("Failed to close Evolution session during downgrade tenant=%s", profile.id, exc_info=True)
+            logger.warning(
+                "Failed to close Evolution session during downgrade tenant=%s",
+                profile.id,
+                exc_info=True,
+            )
 
 
 async def update_tenant(
@@ -141,6 +159,8 @@ async def update_tenant(
     profile = await get_tenant(db, tenant_id)
     if profile is None:
         return None
+    if profile.is_demo:
+        raise ValueError("Demo Tenant must be managed through the Demo Tenant API")
 
     update_data = payload.model_dump(exclude_unset=True)
 
@@ -199,6 +219,8 @@ async def delete_tenant(db: AsyncSession, tenant_id: UUID) -> bool:
     profile = await get_tenant(db, tenant_id)
     if profile is None:
         return False
+    if profile.is_demo:
+        raise ValueError("Demo Tenant must be managed through the Demo Tenant API")
     if profile.is_active:
         raise ValueError("Cannot delete active tenant. Deactivate first.")
 

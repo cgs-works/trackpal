@@ -8,6 +8,7 @@ backend/
 │   │           ├── __init__.py
 │   │           ├── auth.py
 │   │           ├── catalog.py
+│   │           ├── demos.py              # Master-only Demo Tenant lifecycle management
 │   │           ├── clients.py
 │   │           ├── code_services.py   # Code-services governance (global + tenant)
 │   │           ├── access_control.py  # Tenant access-control blocks (list, create, delete)
@@ -108,6 +109,7 @@ backend/
 │   │   ├── mailbox.py
 │   │   ├── me.py
 │   │   ├── tenant.py
+│   │   ├── demo.py
 │   │   ├── whatsapp.py
 │   │   └── subscription/          # Package: create_update, responses
 │   │       ├── __init__.py
@@ -117,6 +119,7 @@ backend/
 │       ├── __init__.py            # Re-exports for stable public API
 │       ├── access_control_service.py  # Block/unblock + codigo session cleanup
 │       ├── auth_service/
+│       ├── demo_management_service.py    # Master Demo Tenant identity and credential lifecycle
 │       ├── catalog_service/
 │       ├── client_service/
 │       ├── contingency_reply_policy/

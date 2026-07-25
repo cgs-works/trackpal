@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    demos,
     access_control,
     auth,
     catalog,
@@ -12,7 +13,6 @@ from app.api.v1.endpoints import (
     i18n,
     integrations,
     mailbox,
-
     me,
     public_api_key,
     public_catalog,
@@ -24,6 +24,7 @@ from app.api.v1.endpoints import (
 )
 
 api_router = APIRouter()
+api_router.include_router(demos.router)
 api_router.include_router(auth.router)
 api_router.include_router(integrations.router)
 api_router.include_router(mailbox.router)
