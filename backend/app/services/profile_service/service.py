@@ -40,6 +40,8 @@ class ProfileService:
         if profile is None:
             return None
 
+        if user.role == "tenant" and isinstance(profile, Tenant) and profile.is_demo:
+            raise UserFacingError("demo_tenant_management_only")
         if user.role == "client":
             raise PermissionError("Client profile is read-only")
 

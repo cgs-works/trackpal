@@ -45,6 +45,7 @@ _CATALOG_ES_GENERAL: Final[dict[str, str]] = {
     "errors.plan_not_found": "Plan no encontrado",
     "errors.subscription_not_found": "Suscripción no encontrada",
     "errors.profile_not_found": "Perfil no encontrado",
+    "errors.demo_tenant_management_only": "Los Demo Tenants deben gestionarse mediante la API de Demo Tenants",
     "errors.reminder_log_not_found": "Registro de recordatorio no encontrado",
     "errors.catalog_delete_confirmation_required": "Debes confirmar la eliminación con confirm=true",
     "errors.service_delete_failed": "No se pudo eliminar el servicio",
