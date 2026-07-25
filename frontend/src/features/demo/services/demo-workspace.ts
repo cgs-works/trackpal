@@ -1,7 +1,7 @@
 import type { DemoAuthMetadata } from "@/store/auth";
 import type { TenantPlan } from "@/features/auth/services/auth-api";
 
-export const DEMO_WORKSPACE_SCHEMA_VERSION = 1;
+export const DEMO_WORKSPACE_SCHEMA_VERSION = 2;
 export const DEMO_WORKSPACE_KEY_PREFIX = "trackpal:demo-workspace:";
 
 export interface DemoWorkspaceEnvelope {
@@ -12,14 +12,26 @@ export interface DemoWorkspaceEnvelope {
   activated_at: string | null;
   expires_at: string | null;
   baseline_version: number;
+  plan_specific: Record<string, unknown>;
+  tour_state: Record<string, unknown>;
   saved_at: string;
 }
 
 export interface DemoWorkspaceRepository {
   readonly key: string;
   read(): DemoWorkspaceEnvelope | null;
-  ensure(metadata: DemoAuthMetadata): DemoWorkspaceEnvelope;
+  ensure(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
+  saveTourState(patch: Record<string, unknown>): void;
   reset(metadata: DemoAuthMetadata): DemoWorkspaceEnvelope;
+  clear(): void;
+}
+
+export interface DemoWorkspaceRepository {
+  readonly key: string;
+  read(): DemoWorkspaceEnvelope | null;
+  ensure(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
+  saveTourState(patch: Record<string, unknown>): void;
+  reset(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
   clear(): void;
 }
 
@@ -33,7 +45,14 @@ function workspaceKey(tenantId: string): string {
   return `${DEMO_WORKSPACE_KEY_PREFIX}${tenantId}`;
 }
 
-function createEnvelope(metadata: DemoAuthMetadata): DemoWorkspaceEnvelope {
+function createEnvelope(
+  metadata: DemoAuthMetadata,
+  baseline?: PlanBaselineFactory,
+): DemoWorkspaceEnvelope {
+  const defaults = baseline
+    ? baseline(metadata.plan, metadata)
+    : { plan_specific: {}, tour_state: {}, baseline_version: 1 };
+
   return {
     schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
     tenant_id: metadata.tenantId,
@@ -41,7 +60,9 @@ function createEnvelope(metadata: DemoAuthMetadata): DemoWorkspaceEnvelope {
     plan: metadata.plan,
     activated_at: metadata.activatedAt,
     expires_at: metadata.expiresAt,
-    baseline_version: 1,
+    baseline_version: defaults.baseline_version,
+    plan_specific: defaults.plan_specific,
+    tour_state: defaults.tour_state,
     saved_at: new Date().toISOString(),
   };
 }
@@ -60,8 +81,18 @@ function isWorkspaceEnvelope(value: unknown, tenantId: string): value is DemoWor
     "activated_at" in value &&
     "expires_at" in value &&
     "baseline_version" in value &&
+    "plan_specific" in value &&
+    "tour_state" in value &&
     "saved_at" in value
   );
+}
+
+function defaultBaseline(): {
+  plan_specific: Record<string, unknown>;
+  tour_state: Record<string, unknown>;
+  baseline_version: number;
+} {
+  return { plan_specific: {}, tour_state: {}, baseline_version: 1 };
 }
 
 export function createDemoWorkspaceRepository(
@@ -81,8 +112,32 @@ export function createDemoWorkspaceRepository(
     }
   };
 
-  const save = (metadata: DemoAuthMetadata): DemoWorkspaceEnvelope => {
-    const envelope = createEnvelope(metadata);
+  const save = (metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope => {
+    const envelope = createEnvelope(metadata, baseline);
+    storage.setItem(key, JSON.stringify(envelope));
+    return envelope;
+  };
+
+  const ensure = (metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope => {
+    return read() ?? save(metadata, baseline);
+  };
+
+  const saveTourState = (patch: Record<string, unknown>): void => {
+    const envelope = read();
+    if (!envelope) return;
+    const updated: DemoWorkspaceEnvelope = {
+      ...envelope,
+      tour_state: { ...envelope.tour_state, ...patch },
+      saved_at: new Date().toISOString(),
+    };
+    storage.setItem(key, JSON.stringify(updated));
+  };
+
+  const reset = (metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope => {
+    const existing = read();
+    const tour_state = existing?.tour_state ?? {};
+    const envelope = createEnvelope(metadata, baseline);
+    envelope.tour_state = tour_state;
     storage.setItem(key, JSON.stringify(envelope));
     return envelope;
   };
@@ -90,8 +145,9 @@ export function createDemoWorkspaceRepository(
   return {
     key,
     read,
-    ensure: (metadata) => read() ?? save(metadata),
-    reset: save,
+    ensure,
+    saveTourState,
+    reset,
     clear: () => storage.removeItem(key),
   };
 }
