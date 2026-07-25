@@ -32,6 +32,8 @@ class TokenResponse(BaseModel):
     active_tenant_id: UUID | None = None
     tenant_plan: TenantPlan | None = None
     is_demo: bool = False
+    demo_tenant_id: UUID | None = None
+    demo_name: str | None = None
     demo_status: DemoTenantStatus | None = None
     demo_activated_at: datetime | None = None
     demo_expires_at: datetime | None = None
@@ -41,13 +43,14 @@ class TokenResponse(BaseModel):
 
 class DemoHeartbeatResponse(BaseModel):
     is_demo: bool
+    demo_tenant_id: UUID | None = None
+    demo_name: str | None = None
     tenant_plan: TenantPlan | None = None
     demo_status: DemoTenantStatus | None = None
     demo_activated_at: datetime | None = None
     demo_expires_at: datetime | None = None
     demo_credentials_version: int | None = None
     server_time: datetime
-
 
 class RefreshRequest(BaseModel):
     refresh_token: str

@@ -81,16 +81,22 @@ Three Zustand stores in `src/store/`:
 
 ### `authStore` (`store/auth.ts`)
 
-- **State**: `token`, `refreshToken`, `user`, `activeTenantId` — persisted to `localStorage`
-- **Selectors**: `isAuthenticated`, `role`, `username`
-- **Plan-aware state**:
-  - `tenantPlan`: `starter | pro | null`, persisted from auth responses and corrected by tenant dashboard responses. This is only a UI hint; backend gates remain authoritative.
-  - `isMasterSupportContext`: true when Master is switched into a tenant (`role=master` + `activeTenantId`). Master support sees the full admin surface and a support banner.
+- **State**: `token`, `refreshToken`, `user`, `activeTenantId`, and `tenantPlan` remain persisted to `localStorage` for production compatibility.
+- **Demo context**: authenticated Demo Accounts persist immutable `demo` metadata separately from workspace data: tenant id, immutable display name, plan, lifecycle status, activation/expiration timestamps, credential version, and server time.
+- **Data source**: `dataSource` is selected once from the authenticated context. Production uses the existing API boundary; Demo Accounts use a tenant-isolated browser-local workspace repository. Resource contracts cover dashboard, settings, CRUD, and simulator consumers.
 - **Actions**:
-  - `login(username, password)` — POST to `/auth/login`, stores tokens + user, clears all caches, loads i18n catalog
-  - `switchTenant(tenantId)` — Master support context switch, clears all caches
-  - `logout()` — POST to `/auth/logout`, clears localStorage + all caches
-  - `setTenantPlan(plan)` — corrects `tenantPlan` from dashboard response after initial render
+  - `login(username, password)` — POST to `/auth/login`, stores tokens + auth metadata, clears all caches, and loads the i18n catalog.
+  - `refresh()` — rotates tokens while preserving Demo lifecycle metadata and distinguishes `demo_ended` and `demo_credentials_replaced` outcomes.
+  - `heartbeat()` — POST to `/auth/heartbeat` and updates lifecycle-only metadata without loading business data.
+  - `switchTenant(tenantId)` — Master support context switch, clears all caches, and returns to the production adapter.
+  - `logout()` — POST to `/auth/logout`, clears auth metadata and caches, but preserves the matching Demo Workspace for a later login.
+  - `setTenantPlan(plan)` — corrects production `tenantPlan` from dashboard responses without changing Demo's immutable plan.
+
+### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
+
+- Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
+- The current versioned envelope stores only lifecycle context and baseline/schema anchors. It deliberately excludes tokens, passwords, credentials, chat transcripts, and business records; later workspace slices extend the repository contract rather than auth storage.
+- `ensure()` creates the envelope lazily after authenticated Demo context exists; `reset()` replaces the current envelope; `clear()` removes only the selected Demo Account's workspace.
 
 ### `settingsStore` (`store/settings.ts`)
 
@@ -165,8 +171,9 @@ Singleton Axios instance in `src/lib/api.ts`:
 
 - Base URL from `VITE_API_URL` env var or fallback `http://localhost:8000/api/v1`
 - **Request interceptor**: Attaches `Authorization: Bearer <token>` from `localStorage`
-- **Response interceptor**: On HTTP 401, clears all auth state from `localStorage` and redirects to `/login`
+- **Response interceptor**: On HTTP 401, clears auth tokens and demo metadata and redirects to `/login`; the Demo Workspace remains untouched so credential replacement does not erase local business state.
 
+Authentication services also expose typed `/auth/refresh` and `/auth/heartbeat` contracts. Stable lifecycle details (`demo_ended`, `demo_credentials_replaced`) are kept distinct from ordinary authentication failures in `authStore.authOutcome`.
 Path alias: `@/` maps to `src/` (configured in `tsconfig.json` + `vite.config.ts`).
 
 ## Auth Flow

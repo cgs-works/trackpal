@@ -112,6 +112,8 @@ def lifecycle_metadata(
     if tenant is None or not tenant.is_demo:
         return {
             "is_demo": False,
+            "demo_tenant_id": None,
+            "demo_name": None,
             "tenant_plan": None,
             "demo_status": None,
             "demo_activated_at": None,
@@ -121,6 +123,8 @@ def lifecycle_metadata(
         }
     return {
         "is_demo": True,
+        "demo_tenant_id": tenant.id,
+        "demo_name": tenant.name,
         "tenant_plan": tenant.plan,
         "demo_status": tenant.get_demo_status(current_time),
         "demo_activated_at": _utc(tenant.demo_activated_at),

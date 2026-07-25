@@ -22,6 +22,7 @@ api.interceptors.response.use(
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
       localStorage.removeItem("activeTenantId");
+      localStorage.removeItem("demoMetadata");
       window.location.href = "/login";
     }
     return Promise.reject(error);

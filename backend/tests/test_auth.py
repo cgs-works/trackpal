@@ -129,10 +129,14 @@ async def test_demo_heartbeat_returns_lifecycle_only_data(client, active_demo_us
 
     assert response.status_code == 200
     assert response.json()["is_demo"] is True
+    assert response.json()["demo_tenant_id"]
+    assert response.json()["demo_name"] == "Active Demo"
     assert response.json()["demo_status"] == "active"
     assert response.json()["demo_credentials_version"] == 1
     assert set(response.json()) == {
         "is_demo",
+        "demo_tenant_id",
+        "demo_name",
         "tenant_plan",
         "demo_status",
         "demo_activated_at",
