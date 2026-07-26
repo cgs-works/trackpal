@@ -83,7 +83,7 @@ Three Zustand stores in `src/store/`:
 
 - **State**: `token`, `refreshToken`, `user`, `activeTenantId`, and `tenantPlan` remain persisted to `localStorage` for production compatibility.
 - **Demo context**: authenticated Demo Accounts persist immutable `demo` metadata separately from workspace data: tenant id, immutable display name, plan, lifecycle status, activation/expiration timestamps, credential version, and server time.
-- **Data source**: `dataSource` is selected once from the authenticated context. Production uses the existing API boundary; Demo Accounts use a tenant-isolated browser-local workspace repository. Resource contracts cover dashboard, settings, CRUD, and simulator consumers.
+- **Data source**: `dataSource` is selected once from the authenticated context. Production uses the existing API boundary; Demo Accounts use a tenant-isolated browser-local workspace repository. Resource contracts cover dashboard, settings, CRUD, simulator, and orientation consumers.
 - **Actions**:
   - `login(username, password)` — POST to `/auth/login`, stores tokens + auth metadata, clears all caches, and loads the i18n catalog.
   - `refresh()` — rotates tokens while preserving Demo lifecycle metadata and distinguishes `demo_ended` and `demo_credentials_replaced` outcomes.
@@ -98,8 +98,8 @@ Three Zustand stores in `src/store/`:
 ### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
 
 - Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
-- The current versioned envelope stores only lifecycle context and baseline/schema anchors. It deliberately excludes tokens, passwords, credentials, chat transcripts, and business records; later workspace slices extend the repository contract rather than auth storage.
-- `ensure()` creates the envelope lazily after authenticated Demo context exists; `reset()` replaces the current envelope; `clear()` removes only the selected Demo Account's workspace.
+- The versioned envelope stores lifecycle anchors, the deterministic plan baseline, browser-local settings/business state, and tour acknowledgements; it excludes tokens, passwords, credentials, session identifiers, and chat transcripts.
+- `ensure()` creates the envelope lazily after authenticated Demo context exists; Starter initializes the Master-provided business name, English locale, connected simulated mailbox/WhatsApp states, three ordered generic code services, and two ordered blocked identities. `reset()` restores that baseline while preserving tour state, and `clear()` removes only the selected Demo Account's workspace.
 
 ### `settingsStore` (`store/settings.ts`)
 
@@ -247,6 +247,8 @@ Collapsible sidebar layout for tenant admin pages:
 - Mobile: the shared header exposes an accessible menu control that opens the authorized destinations in a focus-managed `Sheet`; selecting a destination closes the Sheet.
 - Content: `<Outlet>` renders child routes.
 - When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`.
+- Starter Demo dashboard cards and enabled-service badges load through the selected data-source adapter and derive entirely from the browser-local workspace; production dashboards retain the API-backed adapter.
+- Starter Demo orientation content remains server-readable, while completion/skipping is acknowledged in the local workspace so reload and logout/login preserve it without a business mutation request.
 
 ### ClientLayout (`features/client/layout/client-layout.tsx`)
 

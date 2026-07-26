@@ -32,12 +32,7 @@ import {
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
 import { resolveSafeHelpNavigation } from "../safe-navigation";
-import {
-  acknowledgeHelpTour,
-  getUnseenHelpTour,
-  replayHelpTour,
-  type HelpTourRelease,
-} from "../services/help-api";
+import type { HelpTourRelease } from "../services/help-api";
 import { HELP_TARGET_CONTRACT_VERSION, isPrivateHelpEnabled } from "../config";
 import { SafeMarkdown } from "./safe-markdown";
 
@@ -212,6 +207,7 @@ export function OrientationTour() {
     tenantPlan,
     planDowngraded,
     isMasterSupportContext,
+    dataSource,
   } = useAuthStore();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
@@ -278,19 +274,21 @@ export function OrientationTour() {
       stopTour();
       return;
     }
-    void loadTour(getUnseenHelpTour);
-  }, [canRun, loadTour, stopTour, tenantPlan]);
+    void loadTour(dataSource.orientation.getUnseen);
+  }, [canRun, dataSource, loadTour, stopTour, tenantPlan]);
 
   useEffect(() => {
     if (!canRun) return;
     const handleReplay = () => {
       void loadTour(() =>
-        tour ? replayHelpTour(tour.release_id) : replayHelpTour(),
+        tour
+          ? dataSource.orientation.replay(tour.release_id)
+          : dataSource.orientation.replay(),
       );
     };
     window.addEventListener(HELP_TOUR_REPLAY_EVENT, handleReplay);
     return () => window.removeEventListener(HELP_TOUR_REPLAY_EVENT, handleReplay);
-  }, [canRun, loadTour, tour]);
+  }, [canRun, dataSource, loadTour, tour]);
 
   useEffect(() => {
     if (!running || !tour) return;
@@ -370,7 +368,7 @@ export function OrientationTour() {
       acknowledgementInFlight.current = true;
       setAcknowledging(true);
       try {
-        await acknowledgeHelpTour(tour.release_id, status);
+        await dataSource.orientation.acknowledge(tour.release_id, status);
         stopTour();
       } catch {
         toast.error(t("frontend.help.tour_acknowledge_error"));
@@ -379,7 +377,7 @@ export function OrientationTour() {
         setAcknowledging(false);
       }
     },
-    [stopTour, tour],
+    [dataSource, stopTour, tour],
   );
 
   const handleEvent: EventHandler = useCallback(

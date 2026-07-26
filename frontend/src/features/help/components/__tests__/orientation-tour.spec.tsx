@@ -18,6 +18,17 @@ const joyrideState = vi.hoisted(() => ({
   props: null as Record<string, unknown> | null,
   navigate: vi.fn(),
 }));
+const helpApiState = vi.hoisted(() => {
+  const acknowledge = vi.fn();
+  const getUnseen = vi.fn();
+  const replay = vi.fn();
+  return {
+    acknowledge,
+    getUnseen,
+    replay,
+    dataSource: { orientation: { acknowledge, getUnseen, replay } },
+  };
+});
 
 vi.mock("react-joyride", () => ({
   ACTIONS: { PREV: "prev" },
@@ -62,6 +73,7 @@ vi.mock("@/store/auth", () => ({
     role: "tenant",
     tenantPlan: "starter",
     isMasterSupportContext: false,
+    dataSource: helpApiState.dataSource,
   }),
 }));
 
@@ -79,9 +91,9 @@ vi.mock("../safe-markdown", () => ({
 }));
 
 vi.mock("../../services/help-api", () => ({
-  acknowledgeHelpTour: vi.fn(),
-  getUnseenHelpTour: vi.fn(),
-  replayHelpTour: vi.fn(),
+  acknowledgeHelpTour: helpApiState.acknowledge,
+  getUnseenHelpTour: helpApiState.getUnseen,
+  replayHelpTour: helpApiState.replay,
 }));
 
 const release: HelpTourRelease = {

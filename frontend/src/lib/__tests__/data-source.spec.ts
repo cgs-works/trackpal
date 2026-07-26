@@ -41,6 +41,7 @@ describe("authenticated data source selection", () => {
     expect(source.settings.storage).toBe("api");
     expect(source.crud.storage).toBe("api");
     expect(source.simulator.storage).toBe("api");
+    expect(source.orientation.storage).toBe("api");
   });
 
   it("selects the demo adapter with a tenant-isolated workspace", () => {
@@ -53,6 +54,7 @@ describe("authenticated data source selection", () => {
     expect(source.settings.storage).toBe("workspace");
     expect(source.crud.storage).toBe("workspace");
     expect(source.simulator.storage).toBe("workspace");
+    expect(source.orientation.storage).toBe("workspace");
   });
 });
 

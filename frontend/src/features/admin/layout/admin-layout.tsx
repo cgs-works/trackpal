@@ -65,6 +65,7 @@ export function AdminLayout() {
     void logout();
   }
 
+  return (
     <div className="flex h-screen flex-col bg-background/80 md:flex-row">
       <MobileSidebar
         username={username}
@@ -96,4 +97,5 @@ export function AdminLayout() {
       </main>
       {isPaused && <DemoOverlay onRetry={retry} />}
     </div>
+  );
 }

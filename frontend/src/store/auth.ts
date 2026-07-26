@@ -204,6 +204,11 @@ function clearTokenData() {
 }
 
 function stateFromToken(data: TokenResponse, demo: DemoAuthMetadata | null) {
+  const dataSource = createDataSource({
+    tenantId: data.active_tenant_id,
+    tenantPlan: data.tenant_plan,
+    demo,
+  });
   return {
     token: data.access_token,
     refreshToken: data.refresh_token,
@@ -211,11 +216,7 @@ function stateFromToken(data: TokenResponse, demo: DemoAuthMetadata | null) {
     activeTenantId: data.active_tenant_id,
     tenantPlan: data.tenant_plan,
     demo,
-    dataSource: createDataSource({
-      tenantId: data.active_tenant_id,
-      tenantPlan: data.tenant_plan,
-      demo,
-    }),
+    dataSource,
     authOutcome: "authenticated" as const,
     isMasterSupportContext: data.user.role === "master" && !!data.active_tenant_id,
     isAuthenticated: true,
@@ -385,14 +386,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } else {
       localStorage.removeItem("tenantPlan");
     }
-    set({
-      tenantPlan: plan,
-      planDowngraded: previousPlan === "pro" && plan === "starter",
-      dataSource: createDataSource({
+    const dataSource = createDataSource(
+      {
         tenantId: current.activeTenantId,
         tenantPlan: plan,
         demo: current.demo,
-      }),
+      },
+      current.dataSource.workspace ?? undefined,
+    );
+    set({
+      tenantPlan: plan,
+      planDowngraded: previousPlan === "pro" && plan === "starter",
+      dataSource,
     });
   },
 }));

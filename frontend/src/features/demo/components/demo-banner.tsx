@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
 import { DemoCountdown } from "@/features/demo/components/demo-countdown";
+import { createDemoBaseline } from "@/features/demo/services/demo-baseline";
 
 export function DemoBanner({
   showConnectivityWarning = false,
@@ -28,7 +29,7 @@ export function DemoBanner({
   const activeDemo = demo;
 
   function handleReset() {
-    dataSource.workspace?.reset(activeDemo);
+    dataSource.workspace?.reset(activeDemo, createDemoBaseline);
     setConfirmOpen(false);
     window.location.reload();
   }
