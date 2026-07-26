@@ -15,15 +15,20 @@ import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
 import { DemoCountdown } from "@/features/demo/components/demo-countdown";
 
-export function DemoBanner() {
+export function DemoBanner({
+  showConnectivityWarning = false,
+}: {
+  showConnectivityWarning?: boolean;
+}) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const demo = useAuthStore((s) => s.demo);
   const dataSource = useAuthStore((s) => s.dataSource);
 
   if (!demo || demo.status !== "active") return null;
+  const activeDemo = demo;
 
   function handleReset() {
-    dataSource.workspace?.reset(demo);
+    dataSource.workspace?.reset(activeDemo);
     setConfirmOpen(false);
     window.location.reload();
   }
@@ -42,6 +47,11 @@ export function DemoBanner() {
         </span>
       </AlertTitle>
       <AlertDescription className="flex flex-col gap-2">
+        {showConnectivityWarning && (
+          <p role="status" className="font-medium text-destructive">
+            {t("frontend.demo.banner.connectivity_warning")}
+          </p>
+        )}
         <p>
           {demo.expiresAt && (
             <DemoCountdown expiresAt={demo.expiresAt} serverTime={demo.serverTime} />

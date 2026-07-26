@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { DemoBanner } from "../demo-banner";
-import { useAuthStore } from "@/store/auth";
 
 vi.mock("@/i18n", () => ({
   t: (key: string, params?: Record<string, string | number>) => {
@@ -9,6 +8,8 @@ vi.mock("@/i18n", () => ({
       "frontend.demo.banner.title": "Demo Account",
       "frontend.demo.banner.remaining": "{time} remaining",
       "frontend.demo.banner.browser_local": "Data is stored in this browser only.",
+      "frontend.demo.banner.connectivity_warning":
+        "We are having trouble verifying this demo. Your local work is preserved; retry shortly.",
       "frontend.demo.banner.reset": "Reset Demo Data",
       "frontend.demo.banner.reset_confirm_title": "Reset demo data?",
       "frontend.demo.banner.reset_confirm_description":
@@ -47,7 +48,7 @@ vi.mock("@/store/auth", () => ({
 const activeDemoMetadata = {
   tenantId: "demo-tenant-1",
   name: "Test Demo",
-  plan: "starter" as const,
+  plan: "starter" as "starter" | "pro",
   status: "active" as const,
   activatedAt: "2026-07-25T10:00:00Z",
   expiresAt: "2026-07-27T10:00:00Z",
@@ -142,6 +143,17 @@ describe("DemoBanner", () => {
     mockAuthStore({ demo: pendingDemoMetadata });
     const { container } = render(<DemoBanner />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it("shows a localized warning after one connectivity failure", () => {
+    mockAuthStore();
+    render(<DemoBanner showConnectivityWarning />);
+
+    expect(
+      screen.getByText(
+        "We are having trouble verifying this demo. Your local work is preserved; retry shortly.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows browser-local explanation", () => {

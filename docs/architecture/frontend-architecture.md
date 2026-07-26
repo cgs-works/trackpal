@@ -92,6 +92,9 @@ Three Zustand stores in `src/store/`:
   - `logout()` — POST to `/auth/logout`, clears auth metadata and caches, but preserves the matching Demo Workspace for a later login.
   - `setTenantPlan(plan)` — corrects production `tenantPlan` from dashboard responses without changing Demo's immutable plan.
 
+- **Demo connectivity**: `useDemoHeartbeat` owns one interval while an active Demo Account is mounted, deduplicates overlapping focus and hidden-to-visible checks, and removes the interval/listeners on logout, navigation, unmount, or context change. One transient failure shows a localized warning; two pause the shell behind an accessible manual-retry overlay. Successful retry resets the count and keeps the browser-local workspace intact.
+- **Lifecycle fail-closed**: a missing, changed, expired, or deleted Demo identity clears the matching workspace and navigates to the public Demo Ended page; `demo_credentials_replaced` preserves the workspace and returns to login with a reauthentication message. Manual logout remains a neutral login transition.
+
 ### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
 
 - Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
@@ -171,7 +174,7 @@ Singleton Axios instance in `src/lib/api.ts`:
 
 - Base URL from `VITE_API_URL` env var or fallback `http://localhost:8000/api/v1`
 - **Request interceptor**: Attaches `Authorization: Bearer <token>` from `localStorage`
-- **Response interceptor**: On HTTP 401, clears auth tokens and demo metadata and redirects to `/login`; the Demo Workspace remains untouched so credential replacement does not erase local business state.
+- **Response interceptor**: On ordinary HTTP 401, clears auth tokens and demo metadata and redirects to `/login`. Lifecycle-coded Demo failures (`demo_ended`, `demo_credentials_replaced`) bypass the hard redirect so `authStore` can preserve or clear the matching workspace and route to the correct outcome; the Demo Workspace remains untouched for credential replacement.
 
 Authentication services also expose typed `/auth/refresh` and `/auth/heartbeat` contracts. Stable lifecycle details (`demo_ended`, `demo_credentials_replaced`) are kept distinct from ordinary authentication failures in `authStore.authOutcome`.
 Path alias: `@/` maps to `src/` (configured in `tsconfig.json` + `vite.config.ts`).

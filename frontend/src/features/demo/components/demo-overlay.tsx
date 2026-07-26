@@ -1,17 +1,29 @@
+import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-export function DemoOverlay() {
+interface DemoOverlayProps {
+  onRetry: () => void;
+}
+
+export function DemoOverlay({ onRetry }: DemoOverlayProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-      role="alert"
-      aria-live="assertive"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="demo-overlay-title"
       data-testid="demo-overlay"
     >
-      <div className="rounded-lg border bg-card p-6 text-center shadow-lg max-w-sm mx-4">
-        <p className="text-sm font-medium text-foreground">
+      <div className="mx-4 max-w-sm rounded-lg border bg-card p-6 text-center shadow-lg">
+        <h2
+          id="demo-overlay-title"
+          className="text-sm font-medium text-foreground"
+        >
           {t("frontend.demo.overlay.message")}
-        </p>
+        </h2>
+        <Button className="mt-4" onClick={onRetry}>
+          {t("frontend.demo.overlay.retry")}
+        </Button>
       </div>
     </div>
   );

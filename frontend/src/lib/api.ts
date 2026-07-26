@@ -17,7 +17,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const detail = error.response?.data?.detail;
+    const isDemoLifecycleFailure =
+      detail === "demo_ended" || detail === "demo_credentials_replaced";
+
+    if (error.response?.status === 401 && !isDemoLifecycleFailure) {
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
@@ -26,7 +30,7 @@ api.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

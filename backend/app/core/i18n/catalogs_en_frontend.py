@@ -673,6 +673,8 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.reset_confirm_description": "This restores the demo baseline. Credentials, expiration, and tour progress are preserved.",
     "frontend.demo.banner.reset_confirm_action": "Reset data",
     "frontend.demo.banner.expired": "Expired",
+    "frontend.demo.banner.connectivity_warning": "We are having trouble verifying this demo. Your local work is preserved; retry shortly.",
+    "frontend.demo.overlay.retry": "Retry now",
     "frontend.demo.overlay.message": "Interaction paused. Verifying demo status…",
 }
 

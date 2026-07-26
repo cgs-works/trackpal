@@ -142,6 +142,16 @@ function metadataFromHeartbeat(
     serverTime: data.server_time,
   };
 }
+
+function demoEndedError(): Error & {
+  response: { data: { detail: "demo_ended" } };
+} {
+  const error = new Error("demo_ended") as Error & {
+    response: { data: { detail: "demo_ended" } };
+  };
+  error.response = { data: { detail: "demo_ended" } };
+  return error;
+}
 function loadFromStorage() {
   const token = localStorage.getItem("token");
   return {
@@ -302,9 +312,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   heartbeat: async () => {
     try {
       const data = await heartbeatApi();
+      const currentDemo = get().demo;
       const tenantId = get().activeTenantId;
       const tenantPlan = data.tenant_plan ?? get().tenantPlan;
       const demo = metadataFromHeartbeat(data, tenantId);
+
+      if (
+        currentDemo &&
+        (!demo ||
+          demo.tenantId !== currentDemo.tenantId ||
+          demo.status !== "active")
+      ) {
+        throw demoEndedError();
+      }
+
       saveDemoMetadata(demo);
       if (data.tenant_plan) {
         localStorage.setItem("tenantPlan", data.tenant_plan);

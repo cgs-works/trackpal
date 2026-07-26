@@ -86,7 +86,7 @@ function ThemeToggle({
 export function LoginForm() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-
+  const authOutcome = useAuthStore((s) => s.authOutcome);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -111,6 +111,12 @@ export function LoginForm() {
   }, [isDark]);
 
   useEffect(() => subscribeLocale(() => setTick((n) => n + 1)), []);
+
+  useEffect(() => {
+    if (authOutcome === "demo_credentials_replaced") {
+      setErrorMessage(t("login.demo_credentials_replaced"));
+    }
+  }, [authOutcome]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

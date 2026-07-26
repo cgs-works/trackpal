@@ -11,8 +11,10 @@ function IndexComponent() {
   const { isAuthenticated, role, authOutcome } = useAuthStore();
 
   useEffect(() => {
-    if (authOutcome === "demo_ended" || authOutcome === "demo_credentials_replaced") {
+    if (authOutcome === "demo_ended") {
       navigate({ to: "/demo-ended", replace: true });
+    } else if (authOutcome === "demo_credentials_replaced") {
+      navigate({ to: "/login", replace: true });
     } else if (isAuthenticated) {
       if (role === "master") {
         navigate({ to: "/master/dashboard", replace: true });

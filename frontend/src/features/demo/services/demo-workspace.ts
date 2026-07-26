@@ -87,13 +87,6 @@ function isWorkspaceEnvelope(value: unknown, tenantId: string): value is DemoWor
   );
 }
 
-function defaultBaseline(): {
-  plan_specific: Record<string, unknown>;
-  tour_state: Record<string, unknown>;
-  baseline_version: number;
-} {
-  return { plan_specific: {}, tour_state: {}, baseline_version: 1 };
-}
 
 export function createDemoWorkspaceRepository(
   tenantId: string,

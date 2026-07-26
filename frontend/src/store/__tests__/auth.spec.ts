@@ -156,6 +156,49 @@ describe("auth context persistence", () => {
     expect(useAuthStore.getState().demo?.serverTime).toBe("2026-07-25T10:01:00.000Z");
     expect(useAuthStore.getState().dataSource.mode).toBe("demo");
   });
+  it("keeps production authentication intact on a non-demo heartbeat", async () => {
+    vi.mocked(loginApi).mockResolvedValueOnce(productionResponse);
+    await useAuthStore.getState().login("production-user", "password");
+    vi.mocked(authHeartbeatApi).mockResolvedValueOnce({
+      is_demo: false,
+      demo_tenant_id: null,
+      demo_name: null,
+      tenant_plan: "starter",
+      demo_status: null,
+      demo_activated_at: null,
+      demo_expires_at: null,
+      demo_credentials_version: null,
+      server_time: "2026-07-25T10:01:00.000Z",
+    });
+
+    await useAuthStore.getState().heartbeat();
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(useAuthStore.getState().authOutcome).toBe("authenticated");
+    expect(useAuthStore.getState().demo).toBeNull();
+  });
+  it("ends a demo session when heartbeat loses its server identity", async () => {
+    vi.mocked(loginApi).mockResolvedValueOnce(demoResponse);
+    await useAuthStore.getState().login("demo-user", "password");
+    useAuthStore.getState().dataSource.workspace?.ensure(useAuthStore.getState().demo!);
+    vi.mocked(authHeartbeatApi).mockResolvedValueOnce({
+      is_demo: false,
+      demo_tenant_id: null,
+      demo_name: null,
+      tenant_plan: null,
+      demo_status: null,
+      demo_activated_at: null,
+      demo_expires_at: null,
+      demo_credentials_version: null,
+      server_time: "2026-07-25T10:01:00.000Z",
+    });
+
+    await expect(useAuthStore.getState().heartbeat()).rejects.toThrow("demo_ended");
+
+    expect(useAuthStore.getState().authOutcome).toBe("demo_ended");
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(localStorage.getItem("trackpal:demo-workspace:demo-tenant")).toBeNull();
+  });
 
   it("distinguishes credential replacement while preserving the workspace", async () => {
     vi.mocked(loginApi).mockResolvedValueOnce(demoResponse);

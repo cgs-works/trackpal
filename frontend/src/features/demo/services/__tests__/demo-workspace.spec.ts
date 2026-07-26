@@ -185,7 +185,7 @@ describe("DemoWorkspaceRepository", () => {
     });
 
     it("invokes the baseline factory when no workspace exists", () => {
-      const baseline: PlanBaselineFactory = vi.fn((plan, metadata) => ({
+      const baseline: PlanBaselineFactory = vi.fn((plan, _metadata) => ({
         plan_specific: { seeded: true, plan },
         tour_state: { toursCompleted: [] },
         baseline_version: 2,
