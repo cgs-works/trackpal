@@ -20,7 +20,6 @@ import {
   cancelSubscription,
   renewSubscription,
   reactivateSubscription,
-  getPlansForService,
   type Subscription,
   type Plan,
   type SubscriptionCreate,
@@ -59,7 +58,7 @@ export function SubscriptionsPage() {
   // Data
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const { dataSource } = useAuthStore();
-  const { clients, services, loadClients, loadServices } = useCatalogStore();
+  const { clients, services, loadClients, loadServices, loadPlans } = useCatalogStore();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -98,7 +97,7 @@ export function SubscriptionsPage() {
   // ── Load data ──────────────────────────────────────────────
   const loadDropdowns = useCallback(async () => {
     try {
-      await Promise.all([loadClients(dataSource.crud.clients), loadServices()]);
+      await Promise.all([loadClients(dataSource.crud.clients), loadServices(dataSource.catalog)]);
     } catch {
       // Non-critical
     }
@@ -135,7 +134,7 @@ export function SubscriptionsPage() {
   async function handleServiceChange(serviceId: string) {
     setLoadingPlans(true);
     try {
-      const data = await getPlansForService(serviceId);
+      const data = await loadPlans(serviceId, dataSource.catalog);
       setPlans(data);
     } catch {
       setPlans([]);
@@ -158,7 +157,7 @@ export function SubscriptionsPage() {
       try {
         const all: Plan[] = [];
         for (const s of services) {
-          const p = await getPlansForService(s.id);
+          const p = await loadPlans(s.id, dataSource.catalog);
           all.push(...p);
         }
         setAllPlans(all);
@@ -167,7 +166,7 @@ export function SubscriptionsPage() {
       }
     }
     if (services.length > 0) loadAllPlans();
-  }, [services]);
+  }, [services, dataSource.catalog, loadPlans]);
   const planMap = Object.fromEntries(allPlans.map((p) => [p.id, p.name]));
 
   // ── Create ─────────────────────────────────────────────────

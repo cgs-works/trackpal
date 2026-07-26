@@ -21,20 +21,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "@/i18n";
-import {
-  createService,
-  updateService,
-  getServiceDeletePreview,
-  deleteService,
-  createPlan,
-  updatePlan,
-  getPlanDeletePreview,
-  deletePlan,
-  type Service,
-  type Plan,
-  type DeletePreview,
+import type {
+  Service,
+  Plan,
+  DeletePreview,
 } from "../services/catalog-api";
 import { useCatalogStore } from "@/store/catalog";
+import { useAuthStore } from "@/store/auth";
 
 // ── Rename Dialog ──────────────────────────────────────────────
 interface RenameDialogProps {
@@ -269,6 +262,7 @@ function DeletePreviewDialog({
 
 // ── Main Catalog Page ──────────────────────────────────────────
 export function CatalogPage() {
+  const { dataSource } = useAuthStore();
   const {
     services,
     loadServices,
@@ -313,7 +307,7 @@ export function CatalogPage() {
     setIsLoading(true);
     setError("");
     try {
-      const data = await loadServices();
+      const data = await loadServices(dataSource.catalog);
       if (!selectedServiceId && data.length > 0) {
         setSelectedServiceId(data[0].id);
       }
@@ -324,11 +318,11 @@ export function CatalogPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [loadServices, selectedServiceId]);
+  }, [loadServices, selectedServiceId, dataSource.catalog]);
 
   useEffect(() => {
     loadServicesData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadServicesData]);
 
   // ── Load plans when service changes ────────────────────────
   const loadPlansData = useCallback(async () => {
@@ -337,14 +331,14 @@ export function CatalogPage() {
       return;
     }
     try {
-      const data = await loadPlans(selectedServiceId);
+      const data = await loadPlans(selectedServiceId, dataSource.catalog);
       setPlans(data);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load plans"
       );
     }
-  }, [selectedServiceId, loadPlans]);
+  }, [selectedServiceId, loadPlans, dataSource.catalog]);
 
   useEffect(() => {
     loadPlansData();
@@ -356,7 +350,7 @@ export function CatalogPage() {
     if (!newServiceName.trim()) return;
     setCreatingService(true);
     try {
-      const service = await createService({ name: newServiceName.trim() });
+      const service = await dataSource.catalog.createService({ name: newServiceName.trim() });
       setNewServiceName("");
       setSelectedServiceId(service.id);
       invalidateServices();
@@ -377,7 +371,7 @@ export function CatalogPage() {
     if (!newPlanName.trim() || !selectedServiceId) return;
     setCreatingPlan(true);
     try {
-      await createPlan(selectedServiceId, { name: newPlanName.trim() });
+      await dataSource.catalog.createPlan(selectedServiceId, { name: newPlanName.trim() });
       setNewPlanName("");
       invalidatePlans(selectedServiceId);
       await loadPlansData();
@@ -398,7 +392,7 @@ export function CatalogPage() {
     setRenameCallback(() => async (name: string) => {
       setRenameSaving(true);
       try {
-        await updateService(service.id, { name });
+        await dataSource.catalog.updateService(service.id, { name });
         invalidateServices();
         await loadServicesData();
         toast.success(t("frontend.catalog.service_renamed"));
@@ -421,7 +415,7 @@ export function CatalogPage() {
     setRenameCallback(() => async (name: string) => {
       setRenameSaving(true);
       try {
-        await updatePlan(selectedServiceId, plan.id, { name });
+        await dataSource.catalog.updatePlan(selectedServiceId, plan.id, { name });
         invalidatePlans(selectedServiceId);
         await loadPlansData();
         toast.success(t("frontend.catalog.plan_renamed"));
@@ -444,12 +438,12 @@ export function CatalogPage() {
     setDeleteError("");
     setDeletePreview(null);
     try {
-      const preview = await getServiceDeletePreview(service.id);
+      const preview = await dataSource.catalog.getServiceDeletePreview(service.id);
       setDeletePreview(preview);
       setDeleteCallback(() => async () => {
         setDeleting(true);
         try {
-          await deleteService(service.id);
+          await dataSource.catalog.deleteService(service.id);
           if (selectedServiceId === service.id) {
             setSelectedServiceId("");
           }
@@ -481,12 +475,12 @@ export function CatalogPage() {
     setDeleteError("");
     setDeletePreview(null);
     try {
-      const preview = await getPlanDeletePreview(selectedServiceId, plan.id);
+      const preview = await dataSource.catalog.getPlanDeletePreview(selectedServiceId, plan.id);
       setDeletePreview(preview);
       setDeleteCallback(() => async () => {
         setDeleting(true);
         try {
-          await deletePlan(selectedServiceId, plan.id);
+          await dataSource.catalog.deletePlan(selectedServiceId, plan.id);
           invalidatePlans(selectedServiceId);
           await loadPlansData();
           toast.success(t("frontend.catalog.plan_deleted"));

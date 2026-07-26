@@ -16,7 +16,29 @@ import {
   type ClientCreate,
   type ClientUpdate,
 } from "@/features/admin/services/client-api";
-import { createDemoClientCrud } from "@/features/demo/services/demo-client-crud";
+import {
+  deletePlan,
+  createService,
+  deleteService,
+  getPlanDeletePreview,
+  getServiceDeletePreview,
+  listPlans,
+  listServices,
+  createPlan,
+  updatePlan,
+  updateService,
+  type DeletePreview,
+  type Plan,
+  type PlanCreate,
+  type PlanUpdate,
+  type Service,
+  type ServiceCreate,
+  type ServiceUpdate,
+} from "@/features/admin/services/catalog-api";
+import { createDemoCatalog } from "@/features/demo/services/demo-catalog";
+import {
+  createDemoClientCrud,
+} from "@/features/demo/services/demo-client-crud";
 import {
   createDemoBaseline,
   readProDemoState,
@@ -35,6 +57,7 @@ export type DataStorage = "api" | "workspace";
 export type DataResource =
   | "dashboard"
   | "settings"
+  | "catalog"
   | "crud"
   | "simulator"
   | "orientation";
@@ -63,6 +86,20 @@ export interface ClientCrudDataSourceContract {
   delete(id: string): Promise<void>;
 }
 
+export interface CatalogDataSourceContract
+  extends DataSourceResourceContract<"catalog"> {
+  listServices(): Promise<Service[]>;
+  createService(payload: ServiceCreate): Promise<Service>;
+  updateService(id: string, payload: ServiceUpdate): Promise<Service>;
+  getServiceDeletePreview(id: string): Promise<DeletePreview>;
+  deleteService(id: string): Promise<void>;
+  listPlans(serviceId: string): Promise<Plan[]>;
+  createPlan(serviceId: string, payload: PlanCreate): Promise<Plan>;
+  updatePlan(serviceId: string, planId: string, payload: PlanUpdate): Promise<Plan>;
+  getPlanDeletePreview(serviceId: string, planId: string): Promise<DeletePreview>;
+  deletePlan(serviceId: string, planId: string): Promise<void>;
+}
+
 export interface CrudDataSourceContract
   extends DataSourceResourceContract<"crud"> {
   readonly clients: ClientCrudDataSourceContract;
@@ -83,6 +120,7 @@ export interface DataSourceAdapter {
   readonly workspace: DemoWorkspaceRepository | null;
   readonly dashboard: DashboardDataSourceContract;
   readonly settings: DataSourceResourceContract<"settings">;
+  readonly catalog: CatalogDataSourceContract;
   readonly crud: CrudDataSourceContract;
   readonly simulator: DataSourceResourceContract<"simulator">;
   readonly orientation: OrientationDataSourceContract;
@@ -97,6 +135,21 @@ const productionClientCrud: ClientCrudDataSourceContract = {
   delete: deleteClient,
 };
 
+const productionCatalog: CatalogDataSourceContract = {
+  resource: "catalog",
+  storage: "api",
+  listServices,
+  createService,
+  updateService,
+  getServiceDeletePreview,
+  deleteService,
+  listPlans,
+  createPlan,
+  updatePlan,
+  getPlanDeletePreview,
+  deletePlan,
+};
+
 const productionResources = {
   dashboard: {
     resource: "dashboard",
@@ -104,6 +157,7 @@ const productionResources = {
     load: getTenantDashboard,
   },
   settings: { resource: "settings", storage: "api" },
+  catalog: productionCatalog,
   crud: { resource: "crud", storage: "api", clients: productionClientCrud },
   simulator: { resource: "simulator", storage: "api" },
   orientation: {
@@ -117,6 +171,7 @@ const productionResources = {
 
 const demoResources = {
   settings: { resource: "settings", storage: "workspace" },
+  catalog: { resource: "catalog", storage: "workspace" },
   crud: { resource: "crud", storage: "workspace" },
   simulator: { resource: "simulator", storage: "workspace" },
   orientation: { resource: "orientation", storage: "workspace" },
@@ -161,6 +216,10 @@ export function createDataSource(
         },
       },
       settings: demoResources.settings,
+      catalog: {
+        ...demoResources.catalog,
+        ...createDemoCatalog(workspace, demo),
+      },
       crud: {
         ...demoResources.crud,
         clients: createDemoClientCrud(workspace, demo),
@@ -191,10 +250,11 @@ export function createDataSource(
 
   return {
     mode: "production",
-    context,
-    workspace: null,
     dashboard: productionResources.dashboard,
+    workspace: null,
+    context,
     settings: productionResources.settings,
+    catalog: productionResources.catalog,
     crud: productionResources.crud,
     simulator: productionResources.simulator,
     orientation: productionResources.orientation,

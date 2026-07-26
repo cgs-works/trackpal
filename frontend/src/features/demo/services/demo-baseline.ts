@@ -1,3 +1,4 @@
+import type { Service, Plan } from "@/features/admin/services/catalog-api";
 import type { DemoAuthMetadata } from "@/store/auth";
 import type { Client } from "@/features/admin/services/client-api";
 import type { PlanBaselineFactory } from "./demo-workspace";
@@ -13,6 +14,16 @@ export interface DemoCodeService {
 export interface DemoBlockedIdentity {
   id: string;
   phone: string;
+}
+
+export interface DemoSubscriptionRelation {
+  id: string;
+  service_id: string;
+  plan_id: string;
+  client_id: string;
+  status: "active" | "expired" | "cancelled";
+  streaming_email: string;
+  expires_at: string | null;
 }
 
 export interface DemoWorkspaceState {
@@ -33,11 +44,17 @@ export interface DemoWorkspaceState {
   code_services: DemoCodeService[];
   blocked_identities: DemoBlockedIdentity[];
   clients?: Client[];
+  services?: Service[];
+  plans?: Plan[];
+  subscriptions?: DemoSubscriptionRelation[];
 }
 
-export type StarterDemoWorkspaceState = Omit<DemoWorkspaceState, "clients">;
+export type StarterDemoWorkspaceState = Omit<DemoWorkspaceState, "clients" | "services" | "plans" | "subscriptions">;
 export interface ProDemoWorkspaceState extends DemoWorkspaceState {
   clients: Client[];
+  services: Service[];
+  plans: Plan[];
+  subscriptions: DemoSubscriptionRelation[];
 }
 
 function dateAtOffset(metadata: DemoAuthMetadata, days: number): string {
@@ -95,9 +112,51 @@ function createProClients(metadata: DemoAuthMetadata): Client[] {
 
 export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
   const starter = createStarterState(metadata);
+  if (plan === "starter") {
+    return {
+      plan_specific: starter,
+      tour_state: {},
+      baseline_version: DEMO_BASELINE_VERSION,
+    };
+  }
+
+  const now = metadata.serverTime;
+  const services: Service[] = [
+    ["service-messaging", "Secure Messaging"],
+    ["service-access", "Account Access"],
+    ["service-verification", "Verification Hub"],
+  ].map(([id, name]) => ({
+    id: `${metadata.tenantId}-${id}`,
+    tenant_id: metadata.tenantId,
+    name,
+    created_at: now,
+    updated_at: now,
+  }));
+  const planDefinitions: Array<[string, string, string]> = [
+    ["service-messaging", "messaging-basic", "Basic"],
+    ["service-messaging", "messaging-plus", "Plus"],
+    ["service-access", "access-standard", "Standard"],
+    ["service-access", "access-premium", "Premium"],
+    ["service-verification", "verification-basic", "Basic"],
+    ["service-verification", "verification-pro", "Professional"],
+  ];
+  const plans: Plan[] = planDefinitions.map(([serviceKey, planKey, name]) => ({
+    id: `${metadata.tenantId}-${planKey}`,
+    tenant_id: metadata.tenantId,
+    service_id: `${metadata.tenantId}-${serviceKey}`,
+    name,
+    created_at: now,
+    updated_at: now,
+  }));
+
   return {
-    plan_specific:
-      plan === "pro" ? { ...starter, clients: createProClients(metadata) } : starter,
+    plan_specific: {
+      ...starter,
+      clients: createProClients(metadata),
+      services,
+      plans,
+      subscriptions: [],
+    },
     tour_state: {},
     baseline_version: DEMO_BASELINE_VERSION,
   };
@@ -124,6 +183,12 @@ export function readProDemoState(
   planSpecific: Record<string, unknown>,
 ): ProDemoWorkspaceState | null {
   const state = readStarterDemoState(planSpecific) as ProDemoWorkspaceState | null;
-  if (!state || !Array.isArray(state.clients)) return null;
+  if (
+    !state ||
+    !Array.isArray(state.clients) ||
+    !Array.isArray(state.services) ||
+    !Array.isArray(state.plans) ||
+    !Array.isArray(state.subscriptions)
+  ) return null;
   return state;
 }

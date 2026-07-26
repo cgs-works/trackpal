@@ -6,7 +6,7 @@ import {
   type Plan,
 } from "@/features/admin/services/catalog-api";
 import { listClients, type Client } from "@/features/admin/services/client-api";
-import type { ClientCrudDataSourceContract } from "@/lib/data-source";
+import type { CatalogDataSourceContract, ClientCrudDataSourceContract } from "@/lib/data-source";
 
 interface CatalogState {
   // Cache state
@@ -20,9 +20,9 @@ interface CatalogState {
   loadError: string | null;
 
   // Actions
-  loadServices: () => Promise<Service[]>;
+  loadServices: (source?: CatalogDataSourceContract) => Promise<Service[]>;
   loadClients: (source?: ClientCrudDataSourceContract) => Promise<Client[]>;
-  loadPlans: (serviceId: string) => Promise<Plan[]>;
+  loadPlans: (serviceId: string, source?: CatalogDataSourceContract) => Promise<Plan[]>;
   invalidateServices: () => void;
   invalidatePlans: (serviceId?: string) => void;
   invalidateClients: () => void;
@@ -41,7 +41,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
   loadError: null,
 
   // Load services with deduplication
-  loadServices: async () => {
+  loadServices: async (source?: CatalogDataSourceContract) => {
     const state = get();
 
     // Return cached if loaded
@@ -56,7 +56,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
 
     const promise = (async () => {
       try {
-        const data = await listServices();
+        const data = await (source?.listServices ?? listServices)();
         set({
           services: data,
           servicesLoaded: true,
@@ -76,7 +76,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
   },
 
   // Load plans for a service (cached per serviceId)
-  loadPlans: async (serviceId: string) => {
+  loadPlans: async (serviceId: string, source?: CatalogDataSourceContract) => {
     const state = get();
 
     // Return cached if available
@@ -85,7 +85,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
     }
 
     try {
-      const data = await listPlans(serviceId);
+      const data = await (source?.listPlans ?? listPlans)(serviceId);
       set((prev) => ({
         plans: { ...prev.plans, [serviceId]: data },
       }));

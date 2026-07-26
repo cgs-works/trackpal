@@ -312,3 +312,7 @@ Service + plan CRUD with cached data from `catalogStore` (Pro-only):
 - Services sidebar with create/rename/delete
 - Plans panel with create/rename/delete
 - Delete preview dialog with confirmation
+
+- Pro Demo Accounts use the browser-local catalog adapter: the baseline has exactly three deterministic generic services with six representative plans; service/plan names are trimmed, case-insensitively unique within their scope, and capped at 200 characters.
+- Catalog delete previews expose affected plans and active/historical subscription impact. Confirmed service deletion cascades plans and related local references, while plan deletion removes its local references; Starter workspaces have no catalog baseline.
+- CatalogPage and dependent subscription selectors use the selected data-source adapter, so Demo catalog reads and mutations never call catalog API endpoints and persist across reload or logout/login.
