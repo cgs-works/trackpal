@@ -29,6 +29,9 @@ export interface DemoWorkspaceRepository {
   readonly key: string;
   read(): DemoWorkspaceEnvelope | null;
   ensure(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
+  updatePlanSpecific(
+    updater: (planSpecific: Record<string, unknown>) => Record<string, unknown>,
+  ): DemoWorkspaceEnvelope | null;
   saveTourState(patch: Record<string, unknown>): void;
   reset(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
   clear(): void;
@@ -114,6 +117,19 @@ export function createDemoWorkspaceRepository(
   const ensure = (metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope => {
     return read() ?? save(metadata, baseline);
   };
+  const updatePlanSpecific = (
+    updater: (planSpecific: Record<string, unknown>) => Record<string, unknown>,
+  ): DemoWorkspaceEnvelope | null => {
+    const envelope = read();
+    if (!envelope) return null;
+    const updated: DemoWorkspaceEnvelope = {
+      ...envelope,
+      plan_specific: updater(envelope.plan_specific),
+      saved_at: new Date().toISOString(),
+    };
+    storage.setItem(key, JSON.stringify(updated));
+    return updated;
+  };
 
   const saveTourState = (patch: Record<string, unknown>): void => {
     const envelope = read();
@@ -140,6 +156,7 @@ export function createDemoWorkspaceRepository(
     read,
     ensure,
     saveTourState,
+    updatePlanSpecific,
     reset,
     clear: () => storage.removeItem(key),
   };

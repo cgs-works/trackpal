@@ -6,7 +6,20 @@ import {
   type TenantDashboardResponse,
 } from "@/features/admin/services/dashboard-api";
 import {
+  activateClient,
+  createClient,
+  deactivateClient,
+  deleteClient,
+  listClients,
+  updateClient,
+  type Client,
+  type ClientCreate,
+  type ClientUpdate,
+} from "@/features/admin/services/client-api";
+import { createDemoClientCrud } from "@/features/demo/services/demo-client-crud";
+import {
   createDemoBaseline,
+  readProDemoState,
   readStarterDemoState,
 } from "@/features/demo/services/demo-baseline";
 import {
@@ -41,6 +54,19 @@ export interface DataSourceResourceContract<Resource extends DataResource> {
   readonly resource: Resource;
   readonly storage: DataStorage;
 }
+export interface ClientCrudDataSourceContract {
+  list(): Promise<Client[]>;
+  create(payload: ClientCreate): Promise<Client>;
+  update(id: string, payload: ClientUpdate): Promise<Client>;
+  deactivate(id: string): Promise<Client>;
+  activate(id: string): Promise<Client>;
+  delete(id: string): Promise<void>;
+}
+
+export interface CrudDataSourceContract
+  extends DataSourceResourceContract<"crud"> {
+  readonly clients: ClientCrudDataSourceContract;
+}
 export interface OrientationDataSourceContract
   extends DataSourceResourceContract<"orientation"> {
   getUnseen(): Promise<HelpTourRelease>;
@@ -57,10 +83,19 @@ export interface DataSourceAdapter {
   readonly workspace: DemoWorkspaceRepository | null;
   readonly dashboard: DashboardDataSourceContract;
   readonly settings: DataSourceResourceContract<"settings">;
-  readonly crud: DataSourceResourceContract<"crud">;
+  readonly crud: CrudDataSourceContract;
   readonly simulator: DataSourceResourceContract<"simulator">;
   readonly orientation: OrientationDataSourceContract;
 }
+
+const productionClientCrud: ClientCrudDataSourceContract = {
+  list: listClients,
+  create: createClient,
+  update: updateClient,
+  deactivate: deactivateClient,
+  activate: activateClient,
+  delete: deleteClient,
+};
 
 const productionResources = {
   dashboard: {
@@ -69,7 +104,7 @@ const productionResources = {
     load: getTenantDashboard,
   },
   settings: { resource: "settings", storage: "api" },
-  crud: { resource: "crud", storage: "api" },
+  crud: { resource: "crud", storage: "api", clients: productionClientCrud },
   simulator: { resource: "simulator", storage: "api" },
   orientation: {
     resource: "orientation",
@@ -106,6 +141,7 @@ export function createDataSource(
           const envelope = workspace.ensure(demo, createDemoBaseline);
           const starter = readStarterDemoState(envelope.plan_specific);
           if (!starter) throw new Error("invalid_demo_workspace");
+          const pro = demo.plan === "pro" ? readProDemoState(envelope.plan_specific) : null;
           const enabledServices = starter.code_services
             .filter((service) => service.enabled)
             .map((service) => service.name);
@@ -117,7 +153,7 @@ export function createDataSource(
             mailbox_status: starter.integrations.mailbox.status,
             enabled_code_services: enabledServices,
             access_control_count: starter.blocked_identities.length,
-            active_clients: null,
+            active_clients: pro?.clients.filter((client) => client.is_active).length ?? null,
             catalog_services: null,
             active_subscriptions: null,
             subscriptions_expiring_soon: null,
@@ -125,7 +161,10 @@ export function createDataSource(
         },
       },
       settings: demoResources.settings,
-      crud: demoResources.crud,
+      crud: {
+        ...demoResources.crud,
+        clients: createDemoClientCrud(workspace, demo),
+      },
       simulator: demoResources.simulator,
       orientation: {
         ...demoResources.orientation,

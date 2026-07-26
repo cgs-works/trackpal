@@ -304,6 +304,7 @@ Client management with cached data from `catalogStore` (Pro-only):
 - Create/Edit/Delete dialogs
 - Activate/deactivate toggle
 - Link to subscriptions per client
+- Pro Demo Accounts route Clients CRUD through the browser-local workspace adapter: the deterministic baseline has five fictional clients, local validation/uniqueness/phone normalization, lifecycle toggles, relation-safe deletion, search/status filtering, and pagination. Mutations never call tenant Client or Client identity APIs and remain available after reload or logout/login.
 
 ### CatalogPage (`features/admin/components/catalog-page.tsx`)
 

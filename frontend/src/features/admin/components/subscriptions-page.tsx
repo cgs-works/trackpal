@@ -27,6 +27,7 @@ import {
   type SubscriptionFilters,
 } from "../services/subscription-api";
 import { useCatalogStore } from "@/store/catalog";
+import { useAuthStore } from "@/store/auth";
 import {
   SubscriptionTable,
   RevealCredentialsDialog,
@@ -57,6 +58,7 @@ export function SubscriptionsPage() {
 
   // Data
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const { dataSource } = useAuthStore();
   const { clients, services, loadClients, loadServices } = useCatalogStore();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,11 +98,11 @@ export function SubscriptionsPage() {
   // ── Load data ──────────────────────────────────────────────
   const loadDropdowns = useCallback(async () => {
     try {
-      await Promise.all([loadClients(), loadServices()]);
+      await Promise.all([loadClients(dataSource.crud.clients), loadServices()]);
     } catch {
       // Non-critical
     }
-  }, [loadClients, loadServices]);
+  }, [dataSource, loadClients, loadServices]);
 
   const loadSubscriptions = useCallback(async () => {
     setIsLoading(true);

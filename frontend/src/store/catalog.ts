@@ -6,6 +6,7 @@ import {
   type Plan,
 } from "@/features/admin/services/catalog-api";
 import { listClients, type Client } from "@/features/admin/services/client-api";
+import type { ClientCrudDataSourceContract } from "@/lib/data-source";
 
 interface CatalogState {
   // Cache state
@@ -20,8 +21,8 @@ interface CatalogState {
 
   // Actions
   loadServices: () => Promise<Service[]>;
+  loadClients: (source?: ClientCrudDataSourceContract) => Promise<Client[]>;
   loadPlans: (serviceId: string) => Promise<Plan[]>;
-  loadClients: () => Promise<Client[]>;
   invalidateServices: () => void;
   invalidatePlans: (serviceId?: string) => void;
   invalidateClients: () => void;
@@ -97,7 +98,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
   },
 
   // Load clients with deduplication
-  loadClients: async () => {
+  loadClients: async (source?: ClientCrudDataSourceContract) => {
     const state = get();
 
     // Return cached if loaded
@@ -112,7 +113,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
 
     const promise = (async () => {
       try {
-        const data = await listClients();
+        const data = await (source?.list ?? listClients)();
         set({
           clients: data,
           clientsLoaded: true,
