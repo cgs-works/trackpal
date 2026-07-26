@@ -55,7 +55,7 @@ export interface DeletePagination {
 }
 
 export interface DeletePreview {
-  target_type: "service" | "plan";
+  target_type: "client" | "service" | "plan";
   target_id: string;
   target_name: string;
   affected_plan_count: number;

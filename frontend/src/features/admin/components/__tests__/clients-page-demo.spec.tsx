@@ -70,6 +70,26 @@ describe("ClientsPage Demo rendering", () => {
       expect(screen.queryAllByText("Avery Stone")).toHaveLength(0);
     });
   });
+  it("shows a live relationship preview before cascading client deletion", async () => {
+    const user = userEvent.setup();
+    const source = useAuthStore.getState().dataSource;
+    const mina = (await source.crud.clients.list()).find((client) => client.full_name === "Mina Duarte")!;
+    await source.crud.clients.deactivate(mina.id);
+
+    render(<ClientsPage />);
+    await waitFor(() => expect(screen.getAllByText("Mina Duarte")).toHaveLength(2));
+    const row = screen.getAllByText("Mina Duarte")[0].closest("tr");
+    await user.click(within(row!).getByRole("button", { name: "frontend.clients.delete" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await waitFor(() => {
+      expect(within(dialog).getAllByText("1").length).toBeGreaterThan(0);
+      expect(within(dialog).getAllByText("2").length).toBeGreaterThan(0);
+    });
+    await user.click(within(dialog).getByRole("button", { name: "frontend.clients.delete" }));
+    await waitFor(() => expect(screen.queryAllByText("Mina Duarte")).toHaveLength(0));
+  });
+
   it("performs create, edit, lifecycle, delete, and pagination locally", async () => {
     const user = userEvent.setup();
     const getSpy = vi.spyOn(api, "get");

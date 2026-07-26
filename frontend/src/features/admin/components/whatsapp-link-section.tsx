@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { t } from "@/i18n";
+import { useAuthStore } from "@/store/auth";
 import { getApiError } from "@/lib/api-errors";
 import {
   disconnectWhatsApp,
@@ -58,6 +59,7 @@ export function WhatsappLinkSection() {
   const [pollingEnabled, setPollingEnabled] = useState(false);
   const [timeoutError, setTimeoutError] = useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
+  const isDemo = useAuthStore((state) => state.dataSource.mode === "demo");
   const qrRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs for stale closure prevention in QR refresh timer
@@ -81,14 +83,16 @@ export function WhatsappLinkSection() {
   const loadStatus = useCallback(async () => {
     try {
       setError(null);
-      const data = await getWhatsAppLinkStatus();
+      const data = isDemo
+        ? { connected: true, phone: null, instance_name: "Demo WhatsApp" }
+        : await getWhatsAppLinkStatus();
       setStatus(data);
     } catch (err) {
       setError(getApiError(err, t("frontend.whatsapp_link.error_load")));
     } finally {
       setIsInitialLoading(false);
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     loadStatus();
@@ -294,7 +298,7 @@ export function WhatsappLinkSection() {
         )}
 
         {/* Connected: disconnect button */}
-        {connected && (
+        {connected && !isDemo && (
           <div className="flex flex-col gap-3">
             <div className="flex gap-3">
               <AlertDialog open={disconnectDialogOpen} onOpenChange={setDisconnectDialogOpen}>
@@ -333,7 +337,7 @@ export function WhatsappLinkSection() {
         )}
 
         {/* Pairing tabs (disconnected + phone exists) */}
-        {!connected && hasPhone && (
+        {!connected && hasPhone && !isDemo && (
           <Tabs defaultValue="pairing-code">
             <TabsList>
               <TabsTrigger value="pairing-code">{t("frontend.whatsapp_link.pairing_tab")}</TabsTrigger>

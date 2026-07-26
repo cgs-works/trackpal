@@ -6,6 +6,7 @@ import { Users, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import { type Client } from "../services/client-api";
+import type { DeletePreview } from "../services/catalog-api";
 import { useCatalogStore } from "@/store/catalog";
 import { useAuthStore } from "@/store/auth";
 import { ClientTable } from "./client-table";
@@ -66,6 +67,9 @@ export function ClientsPage() {
   // Delete state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
+  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(null);
+  const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
+  const [deletePreviewError, setDeletePreviewError] = useState("");
 
   // ── Load clients ────────────────────────────────────────────
   const loadClientsData = useCallback(async () => {
@@ -186,9 +190,19 @@ export function ClientsPage() {
   }
 
   // ── Delete ──────────────────────────────────────────────────
-  function openDelete(client: Client) {
+  async function openDelete(client: Client) {
     setDeleteTarget(client);
+    setDeletePreview(null);
+    setDeletePreviewError("");
+    setDeletePreviewLoading(true);
     setDeleteOpen(true);
+    try {
+      setDeletePreview(await dataSource.crud.clients.getDeletePreview(client.id));
+    } catch (error) {
+      setDeletePreviewError(getClientErrorMessage(error, t("frontend.clients.error_delete")));
+    } finally {
+      setDeletePreviewLoading(false);
+    }
   }
 
   async function handleDelete() {
@@ -346,6 +360,9 @@ export function ClientsPage() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         clientName={deleteTarget?.full_name || ""}
+        preview={deletePreview}
+        loading={deletePreviewLoading}
+        error={deletePreviewError}
         onConfirm={handleDelete}
       />
     </div>

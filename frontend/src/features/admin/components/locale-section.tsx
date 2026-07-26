@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { t, loadCatalog } from "@/i18n";
 import { useSettingsStore } from "@/store/settings";
+import { useAuthStore } from "@/store/auth";
 
 const LOCALE_OPTIONS = [
   { value: "en", label: "English" },
@@ -18,6 +19,7 @@ const LOCALE_OPTIONS = [
 ];
 
 export function LocaleSection() {
+  const { dataSource } = useAuthStore();
   const { tenantSettings, loadTenantSettings, updateTenantSettings } =
     useSettingsStore();
 
@@ -25,8 +27,8 @@ export function LocaleSection() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    await loadTenantSettings();
-  }, [loadTenantSettings]);
+    await loadTenantSettings(dataSource.settings);
+  }, [dataSource.settings, loadTenantSettings]);
 
   useEffect(() => {
     load().catch(() => {});
@@ -42,8 +44,8 @@ export function LocaleSection() {
     setSaving(true);
     try {
       const prev = tenantSettings?.locale || "en";
-      await updateTenantSettings({ locale });
-      if (locale !== prev) {
+      await updateTenantSettings({ locale }, dataSource.settings);
+      if (locale !== prev && dataSource.mode !== "demo") {
         await loadCatalog();
       }
       toast.success(t("frontend.profile.saved"));

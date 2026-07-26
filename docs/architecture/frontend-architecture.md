@@ -248,6 +248,8 @@ Collapsible sidebar layout for tenant admin pages:
 - Content: `<Outlet>` renders child routes.
 - When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`.
 - Starter Demo dashboard cards and enabled-service badges load through the selected data-source adapter and derive entirely from the browser-local workspace; production dashboards retain the API-backed adapter.
+- Pro Demo dashboard metrics are recalculated from current local clients, catalog services, subscriptions, activation-relative expiry dates, reminders, code services, access-control blocks, and fixed simulated integration state. Client delete previews and catalog delete previews use the same live workspace relationships; client deletion cascades local subscriptions like production, while service and plan deletion cascades their dependent plans/subscriptions.
+- Demo reminder, code-service, access-control, mailbox, and WhatsApp settings use fixed/local adapters and do not call production, reminder, n8n, or integration endpoints.
 - Starter Demo orientation content remains server-readable, while completion/skipping is acknowledged in the local workspace so reload and logout/login preserve it without a business mutation request.
 
 ### ClientLayout (`features/client/layout/client-layout.tsx`)

@@ -6,6 +6,30 @@ import {
   type TenantDashboardResponse,
 } from "@/features/admin/services/dashboard-api";
 import {
+  getTenantSettings,
+  updateTenantSettings,
+  getMailbox,
+  getTimezones,
+  getTenantCodeServices,
+  updateTenantCodeServices,
+  type Mailbox,
+  type TenantCodeServiceResponse,
+  type TenantSettings,
+  type TenantSettingsUpdate,
+} from "@/features/admin/services/settings-api";
+import {
+  getReminderSettings,
+  updateReminderSettings,
+  type ReminderSettings,
+  type ReminderSettingsUpdate,
+} from "@/features/admin/services/reminder-api";
+import {
+  listAccessBlocks,
+  createAccessBlock,
+  deleteAccessBlock,
+  type AccessControlBlock,
+} from "@/features/admin/services/access-control-api";
+import {
   activateClient,
   createClient,
   deactivateClient,
@@ -40,6 +64,7 @@ import {
   createDemoClientCrud,
 } from "@/features/demo/services/demo-client-crud";
 import { createDemoSubscriptions } from "@/features/demo/services/demo-subscriptions";
+import { createDemoSettings } from "@/features/demo/services/demo-settings";
 import {
   createDemoBaseline,
   readProDemoState,
@@ -67,6 +92,9 @@ import {
   type SubscriptionFilters,
   type SubscriptionUpdate,
 } from "@/features/admin/services/subscription-api";
+
+const DEMO_EXPIRING_WINDOW_DAYS = 7;
+const MILLISECONDS_PER_DAY = 86_400_000;
 
 export type DataSourceMode = "production" | "demo";
 export type DataStorage = "api" | "workspace";
@@ -100,6 +128,7 @@ export interface ClientCrudDataSourceContract {
   update(id: string, payload: ClientUpdate): Promise<Client>;
   deactivate(id: string): Promise<Client>;
   activate(id: string): Promise<Client>;
+  getDeletePreview(id: string): Promise<DeletePreview>;
   delete(id: string): Promise<void>;
 }
 
@@ -120,6 +149,21 @@ export interface CatalogDataSourceContract
 export interface CrudDataSourceContract
   extends DataSourceResourceContract<"crud"> {
   readonly clients: ClientCrudDataSourceContract;
+}
+
+export interface SettingsDataSourceContract
+  extends DataSourceResourceContract<"settings"> {
+  loadReminderSettings(): Promise<ReminderSettings>;
+  updateReminderSettings(payload: ReminderSettingsUpdate): Promise<ReminderSettings>;
+  loadTenantSettings(): Promise<TenantSettings>;
+  updateTenantSettings(payload: TenantSettingsUpdate): Promise<TenantSettings>;
+  loadTimezoneOptions(): Promise<{ value: string; label: string; group: string }[]>;
+  loadMailbox(): Promise<Mailbox | null>;
+  loadCodeServices(): Promise<TenantCodeServiceResponse>;
+  updateCodeServices(serviceKeys: string[]): Promise<TenantCodeServiceResponse>;
+  listAccessBlocks(): Promise<AccessControlBlock[]>;
+  createAccessBlock(phone: string): Promise<AccessControlBlock>;
+  deleteAccessBlock(id: string): Promise<void>;
 }
 export interface SubscriptionDataSourceContract
   extends DataSourceResourceContract<"subscriptions"> {
@@ -147,7 +191,7 @@ export interface DataSourceAdapter {
   readonly context: DataSourceContext;
   readonly workspace: DemoWorkspaceRepository | null;
   readonly dashboard: DashboardDataSourceContract;
-  readonly settings: DataSourceResourceContract<"settings">;
+  readonly settings: SettingsDataSourceContract;
   readonly catalog: CatalogDataSourceContract;
   readonly crud: CrudDataSourceContract;
   readonly subscriptions: SubscriptionDataSourceContract;
@@ -155,12 +199,65 @@ export interface DataSourceAdapter {
   readonly orientation: OrientationDataSourceContract;
 }
 
+async function getProductionClientDeletePreview(id: string): Promise<DeletePreview> {
+  const [clients, subscriptions] = await Promise.all([
+    listClients(),
+    listSubscriptions({ client_id: id }),
+  ]);
+  const client = clients.find((item) => item.id === id);
+  if (!client) throw new Error("client_not_found");
+  const activeSubscriptions = subscriptions.filter((subscription) => subscription.status === "active");
+  return {
+    target_type: "client",
+    target_id: id,
+    target_name: client.full_name,
+    affected_plan_count: 0,
+    active_subscription_count: activeSubscriptions.length,
+    historical_subscription_count: subscriptions.length - activeSubscriptions.length,
+    total_subscription_count: subscriptions.length,
+    active_subscriptions: activeSubscriptions.map((subscription) => ({
+      id: subscription.id,
+      streaming_email: subscription.streaming_email,
+      client_name: client.full_name,
+      client_phone: client.phone,
+      service_name: "",
+      plan_name: "",
+      expires_at: subscription.expires_at,
+    })),
+    pagination: {
+      page: 1,
+      page_size: 10,
+      total_items: activeSubscriptions.length,
+      total_pages: Math.max(1, Math.ceil(activeSubscriptions.length / 10)),
+      has_next: false,
+    },
+    note: "frontend.catalog.delete_preview_note",
+  };
+}
+
+const productionSettings: SettingsDataSourceContract = {
+  resource: "settings",
+  storage: "api",
+  loadReminderSettings: getReminderSettings,
+  updateReminderSettings,
+  loadTenantSettings: getTenantSettings,
+  updateTenantSettings,
+  loadTimezoneOptions: getTimezones,
+  loadMailbox: getMailbox,
+  loadCodeServices: getTenantCodeServices,
+  updateCodeServices: updateTenantCodeServices,
+  listAccessBlocks,
+  createAccessBlock,
+  deleteAccessBlock,
+};
+
 const productionClientCrud: ClientCrudDataSourceContract = {
   list: listClients,
   create: createClient,
   update: updateClient,
   deactivate: deactivateClient,
   activate: activateClient,
+  getDeletePreview: getProductionClientDeletePreview,
   delete: deleteClient,
 };
 
@@ -198,7 +295,7 @@ const productionResources = {
     storage: "api",
     load: getTenantDashboard,
   },
-  settings: { resource: "settings", storage: "api" },
+  settings: productionSettings,
   catalog: productionCatalog,
   crud: { resource: "crud", storage: "api", clients: productionClientCrud },
   subscriptions: productionSubscriptions,
@@ -244,6 +341,15 @@ export function createDataSource(
           const enabledServices = starter.code_services
             .filter((service) => service.enabled)
             .map((service) => service.name);
+          const reference = new Date(demo.serverTime).getTime();
+          const expiringEnd = reference + DEMO_EXPIRING_WINDOW_DAYS * MILLISECONDS_PER_DAY;
+          const activeSubscriptions = pro?.subscriptions.filter(
+            (subscription) => subscription.status === "active",
+          ) ?? [];
+          const subscriptionsExpiringSoon = activeSubscriptions.filter((subscription) => {
+            const expiresAt = new Date(subscription.expires_at).getTime();
+            return expiresAt >= reference && expiresAt <= expiringEnd;
+          }).length;
           return {
             message: "Demo dashboard",
             full_name: starter.profile.business_name,
@@ -253,13 +359,17 @@ export function createDataSource(
             enabled_code_services: enabledServices,
             access_control_count: starter.blocked_identities.length,
             active_clients: pro?.clients.filter((client) => client.is_active).length ?? null,
-            catalog_services: null,
-            active_subscriptions: null,
-            subscriptions_expiring_soon: null,
+            catalog_services: pro?.services.length ?? null,
+            active_subscriptions: pro ? activeSubscriptions.length : null,
+            subscriptions_expiring_soon: pro ? subscriptionsExpiringSoon : null,
+            reminders_enabled: starter.reminder_settings?.reminders_enabled ?? false,
           };
         },
       },
-      settings: demoResources.settings,
+      settings: {
+        ...demoResources.settings,
+        ...createDemoSettings(workspace, demo),
+      },
       catalog: {
         ...demoResources.catalog,
         ...createDemoCatalog(workspace, demo),

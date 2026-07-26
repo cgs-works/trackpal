@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { getLocale, t } from "@/i18n";
 import { useSettingsStore } from "@/store/settings";
+import { useAuthStore } from "@/store/auth";
 
 const PREVIEW_PLACEHOLDERS = {
   client_name: "María Pérez",
@@ -57,6 +58,7 @@ export function ReminderSettingsSection() {
   const [error, setError] = useState("");
   const [locale, setLocale] = useState(getLocale());
   const defaults = getDefaultMessages(locale);
+  const { dataSource } = useAuthStore();
   const {
     reminderSettings,
     tenantSettings,
@@ -81,13 +83,16 @@ export function ReminderSettingsSection() {
     setIsLoading(true);
     setLocale(getLocale());
     try {
-      await Promise.all([loadReminderSettings(), loadTenantSettings()]);
+      await Promise.all([
+        loadReminderSettings(dataSource.settings),
+        loadTenantSettings(dataSource.settings),
+      ]);
     } catch (err: unknown) {
       setError(getReminderSettingsError(err));
     } finally {
       setIsLoading(false);
     }
-  }, [loadReminderSettings, loadTenantSettings]);
+  }, [dataSource.settings, loadReminderSettings, loadTenantSettings]);
 
   useEffect(() => {
     if (reminderSettingsLoaded && reminderSettings) {
@@ -148,7 +153,7 @@ export function ReminderSettingsSection() {
     setIsSaving(true);
     setError("");
     try {
-      await updateReminderSettings(settings);
+      await updateReminderSettings(settings, dataSource.settings);
       toast.success(t("frontend.subscriptions.reminder_saved"));
     } catch (err: unknown) {
       setError(getReminderSettingsError(err));

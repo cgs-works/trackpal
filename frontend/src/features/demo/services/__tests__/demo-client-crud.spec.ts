@@ -100,12 +100,14 @@ describe("Pro Demo Clients data source", () => {
     });
 
     await clients.deactivate(baseline[1].id);
-    source.workspace!.updatePlanSpecific((state) => ({
-      ...state,
-      subscriptions: [{ client_id: baseline[1].id }],
-    }));
-    await expect(clients.delete(baseline[1].id)).rejects.toMatchObject({
-      code: "client_has_subscriptions",
-    });
+    const beforeDelete = readProDemoState(source.workspace!.read()!.plan_specific)!;
+    const relatedSubscriptionIds = beforeDelete.subscriptions
+      .filter((subscription) => subscription.client_id === baseline[1].id)
+      .map((subscription) => subscription.id);
+
+    await expect(clients.delete(baseline[1].id)).resolves.toBeUndefined();
+    const afterDelete = readProDemoState(source.workspace!.read()!.plan_specific)!;
+    expect(afterDelete.clients.some((client) => client.id === baseline[1].id)).toBe(false);
+    expect(afterDelete.subscriptions.some((subscription) => relatedSubscriptionIds.includes(subscription.id))).toBe(false);
   });
 });

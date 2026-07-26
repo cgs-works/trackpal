@@ -2,6 +2,8 @@ import type { Service, Plan } from "@/features/admin/services/catalog-api";
 import type { DemoAuthMetadata } from "@/store/auth";
 import type { Client } from "@/features/admin/services/client-api";
 import type { Subscription } from "@/features/admin/services/subscription-api";
+import type { ReminderSettings } from "@/features/admin/services/reminder-api";
+import type { TenantSettings } from "@/features/admin/services/settings-api";
 import type { PlanBaselineFactory } from "./demo-workspace";
 
 export const DEMO_BASELINE_VERSION = 2;
@@ -39,6 +41,8 @@ export interface DemoWorkspaceState {
   };
   code_services: DemoCodeService[];
   blocked_identities: DemoBlockedIdentity[];
+  reminder_settings?: ReminderSettings;
+  tenant_settings?: TenantSettings;
   clients?: Client[];
   services?: Service[];
   plans?: Plan[];
@@ -77,6 +81,25 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
       { id: "blocked-1", phone: "12025550101" },
       { id: "blocked-2", phone: "12025550102" },
     ],
+    reminder_settings: {
+      id: `reminders-${metadata.tenantId}`,
+      tenant_id: metadata.tenantId,
+      warning_days: [7, 3, 1],
+      reminder_time: "09:00",
+      recipient_mode: "tenant_only",
+      reminders_enabled: false,
+      custom_message_tenant: null,
+      custom_message_client: null,
+      created_at: metadata.serverTime,
+      updated_at: metadata.serverTime,
+    },
+    tenant_settings: {
+      tenant_id: metadata.tenantId,
+      locale: "en",
+      timezone: "UTC",
+      created_at: metadata.serverTime,
+      updated_at: metadata.serverTime,
+    },
   };
 }
 

@@ -3,6 +3,7 @@ import type {
   ClientCreate,
   ClientUpdate,
 } from "@/features/admin/services/client-api";
+import type { DeletePreview } from "@/features/admin/services/catalog-api";
 import {
   createDemoBaseline,
   readProDemoState,
@@ -98,6 +99,42 @@ function updateState(
   const state = readProDemoState(updated.plan_specific);
   if (!state) throw new DemoClientError("client_update_failed", "invalid_demo_workspace");
   return state;
+}
+
+function clientDeletePreview(
+  state: ProDemoWorkspaceState,
+  client: Client,
+): DeletePreview {
+  const services = new Map(state.services.map((service) => [service.id, service]));
+  const plans = new Map(state.plans.map((plan) => [plan.id, plan]));
+  const related = state.subscriptions.filter((subscription) => subscription.client_id === client.id);
+  const active = related.filter((subscription) => subscription.status === "active");
+  return {
+    target_type: "client",
+    target_id: client.id,
+    target_name: client.full_name,
+    affected_plan_count: 0,
+    active_subscription_count: active.length,
+    historical_subscription_count: related.length - active.length,
+    total_subscription_count: related.length,
+    active_subscriptions: active.map((subscription) => ({
+      id: subscription.id,
+      streaming_email: subscription.streaming_email,
+      client_name: client.full_name,
+      client_phone: client.phone,
+      service_name: services.get(subscription.service_id)?.name ?? "",
+      plan_name: plans.get(subscription.plan_id)?.name ?? "",
+      expires_at: subscription.expires_at,
+    })),
+    pagination: {
+      page: 1,
+      page_size: 10,
+      total_items: active.length,
+      total_pages: Math.max(1, Math.ceil(active.length / 10)),
+      has_next: false,
+    },
+    note: "frontend.catalog.delete_preview_note",
+  };
 }
 
 function assertUnique(
@@ -203,20 +240,22 @@ export function createDemoClientCrud(
       return setActive(id, true);
     },
 
+    async getDeletePreview(id: string): Promise<DeletePreview> {
+      const state = requireState(workspace, metadata);
+      const client = state.clients.find((item) => item.id === id);
+      if (!client) throw new DemoClientError("client_not_found");
+      return clientDeletePreview(state, client);
+    },
+
     async delete(id: string): Promise<void> {
       const current = requireState(workspace, metadata);
       const client = current.clients.find((item) => item.id === id);
       if (!client) throw new DemoClientError("client_not_found");
       if (client.is_active) throw new DemoClientError("client_delete_active");
-      const subscriptions = (current as ProDemoWorkspaceState & {
-        subscriptions?: Array<{ client_id?: string }>;
-      }).subscriptions;
-      if (subscriptions?.some((subscription) => subscription.client_id === id)) {
-        throw new DemoClientError("client_has_subscriptions");
-      }
       updateState(workspace, metadata, (state) => ({
         ...state,
         clients: state.clients.filter((item) => item.id !== id),
+        subscriptions: state.subscriptions.filter((subscription) => subscription.client_id !== id),
       }));
     },
   };

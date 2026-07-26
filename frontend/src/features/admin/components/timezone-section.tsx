@@ -4,9 +4,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import { useSettingsStore } from "@/store/settings";
+import { useAuthStore } from "@/store/auth";
 import { TimezonePicker } from "./timezone-picker";
 
 export function TimezoneSection() {
+  const { dataSource } = useAuthStore();
   const {
     tenantSettings,
     timezoneOptions,
@@ -19,8 +21,11 @@ export function TimezoneSection() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    await Promise.all([loadTenantSettings(), loadTimezoneOptions()]);
-  }, [loadTenantSettings, loadTimezoneOptions]);
+    await Promise.all([
+      loadTenantSettings(dataSource.settings),
+      loadTimezoneOptions(dataSource.settings),
+    ]);
+  }, [dataSource.settings, loadTenantSettings, loadTimezoneOptions]);
 
   useEffect(() => {
     load().catch(() => {});
@@ -35,7 +40,7 @@ export function TimezoneSection() {
   async function handleSave() {
     setSaving(true);
     try {
-      await updateTenantSettings({ timezone });
+      await updateTenantSettings({ timezone }, dataSource.settings);
       toast.success(t("frontend.profile.saved"));
     } catch (err) {
       toast.error(

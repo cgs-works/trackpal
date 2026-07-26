@@ -114,6 +114,25 @@ describe("Pro Demo Catalog", () => {
     expect(after.subscriptions).toHaveLength(0);
   });
 
+  it("previews plan relationships from the current workspace", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    await source.catalog.listServices();
+    const state = readProDemoState(source.workspace!.read()!.plan_specific)!;
+    const service = state.services[0];
+    const plan = state.plans.find((item) => item.service_id === service.id)!;
+
+    const preview = await source.catalog.getPlanDeletePreview(service.id, plan.id);
+    const related = state.subscriptions.filter((subscription) => subscription.plan_id === plan.id);
+    expect(preview.total_subscription_count).toBe(related.length);
+    expect(preview.active_subscription_count).toBe(
+      related.filter((subscription) => subscription.status === "active").length,
+    );
+  });
+
   it("does not create a Starter catalog baseline", async () => {
     const starter = createDataSource({
       tenantId: "starter-catalog-demo",
