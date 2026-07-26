@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import api from "@/lib/api";
+import { createDataSource } from "@/lib/data-source";
 import { MyAccountSection } from "../my-account-section";
 
 vi.mock("@/i18n", () => ({
@@ -99,6 +101,42 @@ describe("MyAccountSection", () => {
 
     expect(screen.getByText("frontend.my_account.data_empty_title")).toBeInTheDocument();
     expect(screen.getByText("frontend.my_account.data_empty_description")).toBeInTheDocument();
+  });
+
+  it("keeps Demo export and deletion actions visible but unavailable without HTTP calls", async () => {
+    const metadata = {
+      tenantId: "demo-account-settings",
+      name: "Demo Account",
+      plan: "starter" as const,
+      status: "active" as const,
+      activatedAt: "2026-07-24T12:00:00.000Z",
+      expiresAt: "2026-07-26T12:00:00.000Z",
+      credentialVersion: 1,
+      serverTime: "2026-07-25T12:00:00.000Z",
+    };
+    const getSpy = vi.spyOn(api, "get");
+    const postSpy = vi.spyOn(api, "post");
+    mockUseAuthStore.mockReturnValue({
+      isMasterSupportContext: false,
+      dataSource: createDataSource({
+        tenantId: metadata.tenantId,
+        tenantPlan: metadata.plan,
+        demo: metadata,
+      }),
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MyAccountSection profile={mockProfile} onProfileUpdate={vi.fn()} />,
+    );
+
+    await user.click(screen.getByText("frontend.my_account.tab_data"));
+
+    expect(screen.getByText("frontend.my_account.demo_data_title")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "frontend.my_account.data_empty_action" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "frontend.my_account.danger_delete_button" })).toBeDisabled();
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(postSpy).not.toHaveBeenCalled();
   });
 
   it("passes an onSave handler to ProfileSection when in Master Support Context", () => {

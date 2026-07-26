@@ -2,6 +2,8 @@ import { render, screen, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
+import { createDataSource } from "@/lib/data-source";
+import { useAuthStore } from "@/store/auth";
 import { WhatsappLinkSection } from "../whatsapp-link-section";
 
 // ---- Module-level mocks ----
@@ -61,6 +63,9 @@ const noPhoneStatus = {
 
 describe("WhatsappLinkSection", () => {
   beforeEach(() => {
+    useAuthStore.setState({
+      dataSource: createDataSource({ tenantId: null, tenantPlan: null, demo: null }),
+    });
     vi.clearAllMocks();
     mockUsePolling.mockReturnValue({
       isPolling: false,
@@ -126,6 +131,42 @@ describe("WhatsappLinkSection", () => {
       expect(screen.getByText("+12015550000")).toBeInTheDocument();
       expect(screen.getByText("test-instance")).toBeInTheDocument();
       expect(screen.getByText("frontend.whatsapp_link.disconnect")).toBeInTheDocument();
+    });
+  });
+
+  describe("Demo state", () => {
+    it("renders a contained simulator link without provider controls or API calls", async () => {
+      useAuthStore.setState({
+        dataSource: createDataSource({
+          tenantId: "demo-whatsapp",
+          tenantPlan: "starter",
+          demo: {
+            tenantId: "demo-whatsapp",
+            name: "WhatsApp Demo",
+            plan: "starter",
+            status: "active",
+            activatedAt: "2026-07-24T12:00:00.000Z",
+            expiresAt: "2026-07-26T12:00:00.000Z",
+            credentialVersion: 1,
+            serverTime: "2026-07-25T12:00:00.000Z",
+          },
+        }),
+      });
+
+      render(<WhatsappLinkSection />);
+
+      await waitFor(() => {
+        expect(screen.getByText("frontend.whatsapp_link.status_connected")).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole("link", { name: "frontend.whatsapp_link.demo_simulator_link" })).toHaveAttribute(
+        "href",
+        "/admin/demo/simulator",
+      );
+      expect(screen.queryByRole("button", { name: "frontend.whatsapp_link.disconnect" })).not.toBeInTheDocument();
+      expect(screen.queryByText("frontend.whatsapp_link.qr_tab")).not.toBeInTheDocument();
+      expect(mockGetStatus).not.toHaveBeenCalled();
+      expect(mockGetQR).not.toHaveBeenCalled();
     });
   });
 

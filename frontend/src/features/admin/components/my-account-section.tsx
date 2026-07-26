@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type Profile,
   type ProfileUpdate,
-  updateProfile,
   updateTenantProfile,
 } from "../services/settings-api";
 
@@ -20,13 +19,13 @@ export function MyAccountSection({
   profile,
   onProfileUpdate,
 }: MyAccountSectionProps) {
-  const { isMasterSupportContext } = useAuthStore();
+  const { isMasterSupportContext, dataSource } = useAuthStore();
 
   async function handleProfileSave(payload: ProfileUpdate): Promise<Profile> {
     if (isMasterSupportContext) {
       return updateTenantProfile(payload);
     }
-    return updateProfile(payload);
+    return dataSource.settings.updateProfile(payload);
   }
 
   return (

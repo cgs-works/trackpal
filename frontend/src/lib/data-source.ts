@@ -8,11 +8,15 @@ import {
 import {
   getTenantSettings,
   updateTenantSettings,
+  getProfile,
+  updateProfile,
   getMailbox,
   getTimezones,
   getTenantCodeServices,
   updateTenantCodeServices,
   type Mailbox,
+  type Profile,
+  type ProfileUpdate,
   type TenantCodeServiceResponse,
   type TenantSettings,
   type TenantSettingsUpdate,
@@ -153,6 +157,8 @@ export interface CrudDataSourceContract
 
 export interface SettingsDataSourceContract
   extends DataSourceResourceContract<"settings"> {
+  loadProfile(): Promise<Profile>;
+  updateProfile(payload: ProfileUpdate): Promise<Profile>;
   loadReminderSettings(): Promise<ReminderSettings>;
   updateReminderSettings(payload: ReminderSettingsUpdate): Promise<ReminderSettings>;
   loadTenantSettings(): Promise<TenantSettings>;
@@ -238,6 +244,8 @@ async function getProductionClientDeletePreview(id: string): Promise<DeletePrevi
 const productionSettings: SettingsDataSourceContract = {
   resource: "settings",
   storage: "api",
+  loadProfile: getProfile,
+  updateProfile,
   loadReminderSettings: getReminderSettings,
   updateReminderSettings,
   loadTenantSettings: getTenantSettings,

@@ -42,4 +42,38 @@ describe("Pro Demo settings adapter", () => {
     expect(putSpy).not.toHaveBeenCalled();
     expect(postSpy).not.toHaveBeenCalled();
   });
+
+  it("persists profile, locale, code services, and access control locally for Starter and Pro", async () => {
+    const getSpy = vi.spyOn(api, "get");
+    const putSpy = vi.spyOn(api, "put");
+
+    for (const plan of ["starter", "pro"] as const) {
+      const source = createDataSource({
+        tenantId: `profile-${plan}`,
+        tenantPlan: plan,
+        demo: { ...metadata, tenantId: `profile-${plan}`, plan },
+      });
+
+      const initial = await source.settings.loadProfile();
+      expect(initial.full_name).toBe("Settings Demo");
+
+      const updated = await source.settings.updateProfile({
+        full_name: `${plan} Business`,
+        email: `${plan}@example.test`,
+        phone: "12025550199",
+      });
+
+      expect(updated.full_name).toBe(`${plan} Business`);
+      expect((await source.settings.loadProfile()).email).toBe(`${plan}@example.test`);
+      await source.settings.updateTenantSettings({ locale: "es" });
+      await source.settings.updateCodeServices(["secure-mail"]);
+      const created = await source.settings.createAccessBlock("12025550199");
+      expect((await source.settings.loadTenantSettings()).locale).toBe("es");
+      expect((await source.settings.loadCodeServices()).services.filter((item) => item.is_selected)).toHaveLength(1);
+      expect((await source.settings.listAccessBlocks()).some((item) => item.id === created.id)).toBe(true);
+    }
+
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(putSpy).not.toHaveBeenCalled();
+  });
 });

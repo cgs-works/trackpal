@@ -1,5 +1,12 @@
 import type { AccessControlBlock } from "@/features/admin/services/access-control-api";
-import type { Mailbox, TenantCodeService, TenantSettings, TenantSettingsUpdate } from "@/features/admin/services/settings-api";
+import type {
+  Mailbox,
+  Profile,
+  ProfileUpdate,
+  TenantCodeService,
+  TenantSettings,
+  TenantSettingsUpdate,
+} from "@/features/admin/services/settings-api";
 import type { ReminderSettings, ReminderSettingsUpdate } from "@/features/admin/services/reminder-api";
 import type { DemoAuthMetadata } from "@/store/auth";
 import { createDemoBaseline, readStarterDemoState, type StarterDemoWorkspaceState } from "./demo-baseline";
@@ -61,6 +68,29 @@ function defaultTenantSettings(metadata: DemoAuthMetadata): TenantSettings {
   };
 }
 
+function demoProfile(
+  metadata: DemoAuthMetadata,
+  state: StarterDemoWorkspaceState,
+): Profile {
+  const timestamp = now(metadata);
+  return {
+    role: "tenant",
+    username: `demo_${metadata.tenantId}`,
+    name: state.profile.business_name,
+    full_name: state.profile.business_name,
+    tenant_id: metadata.tenantId,
+    tenant_name: state.profile.business_name,
+    client_prefix: null,
+    locale: state.profile.locale,
+    timezone: state.tenant_settings?.timezone ?? "UTC",
+    email: state.profile.email ?? null,
+    phone: state.profile.phone ?? null,
+    is_active: true,
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+}
+
 function fixedMailbox(metadata: DemoAuthMetadata): Mailbox {
   const timestamp = now(metadata);
   return {
@@ -87,6 +117,23 @@ export function createDemoSettings(
   metadata: DemoAuthMetadata,
 ) {
   return {
+    async loadProfile(): Promise<Profile> {
+      return demoProfile(metadata, requireState(workspace, metadata));
+    },
+
+    async updateProfile(payload: ProfileUpdate): Promise<Profile> {
+      const state = updateState(workspace, (existing) => ({
+        ...existing,
+        profile: {
+          ...existing.profile,
+          business_name: payload.full_name?.trim() || existing.profile.business_name,
+          email: payload.email?.trim() || existing.profile.email || null,
+          phone: payload.phone?.trim() || existing.profile.phone || null,
+        },
+      }));
+      return demoProfile(metadata, state);
+    },
+
     async loadReminderSettings(): Promise<ReminderSettings> {
       const state = requireState(workspace, metadata);
       return state.reminder_settings ?? defaultReminderSettings(metadata);

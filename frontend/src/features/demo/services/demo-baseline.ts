@@ -28,6 +28,8 @@ export interface DemoWorkspaceState {
   profile: {
     business_name: string;
     locale: "en" | "es";
+    email?: string | null;
+    phone?: string | null;
   };
   integrations: {
     mailbox: {
@@ -67,6 +69,8 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
     profile: {
       business_name: metadata.name,
       locale: "en",
+      email: null,
+      phone: null,
     },
     integrations: {
       mailbox: { status: "connected", simulated: true },

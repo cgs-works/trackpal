@@ -279,7 +279,8 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 | Data | Export status/actions + self-service deletion | Export status/actions only (no Security tab, no deletion action) |
 
 **Data tab** (`DataTabContent`):
-- Displays current export job status (empty, pending, processing, ready, failed, cancelled)
+- Production displays current export job status (empty, pending, processing, ready, failed, cancelled)
+- Demo Accounts keep export and self-deletion controls discoverable but disabled; the tab never calls export or deletion APIs
 - Polls status while Data tab is open
 - Request new export button (triggers password step-up dialog)
 - Cancel pending/processing export
@@ -290,6 +291,8 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 - Expiry countdown for ready exports
 - Danger zone (Tenant Admin only): self-service deletion with password + destructive word dialog
 - Master Support Context: replaces danger zone with guidance back to Master Dashboard
+- Demo profile, locale, code-service selection, and access-control mutations use the browser-local workspace adapter for both Starter and Pro; password changes remain server-backed.
+- Demo Mailbox and WhatsApp sections render fixed connected simulated states without provider controls. WhatsApp exposes an accessible link to the contained Demo Simulator.
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 

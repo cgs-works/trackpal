@@ -39,7 +39,8 @@ Role-aware horizontal tabs inside Settings. Renders different content based on r
 Data tab for Tenant Data Export and self-service Tenant Deletion. Connected to `useExportStore` for state management.
 
 **Export section:**
-- Empty state with description and "Request export" button (triggers password dialog)
+- Production empty state with description and "Request export" button (triggers password dialog)
+- Demo Accounts keep export and self-deletion discoverable but render both actions disabled and never call their APIs
 - Status display: pending, processing (with spinner), ready (with download button), failed (with retry option), cancelled
 - Previous version download while replacement is pending
 - Actor attribution: localized "You" / "Support" label
@@ -116,7 +117,7 @@ Pro-only Settings section for Public API Catalog configuration. It shows the vis
 
 ### WhatsappLinkSection (`features/admin/components/whatsapp-link-section.tsx`)
 
-Settings section for managing WhatsApp connection (status badge, pairing code, QR scanning, and disconnect). Available for both Starter and Pro tenant admins, and master support context. Uses the `useWhatsAppLinkPolling` hook to fetch status every 5 seconds.
+Settings section for managing WhatsApp connection (status badge, pairing code, QR scanning, and disconnect). Available for both Starter and Pro tenant admins, and master support context. Uses the `useWhatsAppLinkPolling` hook to fetch status every 5 seconds. Demo Accounts render a fixed connected simulated state and an accessible link to the Demo WhatsApp Simulator without provider controls.
 
 ### AccessControlSection (`features/admin/components/access-control-section.tsx`)
 

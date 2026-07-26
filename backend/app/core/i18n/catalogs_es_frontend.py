@@ -545,6 +545,8 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     # WhatsApp Link
     "frontend.whatsapp_link.section_title": "WhatsApp",
     "frontend.whatsapp_link.section_description": "Conecta tu instancia de WhatsApp para el bot y notificaciones.",
+    "frontend.whatsapp_link.demo_description": "Esta instancia conectada es una simulación contenida. No se usa tráfico de WhatsApp, correo, n8n ni Evolution.",
+    "frontend.whatsapp_link.demo_simulator_link": "Abrir simulador de WhatsApp",
     "frontend.whatsapp_link.heading": "Conexión WhatsApp",
     "frontend.whatsapp_link.description": "Gestiona tu instancia de WhatsApp vinculada a este negocio.",
     "frontend.whatsapp_link.phone_label": "Teléfono WhatsApp",
@@ -614,6 +616,8 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.tour_acknowledge_error": "No se pudo guardar el estado del recorrido. Tu espacio de trabajo sigue disponible; inténtalo más tarde.",
     "frontend.help.replay_tour": "Repetir recorrido de orientación",
     # ── Tenant self-service deletion ──────────────────────────
+    "frontend.my_account.demo_data_title": "Acciones de datos no disponibles en demos",
+    "frontend.my_account.demo_data_description": "Las exportaciones y la autoeliminación se muestran para que conozcas estas funciones, pero no están disponibles en una cuenta de demostración. Tu espacio de trabajo permanece local en este navegador.",
     "frontend.my_account.danger_title": "Zona de peligro",
     "frontend.my_account.danger_description": "Elimina permanentemente tu cuenta y todos los datos asociados. Esta acción no se puede deshacer.",
     "frontend.my_account.danger_delete_button": "Eliminar cuenta permanentemente",

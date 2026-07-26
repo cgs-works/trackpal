@@ -45,7 +45,8 @@ export function DataTabContent() {
     reset,
   } = useExportStore();
 
-  const { isMasterSupportContext } = useAuthStore();
+  const { isMasterSupportContext, dataSource } = useAuthStore();
+  const isDemo = dataSource?.mode === "demo";
 
   const [downloading, setDownloading] = useState(false);
   const initialLoadDone = useRef(false);
@@ -63,12 +64,12 @@ export function DataTabContent() {
   useEffect(() => {
     if (!initialLoadDone.current) {
       initialLoadDone.current = true;
-      refreshStatus();
+      if (!isDemo) refreshStatus();
     }
     return () => {
       reset();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDemo, refreshStatus, reset]);
 
   const handleRequestExport = useCallback(async () => {
     await requestExport();
@@ -101,6 +102,7 @@ export function DataTabContent() {
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletePassword || !deleteConfirmWord) return;
+    if (isDemo) return;
     setDeleting(true);
     setDeleteError(null);
     try {
@@ -118,7 +120,7 @@ export function DataTabContent() {
     } finally {
       setDeleting(false);
     }
-  }, [deletePassword, deleteConfirmWord]);
+  }, [deletePassword, deleteConfirmWord, isDemo]);
 
   // ── Actor label ─────────────────────────────────────────────
   const actorLabel = () => {
@@ -147,6 +149,24 @@ export function DataTabContent() {
     const hours = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60));
     return t("frontend.my_account.data_expires_in", { hours: String(hours) });
   };
+
+  if (isDemo) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-12 text-center">
+        <div className="flex size-16 items-center justify-center rounded-full bg-muted">
+          <Database className="size-8 text-muted-foreground" />
+        </div>
+        <div className="max-w-md space-y-2">
+          <h3 className="text-lg font-semibold">{t("frontend.my_account.demo_data_title")}</h3>
+          <p className="text-sm text-muted-foreground">{t("frontend.my_account.demo_data_description")}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button type="button" disabled variant="outline">{t("frontend.my_account.data_empty_action")}</Button>
+          <Button type="button" disabled variant="destructive">{t("frontend.my_account.danger_delete_button")}</Button>
+        </div>
+      </div>
+    );
+  }
 
   // ── No job exists (empty state) ─────────────────────────────
   if (!job) {

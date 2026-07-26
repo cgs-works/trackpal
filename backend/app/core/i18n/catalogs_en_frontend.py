@@ -545,6 +545,8 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     # WhatsApp Link
     "frontend.whatsapp_link.section_title": "WhatsApp",
     "frontend.whatsapp_link.section_description": "Connect your WhatsApp instance for bot and notifications.",
+    "frontend.whatsapp_link.demo_description": "This connected instance is a contained simulation. No WhatsApp, mailbox, n8n, or Evolution traffic is used.",
+    "frontend.whatsapp_link.demo_simulator_link": "Open WhatsApp Simulator",
     "frontend.whatsapp_link.heading": "WhatsApp Connection",
     "frontend.whatsapp_link.description": "Manage your WhatsApp instance linked to this business.",
     "frontend.whatsapp_link.phone_label": "WhatsApp Phone",
@@ -614,6 +616,8 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.help.tour_acknowledge_error": "The tour could not save its state. Your workspace is still available; try again later.",
     "frontend.help.replay_tour": "Replay orientation tour",
     # ── Tenant self-service deletion ──────────────────────────
+    "frontend.my_account.demo_data_title": "Demo data actions unavailable",
+    "frontend.my_account.demo_data_description": "Exports and self-deletion are shown for discoverability but are unavailable in a Demo Account. Your workspace remains local to this browser.",
     "frontend.my_account.danger_title": "Danger zone",
     "frontend.my_account.danger_description": "Permanently delete your account and all associated data. This action cannot be undone.",
     "frontend.my_account.danger_delete_button": "Delete account permanently",
