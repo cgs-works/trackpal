@@ -39,6 +39,7 @@ import { createDemoCatalog } from "@/features/demo/services/demo-catalog";
 import {
   createDemoClientCrud,
 } from "@/features/demo/services/demo-client-crud";
+import { createDemoSubscriptions } from "@/features/demo/services/demo-subscriptions";
 import {
   createDemoBaseline,
   readProDemoState,
@@ -51,6 +52,21 @@ import {
   type HelpTourAcknowledgement,
   type HelpTourRelease,
 } from "@/features/help/services/help-api";
+import {
+  cancelSubscription,
+  createSubscription,
+  getSubscription,
+  listSubscriptions,
+  reactivateSubscription,
+  renewSubscription,
+  revealCredentials,
+  updateSubscription,
+  type RevealCredentials,
+  type Subscription,
+  type SubscriptionCreate,
+  type SubscriptionFilters,
+  type SubscriptionUpdate,
+} from "@/features/admin/services/subscription-api";
 
 export type DataSourceMode = "production" | "demo";
 export type DataStorage = "api" | "workspace";
@@ -59,6 +75,7 @@ export type DataResource =
   | "settings"
   | "catalog"
   | "crud"
+  | "subscriptions"
   | "simulator"
   | "orientation";
 
@@ -104,6 +121,17 @@ export interface CrudDataSourceContract
   extends DataSourceResourceContract<"crud"> {
   readonly clients: ClientCrudDataSourceContract;
 }
+export interface SubscriptionDataSourceContract
+  extends DataSourceResourceContract<"subscriptions"> {
+  list(filters?: SubscriptionFilters): Promise<Subscription[]>;
+  get(id: string): Promise<Subscription>;
+  create(payload: SubscriptionCreate): Promise<Subscription>;
+  update(id: string, payload: SubscriptionUpdate): Promise<Subscription>;
+  reveal(id: string): Promise<RevealCredentials>;
+  cancel(id: string): Promise<Subscription>;
+  renew(id: string, durationType: string, expiresAt?: string): Promise<Subscription>;
+  reactivate(id: string, durationType?: string, startsAt?: string, expiresAt?: string): Promise<Subscription>;
+}
 export interface OrientationDataSourceContract
   extends DataSourceResourceContract<"orientation"> {
   getUnseen(): Promise<HelpTourRelease>;
@@ -122,6 +150,7 @@ export interface DataSourceAdapter {
   readonly settings: DataSourceResourceContract<"settings">;
   readonly catalog: CatalogDataSourceContract;
   readonly crud: CrudDataSourceContract;
+  readonly subscriptions: SubscriptionDataSourceContract;
   readonly simulator: DataSourceResourceContract<"simulator">;
   readonly orientation: OrientationDataSourceContract;
 }
@@ -150,6 +179,19 @@ const productionCatalog: CatalogDataSourceContract = {
   deletePlan,
 };
 
+const productionSubscriptions: SubscriptionDataSourceContract = {
+  resource: "subscriptions",
+  storage: "api",
+  list: listSubscriptions,
+  get: getSubscription,
+  create: createSubscription,
+  update: updateSubscription,
+  reveal: revealCredentials,
+  cancel: cancelSubscription,
+  renew: renewSubscription,
+  reactivate: reactivateSubscription,
+};
+
 const productionResources = {
   dashboard: {
     resource: "dashboard",
@@ -159,6 +201,7 @@ const productionResources = {
   settings: { resource: "settings", storage: "api" },
   catalog: productionCatalog,
   crud: { resource: "crud", storage: "api", clients: productionClientCrud },
+  subscriptions: productionSubscriptions,
   simulator: { resource: "simulator", storage: "api" },
   orientation: {
     resource: "orientation",
@@ -173,6 +216,7 @@ const demoResources = {
   settings: { resource: "settings", storage: "workspace" },
   catalog: { resource: "catalog", storage: "workspace" },
   crud: { resource: "crud", storage: "workspace" },
+  subscriptions: { resource: "subscriptions", storage: "workspace" },
   simulator: { resource: "simulator", storage: "workspace" },
   orientation: { resource: "orientation", storage: "workspace" },
 } as const;
@@ -220,6 +264,10 @@ export function createDataSource(
         ...demoResources.catalog,
         ...createDemoCatalog(workspace, demo),
       },
+      subscriptions: {
+        ...demoResources.subscriptions,
+        ...createDemoSubscriptions(workspace, demo),
+      },
       crud: {
         ...demoResources.crud,
         clients: createDemoClientCrud(workspace, demo),
@@ -256,6 +304,7 @@ export function createDataSource(
     settings: productionResources.settings,
     catalog: productionResources.catalog,
     crud: productionResources.crud,
+    subscriptions: productionResources.subscriptions,
     simulator: productionResources.simulator,
     orientation: productionResources.orientation,
   };

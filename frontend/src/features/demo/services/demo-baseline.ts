@@ -1,6 +1,7 @@
 import type { Service, Plan } from "@/features/admin/services/catalog-api";
 import type { DemoAuthMetadata } from "@/store/auth";
 import type { Client } from "@/features/admin/services/client-api";
+import type { Subscription } from "@/features/admin/services/subscription-api";
 import type { PlanBaselineFactory } from "./demo-workspace";
 
 export const DEMO_BASELINE_VERSION = 2;
@@ -16,14 +17,9 @@ export interface DemoBlockedIdentity {
   phone: string;
 }
 
-export interface DemoSubscriptionRelation {
-  id: string;
-  service_id: string;
-  plan_id: string;
-  client_id: string;
-  status: "active" | "expired" | "cancelled";
-  streaming_email: string;
-  expires_at: string | null;
+export interface DemoSubscriptionRelation extends Omit<Subscription, "has_password" | "has_pin"> {
+  streaming_secret?: string | null;
+  pin_secret?: string | null;
 }
 
 export interface DemoWorkspaceState {
@@ -110,6 +106,67 @@ function createProClients(metadata: DemoAuthMetadata): Client[] {
   });
 }
 
+function createProSubscriptions(metadata: DemoAuthMetadata, clients: Client[], services: Service[], plans: Plan[]): DemoSubscriptionRelation[] {
+  const serviceByKey = new Map(
+    services.map((service) => [service.id.split("-").slice(-1)[0], service]),
+  );
+  const planByKey = new Map(plans.map((plan) => [plan.name.toLowerCase(), plan]));
+  const client = (index: number) => clients[index].id;
+  const service = (key: string) => serviceByKey.get(key)!;
+  const plan = (name: string, serviceKey: string) => {
+    const selected = plans.find(
+      (item) => item.service_id === service(serviceKey).id && item.name.toLowerCase() === name.toLowerCase(),
+    );
+    return selected ?? planByKey.get(name.toLowerCase())!;
+  };
+  const origin = metadata.activatedAt ?? metadata.serverTime;
+  const at = (days: number) => new Date(new Date(origin).getTime() + days * 86_400_000).toISOString();
+  const now = at(0);
+  const build = (
+    id: string,
+    clientIndex: number,
+    serviceKey: string,
+    planName: string,
+    email: string,
+    startsAt: number,
+    expiresAt: number,
+    durationType: string,
+    status: DemoSubscriptionRelation["status"],
+    password: string,
+    profileName?: string,
+    profilePin?: string,
+    cancelledAt?: number,
+  ): DemoSubscriptionRelation => ({
+    id: `${metadata.tenantId}-${id}`,
+    tenant_id: metadata.tenantId,
+    client_id: client(clientIndex),
+    service_id: service(serviceKey).id,
+    plan_id: plan(planName, serviceKey).id,
+    streaming_email: email,
+    streaming_secret: password,
+    profile_name: profileName ?? null,
+    pin_secret: profilePin ?? null,
+    duration_type: durationType,
+    starts_at: at(startsAt),
+    expires_at: at(expiresAt),
+    cancelled_at: cancelledAt === undefined ? null : at(cancelledAt),
+    status,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return [
+    build("subscription-active", 0, "messaging", "Basic", "demo.active@example.test", -14, 16, "1_month", "active", "demo-active-secret"),
+    build("subscription-expiring-7", 1, "messaging", "Plus", "demo.expiring.7@example.test", -23, 7, "1_month", "active", "demo-expiring-7-secret", "Demo Profile 7", "7007"),
+    build("subscription-expiring-3", 2, "access", "Standard", "demo.expiring.3@example.test", -27, 3, "1_month", "active", "demo-expiring-3-secret"),
+    build("subscription-expiring-1", 3, "access", "Premium", "demo.expiring.1@example.test", -29, 1, "1_month", "active", "demo-expiring-1-secret", "Demo Profile 1", "1001"),
+    build("subscription-renewed", 0, "verification", "Professional", "demo.renewed@example.test", -5, 25, "3_months", "active", "demo-renewed-secret"),
+    build("subscription-expired", 0, "verification", "Basic", "demo.expired@example.test", -45, -15, "1_month", "expired", "demo-expired-secret"),
+    build("subscription-cancelled", 1, "messaging", "Basic", "demo.cancelled@example.test", -20, 10, "1_month", "cancelled", "demo-cancelled-secret", undefined, undefined, -10),
+    build("subscription-reactivated", 2, "access", "Standard", "demo.reactivated@example.test", -8, 22, "1_month", "cancelled", "demo-reactivated-secret", "Demo Profile Reactivated", "2222", -2),
+  ];
+}
+
 export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
   const starter = createStarterState(metadata);
   if (plan === "starter") {
@@ -148,14 +205,15 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
     created_at: now,
     updated_at: now,
   }));
+  const clients = createProClients(metadata);
 
   return {
     plan_specific: {
       ...starter,
-      clients: createProClients(metadata),
+      clients,
       services,
       plans,
-      subscriptions: [],
+      subscriptions: createProSubscriptions(metadata, clients, services, plans),
     },
     tour_state: {},
     baseline_version: DEMO_BASELINE_VERSION,

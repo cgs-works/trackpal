@@ -13,13 +13,6 @@ import { CreditCard, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import {
-  listSubscriptions,
-  createSubscription,
-  updateSubscription,
-  revealCredentials,
-  cancelSubscription,
-  renewSubscription,
-  reactivateSubscription,
   type Subscription,
   type Plan,
   type SubscriptionCreate,
@@ -37,6 +30,31 @@ import {
   type LifecycleAction,
 } from "./subscription-lifecycle-dialog";
 import { SubscriptionRenewDialog } from "./subscription-renew-dialog";
+
+function getSubscriptionErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "code" in error && typeof error.code === "string") {
+    const keyByCode: Record<string, string> = {
+      subscription_validation_failed: "frontend.subscriptions.error_validation",
+      subscription_invalid_relationship: "frontend.subscriptions.error_relationship",
+      subscription_invalid_duration: "frontend.subscriptions.error_duration",
+      subscription_pin_requires_profile: "frontend.subscriptions.error_pin_requires_profile",
+      subscription_invalid_dates: "frontend.subscriptions.error_dates",
+      subscription_not_found: "frontend.subscriptions.error_not_found",
+      invalid_demo_workspace: "frontend.subscriptions.error_load",
+    };
+    const key = keyByCode[error.code];
+    if (key) return t(key);
+  }
+  const apiErr = error as {
+    response?: { data?: { detail?: string | Array<{ msg?: string }> } };
+  };
+  const detail = apiErr.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((item) => item.msg || fallback).join("; ");
+  }
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function SubscriptionsPage() {
   const STATUS_OPTIONS = [
@@ -111,16 +129,14 @@ export function SubscriptionsPage() {
       if (statusFilter !== "all") filters.status = statusFilter;
       if (serviceFilter !== "all") filters.service_id = serviceFilter;
       if (clientIdFilter) filters.client_id = clientIdFilter;
-      const data = await listSubscriptions(filters);
+      const data = await dataSource.subscriptions.list(filters);
       setSubscriptions(data);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("frontend.subscriptions.error_load")
-      );
+      setError(getSubscriptionErrorMessage(err, t("frontend.subscriptions.error_load")));
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, serviceFilter, clientIdFilter]);
+  }, [dataSource, statusFilter, serviceFilter, clientIdFilter]);
 
   useEffect(() => {
     loadDropdowns();
@@ -193,28 +209,16 @@ export function SubscriptionsPage() {
     setFormError("");
     try {
       if (formMode === "create") {
-        await createSubscription(payload);
+        await dataSource.subscriptions.create(payload);
         toast.success(t("frontend.subscriptions.created"));
       } else {
-        await updateSubscription(selectedSub!.id, payload);
+        await dataSource.subscriptions.update(selectedSub!.id, payload);
         toast.success(t("frontend.subscriptions.updated"));
       }
       setFormOpen(false);
       await loadSubscriptions();
     } catch (err: unknown) {
-      const apiErr = err as {
-        response?: { data?: { detail?: string | Array<{ msg?: string }> } }
-      };
-      const detail = apiErr.response?.data?.detail;
-      let msg = t("frontend.subscriptions.error_save");
-      if (typeof detail === "string") {
-        msg = detail;
-      } else if (Array.isArray(detail) && detail.length > 0) {
-        msg = detail.map((d) => d.msg || "Unknown error").join("; ");
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      setFormError(msg);
+      setFormError(getSubscriptionErrorMessage(err, t("frontend.subscriptions.error_save")));
     } finally {
       setSaving(false);
     }
@@ -223,15 +227,13 @@ export function SubscriptionsPage() {
   // ── Reveal credentials ─────────────────────────────────────
   async function handleReveal(sub: Subscription) {
     try {
-      const creds = await revealCredentials(sub.id);
+      const creds = await dataSource.subscriptions.reveal(sub.id);
       setRevealEmail(sub.streaming_email);
       setRevealPassword(creds.streaming_password);
       setRevealPin(creds.profile_pin);
       setRevealOpen(true);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("frontend.subscriptions.error_reveal")
-      );
+      toast.error(getSubscriptionErrorMessage(err, t("frontend.subscriptions.error_reveal")));
     }
   }
 
@@ -247,19 +249,17 @@ export function SubscriptionsPage() {
     setLifecycleLoading(true);
     try {
       if (lifecycleAction === "cancel") {
-        await cancelSubscription(lifecycleSub.id);
+        await dataSource.subscriptions.cancel(lifecycleSub.id);
         toast.success(t("frontend.subscriptions.cancelled") || "Subscription cancelled.");
       } else if (lifecycleAction === "reactivate") {
-        await reactivateSubscription(lifecycleSub.id);
+        await dataSource.subscriptions.reactivate(lifecycleSub.id);
         toast.success(t("frontend.subscriptions.reactivated") || "Subscription reactivated.");
       }
       setLifecycleOpen(false);
       await loadSubscriptions();
     } catch (err) {
       const errorKey = `frontend.subscriptions.error_${lifecycleAction}`;
-      toast.error(
-        err instanceof Error ? err.message : t(errorKey)
-      );
+      toast.error(getSubscriptionErrorMessage(err, t(errorKey)));
     } finally {
       setLifecycleLoading(false);
     }
@@ -275,20 +275,27 @@ export function SubscriptionsPage() {
     if (!renewSub) return;
     setRenewLoading(true);
     try {
-      await renewSubscription(renewSub.id, durationType, expiresAt);
+      await dataSource.subscriptions.renew(renewSub.id, durationType, expiresAt);
       toast.success(t("frontend.subscriptions.renewed") || "Subscription renewed.");
       setRenewOpen(false);
       await loadSubscriptions();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("frontend.subscriptions.error_renew")
-      );
+      toast.error(getSubscriptionErrorMessage(err, t("frontend.subscriptions.error_renew")));
     } finally {
       setRenewLoading(false);
     }
   }
 
   // ── Clear filters ──────────────────────────────────────────
+  const filteredSubscriptions = subscriptions.filter((subscription) => {
+    const query = search.trim().toLocaleLowerCase();
+    if (!query) return true;
+    const clientName = clientMap[subscription.client_id] ?? "";
+    const serviceName = serviceMap[subscription.service_id] ?? "";
+    const planName = planMap[subscription.plan_id] ?? "";
+    return [subscription.streaming_email, clientName, serviceName, planName]
+      .some((value) => value.toLocaleLowerCase().includes(query));
+  });
   const hasFilters =
     statusFilter !== "all" || serviceFilter !== "all" || clientIdFilter || search;
 
@@ -380,7 +387,7 @@ export function SubscriptionsPage() {
               {t("frontend.subscriptions.loading")}
             </div>
           </div>
-        ) : subscriptions.length === 0 ? (
+        ) : filteredSubscriptions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <CreditCard className="size-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">
@@ -401,11 +408,11 @@ export function SubscriptionsPage() {
         ) : (
           <>
             <div className="text-sm text-muted-foreground">
-              {subscriptions.length} subscription
-              {subscriptions.length !== 1 ? "s" : ""}
+              {filteredSubscriptions.length} subscription
+              {filteredSubscriptions.length !== 1 ? "s" : ""}
             </div>
             <SubscriptionTable
-              subscriptions={subscriptions}
+              subscriptions={filteredSubscriptions}
               clients={clientMap}
               services={serviceMap}
               plans={planMap}

@@ -83,7 +83,7 @@ Three Zustand stores in `src/store/`:
 
 - **State**: `token`, `refreshToken`, `user`, `activeTenantId`, and `tenantPlan` remain persisted to `localStorage` for production compatibility.
 - **Demo context**: authenticated Demo Accounts persist immutable `demo` metadata separately from workspace data: tenant id, immutable display name, plan, lifecycle status, activation/expiration timestamps, credential version, and server time.
-- **Data source**: `dataSource` is selected once from the authenticated context. Production uses the existing API boundary; Demo Accounts use a tenant-isolated browser-local workspace repository. Resource contracts cover dashboard, settings, CRUD, simulator, and orientation consumers.
+- **Data source**: `dataSource` is selected once from the authenticated context. Production uses the existing API boundary; Demo Accounts use a tenant-isolated browser-local workspace repository. Resource contracts cover dashboard, settings, catalog, CRUD, subscriptions, simulator, and orientation consumers.
 - **Actions**:
   - `login(username, password)` — POST to `/auth/login`, stores tokens + auth metadata, clears all caches, and loads the i18n catalog.
   - `refresh()` — rotates tokens while preserving Demo lifecycle metadata and distinguishes `demo_ended` and `demo_credentials_replaced` outcomes.
@@ -99,7 +99,7 @@ Three Zustand stores in `src/store/`:
 
 - Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
 - The versioned envelope stores lifecycle anchors, the deterministic plan baseline, browser-local settings/business state, and tour acknowledgements; it excludes tokens, passwords, credentials, session identifiers, and chat transcripts.
-- `ensure()` creates the envelope lazily after authenticated Demo context exists; Starter initializes the Master-provided business name, English locale, connected simulated mailbox/WhatsApp states, three ordered generic code services, and two ordered blocked identities. `reset()` restores that baseline while preserving tour state, and `clear()` removes only the selected Demo Account's workspace.
+- `ensure()` creates the envelope lazily after authenticated Demo context exists; Starter initializes the Master-provided business name, English locale, connected simulated mailbox/WhatsApp states, three ordered generic code services, and two ordered blocked identities. Pro subscription records may carry only fictitious demo secret values for the local reveal flow; they are never sent to production services or logged. `reset()` restores that baseline while preserving tour state, and `clear()` removes only the selected Demo Account's workspace.
 
 ### `settingsStore` (`store/settings.ts`)
 
@@ -293,9 +293,11 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 
 Full subscription management (Pro-only):
 - Table with columns: client, service, email, profile, duration, dates, status badges, actions
-- Filters: status, client, service
+- Filters: status, client, service, and local text search across linked names and email
 - Create/Edit/Renew/Reactivate/Cancel modals
 - Reveal credential per row
+- Pro Demo Accounts use the browser-local subscriptions adapter: the deterministic baseline has exactly eight linked records covering active, expiring, expired, cancelled, renewed, reactivation, and reminder-relevant states. Relationship validation, duration/date calculation, lifecycle mutations, credential reveal, filters, and persistence stay local and never call subscription API endpoints.
+- Demo reset restores the eight-record subscription baseline together with the other Pro workspace records; Starter workspaces do not initialize subscription data.
 
 ### ClientsPage (`features/admin/components/clients-page.tsx`)
 
