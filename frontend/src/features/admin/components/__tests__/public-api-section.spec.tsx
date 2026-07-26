@@ -3,6 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDeveloperHandoffPackage, PublicApiSection } from "../public-api-section";
 import { useSettingsStore } from "@/store/settings";
+import api from "@/lib/api";
+import { createDataSource } from "@/lib/data-source";
+
+const mockUseAuthStore = vi.hoisted(() => vi.fn());
+
+vi.mock("@/store/auth", () => ({
+  useAuthStore: mockUseAuthStore,
+}));
 
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
@@ -21,6 +29,9 @@ const config = {
 describe("PublicApiSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuthStore.mockReturnValue({
+      dataSource: { mode: "production", settings: {} },
+    });
     useSettingsStore.getState().clearSettingsCache();
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -55,6 +66,45 @@ describe("PublicApiSection", () => {
 
     await user.click(screen.getByRole("button", { name: "frontend.public_api.show" }));
     expect(screen.getByText("tpk_abc")).toBeInTheDocument();
+  });
+
+  it("keeps every Public API control disabled for Pro Demo Accounts", async () => {
+    const metadata = {
+      tenantId: "demo-public-api",
+      name: "Public API Demo",
+      plan: "pro" as const,
+      status: "active" as const,
+      activatedAt: "2026-07-24T12:00:00.000Z",
+      expiresAt: "2026-07-26T12:00:00.000Z",
+      credentialVersion: 1,
+      serverTime: "2026-07-25T12:00:00.000Z",
+    };
+    const getSpy = vi.spyOn(api, "get");
+    const putSpy = vi.spyOn(api, "put");
+    const postSpy = vi.spyOn(api, "post");
+    const deleteSpy = vi.spyOn(api, "delete");
+    mockUseAuthStore.mockReturnValue({
+      dataSource: createDataSource({
+        tenantId: metadata.tenantId,
+        tenantPlan: metadata.plan,
+        demo: metadata,
+      }),
+    });
+
+    render(<PublicApiSection />);
+
+    expect(await screen.findByText("frontend.public_api.demo_title")).toBeInTheDocument();
+    expect(screen.getByText("frontend.public_api.demo_description")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "frontend.public_api.site_label" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "frontend.public_api.create_key" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "frontend.public_api.key_label" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "frontend.public_api.show" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "frontend.public_api.copy" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "frontend.public_api.delete_key" })).toBeDisabled();
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(putSpy).not.toHaveBeenCalled();
+    expect(postSpy).not.toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
   });
 
   it("creates the key with the first authorized website", async () => {

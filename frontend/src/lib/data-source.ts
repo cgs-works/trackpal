@@ -12,10 +12,15 @@ import {
   updateProfile,
   getMailbox,
   getTimezones,
+  getPublicApiKey,
+  savePublicApiKeyOrigins,
+  regeneratePublicApiKey,
+  revokePublicApiKey,
   getTenantCodeServices,
   updateTenantCodeServices,
   type Mailbox,
   type Profile,
+  type PublicApiKeyConfig,
   type ProfileUpdate,
   type TenantCodeServiceResponse,
   type TenantSettings,
@@ -165,6 +170,10 @@ export interface SettingsDataSourceContract
   updateTenantSettings(payload: TenantSettingsUpdate): Promise<TenantSettings>;
   loadTimezoneOptions(): Promise<{ value: string; label: string; group: string }[]>;
   loadMailbox(): Promise<Mailbox | null>;
+  loadPublicApiKey(): Promise<PublicApiKeyConfig | null>;
+  savePublicApiKeyOrigins(origins: string[]): Promise<PublicApiKeyConfig>;
+  regeneratePublicApiKey(): Promise<PublicApiKeyConfig>;
+  revokePublicApiKey(): Promise<void>;
   loadCodeServices(): Promise<TenantCodeServiceResponse>;
   updateCodeServices(serviceKeys: string[]): Promise<TenantCodeServiceResponse>;
   listAccessBlocks(): Promise<AccessControlBlock[]>;
@@ -252,6 +261,10 @@ const productionSettings: SettingsDataSourceContract = {
   updateTenantSettings,
   loadTimezoneOptions: getTimezones,
   loadMailbox: getMailbox,
+  loadPublicApiKey: getPublicApiKey,
+  savePublicApiKeyOrigins: savePublicApiKeyOrigins,
+  regeneratePublicApiKey: regeneratePublicApiKey,
+  revokePublicApiKey: revokePublicApiKey,
   loadCodeServices: getTenantCodeServices,
   updateCodeServices: updateTenantCodeServices,
   listAccessBlocks,

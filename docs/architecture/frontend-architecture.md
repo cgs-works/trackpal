@@ -291,8 +291,10 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 - Expiry countdown for ready exports
 - Danger zone (Tenant Admin only): self-service deletion with password + destructive word dialog
 - Master Support Context: replaces danger zone with guidance back to Master Dashboard
-- Demo profile, locale, code-service selection, and access-control mutations use the browser-local workspace adapter for both Starter and Pro; password changes remain server-backed.
+- Demo profile, locale, code-service selection, access-control, timezone, and reminder mutations use the browser-local workspace adapter for both Starter and Pro; local validation mirrors the production settings contracts and password changes remain server-backed.
+- Demo Public API remains visible for Pro Accounts as a capability preview, but key/origin controls are disabled and no key is created, stored, revealed, copied, regenerated, revoked, or sent.
 - Demo Mailbox and WhatsApp sections render fixed connected simulated states without provider controls. WhatsApp exposes an accessible link to the contained Demo Simulator.
+- Demo export and self-deletion controls remain discoverable but disabled on both plans; the demo workspace reset restores settings and business baselines while preserving lifecycle and tour state.
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 

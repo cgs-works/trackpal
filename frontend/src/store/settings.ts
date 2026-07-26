@@ -49,7 +49,7 @@ interface SettingsState {
   loadTenantSettings: (source?: SettingsDataSourceContract) => Promise<TenantSettings | null>;
   loadTimezoneOptions: (source?: SettingsDataSourceContract) => Promise<TimezoneOption[]>;
   loadMailbox: (source?: SettingsDataSourceContract) => Promise<Mailbox | null>;
-  loadPublicApiKey: () => Promise<PublicApiKeyConfig | null>;
+  loadPublicApiKey: (source?: SettingsDataSourceContract) => Promise<PublicApiKeyConfig | null>;
   updateReminderSettings: (
     settings: ReminderSettingsUpdate,
     source?: SettingsDataSourceContract,
@@ -60,9 +60,14 @@ interface SettingsState {
   ) => Promise<TenantSettings>;
   savePublicApiKeyOrigins: (
     origins: string[],
+    source?: SettingsDataSourceContract,
   ) => Promise<PublicApiKeyConfig>;
-  regeneratePublicApiKey: () => Promise<PublicApiKeyConfig>;
-  revokePublicApiKey: () => Promise<void>;
+  regeneratePublicApiKey: (
+    source?: SettingsDataSourceContract,
+  ) => Promise<PublicApiKeyConfig>;
+  revokePublicApiKey: (
+    source?: SettingsDataSourceContract,
+  ) => Promise<void>;
   clearSettingsCache: () => void;
 }
 
@@ -127,11 +132,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return promise;
   },
 
-  loadPublicApiKey: async () => {
+  loadPublicApiKey: async (source) => {
     const state = get();
     if (state.publicApiKeyLoaded) return state.publicApiKey;
     const promise =
-      state.publicApiKeyInFlight || loadPublicApiKey(set, get);
+      state.publicApiKeyInFlight || loadPublicApiKey(set, get, source);
     if (!state.publicApiKeyInFlight) {
       set({ publicApiKeyInFlight: promise });
     }
@@ -154,8 +159,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return data;
   },
 
-  savePublicApiKeyOrigins: async (origins) => {
-    const data = await apiSavePublicApiKeyOrigins(origins);
+  savePublicApiKeyOrigins: async (origins, source) => {
+    const data = source
+      ? await source.savePublicApiKeyOrigins(origins)
+      : await apiSavePublicApiKeyOrigins(origins);
     set({
       publicApiKey: data,
       publicApiKeyLoaded: true,
@@ -164,8 +171,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return data;
   },
 
-  regeneratePublicApiKey: async () => {
-    const data = await apiRegeneratePublicApiKey();
+  regeneratePublicApiKey: async (source) => {
+    const data = source
+      ? await source.regeneratePublicApiKey()
+      : await apiRegeneratePublicApiKey();
     set({
       publicApiKey: data,
       publicApiKeyLoaded: true,
@@ -174,8 +183,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return data;
   },
 
-  revokePublicApiKey: async () => {
-    await apiRevokePublicApiKey();
+  revokePublicApiKey: async (source) => {
+    if (source) {
+      await source.revokePublicApiKey();
+    } else {
+      await apiRevokePublicApiKey();
+    }
     set({
       publicApiKey: null,
       publicApiKeyLoaded: true,
@@ -328,10 +341,13 @@ async function loadMailbox(
 async function loadPublicApiKey(
   set: (partial: Partial<SettingsState>) => void,
   get: () => SettingsState,
+  source?: SettingsDataSourceContract,
 ): Promise<PublicApiKeyConfig | null> {
   const epoch = get()._settingsEpoch;
   try {
-    const data = await apiGetPublicApiKey();
+    const data = source
+      ? await source.loadPublicApiKey()
+      : await apiGetPublicApiKey();
     if (get()._settingsEpoch !== epoch) return null;
     set({
       publicApiKey: data,

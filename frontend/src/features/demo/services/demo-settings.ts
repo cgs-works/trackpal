@@ -2,18 +2,141 @@ import type { AccessControlBlock } from "@/features/admin/services/access-contro
 import type {
   Mailbox,
   Profile,
+  PublicApiKeyConfig,
   ProfileUpdate,
   TenantCodeService,
   TenantSettings,
   TenantSettingsUpdate,
 } from "@/features/admin/services/settings-api";
 import type { ReminderSettings, ReminderSettingsUpdate } from "@/features/admin/services/reminder-api";
+import { t } from "@/i18n";
 import type { DemoAuthMetadata } from "@/store/auth";
 import { createDemoBaseline, readStarterDemoState, type StarterDemoWorkspaceState } from "./demo-baseline";
 import type { DemoWorkspaceRepository } from "./demo-workspace";
 
 function now(metadata: DemoAuthMetadata): string {
   return metadata.serverTime;
+}
+
+const FALLBACK_TIMEZONES = [
+  "Africa/Cairo",
+  "Africa/Casablanca",
+  "Africa/Johannesburg",
+  "Africa/Lagos",
+  "America/Argentina/Buenos_Aires",
+  "America/Bogota",
+  "America/Caracas",
+  "America/Chicago",
+  "America/Denver",
+  "America/Guatemala",
+  "America/Halifax",
+  "America/Lima",
+  "America/Los_Angeles",
+  "America/Mexico_City",
+  "America/New_York",
+  "America/Panama",
+  "America/Santiago",
+  "America/Sao_Paulo",
+  "America/Toronto",
+  "America/Vancouver",
+  "Asia/Bangkok",
+  "Asia/Dubai",
+  "Asia/Hong_Kong",
+  "Asia/Jakarta",
+  "Asia/Kolkata",
+  "Asia/Manila",
+  "Asia/Seoul",
+  "Asia/Shanghai",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Melbourne",
+  "Australia/Sydney",
+  "Europe/Berlin",
+  "Europe/Helsinki",
+  "Europe/Lisbon",
+  "Europe/London",
+  "Europe/Madrid",
+  "Europe/Moscow",
+  "Europe/Paris",
+  "Europe/Rome",
+  "Europe/Stockholm",
+  "Europe/Zurich",
+  "Pacific/Auckland",
+  "Pacific/Honolulu",
+  "UTC",
+] as const;
+
+function isValidTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function timezoneLabel(value: string): string {
+  try {
+    const offset = new Intl.DateTimeFormat("en-US", {
+      timeZone: value,
+      timeZoneName: "longOffset",
+    })
+      .formatToParts(new Date())
+      .find((part) => part.type === "timeZoneName")?.value
+      .replace(/^GMT/, "UTC");
+    return offset && offset !== "UTC" ? `${value} (${offset})` : value;
+  } catch {
+    return value;
+  }
+}
+
+function demoTimezoneOptions(): { value: string; label: string; group: string }[] {
+  const supportedValues =
+    typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : [...FALLBACK_TIMEZONES];
+  return Array.from(new Set(["UTC", ...supportedValues])).sort().map((value) => ({
+    value,
+    label: timezoneLabel(value),
+    group: value.includes("/") ? value.split("/")[0] : "UTC",
+  }));
+}
+
+function validateTenantSettings(payload: TenantSettingsUpdate): TenantSettingsUpdate {
+  const normalized: TenantSettingsUpdate = { ...payload };
+  if (payload.locale !== undefined && payload.locale !== null) {
+    const locale = payload.locale.trim().toLowerCase();
+    if (locale !== "en" && locale !== "es") {
+      throw new Error(t("frontend.profile.error_invalid_locale"));
+    }
+    normalized.locale = locale;
+  }
+  if (payload.timezone !== undefined && payload.timezone !== null && !isValidTimezone(payload.timezone)) {
+    throw new Error(t("frontend.subscriptions.error_invalid_timezone"));
+  }
+  return normalized;
+}
+
+function validateReminderSettings(payload: ReminderSettingsUpdate): void {
+  if (payload.reminder_time !== undefined && !/^\d{2}:\d{2}$/.test(payload.reminder_time)) {
+    throw new Error(t("frontend.subscriptions.error_invalid_time"));
+  }
+  if (payload.reminder_time !== undefined) {
+    const [hours, minutes] = payload.reminder_time.split(":").map(Number);
+    if (hours > 23 || minutes > 59) {
+      throw new Error(t("frontend.subscriptions.error_invalid_time"));
+    }
+  }
+  if (
+    payload.recipient_mode !== undefined &&
+    !new Set(["tenant_only", "client_only", "tenant_client", "tenant_and_client", "both"]).has(payload.recipient_mode)
+  ) {
+    throw new Error(t("frontend.subscriptions.error_invalid_recipient_mode"));
+  }
+}
+
+function demoPublicApiBlocked(): never {
+  throw new Error("demo_public_api_blocked");
 }
 
 function requireState(
@@ -140,6 +263,7 @@ export function createDemoSettings(
     },
 
     async updateReminderSettings(payload: ReminderSettingsUpdate): Promise<ReminderSettings> {
+      validateReminderSettings(payload);
       const current = await this.loadReminderSettings();
       const settings = { ...current, ...payload, updated_at: now(metadata) };
       const state = updateState(workspace, (existing) => ({
@@ -155,8 +279,9 @@ export function createDemoSettings(
     },
 
     async updateTenantSettings(payload: TenantSettingsUpdate): Promise<TenantSettings> {
+      const normalizedPayload = validateTenantSettings(payload);
       const current = await this.loadTenantSettings();
-      const settings = { ...current, ...payload, updated_at: now(metadata) };
+      const settings = { ...current, ...normalizedPayload, updated_at: now(metadata) };
       const state = updateState(workspace, (existing) => ({
         ...existing,
         profile: {
@@ -169,7 +294,23 @@ export function createDemoSettings(
     },
 
     async loadTimezoneOptions(): Promise<{ value: string; label: string; group: string }[]> {
-      return [{ value: "UTC", label: "UTC", group: "UTC" }];
+      return demoTimezoneOptions();
+    },
+
+    async loadPublicApiKey(): Promise<PublicApiKeyConfig | null> {
+      return null;
+    },
+
+    async savePublicApiKeyOrigins(): Promise<PublicApiKeyConfig> {
+      return demoPublicApiBlocked();
+    },
+
+    async regeneratePublicApiKey(): Promise<PublicApiKeyConfig> {
+      return demoPublicApiBlocked();
+    },
+
+    async revokePublicApiKey(): Promise<void> {
+      return demoPublicApiBlocked();
     },
 
     async loadMailbox(): Promise<Mailbox> {
