@@ -16,15 +16,14 @@ export interface DemoWorkspaceEnvelope {
   tour_state: Record<string, unknown>;
   saved_at: string;
 }
-
-export interface DemoWorkspaceRepository {
-  readonly key: string;
-  read(): DemoWorkspaceEnvelope | null;
-  ensure(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
-  saveTourState(patch: Record<string, unknown>): void;
-  reset(metadata: DemoAuthMetadata): DemoWorkspaceEnvelope;
-  clear(): void;
-}
+export type PlanBaselineFactory = (
+  plan: TenantPlan,
+  metadata: DemoAuthMetadata,
+) => {
+  plan_specific: Record<string, unknown>;
+  tour_state: Record<string, unknown>;
+  baseline_version: number;
+};
 
 export interface DemoWorkspaceRepository {
   readonly key: string;
@@ -34,6 +33,7 @@ export interface DemoWorkspaceRepository {
   reset(metadata: DemoAuthMetadata, baseline?: PlanBaselineFactory): DemoWorkspaceEnvelope;
   clear(): void;
 }
+
 
 interface StorageLike {
   getItem(key: string): string | null;

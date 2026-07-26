@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MasterRouteImport } from './routes/master'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DemoEndedRouteImport } from './routes/demo-ended'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -33,6 +34,11 @@ const MasterRoute = MasterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoEndedRoute = DemoEndedRouteImport.update({
+  id: '/demo-ended',
+  path: '/demo-ended',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientRoute = ClientRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRouteWithChildren
+  '/demo-ended': typeof DemoEndedRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRouteWithChildren
+  '/demo-ended': typeof DemoEndedRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRouteWithChildren
+  '/demo-ended': typeof DemoEndedRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/client'
+    | '/demo-ended'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/client'
+    | '/demo-ended'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/client'
+    | '/demo-ended'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
+  DemoEndedRoute: typeof DemoEndedRoute
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
 }
@@ -229,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-ended': {
+      id: '/demo-ended'
+      path: '/demo-ended'
+      fullPath: '/demo-ended'
+      preLoaderRoute: typeof DemoEndedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/client': {
@@ -375,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
+  DemoEndedRoute: DemoEndedRoute,
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
 }

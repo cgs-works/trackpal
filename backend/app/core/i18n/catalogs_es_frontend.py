@@ -664,6 +664,16 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.master.demos.deleting": "Eliminando…",
     "frontend.master.demos.confirm_delete": "Eliminar demo",
     "frontend.master.demos.delete_success": "Demo eliminada exitosamente.",
+    # Demo Account shell y banner
+    "frontend.demo.banner.title": "Cuenta de demostración",
+    "frontend.demo.banner.remaining": "{time} restantes",
+    "frontend.demo.banner.browser_local": "Los datos se guardan solo en este navegador.",
+    "frontend.demo.banner.reset": "Restablecer datos de demo",
+    "frontend.demo.banner.reset_confirm_title": "¿Restablecer datos de demo?",
+    "frontend.demo.banner.reset_confirm_description": "Esto restaura la línea base de la demo. Las credenciales, la expiración y el progreso del recorrido se conservan.",
+    "frontend.demo.banner.reset_confirm_action": "Restablecer datos",
+    "frontend.demo.banner.expired": "Expirada",
+    "frontend.demo.overlay.message": "Interacción pausada. Verificando estado de la demo…",
 }
 
 

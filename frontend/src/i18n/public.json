@@ -8,7 +8,12 @@
     "login.signing_in": "Signing in...",
     "login.unknown_role": "Unknown user role",
     "login.error": "Could not sign in",
-    "login.language": "Language"
+    "login.language": "Language",
+    "demo_ended.title": "Demo Unavailable",
+    "demo_ended.description": "This demo evaluation is no longer available. Contact us to continue the conversation.",
+    "demo_ended.contact.whatsapp": "WhatsApp",
+    "demo_ended.contact.telegram": "Telegram",
+    "demo_ended.contact.email": "Email"
   },
   "es": {
     "login.title": "Iniciar sesión",
@@ -19,6 +24,11 @@
     "login.signing_in": "Ingresando...",
     "login.unknown_role": "Rol de usuario no reconocido",
     "login.error": "No se pudo iniciar sesión",
-    "login.language": "Idioma"
+    "login.language": "Idioma",
+    "demo_ended.title": "Demo no disponible",
+    "demo_ended.description": "Esta evaluación de demo ya no está disponible. Contáctanos para continuar la conversación.",
+    "demo_ended.contact.whatsapp": "WhatsApp",
+    "demo_ended.contact.telegram": "Telegram",
+    "demo_ended.contact.email": "Correo"
   }
 }
