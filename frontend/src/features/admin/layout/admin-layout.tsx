@@ -56,6 +56,7 @@ export function AdminLayout() {
     getAdminNavigationItems(
       showProNav,
       role === "tenant" && isPrivateHelpEnabled(),
+      Boolean(demo && demo.plan === "starter" && role === "tenant" && !isMasterSupportContext),
     ),
     location.pathname,
   );

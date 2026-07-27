@@ -25,6 +25,7 @@ import { Route as AdminHelpRouteImport } from './routes/admin/help'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminClientsRouteImport } from './routes/admin/clients'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
+import { Route as AdminDemoSimulatorRouteImport } from './routes/admin/demo/simulator'
 
 const MasterRoute = MasterRouteImport.update({
   id: '/master',
@@ -106,6 +107,11 @@ const AdminCatalogRoute = AdminCatalogRouteImport.update({
   path: '/catalog',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDemoSimulatorRoute = AdminDemoSimulatorRouteImport.update({
+  id: '/demo/simulator',
+  path: '/demo/simulator',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/admin/demo/simulator'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/admin/demo/simulator'
   id:
     | '__root__'
     | '/'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/admin/demo/simulator'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -342,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCatalogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/demo/simulator': {
+      id: '/admin/demo/simulator'
+      path: '/demo/simulator'
+      fullPath: '/admin/demo/simulator'
+      preLoaderRoute: typeof AdminDemoSimulatorRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -352,6 +371,7 @@ interface AdminRouteChildren {
   AdminHelpRoute: typeof AdminHelpRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
+  AdminDemoSimulatorRoute: typeof AdminDemoSimulatorRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -361,6 +381,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminHelpRoute: AdminHelpRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSubscriptionsRoute: AdminSubscriptionsRoute,
+  AdminDemoSimulatorRoute: AdminDemoSimulatorRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

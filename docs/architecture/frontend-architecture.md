@@ -98,6 +98,13 @@ Three Zustand stores in `src/store/`:
 ### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
 
 - Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
+
+### Authenticated Demo WhatsApp Simulator
+
+- `/admin/demo/simulator` is available only to active Starter Demo Accounts. The admin layout adds its navigation item only for that context, and direct production/Pro access renders the normal 404 surface.
+- The Starter simulator adapts the landing WhatsApp phone-shell interaction and pure state-machine pattern for the authenticated design system. It accepts `code`, `codigo`, and `código`, reads enabled services from the browser-local Demo Workspace, validates the subscription email locally, and returns a deterministic fictitious six-digit code after cancellable local progress.
+- Conversation state, email input, generated code, and timers remain component state. Reset Conversation clears only chat, unmount cleanup cancels pending effects, and no simulator action calls WhatsApp, mailbox, n8n, Evolution, or business APIs.
+- Starter intentionally exposes Request only; Pro operation menus are outside this feature's scope.
 - The versioned envelope stores lifecycle anchors, the deterministic plan baseline, browser-local settings/business state, and tour acknowledgements; it excludes tokens, passwords, credentials, session identifiers, and chat transcripts.
 - `ensure()` creates the envelope lazily after authenticated Demo context exists; Starter initializes the Master-provided business name, English locale, connected simulated mailbox/WhatsApp states, three ordered generic code services, and two ordered blocked identities. Pro subscription records may carry only fictitious demo secret values for the local reveal flow; they are never sent to production services or logged. `reset()` restores that baseline while preserving tour state, and `clear()` removes only the selected Demo Account's workspace.
 

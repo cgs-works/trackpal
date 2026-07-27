@@ -60,6 +60,9 @@ export function WhatsappLinkSection() {
   const [timeoutError, setTimeoutError] = useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const isDemo = useAuthStore((state) => state.dataSource.mode === "demo");
+  const isStarterDemo = useAuthStore(
+    (state) => isDemo && (state.demo?.plan ?? state.dataSource.context.tenantPlan) === "starter",
+  );
   const qrRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs for stale closure prevention in QR refresh timer
@@ -297,7 +300,7 @@ export function WhatsappLinkSection() {
           </Alert>
         )}
 
-        {connected && isDemo && (
+        {connected && isStarterDemo && (
           <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4">
             <p className="text-sm text-muted-foreground">
               {t("frontend.whatsapp_link.demo_description")}

@@ -3,6 +3,7 @@ import {
   CreditCard,
   HelpCircle,
   LayoutDashboard,
+  MessageCircle,
   Package,
   Settings,
   User,
@@ -17,7 +18,8 @@ export type AdminNavigationPath =
   | "/admin/catalog"
   | "/admin/subscriptions"
   | "/admin/settings"
-  | "/admin/help";
+  | "/admin/help"
+  | "/admin/demo/simulator";
 
 export type ClientNavigationPath =
   | "/client/dashboard"
@@ -38,6 +40,7 @@ export type ClientNavigationItem = NavigationItem<ClientNavigationPath>;
 export function getAdminNavigationItems(
   showProNav: boolean,
   showHelp = false,
+  showSimulator = false,
 ): AdminNavigationItem[] {
   const items: AdminNavigationItem[] = [
     {
@@ -74,6 +77,15 @@ export function getAdminNavigationItems(
       activeMatch: "prefix",
     },
   ];
+
+  if (showSimulator) {
+    items.push({
+      to: "/admin/demo/simulator",
+      label: t("frontend.demo_simulator.title"),
+      icon: MessageCircle,
+      activeMatch: "prefix",
+    });
+  }
 
   if (showHelp) {
     items.push({
