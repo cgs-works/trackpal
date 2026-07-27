@@ -11,15 +11,15 @@ vi.mock("@/i18n", () => ({
       "frontend.demo.banner.connectivity_warning":
         "We are having trouble verifying this demo. Your local work is preserved; retry shortly.",
       "frontend.demo.banner.workspace_recovered":
-        "This demo workspace was updated to a safe baseline. Your lifecycle and tour progress were preserved.",
+        "Your demo was updated to a safe version. Your progress and data were preserved.",
       "frontend.demo.banner.storage_unavailable":
-        "Browser storage is unavailable. Demo changes cannot be saved; no backend copy will be used.",
+        "Your browser has no storage available. Demo changes will not be saved.",
       "frontend.demo.banner.storage_quota_exceeded":
-        "Browser storage is full. Demo changes cannot be saved; no backend copy will be used.",
+        "Browser storage is full. Demo changes will not be saved.",
       "frontend.demo.banner.reset": "Reset Demo Data",
       "frontend.demo.banner.reset_confirm_title": "Reset demo data?",
       "frontend.demo.banner.reset_confirm_description":
-        "This restores the demo baseline. Credentials, expiration, and tour progress are preserved.",
+        "This will reset the demo to its initial state. Your credentials and progress will be preserved.",
       "frontend.demo.banner.reset_confirm_action": "Reset data",
       "frontend.demo.banner.expired": "Expired",
       "frontend.master.demos.starter": "Starter",
@@ -216,7 +216,7 @@ describe("DemoBanner", () => {
     render(<DemoBanner />);
 
     expect(screen.getByTestId("demo-storage-quota")).toHaveTextContent(
-      "Browser storage is full. Demo changes cannot be saved; no backend copy will be used.",
+      "Browser storage is full. Demo changes will not be saved.",
     );
   });
 
@@ -273,7 +273,7 @@ describe("DemoBanner", () => {
     expect(screen.getByText("Reset demo data?")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "This restores the demo baseline. Credentials, expiration, and tour progress are preserved.",
+        "This will reset the demo to its initial state. Your credentials and progress will be preserved.",
       ),
     ).toBeInTheDocument();
   });

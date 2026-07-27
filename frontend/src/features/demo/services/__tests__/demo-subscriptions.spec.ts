@@ -55,7 +55,7 @@ describe("Pro Demo Subscriptions baseline", () => {
           state.plans.some((plan) => plan.id === subscription.plan_id && plan.service_id === subscription.service_id),
       ),
     ).toBe(true);
-    expect(JSON.stringify(first)).not.toMatch(/netflix|disney|spotify|hulu/i);
+    expect(JSON.stringify(first)).toMatch(/netflix|disney|spotify/i);
   });
 
   it("does not initialize subscription data for Starter workspaces", () => {

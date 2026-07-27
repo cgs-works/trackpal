@@ -31,20 +31,20 @@ describe("Pro Demo dashboard data source", () => {
 
     await expect(source.dashboard.load()).resolves.toMatchObject({
       active_clients: 3,
-      catalog_services: 3,
+      catalog_services: 6,
       active_subscriptions: 5,
       subscriptions_expiring_soon: 3,
       mailbox_status: "connected",
-      enabled_code_services: ["Secure Mail", "Account Access", "Verification Hub"],
+      enabled_code_services: ["Disney+", "HBO Max", "Netflix", "Prime Video", "Spotify", "Universal+"],
       access_control_count: 2,
       reminders_enabled: false,
     });
 
     await source.settings.updateReminderSettings({ reminders_enabled: true });
-    await source.settings.updateCodeServices(["secure-mail"]);
+    await source.settings.updateCodeServices(["netflix"]);
     await source.settings.createAccessBlock("12025550103");
     await expect(source.dashboard.load()).resolves.toMatchObject({
-      enabled_code_services: ["Secure Mail"],
+      enabled_code_services: ["Netflix"],
       access_control_count: 3,
       reminders_enabled: true,
     });
@@ -56,7 +56,7 @@ describe("Pro Demo dashboard data source", () => {
 
     await expect(source.dashboard.load()).resolves.toMatchObject({
       active_clients: 2,
-      catalog_services: 4,
+      catalog_services: 7,
       active_subscriptions: 4,
       subscriptions_expiring_soon: 3,
     });
@@ -64,7 +64,7 @@ describe("Pro Demo dashboard data source", () => {
     source.workspace!.reset(metadata, createDemoBaseline);
     await expect(source.dashboard.load()).resolves.toMatchObject({
       active_clients: 3,
-      catalog_services: 3,
+      catalog_services: 6,
       active_subscriptions: 5,
       subscriptions_expiring_soon: 3,
     });

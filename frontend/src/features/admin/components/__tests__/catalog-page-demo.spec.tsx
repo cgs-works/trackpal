@@ -50,9 +50,9 @@ describe("CatalogPage Demo rendering", () => {
 
     render(<CatalogPage />);
 
-    await waitFor(() => expect(screen.getByText("Account Access")).toBeInTheDocument());
-    expect(screen.getByText("Secure Messaging")).toBeInTheDocument();
-    expect(screen.getByText("Verification Hub")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Disney+")).toBeInTheDocument());
+    expect(screen.getByText("Netflix")).toBeInTheDocument();
+    expect(screen.getByText("Spotify")).toBeInTheDocument();
     expect(getSpy).not.toHaveBeenCalled();
 
     const input = screen.getByPlaceholderText("frontend.catalog.new_service_placeholder");

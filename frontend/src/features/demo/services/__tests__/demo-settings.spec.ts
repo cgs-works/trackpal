@@ -32,7 +32,7 @@ describe("Pro Demo settings adapter", () => {
     expect(timezoneOptions.map((item) => item.value)).toContain("America/Caracas");
     await source.settings.updateReminderSettings({ reminders_enabled: true, warning_days: [5] });
     await source.settings.updateTenantSettings({ locale: "es", timezone: "UTC" });
-    await source.settings.updateCodeServices(["secure-mail"]);
+    await source.settings.updateCodeServices(["netflix"]);
     const created = await source.settings.createAccessBlock("12025550103");
 
     expect((await source.settings.loadReminderSettings()).warning_days).toEqual([5]);
@@ -118,7 +118,7 @@ describe("Pro Demo settings adapter", () => {
       expect(updated.full_name).toBe(`${plan} Business`);
       expect((await source.settings.loadProfile()).email).toBe(`${plan}@example.test`);
       await source.settings.updateTenantSettings({ locale: "es" });
-      await source.settings.updateCodeServices(["secure-mail"]);
+      await source.settings.updateCodeServices(["netflix"]);
       const created = await source.settings.createAccessBlock("12025550199");
       expect((await source.settings.loadTenantSettings()).locale).toBe("es");
       expect((await source.settings.loadCodeServices()).services.filter((item) => item.is_selected)).toHaveLength(1);

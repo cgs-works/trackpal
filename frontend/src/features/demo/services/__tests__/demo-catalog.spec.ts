@@ -25,20 +25,22 @@ beforeEach(() => {
 });
 
 describe("Pro Demo Catalog", () => {
-  it("starts with exactly three generic services and deterministic plans", () => {
+  it("starts with six real streaming services and deterministic plans", () => {
     const first = createDemoBaseline("pro", metadata);
     const second = createDemoBaseline("pro", metadata);
     const state = readProDemoState(first.plan_specific);
 
-    expect(state?.services).toHaveLength(3);
-    expect(state?.plans).toHaveLength(6);
+    expect(state?.services).toHaveLength(6);
+    expect(state?.plans).toHaveLength(12);
     expect(state?.services.map((service) => service.name)).toEqual([
-      "Secure Messaging",
-      "Account Access",
-      "Verification Hub",
+      "Disney+",
+      "HBO Max",
+      "Netflix",
+      "Prime Video",
+      "Spotify",
+      "Universal+",
     ]);
     expect(first).toEqual(second);
-    expect(JSON.stringify(first)).not.toMatch(/netflix|disney|spotify|hulu/i);
   });
 
   it("keeps catalog CRUD local, normalized, unique, and persistent", async () => {
@@ -53,7 +55,7 @@ describe("Pro Demo Catalog", () => {
     const renamed = await catalog.updateService(created.id, { name: "New Service Renamed" });
     const plan = await catalog.createPlan(renamed.id, { name: "  Starter Plan " });
 
-    expect(initial).toHaveLength(3);
+    expect(initial).toHaveLength(6);
     expect(renamed.name).toBe("New Service Renamed");
     expect(plan.name).toBe("Starter Plan");
     await expect(catalog.createService({ name: " new service renamed " })).rejects.toMatchObject({

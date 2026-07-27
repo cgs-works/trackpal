@@ -73,7 +73,7 @@ describe("ClientConsoleExperience", () => {
     fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
 
     expect(await screen.findByText(/frontend\.demo_simulator\.client_subscriptions/)).toBeInTheDocument();
-    expect(screen.getByText(/Secure Messaging/)).toBeInTheDocument();
+    expect(screen.getByText(/Netflix/)).toBeInTheDocument();
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });

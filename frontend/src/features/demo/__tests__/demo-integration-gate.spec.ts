@@ -154,7 +154,7 @@ describe("Demo integration and regression gate", () => {
     expect(updatedProfile.full_name).toBe(`${metadata.name} Updated`);
     expect(tenantSettings.locale).toBe("es");
     expect(dashboard.tenant_plan).toBe(metadata.plan);
-    expect(services).toHaveLength(metadata.plan === "pro" ? 3 : 0);
+    expect(services).toHaveLength(metadata.plan === "pro" ? 6 : 0);
     expect(clients).toHaveLength(metadata.plan === "pro" ? 5 : 0);
     expect(subscriptions).toHaveLength(metadata.plan === "pro" ? 8 : 0);
     expect(api.get).not.toHaveBeenCalledWith("/dashboard");

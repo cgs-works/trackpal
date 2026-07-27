@@ -7,8 +7,8 @@ import {
 } from "../simulator-machine";
 
 const services: SimulatorService[] = [
-  { id: "secure-mail", name: "Secure Mail" },
-  { id: "account-access", name: "Account Access" },
+  { id: "netflix", name: "Netflix" },
+  { id: "disney", name: "Disney+" },
 ];
 
 describe("simulator machine", () => {
@@ -20,8 +20,8 @@ describe("simulator machine", () => {
       });
 
       expect(next.step).toBe("service");
-      expect(next.messages.at(-1)?.text).toContain("Secure Mail");
-      expect(next.messages.at(-1)?.text).toContain("Account Access");
+      expect(next.messages.at(-1)?.text).toContain("Netflix");
+      expect(next.messages.at(-1)?.text).toContain("Disney+");
     }
   });
 

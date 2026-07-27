@@ -59,7 +59,7 @@ export function DemoCredentialsDialog({
         }
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="min-w-0 overflow-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("frontend.master.demos.credentials_title")}</DialogTitle>
           <DialogDescription>
@@ -119,16 +119,17 @@ function CredentialRow({
   onCopy: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
+    <div className="flex min-w-0 w-full max-w-full items-center gap-3 rounded-lg border p-3">
       <div className="text-muted-foreground">{icon}</div>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-hidden">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <code className="block truncate text-sm font-medium">{value}</code>
+        <code className="block min-w-0 max-w-full truncate text-sm font-medium">{value}</code>
       </div>
       <Button
         type="button"
         variant="outline"
         size="icon-sm"
+        className="shrink-0"
         onClick={onCopy}
         aria-label={copied ? copiedLabel : copyLabel}
         title={copied ? copiedLabel : copyLabel}

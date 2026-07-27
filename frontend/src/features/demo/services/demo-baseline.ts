@@ -77,9 +77,12 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
       whatsapp: { status: "connected", simulated: true },
     },
     code_services: [
-      { id: "secure-mail", name: "Secure Mail", enabled: true },
-      { id: "account-access", name: "Account Access", enabled: true },
-      { id: "verification-hub", name: "Verification Hub", enabled: true },
+      { id: "disney", name: "Disney+", enabled: true },
+      { id: "hbo_max", name: "HBO Max", enabled: true },
+      { id: "netflix", name: "Netflix", enabled: true },
+      { id: "prime_video", name: "Prime Video", enabled: true },
+      { id: "spotify", name: "Spotify", enabled: true },
+      { id: "universal_plus", name: "Universal+", enabled: true },
     ],
     blocked_identities: [
       { id: "blocked-1", phone: "12025550101" },
@@ -183,14 +186,14 @@ function createProSubscriptions(metadata: DemoAuthMetadata, clients: Client[], s
   });
 
   return [
-    build("subscription-active", 0, "messaging", "Basic", "demo.active@example.test", -14, 16, "1_month", "active", "demo-active-secret"),
-    build("subscription-expiring-7", 1, "messaging", "Plus", "demo.expiring.7@example.test", -23, 7, "1_month", "active", "demo-expiring-7-secret", "Demo Profile 7", "7007"),
-    build("subscription-expiring-3", 2, "access", "Standard", "demo.expiring.3@example.test", -27, 3, "1_month", "active", "demo-expiring-3-secret"),
-    build("subscription-expiring-1", 3, "access", "Premium", "demo.expiring.1@example.test", -29, 1, "1_month", "active", "demo-expiring-1-secret", "Demo Profile 1", "1001"),
-    build("subscription-renewed", 0, "verification", "Professional", "demo.renewed@example.test", -5, 25, "3_months", "active", "demo-renewed-secret"),
-    build("subscription-expired", 0, "verification", "Basic", "demo.expired@example.test", -45, -15, "1_month", "expired", "demo-expired-secret"),
-    build("subscription-cancelled", 1, "messaging", "Basic", "demo.cancelled@example.test", -20, 10, "1_month", "cancelled", "demo-cancelled-secret", undefined, undefined, -10),
-    build("subscription-reactivated", 2, "access", "Standard", "demo.reactivated@example.test", -8, 22, "1_month", "cancelled", "demo-reactivated-secret", "Demo Profile Reactivated", "2222", -2),
+    build("subscription-active", 0, "netflix", "Básico", "demo.active@example.test", -14, 16, "1_month", "active", "demo-active-secret"),
+    build("subscription-expiring-7", 1, "disney", "Premium", "demo.expiring.7@example.test", -23, 7, "1_month", "active", "demo-expiring-7-secret", "Perfil Demo 7", "7007"),
+    build("subscription-expiring-3", 2, "hbo_max", "Básico", "demo.expiring.3@example.test", -27, 3, "1_month", "active", "demo-expiring-3-secret"),
+    build("subscription-expiring-1", 3, "prime_video", "Premium", "demo.expiring.1@example.test", -29, 1, "1_month", "active", "demo-expiring-1-secret", "Perfil Demo 1", "1001"),
+    build("subscription-renewed", 0, "spotify", "Individual", "demo.renewed@example.test", -5, 25, "3_months", "active", "demo-renewed-secret"),
+    build("subscription-expired", 0, "universal_plus", "Básico", "demo.expired@example.test", -45, -15, "1_month", "expired", "demo-expired-secret"),
+    build("subscription-cancelled", 1, "netflix", "Básico", "demo.cancelled@example.test", -20, 10, "1_month", "cancelled", "demo-cancelled-secret", undefined, undefined, -10),
+    build("subscription-reactivated", 2, "disney", "Básico", "demo.reactivated@example.test", -8, 22, "1_month", "cancelled", "demo-reactivated-secret", "Perfil Reactivado", "2222", -2),
   ];
 }
 
@@ -206,9 +209,12 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
 
   const now = metadata.serverTime;
   const services: Service[] = [
-    ["service-messaging", "Secure Messaging"],
-    ["service-access", "Account Access"],
-    ["service-verification", "Verification Hub"],
+    ["service-disney", "Disney+"],
+    ["service-hbo_max", "HBO Max"],
+    ["service-netflix", "Netflix"],
+    ["service-prime_video", "Prime Video"],
+    ["service-spotify", "Spotify"],
+    ["service-universal_plus", "Universal+"],
   ].map(([id, name]) => ({
     id: `${metadata.tenantId}-${id}`,
     tenant_id: metadata.tenantId,
@@ -217,12 +223,18 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
     updated_at: now,
   }));
   const planDefinitions: Array<[string, string, string]> = [
-    ["service-messaging", "messaging-basic", "Basic"],
-    ["service-messaging", "messaging-plus", "Plus"],
-    ["service-access", "access-standard", "Standard"],
-    ["service-access", "access-premium", "Premium"],
-    ["service-verification", "verification-basic", "Basic"],
-    ["service-verification", "verification-pro", "Professional"],
+    ["service-disney", "disney-basic", "Básico"],
+    ["service-disney", "disney-premium", "Premium"],
+    ["service-hbo_max", "hbo-basic", "Básico"],
+    ["service-hbo_max", "hbo-premium", "Premium"],
+    ["service-netflix", "netflix-basic", "Básico"],
+    ["service-netflix", "netflix-premium", "Premium HD"],
+    ["service-prime_video", "prime-basic", "Básico"],
+    ["service-prime_video", "prime-premium", "Premium"],
+    ["service-spotify", "spotify-individual", "Individual"],
+    ["service-spotify", "spotify-family", "Familiar"],
+    ["service-universal_plus", "universal-basic", "Básico"],
+    ["service-universal_plus", "universal-premium", "Premium"],
   ];
   const plans: Plan[] = planDefinitions.map(([serviceKey, planKey, name]) => ({
     id: `${metadata.tenantId}-${planKey}`,

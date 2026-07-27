@@ -111,7 +111,7 @@ describe("Starter Demo Account integration", () => {
         whatsapp: { status: "connected", simulated: true },
       },
     });
-    expect(first.plan_specific.code_services).toHaveLength(3);
+    expect(first.plan_specific.code_services).toHaveLength(6);
     expect(first.plan_specific.blocked_identities).toHaveLength(2);
   });
 
@@ -119,7 +119,7 @@ describe("Starter Demo Account integration", () => {
     render(<DashboardPage />);
 
     expect(await screen.findByText("Northwind Demo")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(api.get).not.toHaveBeenCalledWith("/dashboard");
   });
@@ -150,7 +150,7 @@ describe("Starter Demo Account integration", () => {
       (reset.plan_specific.code_services as Array<{ id: string }>).map(
         (service) => service.id,
       ),
-    ).toEqual(["secure-mail", "account-access", "verification-hub"]);
+    ).toEqual(["disney", "hbo_max", "netflix", "prime_video", "spotify", "universal_plus"]);
     expect(
       (reset.plan_specific.blocked_identities as Array<{ id: string }>).map(
         (identity) => identity.id,

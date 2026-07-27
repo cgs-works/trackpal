@@ -36,11 +36,11 @@ const clients: ClientConsoleClient[] = [
 ];
 
 const subscriptions: ClientConsoleSubscription[] = [
-  { id: "sub-1", clientId: "client-1", serviceName: "Secure Messaging", planName: "Basic", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-01T00:00:00.000Z", status: "active" },
-  { id: "sub-2", clientId: "client-1", serviceName: "Account Access", planName: "Premium", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-02T00:00:00.000Z", status: "active" },
-  { id: "sub-3", clientId: "client-1", serviceName: "Verification Hub", planName: "Professional", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-03T00:00:00.000Z", status: "active" },
-  { id: "sub-4", clientId: "client-1", serviceName: "Secure Messaging", planName: "Plus", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-04T00:00:00.000Z", status: "active" },
-  { id: "expired", clientId: "client-2", serviceName: "Secure Messaging", planName: "Basic", startsAt: "2026-06-01T00:00:00.000Z", expiresAt: "2026-06-30T00:00:00.000Z", status: "expired" },
+  { id: "sub-1", clientId: "client-1", serviceName: "Netflix", planName: "Básico", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-01T00:00:00.000Z", status: "active" },
+  { id: "sub-2", clientId: "client-1", serviceName: "Disney+", planName: "Premium", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-02T00:00:00.000Z", status: "active" },
+  { id: "sub-3", clientId: "client-1", serviceName: "Spotify", planName: "Individual", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-03T00:00:00.000Z", status: "active" },
+  { id: "sub-4", clientId: "client-1", serviceName: "Netflix", planName: "Premium HD", startsAt: "2026-07-01T00:00:00.000Z", expiresAt: "2026-08-04T00:00:00.000Z", status: "active" },
+  { id: "expired", clientId: "client-2", serviceName: "Netflix", planName: "Básico", startsAt: "2026-06-01T00:00:00.000Z", expiresAt: "2026-06-30T00:00:00.000Z", status: "expired" },
 ];
 
 function step(state: ReturnType<typeof createClientConsoleState>, text: string) {
@@ -68,10 +68,10 @@ describe("Client console machine", () => {
     const page = step(list, "8");
     const back = step(page, "9");
 
-    expect(list.messages.at(-1)?.text).toContain("Secure Messaging");
+    expect(list.messages.at(-1)?.text).toContain("Netflix");
     expect(list.messages.at(-1)?.text).not.toContain("expired");
     expect(page.page).toBe(1);
-    expect(page.messages.at(-1)?.text).toContain("Plus");
+    expect(page.messages.at(-1)?.text).toContain("Premium HD");
     expect(back.page).toBe(0);
   });
 

@@ -415,7 +415,7 @@ describe("DemoWhatsappSimulator", () => {
     expect(await screen.findByText(/frontend\.demo_simulator\.catalog_confirm_reprompt/)).toBeInTheDocument();
     const state = useAuthStore.getState().dataSource.workspace?.read();
     const services = state?.plan_specific.services as Array<{ name: string }> | undefined;
-    expect(services).toHaveLength(3);
+    expect(services).toHaveLength(6);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
@@ -425,8 +425,8 @@ describe("DemoWhatsappSimulator", () => {
 
     expect(await screen.findByText("frontend.demo_simulator.welcome")).toBeInTheDocument();
     expect(screen.getByText("frontend.demo_simulator.no_operation_notice")).toBeInTheDocument();
-    expect(screen.getByText("Secure Mail")).toBeInTheDocument();
-    expect(screen.getByText("Account Access")).toBeInTheDocument();
+    expect(screen.getByText("Netflix")).toBeInTheDocument();
+    expect(screen.getByText("Disney+")).toBeInTheDocument();
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
@@ -487,12 +487,12 @@ describe("DemoWhatsappSimulator", () => {
 
   it("reset conversation clears chat without changing workspace services", async () => {
     render(<DemoWhatsappSimulator />);
-    expect(await screen.findByText("Secure Mail")).toBeInTheDocument();
+    expect(await screen.findByText("Netflix")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.reset" }));
 
     expect(screen.getByText("frontend.demo_simulator.welcome")).toBeInTheDocument();
     expect(screen.queryByText(/frontend\.demo_simulator\.service_prompt/)).not.toBeInTheDocument();
-    expect(screen.getByText("Secure Mail")).toBeInTheDocument();
+    expect(screen.getByText("Netflix")).toBeInTheDocument();
   });
 });
