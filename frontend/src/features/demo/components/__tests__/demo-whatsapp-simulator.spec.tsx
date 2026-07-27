@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DemoWhatsappSimulator } from "../demo-whatsapp-simulator";
 import { createDemoBaseline } from "../../services/demo-baseline";
@@ -120,6 +120,123 @@ describe("DemoWhatsappSimulator", () => {
     expect(await screen.findByText(/frontend\.demo_simulator\.role_prompt/)).toBeInTheDocument();
     expect(screen.getByText(/frontend\.demo_simulator\.role_tenant_admin/)).toBeInTheDocument();
     expect(screen.getByText(/frontend\.demo_simulator\.role_client/)).toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("runs Tenant Admin client mutations through the local repository", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await waitFor(() => expect(screen.getByText(/frontend\.demo_simulator\.tenant_menu/)).toBeInTheDocument());
+    await send("1");
+    expect(await screen.findByText(/frontend\.demo_simulator\.clients_title/)).toBeInTheDocument();
+    await send("1");
+    expect(await screen.findByText(/Avery Stone/)).toBeInTheDocument();
+    await send("1");
+    await send("2");
+    expect(await screen.findByText(/frontend\.demo_simulator\.client_deactivate_confirm/)).toBeInTheDocument();
+    await send("CONFIRM");
+    await waitFor(() => expect(screen.getByText(/frontend\.demo_simulator\.client_deactivated/)).toBeInTheDocument());
+
+    await waitFor(() => {
+      const state = useAuthStore.getState().dataSource.workspace?.read();
+      const client = state && (state.plan_specific.clients as Array<{ full_name: string; is_active: boolean }>).find((item) => item.full_name === "Avery Stone");
+      expect(client?.is_active).toBe(false);
+    });
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("creates catalog services locally and keeps invalid confirmations non-mutating", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await waitFor(() => expect(screen.getByText(/frontend\.demo_simulator\.tenant_menu/)).toBeInTheDocument());
+    await send("2");
+    expect(await screen.findByText(/frontend\.demo_simulator\.catalog_title/)).toBeInTheDocument();
+    await send("2");
+    await send("New Local Service");
+
+    await waitFor(() => {
+      const state = useAuthStore.getState().dataSource.workspace?.read();
+      const services = state?.plan_specific.services as Array<{ name: string }> | undefined;
+      expect(services?.some((service) => service.name === "New Local Service")).toBe(true);
+    });
+    expect(screen.getAllByText(/New Local Service/).length).toBeGreaterThan(0);
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("supports 8 pagination, 9 back, and 0 cancellation in Tenant Admin flows", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await send("1");
+    await send("1");
+    await send("8");
+    expect(await screen.findByText(/Jon Bell/)).toBeInTheDocument();
+    await send("9");
+    expect(screen.getAllByText(/Avery Stone/).length).toBeGreaterThan(0);
+    await send("0");
+    expect(screen.getAllByText(/frontend\.demo_simulator\.mode_request/).length).toBeGreaterThan(0);
+  });
+
+  it("previews catalog relations before delete and does not mutate on a bad confirmation", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await send("2");
+    await send("1");
+    await send("1");
+    await send("4");
+    await send("1");
+    expect(await screen.findByText(/frontend\.demo_simulator\.catalog_delete_confirm/)).toBeInTheDocument();
+    await send("not-confirmed");
+    expect(await screen.findByText(/frontend\.demo_simulator\.catalog_confirm_reprompt/)).toBeInTheDocument();
+    const state = useAuthStore.getState().dataSource.workspace?.read();
+    const services = state?.plan_specific.services as Array<{ name: string }> | undefined;
+    expect(services).toHaveLength(3);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
