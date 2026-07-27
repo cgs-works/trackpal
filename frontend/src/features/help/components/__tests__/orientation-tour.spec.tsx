@@ -257,6 +257,38 @@ describe("OrientationTour", () => {
     );
   });
 
+  it("portals the mobile tour sheet outside the positioned Joyride wrapper", async () => {
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(max-width: 767px)",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
+
+    try {
+      render(
+        <>
+          <div data-help-id="admin.dashboard" />
+          <OrientationTour />
+        </>,
+      );
+
+      await waitFor(() => {
+        const popover = screen.getByTestId("help-tour-popover");
+        expect(popover).toHaveAttribute("data-tour-layout", "mobile-sheet");
+        expect(popover.parentElement).toBe(document.body);
+      });
+    } finally {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: originalMatchMedia,
+      });
+    }
+  });
+
   it("replaces tour motion when the user prefers reduced motion", async () => {
     const originalMatchMedia = window.matchMedia;
     Object.defineProperty(window, "matchMedia", {

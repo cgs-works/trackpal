@@ -108,6 +108,19 @@ describe("auth context persistence", () => {
     expect(vi.mocked(loadCatalog)).toHaveBeenCalledOnce();
   });
 
+  it("restores the browser-local demo locale on the next login", async () => {
+    vi.mocked(loginApi).mockResolvedValue(demoResponse);
+
+    await useAuthStore.getState().login("demo-user", "password");
+    await useAuthStore.getState().dataSource.settings.updateTenantSettings({ locale: "es" });
+    await useAuthStore.getState().logout();
+    vi.mocked(loadCatalog).mockClear();
+
+    await useAuthStore.getState().login("demo-user", "password");
+
+    expect(loadCatalog).toHaveBeenCalledWith("es");
+  });
+
   it("uses the production fallback without demo metadata", async () => {
     vi.mocked(loginApi).mockResolvedValueOnce(productionResponse);
 

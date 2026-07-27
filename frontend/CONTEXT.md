@@ -74,8 +74,9 @@ File-based routing via `@tanstack/router-plugin`. Árbol auto-generado en `src/r
 | `/admin/catalog` | `CatalogPage` | `tenant` | Pro-only |
 | `/admin/subscriptions` | `SubscriptionsPage` | `tenant` | Pro-only |
 | `/admin/settings` | `SettingsPage` | `tenant` | — |
+| `/admin/demo/simulator` | `DemoWhatsappSimulator` | Demo `tenant` only | Starter Request; Pro Request + Operation |
 | `/admin/help` | `HelpCenterPage` | `tenant` | `VITE_PRIVATE_HELP_ENABLED=true` |
-
+| `/demo-ended` | `DemoEndedPage` | Public | — |
 | `/client/dashboard` | `ClientDashboard` | `client` | — |
 | `/client/profile` | `ProfilePage` | `client` | — |
 | `/client/help` | `HelpCenterPage` | `client` | `VITE_PRIVATE_HELP_ENABLED=true` |

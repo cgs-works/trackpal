@@ -77,7 +77,7 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 
 ### I18n Endpoints
 
-- `GET /api/v1/i18n/catalog` — Returns merged translation catalog for current user's tenant locale. Tenant reads locale from `TenantSettings` via `tenant_settings_repository.resolve_locale_by_owner()`; client reads from parent tenant via `resolve_locale_by_client()`; master/unknown returns English. Catalog includes all English keys as fallback.
+- `GET /api/v1/i18n/catalog` — Returns the merged translation catalog. Production Tenant Admins read `TenantSettings.locale`; Clients read the parent Tenant locale; Master returns English. Demo Tenant Admins may pass `?locale=en|es` so their browser-local workspace controls language without server-side Tenant Settings. Non-Demo query overrides are ignored. Catalogs include all English keys as fallback.
 
 ### Auth Endpoints
 

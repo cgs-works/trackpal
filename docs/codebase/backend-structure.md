@@ -45,6 +45,7 @@ backend/
 │   │   ├── database.py            # AsyncSession factory
 │   │   ├── encryption.py          # Fernet encrypt/decrypt
 │   │   ├── errors.py              # UserFacingError, translate_error
+│   │   ├── demo_guardrail.py      # Demo allowlist and stable blocked-operation policy
 │   │   ├── phone.py               # normalize_phone
 │   │   ├── security.py            # bcrypt, JWT, refresh tokens
 │   │   ├── tenant_plan.py          # TenantPlan type, valid plans, normalize helper
@@ -119,6 +120,7 @@ backend/
 │       ├── __init__.py            # Re-exports for stable public API
 │       ├── access_control_service.py  # Block/unblock + codigo session cleanup
 │       ├── auth_service/
+│       ├── demo_lifecycle_service.py     # Activation, 48-hour expiry, heartbeat metadata, credential version checks
 │       ├── demo_management_service.py    # Master Demo Tenant identity and credential lifecycle
 │       ├── catalog_service/
 │       ├── client_service/
@@ -180,12 +182,17 @@ backend/
 │       ├── cdc0fe74caa8_add_code_service_tables.py  # Code-service governance tables
 │       ├── ce10fe74caa10_add_client_messaging_blocks_table.py  # Client Messaging Blocks table (renamed to blocked_clients in ce10fe74caa11)
 │       ├── ce10fe74caa11_rename_client_messaging_blocks_to_blocked_clients.py  # Rename to blocked_clients
-│       └── e011fe74cab1_add_tenant_plan.py  # Add plan column to tenants
+│       ├── e011fe74cab1_add_tenant_plan.py  # Add plan column to tenants
+│       └── e017fe74cab7_add_demo_tenant_lifecycle.py # Demo identity/lifecycle columns, constraints, and index
 ├── scripts/
 │   └── seed.py
 ├── tests/
 │   ├── conftest.py
 │   ├── test_auth.py
+│   ├── test_demo_guardrails.py          # Direct route-family containment and explicit allowlist
+│   ├── test_demo_integration_gate.py    # Creation/login/lifecycle/containment narrative
+│   ├── test_demo_tenant_management.py   # Master create/list/credentials/delete lifecycle
+│   ├── test_demo_tenant_persistence.py  # Model and migration constraints
 │   ├── test_catalog.py
 │   ├── test_client_console_service.py  # 26 tests
 │   ├── test_whatsapp_navigation.py     # 7 tests — shared navigation primitives
@@ -249,6 +256,9 @@ backend/
 | `app/core/encryption.py` | Fernet encryption for subscription secrets |
 | `app/core/tenant_plan.py` | TenantPlan type, valid plans, normalize helper |
 | `app/core/errors.py` | UserFacingError and translate_error |
+| `app/core/demo_guardrail.py` | Rejects Demo JWT access outside the auth/password/Help/i18n/heartbeat allowlist |
+| `app/services/demo_lifecycle_service.py` | Activates the single 48-hour window and resolves expiry/credential-version lifecycle outcomes |
+| `app/services/demo_management_service.py` | Master-only Demo identity creation, credential replacement, listing, and deletion |
 | `app/api/v1/endpoints/code_services.py` | Code-services global + tenant selection endpoints |
 | `app/core/input_validation/` | Shared validation package: contact, phone, general validators |
 | `app/services/whatsapp_tenant_console_service/` | Tenant WhatsApp menu routing (package, 18 modules) |

@@ -4,11 +4,13 @@ Returns the merged translation catalog for the current user's locale.
 Frontend fetches at login and refetches after locale change.
 """
 
-from fastapi import APIRouter
+from typing import Literal
+
+from fastapi import APIRouter, Query
 
 from app.api.dependencies import CurrentUser, DbDep
 from app.core.i18n import get_merged_catalog, LOCALE_NAMES
-from app.repositories import tenant_settings_repository
+from app.repositories import tenant_settings_repository, tenants_repository
 
 router = APIRouter(prefix="/i18n", tags=["i18n"])
 
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/i18n", tags=["i18n"])
 async def get_catalog(
     db: DbDep,
     current_user: CurrentUser,
+    requested_locale: Literal["en", "es"] | None = Query(None, alias="locale"),
 ):
     """Return merged translation catalog for the current user's tenant locale.
 
@@ -26,9 +29,13 @@ async def get_catalog(
     locale = "en"  # default fallback
 
     if current_user.role == "tenant":
-        locale = await tenant_settings_repository.resolve_locale_by_owner(
-            db, current_user.id
-        )
+        tenant = await tenants_repository.get_by_owner(db, current_user.id)
+        if tenant is not None and tenant.is_demo and requested_locale is not None:
+            locale = requested_locale
+        else:
+            locale = await tenant_settings_repository.resolve_locale_by_owner(
+                db, current_user.id
+            )
     elif current_user.role == "client":
         locale = await tenant_settings_repository.resolve_locale_by_client(
             db, current_user.id

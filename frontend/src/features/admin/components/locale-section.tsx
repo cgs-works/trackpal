@@ -45,8 +45,8 @@ export function LocaleSection() {
     try {
       const prev = tenantSettings?.locale || "en";
       await updateTenantSettings({ locale }, dataSource.settings);
-      if (locale !== prev && dataSource.mode !== "demo") {
-        await loadCatalog();
+      if (locale !== prev) {
+        await loadCatalog(dataSource.mode === "demo" ? locale : undefined);
       }
       toast.success(t("frontend.profile.saved"));
     } catch (err) {

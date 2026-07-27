@@ -5,7 +5,7 @@ TrackPal has three WhatsApp conversational consoles:
 - **Tenant Console** for tenant admins to manage clients, catalog, profile, and subscriptions
 - **Client Console** (read-only) for tenant clients
 
-Both use n8n + Evolution + backend relay and store conversation state in Redis.
+Production consoles use n8n + Evolution + backend relay and store conversation state in Redis. Demo Accounts never enter this provider path: their dedicated Web WhatsApp Simulator runs entirely against the browser-local Demo Workspace.
 
 ## Message Flow
 
@@ -474,6 +474,13 @@ The contract is enforced by:
 - `0` is global exit across top-level and active flows; `9` goes back without cancelling; `8` advances to next screen when offered
 - Invalid input does not refresh TTL
 - Only valid contextual messages refresh contextual TTL
+
+## Demo containment
+
+- Demo Tenants do not receive an Evolution instance and cannot enter the Master, Tenant Admin, Client, Client Context Shortcut, or unauthenticated lookup production paths.
+- Tenant-scoped console endpoints apply the Demo Guardrail before provider or business work and return the stable `demo_operation_blocked` code for direct Demo JWT attempts.
+- `/admin/demo/simulator` reproduces plan-correct Request and Operation experiences in the frontend. It calls no n8n, Evolution, mailbox, or WhatsApp endpoint and persists only business workspace changes, never chat transcript or credentials.
+- Reset Conversation clears component-local chat state. Reset Demo Data restores the browser-local plan baseline without altering credentials or the server-enforced evaluation clock.
 
 ## Contingency behavior
 

@@ -1,6 +1,6 @@
 # TrackPal
 
-Multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages tenant lifecycle through a WhatsApp console and a web dashboard. Tenant Admins use plan-aware Web and WhatsApp interfaces for profile, WhatsApp linking, mailbox code retrieval, code-service selection, and access control; Pro adds clients, catalog, subscriptions, reminders, and Public API Catalog.
+Multi-tenant platform for managing WhatsApp-based service delivery. The Master operator manages production Tenant lifecycle and bounded Starter/Pro Demo Account evaluations through the web dashboard, plus production Tenant lifecycle through WhatsApp. Tenant Admins use plan-aware Web and WhatsApp interfaces for profile, WhatsApp linking, mailbox code retrieval, code-service selection, and access control; Pro adds clients, catalog, subscriptions, reminders, and Public API Catalog.
 
 Clients of Pro tenants have read-only Web and WhatsApp access to profile and active subscription information, can search for access codes through WhatsApp, and can change their password through the Web Dashboard.
 

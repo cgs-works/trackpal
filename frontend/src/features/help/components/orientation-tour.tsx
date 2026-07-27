@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ACTIONS,
@@ -95,7 +96,7 @@ function TourTooltip(props: TooltipRenderProps) {
     },
   };
 
-  return (
+  const tooltip = (
     <div
       {...tooltipProps}
       style={
@@ -103,10 +104,12 @@ function TourTooltip(props: TooltipRenderProps) {
           ? {
               position: "fixed",
               top: "auto",
-              right: "1rem",
+              right: "auto",
               bottom: "1rem",
-              left: "1rem",
-              transform: "none",
+              left: "50%",
+              width: "calc(100vw - 2rem)",
+              maxWidth: "32rem",
+              transform: "translateX(-50%)",
             }
           : undefined
       }
@@ -177,6 +180,8 @@ function TourTooltip(props: TooltipRenderProps) {
       </div>
     </div>
   );
+
+  return isMobile ? createPortal(tooltip, document.body) : tooltip;
 }
 
 function useReducedMotion(): boolean {

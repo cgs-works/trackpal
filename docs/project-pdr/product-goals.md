@@ -18,6 +18,12 @@ Master interacts via WhatsApp chatbot to:
 5. **Reactivate tenants** — Restore deactivated tenants
 6. **Delete tenants** — Permanently remove inactive tenants plus their Evolution instance and all cascaded data. **Note**: Master deletion now requires password step-up and locale-aware destructive word confirmation (ELIMINAR/DELETE)
 
+### Demo Account Evaluations (Web)
+
+Master creates and manages bounded Starter or Pro evaluations from the dedicated Demos tab. The first successful Demo Credentials login starts one non-extendable 48-hour period. The backend stores identity and lifecycle only; realistic business changes and simulator operations remain isolated in a versioned browser-local Demo Workspace. Direct business, integration, Public API, export, and self-deletion requests are blocked server-side.
+
+Starter demos preserve Starter navigation and provide the contained access-code Request simulator. Pro demos add local Clients, Catalog, Subscriptions, derived dashboards, plan-correct Settings, and Client/Tenant Admin console simulations. Both plans provide Help, password change, lifecycle heartbeat, reset, bilingual UI, and the neutral Demo Ended route without provisioning Evolution, n8n, mailbox, OAuth, Public API, or export resources.
+
 ### Tenant Console (WhatsApp)
 
 Tenant Admin capabilities are plan-aware:
@@ -46,7 +52,7 @@ Client password changes are available through the authenticated Web Dashboard, n
 
 ### Web Dashboard
 
-- **Master Dashboard** (`/master/dashboard`): Full tenant management UI (CRUD, activate/deactivate, delete) with summary cards and modal forms. Includes global code-service activation panel. Master can export data for any active or inactive Tenant directly from the Dashboard.
+- **Master Dashboard** (`/master/dashboard`): Separate Production and Demos tabs. Production provides Tenant CRUD, activate/deactivate/delete, summary cards, global code-service activation, support context, and export. Demos provides lifecycle-only creation, credential replacement, status/search, and deletion without workspace preview or telemetry.
 - **Tenant Dashboard** (`/admin/dashboard`): Self-service profile + password management, catalog panel, client management panel, subscriptions page, mailbox config panel, code-service selection panel, access-control settings, WhatsApp self-linking configuration, My Account with Data tab for Tenant Data Export and Tenant Admin self-service deletion.
 - **Client Dashboard** (`/client/dashboard`): Read-only profile view and password change for end-customers.
 
@@ -90,7 +96,7 @@ Programmatic access for frontend SPA and n8n integration:
 
 | Role | Capabilities |
 |------|-------------|
-| **Master** | Full access via WhatsApp Console + REST API + Web Dashboard. Manages all tenants, global code-service activation, system config. One instance. Can export active or inactive Tenant data. Deletes inactive Tenants with password step-up and destructive word confirmation. |
+| **Master** | Full access via WhatsApp Console + REST API + Web Dashboard. Manages production Tenants, global code-service activation, system config, and web-only Demo Tenant lifecycle. Can export active or inactive production Tenant data. Deletes inactive production Tenants with password step-up and destructive word confirmation; Demo deletion uses its separate bounded lifecycle contract. |
 | **Tenant Admin** | Operates one tenant through plan-aware Web and WhatsApp administration. Starter covers profile, WhatsApp, mailbox code lookup, code-service selection, and access control; Pro adds clients, catalog, subscriptions, reminders, timezone, and Public API Catalog. Can export business data (all plans) and permanently self-delete the Tenant (My Account Data tab, password step-up + destructive word). |
 | **Client** | For Pro tenants, views own profile and active subscriptions through Web and WhatsApp, searches for access codes through WhatsApp, and changes password through Web. Uses a tenant-prefixed login (`{prefix}_{local_username}`). |
 
@@ -99,7 +105,7 @@ Programmatic access for frontend SPA and n8n integration:
 | Channel | Master | Tenant | Client |
 |---------|--------|--------|--------|
 | WhatsApp Console | Full admin (CRUD tenants) | Plan-aware administration: profile, access codes, access control, and help; Pro also includes clients, catalog, and subscriptions | Read-only profile and active subscriptions, plus access-code search |
-| Web Dashboard | Tenant list + CRUD + global code-services | Plan-aware profile, WhatsApp, mailbox, code-services, access control, catalog, clients, subscriptions, reminders, and Public API settings | Read-only profile and active subscriptions, plus password change |
+| Web Dashboard | Production Tenant management + Demo lifecycle management + global code-services | Plan-aware production administration or contained browser-local Demo Workspace | Read-only profile and active subscriptions, plus password change |
 | REST API | Full | Self-scoped | Read-only self |
 | Mailbox Ingestion | N/A | Configure mailbox, access code retrieval | N/A |
 

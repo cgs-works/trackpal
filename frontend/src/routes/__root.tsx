@@ -2,8 +2,9 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { loadCatalog, isCatalogReady } from "@/i18n";
+import { isCatalogReady } from "@/i18n";
 import { readBrowserStorage } from "@/lib/browser-storage";
+import { loadCatalogForDataSource, useAuthStore } from "@/store/auth";
 
 function RootComponent() {
   const [catalogLoaded, setCatalogLoaded] = useState(isCatalogReady());
@@ -22,7 +23,9 @@ function RootComponent() {
       setCatalogLoaded(true);
       return;
     }
-    loadCatalog().then(() => setCatalogLoaded(true));
+    loadCatalogForDataSource(useAuthStore.getState().dataSource).then(() =>
+      setCatalogLoaded(true),
+    );
   }, []);
 
   // Don't render children until catalog is loaded (prevents raw key flash)

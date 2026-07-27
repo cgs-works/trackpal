@@ -23,6 +23,21 @@ import {
   writeBrowserStorage,
 } from "@/lib/browser-storage";
 
+export async function loadCatalogForDataSource(
+  dataSource: DataSourceAdapter,
+): Promise<void> {
+  if (dataSource.mode === "demo") {
+    try {
+      const settings = await dataSource.settings.loadTenantSettings();
+      await loadCatalog(settings.locale);
+      return;
+    } catch {
+      // Workspace recovery must not prevent authenticated rendering.
+    }
+  }
+  await loadCatalog();
+}
+
 export interface DemoAuthMetadata {
   tenantId: string;
   name: string;
@@ -294,7 +309,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useSettingsStore.getState().clearSettingsCache();
     useCatalogStore.getState().clearAll();
     set({ ...stateFromToken(data, demo), planDowngraded });
-    await loadCatalog();
+    await loadCatalogForDataSource(get().dataSource);
     return data;
   },
 

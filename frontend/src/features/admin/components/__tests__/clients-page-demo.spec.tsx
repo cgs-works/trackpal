@@ -6,6 +6,7 @@ import { createDataSource } from "@/lib/data-source";
 import { useAuthStore } from "@/store/auth";
 import { useCatalogStore } from "@/store/catalog";
 import api from "@/lib/api";
+import { toast } from "sonner";
 
 vi.mock("@/i18n", () => ({
   t: (key: string, params?: Record<string, string | number>) =>
@@ -93,6 +94,7 @@ describe("ClientsPage Demo rendering", () => {
   it("performs create, edit, lifecycle, delete, and pagination locally", async () => {
     const user = userEvent.setup();
     const getSpy = vi.spyOn(api, "get");
+    const successSpy = vi.spyOn(toast, "success");
     const clients = useAuthStore.getState().dataSource.crud.clients;
     for (let index = 0; index < 6; index += 1) {
       await clients.create({
@@ -113,6 +115,9 @@ describe("ClientsPage Demo rendering", () => {
     await user.type(screen.getByLabelText("frontend.profile.phone"), "+1 (415) 555-2676");
     await user.type(screen.getByLabelText("frontend.clients.password"), "not-persisted");
     await user.click(screen.getByRole("button", { name: "frontend.common.save" }));
+    expect(successSpy).toHaveBeenCalledWith(
+      'frontend.clients.created:{"login":"demo_nora_example"}',
+    );
     await user.click(screen.getByRole("button", { name: "frontend.clients.next" }));
     await waitFor(() => expect(screen.getAllByText("Nora Example")).toHaveLength(2));
 
@@ -123,6 +128,9 @@ describe("ClientsPage Demo rendering", () => {
     await user.clear(fullNameInput);
     await user.type(fullNameInput, "Nora Updated");
     await user.click(screen.getByRole("button", { name: "frontend.common.save" }));
+    expect(successSpy).toHaveBeenLastCalledWith(
+      'frontend.clients.updated:{"login":"demo_nora_example"}',
+    );
     await waitFor(async () => {
       const updated = await clients.list();
       expect(updated.some((client) => client.full_name === "Nora Updated")).toBe(true);

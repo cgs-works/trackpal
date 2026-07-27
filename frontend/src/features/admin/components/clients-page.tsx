@@ -147,20 +147,20 @@ export function ClientsPage() {
 
     try {
       if (formMode === "create") {
-        await dataSource.crud.clients.create({
+        const created = await dataSource.crud.clients.create({
           full_name: form.full_name,
           local_username: form.local_username,
           phone: form.phone || undefined,
           password: form.password,
         });
-        toast.success(t("frontend.clients.created"));
+        toast.success(t("frontend.clients.created", { login: created.username }));
       } else {
-        await dataSource.crud.clients.update(form.id!, {
+        const updated = await dataSource.crud.clients.update(form.id!, {
           full_name: form.full_name,
           local_username: form.local_username,
           phone: form.phone || undefined,
         });
-        toast.success(t("frontend.clients.updated"));
+        toast.success(t("frontend.clients.updated", { login: updated.username }));
       }
       setFormOpen(false);
       invalidateClients();
