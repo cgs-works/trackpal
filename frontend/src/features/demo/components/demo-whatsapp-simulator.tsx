@@ -26,22 +26,8 @@ import {
   type ProSimulatorMode,
   type ProSimulatorState,
 } from "../services/pro-simulator-machine";
-
-function usePrefersReducedMotion(): boolean {
-  const [reducedMotion, setReducedMotion] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
-
-  return reducedMotion;
-}
+import { ClientConsoleExperience } from "./client-console-experience";
+import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 function createSimulatorCopy(): SimulatorCopy {
   return {
@@ -253,6 +239,7 @@ function ProOperationExperience() {
     ),
   );
   const [input, setInput] = useState("");
+  const [clientConsole, setClientConsole] = useState(false);
   const [summary, setSummary] = useState({ clients: 0, services: 0, subscriptions: 0, codeServices: 0 });
   const [summaryError, setSummaryError] = useState(false);
 
@@ -284,8 +271,29 @@ function ProOperationExperience() {
     event.preventDefault();
     const text = input.trim();
     if (!text) return;
+    if (state.screen === "role" && text === "2") {
+      setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
+      setClientConsole(true);
+      setInput("");
+      return;
+    }
     setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
     setInput("");
+  }
+
+  if (clientConsole) {
+    return (
+      <ClientConsoleExperience
+        onBack={() => {
+          setClientConsole(false);
+          setState((current) => transitionProSimulator(current, { type: "message", text: "9" }, copy));
+        }}
+        onCancel={() => {
+          setClientConsole(false);
+          setState((current) => transitionProSimulator(current, { type: "message", text: "0" }, copy));
+        }}
+      />
+    );
   }
 
   return (

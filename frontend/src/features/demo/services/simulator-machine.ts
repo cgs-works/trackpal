@@ -14,6 +14,9 @@ export interface SimulatorCopy {
   codeFound: (service: string, code: string) => string;
   invalidStart: string;
   busy: string;
+  cancelled?: string;
+  back?: string;
+  invalidNavigation?: string;
 }
 
 export interface SimulatorMessage {
@@ -36,6 +39,7 @@ export interface SimulatorState {
 export type SimulatorEvent =
   | { type: "message"; text: string }
   | { type: "processing-complete" }
+  | { type: "back" }
   | { type: "reset" };
 
 const DEFAULT_COPY: SimulatorCopy = {
@@ -49,6 +53,9 @@ const DEFAULT_COPY: SimulatorCopy = {
   codeFound: (service, code) => `Code found for ${service}: ${code}`,
   invalidStart: "Send code, codigo, or código to start the request.",
   busy: "The demo is still searching. Please wait.",
+  cancelled: "Conversation cancelled.",
+  back: "Back",
+  invalidNavigation: "Choose one of the listed options.",
 };
 
 function nextMessageId(messages: SimulatorMessage[]): number {
@@ -110,6 +117,28 @@ export function transitionSimulator(
     return createSimulatorState(state.services, copy);
   }
 
+  if (event.type === "back") {
+    if (state.step === "email") {
+      return {
+        ...appendMessage(state, "bot", copy.servicePrompt(formatServices(state.services))),
+        step: "service",
+        selectedService: null,
+        email: null,
+        code: null,
+      };
+    }
+    if (state.step === "service" || state.step === "complete" || state.step === "empty") {
+      return {
+        ...appendMessage(state, "bot", copy.back ?? copy.invalidStart),
+        step: "idle",
+        selectedService: null,
+        email: null,
+        code: null,
+      };
+    }
+    return state;
+  }
+
   if (event.type === "processing-complete") {
     if (state.step !== "processing" || !state.selectedService || !state.email) return state;
     const code = generateFictitiousCode(state.selectedService.id, state.email);
@@ -125,6 +154,20 @@ export function transitionSimulator(
 
   if (state.step === "processing") {
     return appendMessage(withUserMessage, "bot", copy.busy);
+  }
+
+  if (text === "0") {
+    return {
+      ...appendMessage(withUserMessage, "bot", copy.cancelled ?? copy.invalidStart),
+      step: "idle",
+      selectedService: null,
+      email: null,
+      code: null,
+    };
+  }
+
+  if (state.step === "service" && text === "8") {
+    return appendMessage(withUserMessage, "bot", copy.invalidNavigation ?? copy.invalidService);
   }
 
   if (state.step === "idle" || state.step === "complete" || state.step === "empty") {
