@@ -21,6 +21,7 @@ export type DemoSubscriptionErrorCode =
   | "subscription_invalid_duration"
   | "subscription_pin_requires_profile"
   | "subscription_invalid_dates"
+  | "subscription_duplicate"
   | "invalid_demo_workspace";
 
 export class DemoSubscriptionError extends Error {
@@ -164,6 +165,23 @@ function findSubscription(
   return subscription;
 }
 
+function validateDuplicate(
+  state: ProDemoWorkspaceState,
+  clientId: string,
+  serviceId: string,
+  streamingEmail: string,
+  exceptId?: string,
+): void {
+  const duplicate = state.subscriptions.some((subscription) =>
+    subscription.id !== exceptId &&
+    subscription.status === "active" &&
+    subscription.client_id === clientId &&
+    subscription.service_id === serviceId &&
+    subscription.streaming_email.toLocaleLowerCase() === streamingEmail.toLocaleLowerCase(),
+  );
+  if (duplicate) throw new DemoSubscriptionError("subscription_duplicate");
+}
+
 function filtered(
   subscriptions: DemoSubscriptionRelation[],
   filters: SubscriptionFilters,
@@ -207,6 +225,7 @@ export function createDemoSubscriptions(
       validateRelationships(state, payload.client_id, payload.service_id, payload.plan_id);
       validateDuration(payload.duration_type);
       const streamingEmail = validateEmail(payload.streaming_email);
+      validateDuplicate(state, payload.client_id, payload.service_id, streamingEmail);
       const startsAt = isoDate(payload.starts_at);
       const expiresAt = calculateExpiration(startsAt, payload.duration_type, payload.expires_at);
       validateDateRange(startsAt, expiresAt);
@@ -258,12 +277,16 @@ export function createDemoSubscriptions(
       const profileName = payload.profile_name === undefined ? existing.profile_name : payload.profile_name.trim() || null;
       const profilePin = payload.profile_pin === undefined ? existing.pin_secret : payload.profile_pin || null;
       if (profilePin && !profileName) throw new DemoSubscriptionError("subscription_pin_requires_profile");
+      const streamingEmail = payload.streaming_email === undefined
+        ? existing.streaming_email
+        : validateEmail(payload.streaming_email);
+      validateDuplicate(state, clientId, serviceId, streamingEmail, id);
       const updated: DemoSubscriptionRelation = {
         ...existing,
         client_id: clientId,
         service_id: serviceId,
         plan_id: planId,
-        streaming_email: payload.streaming_email === undefined ? existing.streaming_email : validateEmail(payload.streaming_email),
+        streaming_email: streamingEmail,
         streaming_secret: payload.streaming_password === undefined ? existing.streaming_secret : payload.streaming_password || null,
         profile_name: profileName,
         pin_secret: profilePin,

@@ -27,6 +27,7 @@ import {
   type ProSimulatorState,
 } from "../services/pro-simulator-machine";
 import { ClientConsoleExperience } from "./client-console-experience";
+import { SubscriptionConsoleExperience } from "./subscription-console-experience";
 import { TenantAdminConsoleExperience } from "./tenant-admin-console-experience";
 import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
@@ -241,7 +242,7 @@ function ProOperationExperience() {
   );
   const [input, setInput] = useState("");
   const [clientConsole, setClientConsole] = useState(false);
-  const [tenantAdminConsole, setTenantAdminConsole] = useState<"clients" | "catalog" | null>(null);
+  const [tenantAdminConsole, setTenantAdminConsole] = useState<"clients" | "catalog" | "subscriptions" | null>(null);
   const [summaryVersion, setSummaryVersion] = useState(0);
   const [summary, setSummary] = useState({ clients: 0, services: 0, subscriptions: 0, codeServices: 0 });
   const [summaryError, setSummaryError] = useState(false);
@@ -280,9 +281,9 @@ function ProOperationExperience() {
       setInput("");
       return;
     }
-    if (state.screen === "menu" && state.role === "tenant-admin" && state.page === 0 && (text === "1" || text === "2")) {
+    if (state.screen === "menu" && state.role === "tenant-admin" && state.page === 0 && ["1", "2", "4"].includes(text)) {
       setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
-      setTenantAdminConsole(text === "1" ? "clients" : "catalog");
+      setTenantAdminConsole(text === "1" ? "clients" : text === "2" ? "catalog" : "subscriptions");
       setInput("");
       return;
     }
@@ -301,6 +302,19 @@ function ProOperationExperience() {
           setClientConsole(false);
           setState((current) => transitionProSimulator(current, { type: "message", text: "0" }, copy));
         }}
+      />
+    );
+  }
+
+  if (tenantAdminConsole === "subscriptions") {
+    return (
+      <SubscriptionConsoleExperience
+        onBack={() => setTenantAdminConsole(null)}
+        onCancel={() => {
+          setTenantAdminConsole(null);
+          setState((current) => transitionProSimulator(current, { type: "message", text: "0" }, copy));
+        }}
+        onChanged={() => setSummaryVersion((version) => version + 1)}
       />
     );
   }

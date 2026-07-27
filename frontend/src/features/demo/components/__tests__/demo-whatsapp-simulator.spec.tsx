@@ -158,6 +158,122 @@ describe("DemoWhatsappSimulator", () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
+  it("runs Tenant Admin subscription listing, reveal, filters, and lifecycle locally", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await send("4");
+    expect(await screen.findByText("frontend.demo_simulator.subscriptions_title")).toBeInTheDocument();
+    await send("1");
+    expect(await screen.findByText(/demo\.expiring\.1@example\.test/)).toBeInTheDocument();
+    await send("2");
+    await send("2");
+    expect(await screen.findByText(/demo-expiring-1-secret/)).toBeInTheDocument();
+    await send("3");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_cancel_confirm/)).toBeInTheDocument();
+    await send("not-confirmed");
+    expect(await screen.findByText("frontend.demo_simulator.confirm_reprompt")).toBeInTheDocument();
+    await send("CONFIRM");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_cancelled/)).toBeInTheDocument();
+
+    const state = useAuthStore.getState().dataSource.workspace?.read();
+    const subscriptions = state?.plan_specific.subscriptions as Array<{ streaming_email: string; status: string }> | undefined;
+    expect(subscriptions?.find((subscription) => subscription.streaming_email === "demo.expiring.1@example.test")?.status).toBe("cancelled");
+
+    await send("9");
+    await send("9");
+    await send("2");
+    await send("3");
+    expect((await screen.findAllByText(/demo\.expired@example\.test/)).length).toBeGreaterThan(0);
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("edits, renews, cancels, and reactivates a local subscription", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await send("4");
+    await send("1");
+    await send("1");
+    await send("1");
+    await send("1");
+    await send("edited.local@example.test");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_updated/)).toBeInTheDocument();
+    await send("4");
+    await send("1");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_renewed/)).toBeInTheDocument();
+    await send("3");
+    await send("CONFIRM");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_cancelled/)).toBeInTheDocument();
+    await send("3");
+    await send("1");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_reactivated/)).toBeInTheDocument();
+
+    const subscriptions = useAuthStore.getState().dataSource.workspace?.read()?.plan_specific.subscriptions as Array<{ streaming_email: string; status: string }>;
+    expect(subscriptions.some((subscription) => subscription.streaming_email === "edited.local@example.test" && subscription.status === "active")).toBe(true);
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("creates a subscription only after the final confirmation and keeps invalid input local", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByLabelText("frontend.demo_simulator.message_input_label");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await send("4");
+    await send("3");
+    await send("1");
+    await send("1");
+    await send("1");
+    await send("new.local@example.test");
+    await send("-");
+    await send("-");
+    await send("-");
+    await send("1");
+    await send("2026-07-25");
+    await send("not-confirmed");
+    expect(await screen.findByText("frontend.demo_simulator.confirm_reprompt")).toBeInTheDocument();
+
+    const before = useAuthStore.getState().dataSource.workspace?.read();
+    expect(before?.plan_specific.subscriptions).toHaveLength(8);
+    await send("CONFIRM");
+    expect(await screen.findByText(/frontend\.demo_simulator\.subscription_created/)).toBeInTheDocument();
+    const after = useAuthStore.getState().dataSource.workspace?.read();
+    expect(after?.plan_specific.subscriptions).toHaveLength(9);
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("creates catalog services locally and keeps invalid confirmations non-mutating", async () => {
     authenticateProDemo();
     render(<DemoWhatsappSimulator />);

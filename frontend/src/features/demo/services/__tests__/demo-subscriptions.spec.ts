@@ -66,6 +66,29 @@ describe("Pro Demo Subscriptions baseline", () => {
 });
 
 describe("Pro Demo Subscriptions data source", () => {
+  it("rejects duplicate active client-service-email records without mutating the workspace", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    await source.subscriptions.list();
+    const state = readProDemoState(source.workspace!.read()!.plan_specific)!;
+    const existing = state.subscriptions[0];
+
+    await expect(
+      source.subscriptions.create({
+        client_id: existing.client_id,
+        service_id: existing.service_id,
+        plan_id: existing.plan_id,
+        streaming_email: existing.streaming_email,
+        duration_type: "1_month",
+        starts_at: atOffset(0),
+      }),
+    ).rejects.toMatchObject({ code: "subscription_duplicate" });
+    expect(await source.subscriptions.list()).toHaveLength(8);
+  });
+
   it("supports local filtering, CRUD, lifecycle transitions, masked credentials, and reset", async () => {
     const source = createDataSource({
       tenantId: metadata.tenantId,
