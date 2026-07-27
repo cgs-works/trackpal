@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DemoWhatsappSimulator } from "../demo-whatsapp-simulator";
+import { DashboardPage } from "@/features/admin/components/dashboard-page";
+import { SettingsPage } from "@/features/admin/components/settings-page";
 import { createDemoBaseline } from "../../services/demo-baseline";
 import { createDemoWorkspaceRepository } from "../../services/demo-workspace";
 import { createDataSource } from "@/lib/data-source";
@@ -156,6 +158,67 @@ describe("DemoWhatsappSimulator", () => {
     });
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("runs Tenant Admin profile, access control, Help, and code lookup locally", async () => {
+    authenticateProDemo();
+    const { unmount } = render(<DemoWhatsappSimulator />);
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+
+    const send = async (value: string) => {
+      const input = await screen.findByRole("textbox");
+      await act(async () => {
+        fireEvent.change(input, { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "frontend.demo_simulator.send" }));
+      });
+    };
+
+    await send("1");
+    await send("3");
+    expect(await screen.findByText("frontend.demo_simulator.profile_title")).toBeInTheDocument();
+    await send("1");
+    expect(await screen.findByText(/demo_pro-simulator/)).toBeInTheDocument();
+    await send("2");
+    await send("1");
+    await send("Updated Demo");
+    expect(await screen.findByText(/frontend\.demo_simulator\.profile_updated/)).toBeInTheDocument();
+
+    const workspace = useAuthStore.getState().dataSource.workspace;
+    expect(workspace?.read()?.plan_specific.profile).toMatchObject({ business_name: "Updated Demo" });
+
+    await send("9");
+    await send("5");
+    expect(await screen.findByText("frontend.demo_simulator.access_control_title")).toBeInTheDocument();
+    await send("1");
+    expect(await screen.findByText(/12025550101/)).toBeInTheDocument();
+    await send("1");
+    expect(await screen.findByText(/frontend\.demo_simulator\.access_control_unblocked/)).toBeInTheDocument();
+    await send("9");
+    await send("2");
+    await send("12025550101");
+    expect(await screen.findByText(/frontend\.demo_simulator\.access_control_blocked/)).toBeInTheDocument();
+
+    await send("9");
+    await send("6");
+    expect(await screen.findByText(/frontend\.demo_simulator\.help_text/)).toBeInTheDocument();
+
+    await send("9");
+    await send("7");
+    expect(await screen.findByText("frontend.demo_simulator.access_code_title")).toBeInTheDocument();
+    await send("code");
+    await send("1");
+    await send("member@example.test");
+    await waitFor(() => expect(screen.getByText(/frontend\.demo_simulator\.code_found/)).toBeInTheDocument(), { timeout: 1500 });
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+
+    unmount();
+    const settingsRender = render(<SettingsPage initialSection="my-account" />);
+    expect(await screen.findByDisplayValue("Updated Demo")).toBeInTheDocument();
+    settingsRender.unmount();
+    render(<DashboardPage />);
+    expect(await screen.findByText("Updated Demo")).toBeInTheDocument();
+    expect(screen.getByText("frontend.access_control.section_title")).toBeInTheDocument();
   });
 
   it("runs Tenant Admin subscription listing, reveal, filters, and lifecycle locally", async () => {

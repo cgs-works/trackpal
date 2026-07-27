@@ -364,6 +364,10 @@ export function createDemoSettings(
     async createAccessBlock(phone: string): Promise<AccessControlBlock> {
       const normalized = phone.trim();
       if (!normalized) throw new Error("phone_required");
+      const state = requireState(workspace, metadata);
+      if (state.blocked_identities.some((block) => block.phone === normalized)) {
+        throw new Error("access_block_duplicate");
+      }
       const block = {
         id: `blocked-${metadata.tenantId}-${Date.now()}`,
         phone: normalized,

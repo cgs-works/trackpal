@@ -36,6 +36,7 @@ export interface ProSimulatorState {
   mode: ProSimulatorMode | null;
   role: ProSimulatorRole | null;
   page: number;
+  tenantAdminPageSize: number;
   tenantAdminItems: ProSimulatorMenuItem[];
   clientItems: ProSimulatorMenuItem[];
   messages: ProSimulatorMessage[];
@@ -67,8 +68,12 @@ function menuItems(state: ProSimulatorState): ProSimulatorMenuItem[] {
   return state.role === "client" ? state.clientItems : state.tenantAdminItems;
 }
 
-function totalPages(items: ProSimulatorMenuItem[]): number {
-  return Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+function pageSize(state: ProSimulatorState): number {
+  return state.role === "client" ? PAGE_SIZE : state.tenantAdminPageSize;
+}
+
+function totalPages(state: ProSimulatorState): number {
+  return Math.max(1, Math.ceil(menuItems(state).length / pageSize(state)));
 }
 
 function menuMessage(
@@ -76,18 +81,19 @@ function menuMessage(
   copy: ProSimulatorCopy,
 ): string {
   const items = menuItems(state);
-  const start = state.page * PAGE_SIZE;
-  const visible = items.slice(start, start + PAGE_SIZE);
+  const size = pageSize(state);
+  const start = state.page * size;
+  const visible = items.slice(start, start + size);
   const title = state.role === "client"
-    ? copy.clientMenu(state.page + 1, totalPages(items))
-    : copy.tenantAdminMenu(state.page + 1, totalPages(items));
+    ? copy.clientMenu(state.page + 1, totalPages(state))
+    : copy.tenantAdminMenu(state.page + 1, totalPages(state));
 
   return [
     title,
     ...visible.map((item, index) => `${index + 1}. ${item.label}`),
     `0. ${copy.cancel}`,
     `9. ${copy.back}`,
-    ...(state.page < totalPages(items) - 1 ? [`8. ${copy.next}`] : []),
+    ...(state.page < totalPages(state) - 1 ? [`8. ${copy.next}`] : []),
   ].join("\n");
 }
 
@@ -118,12 +124,14 @@ function rootState(
   tenantAdminItems: ProSimulatorMenuItem[],
   clientItems: ProSimulatorMenuItem[],
   copy: ProSimulatorCopy,
+  tenantAdminPageSize = PAGE_SIZE,
 ): ProSimulatorState {
   const state: ProSimulatorState = {
     screen: "mode",
     mode: null,
     role: null,
     page: 0,
+    tenantAdminPageSize,
     tenantAdminItems,
     clientItems,
     messages: [],
@@ -152,8 +160,9 @@ export function createProSimulatorState(
   tenantAdminItems: ProSimulatorMenuItem[],
   clientItems: ProSimulatorMenuItem[],
   copy: ProSimulatorCopy,
+  tenantAdminPageSize = PAGE_SIZE,
 ): ProSimulatorState {
-  return rootState(tenantAdminItems, clientItems, copy);
+  return rootState(tenantAdminItems, clientItems, copy, tenantAdminPageSize);
 }
 
 export function transitionProSimulator(
@@ -162,7 +171,7 @@ export function transitionProSimulator(
   copy: ProSimulatorCopy,
 ): ProSimulatorState {
   if (event.type === "reset") {
-    return rootState(state.tenantAdminItems, state.clientItems, copy);
+    return rootState(state.tenantAdminItems, state.clientItems, copy, state.tenantAdminPageSize);
   }
 
   if (event.type === "select-mode") {
@@ -174,7 +183,7 @@ export function transitionProSimulator(
 
   if (state.screen === "mode") {
     if (text === "0") {
-      return withBot(rootState(state.tenantAdminItems, state.clientItems, copy), copy.cancelled);
+      return withBot(rootState(state.tenantAdminItems, state.clientItems, copy, state.tenantAdminPageSize), copy.cancelled);
     }
     if (text === "1") return chooseMode(withUserMessage, "request", copy);
     if (text === "2") return chooseMode(withUserMessage, "operation", copy);
@@ -183,9 +192,9 @@ export function transitionProSimulator(
 
   if (state.screen === "role") {
     if (text === "0") {
-      return withBot(rootState(state.tenantAdminItems, state.clientItems, copy), copy.cancelled);
+      return withBot(rootState(state.tenantAdminItems, state.clientItems, copy, state.tenantAdminPageSize), copy.cancelled);
     }
-    if (text === "9") return withBot(rootState(state.tenantAdminItems, state.clientItems, copy), modeMessage(copy));
+    if (text === "9") return withBot(rootState(state.tenantAdminItems, state.clientItems, copy, state.tenantAdminPageSize), modeMessage(copy));
     if (text === "1" || text === "2") {
       const role: ProSimulatorRole = text === "1" ? "tenant-admin" : "client";
       const next = { ...withUserMessage, screen: "menu" as const, role, page: 0 };
@@ -195,7 +204,7 @@ export function transitionProSimulator(
   }
 
   if (text === "0") {
-    return withBot(rootState(state.tenantAdminItems, state.clientItems, copy), copy.cancelled);
+    return withBot(rootState(state.tenantAdminItems, state.clientItems, copy, state.tenantAdminPageSize), copy.cancelled);
   }
   if (text === "9") {
     if (state.page > 0) {
@@ -208,7 +217,7 @@ export function transitionProSimulator(
     );
   }
   if (text === "8") {
-    const lastPage = totalPages(menuItems(state)) - 1;
+    const lastPage = totalPages(state) - 1;
     if (state.page >= lastPage) return withBot(withUserMessage, copy.noNextPage);
     const next = { ...withUserMessage, page: state.page + 1 };
     return withBot(next, menuMessage(next, copy));
@@ -217,7 +226,7 @@ export function transitionProSimulator(
   const selection = Number.parseInt(text, 10);
   const items = menuItems(state);
   const selected = Number.isInteger(selection) && selection > 0
-    ? items[state.page * PAGE_SIZE + selection - 1]
+    ? items[state.page * pageSize(state) + selection - 1]
     : undefined;
   return selected ? withBot(withUserMessage, copy.unavailable) : withBot(withUserMessage, copy.invalid);
 }

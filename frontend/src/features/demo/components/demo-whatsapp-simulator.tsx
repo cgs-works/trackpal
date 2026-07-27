@@ -29,6 +29,10 @@ import {
 import { ClientConsoleExperience } from "./client-console-experience";
 import { SubscriptionConsoleExperience } from "./subscription-console-experience";
 import { TenantAdminConsoleExperience } from "./tenant-admin-console-experience";
+import {
+  TenantUtilityConsoleExperience,
+  type TenantUtilitySection,
+} from "./tenant-utility-console-experience";
 import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 function createSimulatorCopy(): SimulatorCopy {
@@ -235,14 +239,16 @@ function ProOperationExperience() {
   const menus = useMemo(() => createProMenuItems(), []);
   const [state, setState] = useState<ProSimulatorState>(() =>
     transitionProSimulator(
-      createProSimulatorState(menus.tenantAdmin, menus.client, copy),
+      createProSimulatorState(menus.tenantAdmin, menus.client, copy, 7),
       { type: "select-mode", mode: "operation" },
       copy,
     ),
   );
   const [input, setInput] = useState("");
   const [clientConsole, setClientConsole] = useState(false);
-  const [tenantAdminConsole, setTenantAdminConsole] = useState<"clients" | "catalog" | "subscriptions" | null>(null);
+  const [tenantAdminConsole, setTenantAdminConsole] = useState<
+    "clients" | "catalog" | "subscriptions" | TenantUtilitySection | null
+  >(null);
   const [summaryVersion, setSummaryVersion] = useState(0);
   const [summary, setSummary] = useState({ clients: 0, services: 0, subscriptions: 0, codeServices: 0 });
   const [summaryError, setSummaryError] = useState(false);
@@ -281,11 +287,27 @@ function ProOperationExperience() {
       setInput("");
       return;
     }
-    if (state.screen === "menu" && state.role === "tenant-admin" && state.page === 0 && ["1", "2", "4"].includes(text)) {
-      setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
-      setTenantAdminConsole(text === "1" ? "clients" : text === "2" ? "catalog" : "subscriptions");
-      setInput("");
-      return;
+    if (state.screen === "menu" && state.role === "tenant-admin") {
+      const selection = Number.parseInt(text, 10);
+      const selectedItem = Number.isInteger(selection) && selection > 0
+        ? state.tenantAdminItems[state.page * state.tenantAdminPageSize + selection - 1]
+        : undefined;
+      const consoleByMenuItem: Partial<Record<string, "clients" | "catalog" | "subscriptions" | TenantUtilitySection>> = {
+        clients: "clients",
+        catalog: "catalog",
+        subscriptions: "subscriptions",
+        profile: "profile",
+        "access-control": "access-control",
+        help: "help",
+        "access-code": "access-code",
+      };
+      const nextConsole = selectedItem ? consoleByMenuItem[selectedItem.id] : undefined;
+      if (nextConsole) {
+        setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
+        setTenantAdminConsole(nextConsole);
+        setInput("");
+        return;
+      }
     }
     setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
     setInput("");
@@ -319,7 +341,21 @@ function ProOperationExperience() {
     );
   }
 
-  if (tenantAdminConsole) {
+  if (tenantAdminConsole === "profile" || tenantAdminConsole === "access-control" || tenantAdminConsole === "help" || tenantAdminConsole === "access-code") {
+    return (
+      <TenantUtilityConsoleExperience
+        section={tenantAdminConsole}
+        onBack={() => setTenantAdminConsole(null)}
+        onCancel={() => {
+          setTenantAdminConsole(null);
+          setState((current) => transitionProSimulator(current, { type: "message", text: "0" }, copy));
+        }}
+        onChanged={() => setSummaryVersion((version) => version + 1)}
+      />
+    );
+  }
+
+  if (tenantAdminConsole === "clients" || tenantAdminConsole === "catalog") {
     return (
       <TenantAdminConsoleExperience
         section={tenantAdminConsole}

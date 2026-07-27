@@ -46,6 +46,14 @@ describe("Pro Demo settings adapter", () => {
     expect(postSpy).not.toHaveBeenCalled();
   });
 
+  it("rejects duplicate access blocks without changing the local workspace", async () => {
+    const source = createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: metadata });
+
+    const before = await source.settings.listAccessBlocks();
+    await expect(source.settings.createAccessBlock(before[0].phone ?? "")).rejects.toThrow("access_block_duplicate");
+    await expect(source.settings.listAccessBlocks()).resolves.toHaveLength(before.length);
+  });
+
   it("matches production validation for timezone, locale, reminder time, and recipient mode", async () => {
     const source = createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: metadata });
 
