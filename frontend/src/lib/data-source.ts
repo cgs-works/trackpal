@@ -355,6 +355,8 @@ export function createDataSource(
       workspace.ensure(demo, createDemoBaseline);
     } catch (error) {
       if (!(error instanceof DemoWorkspaceStorageError)) throw error;
+      // Storage failures are intentionally converted into the repository's explicit
+      // unavailable/quota state so the Demo Banner can recover without API fallback.
     }
     return {
       mode: "demo",

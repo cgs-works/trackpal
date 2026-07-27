@@ -76,6 +76,7 @@ describe("DemoWorkspaceRepository", () => {
 
   afterEach(() => {
     fetchSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   describe("keys / isolation", () => {
@@ -93,6 +94,20 @@ describe("DemoWorkspaceRepository", () => {
       expect(repoB.read()).toBeNull();
 
       expect(repoA.key).not.toBe(repoB.key);
+    });
+
+    it("uses last-write-wins for same-tenant tabs without crossing tenant keys", () => {
+      const firstTab = createDemoWorkspaceRepository(TENANT_ID, storage);
+      const secondTab = createDemoWorkspaceRepository(TENANT_ID, storage);
+      const otherTenant = createDemoWorkspaceRepository("other-tenant", storage);
+
+      firstTab.ensure(baseMetadata(), baselineFactory({ owner: "first" }));
+      secondTab.updatePlanSpecific(() => ({ owner: "second" }));
+      otherTenant.ensure(baseMetadata({ tenantId: "other-tenant" }), baselineFactory({ owner: "other" }));
+
+      expect(firstTab.read()?.plan_specific).toEqual({ owner: "second" });
+      expect(otherTenant.read()?.plan_specific).toEqual({ owner: "other" });
+      expect(firstTab.read()?.tenant_id).toBe(TENANT_ID);
     });
 
     it("does not store tokens, passwords, credentials, session identifiers, or chat transcripts", () => {
@@ -138,10 +153,13 @@ describe("DemoWorkspaceRepository", () => {
       expect(envelope.baseline_version).toBeGreaterThanOrEqual(1);
     });
 
-    it("sets saved_at to an ISO string", () => {
+    it("sets saved_at from the current clock", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-07-25T12:34:56.000Z"));
+
       repo.ensure(baseMetadata());
-      const envelope = repo.read()!;
-      expect(envelope.saved_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+      expect(repo.read()!.saved_at).toBe("2026-07-25T12:34:56.000Z");
     });
 
     it("rejects a stored envelope with a mismatched tenant id", () => {
@@ -587,6 +605,25 @@ describe("DemoWorkspaceRepository", () => {
       repo.ensure(meta, factory);
 
       expect(factory).toHaveBeenCalledWith("pro", meta);
+    });
+  });
+
+  describe("privacy", () => {
+    it("does not emit workspace values to console telemetry", () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const privateValue = "private-workspace-value";
+
+      repo.ensure(baseMetadata(), baselineFactory({ business_name: privateValue }));
+
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(JSON.stringify([...logSpy.mock.calls, ...warnSpy.mock.calls, ...errorSpy.mock.calls])).not.toContain(privateValue);
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
     });
   });
 

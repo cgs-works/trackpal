@@ -363,11 +363,11 @@ export function createDemoWorkspaceRepository(
           if (parsed.migrated) write(parsed.envelope);
           return parsed.envelope;
         }
-        recoveryNotice = { kind: "reset" };
+        recoveryNotice ??= { kind: "reset" };
       } else if (parsed.envelope && isExpiredOrphan(parsed.envelope, metadata)) {
         remove();
       } else {
-        recoveryNotice = { kind: "reset" };
+        recoveryNotice ??= { kind: "reset" };
       }
     }
     return save(metadata, baseline);
@@ -428,10 +428,15 @@ export function createDemoWorkspaceRepository(
   };
 }
 
-export function clearDemoWorkspace(tenantId: string, storage: StorageLike = defaultStorage()): void {
+export function clearDemoWorkspace(
+  tenantId: string,
+  storage: StorageLike = defaultStorage(),
+): DemoWorkspaceStorageState {
   try {
     storage.removeItem(workspaceKey(tenantId));
-  } catch {
-    // Workspace cleanup must never mask the lifecycle/auth outcome.
+    return "available";
+  } catch (error) {
+    // Lifecycle cleanup is best-effort, but the caller still receives an explicit state.
+    return isQuotaError(error) ? "quota_exceeded" : "unavailable";
   }
 }
