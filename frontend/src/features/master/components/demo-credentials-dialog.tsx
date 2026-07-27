@@ -59,7 +59,7 @@ export function DemoCredentialsDialog({
         }
       }}
     >
-      <DialogContent className="min-w-0 overflow-hidden sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("frontend.master.demos.credentials_title")}</DialogTitle>
           <DialogDescription>
