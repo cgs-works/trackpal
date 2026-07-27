@@ -52,6 +52,26 @@ function authenticateDemo() {
   });
 }
 
+function authenticateProDemo() {
+  const proMetadata = { ...metadata, tenantId: "pro-simulator", plan: "pro" as const };
+  const repository = createDemoWorkspaceRepository(proMetadata.tenantId);
+  repository.reset(proMetadata, createDemoBaseline);
+  useAuthStore.setState({
+    token: "demo-token",
+    user: { id: "demo-user", username: "demo-admin", role: "tenant" },
+    activeTenantId: proMetadata.tenantId,
+    tenantPlan: "pro",
+    demo: proMetadata,
+    dataSource: createDataSource(
+      { tenantId: proMetadata.tenantId, tenantPlan: "pro", demo: proMetadata },
+      repository,
+    ),
+    isAuthenticated: true,
+    role: "tenant",
+    isMasterSupportContext: false,
+  });
+}
+
 describe("DemoWhatsappSimulator", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -69,7 +89,7 @@ describe("DemoWhatsappSimulator", () => {
     localStorage.clear();
   });
 
-  it("rejects production and Pro direct access", () => {
+  it("rejects production access but exposes the Pro simulator modes", async () => {
     useAuthStore.setState({
       dataSource: createDataSource({ tenantId: "production", tenantPlan: "starter", demo: null }),
       demo: null,
@@ -87,7 +107,21 @@ describe("DemoWhatsappSimulator", () => {
       dataSource: createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: { ...metadata, plan: "pro" } }),
     });
     render(<DemoWhatsappSimulator />);
-    expect(screen.getByText("404")).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "frontend.demo_simulator.mode_request" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" })).toBeInTheDocument();
+  });
+
+  it("renders Pro Request and Operation modes with the documented console roots", async () => {
+    authenticateProDemo();
+    render(<DemoWhatsappSimulator />);
+
+    expect(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_request" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "frontend.demo_simulator.mode_operation" }));
+    expect(await screen.findByText(/frontend\.demo_simulator\.role_prompt/)).toBeInTheDocument();
+    expect(screen.getByText(/frontend\.demo_simulator\.role_tenant_admin/)).toBeInTheDocument();
+    expect(screen.getByText(/frontend\.demo_simulator\.role_client/)).toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it("renders only the Starter Request experience from local services", async () => {

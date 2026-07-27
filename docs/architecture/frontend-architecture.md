@@ -101,10 +101,11 @@ Three Zustand stores in `src/store/`:
 
 ### Authenticated Demo WhatsApp Simulator
 
-- `/admin/demo/simulator` is available only to active Starter Demo Accounts. The admin layout adds its navigation item only for that context, and direct production/Pro access renders the normal 404 surface.
+- `/admin/demo/simulator` is available only to active Starter and Pro Demo Accounts. The admin layout adds its navigation item only for those contexts, and direct production/Master-support access renders the normal 404 surface.
 - The Starter simulator adapts the landing WhatsApp phone-shell interaction and pure state-machine pattern for the authenticated design system. It accepts `code`, `codigo`, and `código`, reads enabled services from the browser-local Demo Workspace, validates the subscription email locally, and returns a deterministic fictitious six-digit code after cancellable local progress.
+- Pro adds Request and Operation modes. Operation mode exposes the production Client and Tenant Admin menu roots with the documented `0` cancel, `8` next, and `9` back semantics, paginates menu roots, and returns a localized deferred-operation reply until detailed operation families land. It reads current Pro workspace collections locally and never issues business HTTP requests.
 - Conversation state, email input, generated code, and timers remain component state. Reset Conversation clears only chat, unmount cleanup cancels pending effects, and no simulator action calls WhatsApp, mailbox, n8n, Evolution, or business APIs.
-- Starter intentionally exposes Request only; Pro operation menus are outside this feature's scope.
+- Starter intentionally exposes Request only; Pro exposes Request and the documented operation menu roots while detailed operation families remain follow-up work.
 - The versioned envelope stores lifecycle anchors, the deterministic plan baseline, browser-local settings/business state, and tour acknowledgements; it excludes tokens, passwords, credentials, session identifiers, and chat transcripts.
 - `ensure()` creates the envelope lazily after authenticated Demo context exists; Starter initializes the Master-provided business name, English locale, connected simulated mailbox/WhatsApp states, three ordered generic code services, and two ordered blocked identities. Pro subscription records may carry only fictitious demo secret values for the local reveal flow; they are never sent to production services or logged. `reset()` restores that baseline while preserving tour state, and `clear()` removes only the selected Demo Account's workspace.
 

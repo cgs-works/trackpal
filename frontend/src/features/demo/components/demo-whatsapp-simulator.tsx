@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotFoundPage } from "@/features/admin/components/not-found-page";
 import { t } from "@/i18n";
 import { useAuthStore } from "@/store/auth";
@@ -17,6 +18,14 @@ import {
   type SimulatorCopy,
   type SimulatorState,
 } from "../services/simulator-machine";
+import {
+  createProSimulatorState,
+  transitionProSimulator,
+  type ProSimulatorCopy,
+  type ProSimulatorMenuItem,
+  type ProSimulatorMode,
+  type ProSimulatorState,
+} from "../services/pro-simulator-machine";
 
 function usePrefersReducedMotion(): boolean {
   const [reducedMotion, setReducedMotion] = useState(() =>
@@ -78,6 +87,287 @@ function SimulatorMessages({ state }: { state: SimulatorState }) {
   );
 }
 
+function ProSimulatorMessages({ state }: { state: ProSimulatorState }) {
+  return (
+    <div
+      className="flex min-h-[22rem] flex-col gap-3 overflow-y-auto rounded-t-xl bg-background p-4"
+      role="log"
+      aria-label={t("frontend.demo_simulator.conversation")}
+      aria-live="polite"
+    >
+      {state.messages.map((message) => (
+        <div key={message.id} className={messageBubbleClass(message.role)}>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.text}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function createProSimulatorCopy(): ProSimulatorCopy {
+  return {
+    welcome: t("frontend.demo_simulator.welcome"),
+    requestMode: t("frontend.demo_simulator.mode_request"),
+    operationMode: t("frontend.demo_simulator.mode_operation"),
+    rolePrompt: t("frontend.demo_simulator.role_prompt"),
+    tenantAdminRole: t("frontend.demo_simulator.role_tenant_admin"),
+    clientRole: t("frontend.demo_simulator.role_client"),
+    tenantAdminMenu: (page, total) => t("frontend.demo_simulator.tenant_menu", { page, total }),
+    clientMenu: (page, total) => t("frontend.demo_simulator.client_menu", { page, total }),
+    unavailable: t("frontend.demo_simulator.operation_unavailable"),
+    invalid: t("frontend.demo_simulator.invalid_navigation"),
+    noNextPage: t("frontend.demo_simulator.no_next_page"),
+    cancelled: t("frontend.demo_simulator.cancelled"),
+    cancel: t("frontend.demo_simulator.cancel"),
+    back: t("frontend.demo_simulator.back"),
+    next: t("frontend.demo_simulator.next"),
+  };
+}
+
+function createProMenuItems(): { tenantAdmin: ProSimulatorMenuItem[]; client: ProSimulatorMenuItem[] } {
+  return {
+    tenantAdmin: [
+      { id: "clients", label: t("frontend.demo_simulator.menu_clients") },
+      { id: "catalog", label: t("frontend.demo_simulator.menu_catalog") },
+      { id: "profile", label: t("frontend.demo_simulator.menu_profile") },
+      { id: "subscriptions", label: t("frontend.demo_simulator.menu_subscriptions") },
+      { id: "access-control", label: t("frontend.demo_simulator.menu_access_control") },
+      { id: "help", label: t("frontend.demo_simulator.menu_help") },
+      { id: "access-code", label: t("frontend.demo_simulator.menu_access_code") },
+    ],
+    client: [
+      { id: "profile", label: t("frontend.demo_simulator.menu_view_profile") },
+      { id: "subscriptions", label: t("frontend.demo_simulator.menu_active_subscriptions") },
+      { id: "access-code", label: t("frontend.demo_simulator.menu_access_code") },
+    ],
+  };
+}
+
+function ProRequestExperience() {
+  const { dataSource } = useAuthStore();
+  const reducedMotion = usePrefersReducedMotion();
+  const copy = useMemo(() => createSimulatorCopy(), []);
+  const [state, setState] = useState<SimulatorState>(() => createSimulatorState([], copy));
+  const [input, setInput] = useState("");
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    dataSource.settings.loadCodeServices().then((response) => {
+      if (cancelled) return;
+      const services = response.services
+        .filter((service) => service.is_selected)
+        .map((service) => ({ id: service.service_key, name: service.label }));
+      setState(createSimulatorState(services, copy));
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [copy, dataSource]);
+
+  useEffect(() => {
+    if (state.step !== "processing") return;
+    const timer = window.setTimeout(() => {
+      setState((current) => transitionSimulator(current, { type: "processing-complete" }, copy));
+    }, reducedMotion ? 0 : 900);
+    return () => window.clearTimeout(timer);
+  }, [copy, reducedMotion, state.step]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const text = input.trim();
+    if (!text || state.step === "processing") return;
+    if (state.step === "email" && !isValidSimulatorEmail(text)) {
+      setInputError(t("frontend.demo_simulator.invalid_email"));
+    } else if (state.step === "service") {
+      const index = Number.parseInt(text, 10) - 1;
+      setInputError(state.services[index] ? null : t("frontend.demo_simulator.invalid_service"));
+    } else {
+      setInputError(null);
+    }
+    setState((current) => transitionSimulator(current, { type: "message", text }, copy));
+    setInput("");
+  }
+
+  if (loading) {
+    return <div className="flex min-h-[22rem] items-center justify-center text-sm text-muted-foreground" role="status">{t("frontend.demo_simulator.loading")}</div>;
+  }
+
+  const inputLabel = state.step === "service"
+    ? t("frontend.demo_simulator.service_input_label")
+    : state.step === "email"
+      ? t("frontend.demo_simulator.email_input_label")
+      : t("frontend.demo_simulator.message_input_label");
+  const inputPlaceholder = state.step === "service"
+    ? t("frontend.demo_simulator.service_placeholder")
+    : state.step === "email"
+      ? t("frontend.demo_simulator.email_placeholder")
+      : t("frontend.demo_simulator.message_placeholder");
+
+  return (
+    <Card className="mx-auto w-full max-w-md overflow-hidden">
+      <CardHeader className="border-b bg-muted/30">
+        <CardTitle>{t("frontend.demo_simulator.request_title")}</CardTitle>
+        <CardDescription>{t("frontend.demo_simulator.request_description")}</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <SimulatorMessages state={state} />
+        <form className="flex flex-col gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="pro-simulator-input">{inputLabel}</label>
+          <div className="flex gap-2">
+            <Input
+              id="pro-simulator-input"
+              value={input}
+              onChange={(event) => { setInput(event.target.value); setInputError(null); }}
+              placeholder={inputPlaceholder}
+              aria-invalid={Boolean(inputError)}
+              aria-describedby={inputError ? "pro-simulator-input-error" : undefined}
+              disabled={state.step === "processing"}
+              autoComplete="off"
+            />
+            <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
+              <Send className="size-4" aria-hidden="true" />
+            </Button>
+          </div>
+          {inputError && <p id="pro-simulator-input-error" role="alert" className="text-xs text-destructive">{inputError}</p>}
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProOperationExperience() {
+  const { dataSource } = useAuthStore();
+  const copy = useMemo(() => createProSimulatorCopy(), []);
+  const menus = useMemo(() => createProMenuItems(), []);
+  const [state, setState] = useState<ProSimulatorState>(() =>
+    transitionProSimulator(
+      createProSimulatorState(menus.tenantAdmin, menus.client, copy),
+      { type: "select-mode", mode: "operation" },
+      copy,
+    ),
+  );
+  const [input, setInput] = useState("");
+  const [summary, setSummary] = useState({ clients: 0, services: 0, subscriptions: 0, codeServices: 0 });
+  const [summaryError, setSummaryError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      dataSource.crud.clients.list(),
+      dataSource.catalog.listServices(),
+      dataSource.subscriptions.list(),
+      dataSource.settings.loadCodeServices(),
+    ]).then(([clients, services, subscriptions, codeServices]) => {
+      if (cancelled) return;
+      setSummary({
+        clients: clients.length,
+        services: services.length,
+        subscriptions: subscriptions.length,
+        codeServices: codeServices.services.filter((service) => service.is_selected).length,
+      });
+      setSummaryError(false);
+    }).catch(() => {
+      if (!cancelled) setSummaryError(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [dataSource]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const text = input.trim();
+    if (!text) return;
+    setState((current) => transitionProSimulator(current, { type: "message", text }, copy));
+    setInput("");
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:items-start">
+      <Card className="mx-auto w-full max-w-md overflow-hidden">
+        <CardHeader className="border-b bg-muted/30">
+          <CardTitle>{t("frontend.demo_simulator.operation_title")}</CardTitle>
+          <CardDescription>{t("frontend.demo_simulator.operation_description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ProSimulatorMessages state={state} />
+          <form className="flex gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
+            <label className="sr-only" htmlFor="pro-operation-input">{t("frontend.demo_simulator.message_input_label")}</label>
+            <Input id="pro-operation-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("frontend.demo_simulator.operation_placeholder")} autoComplete="off" />
+            <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim()}><Send className="size-4" aria-hidden="true" /></Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("frontend.demo_simulator.workspace_title")}</CardTitle>
+          <CardDescription>{t("frontend.demo_simulator.workspace_description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {summaryError && <p role="alert" className="sm:col-span-2 text-sm text-destructive">{t("frontend.demo_simulator.workspace_error")}</p>}
+          {[
+            [t("frontend.demo_simulator.workspace_clients"), summary.clients],
+            [t("frontend.demo_simulator.workspace_services"), summary.services],
+            [t("frontend.demo_simulator.workspace_subscriptions"), summary.subscriptions],
+            [t("frontend.demo_simulator.workspace_code_services"), summary.codeServices],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-2xl font-semibold tabular-nums">{value}</p>
+              <p className="text-sm text-muted-foreground">{label}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ProSimulatorView() {
+  const [mode, setMode] = useState<ProSimulatorMode>("request");
+  const [resetVersion, setResetVersion] = useState(0);
+
+  function handleModeChange(value: string) {
+    setMode(value as ProSimulatorMode);
+    setResetVersion((version) => version + 1);
+  }
+
+  return (
+    <div className="flex-1 p-4 sm:p-6 lg:p-8" data-testid="demo-whatsapp-simulator">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("frontend.demo_simulator.title")}</h1>
+            <p className="mt-1 text-muted-foreground">{t("frontend.demo_simulator.description")}</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => setResetVersion((version) => version + 1)}>
+            <RotateCcw data-icon="inline-start" />
+            {t("frontend.demo_simulator.reset")}
+          </Button>
+        </div>
+        <Alert>
+          <MessageCircle aria-hidden="true" />
+          <AlertTitle>{t("frontend.demo_simulator.contained_title")}</AlertTitle>
+          <AlertDescription>{t("frontend.demo_simulator.contained_description")}</AlertDescription>
+        </Alert>
+        <Tabs value={mode} onValueChange={handleModeChange} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:w-fit">
+            <TabsTrigger value="request">{t("frontend.demo_simulator.mode_request")}</TabsTrigger>
+            <TabsTrigger value="operation">{t("frontend.demo_simulator.mode_operation")}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="request" className="pt-4"><ProRequestExperience key={`request-${resetVersion}`} /></TabsContent>
+          <TabsContent value="operation" className="pt-4"><ProOperationExperience key={`operation-${resetVersion}`} /></TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
 export function DemoWhatsappSimulator() {
   const { dataSource, demo, tenantPlan, role, isAuthenticated, isMasterSupportContext } = useAuthStore();
   const reducedMotion = usePrefersReducedMotion();
@@ -88,13 +378,14 @@ export function DemoWhatsappSimulator() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const isStarterDemo =
+  const isDemoSimulator =
     isAuthenticated &&
     role === "tenant" &&
     !isMasterSupportContext &&
     dataSource.mode === "demo" &&
-    demo?.plan === "starter" &&
-    tenantPlan === "starter";
+    (demo?.plan === "starter" || demo?.plan === "pro") &&
+    tenantPlan === demo.plan;
+  const isStarterDemo = isDemoSimulator && demo?.plan === "starter";
 
   useEffect(() => {
     if (!isStarterDemo) return;
@@ -130,7 +421,8 @@ export function DemoWhatsappSimulator() {
     return () => window.clearTimeout(timer);
   }, [copy, reducedMotion, state.step]);
 
-  if (!isStarterDemo) return <NotFoundPage />;
+  if (!isDemoSimulator) return <NotFoundPage />;
+  if (demo?.plan === "pro") return <ProSimulatorView />;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
