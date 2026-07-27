@@ -247,19 +247,6 @@ class TestGetLookupStatusEndpoint:
         await db_session.flush()
 
         # Process job directly with mock provider
-        provider = StubProvider(
-            emails=[
-                EmailMessage(
-                    subject="Your Spotify login code",
-                    body="Enter this code 654321",
-                    received_at=datetime.now(timezone.utc),
-                    message_id="msg-001",
-                    sender="noreply@spotify.com",
-                )
-            ]
-        )
-
-        # Need to import and set active_provider
         import app.services.mail_lookup_worker.providers as pmod
 
         old_active = pmod.active_provider

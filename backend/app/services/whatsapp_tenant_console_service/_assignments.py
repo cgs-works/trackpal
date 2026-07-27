@@ -149,7 +149,7 @@ _build_subscription_reactivate_confirm = sb._build_subscription_reactivate_confi
 _build_subscription_renew_confirm = sb._build_subscription_renew_confirm
 
 # -- Codigo flow handlers
-from . import codigo_flow as cgf
+from . import codigo_flow as cgf  # noqa: E402
 _start_codigo_flow = cgf._start_codigo_flow
 _handle_codigo_service = cgf._handle_codigo_service
 _handle_codigo_email = cgf._handle_codigo_email
@@ -165,7 +165,7 @@ _route_codigo_flow = rt._route_codigo_flow
 # fmt: on
 
 # -- Access control flow handlers
-from . import access_control_flow as acf
+from . import access_control_flow as acf  # noqa: E402
 _start_access_control_flow = acf._start_access_control_flow
 _handle_access_control_menu = acf._handle_access_control_menu
 _handle_access_control_block_phone = acf._handle_access_control_block_phone

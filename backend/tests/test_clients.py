@@ -102,7 +102,6 @@ async def test_list_get_update_client(client, active_tenant_user, db_session):
     headers = await _login_tenant(client)
     create_response = await _create_client(client, headers)
     client_id = create_response.json()["id"]
-    old_username = create_response.json()["username"]
 
     list_response = await client.get("/api/v1/clients", headers=headers)
     assert list_response.status_code == 200
@@ -201,10 +200,7 @@ async def test_prefix_update_syncs_inactive_tenant_client_usernames(
     client, active_tenant_user, auth_headers, db_session
 ):
     headers = await _login_tenant(client)
-    create_response = await _create_client(client, headers)
-    client_id = create_response.json()["id"]
-    old_username = create_response.json()["username"]
-
+    await _create_client(client, headers)
     deactivate_response = await client.patch(
         f"/api/v1/tenants/{active_tenant_user.id}/deactivate",
         headers=auth_headers,
@@ -276,7 +272,6 @@ async def test_cross_tenant_client_access_blocked(
     )
     assert other_tenant_response.status_code == 201
 
-    other_tenant_id = other_tenant_response.json()["id"]
     other_headers = await client.post(
         "/api/v1/auth/login",
         json={"username": "tenant_two", "password": "tenant-password"},

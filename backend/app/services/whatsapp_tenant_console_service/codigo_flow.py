@@ -385,7 +385,7 @@ async def _handle_codigo_awaiting_result(
                 "Failed to check lookup job %s",
                 lookup_job_id,
             )
-            job_done = True  # treat error as done so we don't loop
+            job_done = True  # treat error as done so we don't loop  # noqa: F841
 
     restart_trigger = msg.strip().lower() in ("codigo", "código", "code")
     if restart_trigger:

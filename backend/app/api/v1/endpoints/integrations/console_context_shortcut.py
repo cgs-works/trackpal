@@ -1346,10 +1346,7 @@ async def handle_ctx_view_subscription_detail(
 ) -> WhatsAppConsoleResponse:
     """Handle actions from subscription detail view (active client)."""
     locale = _ctx_locale(tenant, data)
-    target_phone = data.get("temp_data", {}).get("target_phone")
     sub_id_str = data.get("temp_data", {}).get("selected_sub_id", "")
-    sub_service = data.get("temp_data", {}).get("selected_sub_service", "")
-    sub_plan = data.get("temp_data", {}).get("selected_sub_plan", "")
 
     from app.models.subscription import Subscription as _Sub
     from sqlalchemy import select as _select
@@ -1448,7 +1445,6 @@ async def handle_ctx_active_extend_subscription(
 ) -> WhatsAppConsoleResponse:
     """Handle extend subscription duration selection and confirmation."""
     locale = _ctx_locale(tenant, data)
-    target_phone = data.get("temp_data", {}).get("target_phone")
     sub_id_str = data.get("temp_data", {}).get("extend_sub_id", "")
     service_name = data.get("temp_data", {}).get("extend_service_name", "")
     plan_name = data.get("temp_data", {}).get("extend_plan_name", "")
