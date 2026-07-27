@@ -120,10 +120,10 @@ function CredentialRow({
 }) {
   return (
     <div className="flex min-w-0 w-full max-w-full items-center gap-3 rounded-lg border p-3">
-      <div className="text-muted-foreground">{icon}</div>
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="shrink-0 text-muted-foreground">{icon}</div>
+      <div className="min-w-0 flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <code className="block min-w-0 max-w-full truncate text-sm font-medium">{value}</code>
+        <code className="block break-all text-sm font-medium">{value}</code>
       </div>
       <Button
         type="button"
