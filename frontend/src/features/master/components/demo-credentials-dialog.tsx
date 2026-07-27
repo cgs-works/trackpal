@@ -59,8 +59,8 @@ export function DemoCredentialsDialog({
         }
       }}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="gap-3 p-5 sm:max-w-sm">
+        <DialogHeader className="gap-1.5">
           <DialogTitle>{t("frontend.master.demos.credentials_title")}</DialogTitle>
           <DialogDescription>
             {t("frontend.master.demos.credentials_description", {
@@ -69,7 +69,7 @@ export function DemoCredentialsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           <CredentialRow
             icon={<UserRound />}
             label={t("frontend.master.demos.username_label")}
