@@ -128,6 +128,7 @@ describe("DemosTab", () => {
     await userEvent.click(screen.getByRole("button", { name: "frontend.master.demos.submit_create" }));
 
     expect(await screen.findByText("once-password")).toBeInTheDocument();
+    expect(screen.queryByLabelText("frontend.master.demos.name_label")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "frontend.master.demos.copy_username" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "frontend.master.demos.copy_password" })).toBeInTheDocument();
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -137,8 +138,23 @@ describe("DemosTab", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "frontend.master.demos.copy_password" }));
     expect(writeText).toHaveBeenCalledWith("once-password");
+    expect(screen.getByText("frontend.master.demos.copied_password")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "frontend.master.demos.dismiss_credentials" }));
     expect(screen.queryByText("once-password")).not.toBeInTheDocument();
+  });
+
+  it("associates create errors with the field that needs correction", async () => {
+    mockedCreateDemo.mockRejectedValue(new Error("invalid demo"));
+
+    render(<DemosTab />);
+    await waitFor(() => expect(screen.getAllByText("Pending Demo")[0]).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "frontend.master.demos.create" }));
+    const name = screen.getByLabelText("frontend.master.demos.name_label");
+    await userEvent.type(name, "New Demo");
+    await userEvent.click(screen.getByRole("button", { name: "frontend.master.demos.submit_create" }));
+
+    await waitFor(() => expect(name).toHaveAttribute("aria-describedby", "demo-form-error"));
+    expect(screen.getByRole("alert")).toHaveAttribute("id", "demo-form-error");
   });
 
   it("allows replacement for pending and active demos but not expired demos", async () => {
