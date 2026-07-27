@@ -45,7 +45,7 @@ function AtmosphericPanel() {
         <div className="h-px w-16 bg-primary opacity-40" />
         <img src="/trackpal-dark.png" alt="TrackPal" className="h-10 w-[172px] object-contain" />
         <p className="max-w-xs text-sm leading-relaxed text-white/55">
-          Operations platform for WhatsApp-based service delivery and subscription management.
+          {t("login.platform_description")}
         </p>
         <div className="flex gap-2 mt-4">
           {[0.3, 0.5, 0.3].map((opacity, i) => (
@@ -75,7 +75,8 @@ function ThemeToggle({
       type="button"
       onClick={onToggle}
       className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={isDark ? t("login.theme_light") : t("login.theme_dark")}
+      aria-pressed={isDark}
     >
       {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
@@ -116,6 +117,8 @@ export function LoginForm() {
   useEffect(() => {
     if (authOutcome === "demo_credentials_replaced") {
       setErrorMessage(t("login.demo_credentials_replaced"));
+    } else if (authOutcome === "demo_ended") {
+      setErrorMessage(t("login.demo_ended"));
     }
   }, [authOutcome]);
 
@@ -138,12 +141,17 @@ export function LoginForm() {
         setErrorMessage(t("login.unknown_role"));
       }
     } catch (error: unknown) {
-      const apiErr = error as {
-        response?: { data?: { detail?: string } }
-      };
-      setErrorMessage(
-        apiErr.response?.data?.detail || t("login.error")
-      );
+      const outcome = useAuthStore.getState().authOutcome;
+      if (outcome === "demo_credentials_replaced") {
+        setErrorMessage(t("login.demo_credentials_replaced"));
+      } else if (outcome === "demo_ended") {
+        setErrorMessage(t("login.demo_ended"));
+      } else {
+        const apiErr = error as {
+          response?: { data?: { detail?: string } }
+        };
+        setErrorMessage(apiErr.response?.data?.detail || t("login.error"));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +166,7 @@ export function LoginForm() {
           {/* Mobile brand */}
           <div className="flex flex-col items-center gap-3 md:hidden">
             <BrandLogo />
-            <p className="font-mono text-xs text-muted-foreground">Operations platform</p>
+            <p className="font-mono text-xs text-muted-foreground">{t("login.platform")}</p>
           </div>
 
           {/* Header */}

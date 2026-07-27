@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 function diffSeconds(expiresAt: string, serverTime: string): number {
   const exp = new Date(expiresAt).getTime();
   const now = new Date(serverTime).getTime();
+  if (!Number.isFinite(exp) || !Number.isFinite(now)) return 0;
   return Math.max(0, Math.floor((exp - now) / 1000));
 }
 

@@ -5,6 +5,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCaption,
   TableHead,
   TableHeader,
   TableRow,
@@ -25,6 +26,7 @@ export function DemoTable({ demos, onReplace, onDelete, busyId }: DemoTableProps
     <>
       <div className="hidden overflow-x-auto md:block" data-testid="demo-desktop-table">
         <Table>
+          <TableCaption className="sr-only">{t("frontend.master.demos.title")}</TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>{t("frontend.master.demos.name_column")}</TableHead>
@@ -54,8 +56,8 @@ export function DemoTable({ demos, onReplace, onDelete, busyId }: DemoTableProps
           <div key={demo.id} className="flex flex-col gap-3 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-medium">{demo.name}</p>
-                <p className="truncate text-sm text-muted-foreground">{demo.username}</p>
+                <p className="break-words font-medium" title={demo.name}>{demo.name}</p>
+                <p className="break-all text-sm text-muted-foreground" title={demo.username}>{demo.username}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <PlanBadge plan={demo.plan} />
@@ -90,9 +92,9 @@ function DemoRow({
 }) {
   return (
     <TableRow>
-      <TableCell className="font-medium">{demo.name}</TableCell>
+      <TableCell className="max-w-56 whitespace-normal break-words font-medium">{demo.name}</TableCell>
       <TableCell><PlanBadge plan={demo.plan} /></TableCell>
-      <TableCell><code>{demo.username}</code></TableCell>
+      <TableCell className="max-w-48 whitespace-normal break-all"><code>{demo.username}</code></TableCell>
       <TableCell><StatusBadge status={demo.status} /></TableCell>
       <TableCell><LifecycleDetails demo={demo} /></TableCell>
       <TableCell className="text-right">
@@ -160,9 +162,9 @@ function PlanBadge({ plan }: { plan: DemoTenant["plan"] }) {
 
 function StatusBadge({ status }: { status: DemoTenantStatus }) {
   const styles: Record<DemoTenantStatus, string> = {
-    pending: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300",
-    active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
-    expired: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
+    pending: "border-border bg-muted text-foreground",
+    active: "border-primary/30 bg-primary/10 text-foreground",
+    expired: "border-destructive/30 bg-destructive/10 text-destructive",
   };
 
   return (
@@ -214,16 +216,19 @@ function LifecycleDetails({ demo }: { demo: DemoTenant }) {
 }
 
 function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return t("frontend.master.demos.not_available");
   return new Intl.DateTimeFormat(getLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatRemaining(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const hours = Math.floor(safeSeconds / 3600);
   if (hours > 0) return t("frontend.master.demos.hours", { hours });
   return t("frontend.master.demos.minutes", {
-    minutes: Math.max(1, Math.floor(seconds / 60)),
+    minutes: Math.max(1, Math.floor(safeSeconds / 60)),
   });
 }

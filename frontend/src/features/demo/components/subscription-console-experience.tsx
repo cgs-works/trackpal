@@ -161,6 +161,7 @@ export function SubscriptionConsoleExperience({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const selected = subscriptions.find((subscription) => subscription.id === selectedId) ?? null;
   const clientMap = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
@@ -207,7 +208,7 @@ export function SubscriptionConsoleExperience({
     return () => {
       cancelled = true;
     };
-  }, [loadWorkspace]);
+  }, [loadWorkspace, loadAttempt]);
 
   function append(role: Message["role"], text: string) {
     if (!mountedRef.current) return;
@@ -749,7 +750,12 @@ export function SubscriptionConsoleExperience({
     return (
       <Alert variant="destructive">
         <AlertTitle>{t("frontend.demo_simulator.operation_error")}</AlertTitle>
-        <AlertDescription>{t("frontend.subscriptions.error_load")}</AlertDescription>
+        <AlertDescription className="flex flex-col gap-3">
+          <span>{t("frontend.subscriptions.error_load")}</span>
+          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            {t("frontend.demo_simulator.retry")}
+          </Button>
+        </AlertDescription>
       </Alert>
     );
   }
@@ -770,6 +776,7 @@ export function SubscriptionConsoleExperience({
             onChange={(event) => setInput(event.target.value)}
             placeholder={t("frontend.demo_simulator.operation_placeholder")}
             autoComplete="off"
+            autoFocus
             disabled={busy}
           />
           <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || busy}>

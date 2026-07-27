@@ -80,7 +80,7 @@ function ConsoleCard({
       </CardHeader>
       <CardContent className="p-0">
         <Messages messages={messages} />
-        <form className="flex gap-2 border-t bg-muted/30 p-3" onSubmit={onSubmit}>
+        <form className="flex gap-2 border-t bg-muted/30 p-3" onSubmit={onSubmit} aria-busy={disabled}>
           <label className="sr-only" htmlFor="tenant-utility-input">
             {t("frontend.demo_simulator.message_input_label")}
           </label>
@@ -90,6 +90,7 @@ function ConsoleCard({
             onChange={(event) => onInputChange(event.target.value)}
             placeholder={t("frontend.demo_simulator.operation_placeholder")}
             autoComplete="off"
+            autoFocus
             disabled={disabled}
           />
           <Button
@@ -106,11 +107,18 @@ function ConsoleCard({
   );
 }
 
-function UtilityError({ message }: { message: string }) {
+function UtilityError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <Alert variant="destructive">
       <AlertTitle>{t("frontend.demo_simulator.operation_error")}</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
+      <AlertDescription className="flex flex-col gap-3">
+        <span>{message}</span>
+        {onRetry && (
+          <Button type="button" variant="outline" onClick={onRetry}>
+            {t("frontend.demo_simulator.retry")}
+          </Button>
+        )}
+      </AlertDescription>
     </Alert>
   );
 }
@@ -132,10 +140,12 @@ function ProfileConsole({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setError(null);
     dataSource.settings.loadProfile()
       .then((nextProfile) => {
         if (cancelled) return;
@@ -151,7 +161,7 @@ function ProfileConsole({
     return () => {
       cancelled = true;
     };
-  }, [dataSource.settings]);
+  }, [dataSource.settings, loadAttempt]);
 
   function append(role: Message["role"], text: string) {
     setMessages((current) => [...current, { id: current.length + 1, role, text }]);
@@ -248,7 +258,7 @@ function ProfileConsole({
   }
 
   if (loading) return <Loading />;
-  if (error) return <UtilityError message={error} />;
+  if (error) return <UtilityError message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />;
   return (
     <ConsoleCard
       title={t("frontend.demo_simulator.profile_title")}
@@ -274,10 +284,12 @@ function AccessControlConsole({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setError(null);
     dataSource.settings.listAccessBlocks()
       .then((nextBlocks) => {
         if (cancelled) return;
@@ -293,7 +305,7 @@ function AccessControlConsole({
     return () => {
       cancelled = true;
     };
-  }, [dataSource.settings]);
+  }, [dataSource.settings, loadAttempt]);
 
   function append(role: Message["role"], text: string) {
     setMessages((current) => [...current, { id: current.length + 1, role, text }]);
@@ -381,7 +393,7 @@ function AccessControlConsole({
   }
 
   if (loading) return <Loading />;
-  if (error) return <UtilityError message={error} />;
+  if (error) return <UtilityError message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />;
   return (
     <ConsoleCard
       title={t("frontend.demo_simulator.access_control_title")}
@@ -451,9 +463,12 @@ function CodeLookupConsole({ onBack, onCancel }: Omit<TenantUtilityConsoleExperi
   const [input, setInput] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoadError(false);
     dataSource.settings.loadCodeServices()
       .then((response) => {
         if (cancelled) return;
@@ -463,13 +478,16 @@ function CodeLookupConsole({ onBack, onCancel }: Omit<TenantUtilityConsoleExperi
         setServices(enabled);
         setState(createSimulatorState(enabled, copy));
       })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [copy, dataSource.settings]);
+  }, [copy, dataSource.settings, loadAttempt]);
 
   useEffect(() => {
     if (state.step !== "processing") return;
@@ -504,6 +522,9 @@ function CodeLookupConsole({ onBack, onCancel }: Omit<TenantUtilityConsoleExperi
   }
 
   if (loading) return <Loading />;
+  if (loadError) {
+    return <UtilityError message={t("frontend.demo_simulator.workspace_error")} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />;
+  }
   return (
     <Card className="mx-auto w-full max-w-md overflow-hidden">
       <CardHeader className="border-b bg-muted/30">

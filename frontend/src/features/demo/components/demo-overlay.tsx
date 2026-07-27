@@ -1,3 +1,11 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
@@ -7,24 +15,29 @@ interface DemoOverlayProps {
 
 export function DemoOverlay({ onRetry }: DemoOverlayProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="demo-overlay-title"
-      data-testid="demo-overlay"
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onRetry();
+      }}
     >
-      <div className="mx-4 max-w-sm rounded-lg border bg-card p-6 text-center shadow-lg">
-        <h2
-          id="demo-overlay-title"
-          className="text-sm font-medium text-foreground"
-        >
-          {t("frontend.demo.overlay.message")}
-        </h2>
-        <Button className="mt-4" onClick={onRetry}>
-          {t("frontend.demo.overlay.retry")}
-        </Button>
-      </div>
-    </div>
+      <DialogContent
+        showCloseButton={false}
+        aria-modal="true"
+        aria-describedby="demo-overlay-description"
+        data-testid="demo-overlay"
+        className="max-w-sm text-center"
+      >
+        <DialogHeader className="text-center">
+          <DialogTitle>{t("frontend.demo.overlay.message")}</DialogTitle>
+          <DialogDescription id="demo-overlay-description">
+            {t("frontend.demo.overlay.description")}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="sm:justify-center">
+          <Button onClick={onRetry}>{t("frontend.demo.overlay.retry")}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

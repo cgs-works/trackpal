@@ -15,7 +15,7 @@ export function DemoCountdown({ expiresAt, serverTime }: { expiresAt: string; se
   if (minutes > 0 || hours === 0) parts.push(t("frontend.master.demos.minutes", { minutes }));
 
   return (
-    <span data-testid="demo-countdown" aria-live="polite">
+    <span data-testid="demo-countdown" aria-live="off">
       {t("frontend.demo.banner.remaining", { time: parts.join(" ") })}
     </span>
   );

@@ -156,11 +156,11 @@ export function DemosTab() {
             disabled={loading}
             aria-label={t("frontend.master.demos.refresh")}
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">{t("frontend.master.demos.refresh")}</span>
           </Button>
           <Button type="button" size="sm" onClick={openCreate}>
-            <Plus className="size-4" />
+            <Plus className="size-4" aria-hidden="true" />
             {t("frontend.master.demos.create")}
           </Button>
         </div>
@@ -174,6 +174,7 @@ export function DemosTab() {
           placeholder={t("frontend.master.demos.search_placeholder")}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
+          maxLength={120}
           className="pl-9"
         />
       </div>
@@ -207,7 +208,7 @@ export function DemosTab() {
             </p>
             {!searchQuery && (
               <Button type="button" size="sm" onClick={openCreate}>
-                <Plus className="size-4" />
+                <Plus className="size-4" aria-hidden="true" />
                 {t("frontend.master.demos.create_first")}
               </Button>
             )}

@@ -900,6 +900,8 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.master.demos.password_label": "Contraseña",
     "frontend.master.demos.copy_username": "Copiar usuario",
     "frontend.master.demos.copy_password": "Copiar contraseña",
+    "frontend.master.demos.copied_username": "Usuario copiado.",
+    "frontend.master.demos.copied_password": "Contraseña copiada.",
     "frontend.master.demos.dismiss_credentials": "Cerrar credenciales",
     "frontend.master.demos.done": "Listo",
     "frontend.master.demos.name_column": "Nombre",
@@ -945,6 +947,8 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.workspace_recovered": "Este espacio de demo se actualizó a una línea base segura. Se conservaron el ciclo de vida y el progreso del recorrido.",
     "frontend.demo.banner.storage_unavailable": "El almacenamiento del navegador no está disponible. Los cambios de demo no se pueden guardar; no se usará una copia en el backend.",
     "frontend.demo.banner.storage_quota_exceeded": "El almacenamiento del navegador está lleno. Los cambios de demo no se pueden guardar; no se usará una copia en el backend.",
+    "frontend.demo.banner.reset_error": "No se pudieron restablecer los datos porque el almacenamiento del navegador no está disponible. No se modificó ninguna copia en el backend.",
+    "frontend.demo.overlay.description": "Es necesario verificar el estado de la demo antes de continuar.",
 }
 
 

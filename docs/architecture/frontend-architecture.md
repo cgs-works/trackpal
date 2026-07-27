@@ -92,7 +92,7 @@ Three Zustand stores in `src/store/`:
   - `logout()` — POST to `/auth/logout`, clears auth metadata and caches, but preserves the matching Demo Workspace for a later login.
   - `setTenantPlan(plan)` — corrects production `tenantPlan` from dashboard responses without changing Demo's immutable plan.
 
-- **Demo connectivity**: `useDemoHeartbeat` owns one interval while an active Demo Account is mounted, deduplicates overlapping focus and hidden-to-visible checks, and removes the interval/listeners on logout, navigation, unmount, or context change. One transient failure shows a localized warning; two pause the shell behind an accessible manual-retry overlay. Successful retry resets the count and keeps the browser-local workspace intact.
+- **Demo connectivity**: `useDemoHeartbeat` owns one interval while an active Demo Account is mounted, deduplicates overlapping focus and hidden-to-visible checks, and removes the interval/listeners on logout, navigation, unmount, or context change. One transient failure shows a localized warning; two pause the shell behind a focus-managed modal with a localized manual-retry action. Successful retry resets the count and keeps the browser-local workspace intact. The countdown is intentionally not a per-second live region so screen readers are not interrupted.
 - **Lifecycle fail-closed**: a missing, changed, expired, or deleted Demo identity clears the matching workspace and navigates to the public Demo Ended page; `demo_credentials_replaced` preserves the workspace and returns to login with a reauthentication message. Manual logout remains a neutral login transition.
 
 ### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
@@ -275,7 +275,7 @@ Client navigation uses the same role-navigation and sidebar primitives. When pri
 
 Sidebar layout for master pages. The Master dashboard keeps lifecycle work separated into accessible `Production` and `Demos` tabs:
 - **Production** renders the existing summary cards, search, tenant rows, exports, status actions, deletion, and support-context actions. Demo Tenants are excluded from its rows and counts even if a stale response contains them.
-- **Demos** uses the lifecycle-only `/demos/` API. It renders no workspace preview, activity feed, last-seen fields, summary cards, or usage telemetry.
+- **Demos** uses the lifecycle-only `/demos/` API. It renders no workspace preview, activity feed, last-seen fields, summary cards, or usage telemetry. Create-form errors are associated with their fields, credential copy actions announce success, long lifecycle values wrap safely, and mobile actions remain keyboard reachable.
 - Demo creation accepts only a name and Starter/Pro plan (Starter by default). Credential creation/replacement responses show the plaintext password once with independent username/password copy actions; dismissing the dialog clears it.
 - Pending, Active, and Expired lifecycle rows expose status-specific actions. Credential replacement is disabled for Expired rows, while deletion is confirmable for every status. Desktop tables have responsive mobile card lists.
 - Manage catalog action switches into tenant support context for production Tenants only.
@@ -308,7 +308,7 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 - Demo profile, locale, code-service selection, access-control, timezone, and reminder mutations use the browser-local workspace adapter for both Starter and Pro; local validation mirrors the production settings contracts and password changes remain server-backed.
 - Demo Public API remains visible for Pro Accounts as a capability preview, but key/origin controls are disabled and no key is created, stored, revealed, copied, regenerated, revoked, or sent.
 - Demo Mailbox and WhatsApp sections render fixed connected simulated states without provider controls. WhatsApp exposes an accessible link to the contained Demo Simulator.
-- Demo export and self-deletion controls remain discoverable but disabled on both plans; the demo workspace reset restores settings and business baselines while preserving lifecycle and tour state.
+- Demo export and self-deletion controls remain discoverable but disabled on both plans; the demo workspace reset restores settings and business baselines while preserving lifecycle and tour state. When browser storage is unavailable or full, reset is disabled and the banner explains that no backend fallback exists.
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 

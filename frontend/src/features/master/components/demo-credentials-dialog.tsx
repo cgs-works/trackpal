@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Check, Copy, KeyRound, UserRound } from "lucide-react";
 import {
@@ -22,6 +22,14 @@ export function DemoCredentialsDialog({
   onDismiss,
 }: DemoCredentialsDialogProps) {
   const [copied, setCopied] = useState<"username" | "password" | null>(null);
+  const copyTimeout = useRef<number | null>(null);
+
+  useEffect(() => {
+    setCopied(null);
+    return () => {
+      if (copyTimeout.current !== null) window.clearTimeout(copyTimeout.current);
+    };
+  }, [credentials?.username, credentials?.plain_password]);
 
   if (!credentials) return null;
 
@@ -30,7 +38,8 @@ export function DemoCredentialsDialog({
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(value);
       setCopied(kind);
-      window.setTimeout(() => setCopied(null), 1500);
+      if (copyTimeout.current !== null) window.clearTimeout(copyTimeout.current);
+      copyTimeout.current = window.setTimeout(() => setCopied(null), 1500);
     } catch {
       toast.error(t("frontend.master.demos.copy_error"));
     }
@@ -62,6 +71,7 @@ export function DemoCredentialsDialog({
             label={t("frontend.master.demos.username_label")}
             value={credentials.username}
             copyLabel={t("frontend.master.demos.copy_username")}
+            copiedLabel={t("frontend.master.demos.copied_username")}
             copied={copied === "username"}
             onCopy={() => copyValue("username", credentials.username)}
           />
@@ -70,10 +80,14 @@ export function DemoCredentialsDialog({
             label={t("frontend.master.demos.password_label")}
             value={credentials.plain_password}
             copyLabel={t("frontend.master.demos.copy_password")}
+            copiedLabel={t("frontend.master.demos.copied_password")}
             copied={copied === "password"}
             onCopy={() => copyValue("password", credentials.plain_password)}
           />
         </div>
+        <p className="sr-only" aria-live="polite">
+          {copied === "username" ? t("frontend.master.demos.copied_username") : copied === "password" ? t("frontend.master.demos.copied_password") : ""}
+        </p>
 
         <Button onClick={onDismiss} aria-label={t("frontend.master.demos.dismiss_credentials")}>
           {t("frontend.master.demos.done")}
@@ -88,6 +102,7 @@ function CredentialRow({
   label,
   value,
   copyLabel,
+  copiedLabel,
   copied,
   onCopy,
 }: {
@@ -95,6 +110,7 @@ function CredentialRow({
   label: string;
   value: string;
   copyLabel: string;
+  copiedLabel: string;
   copied: boolean;
   onCopy: () => void;
 }) {
@@ -110,10 +126,10 @@ function CredentialRow({
         variant="outline"
         size="icon-sm"
         onClick={onCopy}
-        aria-label={copyLabel}
-        title={copyLabel}
+        aria-label={copied ? copiedLabel : copyLabel}
+        title={copied ? copiedLabel : copyLabel}
       >
-        {copied ? <Check /> : <Copy />}
+        {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
       </Button>
     </div>
   );

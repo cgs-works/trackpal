@@ -245,6 +245,7 @@ export function ClientConsoleExperience({ onBack, onCancel }: ClientConsoleExper
   const { dataSource, demo } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [tenantName, setTenantName] = useState(demo?.name ?? "");
   const [services, setServices] = useState<SimulatorService[]>([]);
   const [input, setInput] = useState("");
@@ -309,7 +310,7 @@ export function ClientConsoleExperience({ onBack, onCancel }: ClientConsoleExper
     return () => {
       cancelled = true;
     };
-  }, [dataSource, demo?.name, demo?.serverTime]);
+  }, [dataSource, demo?.name, demo?.serverTime, loadAttempt]);
 
   useEffect(() => {
     if (state.screen === "back") onBack();
@@ -331,7 +332,12 @@ export function ClientConsoleExperience({ onBack, onCancel }: ClientConsoleExper
     return (
       <Alert variant="destructive">
         <AlertTitle>{t("frontend.demo_simulator.client_load_error")}</AlertTitle>
-        <AlertDescription>{t("frontend.demo_simulator.workspace_error")}</AlertDescription>
+        <AlertDescription className="flex flex-col gap-3">
+          <span>{t("frontend.demo_simulator.workspace_error")}</span>
+          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            {t("frontend.demo_simulator.retry")}
+          </Button>
+        </AlertDescription>
       </Alert>
     );
   }
@@ -369,6 +375,7 @@ export function ClientConsoleExperience({ onBack, onCancel }: ClientConsoleExper
             onChange={(event) => setInput(event.target.value)}
             placeholder={t("frontend.demo_simulator.operation_placeholder")}
             autoComplete="off"
+            autoFocus
           />
           <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")}>
             <Send className="size-4" aria-hidden="true" />

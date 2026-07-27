@@ -22,6 +22,7 @@ export function DemoBanner({
   showConnectivityWarning?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [resetError, setResetError] = useState(false);
   const demo = useAuthStore((s) => s.demo);
   const dataSource = useAuthStore((s) => s.dataSource);
   const workspace = dataSource.workspace;
@@ -29,11 +30,23 @@ export function DemoBanner({
 
   if (!demo || demo.status !== "active") return null;
   const activeDemo = demo;
+  const storageState = workspace?.storageState?.() ?? "unavailable";
+  const resetDisabled = storageState !== "available";
 
   function handleReset() {
-    dataSource.workspace?.reset(activeDemo, createDemoBaseline);
-    setConfirmOpen(false);
-    window.location.reload();
+    if (!workspace) return;
+    if (workspace.storageState() !== "available") {
+      setResetError(true);
+      return;
+    }
+    try {
+      workspace.reset(activeDemo, createDemoBaseline);
+      setResetError(false);
+      setConfirmOpen(false);
+      window.location.reload();
+    } catch {
+      setResetError(true);
+    }
   }
 
   const planLabel =
@@ -55,12 +68,12 @@ export function DemoBanner({
             {t("frontend.demo.banner.workspace_recovered")}
           </p>
         )}
-        {workspace?.storageState?.() === "unavailable" && (
+        {storageState === "unavailable" && (
           <p role="alert" data-testid="demo-storage-unavailable" className="font-medium text-destructive">
             {t("frontend.demo.banner.storage_unavailable")}
           </p>
         )}
-        {workspace?.storageState?.() === "quota_exceeded" && (
+        {storageState === "quota_exceeded" && (
           <p role="alert" data-testid="demo-storage-quota" className="font-medium text-destructive">
             {t("frontend.demo.banner.storage_quota_exceeded")}
           </p>
@@ -81,9 +94,13 @@ export function DemoBanner({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setConfirmOpen(true)}
+            onClick={() => {
+              setResetError(false);
+              setConfirmOpen(true);
+            }}
             data-testid="demo-reset-trigger"
             aria-label={t("frontend.demo.banner.reset")}
+            disabled={resetDisabled}
           >
             {t("frontend.demo.banner.reset")}
           </Button>
@@ -96,6 +113,11 @@ export function DemoBanner({
             <AlertDialogTitle>{t("frontend.demo.banner.reset_confirm_title")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("frontend.demo.banner.reset_confirm_description")}
+              {resetError && (
+                <span role="alert" className="mt-2 block text-destructive">
+                  {t("frontend.demo.banner.reset_error")}
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

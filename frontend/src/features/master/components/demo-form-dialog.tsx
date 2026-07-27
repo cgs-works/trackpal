@@ -45,8 +45,8 @@ export function DemoFormDialog({
   onSubmit,
 }: DemoFormDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!saving) onOpenChange(nextOpen); }}>
+      <DialogContent className="max-h-[min(90dvh,36rem)] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("frontend.master.demos.create_title")}</DialogTitle>
           <DialogDescription>
@@ -56,6 +56,7 @@ export function DemoFormDialog({
 
         {error && (
           <div
+            id="demo-form-error"
             role="alert"
             className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
           >
@@ -63,7 +64,7 @@ export function DemoFormDialog({
           </div>
         )}
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-busy={saving}>
           <div className="flex flex-col gap-2">
             <Label htmlFor="demo-name">{t("frontend.master.demos.name_label")}</Label>
             <Input
@@ -71,7 +72,12 @@ export function DemoFormDialog({
               value={form.name}
               onChange={(event) => onFormChange("name", event.target.value)}
               required
+              maxLength={120}
+              autoComplete="organization"
               autoFocus
+              disabled={saving}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "demo-form-error" : undefined}
             />
           </div>
 
@@ -85,7 +91,7 @@ export function DemoFormDialog({
                 }
               }}
             >
-              <SelectTrigger id="demo-plan">
+              <SelectTrigger id="demo-plan" disabled={saving} aria-describedby={error ? "demo-form-error" : undefined}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

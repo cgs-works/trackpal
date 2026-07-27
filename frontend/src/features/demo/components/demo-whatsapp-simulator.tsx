@@ -143,10 +143,13 @@ function ProRequestExperience() {
   const [input, setInput] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     dataSource.settings.loadCodeServices().then((response) => {
       if (cancelled) return;
       const services = response.services
@@ -155,12 +158,15 @@ function ProRequestExperience() {
       setState(createSimulatorState(services, copy));
       setLoading(false);
     }).catch(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        setLoadError(true);
+        setLoading(false);
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [copy, dataSource]);
+  }, [copy, dataSource, loadAttempt]);
 
   useEffect(() => {
     if (state.step !== "processing") return;
@@ -188,6 +194,19 @@ function ProRequestExperience() {
 
   if (loading) {
     return <div className="flex min-h-[22rem] items-center justify-center text-sm text-muted-foreground" role="status">{t("frontend.demo_simulator.loading")}</div>;
+  }
+  if (loadError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>{t("frontend.demo_simulator.operation_error")}</AlertTitle>
+        <AlertDescription className="flex flex-col gap-3">
+          <span>{t("frontend.demo_simulator.load_error")}</span>
+          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            {t("frontend.demo_simulator.retry")}
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   const inputLabel = state.step === "service"
@@ -221,6 +240,7 @@ function ProRequestExperience() {
               aria-describedby={inputError ? "pro-simulator-input-error" : undefined}
               disabled={state.step === "processing"}
               autoComplete="off"
+              autoFocus
             />
             <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
               <Send className="size-4" aria-hidden="true" />
@@ -391,7 +411,14 @@ function ProOperationExperience() {
           <CardDescription>{t("frontend.demo_simulator.workspace_description")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
-          {summaryError && <p role="alert" className="sm:col-span-2 text-sm text-destructive">{t("frontend.demo_simulator.workspace_error")}</p>}
+          {summaryError && (
+            <div role="alert" className="flex flex-wrap items-center gap-3 sm:col-span-2 text-sm text-destructive">
+              <span>{t("frontend.demo_simulator.workspace_error")}</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setSummaryVersion((version) => version + 1)}>
+                {t("frontend.demo_simulator.retry")}
+              </Button>
+            </div>
+          )}
           {[
             [t("frontend.demo_simulator.workspace_clients"), summary.clients],
             [t("frontend.demo_simulator.workspace_services"), summary.services],
@@ -458,6 +485,7 @@ export function DemoWhatsappSimulator() {
   const [inputError, setInputError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const isDemoSimulator =
     isAuthenticated &&
@@ -492,7 +520,7 @@ export function DemoWhatsappSimulator() {
     return () => {
       cancelled = true;
     };
-  }, [copy, dataSource, isStarterDemo]);
+  }, [copy, dataSource, isStarterDemo, loadAttempt]);
 
   useEffect(() => {
     if (state.step !== "processing") return;
@@ -603,7 +631,7 @@ export function DemoWhatsappSimulator() {
               ) : loadError ? (
                 <div className="flex min-h-[22rem] flex-col items-center justify-center gap-3 p-6 text-center">
                   <p className="text-sm text-destructive">{t("frontend.demo_simulator.load_error")}</p>
-                  <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+                  <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
                     {t("frontend.demo_simulator.retry")}
                   </Button>
                 </div>
@@ -627,6 +655,7 @@ export function DemoWhatsappSimulator() {
                         aria-describedby={inputInvalid ? "demo-simulator-input-error" : undefined}
                         disabled={state.step === "processing"}
                         autoComplete="off"
+                        autoFocus
                       />
                       <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
                         <Send className="size-4" aria-hidden="true" />

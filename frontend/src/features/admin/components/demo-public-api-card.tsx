@@ -10,12 +10,18 @@ export function DemoPublicApiCard() {
     <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-medium">{t("frontend.public_api.section_title")}</h2>
+          <h2 className="text-base font-medium" aria-describedby="public-api-demo-tooltip">
+            {t("frontend.public_api.section_title")}
+          </h2>
           <span
+            aria-hidden="true"
             title={t("frontend.public_api.tooltip")}
             className="inline-flex size-5 items-center justify-center rounded-full border text-xs text-muted-foreground"
           >
             ?
+          </span>
+          <span id="public-api-demo-tooltip" className="sr-only">
+            {t("frontend.public_api.tooltip")}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">

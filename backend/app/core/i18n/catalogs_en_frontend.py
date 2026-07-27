@@ -900,6 +900,8 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.master.demos.password_label": "Password",
     "frontend.master.demos.copy_username": "Copy username",
     "frontend.master.demos.copy_password": "Copy password",
+    "frontend.master.demos.copied_username": "Username copied.",
+    "frontend.master.demos.copied_password": "Password copied.",
     "frontend.master.demos.dismiss_credentials": "Dismiss credentials",
     "frontend.master.demos.done": "Done",
     "frontend.master.demos.name_column": "Name",
@@ -945,6 +947,8 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.workspace_recovered": "This demo workspace was updated to a safe baseline. Your lifecycle and tour progress were preserved.",
     "frontend.demo.banner.storage_unavailable": "Browser storage is unavailable. Demo changes cannot be saved; no backend copy will be used.",
     "frontend.demo.banner.storage_quota_exceeded": "Browser storage is full. Demo changes cannot be saved; no backend copy will be used.",
+    "frontend.demo.banner.reset_error": "Demo data could not be reset because browser storage is unavailable. No backend copy was changed.",
+    "frontend.demo.overlay.description": "Demo status must be verified before you can continue.",
 }
 
 

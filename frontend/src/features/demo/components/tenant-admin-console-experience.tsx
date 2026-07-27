@@ -141,6 +141,7 @@ export function TenantAdminConsoleExperience({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
 
   const copy = useMemo(() => ({
@@ -201,7 +202,7 @@ export function TenantAdminConsoleExperience({
     return () => {
       cancelled = true;
     };
-  }, [copy.catalogMenu, copy.clientsMenu, loadWorkspace, section]);
+  }, [copy.catalogMenu, copy.clientsMenu, loadAttempt, loadWorkspace, section]);
 
   function invalidateWorkspaceCaches() {
     const catalog = useCatalogStore.getState();
@@ -933,7 +934,19 @@ export function TenantAdminConsoleExperience({
   }
 
   if (loading) return <div className="flex min-h-[22rem] items-center justify-center text-sm text-muted-foreground" role="status"><Loader2 className={`mr-2 size-4 ${reducedMotion ? "" : "animate-spin"}`} aria-hidden="true" />{t("frontend.demo_simulator.client_loading")}</div>;
-  if (loadError) return <Alert variant="destructive"><AlertTitle>{t("frontend.demo_simulator.operation_error")}</AlertTitle><AlertDescription>{t("frontend.demo_simulator.workspace_error")}</AlertDescription></Alert>;
+  if (loadError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>{t("frontend.demo_simulator.operation_error")}</AlertTitle>
+        <AlertDescription className="flex flex-col gap-3">
+          <span>{t("frontend.demo_simulator.workspace_error")}</span>
+          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            {t("frontend.demo_simulator.retry")}
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <Card className="mx-auto w-full max-w-md overflow-hidden">
@@ -945,7 +958,7 @@ export function TenantAdminConsoleExperience({
         <TenantAdminMessages messages={messages} />
         <form className="flex gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
           <label className="sr-only" htmlFor="tenant-admin-console-input">{t("frontend.demo_simulator.message_input_label")}</label>
-          <Input id="tenant-admin-console-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("frontend.demo_simulator.operation_placeholder")} autoComplete="off" disabled={busy} />
+          <Input id="tenant-admin-console-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("frontend.demo_simulator.operation_placeholder")} autoComplete="off" autoFocus disabled={busy} />
           <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || busy}><Send className="size-4" aria-hidden="true" /></Button>
         </form>
       </CardContent>

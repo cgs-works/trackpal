@@ -228,11 +228,34 @@ describe("DemoBanner", () => {
     expect(screen.getByText("(Pro)")).toBeInTheDocument();
   });
 
-  it("shows countdown with remaining time", () => {
+  it("shows countdown without a noisy live region", () => {
     mockAuthStore();
     render(<DemoBanner />);
-    expect(screen.getByTestId("demo-countdown")).toBeInTheDocument();
-    expect(screen.getByTestId("demo-countdown")).toHaveTextContent("remaining");
+    const countdown = screen.getByTestId("demo-countdown");
+    expect(countdown).toBeInTheDocument();
+    expect(countdown).toHaveTextContent("remaining");
+    expect(countdown).not.toHaveAttribute("aria-live", "polite");
+  });
+
+  it("blocks reset when browser storage cannot persist changes", () => {
+    mockAuthStore({
+      dataSource: {
+        mode: "demo",
+        workspace: {
+          reset: vi.fn(),
+          read: vi.fn(),
+          ensure: vi.fn(),
+          saveTourState: vi.fn(),
+          clear: vi.fn(),
+          consumeRecoveryNotice: vi.fn().mockReturnValue(null),
+          storageState: vi.fn().mockReturnValue("unavailable"),
+          key: "trackpal:demo-workspace:demo-tenant-1",
+        },
+      },
+    });
+    render(<DemoBanner />);
+
+    expect(screen.getByTestId("demo-reset-trigger")).toBeDisabled();
   });
 
   it("shows reset button", () => {
