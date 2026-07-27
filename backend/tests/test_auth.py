@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pytest
 from sqlalchemy import select
@@ -271,7 +271,6 @@ async def test_production_heartbeat_has_no_demo_metadata(client, master_user):
     assert response.json()["is_demo"] is False
     assert response.json()["demo_status"] is None
     datetime.fromisoformat(response.json()["server_time"].replace("Z", "+00:00"))
-    assert datetime.now(timezone.utc)
 
 
 async def test_login_deactivated_tenant(client, deactivated_tenant_user):

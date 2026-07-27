@@ -226,7 +226,6 @@ export function DashboardPage() {
             <TabsTrigger value="demos">{t("frontend.master.demos_tab")}</TabsTrigger>
           </TabsList>
           <TabsContent value="production" className="flex flex-col gap-6">
-            
         <SummaryCards total={meta.total} active={meta.active} inactive={meta.inactive} />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

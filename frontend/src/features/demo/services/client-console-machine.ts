@@ -295,4 +295,3 @@ export function transitionClientConsole(
 export function getSelectedClient(state: ClientConsoleState): ClientConsoleClient | null {
   return selectedClient(state);
 }
-

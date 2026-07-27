@@ -138,6 +138,59 @@ export function DemosTab() {
     }
   }
 
+  function renderDemos() {
+    if (loading) {
+      return (
+        <div className="flex flex-col gap-3 p-4" role="status">
+          <span className="sr-only">{t("frontend.master.demos.loading")}</span>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">
+          <p role="alert" className="text-sm text-destructive">{error}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadDemos()}
+          >
+            {t("frontend.master.demos.retry")}
+          </Button>
+        </div>
+      );
+    }
+    if (filteredDemos.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            {searchQuery
+              ? t("frontend.master.demos.empty_search")
+              : t("frontend.master.demos.empty")}
+          </p>
+          {!searchQuery && (
+            <Button type="button" size="sm" onClick={openCreate}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t("frontend.master.demos.create_first")}
+            </Button>
+          )}
+        </div>
+      );
+    }
+    return (
+      <DemoTable
+        demos={filteredDemos}
+        onReplace={(demo) => void handleReplace(demo)}
+        onDelete={setDeleteTarget}
+        busyId={busyId}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -179,49 +232,7 @@ export function DemosTab() {
         />
       </div>
 
-      <div className="min-h-40 rounded-lg border">
-        {loading ? (
-          <div className="flex flex-col gap-3 p-4" role="status">
-            <span className="sr-only">{t("frontend.master.demos.loading")}</span>
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-12 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">
-            <p role="alert" className="text-sm text-destructive">{error}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void loadDemos()}
-            >
-              {t("frontend.master.demos.retry")}
-            </Button>
-          </div>
-        ) : filteredDemos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              {searchQuery
-                ? t("frontend.master.demos.empty_search")
-                : t("frontend.master.demos.empty")}
-            </p>
-            {!searchQuery && (
-              <Button type="button" size="sm" onClick={openCreate}>
-                <Plus className="size-4" aria-hidden="true" />
-                {t("frontend.master.demos.create_first")}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <DemoTable
-            demos={filteredDemos}
-            onReplace={(demo) => void handleReplace(demo)}
-            onDelete={setDeleteTarget}
-            busyId={busyId}
-          />
-        )}
-      </div>
+      <div className="min-h-40 rounded-lg border">{renderDemos()}</div>
 
       <DemoFormDialog
         open={formOpen}
@@ -293,4 +304,3 @@ function DemoDeleteDialog({
     </AlertDialog>
   );
 }
-

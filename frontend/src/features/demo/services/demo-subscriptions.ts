@@ -123,19 +123,17 @@ function requireState(
 
 function updateState(
   workspace: DemoWorkspaceRepository,
-  metadata: DemoAuthMetadata,
   updater: (state: ProDemoWorkspaceState) => ProDemoWorkspaceState,
 ): ProDemoWorkspaceState {
-  void metadata;
   const updated = workspace.updatePlanSpecific((planSpecific) => {
     const state = readProDemoState(planSpecific);
     if (!state) throw new DemoSubscriptionError("invalid_demo_workspace");
     return updater(state) as unknown as Record<string, unknown>;
   });
   if (!updated) throw new DemoSubscriptionError("invalid_demo_workspace");
-  return readProDemoState(updated.plan_specific) ?? (() => {
-    throw new DemoSubscriptionError("invalid_demo_workspace");
-  })();
+  const state = readProDemoState(updated.plan_specific);
+  if (!state) throw new DemoSubscriptionError("invalid_demo_workspace");
+  return state;
 }
 
 function validateRelationships(
@@ -251,7 +249,7 @@ export function createDemoSubscriptions(
         created_at: timestamp,
         updated_at: timestamp,
       };
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         subscriptions: [...current.subscriptions, relation],
       }));
@@ -268,11 +266,12 @@ export function createDemoSubscriptions(
       const durationType = payload.duration_type ?? existing.duration_type;
       validateDuration(durationType);
       const startsAt = payload.starts_at ? isoDate(payload.starts_at) : existing.starts_at;
-      const expiresAt = payload.expires_at
-        ? isoDate(payload.expires_at)
-        : payload.duration_type || payload.starts_at
-          ? calculateExpiration(startsAt, durationType)
-          : existing.expires_at;
+      let expiresAt = existing.expires_at;
+      if (payload.expires_at) {
+        expiresAt = isoDate(payload.expires_at);
+      } else if (payload.duration_type || payload.starts_at) {
+        expiresAt = calculateExpiration(startsAt, durationType);
+      }
       validateDateRange(startsAt, expiresAt);
       const profileName = payload.profile_name === undefined ? existing.profile_name : payload.profile_name.trim() || null;
       const profilePin = payload.profile_pin === undefined ? existing.pin_secret : payload.profile_pin || null;
@@ -295,7 +294,7 @@ export function createDemoSubscriptions(
         expires_at: expiresAt,
         updated_at: now(),
       };
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         subscriptions: current.subscriptions.map((item) => item.id === id ? updated : item),
       }));
@@ -314,7 +313,7 @@ export function createDemoSubscriptions(
       const state = requireState(workspace, metadata);
       const existing = findSubscription(state, id);
       const updated = { ...existing, status: "cancelled", cancelled_at: now(), updated_at: now() };
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         subscriptions: current.subscriptions.map((item) => item.id === id ? updated : item),
       }));
@@ -335,7 +334,7 @@ export function createDemoSubscriptions(
         status: "active",
         updated_at: now(),
       };
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         subscriptions: current.subscriptions.map((item) => item.id === id ? updated : item),
       }));
@@ -363,7 +362,7 @@ export function createDemoSubscriptions(
         status: "active",
         updated_at: now(),
       };
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         subscriptions: current.subscriptions.map((item) => item.id === id ? updated : item),
       }));

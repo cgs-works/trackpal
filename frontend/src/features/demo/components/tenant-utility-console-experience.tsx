@@ -223,13 +223,18 @@ function ProfileConsole({
     }
 
     if (screen === "edit-fields") {
-      const selectedField: ProfileField | undefined = text === "1"
-        ? "full_name"
-        : text === "2"
-          ? "email"
-          : text === "3"
-            ? "phone"
-            : undefined;
+      let selectedField: ProfileField | undefined;
+      switch (text) {
+        case "1":
+          selectedField = "full_name";
+          break;
+        case "2":
+          selectedField = "email";
+          break;
+        case "3":
+          selectedField = "phone";
+          break;
+      }
       if (!selectedField) {
         append("bot", t("frontend.demo_simulator.invalid_navigation"));
         return;
@@ -436,6 +441,12 @@ function HelpConsole({ onBack, onCancel }: Omit<TenantUtilityConsoleExperiencePr
   );
 }
 
+function simulatorInputLabel(step: SimulatorState["step"]): string {
+  if (step === "service") return t("frontend.demo_simulator.service_input_label");
+  if (step === "email") return t("frontend.demo_simulator.email_input_label");
+  return t("frontend.demo_simulator.message_input_label");
+}
+
 function createTenantCodeCopy(): SimulatorCopy {
   return {
     welcome: t("frontend.demo_simulator.tenant_access_code_welcome"),
@@ -535,7 +546,7 @@ function CodeLookupConsole({ onBack, onCancel }: Omit<TenantUtilityConsoleExperi
         <Messages messages={state.messages} />
         <form className="flex flex-col gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
           <label className="text-xs font-medium text-muted-foreground" htmlFor="tenant-code-input">
-            {state.step === "service" ? t("frontend.demo_simulator.service_input_label") : state.step === "email" ? t("frontend.demo_simulator.email_input_label") : t("frontend.demo_simulator.message_input_label")}
+            {simulatorInputLabel(state.step)}
           </label>
           <div className="flex gap-2">
             <Input

@@ -122,10 +122,8 @@ function requireState(
 
 function updateState(
   workspace: DemoWorkspaceRepository,
-  metadata: DemoAuthMetadata,
   updater: (state: ProDemoWorkspaceState) => ProDemoWorkspaceState,
 ): ProDemoWorkspaceState {
-  void metadata;
   const updated = workspace.updatePlanSpecific((planSpecific) => {
     const state = readProDemoState(planSpecific);
     if (!state) throw new DemoCatalogError("invalid_demo_workspace");
@@ -160,7 +158,7 @@ export function createDemoCatalog(
         created_at: now,
         updated_at: now,
       };
-      updateState(workspace, metadata, (state) => ({
+      updateState(workspace, (state) => ({
         ...state,
         services: [...state.services, service],
       }));
@@ -176,7 +174,7 @@ export function createDemoCatalog(
         throw new DemoCatalogError("service_name_already_exists");
       }
       const updated = { ...existing, name, updated_at: new Date().toISOString() };
-      updateState(workspace, metadata, (state) => ({
+      updateState(workspace, (state) => ({
         ...state,
         services: state.services.map((service) => service.id === id ? updated : service),
       }));
@@ -196,7 +194,7 @@ export function createDemoCatalog(
         throw new DemoCatalogError("service_not_found");
       }
       const planIds = new Set(state.plans.filter((plan) => plan.service_id === id).map((plan) => plan.id));
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         services: current.services.filter((service) => service.id !== id),
         plans: current.plans.filter((plan) => plan.service_id !== id),
@@ -232,7 +230,7 @@ export function createDemoCatalog(
         created_at: now,
         updated_at: now,
       };
-      updateState(workspace, metadata, (state) => ({ ...state, plans: [...state.plans, plan] }));
+      updateState(workspace, (state) => ({ ...state, plans: [...state.plans, plan] }));
       return plan;
     },
 
@@ -245,7 +243,7 @@ export function createDemoCatalog(
         throw new DemoCatalogError("plan_name_already_exists");
       }
       const updated = { ...existing, name, updated_at: new Date().toISOString() };
-      updateState(workspace, metadata, (state) => ({
+      updateState(workspace, (state) => ({
         ...state,
         plans: state.plans.map((plan) => plan.id === planId ? updated : plan),
       }));
@@ -264,7 +262,7 @@ export function createDemoCatalog(
       if (!state.plans.some((plan) => plan.id === planId && plan.service_id === serviceId)) {
         throw new DemoCatalogError("plan_not_found");
       }
-      updateState(workspace, metadata, (current) => ({
+      updateState(workspace, (current) => ({
         ...current,
         plans: current.plans.filter((plan) => plan.id !== planId),
         subscriptions: current.subscriptions.filter((subscription) => subscription.plan_id !== planId),

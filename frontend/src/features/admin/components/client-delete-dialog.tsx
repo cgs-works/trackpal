@@ -39,9 +39,10 @@ export function DeleteConfirmDialog({
             {t("frontend.clients.delete_warning", { name: clientName })}
           </AlertDialogDescription>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {loading ? (
+          {loading && (
             <p className="text-sm text-muted-foreground">{t("frontend.catalog.delete_preview_loading")}</p>
-          ) : preview ? (
+          )}
+          {!loading && preview && (
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
               <div className="rounded-md bg-muted p-2">
                 <strong className="block text-lg">{preview.active_subscription_count}</strong>
@@ -56,7 +57,7 @@ export function DeleteConfirmDialog({
                 {t("frontend.catalog.total_subscriptions")}
               </div>
             </div>
-          ) : null}
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t("frontend.common.cancel")}</AlertDialogCancel>

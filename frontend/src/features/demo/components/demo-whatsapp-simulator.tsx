@@ -50,6 +50,28 @@ function createSimulatorCopy(): SimulatorCopy {
   };
 }
 
+function simulatorInputText(step: SimulatorState["step"]): {
+  label: string;
+  placeholder: string;
+} {
+  if (step === "service") {
+    return {
+      label: t("frontend.demo_simulator.service_input_label"),
+      placeholder: t("frontend.demo_simulator.service_placeholder"),
+    };
+  }
+  if (step === "email") {
+    return {
+      label: t("frontend.demo_simulator.email_input_label"),
+      placeholder: t("frontend.demo_simulator.email_placeholder"),
+    };
+  }
+  return {
+    label: t("frontend.demo_simulator.message_input_label"),
+    placeholder: t("frontend.demo_simulator.message_placeholder"),
+  };
+}
+
 function messageBubbleClass(role: "bot" | "user"): string {
   return role === "user"
     ? "ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3 py-2 text-primary-foreground"
@@ -209,16 +231,9 @@ function ProRequestExperience() {
     );
   }
 
-  const inputLabel = state.step === "service"
-    ? t("frontend.demo_simulator.service_input_label")
-    : state.step === "email"
-      ? t("frontend.demo_simulator.email_input_label")
-      : t("frontend.demo_simulator.message_input_label");
-  const inputPlaceholder = state.step === "service"
-    ? t("frontend.demo_simulator.service_placeholder")
-    : state.step === "email"
-      ? t("frontend.demo_simulator.email_placeholder")
-      : t("frontend.demo_simulator.message_placeholder");
+  const { label: inputLabel, placeholder: inputPlaceholder } = simulatorInputText(
+    state.step,
+  );
 
   return (
     <Card className="mx-auto w-full max-w-md overflow-hidden">
@@ -557,19 +572,64 @@ export function DemoWhatsappSimulator() {
     setInputError(null);
   }
 
-  const inputLabel =
-    state.step === "service"
-      ? t("frontend.demo_simulator.service_input_label")
-      : state.step === "email"
-        ? t("frontend.demo_simulator.email_input_label")
-        : t("frontend.demo_simulator.message_input_label");
-  const inputPlaceholder =
-    state.step === "service"
-      ? t("frontend.demo_simulator.service_placeholder")
-      : state.step === "email"
-        ? t("frontend.demo_simulator.email_placeholder")
-        : t("frontend.demo_simulator.message_placeholder");
+  const { label: inputLabel, placeholder: inputPlaceholder } = simulatorInputText(
+    state.step,
+  );
   const inputInvalid = Boolean(inputError);
+
+  function renderConversation() {
+    if (loading) {
+      return (
+        <div className="flex min-h-[22rem] items-center justify-center p-6 text-sm text-muted-foreground" role="status">
+          {t("frontend.demo_simulator.loading")}
+        </div>
+      );
+    }
+    if (loadError) {
+      return (
+        <div className="flex min-h-[22rem] flex-col items-center justify-center gap-3 p-6 text-center">
+          <p className="text-sm text-destructive">{t("frontend.demo_simulator.load_error")}</p>
+          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            {t("frontend.demo_simulator.retry")}
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <>
+        <SimulatorMessages state={state} />
+        <form className="flex flex-col gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="demo-simulator-input">
+            {inputLabel}
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="demo-simulator-input"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                setInputError(null);
+              }}
+              placeholder={inputPlaceholder}
+              aria-invalid={inputInvalid}
+              aria-describedby={inputInvalid ? "demo-simulator-input-error" : undefined}
+              disabled={state.step === "processing"}
+              autoComplete="off"
+              autoFocus
+            />
+            <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
+              <Send className="size-4" aria-hidden="true" />
+            </Button>
+          </div>
+          {inputError && (
+            <p id="demo-simulator-input-error" role="alert" className="text-xs text-destructive">
+              {inputError}
+            </p>
+          )}
+        </form>
+      </>
+    );
+  }
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8" data-testid="demo-whatsapp-simulator">
@@ -623,53 +683,7 @@ export function DemoWhatsappSimulator() {
                 <Check className="ml-auto size-5 text-emerald-600" aria-label={t("frontend.demo_simulator.simulated_status")} />
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex min-h-[22rem] items-center justify-center p-6 text-sm text-muted-foreground" role="status">
-                  {t("frontend.demo_simulator.loading")}
-                </div>
-              ) : loadError ? (
-                <div className="flex min-h-[22rem] flex-col items-center justify-center gap-3 p-6 text-center">
-                  <p className="text-sm text-destructive">{t("frontend.demo_simulator.load_error")}</p>
-                  <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
-                    {t("frontend.demo_simulator.retry")}
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <SimulatorMessages state={state} />
-                  <form className="flex flex-col gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
-                    <label className="text-xs font-medium text-muted-foreground" htmlFor="demo-simulator-input">
-                      {inputLabel}
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="demo-simulator-input"
-                        value={input}
-                        onChange={(event) => {
-                          setInput(event.target.value);
-                          setInputError(null);
-                        }}
-                        placeholder={inputPlaceholder}
-                        aria-invalid={inputInvalid}
-                        aria-describedby={inputInvalid ? "demo-simulator-input-error" : undefined}
-                        disabled={state.step === "processing"}
-                        autoComplete="off"
-                        autoFocus
-                      />
-                      <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
-                        <Send className="size-4" aria-hidden="true" />
-                      </Button>
-                    </div>
-                    {inputError && (
-                      <p id="demo-simulator-input-error" role="alert" className="text-xs text-destructive">
-                        {inputError}
-                      </p>
-                    )}
-                  </form>
-                </>
-              )}
-            </CardContent>
+            <CardContent className="p-0">{renderConversation()}</CardContent>
           </Card>
 
           <Card>

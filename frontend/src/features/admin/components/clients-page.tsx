@@ -17,6 +17,14 @@ import {
 } from "./client-form-dialog";
 import { DeleteConfirmDialog } from "./client-delete-dialog";
 
+const CLIENT_ERROR_KEYS: Record<string, string> = {
+  client_local_username_exists: "frontend.clients.error_username_exists",
+  phone_already_registered: "frontend.clients.error_phone_exists",
+  client_delete_active: "frontend.clients.cannot_delete_active",
+  client_has_subscriptions: "frontend.clients.error_has_subscriptions",
+  client_validation_failed: "frontend.clients.error_validation",
+};
+
 function getClientErrorMessage(error: unknown, fallback: string): string {
   let code: string | undefined;
   let detail: unknown;
@@ -27,14 +35,7 @@ function getClientErrorMessage(error: unknown, fallback: string): string {
       if (data && typeof data === "object" && "detail" in data) detail = data.detail;
     }
   }
-  const keyByCode: Record<string, string> = {
-    client_local_username_exists: "frontend.clients.error_username_exists",
-    phone_already_registered: "frontend.clients.error_phone_exists",
-    client_delete_active: "frontend.clients.cannot_delete_active",
-    client_has_subscriptions: "frontend.clients.error_has_subscriptions",
-    client_validation_failed: "frontend.clients.error_validation",
-  };
-  if (code && keyByCode[code]) return t(keyByCode[code]);
+  if (code && CLIENT_ERROR_KEYS[code]) return t(CLIENT_ERROR_KEYS[code]);
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail) && detail.length > 0) {
     return detail.map((item) => {

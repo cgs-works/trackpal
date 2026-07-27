@@ -60,11 +60,8 @@ interface TenantAdminConsoleExperienceProps {
 
 function errorCode(error: unknown): string | undefined {
   if (!error || typeof error !== "object") return undefined;
-  return "code" in error && typeof error.code === "string"
-    ? error.code
-    : error instanceof Error
-      ? error.message
-      : undefined;
+  if ("code" in error && typeof error.code === "string") return error.code;
+  return error instanceof Error ? error.message : undefined;
 }
 
 function errorMessage(error: unknown): string {
@@ -542,11 +539,14 @@ export function TenantAdminConsoleExperience({
       if (!editField || !selectedClientId) return goMenu();
       setBusy(true);
       try {
-        const payload = editField === "full_name"
-          ? { full_name: text }
-          : editField === "local_username"
-            ? { local_username: text.toLowerCase() }
-            : { phone: text === "—" ? undefined : text };
+        let payload;
+        if (editField === "full_name") {
+          payload = { full_name: text };
+        } else if (editField === "local_username") {
+          payload = { local_username: text.toLowerCase() };
+        } else {
+          payload = { phone: text === "—" ? undefined : text };
+        }
         const updated = await dataSource.crud.clients.update(selectedClientId, payload);
         await completeMutation(t("frontend.demo_simulator.client_updated", { name: updated.full_name }));
       } catch (error) {

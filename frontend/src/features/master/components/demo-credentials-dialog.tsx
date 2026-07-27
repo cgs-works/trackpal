@@ -33,6 +33,10 @@ export function DemoCredentialsDialog({
 
   if (!credentials) return null;
 
+  const copiedAnnouncement = copied
+    ? t(`frontend.master.demos.copied_${copied}`)
+    : "";
+
   async function copyValue(kind: "username" | "password", value: string) {
     try {
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
@@ -86,7 +90,7 @@ export function DemoCredentialsDialog({
           />
         </div>
         <p className="sr-only" aria-live="polite">
-          {copied === "username" ? t("frontend.master.demos.copied_username") : copied === "password" ? t("frontend.master.demos.copied_password") : ""}
+          {copiedAnnouncement}
         </p>
 
         <Button onClick={onDismiss} aria-label={t("frontend.master.demos.dismiss_credentials")}>

@@ -259,5 +259,4 @@ export function createDemoClientCrud(
       }));
     },
   };
-
 }

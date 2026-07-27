@@ -86,11 +86,14 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
 
   const loadProfile = useCallback(async () => {
     try {
-      const data = isMasterSupportContext
-        ? await getTenantProfile()
-        : dataSource?.settings
-          ? await dataSource.settings.loadProfile()
-          : await getProfile();
+      let data: Profile;
+      if (isMasterSupportContext) {
+        data = await getTenantProfile();
+      } else if (dataSource.settings) {
+        data = await dataSource.settings.loadProfile();
+      } else {
+        data = await getProfile();
+      }
       setProfile(data);
       setProfileError(null);
     } catch {

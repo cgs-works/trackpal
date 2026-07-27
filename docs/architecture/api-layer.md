@@ -240,7 +240,6 @@ Defined in `app/api/dependencies.py`:
 - `resolve_locale(db, tenant_id)` — Fetches `TenantSettings.locale` from DB via `tenant_settings_repository`, returns `"en"` fallback. Used before mutating service calls to translate `UserFacingError` responses. Must be called *before* the mutating call to avoid post-rollback RLS context loss.
 - Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`, `TenantPlanDep`, `ProTenantId`
 
-
 ### Demo Guardrail Dependency
 
 `require_demo_guardrail` is the reusable production-boundary dependency. `ActiveTenantId`, `ProTenantId`, and tenant-plan resolution reject Demo Accounts with HTTP 403 and the stable `demo_operation_blocked` code before route handlers run. Dashboard/profile mutations and Help acknowledgement opt into the same dependency explicitly; authentication, password change, Help/i18n reads, and lifecycle heartbeat remain allowlisted. Integration routes apply the same policy after resolving a target Tenant and before mailbox, queue, OAuth, Evolution, export, or public-catalog side effects.

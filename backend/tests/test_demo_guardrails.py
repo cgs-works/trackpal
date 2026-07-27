@@ -1,8 +1,9 @@
-from unittest.mock import AsyncMock, patch
 import logging
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
+
 from app.models import Tenant, TenantApiKey, TenantSettings
 
 pytestmark = pytest.mark.asyncio
@@ -82,7 +83,9 @@ async def test_demo_help_acknowledgement_is_not_a_persistence_allowlist(
     assert response.json()["detail"] == "demo_operation_blocked"
 
 
-async def test_demo_guardrail_prevents_settings_persistence(client, db_session, active_demo_user):
+async def test_demo_guardrail_prevents_settings_persistence(
+    client, db_session, active_demo_user
+):
     headers = await _login(client, active_demo_user.username, "demo-password")
 
     response = await client.put(
@@ -231,9 +234,7 @@ async def test_demo_self_deletion_is_blocked_before_cleanup(client, active_demo_
     assert response.json()["detail"] == "demo_operation_blocked"
 
 
-async def test_demo_guardrail_logs_only_safe_context(
-    client, active_demo_user, caplog
-):
+async def test_demo_guardrail_logs_only_safe_context(client, active_demo_user, caplog):
     headers = await _login(client, active_demo_user.username, "demo-password")
 
     with caplog.at_level(logging.INFO, logger="app.core.demo_guardrail"):

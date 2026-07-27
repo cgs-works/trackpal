@@ -71,11 +71,8 @@ interface CreateDraft {
 
 function errorCode(error: unknown): string | undefined {
   if (!error || typeof error !== "object") return undefined;
-  return "code" in error && typeof error.code === "string"
-    ? error.code
-    : error instanceof Error
-      ? error.message
-      : undefined;
+  if ("code" in error && typeof error.code === "string") return error.code;
+  return error instanceof Error ? error.message : undefined;
 }
 
 function errorMessage(error: unknown): string {
@@ -420,14 +417,35 @@ export function SubscriptionConsoleExperience({
     if (!selectedId) return goMenu();
     setBusy(true);
     try {
-      const updated = action === "cancel"
-        ? await dataSource.subscriptions.cancel(selectedId)
-        : action === "renew"
-          ? await dataSource.subscriptions.renew(selectedId, duration ?? "1_month", expiresAt)
-          : await dataSource.subscriptions.reactivate(selectedId, duration ?? "1_month", undefined, expiresAt);
+      let updated: Subscription;
+      if (action === "cancel") {
+        updated = await dataSource.subscriptions.cancel(selectedId);
+      } else if (action === "renew") {
+        updated = await dataSource.subscriptions.renew(
+          selectedId,
+          duration ?? "1_month",
+          expiresAt,
+        );
+      } else {
+        updated = await dataSource.subscriptions.reactivate(
+          selectedId,
+          duration ?? "1_month",
+          undefined,
+          expiresAt,
+        );
+      }
+      const successByAction = {
+        cancel: "cancelled",
+        renew: "renewed",
+        reactivate: "reactivated",
+      } as const;
       await refreshAfterMutation();
       setScreen("detail");
-      bot(t(`frontend.demo_simulator.subscription_${action === "cancel" ? "cancelled" : action === "renew" ? "renewed" : "reactivated"}`, { email: updated.streaming_email }));
+      bot(
+        t(`frontend.demo_simulator.subscription_${successByAction[action]}`, {
+          email: updated.streaming_email,
+        }),
+      );
       bot(detailText(updated));
     } catch (error) {
       bot(errorMessage(error));
@@ -613,7 +631,12 @@ export function SubscriptionConsoleExperience({
     if (screen === "edit-value") {
       if (!editField) return goMenu();
       try {
-        const value = editField.endsWith("_at") ? normalizeDate(text) : ["-", "skip", "none"].includes(text.toLowerCase()) ? "" : text;
+        let value = text;
+        if (editField.endsWith("_at")) {
+          value = normalizeDate(text);
+        } else if (["-", "skip", "none"].includes(text.toLowerCase())) {
+          value = "";
+        }
         await saveEdit({ [editField]: value });
       } catch (error) {
         bot(errorMessage(error));

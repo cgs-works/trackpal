@@ -52,6 +52,7 @@ class DemoHeartbeatResponse(BaseModel):
     demo_credentials_version: int | None = None
     server_time: datetime
 
+
 class RefreshRequest(BaseModel):
     refresh_token: str
     active_tenant_id: UUID | None = None

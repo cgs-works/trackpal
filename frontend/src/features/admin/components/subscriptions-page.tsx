@@ -31,18 +31,19 @@ import {
 } from "./subscription-lifecycle-dialog";
 import { SubscriptionRenewDialog } from "./subscription-renew-dialog";
 
+const SUBSCRIPTION_ERROR_KEYS: Record<string, string> = {
+  subscription_validation_failed: "frontend.subscriptions.error_validation",
+  subscription_invalid_relationship: "frontend.subscriptions.error_relationship",
+  subscription_invalid_duration: "frontend.subscriptions.error_duration",
+  subscription_pin_requires_profile: "frontend.subscriptions.error_pin_requires_profile",
+  subscription_invalid_dates: "frontend.subscriptions.error_dates",
+  subscription_not_found: "frontend.subscriptions.error_not_found",
+  invalid_demo_workspace: "frontend.subscriptions.error_load",
+};
+
 function getSubscriptionErrorMessage(error: unknown, fallback: string): string {
   if (error && typeof error === "object" && "code" in error && typeof error.code === "string") {
-    const keyByCode: Record<string, string> = {
-      subscription_validation_failed: "frontend.subscriptions.error_validation",
-      subscription_invalid_relationship: "frontend.subscriptions.error_relationship",
-      subscription_invalid_duration: "frontend.subscriptions.error_duration",
-      subscription_pin_requires_profile: "frontend.subscriptions.error_pin_requires_profile",
-      subscription_invalid_dates: "frontend.subscriptions.error_dates",
-      subscription_not_found: "frontend.subscriptions.error_not_found",
-      invalid_demo_workspace: "frontend.subscriptions.error_load",
-    };
-    const key = keyByCode[error.code];
+    const key = SUBSCRIPTION_ERROR_KEYS[error.code];
     if (key) return t(key);
   }
   const apiErr = error as {
@@ -391,7 +392,7 @@ export function SubscriptionsPage() {
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <CreditCard className="size-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">
-              {hasFilters ? t("frontend.subscriptions.no_results") : t("frontend.subscriptions.no_results")}
+              {t("frontend.subscriptions.no_results")}
             </h3>
             <p className="text-muted-foreground mt-1">
               {hasFilters

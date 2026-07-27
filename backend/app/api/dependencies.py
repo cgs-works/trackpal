@@ -12,15 +12,14 @@ from app.core.demo_guardrail import (
 )
 from app.core.security import decode_token, verify_n8n_api_key
 from app.core.tenant_plan import TENANT_PLAN_PRO, TenantPlan
+from app.models import User
 from app.repositories import (
     clients_repository,
     tenants_repository,
     tenant_settings_repository,
     users_repository,
 )
-from app.models import User
 from app.services.demo_lifecycle_service import DemoAuthError, ensure_demo_request
-
 
 
 async def resolve_locale(db: AsyncSession, tenant_id: UUID) -> str:
@@ -117,8 +116,6 @@ async def require_demo_guardrail(
             detail=exc.code,
         ) from exc
     return current_user
-
-
 
 
 async def get_active_tenant_id(

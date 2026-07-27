@@ -101,6 +101,28 @@ function createClientCodeCopy(): SimulatorCopy {
   };
 }
 
+function simulatorInputText(step: SimulatorState["step"]): {
+  label: string;
+  placeholder: string;
+} {
+  if (step === "service") {
+    return {
+      label: t("frontend.demo_simulator.service_input_label"),
+      placeholder: t("frontend.demo_simulator.service_placeholder"),
+    };
+  }
+  if (step === "email") {
+    return {
+      label: t("frontend.demo_simulator.email_input_label"),
+      placeholder: t("frontend.demo_simulator.email_placeholder"),
+    };
+  }
+  return {
+    label: t("frontend.demo_simulator.message_input_label"),
+    placeholder: t("frontend.demo_simulator.message_placeholder"),
+  };
+}
+
 function ClientConsoleMessages({ state }: { state: ClientConsoleState }) {
   return (
     <div
@@ -177,16 +199,9 @@ function ClientCodeExperience({
     setInput("");
   }
 
-  const inputLabel = state.step === "service"
-    ? t("frontend.demo_simulator.service_input_label")
-    : state.step === "email"
-      ? t("frontend.demo_simulator.email_input_label")
-      : t("frontend.demo_simulator.message_input_label");
-  const inputPlaceholder = state.step === "service"
-    ? t("frontend.demo_simulator.service_placeholder")
-    : state.step === "email"
-      ? t("frontend.demo_simulator.email_placeholder")
-      : t("frontend.demo_simulator.message_placeholder");
+  const { label: inputLabel, placeholder: inputPlaceholder } = simulatorInputText(
+    state.step,
+  );
 
   return (
     <Card className="mx-auto w-full max-w-md overflow-hidden">
