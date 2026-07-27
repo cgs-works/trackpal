@@ -39,6 +39,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Markdown Capability Registry for User Help](adr/0001-markdown-capability-registry-for-user-help.md) | Canonical Markdown topic source for in-app manuals, orientation tours, and CI capability contracts |
 | [Immediate Confirmed Tenant Deletion](adr/0002-immediate-confirmed-tenant-deletion.md) | Tenant Admin irreversible self-deletion without grace period or Master approval |
 | [Tenant Data Export Domain Contract](adr/0003-tenant-export-domain-contract.md) | Stable business-facing export contract with semantic field names, independent of persistence model |
+| [Browser-local Demo Tenant Workspaces](adr/0004-browser-local-demo-tenant-workspaces.md) | Server-enforced demo identity and lifecycle with plan-aware business state isolated to each browser |
 
 ## Release Operations
 
@@ -46,6 +47,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 |------|-------------|
 | [Private Help Release Gate](releases/user-help-release.md) | Atomic release checklist, automated checks, manual browser QA matrix, and deliberate browser E2E deferral |
 | [Offboarding Release Gate](releases/offboarding-release.md) | Tenant Data Export and Deletion release checklist, role/plan/locale/browser matrices, and private-bucket operational checks |
+| [Demo Tenant Release Evidence](releases/demo-release.md) | Demo lifecycle, containment, browser QA, automated gates, Impeccable result, and explicit blocked/ready recommendation |
 
 ## Codebase
 

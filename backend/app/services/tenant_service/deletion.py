@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_rls_context, restore_rls_context, set_rls_context
+from app.core.demo_guardrail import assert_demo_operation_allowed
 from app.core.security import verify_password
 from app.models import Client as ClientModel
 from app.models.tenant import Tenant
@@ -88,7 +89,6 @@ async def _purge_export_storage(
     Deletes all export artifacts (current, previous, partial uploads).
     Returns ``None`` on success, or an error message on failure.
     """
-    storage = export_service.get_storage()
     jobs = await export_jobs_repository.get_all_for_tenant(db, tenant_id)
     keys_to_delete: set[str] = set()
 
@@ -96,6 +96,10 @@ async def _purge_export_storage(
         if job.r2_key:
             keys_to_delete.add(job.r2_key)
 
+    if not keys_to_delete:
+        return None
+
+    storage = export_service.get_storage()
     for key in keys_to_delete:
         try:
             await storage.delete(key)
@@ -199,6 +203,7 @@ async def delete_tenant_as_master(
 
     if profile is None:
         raise ValueError("Tenant not found")
+    assert_demo_operation_allowed(profile, operation="tenant_delete")
 
     if profile.is_active:
         raise ValueError("Cannot delete active tenant. Deactivate first.")
@@ -367,6 +372,8 @@ async def delete_tenant_account(
 
     if profile.owner_user_id != actor_user_id:
         raise ValueError("Only the owning Tenant Admin can delete this account")
+
+    assert_demo_operation_allowed(profile, operation="tenant_self_delete")
 
     if not profile.is_active:
         raise ValueError("Account is already deactivated. Contact Master support.")

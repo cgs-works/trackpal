@@ -22,6 +22,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.dependencies import ApiKeyDbDep
+from app.core.demo_guardrail import DemoGuardrailError, assert_demo_operation_allowed
 from app.core.metrics import metrics
 from app.core.redis_client import get_redis_manager
 from app.repositories import mailbox_config_repository, mailbox_lookup_repository
@@ -68,6 +69,13 @@ async def create_lookup(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found",
         )
+    try:
+        assert_demo_operation_allowed(tenant, operation="n8n_mail_lookup")
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.code,
+        ) from exc
     if not tenant.is_active:
         metrics.inc(
             "lookup_api_create", status="tenant_inactive", service=payload.service_key
@@ -152,6 +160,15 @@ async def get_lookup_status(
     guessing.  ``result_value`` is returned from the ephemeral cache
     (not persisted in DB).
     """
+    tenant = await tenants_repository.get(db, tenant_id)
+    if tenant is not None:
+        try:
+            assert_demo_operation_allowed(tenant, operation="n8n_mail_lookup_poll")
+        except DemoGuardrailError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=exc.code,
+            ) from exc
     job = await mailbox_lookup_repository.get_job(db, job_id, tenant_id=tenant_id)
     if job is None:
         metrics.inc("lookup_api_poll", status="job_not_found")

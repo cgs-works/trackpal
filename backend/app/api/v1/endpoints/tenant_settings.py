@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep, TenantPlanDep
+from app.api.dependencies import ActiveTenantId, CurrentUser, DemoGuardedUser, DbDep, TenantPlanDep
 from app.api.v1.endpoints.subscriptions._common import require_tenant_or_master
 from app.schemas.tenant_settings import TenantSettingsResponse, TenantSettingsUpdate
 from app.services.subscription_service.timezone_catalog import list_timezones
@@ -47,6 +47,6 @@ async def update_tenant_settings(
 
 
 @router.get("/timezones")
-async def list_supported_timezones(current_user: CurrentUser):
+async def list_supported_timezones(current_user: DemoGuardedUser):
     require_tenant_or_master(current_user)
     return await list_timezones()

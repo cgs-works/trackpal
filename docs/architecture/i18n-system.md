@@ -136,6 +136,8 @@ def translate_error(locale: str, err: UserFacingError) -> str:
 
 Services raise `UserFacingError("client_not_found")` with a machine-readable code. `translate_error()` maps to i18n key `errors.client_not_found`. Endpoints catch `UserFacingError` before `ValueError` and translate before raising `HTTPException`.
 
+Demo lifecycle and containment outcomes are an intentional exception: `demo_operation_blocked`, `demo_ended`, and `demo_credentials_replaced` are stable machine-readable response codes rather than translated prose. The frontend maps them to localized authenticated or public copy. This keeps auth/session routing deterministic while preserving natural English and Spanish user messages.
+
 ## Locale Resolution
 
 ### REST API Endpoints
@@ -205,9 +207,10 @@ Convenience helper `_t(key, **params)` reads `_current_locale.get()` automatical
 
 Role resolution:
 
-- `tenant` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_owner()`
+- Production `tenant` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_owner()`
+- Demo `tenant` role: may request `?locale=en|es`; the endpoint returns that catalog without persisting locale server-side, allowing the browser-local Demo Workspace to remain the locale source of truth
 - `client` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_client()` (joins `Client → TenantSettings` through `client.tenant_id`)
-- Master/unknown: returns English catalog
+- Master/unknown: returns English catalog; locale query overrides are ignored outside Demo Tenants
 
 ## Frontend I18n Store
 
@@ -244,7 +247,7 @@ Catalog loaded on authenticated lifecycle:
 
 ### Pre-auth public i18n (frontend-only)
 
-Login and future unauthenticated routes use local frontend catalog files, independent from backend `/i18n/catalog`:
+Login, Demo Ended, and other unauthenticated routes use local frontend catalog files, independent from backend `/i18n/catalog`:
 
 - `frontend/src/i18n/public.json` — source for public translations (`en`, `es`)
 - `frontend/src/i18n/usePublicI18n.js` — locale resolver + `t(key)` helper

@@ -39,7 +39,8 @@ Role-aware horizontal tabs inside Settings. Renders different content based on r
 Data tab for Tenant Data Export and self-service Tenant Deletion. Connected to `useExportStore` for state management.
 
 **Export section:**
-- Empty state with description and "Request export" button (triggers password dialog)
+- Production empty state with description and "Request export" button (triggers password dialog)
+- Demo Accounts keep export and self-deletion discoverable but render both actions disabled and never call their APIs
 - Status display: pending, processing (with spinner), ready (with download button), failed (with retry option), cancelled
 - Previous version download while replacement is pending
 - Actor attribution: localized "You" / "Support" label
@@ -116,7 +117,7 @@ Pro-only Settings section for Public API Catalog configuration. It shows the vis
 
 ### WhatsappLinkSection (`features/admin/components/whatsapp-link-section.tsx`)
 
-Settings section for managing WhatsApp connection (status badge, pairing code, QR scanning, and disconnect). Available for both Starter and Pro tenant admins, and master support context. Uses the `useWhatsAppLinkPolling` hook to fetch status every 5 seconds.
+Settings section for managing WhatsApp connection (status badge, pairing code, QR scanning, and disconnect). Available for both Starter and Pro tenant admins, and master support context. Uses the `useWhatsAppLinkPolling` hook to fetch status every 5 seconds. Demo Accounts render a fixed connected simulated state and an accessible link to the Demo WhatsApp Simulator without provider controls.
 
 ### AccessControlSection (`features/admin/components/access-control-section.tsx`)
 
@@ -178,6 +179,24 @@ Table component for subscription list display.
 - Reveal credentials eye icon per row
 - Status badges with color coding
 
+## Demo Feature Components
+
+### Demo shell and lifecycle (`features/demo/components/`)
+
+| Component | Responsibility |
+|-----------|----------------|
+| `DemoBanner` | Persistent plan, browser-local storage, countdown, connectivity, recovery, and Reset Demo Data status/action |
+| `DemoCountdown` | Server-offset remaining-time display without noisy live-region announcements |
+| `DemoOverlay` | Accessible interaction pause after two unverifiable lifecycle heartbeats, with explicit retry |
+| `DemoEndedPage` | Public bilingual neutral end state with WhatsApp, Telegram, and email contact paths |
+| `DemoWhatsappSimulator` | Plan-aware contained simulator: Starter Request flow; Pro Request and Operation modes |
+| `ClientConsoleExperience` | Read-only Client menu simulation from current Pro workspace data |
+| `TenantAdminConsoleExperience` | Pro Tenant Admin console navigation and local mutations |
+| `SubscriptionConsoleExperience` | Pro subscription lifecycle simulation backed by the shared workspace repository |
+| `TenantUtilityConsoleExperience` | Pro profile, access-control, Help, and code-service console flows |
+
+`useDemoHeartbeat` performs minute/focus/visibility lifecycle checks and pauses fail-closed without deleting local work. `useCountdown` derives display time from server time, and `usePrefersReducedMotion` removes non-essential simulator delays while preserving state transitions. Chat state remains component-local; business mutations use the same Demo Workspace adapter as the Web pages.
+
 ## Master Feature Components
 
 ### MasterDashboard (`features/master/components/dashboard-page.tsx`)
@@ -189,6 +208,11 @@ Master admin dashboard with tenant management.
 - Code services dialog for global activation
 - Tenant support context switch
 - Plan selector in business form dialog
+- Separate Production and Demos tabs; production summary cards exclude Demo Tenants
+
+### Demo management (`features/master/components/demos-tab.tsx`)
+
+`DemosTab` owns lifecycle-only search, filtering, creation, credential replacement, and deletion. `DemoTable` renders desktop rows and mobile cards with Pending/Active/Expired status; `DemoFormDialog` accepts immutable name and plan with Starter preselected; `DemoCredentialsDialog` reveals generated credentials once and provides separate copy actions. No component exposes workspace preview, support switch, telemetry, plan changes, or extension controls.
 
 ### BusinessTable (`features/master/components/business-table.tsx`)
 

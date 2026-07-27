@@ -8,10 +8,14 @@ export const Route = createFileRoute("/")({
 
 function IndexComponent() {
   const navigate = useNavigate();
-  const { isAuthenticated, role } = useAuthStore();
+  const { isAuthenticated, role, authOutcome } = useAuthStore();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (authOutcome === "demo_ended") {
+      navigate({ to: "/demo-ended", replace: true });
+    } else if (authOutcome === "demo_credentials_replaced") {
+      navigate({ to: "/login", replace: true });
+    } else if (isAuthenticated) {
       if (role === "master") {
         navigate({ to: "/master/dashboard", replace: true });
       } else if (role === "tenant") {
@@ -22,7 +26,7 @@ function IndexComponent() {
     } else {
       navigate({ to: "/login", replace: true });
     }
-  }, [isAuthenticated, role, navigate]);
+  }, [isAuthenticated, role, authOutcome, navigate]);
 
   return (
     <div className="flex-1 flex items-center justify-center">

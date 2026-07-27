@@ -22,6 +22,7 @@ from app.api.v1.endpoints.integrations.console_handlers import (
 from app.api.v1.endpoints.integrations.console_modes import _handle_ambiguity
 from app.core.config import settings
 from app.core.database import set_internal_rls_context
+from app.core.demo_guardrail import DemoGuardrailError, assert_demo_operation_allowed
 from app.core.i18n import t
 from app.core.phone import normalize_phone
 from app.core.redis_client import RedisConnectionManager, get_redis_manager
@@ -161,6 +162,16 @@ async def whatsapp_console(
             db=db,
         )
     if role == "tenant":
+        tenant = await tenants_repository.get_by_owner(db, identity["user_id"])
+        if tenant is not None:
+            try:
+                assert_demo_operation_allowed(tenant, operation="n8n_console")
+            except DemoGuardrailError:
+                return WhatsAppConsoleResponse(
+                    reply="",
+                    status="demo_operation_blocked",
+                    no_reply=True,
+                )
         return await _handle_tenant_console(
             phone=phone,
             message=request.message,
@@ -212,6 +223,14 @@ async def _route_by_instance(
     if tenant is None:
         # Unknown instance — deny access (no fallback by phone/LID)
         return WhatsAppConsoleResponse(reply=UNKNOWN_PHONE_REPLY)
+    try:
+        assert_demo_operation_allowed(tenant, operation="n8n_console")
+    except DemoGuardrailError:
+        return WhatsAppConsoleResponse(
+            reply="",
+            status="demo_operation_blocked",
+            no_reply=True,
+        )
 
     if not tenant.is_active:
         return WhatsAppConsoleResponse(reply=t(_tl(tenant), "wa.client.access_denied"))

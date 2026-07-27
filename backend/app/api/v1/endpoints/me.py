@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DbDep
+from app.api.dependencies import ActiveTenantId, CurrentUser, DemoGuardedUser, DbDep
 from app.core.database import restore_rls_context
 from app.core.errors import UserFacingError, translate_error
 from app.core.i18n import t as _t
@@ -80,7 +80,7 @@ async def _resolve_profile_settings(
 
 
 @router.get("", response_model=ProfileResponse)
-async def get_profile(db: DbDep, current_user: CurrentUser):
+async def get_profile(db: DbDep, current_user: DemoGuardedUser):
     profile = await profile_service.get_profile(db, current_user)
     if profile is None:
         locale = await _resolve_profile_locale(db, current_user)
@@ -93,7 +93,7 @@ async def get_profile(db: DbDep, current_user: CurrentUser):
 
 
 @router.put("", response_model=ProfileResponse)
-async def update_profile(payload: ProfileUpdate, db: DbDep, current_user: CurrentUser):
+async def update_profile(payload: ProfileUpdate, db: DbDep, current_user: DemoGuardedUser):
     try:
         profile = await profile_service.update_profile(db, current_user, payload)
     except PermissionError as exc:
@@ -272,6 +272,11 @@ async def delete_account(
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=str(exc),
+        ) from exc
+    except UserFacingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=translate_error(locale, exc),
         ) from exc
     except ValueError as exc:
         raise HTTPException(

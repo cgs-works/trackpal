@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import UserFacingError
@@ -10,7 +11,12 @@ from app.core.input_validation import (
     validate_password_policy,
 )
 from app.core.security import get_password_hash, verify_password
-from app.repositories import profiles_repository, tenants_repository, users_repository
+from app.repositories import (
+    profiles_repository,
+    sessions_repository,
+    tenants_repository,
+    users_repository,
+)
 from app.models import Client, MasterProfile, Tenant, User
 from app.schemas.me import ProfileUpdate
 
@@ -34,6 +40,8 @@ class ProfileService:
         if profile is None:
             return None
 
+        if user.role == "tenant" and isinstance(profile, Tenant) and profile.is_demo:
+            raise UserFacingError("demo_tenant_management_only")
         if user.role == "client":
             raise PermissionError("Client profile is read-only")
 
@@ -99,9 +107,7 @@ class ProfileService:
         # Duplicate phone check (skip if same value)
         if "phone" in update_data and update_data["phone"] != profile.phone:
             if update_data["phone"] is not None:
-                existing = await users_repository.get_by_phone(
-                    db, update_data["phone"]
-                )
+                existing = await users_repository.get_by_phone(db, update_data["phone"])
                 if existing and existing[0].id != profile.owner_user_id:
                     raise UserFacingError("profile_phone_registered")
 
@@ -126,5 +132,16 @@ class ProfileService:
             return False
 
         user.password_hash = get_password_hash(new_password)
+        if user.role == "tenant":
+            tenant = await tenants_repository.get_by_owner(db, user.id)
+            if tenant is not None and tenant.is_demo:
+                await db.execute(
+                    update(Tenant)
+                    .where(Tenant.id == tenant.id, Tenant.is_demo.is_(True))
+                    .values(
+                        demo_credentials_version=Tenant.demo_credentials_version + 1
+                    )
+                )
+                await sessions_repository.revoke_all_for_user(db, user.id)
         await db.commit()
         return True

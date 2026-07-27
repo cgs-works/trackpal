@@ -15,6 +15,7 @@ import {
   disconnectMailbox,
 } from "../services/settings-api";
 import { useSettingsStore } from "@/store/settings";
+import { useAuthStore } from "@/store/auth";
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
@@ -45,7 +46,9 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function MailboxSection() {
+  const { dataSource } = useAuthStore();
   const { mailbox, mailboxLoaded, loadMailbox } = useSettingsStore();
+  const isDemo = dataSource.mode === "demo";
   const [isLoading, setIsLoading] = useState(!mailboxLoaded);
   const [error, setError] = useState("");
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -60,6 +63,31 @@ export function MailboxSection() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  const loadMailboxData = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const data = await loadMailbox(dataSource.settings);
+      if (data) {
+        setProvider(data.provider);
+        setEmail(data.mailbox_email);
+        setImapHost(data.imap_host || "");
+        setImapPort(String(data.imap_port || 993));
+        setImapSsl(data.imap_ssl ?? true);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("frontend.mailbox.error_load")
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dataSource.settings, loadMailbox]);
+
+  useEffect(() => {
+    loadMailboxData();
+  }, [loadMailboxData]);
 
   // ── Listen for OAuth popup completion via BroadcastChannel ──
   useEffect(() => {
@@ -76,32 +104,6 @@ export function MailboxSection() {
       ch.close();
       channelRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadMailboxData = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const data = await loadMailbox();
-      if (data) {
-        setProvider(data.provider);
-        setEmail(data.mailbox_email);
-        setImapHost(data.imap_host || "");
-        setImapPort(String(data.imap_port || 993));
-        setImapSsl(data.imap_ssl ?? true);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("frontend.mailbox.error_load")
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadMailbox]);
-
-  useEffect(() => {
-    loadMailboxData();
   }, [loadMailboxData]);
 
   // ── OAuth connect ─────────────────────────────────────────
@@ -250,14 +252,14 @@ export function MailboxSection() {
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={mailbox.status} />
-            <Button variant="ghost" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+            {!isDemo && <Button variant="ghost" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
               {disconnecting ? (
                 <Loader2 className="size-3.5 mr-1 animate-spin" />
               ) : (
                 <Unplug className="size-3.5 mr-1" />
               )}
               {disconnecting ? t("frontend.mailbox.disconnecting") : t("frontend.mailbox.disconnect")}
-            </Button>
+            </Button>}
           </div>
         </div>
       )}
@@ -270,7 +272,7 @@ export function MailboxSection() {
       )}
 
       {/* Provider selection */}
-      {!mailbox && (
+      {!mailbox && !isDemo && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {providerOptions.map((opt) => {
@@ -399,7 +401,7 @@ export function MailboxSection() {
       )}
 
       {/* Test connection */}
-      {mailbox && (
+      {mailbox && !isDemo && (
         <div className="flex justify-end">
           <Button
             variant="outline"

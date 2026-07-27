@@ -74,7 +74,7 @@ function CategoryList({ sections, activeSection, onSelect }: { sections: Setting
 }
 
 export function SettingsPage({ initialSection }: { initialSection?: SectionId } = {}) {
-  const { role, tenantPlan, isMasterSupportContext } = useAuthStore();
+  const { role, tenantPlan, isMasterSupportContext, dataSource } = useAuthStore();
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
   const showProSettings = !isStarterTenantAdmin || isMasterSupportContext;
   const sections = buildSections(showProSettings);
@@ -86,13 +86,20 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
 
   const loadProfile = useCallback(async () => {
     try {
-      const data = isMasterSupportContext ? await getTenantProfile() : await getProfile();
+      let data: Profile;
+      if (isMasterSupportContext) {
+        data = await getTenantProfile();
+      } else if (dataSource.settings) {
+        data = await dataSource.settings.loadProfile();
+      } else {
+        data = await getProfile();
+      }
       setProfile(data);
       setProfileError(null);
     } catch {
       setProfileError(t("frontend.profile.error_update"));
     }
-  }, [isMasterSupportContext]);
+  }, [dataSource, isMasterSupportContext]);
 
   useEffect(() => {
     loadProfile();

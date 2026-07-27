@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/store/auth";
 import { t } from "@/i18n";
-import { getTenantDashboard, type TenantDashboardResponse } from "../services/dashboard-api";
+import type { TenantDashboardResponse } from "../services/dashboard-api";
 import { getApiError } from "@/lib/api-errors";
 import { Ban, CheckCircle2, Database, LogOut, Mail, Package, Users } from "lucide-react";
 
@@ -28,14 +28,14 @@ function MetricCard({ title, value, icon: Icon }: { title: string; value: string
 }
 
 export function DashboardPage() {
-  const { isAuthenticated, role, username, logout, setTenantPlan } = useAuthStore();
+  const { dataSource, isAuthenticated, role, username, logout, setTenantPlan } = useAuthStore();
   const [dashboard, setDashboard] = useState<TenantDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getTenantDashboard();
+      const data = await dataSource.dashboard.load();
       setDashboard(data);
       if (data.tenant_plan !== useAuthStore.getState().tenantPlan) {
         setTenantPlan(data.tenant_plan);
@@ -45,7 +45,7 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [setTenantPlan]);
+  }, [dataSource, setTenantPlan]);
 
   useEffect(() => {
     if (isAuthenticated) load();
@@ -84,6 +84,7 @@ export function DashboardPage() {
               <Badge variant={isPro ? "default" : "secondary"}>{planLabel}</Badge>
             </div>
             <p className="text-muted-foreground">{t("frontend.dashboard.tenant.welcome", { name: username || "Admin" })}</p>
+            <p className="font-medium">{dashboard.full_name}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => logout()}>
             <LogOut data-icon="inline-start" />

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MasterRouteImport } from './routes/master'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DemoEndedRouteImport } from './routes/demo-ended'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -24,6 +25,7 @@ import { Route as AdminHelpRouteImport } from './routes/admin/help'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminClientsRouteImport } from './routes/admin/clients'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
+import { Route as AdminDemoSimulatorRouteImport } from './routes/admin/demo/simulator'
 
 const MasterRoute = MasterRouteImport.update({
   id: '/master',
@@ -33,6 +35,11 @@ const MasterRoute = MasterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoEndedRoute = DemoEndedRouteImport.update({
+  id: '/demo-ended',
+  path: '/demo-ended',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientRoute = ClientRouteImport.update({
@@ -100,11 +107,17 @@ const AdminCatalogRoute = AdminCatalogRouteImport.update({
   path: '/catalog',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDemoSimulatorRoute = AdminDemoSimulatorRouteImport.update({
+  id: '/demo/simulator',
+  path: '/demo/simulator',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRouteWithChildren
+  '/demo-ended': typeof DemoEndedRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -117,11 +130,13 @@ export interface FileRoutesByFullPath {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRouteWithChildren
+  '/demo-ended': typeof DemoEndedRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -134,12 +149,14 @@ export interface FileRoutesByTo {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRouteWithChildren
+  '/demo-ended': typeof DemoEndedRoute
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
@@ -152,6 +169,7 @@ export interface FileRoutesById {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/client'
+    | '/demo-ended'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -171,11 +190,13 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/admin/demo/simulator'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
     | '/client'
+    | '/demo-ended'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -188,11 +209,13 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/admin/demo/simulator'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/client'
+    | '/demo-ended'
     | '/login'
     | '/master'
     | '/admin/catalog'
@@ -205,12 +228,14 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/admin/demo/simulator'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
+  DemoEndedRoute: typeof DemoEndedRoute
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
 }
@@ -229,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-ended': {
+      id: '/demo-ended'
+      path: '/demo-ended'
+      fullPath: '/demo-ended'
+      preLoaderRoute: typeof DemoEndedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/client': {
@@ -322,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCatalogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/demo/simulator': {
+      id: '/admin/demo/simulator'
+      path: '/demo/simulator'
+      fullPath: '/admin/demo/simulator'
+      preLoaderRoute: typeof AdminDemoSimulatorRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -332,6 +371,7 @@ interface AdminRouteChildren {
   AdminHelpRoute: typeof AdminHelpRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
+  AdminDemoSimulatorRoute: typeof AdminDemoSimulatorRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -341,6 +381,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminHelpRoute: AdminHelpRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSubscriptionsRoute: AdminSubscriptionsRoute,
+  AdminDemoSimulatorRoute: AdminDemoSimulatorRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -375,6 +416,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
+  DemoEndedRoute: DemoEndedRoute,
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
 }

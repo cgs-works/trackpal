@@ -13,6 +13,7 @@ export interface TenantDashboardResponse {
   catalog_services: number | null;
   active_subscriptions: number | null;
   subscriptions_expiring_soon: number | null;
+  reminders_enabled?: boolean | null;
 }
 
 export async function getTenantDashboard(): Promise<TenantDashboardResponse> {

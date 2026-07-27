@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, MessageCircle, QrCode, Smartphone } from "lucide-react";
+import { ExternalLink, Loader2, MessageCircle, QrCode, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { t } from "@/i18n";
+import { useAuthStore } from "@/store/auth";
 import { getApiError } from "@/lib/api-errors";
 import {
   disconnectWhatsApp,
@@ -58,6 +59,10 @@ export function WhatsappLinkSection() {
   const [pollingEnabled, setPollingEnabled] = useState(false);
   const [timeoutError, setTimeoutError] = useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
+  const isDemo = useAuthStore((state) => state.dataSource.mode === "demo");
+  const isStarterDemo = useAuthStore(
+    (state) => isDemo && (state.demo?.plan ?? state.dataSource.context.tenantPlan) === "starter",
+  );
   const qrRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs for stale closure prevention in QR refresh timer
@@ -81,14 +86,16 @@ export function WhatsappLinkSection() {
   const loadStatus = useCallback(async () => {
     try {
       setError(null);
-      const data = await getWhatsAppLinkStatus();
+      const data = isDemo
+        ? { connected: true, phone: null, instance_name: "Demo WhatsApp" }
+        : await getWhatsAppLinkStatus();
       setStatus(data);
     } catch (err) {
       setError(getApiError(err, t("frontend.whatsapp_link.error_load")));
     } finally {
       setIsInitialLoading(false);
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     loadStatus();
@@ -293,8 +300,23 @@ export function WhatsappLinkSection() {
           </Alert>
         )}
 
+        {connected && isStarterDemo && (
+          <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">
+              {t("frontend.whatsapp_link.demo_description")}
+            </p>
+            <a
+              href="/admin/demo/simulator"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("frontend.whatsapp_link.demo_simulator_link")}
+              <ExternalLink className="size-4" aria-hidden="true" />
+            </a>
+          </div>
+        )}
+
         {/* Connected: disconnect button */}
-        {connected && (
+        {connected && !isDemo && (
           <div className="flex flex-col gap-3">
             <div className="flex gap-3">
               <AlertDialog open={disconnectDialogOpen} onOpenChange={setDisconnectDialogOpen}>
@@ -333,7 +355,7 @@ export function WhatsappLinkSection() {
         )}
 
         {/* Pairing tabs (disconnected + phone exists) */}
-        {!connected && hasPhone && (
+        {!connected && hasPhone && !isDemo && (
           <Tabs defaultValue="pairing-code">
             <TabsList>
               <TabsTrigger value="pairing-code">{t("frontend.whatsapp_link.pairing_tab")}</TabsTrigger>

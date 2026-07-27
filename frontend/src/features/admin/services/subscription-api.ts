@@ -121,9 +121,15 @@ export async function renewSubscription(
 }
 
 export async function reactivateSubscription(
-  id: string
+  id: string,
+  durationType = "1_month",
+  startsAt?: string,
+  expiresAt?: string,
 ): Promise<Subscription> {
-  const { data } = await api.post(`/subscriptions/${id}/reactivate`);
+  const payload: Record<string, string> = { duration_type: durationType };
+  if (startsAt) payload.starts_at = startsAt;
+  if (expiresAt) payload.expires_at = expiresAt;
+  const { data } = await api.post(`/subscriptions/${id}/reactivate`, payload);
   return data;
 }
 

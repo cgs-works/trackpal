@@ -6,13 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
+import { useAuthStore } from "@/store/auth";
 import { getApiError } from "@/lib/api-errors";
-import {
-  createAccessBlock,
-  deleteAccessBlock,
-  listAccessBlocks,
-  type AccessControlBlock,
-} from "../services/access-control-api";
+import type { AccessControlBlock } from "../services/access-control-api";
 
 const PAGE_SIZE = 10;
 const SEARCH_ALLOWED_CHARACTERS = /[^\d+()\-\s]/g;
@@ -41,6 +37,7 @@ export function AccessControlSection() {
   const [saving, setSaving] = useState(false);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const { dataSource } = useAuthStore();
   const trimmedPhone = phone.trim();
   const normalizedSearch = digitsOnly(phoneSearch);
   const filteredBlocks = filterBlocksByPhone(blocks, normalizedSearch);
@@ -54,7 +51,7 @@ export function AccessControlSection() {
   const load = useCallback(async (): Promise<AccessControlBlock[] | null> => {
     setLoading(true);
     try {
-      const nextBlocks = await listAccessBlocks();
+      const nextBlocks = await dataSource.settings.listAccessBlocks();
       setBlocks(nextBlocks);
       return nextBlocks;
     } catch (error) {
@@ -63,7 +60,7 @@ export function AccessControlSection() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataSource.settings]);
 
   useEffect(() => {
     void load();
@@ -93,7 +90,7 @@ export function AccessControlSection() {
     if (!trimmedPhone) return;
     setSaving(true);
     try {
-      await createAccessBlock(trimmedPhone);
+      await dataSource.settings.createAccessBlock(trimmedPhone);
       setPhone("");
       const nextBlocks = await load();
       if (nextBlocks) clampPage(nextBlocks);
@@ -108,7 +105,7 @@ export function AccessControlSection() {
   async function handleUnblock(id: string) {
     setUnblockingId(id);
     try {
-      await deleteAccessBlock(id);
+      await dataSource.settings.deleteAccessBlock(id);
       const nextBlocks = await load();
       if (nextBlocks) clampPage(nextBlocks);
       toast.success(t("frontend.access_control.saved"));

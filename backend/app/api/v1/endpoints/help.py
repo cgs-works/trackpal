@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.dependencies import CurrentUser, DbDep, resolve_locale
+from app.api.dependencies import CurrentUser, DbDep, DemoGuardedUser, resolve_locale
 from app.help import get_help_catalog
 from app.help.artifact import HelpCatalog
 from app.help.compiler import HelpValidationError
@@ -236,7 +236,7 @@ async def acknowledge_tour(
     release_id: str,
     payload: HelpTourAcknowledgementRequest,
     db: DbDep,
-    current_user: CurrentUser,
+    current_user: DemoGuardedUser,
 ) -> HelpTourAcknowledgementResponse:
     """Persist one immutable, Tenant-scoped tour acknowledgement."""
 

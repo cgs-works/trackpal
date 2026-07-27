@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.api.dependencies import DbDep, MasterUser
+from app.core.demo_guardrail import DemoGuardrailError
 from app.schemas.tenant import (
     TenantCreate,
     TenantListResponse,
@@ -68,7 +69,7 @@ async def list_tenants(db: DbDep, current_user: MasterUser):
 @router.get("/{tenant_id}", response_model=TenantResponse)
 async def get_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
     profile = await tenant_service.get_tenant(db, tenant_id)
-    if profile is None:
+    if profile is None or profile.is_demo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
         )
@@ -81,6 +82,10 @@ async def update_tenant(
 ):
     try:
         profile = await tenant_service.update_tenant(db, tenant_id, payload)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -95,7 +100,16 @@ async def update_tenant(
 
 @router.patch("/{tenant_id}/deactivate", response_model=TenantResponse)
 async def deactivate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
-    profile = await tenant_service.deactivate_tenant(db, tenant_id)
+    try:
+        profile = await tenant_service.deactivate_tenant(db, tenant_id)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
@@ -105,7 +119,16 @@ async def deactivate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser
 
 @router.patch("/{tenant_id}/activate", response_model=TenantResponse)
 async def activate_tenant(tenant_id: UUID, db: DbDep, current_user: MasterUser):
-    profile = await tenant_service.activate_tenant(db, tenant_id)
+    try:
+        profile = await tenant_service.activate_tenant(db, tenant_id)
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
@@ -147,6 +170,10 @@ async def master_delete_tenant(
             locale=locale,
             limiter=limiter,
         )
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=exc.code
+        ) from exc
     except StepUpError as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

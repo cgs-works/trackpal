@@ -18,6 +18,17 @@ const joyrideState = vi.hoisted(() => ({
   props: null as Record<string, unknown> | null,
   navigate: vi.fn(),
 }));
+const helpApiState = vi.hoisted(() => {
+  const acknowledge = vi.fn();
+  const getUnseen = vi.fn();
+  const replay = vi.fn();
+  return {
+    acknowledge,
+    getUnseen,
+    replay,
+    dataSource: { orientation: { acknowledge, getUnseen, replay } },
+  };
+});
 
 vi.mock("react-joyride", () => ({
   ACTIONS: { PREV: "prev" },
@@ -62,6 +73,7 @@ vi.mock("@/store/auth", () => ({
     role: "tenant",
     tenantPlan: "starter",
     isMasterSupportContext: false,
+    dataSource: helpApiState.dataSource,
   }),
 }));
 
@@ -79,9 +91,9 @@ vi.mock("../safe-markdown", () => ({
 }));
 
 vi.mock("../../services/help-api", () => ({
-  acknowledgeHelpTour: vi.fn(),
-  getUnseenHelpTour: vi.fn(),
-  replayHelpTour: vi.fn(),
+  acknowledgeHelpTour: helpApiState.acknowledge,
+  getUnseenHelpTour: helpApiState.getUnseen,
+  replayHelpTour: helpApiState.replay,
 }));
 
 const release: HelpTourRelease = {
@@ -243,6 +255,38 @@ describe("OrientationTour", () => {
     await waitFor(() =>
       expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
     );
+  });
+
+  it("portals the mobile tour sheet outside the positioned Joyride wrapper", async () => {
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(max-width: 767px)",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
+
+    try {
+      render(
+        <>
+          <div data-help-id="admin.dashboard" />
+          <OrientationTour />
+        </>,
+      );
+
+      await waitFor(() => {
+        const popover = screen.getByTestId("help-tour-popover");
+        expect(popover).toHaveAttribute("data-tour-layout", "mobile-sheet");
+        expect(popover.parentElement).toBe(document.body);
+      });
+    } finally {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: originalMatchMedia,
+      });
+    }
   });
 
   it("replaces tour motion when the user prefers reduced motion", async () => {

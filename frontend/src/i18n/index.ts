@@ -5,9 +5,12 @@ let currentLocale = "en";
 let _ready = false;
 let _readyListeners: (() => void)[] = [];
 
-export async function loadCatalog(): Promise<void> {
+export async function loadCatalog(locale?: string): Promise<void> {
   try {
-    const { data } = await api.get("/i18n/catalog");
+    const response = locale
+      ? api.get("/i18n/catalog", { params: { locale } })
+      : api.get("/i18n/catalog");
+    const { data } = await response;
     catalog = data.catalog || {};
     currentLocale = data.locale || "en";
   } catch {

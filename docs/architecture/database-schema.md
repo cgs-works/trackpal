@@ -48,7 +48,19 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 | evolution_instance_token | VARCHAR(500) | Nullable, encrypted via app-layer Fernet |
 | plan | VARCHAR(20) | Package source of truth. Allowed: `starter`, `pro`. Existing tenants are backfilled to `pro`; new tenants must choose explicitly. |
 | is_active | BOOLEAN | Default true |
+| is_demo | BOOLEAN | Default false; distinguishes Demo Tenants from production Tenants |
+| demo_activated_at | TIMESTAMPTZ | Nullable; first successful Demo Credentials login timestamp |
+| demo_expires_at | TIMESTAMPTZ | Nullable; non-extendable evaluation boundary |
+| demo_credentials_version | INTEGER | Default 1; increments when Demo Credentials are replaced |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
+
+### Demo Tenant lifecycle constraints
+
+- `demo_activated_at` and `demo_expires_at` are both null or both present.
+- When present, `demo_expires_at` is later than `demo_activated_at`.
+- Production Tenants (`is_demo = false`) cannot carry Demo lifecycle timestamps or a Demo credentials version other than `1`.
+- Demo lifecycle status is derived as Pending (no timestamps), Active (before expiration), or Expired (at/after expiration) from persisted timestamps and authoritative server time; no status enum is stored.
+- Index `ix_tenants_demo_lifecycle` supports Demo listing and expiration lookups.
 
 ### `Client` — `clients` table
 
@@ -349,6 +361,8 @@ Alembic migrations:
 23. `e013fe74cab3` — Delete inactive `blocked_clients` rows and drop `blocked_clients.is_active`; row existence now represents an active block
 24. `e014fe74cab4` — Add `tenant_help_acknowledgements` table for tour release acknowledgment storage
 25. `e015fe74cab5` — Add `export_jobs` table with tenant FK, status, timestamps, lease, cooldown, replacement chain, R2 storage key, ready/expiry lifecycle, and RLS policies
+26. `e016fe74cab6` — Add export job lifecycle columns for failure, cooldown, and actor role
+27. `e017fe74cab7` — Add Demo Tenant flag, lifecycle timestamps, credential/session version, constraints, and lifecycle index
 
 ## Key Constraints
 

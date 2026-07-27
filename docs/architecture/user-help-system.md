@@ -42,6 +42,7 @@ The public Vite bundle contains the Help client and presentation components, but
 - Dashboard, Pro modules, and Settings use semantic targets such as `data-help-id="admin.dashboard"`, `data-help-id="admin.clients"`, `data-help-id="admin.catalog"`, `data-help-id="admin.subscriptions"`, `data-help-id="admin.settings.reminders"`, `data-help-id="admin.settings.timezone"`, and `data-help-id="admin.settings.profile"`; these identifiers are independent of translated labels and CSS.
 - The Help Center groups topics by the same module order as the Tenant Admin navigation and exposes only declarative, allow-listed module or Settings-category links. Pro topics may expose multiple safe module links, while access-code workflow topics link safely to Settings categories; none executes connection, disconnection, blocking, unblocking, lookup, or mutation actions.
 - The shared Tenant Admin and Client layouts provide contextual Help in a responsive Sheet. Each role resolves only its own stable target contract, loads the authorized topic, and leaves the underlying screen mounted so local form state is preserved. Client sessions have no Orientation Tour.
+- Demo Accounts use the same plan-filtered Tenant Admin manuals and Help read endpoints as production, but tour acknowledgement is routed through the Demo data-source adapter into the browser-local workspace. Help navigation remains declarative and cannot bypass Demo guardrails or invoke provider/business mutations.
 
 ## Canonical Markdown Source
 
@@ -86,7 +87,7 @@ The artifact is built once per application release. Runtime users never modify i
 
 The Help API applies the same authenticated identity and active Tenant context used by the product.
 
-- **Tenant Admin**: receives Tenant Admin topics filtered to the Tenant's current plan and locale.
+- **Tenant Admin**: receives Tenant Admin topics filtered to the Tenant's current plan and locale. A Demo Tenant receives the same plan-correct content; its local data source keeps orientation completion in the Demo Workspace rather than writing `tenant_help_acknowledgements`.
 - **Client**: receives only Client topics for the associated Pro Tenant and locale. Starter-associated Clients cannot authenticate, and a Client session never receives Tenant Admin topics or administrative routes.
 - **Master and Master Support Context**: receive no Tenant Admin or Client Help surface.
 - **Unauthenticated user**: receives no manual index, content, search data, or tour definition.
@@ -209,7 +210,7 @@ Help is non-critical to core TrackPal operations.
 - Unexpected missing required targets stop the tour safely and leave the Tour Release unseen. Only steps explicitly marked conditional may be skipped.
 - Logout, login, role changes, Tenant context changes, and plan changes remount the private Help surfaces so indexes, topics, and tour state do not survive the session boundary.
 - A Pro-to-Starter transition shows the preserved-data and paused-automation notice, serves the Starter-filtered manual, and suppresses the downgrade-session tour.
-- Private manual prose is not persisted to browser storage or included in public frontend assets.
+- Private manual prose is not persisted to browser storage or included in public frontend assets. Demo Workspaces store only tour completion identifiers, not Help topic bodies or search data.
 
 ## Contract Validation
 

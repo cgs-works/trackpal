@@ -20,6 +20,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/clients/*` | `app.api.v1.endpoints.clients` | clients | JWT + tenant context |
 | `/api/v1/me/*` | `app.api.v1.endpoints.me` | me | JWT bearer |
 | `/api/v1/tenants/*` | `app.api.v1.endpoints.tenants` | tenants | JWT + master role |
+| `/api/v1/demos/*` | `app.api.v1.endpoints.demos` | demos | JWT + master role |
 | `/api/v1/integrations/*` | `app.api.v1.endpoints.integrations` | integrations | X-API-Key header |
 | `/api/v1/dashboard` | `app.api.v1.endpoints.dashboard` | dashboard | JWT bearer |
 | `/api/v1/i18n/*` | `app.api.v1.endpoints.i18n` | i18n | JWT bearer |
@@ -76,14 +77,15 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 
 ### I18n Endpoints
 
-- `GET /api/v1/i18n/catalog` — Returns merged translation catalog for current user's tenant locale. Tenant reads locale from `TenantSettings` via `tenant_settings_repository.resolve_locale_by_owner()`; client reads from parent tenant via `resolve_locale_by_client()`; master/unknown returns English. Catalog includes all English keys as fallback.
+- `GET /api/v1/i18n/catalog` — Returns the merged translation catalog. Production Tenant Admins read `TenantSettings.locale`; Clients read the parent Tenant locale; Master returns English. Demo Tenant Admins may pass `?locale=en|es` so their browser-local workspace controls language without server-side Tenant Settings. Non-Demo query overrides are ignored. Catalogs include all English keys as fallback.
 
 ### Auth Endpoints
 
-- `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens
-- `POST /api/v1/auth/refresh` — Exchange refresh token for new token pair
-- `POST /api/v1/auth/logout` — Revoke refresh token
-- `POST /api/v1/auth/switch-tenant` — Master switches into an active tenant context (set `tenant_id`) or exits context (set `tenant_id: null`) and receives new token with/without `active_tenant_id`
+- `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens. Demo responses include only immutable lifecycle metadata (`is_demo`, plan, status, activation/expiry, credential version, and `server_time`); successful first login atomically starts the 48-hour evaluation.
+- `POST /api/v1/auth/refresh` — Exchange refresh token for new token pair while preserving Demo lifecycle timestamps and checking credential version and current status
+- `POST /api/v1/auth/logout` — Revoke refresh token; expired Demo Tenants are removed on this first relevant request
+- `GET|POST /api/v1/auth/heartbeat` — Authenticated lifecycle-only check returning Demo status, credential version, timestamps, plan, and authoritative server time
+- `POST /api/v1/auth/switch-tenant` — Master switches into an active production tenant context (set `tenant_id`) or exits context (set `tenant_id: null`) and receives new token with/without `active_tenant_id`; Demo Tenants cannot enter Master Support Context
 
 ### Me Endpoints (self-profile)
 
@@ -95,6 +97,15 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 Client role receives readonly profile data from `GET /api/v1/me`; profile edits are rejected, but password change remains allowed.
 
 **Locale and timezone** are read-only projections on `/me`. To update locale/timezone, use `PUT /api/v1/tenant-settings`.
+
+### Demo Tenant Endpoints (master-only)
+
+- `POST /api/v1/demos/` — Create a Pending Demo Tenant from only an immutable name and explicit Starter/Pro plan. Generates a validator-compatible username and cryptographically strong password; the plaintext password is returned once.
+- `GET /api/v1/demos/` — List Demo Tenants with lifecycle-only identity, plan, username, derived status, timestamps, authoritative server time, and remaining seconds. Production Tenants and prospect/workspace telemetry are excluded.
+- `POST /api/v1/demos/{demo_id}/credentials` — Replace credentials for Pending or Active demos, revoke all refresh sessions, increment the credential version, and preserve the original evaluation window. Expired demos return `demo_ended`.
+- `DELETE /api/v1/demos/{demo_id}` — Idempotently delete a Pending, Active, or Expired Demo Tenant identity and its sessions without invoking production external cleanup.
+
+Demo Tenant name and plan are immutable. Production tenant mutation routes reject Demo Tenants.
 
 ### Tenants Endpoints (master-only)
 
@@ -228,3 +239,7 @@ Defined in `app/api/dependencies.py`:
 - `verify_n8n_api_key_header` — Validates `X-API-Key` header against `settings.n8n_api_key`
 - `resolve_locale(db, tenant_id)` — Fetches `TenantSettings.locale` from DB via `tenant_settings_repository`, returns `"en"` fallback. Used before mutating service calls to translate `UserFacingError` responses. Must be called *before* the mutating call to avoid post-rollback RLS context loss.
 - Type aliases: `CurrentUser`, `MasterUser`, `DbDep`, `ActiveTenantId`, `TenantPlanDep`, `ProTenantId`
+
+### Demo Guardrail Dependency
+
+`require_demo_guardrail` is the reusable production-boundary dependency. `ActiveTenantId`, `ProTenantId`, and tenant-plan resolution reject Demo Accounts with HTTP 403 and the stable `demo_operation_blocked` code before route handlers run. Dashboard/profile mutations and Help acknowledgement opt into the same dependency explicitly; authentication, password change, Help/i18n reads, and lifecycle heartbeat remain allowlisted. Integration routes apply the same policy after resolving a target Tenant and before mailbox, queue, OAuth, Evolution, export, or public-catalog side effects.

@@ -288,8 +288,6 @@ async def test_update_status_to_ready(db_session, active_tenant_user):
     job = await export_jobs_repository.create(
         db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
     )
-    now = datetime.now(timezone.utc)
-
     updated = await export_jobs_repository.update_status(
         db_session, job.id, "ready",
         r2_key="my-key",

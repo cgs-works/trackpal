@@ -5,23 +5,21 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { HelpCircle } from "lucide-react";
 import { t } from "@/i18n";
-import {
-  type TenantCodeService,
-  getTenantCodeServices,
-  updateTenantCodeServices,
-} from "../services/settings-api";
+import { useAuthStore } from "@/store/auth";
+import type { TenantCodeService } from "../services/settings-api";
 
 export function CodeServicesSection() {
   const [services, setServices] = useState<TenantCodeService[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { dataSource } = useAuthStore();
 
   const loadServices = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
-      const data = await getTenantCodeServices();
+      const data = await dataSource.settings.loadCodeServices();
       setServices(data.services);
     } catch (err) {
       setError(
@@ -30,7 +28,7 @@ export function CodeServicesSection() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dataSource.settings]);
 
   useEffect(() => {
     loadServices();
@@ -50,7 +48,7 @@ export function CodeServicesSection() {
       const selectedKeys = services
         .filter((s) => s.is_selected)
         .map((s) => s.service_key);
-      const data = await updateTenantCodeServices(selectedKeys);
+      const data = await dataSource.settings.updateCodeServices(selectedKeys);
       setServices(data.services);
       toast.success(t("frontend.code_services.tenant_saved"));
     } catch (err) {

@@ -19,6 +19,7 @@ Public API Catalog is an implemented Pro-only feature tracked by GitHub Issue #7
 13. Pricing, availability, descriptions, and metadata are out of scope for v1.
 14. Server-to-server usage is out of scope for v1 because non-browser clients can spoof `Origin`.
 15. Production must protect the public catalog route with Cloudflare rate limiting/WAF; app-level rate limiting is explicitly deferred.
+16. Demo Tenants cannot configure or call the real Public API Catalog. Starter demos retain the normal plan gate; Pro demos show a disabled capability preview backed only by the browser-local workspace. Direct Demo JWT or demo-key attempts are rejected by the Demo Guardrail.
 
 ## UX Rules
 
@@ -27,6 +28,7 @@ Public API Catalog is an implemented Pro-only feature tracked by GitHub Issue #7
 - UI copy should use the backend-sourced frontend i18n catalog.
 - Settings provides a localized developer handoff package with maintained HTML + JavaScript, React, Vue, Svelte, Angular, and Alpine.js examples.
 - The handoff package uses `YOUR_PUBLIC_API_KEY` as a placeholder and must never include the Tenant's real key automatically; the real key is shared separately through a secure channel.
+- Pro Demo Accounts keep the section discoverable but disable key/origin creation, regeneration, copy, revoke, and external catalog access with demo-specific explanation.
 
 
 ## Related Decision

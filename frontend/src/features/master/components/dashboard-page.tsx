@@ -3,15 +3,18 @@ import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/auth";
 import { getApiError } from "@/lib/api-errors";
+import { t } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SummaryCards } from "./summary-cards";
 import { BusinessTable } from "./business-table";
 import { BusinessFormDialog, getEmptyForm, type BusinessForm } from "./business-form-dialog";
 import { MasterDeleteDialog } from "./master-delete-dialog";
 import { ExportDialog } from "./export-dialog";
 import { EmptyState } from "./empty-state";
+import { DemosTab } from "./demos-tab";
 import {
   fetchTenants,
   createTenant,
@@ -62,15 +65,13 @@ export function DashboardPage() {
     setIsLoading(true);
     try {
       const res = await fetchTenants();
-      const data = res.data || [];
-      setTenants(data);
-      setMeta(
-        res.meta || {
-          total: data.length,
-          active: data.filter((tenant) => tenant.is_active).length,
-          inactive: data.filter((tenant) => !tenant.is_active).length,
-        }
-      );
+      const productionTenants = (res.data || []).filter((tenant) => !tenant.is_demo);
+      setTenants(productionTenants);
+      setMeta({
+        total: productionTenants.length,
+        active: productionTenants.filter((tenant) => tenant.is_active).length,
+        inactive: productionTenants.filter((tenant) => !tenant.is_active).length,
+      });
     } catch (error) {
       toast.error(getApiError(error, "Unable to load businesses"));
     } finally {
@@ -219,6 +220,12 @@ export function DashboardPage() {
   return (
     <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+        <Tabs defaultValue="production" className="gap-6">
+          <TabsList aria-label={t("frontend.master.tabs_label")}>
+            <TabsTrigger value="production">{t("frontend.master.production_tab")}</TabsTrigger>
+            <TabsTrigger value="demos">{t("frontend.master.demos_tab")}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="production" className="flex flex-col gap-6">
         <SummaryCards total={meta.total} active={meta.active} inactive={meta.inactive} />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -257,6 +264,11 @@ export function DashboardPage() {
             />
           )}
         </div>
+          </TabsContent>
+          <TabsContent value="demos">
+            <DemosTab />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <BusinessFormDialog

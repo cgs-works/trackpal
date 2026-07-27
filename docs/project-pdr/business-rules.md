@@ -17,6 +17,32 @@
 13. Changing `evolution_instance_name` does not recreate or rename the Evolution instance (field is for reference only)
 14. No application tombstone is retained after deletion
 
+## Demo Tenant Lifecycle
+
+1. Demo Tenant identity is orthogonal to the Starter/Pro plan and is distinguished by `tenants.is_demo`; production Tenants remain `is_demo = false` after migration.
+2. A Pending Demo Tenant has no activation or expiration timestamps. Active and Expired status is derived from the paired timestamps and authoritative server time; status is not stored as a second enum.
+3. Demo activation and expiration timestamps must be both null or both present, and expiration must be later than activation.
+4. Production Tenants cannot carry Demo lifecycle timestamps or a Demo credentials/session version other than the production default of `1`.
+5. Demo identity persistence does not require Tenant Settings, business records, mailbox, Evolution, Public API, export, or other integration rows.
+6. Production tenant list and metric queries exclude Demo Tenants; dedicated Demo queries filter by `is_demo` and can efficiently find expiration records.
+7. Demo authentication activates a Pending Demo Tenant only after password verification; activation and expiry are written once as an atomic 48-hour window and are never extended by login, refresh, logout, or password replacement.
+8. Login, refresh, and the lifecycle heartbeat expose only immutable Demo metadata and authoritative server time. Heartbeat and authenticated requests check the persisted credential version and current lifecycle status.
+9. Replacing Demo credentials revokes refresh sessions and increments the credential version while preserving lifecycle timestamps; older access and refresh sessions return `demo_credentials_replaced`.
+10. The first request at or after Demo expiry deletes the Demo Tenant and returns `demo_ended`; no background scheduler is required. Demo Tenants cannot enter Master Support Context.
+
+11. Master Demo management accepts only a validated immutable name and explicit Starter/Pro plan, generates unique credentials, and never creates Tenant Settings, business, or external-integration rows.
+12. Master Demo listing exposes only identity, plan, username, derived lifecycle, and approved time fields; it never exposes workspace state, feature activity, or prospect telemetry.
+13. Master credential replacement is available before expiry, returns one new plaintext password, revokes refresh sessions, increments the credential version, and never changes the original evaluation window.
+14. Master Demo deletion is idempotent across Pending, Active, and Expired states and performs no unprovisioned Evolution, mailbox, n8n, Public API, export, or storage cleanup.
+15. Production Tenant update, activation, deactivation, and deletion routes reject Demo Tenants; Demo name and plan are immutable.
+
+## Demo Guardrails
+
+1. Demo JWTs cannot reach production dashboard, profile mutation, tenant settings, Clients, Catalog, Subscriptions, mailbox, WhatsApp/Evolution, n8n, Public API, export, or self-deletion operations.
+2. Guardrail rejections use the stable `demo_operation_blocked` code and happen before persistence, queueing, OAuth/provider exchange, or external-client calls.
+3. Authentication, refresh/logout, real password change, Help/i18n reads, and lifecycle heartbeat remain reachable for Demo Accounts.
+4. Production tenant mutation, Master export, and Master destructive flows reject Demo Tenants before step-up or cleanup work begins.
+
 ## Client Lifecycle
 
 1. Client created by a Tenant (or Master in tenant context) and linked to that tenant

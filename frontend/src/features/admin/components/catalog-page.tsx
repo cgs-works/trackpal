@@ -21,20 +21,32 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "@/i18n";
-import {
-  createService,
-  updateService,
-  getServiceDeletePreview,
-  deleteService,
-  createPlan,
-  updatePlan,
-  getPlanDeletePreview,
-  deletePlan,
-  type Service,
-  type Plan,
-  type DeletePreview,
+import type {
+  Service,
+  Plan,
+  DeletePreview,
 } from "../services/catalog-api";
 import { useCatalogStore } from "@/store/catalog";
+import { useAuthStore } from "@/store/auth";
+
+const CATALOG_ERROR_KEYS: Record<string, string> = {
+  service_name_already_exists: "frontend.catalog.service_name_exists",
+  plan_name_already_exists: "frontend.catalog.plan_name_exists",
+  catalog_name_required: "frontend.catalog.invalid_name",
+  catalog_name_too_long: "frontend.catalog.invalid_name",
+  service_not_found: "frontend.catalog.target_not_found",
+  plan_not_found: "frontend.catalog.target_not_found",
+  invalid_demo_workspace: "frontend.catalog.target_not_found",
+};
+
+function catalogErrorMessage(error: unknown, fallbackKey: string): string {
+  if (error instanceof Error) {
+    const key = CATALOG_ERROR_KEYS[error.message];
+    if (key) return t(key);
+    if (error.message) return error.message;
+  }
+  return t(fallbackKey);
+}
 
 // ── Rename Dialog ──────────────────────────────────────────────
 interface RenameDialogProps {
@@ -216,8 +228,10 @@ function DeletePreviewDialog({
                 </div>
                 {preview.pagination.total_pages > 1 && (
                   <p className="text-xs text-muted-foreground">
-                    Page {preview.pagination.page} of{" "}
-                    {preview.pagination.total_pages}
+                    {t("frontend.catalog.preview_page", {
+                      page: preview.pagination.page,
+                      total: preview.pagination.total_pages,
+                    })}
                   </p>
                 )}
               </div>
@@ -239,7 +253,7 @@ function DeletePreviewDialog({
 
             {preview.note && (
               <p className="text-xs text-muted-foreground italic">
-                {preview.note}
+                {t(preview.note)}
               </p>
             )}
           </div>
@@ -269,6 +283,7 @@ function DeletePreviewDialog({
 
 // ── Main Catalog Page ──────────────────────────────────────────
 export function CatalogPage() {
+  const { dataSource } = useAuthStore();
   const {
     services,
     loadServices,
@@ -313,22 +328,22 @@ export function CatalogPage() {
     setIsLoading(true);
     setError("");
     try {
-      const data = await loadServices();
+      const data = await loadServices(dataSource.catalog);
       if (!selectedServiceId && data.length > 0) {
         setSelectedServiceId(data[0].id);
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : t("frontend.catalog.error_load_services")
+        catalogErrorMessage(err, "frontend.catalog.error_load_services")
       );
     } finally {
       setIsLoading(false);
     }
-  }, [loadServices, selectedServiceId]);
+  }, [loadServices, selectedServiceId, dataSource.catalog]);
 
   useEffect(() => {
     loadServicesData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadServicesData]);
 
   // ── Load plans when service changes ────────────────────────
   const loadPlansData = useCallback(async () => {
@@ -337,14 +352,14 @@ export function CatalogPage() {
       return;
     }
     try {
-      const data = await loadPlans(selectedServiceId);
+      const data = await loadPlans(selectedServiceId, dataSource.catalog);
       setPlans(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load plans"
+        catalogErrorMessage(err, "frontend.catalog.error_load_plans")
       );
     }
-  }, [selectedServiceId, loadPlans]);
+  }, [selectedServiceId, loadPlans, dataSource.catalog]);
 
   useEffect(() => {
     loadPlansData();
@@ -356,7 +371,7 @@ export function CatalogPage() {
     if (!newServiceName.trim()) return;
     setCreatingService(true);
     try {
-      const service = await createService({ name: newServiceName.trim() });
+      const service = await dataSource.catalog.createService({ name: newServiceName.trim() });
       setNewServiceName("");
       setSelectedServiceId(service.id);
       invalidateServices();
@@ -364,7 +379,7 @@ export function CatalogPage() {
       toast.success(t("frontend.catalog.service_created"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : t("frontend.catalog.error_create_service")
+        catalogErrorMessage(err, "frontend.catalog.error_create_service")
       );
     } finally {
       setCreatingService(false);
@@ -377,14 +392,14 @@ export function CatalogPage() {
     if (!newPlanName.trim() || !selectedServiceId) return;
     setCreatingPlan(true);
     try {
-      await createPlan(selectedServiceId, { name: newPlanName.trim() });
+      await dataSource.catalog.createPlan(selectedServiceId, { name: newPlanName.trim() });
       setNewPlanName("");
       invalidatePlans(selectedServiceId);
       await loadPlansData();
       toast.success(t("frontend.catalog.plan_created"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : t("frontend.catalog.error_create_plan")
+        catalogErrorMessage(err, "frontend.catalog.error_create_plan")
       );
     } finally {
       setCreatingPlan(false);
@@ -398,14 +413,14 @@ export function CatalogPage() {
     setRenameCallback(() => async (name: string) => {
       setRenameSaving(true);
       try {
-        await updateService(service.id, { name });
+        await dataSource.catalog.updateService(service.id, { name });
         invalidateServices();
         await loadServicesData();
         toast.success(t("frontend.catalog.service_renamed"));
         setRenameOpen(false);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : t("frontend.catalog.error_update_service")
+        catalogErrorMessage(err, "frontend.catalog.error_update_service")
         );
       } finally {
         setRenameSaving(false);
@@ -421,14 +436,14 @@ export function CatalogPage() {
     setRenameCallback(() => async (name: string) => {
       setRenameSaving(true);
       try {
-        await updatePlan(selectedServiceId, plan.id, { name });
+        await dataSource.catalog.updatePlan(selectedServiceId, plan.id, { name });
         invalidatePlans(selectedServiceId);
         await loadPlansData();
         toast.success(t("frontend.catalog.plan_renamed"));
         setRenameOpen(false);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : t("frontend.catalog.error_update_plan")
+        catalogErrorMessage(err, "frontend.catalog.error_update_plan")
         );
       } finally {
         setRenameSaving(false);
@@ -444,12 +459,12 @@ export function CatalogPage() {
     setDeleteError("");
     setDeletePreview(null);
     try {
-      const preview = await getServiceDeletePreview(service.id);
+      const preview = await dataSource.catalog.getServiceDeletePreview(service.id);
       setDeletePreview(preview);
       setDeleteCallback(() => async () => {
         setDeleting(true);
         try {
-          await deleteService(service.id);
+          await dataSource.catalog.deleteService(service.id);
           if (selectedServiceId === service.id) {
             setSelectedServiceId("");
           }
@@ -459,7 +474,7 @@ export function CatalogPage() {
           setDeleteOpen(false);
         } catch (err) {
           setDeleteError(
-            err instanceof Error ? err.message : t("frontend.catalog.error_delete_service")
+            catalogErrorMessage(err, "frontend.catalog.error_delete_service")
           );
         } finally {
           setDeleting(false);
@@ -467,7 +482,7 @@ export function CatalogPage() {
       });
     } catch (err) {
       setDeleteError(
-        err instanceof Error ? err.message : t("frontend.catalog.delete_preview_error")
+        catalogErrorMessage(err, "frontend.catalog.delete_preview_error")
       );
     } finally {
       setDeleteLoading(false);
@@ -481,19 +496,19 @@ export function CatalogPage() {
     setDeleteError("");
     setDeletePreview(null);
     try {
-      const preview = await getPlanDeletePreview(selectedServiceId, plan.id);
+      const preview = await dataSource.catalog.getPlanDeletePreview(selectedServiceId, plan.id);
       setDeletePreview(preview);
       setDeleteCallback(() => async () => {
         setDeleting(true);
         try {
-          await deletePlan(selectedServiceId, plan.id);
+          await dataSource.catalog.deletePlan(selectedServiceId, plan.id);
           invalidatePlans(selectedServiceId);
           await loadPlansData();
           toast.success(t("frontend.catalog.plan_deleted"));
           setDeleteOpen(false);
         } catch (err) {
           setDeleteError(
-            err instanceof Error ? err.message : t("frontend.catalog.error_delete_plan")
+            catalogErrorMessage(err, "frontend.catalog.error_delete_plan")
           );
         } finally {
           setDeleting(false);
@@ -501,7 +516,7 @@ export function CatalogPage() {
       });
     } catch (err) {
       setDeleteError(
-        err instanceof Error ? err.message : t("frontend.catalog.delete_preview_error")
+        catalogErrorMessage(err, "frontend.catalog.delete_preview_error")
       );
     } finally {
       setDeleteLoading(false);

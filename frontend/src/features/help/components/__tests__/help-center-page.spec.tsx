@@ -18,6 +18,9 @@ vi.mock("../../services/help-api", () => ({
   getHelpIndex: vi.fn(),
   getHelpTopic: vi.fn(),
   searchHelp: vi.fn(),
+  getUnseenHelpTour: vi.fn(),
+  replayHelpTour: vi.fn(),
+  acknowledgeHelpTour: vi.fn(),
 }));
 
 describe("HelpCenterPage", () => {

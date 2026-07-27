@@ -1,8 +1,13 @@
+import asyncio
+from datetime import datetime
+
 import pytest
+from sqlalchemy import select
 
 import app.api.dependencies as dependencies
 from app.core.config import settings
 from app.core.security import create_access_token
+from app.models import Tenant, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -29,6 +34,243 @@ async def test_login_invalid_password(client, master_user):
     )
 
     assert response.status_code == 401
+
+
+async def test_failed_demo_login_does_not_activate_tenant(
+    client, db_session, pending_demo_user
+):
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": pending_demo_user.username, "password": "wrong-password"},
+    )
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == pending_demo_user.id)
+        )
+    ).scalar_one()
+    assert response.status_code == 401
+    assert tenant.demo_activated_at is None
+    assert tenant.demo_expires_at is None
+
+
+async def test_demo_login_activates_once_and_exposes_only_lifecycle_metadata(
+    client, db_session, pending_demo_user
+):
+    first = await client.post(
+        "/api/v1/auth/login",
+        json={"username": pending_demo_user.username, "password": "demo-password"},
+    )
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == pending_demo_user.id)
+        )
+    ).scalar_one()
+    activated_at = tenant.demo_activated_at
+    expires_at = tenant.demo_expires_at
+
+    second = await client.post(
+        "/api/v1/auth/login",
+        json={"username": pending_demo_user.username, "password": "demo-password"},
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert expires_at is not None and activated_at is not None
+    assert (expires_at - activated_at).total_seconds() == 48 * 60 * 60
+    assert second.json()["is_demo"] is True
+    assert second.json()["tenant_plan"] == "starter"
+    assert second.json()["demo_credentials_version"] == 1
+    assert second.json()["demo_activated_at"] == first.json()["demo_activated_at"]
+    assert second.json()["demo_expires_at"] == first.json()["demo_expires_at"]
+    assert second.json()["server_time"]
+    assert "workspace" not in second.json()
+
+
+async def test_concurrent_demo_logins_share_one_activation_window(
+    client, db_session, pending_demo_user
+):
+    demo_user_id = pending_demo_user.id
+    responses = await asyncio.gather(
+        client.post(
+            "/api/v1/auth/login",
+            json={"username": "pending-demo", "password": "demo-password"},
+        ),
+        client.post(
+            "/api/v1/auth/login",
+            json={"username": "pending-demo", "password": "demo-password"},
+        ),
+    )
+
+    db_session.expire_all()
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == demo_user_id)
+        )
+    ).scalar_one()
+    assert all(response.status_code == 200 for response in responses)
+    assert tenant.demo_activated_at is not None
+    assert tenant.demo_expires_at is not None
+    assert (tenant.demo_expires_at - tenant.demo_activated_at).total_seconds() == (
+        48 * 60 * 60
+    )
+    assert len({response.json()["demo_expires_at"] for response in responses}) == 1
+
+
+async def test_demo_heartbeat_returns_lifecycle_only_data(client, active_demo_user):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": active_demo_user.username, "password": "demo-password"},
+    )
+    response = await client.post(
+        "/api/v1/auth/heartbeat",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_demo"] is True
+    assert response.json()["demo_tenant_id"]
+    assert response.json()["demo_name"] == "Active Demo"
+    assert response.json()["demo_status"] == "active"
+    assert response.json()["demo_credentials_version"] == 1
+    assert set(response.json()) == {
+        "is_demo",
+        "demo_tenant_id",
+        "demo_name",
+        "tenant_plan",
+        "demo_status",
+        "demo_activated_at",
+        "demo_expires_at",
+        "demo_credentials_version",
+        "server_time",
+    }
+
+
+async def test_demo_refresh_and_logout_preserve_lifecycle_window(
+    client, db_session, active_demo_user
+):
+    demo_user_id = active_demo_user.id
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "active-demo", "password": "demo-password"},
+    )
+    db_session.expire_all()
+    before = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == demo_user_id)
+        )
+    ).scalar_one()
+    activated_at = before.demo_activated_at
+    expires_at = before.demo_expires_at
+
+    refreshed = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": login.json()["refresh_token"]},
+    )
+    logged_out = await client.post(
+        "/api/v1/auth/logout",
+        json={"refresh_token": refreshed.json()["refresh_token"]},
+    )
+    db_session.expire_all()
+    after = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == demo_user_id)
+        )
+    ).scalar_one()
+
+    assert refreshed.status_code == 200
+    assert logged_out.status_code == 204
+    assert after.demo_activated_at == activated_at
+    assert after.demo_expires_at == expires_at
+
+
+async def test_demo_password_replacement_revokes_old_sessions_without_extending_lifecycle(
+    client, db_session, active_demo_user
+):
+    demo_user_id = active_demo_user.id
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": active_demo_user.username, "password": "demo-password"},
+    )
+    old_access_token = login.json()["access_token"]
+    old_refresh_token = login.json()["refresh_token"]
+    tenant_before = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == demo_user_id)
+        )
+    ).scalar_one()
+    activated_at = tenant_before.demo_activated_at
+    expires_at = tenant_before.demo_expires_at
+
+    changed = await client.put(
+        "/api/v1/me/password",
+        headers={"Authorization": f"Bearer {old_access_token}"},
+        json={"old_password": "demo-password", "new_password": "new-demo-password"},
+    )
+    old_access = await client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {old_access_token}"}
+    )
+    old_refresh = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": old_refresh_token}
+    )
+    new_login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": active_demo_user.username, "password": "new-demo-password"},
+    )
+    db_session.expire_all()
+    tenant_after = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == demo_user_id)
+        )
+    ).scalar_one()
+
+    assert changed.status_code == 200
+    assert old_access.status_code == 401
+    assert old_access.json()["detail"] == "demo_credentials_replaced"
+    assert old_refresh.status_code == 401
+    assert old_refresh.json()["detail"] == "demo_credentials_replaced"
+    assert new_login.status_code == 200
+    assert tenant_after.demo_credentials_version == 2
+    assert tenant_after.demo_activated_at == activated_at
+    assert tenant_after.demo_expires_at == expires_at
+
+
+async def test_expired_demo_is_deleted_on_first_login_request(
+    client, db_session, expired_demo_user
+):
+    demo_user_id = expired_demo_user.id
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": expired_demo_user.username, "password": "demo-password"},
+    )
+
+    db_session.expire_all()
+    user = await db_session.get(User, demo_user_id)
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == demo_user_id)
+        )
+    ).scalar_one_or_none()
+    assert response.status_code == 410
+    assert response.json()["detail"] == "demo_ended"
+    assert user is None
+    assert tenant is None
+
+
+async def test_production_heartbeat_has_no_demo_metadata(client, master_user):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "master", "password": "master-password"},
+    )
+    response = await client.post(
+        "/api/v1/auth/heartbeat",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_demo"] is False
+    assert response.json()["demo_status"] is None
+    datetime.fromisoformat(response.json()["server_time"].replace("Z", "+00:00"))
 
 
 async def test_login_deactivated_tenant(client, deactivated_tenant_user):

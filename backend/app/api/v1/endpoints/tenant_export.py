@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from app.api.dependencies import CurrentUser, DbDep, MasterUser
 from app.core.database import set_internal_rls_context
+from app.core.demo_guardrail import DemoGuardrailError, assert_demo_operation_allowed
 from app.core.security import verify_password
 from app.repositories import tenants_repository, users_repository
 from app.services import export_service
@@ -51,6 +52,13 @@ async def _validate_tenant(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found",
         )
+    try:
+        assert_demo_operation_allowed(tenant, operation="tenant_export")
+    except DemoGuardrailError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.code,
+        ) from exc
     # Set safe internal RLS context — bypasses the active-tenant gate
     # so the worker can read the target tenant's data safely.
     await set_internal_rls_context(db)

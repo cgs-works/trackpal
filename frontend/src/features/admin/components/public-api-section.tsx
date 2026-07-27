@@ -18,7 +18,9 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { getApiError } from "@/lib/api-errors";
+import { useAuthStore } from "@/store/auth";
 import { useSettingsStore } from "@/store/settings";
+import { DemoPublicApiCard } from "./demo-public-api-card";
 
 const LANGUAGES = ["html", "react", "vue", "svelte", "angular", "alpine"] as const;
 const API_KEY_PLACEHOLDER = "YOUR_PUBLIC_API_KEY";
@@ -39,16 +41,23 @@ function unique(items: string[]): string[] {
 }
 
 export function PublicApiSection() {
+  const { dataSource } = useAuthStore();
+  const isDemo = dataSource.mode === "demo";
   const { publicApiKey, publicApiKeyLoaded, loadPublicApiKey, savePublicApiKeyOrigins, revokePublicApiKey } = useSettingsStore();
   const [origins, setOrigins] = useState<string[]>([]);
   const [originInput, setOriginInput] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [language, setLanguage] = useState<Language>("html");
-  const [loading, setLoading] = useState(!publicApiKeyLoaded);
+  const [loading, setLoading] = useState(!publicApiKeyLoaded && !isDemo);
   const [saving, setSaving] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
   const load = useCallback(async () => {
+    if (isDemo) {
+      setOrigins([]);
+      setLoading(false);
+      return;
+    }
     if (publicApiKeyLoaded) {
       setOrigins(publicApiKey?.allowed_origins ?? []);
       setLoading(false);
@@ -63,7 +72,7 @@ export function PublicApiSection() {
     } finally {
       setLoading(false);
     }
-  }, [loadPublicApiKey, publicApiKey, publicApiKeyLoaded]);
+  }, [isDemo, loadPublicApiKey, publicApiKey, publicApiKeyLoaded]);
 
   useEffect(() => {
     load();
@@ -139,6 +148,10 @@ export function PublicApiSection() {
         <Skeleton className="h-24 w-full" />
       </div>
     );
+  }
+
+  if (isDemo) {
+    return <DemoPublicApiCard />;
   }
 
   const props = {

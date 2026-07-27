@@ -190,6 +190,22 @@ async def test_catalog_endpoint_locale_refetch_after_change(client, active_tenan
     )
 
 
+async def test_demo_catalog_endpoint_accepts_browser_local_locale(
+    client, active_demo_user
+):
+    headers = await _login(client, "active-demo", "demo-password")
+
+    response = await client.get(
+        "/api/v1/i18n/catalog?locale=es",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["locale"] == "es"
+    assert data["catalog"]["frontend.settings.title"] == "Configuración"
+
+
 async def test_catalog_endpoint_master_returns_english(client, master_user):
     """Master user (no tenant locale) gets English catalog."""
     headers = await _login(client, "master", "master-password")
@@ -469,7 +485,11 @@ async def test_settings_frontend_i18n_keys_exist():
     ]
     keys_with_params = {
         "frontend.subscriptions.custom_messages_hint": {"placeholder": "test"},
-        "frontend.access_control.pagination_summary": {"from_item": "1", "to_item": "10", "total": "100"},
+        "frontend.access_control.pagination_summary": {
+            "from_item": "1",
+            "to_item": "10",
+            "total": "100",
+        },
         "frontend.access_control.pagination_page": {"page": "1"},
         "frontend.subscriptions.remove_day": {"day": "3"},
     }
@@ -480,6 +500,4 @@ async def test_settings_frontend_i18n_keys_exist():
             )
         for key, params in keys_with_params.items():
             result = t(locale, key, **params)
-            assert result != key, (
-                f"Missing i18n key '{key}' in {locale} catalog"
-            )
+            assert result != key, f"Missing i18n key '{key}' in {locale} catalog"

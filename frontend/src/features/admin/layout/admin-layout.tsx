@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "@tanstack/react-router";
+import { Navigate, Outlet, useLocation } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/auth";
 import {
   AppSidebar,
@@ -10,6 +10,9 @@ import {
 } from "@/components/layout/role-navigation";
 import { DowngradeBanner } from "@/features/admin/components/downgrade-banner";
 import { SupportBanner } from "@/features/admin/components/support-banner";
+import { DemoBanner } from "@/features/demo/components/demo-banner";
+import { DemoOverlay } from "@/features/demo/components/demo-overlay";
+import { useDemoHeartbeat } from "@/features/demo/hooks/use-demo-heartbeat";
 import { ContextualHelpSheet } from "@/features/help/components/contextual-help-sheet";
 import { isPrivateHelpEnabled } from "@/features/help/config";
 import { OrientationTour } from "@/features/help/components/orientation-tour";
@@ -24,8 +27,20 @@ export function AdminLayout() {
     tenantPlan,
     planDowngraded,
     isMasterSupportContext,
+    authOutcome,
+    isAuthenticated,
+    demo,
   } = useAuthStore();
   const location = useLocation();
+  const { consecutiveFailures, isPaused, retry } = useDemoHeartbeat();
+
+  const canAccessAdmin =
+    isAuthenticated && (role === "tenant" || isMasterSupportContext);
+
+  if (!canAccessAdmin) {
+    const destination = authOutcome === "demo_ended" ? "/demo-ended" : "/login";
+    return <Navigate to={destination} replace />;
+  }
 
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
   const showProNav = !isStarterTenantAdmin || isMasterSupportContext;
@@ -41,6 +56,12 @@ export function AdminLayout() {
     getAdminNavigationItems(
       showProNav,
       role === "tenant" && isPrivateHelpEnabled(),
+      Boolean(
+        demo &&
+          (demo.plan === "starter" || demo.plan === "pro") &&
+          role === "tenant" &&
+          !isMasterSupportContext,
+      ),
     ),
     location.pathname,
   );
@@ -65,6 +86,9 @@ export function AdminLayout() {
       />
 
       <main key={helpSessionKey} className="flex-1 overflow-y-auto">
+        {demo && (
+          <DemoBanner showConnectivityWarning={consecutiveFailures === 1} />
+        )}
         {isMasterSupportContext && tenantPlan === "starter" && <SupportBanner />}
         {role === "tenant" && planDowngraded && tenantPlan === "starter" && (
           <DowngradeBanner />
@@ -77,6 +101,7 @@ export function AdminLayout() {
         <Outlet />
         <OrientationTour />
       </main>
+      {isPaused && <DemoOverlay onRetry={retry} />}
     </div>
   );
 }

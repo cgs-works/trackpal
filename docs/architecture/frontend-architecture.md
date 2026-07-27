@@ -81,16 +81,39 @@ Three Zustand stores in `src/store/`:
 
 ### `authStore` (`store/auth.ts`)
 
-- **State**: `token`, `refreshToken`, `user`, `activeTenantId` — persisted to `localStorage`
-- **Selectors**: `isAuthenticated`, `role`, `username`
-- **Plan-aware state**:
-  - `tenantPlan`: `starter | pro | null`, persisted from auth responses and corrected by tenant dashboard responses. This is only a UI hint; backend gates remain authoritative.
-  - `isMasterSupportContext`: true when Master is switched into a tenant (`role=master` + `activeTenantId`). Master support sees the full admin surface and a support banner.
+- **State**: `token`, `refreshToken`, `user`, `activeTenantId`, and `tenantPlan` remain persisted to `localStorage` for production compatibility.
+- **Demo context**: authenticated Demo Accounts persist immutable `demo` metadata separately from workspace data: tenant id, immutable display name, plan, lifecycle status, activation/expiration timestamps, credential version, and server time.
+- **Data source**: `dataSource` is selected once from the authenticated context. Production uses the existing API boundary; Demo Accounts use a tenant-isolated browser-local workspace repository. Resource contracts cover dashboard, settings, catalog, CRUD, subscriptions, simulator, and orientation consumers.
 - **Actions**:
-  - `login(username, password)` — POST to `/auth/login`, stores tokens + user, clears all caches, loads i18n catalog
-  - `switchTenant(tenantId)` — Master support context switch, clears all caches
-  - `logout()` — POST to `/auth/logout`, clears localStorage + all caches
-  - `setTenantPlan(plan)` — corrects `tenantPlan` from dashboard response after initial render
+  - `login(username, password)` — POST to `/auth/login`, stores tokens + auth metadata, clears all caches, and loads the i18n catalog. Demo login and authenticated reload read the browser-local workspace locale and request that catalog without creating server-side Tenant Settings.
+  - `refresh()` — rotates tokens while preserving Demo lifecycle metadata and distinguishes `demo_ended` and `demo_credentials_replaced` outcomes.
+  - `heartbeat()` — POST to `/auth/heartbeat` and updates lifecycle-only metadata without loading business data.
+  - `switchTenant(tenantId)` — Master support context switch, clears all caches, and returns to the production adapter.
+  - `logout()` — POST to `/auth/logout`, clears auth metadata and caches, but preserves the matching Demo Workspace for a later login.
+  - `setTenantPlan(plan)` — corrects production `tenantPlan` from dashboard responses without changing Demo's immutable plan.
+
+- **Demo connectivity**: `useDemoHeartbeat` owns one interval while an active Demo Account is mounted, deduplicates overlapping focus and hidden-to-visible checks, and removes the interval/listeners on logout, navigation, unmount, or context change. One transient failure shows a localized warning; two pause the shell behind a focus-managed modal with a localized manual-retry action. Successful retry resets the count and keeps the browser-local workspace intact. The countdown is intentionally not a per-second live region so screen readers are not interrupted.
+- **Lifecycle fail-closed**: a missing, changed, expired, or deleted Demo identity clears the matching workspace and navigates to the public Demo Ended page; `demo_credentials_replaced` preserves the workspace and returns to login with a reauthentication message. Manual logout remains a neutral login transition.
+
+### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
+
+- Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
+- The repository migrates known envelopes deterministically, validates lifecycle timestamps and plan-specific shape, and replaces unsupported, corrupt, mismatched, or unsafe data with the authenticated plan baseline without merging Starter and Pro state.
+- Recovery exposes one consumable update notice for the localized Demo Banner. Expired orphan data is removed during bootstrap, while valid lifecycle anchors and tour state remain intact during compatible migration/reset flows.
+- Browser storage errors are classified as unavailable or quota-exceeded. Demo state never falls back to backend persistence; the banner shows an explicit recoverable storage state instead.
+- Same-tenant tabs intentionally share the storage key with last-write-wins semantics. Repositories never hydrate or copy cross-tenant data; bootstrap may inspect only envelope metadata to remove expired orphan keys, without locks or cross-tenant workspace access.
+
+### Authenticated Demo WhatsApp Simulator
+
+- `/admin/demo/simulator` is available only to active Starter and Pro Demo Accounts. The admin layout adds its navigation item only for those contexts, and direct production/Master-support access renders the normal 404 surface.
+- The Starter simulator adapts the landing WhatsApp phone-shell interaction and pure state-machine pattern for the authenticated design system. It accepts `code`, `codigo`, and `código`, reads enabled services from the browser-local Demo Workspace, validates the subscription email locally, and returns a deterministic fictitious six-digit code after cancellable local progress.
+- Pro adds Request and Operation modes. Operation mode exposes the production Tenant Admin and Client menu roots with the documented `0` cancel, `8` next, and `9` back semantics. The Client Console is read-only; the Tenant Admin console lists, creates, edits, activates/deactivates, and deletes local Clients, lists, creates, renames, and deletes Services and Plans, manages Subscriptions (list/filter, create, edit, cancel, renew, reactivate, reveal), and provides local Profile, Access Control, Help, and access-code lookup flows through the same Demo data-source repositories used by the web pages.
+- Profile and Access Control simulator mutations call the shared Settings contract, so successful edits, blocks, and unblocks are immediately visible in Settings and Dashboard reads. Duplicate blocks and repository errors stay in the active flow and return localized retry prompts rather than false success.
+- Tenant Admin delete confirmations render current relation previews before mutation. Successful local mutations invalidate the catalog store and refresh the simulator workspace summary, so Clients, Catalog, dependent selectors, settings, and dashboard reads observe the same browser-local records without backend requests.
+- Conversation state, form input, generated code, and timers remain component state. Reset Conversation clears only chat, unmount cleanup cancels pending effects, reduced-motion mode removes lookup delay, and no simulator action calls WhatsApp, mailbox, n8n, Evolution, Help, or business APIs.
+- Starter intentionally exposes Request only; Pro exposes Request and the localized production menu contract. Code lookup uses only currently enabled Demo Workspace services and returns fictitious local results; the simulator never exposes provider credentials or production integration actions.
+- The versioned envelope stores lifecycle anchors, the deterministic plan baseline, browser-local settings/business state, and tour acknowledgements; it excludes tokens, passwords, credentials, session identifiers, and chat transcripts.
+- `ensure()` creates the envelope lazily after authenticated Demo context exists; Starter initializes the Master-provided business name, English locale, connected simulated mailbox/WhatsApp states, three ordered generic code services, and two ordered blocked identities. Pro subscription records may carry only fictitious demo secret values for the local reveal flow; they are never sent to production services or logged. `reset()` restores that baseline while preserving tour state, and `clear()` removes only the selected Demo Account's workspace.
 
 ### `settingsStore` (`store/settings.ts`)
 
@@ -165,8 +188,9 @@ Singleton Axios instance in `src/lib/api.ts`:
 
 - Base URL from `VITE_API_URL` env var or fallback `http://localhost:8000/api/v1`
 - **Request interceptor**: Attaches `Authorization: Bearer <token>` from `localStorage`
-- **Response interceptor**: On HTTP 401, clears all auth state from `localStorage` and redirects to `/login`
+- **Response interceptor**: On ordinary HTTP 401, clears auth tokens and demo metadata and redirects to `/login`. Lifecycle-coded Demo failures (`demo_ended`, `demo_credentials_replaced`) bypass the hard redirect so `authStore` can preserve or clear the matching workspace and route to the correct outcome; the Demo Workspace remains untouched for credential replacement.
 
+Authentication services also expose typed `/auth/refresh` and `/auth/heartbeat` contracts. Stable lifecycle details (`demo_ended`, `demo_credentials_replaced`) are kept distinct from ordinary authentication failures in `authStore.authOutcome`.
 Path alias: `@/` maps to `src/` (configured in `tsconfig.json` + `vite.config.ts`).
 
 ## Auth Flow
@@ -237,6 +261,10 @@ Collapsible sidebar layout for tenant admin pages:
 - Mobile: the shared header exposes an accessible menu control that opens the authorized destinations in a focus-managed `Sheet`; selecting a destination closes the Sheet.
 - Content: `<Outlet>` renders child routes.
 - When Master support context active with Starter tenant: renders `<SupportBanner>` above `<Outlet>`.
+- Starter Demo dashboard cards and enabled-service badges load through the selected data-source adapter and derive entirely from the browser-local workspace; production dashboards retain the API-backed adapter.
+- Pro Demo dashboard metrics are recalculated from current local clients, catalog services, subscriptions, activation-relative expiry dates, reminders, code services, access-control blocks, and fixed simulated integration state. Client delete previews and catalog delete previews use the same live workspace relationships; client deletion cascades local subscriptions like production, while service and plan deletion cascades their dependent plans/subscriptions.
+- Demo reminder, code-service, access-control, mailbox, and WhatsApp settings use fixed/local adapters and do not call production, reminder, n8n, or integration endpoints.
+- Starter Demo orientation content remains server-readable, while completion/skipping is acknowledged in the local workspace so reload and logout/login preserve it without a business mutation request.
 
 ### ClientLayout (`features/client/layout/client-layout.tsx`)
 
@@ -245,10 +273,12 @@ Client navigation uses the same role-navigation and sidebar primitives. When pri
 
 ### MasterLayout (`features/master/layout/master-layout.tsx`)
 
-Sidebar layout for master pages:
-- Summary cards: total, active, inactive tenant counts
-- Business table with CRUD actions
-- Manage catalog action switches into tenant support context
+Sidebar layout for master pages. The Master dashboard keeps lifecycle work separated into accessible `Production` and `Demos` tabs:
+- **Production** renders the existing summary cards, search, tenant rows, exports, status actions, deletion, and support-context actions. Demo Tenants are excluded from its rows and counts even if a stale response contains them.
+- **Demos** uses the lifecycle-only `/demos/` API. It renders no workspace preview, activity feed, last-seen fields, summary cards, or usage telemetry. Create-form errors are associated with their fields, credential copy actions announce success, long lifecycle values wrap safely, and mobile actions remain keyboard reachable.
+- Demo creation accepts only a name and Starter/Pro plan (Starter by default). Credential creation/replacement responses show the plaintext password once with independent username/password copy actions; dismissing the dialog clears it.
+- Pending, Active, and Expired lifecycle rows expose status-specific actions. Credential replacement is disabled for Expired rows, while deletion is confirmable for every status. Desktop tables have responsive mobile card lists.
+- Manage catalog action switches into tenant support context for production Tenants only.
 
 ### SettingsPage (`features/admin/components/settings-page.tsx`)
 
@@ -263,7 +293,8 @@ Sidebar layout for master pages:
 | Data | Export status/actions + self-service deletion | Export status/actions only (no Security tab, no deletion action) |
 
 **Data tab** (`DataTabContent`):
-- Displays current export job status (empty, pending, processing, ready, failed, cancelled)
+- Production displays current export job status (empty, pending, processing, ready, failed, cancelled)
+- Demo Accounts keep export and self-deletion controls discoverable but disabled; the tab never calls export or deletion APIs
 - Polls status while Data tab is open
 - Request new export button (triggers password step-up dialog)
 - Cancel pending/processing export
@@ -274,14 +305,20 @@ Sidebar layout for master pages:
 - Expiry countdown for ready exports
 - Danger zone (Tenant Admin only): self-service deletion with password + destructive word dialog
 - Master Support Context: replaces danger zone with guidance back to Master Dashboard
+- Demo profile, locale, code-service selection, access-control, timezone, and reminder mutations use the browser-local workspace adapter for both Starter and Pro; local validation mirrors the production settings contracts and password changes remain server-backed.
+- Demo Public API remains visible for Pro Accounts as a capability preview, but key/origin controls are disabled and no key is created, stored, revealed, copied, regenerated, revoked, or sent.
+- Demo Mailbox and WhatsApp sections render fixed connected simulated states without provider controls. WhatsApp exposes an accessible link to the contained Demo Simulator.
+- Demo export and self-deletion controls remain discoverable but disabled on both plans; the demo workspace reset restores settings and business baselines while preserving lifecycle and tour state. When browser storage is unavailable or full, reset is disabled and the banner explains that no backend fallback exists.
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 
 Full subscription management (Pro-only):
 - Table with columns: client, service, email, profile, duration, dates, status badges, actions
-- Filters: status, client, service
+- Filters: status, client, service, and local text search across linked names and email
 - Create/Edit/Renew/Reactivate/Cancel modals
 - Reveal credential per row
+- Pro Demo Accounts use the browser-local subscriptions adapter: the deterministic baseline has exactly eight linked records covering active, expiring, expired, cancelled, renewed, reactivation, and reminder-relevant states. Relationship validation, duration/date calculation, lifecycle mutations, credential reveal, filters, and persistence stay local and never call subscription API endpoints.
+- Demo reset restores the eight-record subscription baseline together with the other Pro workspace records; Starter workspaces do not initialize subscription data.
 
 ### ClientsPage (`features/admin/components/clients-page.tsx`)
 
@@ -290,6 +327,7 @@ Client management with cached data from `catalogStore` (Pro-only):
 - Create/Edit/Delete dialogs
 - Activate/deactivate toggle
 - Link to subscriptions per client
+- Pro Demo Accounts route Clients CRUD through the browser-local workspace adapter: the deterministic baseline has five fictional clients, local validation/uniqueness/phone normalization, lifecycle toggles, relation-safe deletion, search/status filtering, and pagination. Mutations never call tenant Client or Client identity APIs and remain available after reload or logout/login.
 
 ### CatalogPage (`features/admin/components/catalog-page.tsx`)
 
@@ -297,3 +335,7 @@ Service + plan CRUD with cached data from `catalogStore` (Pro-only):
 - Services sidebar with create/rename/delete
 - Plans panel with create/rename/delete
 - Delete preview dialog with confirmation
+
+- Pro Demo Accounts use the browser-local catalog adapter: the baseline has exactly three deterministic generic services with six representative plans; service/plan names are trimmed, case-insensitively unique within their scope, and capped at 200 characters.
+- Catalog delete previews expose affected plans and active/historical subscription impact. Confirmed service deletion cascades plans and related local references, while plan deletion removes its local references; Starter workspaces have no catalog baseline.
+- CatalogPage and dependent subscription selectors use the selected data-source adapter, so Demo catalog reads and mutations never call catalog API endpoints and persist across reload or logout/login.
