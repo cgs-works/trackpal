@@ -10,6 +10,12 @@ vi.mock("@/i18n", () => ({
       "frontend.demo.banner.browser_local": "Data is stored in this browser only.",
       "frontend.demo.banner.connectivity_warning":
         "We are having trouble verifying this demo. Your local work is preserved; retry shortly.",
+      "frontend.demo.banner.workspace_recovered":
+        "This demo workspace was updated to a safe baseline. Your lifecycle and tour progress were preserved.",
+      "frontend.demo.banner.storage_unavailable":
+        "Browser storage is unavailable. Demo changes cannot be saved; no backend copy will be used.",
+      "frontend.demo.banner.storage_quota_exceeded":
+        "Browser storage is full. Demo changes cannot be saved; no backend copy will be used.",
       "frontend.demo.banner.reset": "Reset Demo Data",
       "frontend.demo.banner.reset_confirm_title": "Reset demo data?",
       "frontend.demo.banner.reset_confirm_description":
@@ -82,6 +88,8 @@ interface MockAuthState {
       ensure: ReturnType<typeof vi.fn>;
       saveTourState: ReturnType<typeof vi.fn>;
       clear: ReturnType<typeof vi.fn>;
+      consumeRecoveryNotice?: ReturnType<typeof vi.fn>;
+      storageState?: ReturnType<typeof vi.fn>;
       key: string;
     } | null;
   };
@@ -107,6 +115,8 @@ function mockAuthStore(overrides: Partial<MockAuthState> = {}) {
         ensure: vi.fn(),
         saveTourState: vi.fn(),
         clear: vi.fn(),
+        consumeRecoveryNotice: vi.fn().mockReturnValue(null),
+        storageState: vi.fn().mockReturnValue("available"),
         key: "trackpal:demo-workspace:demo-tenant-1",
       },
     },
@@ -162,6 +172,52 @@ describe("DemoBanner", () => {
     expect(
       screen.getByText(/Data is stored in this browser only/),
     ).toBeInTheDocument();
+  });
+
+  it("shows one localized recovery notice", () => {
+    const recoveryNotice = vi.fn().mockReturnValue({ kind: "reset" });
+    mockAuthStore({
+      dataSource: {
+        mode: "demo",
+        workspace: {
+          reset: vi.fn(),
+          read: vi.fn(),
+          ensure: vi.fn(),
+          saveTourState: vi.fn(),
+          clear: vi.fn(),
+          consumeRecoveryNotice: recoveryNotice,
+          storageState: vi.fn().mockReturnValue("available"),
+          key: "trackpal:demo-workspace:demo-tenant-1",
+        },
+      },
+    });
+    render(<DemoBanner />);
+
+    expect(screen.getAllByTestId("demo-workspace-recovered")).toHaveLength(1);
+    expect(recoveryNotice).toHaveBeenCalledOnce();
+  });
+
+  it("shows explicit browser storage failures without backend fallback", () => {
+    mockAuthStore({
+      dataSource: {
+        mode: "demo",
+        workspace: {
+          reset: vi.fn(),
+          read: vi.fn(),
+          ensure: vi.fn(),
+          saveTourState: vi.fn(),
+          clear: vi.fn(),
+          consumeRecoveryNotice: vi.fn().mockReturnValue(null),
+          storageState: vi.fn().mockReturnValue("quota_exceeded"),
+          key: "trackpal:demo-workspace:demo-tenant-1",
+        },
+      },
+    });
+    render(<DemoBanner />);
+
+    expect(screen.getByTestId("demo-storage-quota")).toHaveTextContent(
+      "Browser storage is full. Demo changes cannot be saved; no backend copy will be used.",
+    );
   });
 
   it("shows Pro label for pro plan", () => {

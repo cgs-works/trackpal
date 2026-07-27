@@ -949,6 +949,9 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.connectivity_warning": "We are having trouble verifying this demo. Your local work is preserved; retry shortly.",
     "frontend.demo.overlay.retry": "Retry now",
     "frontend.demo.overlay.message": "Interaction paused. Verifying demo status…",
+    "frontend.demo.banner.workspace_recovered": "This demo workspace was updated to a safe baseline. Your lifecycle and tour progress were preserved.",
+    "frontend.demo.banner.storage_unavailable": "Browser storage is unavailable. Demo changes cannot be saved; no backend copy will be used.",
+    "frontend.demo.banner.storage_quota_exceeded": "Browser storage is full. Demo changes cannot be saved; no backend copy will be used.",
 }
 
 

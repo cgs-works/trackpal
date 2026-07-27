@@ -98,6 +98,10 @@ Three Zustand stores in `src/store/`:
 ### Demo Workspace contract (`features/demo/services/demo-workspace.ts`)
 
 - Workspace storage is keyed by `trackpal:demo-workspace:<tenant_id>` so different Demo Accounts cannot share browser state.
+- The repository migrates known envelopes deterministically, validates lifecycle timestamps and plan-specific shape, and replaces unsupported, corrupt, mismatched, or unsafe data with the authenticated plan baseline without merging Starter and Pro state.
+- Recovery exposes one consumable update notice for the localized Demo Banner. Expired orphan data is removed during bootstrap, while valid lifecycle anchors and tour state remain intact during compatible migration/reset flows.
+- Browser storage errors are classified as unavailable or quota-exceeded. Demo state never falls back to backend persistence; the banner shows an explicit recoverable storage state instead.
+- Same-tenant tabs intentionally share the storage key with last-write-wins semantics. Repositories never hydrate or copy cross-tenant data; bootstrap may inspect only envelope metadata to remove expired orphan keys, without locks or cross-tenant workspace access.
 
 ### Authenticated Demo WhatsApp Simulator
 

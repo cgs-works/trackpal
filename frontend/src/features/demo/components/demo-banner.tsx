@@ -24,6 +24,8 @@ export function DemoBanner({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const demo = useAuthStore((s) => s.demo);
   const dataSource = useAuthStore((s) => s.dataSource);
+  const workspace = dataSource.workspace;
+  const [recoveryNotice] = useState(() => workspace?.consumeRecoveryNotice?.() ?? null);
 
   if (!demo || demo.status !== "active") return null;
   const activeDemo = demo;
@@ -48,6 +50,21 @@ export function DemoBanner({
         </span>
       </AlertTitle>
       <AlertDescription className="flex flex-col gap-2">
+        {recoveryNotice && (
+          <p role="status" data-testid="demo-workspace-recovered" className="font-medium">
+            {t("frontend.demo.banner.workspace_recovered")}
+          </p>
+        )}
+        {workspace?.storageState?.() === "unavailable" && (
+          <p role="alert" data-testid="demo-storage-unavailable" className="font-medium text-destructive">
+            {t("frontend.demo.banner.storage_unavailable")}
+          </p>
+        )}
+        {workspace?.storageState?.() === "quota_exceeded" && (
+          <p role="alert" data-testid="demo-storage-quota" className="font-medium text-destructive">
+            {t("frontend.demo.banner.storage_quota_exceeded")}
+          </p>
+        )}
         {showConnectivityWarning && (
           <p role="status" className="font-medium text-destructive">
             {t("frontend.demo.banner.connectivity_warning")}

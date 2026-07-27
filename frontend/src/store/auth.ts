@@ -17,6 +17,11 @@ import { useSettingsStore } from "@/store/settings";
 import { useCatalogStore } from "@/store/catalog";
 import { clearDemoWorkspace } from "@/features/demo/services/demo-workspace";
 import { createDataSource, type DataSourceAdapter } from "@/lib/data-source";
+import {
+  readBrowserStorage,
+  removeBrowserStorage,
+  writeBrowserStorage,
+} from "@/lib/browser-storage";
 
 export interface DemoAuthMetadata {
   tenantId: string;
@@ -66,7 +71,7 @@ function parseTenantPlan(value: string | null): TenantPlan | null {
 }
 
 function loadDemoMetadata(): DemoAuthMetadata | null {
-  const raw = localStorage.getItem("demoMetadata");
+  const raw = readBrowserStorage("demoMetadata");
   if (!raw) return null;
   try {
     const value: unknown = JSON.parse(raw);
@@ -153,54 +158,60 @@ function demoEndedError(): Error & {
   return error;
 }
 function loadFromStorage() {
-  const token = localStorage.getItem("token");
+  const token = readBrowserStorage("token");
+  let user: UserInfo | null = null;
+  try {
+    user = JSON.parse(readBrowserStorage("user") || "null") as UserInfo | null;
+  } catch {
+    removeBrowserStorage("user");
+  }
   return {
     token,
-    refreshToken: localStorage.getItem("refreshToken"),
-    user: JSON.parse(localStorage.getItem("user") || "null") as UserInfo | null,
-    activeTenantId: localStorage.getItem("activeTenantId"),
-    tenantPlan: parseTenantPlan(localStorage.getItem("tenantPlan")),
+    refreshToken: readBrowserStorage("refreshToken"),
+    user,
+    activeTenantId: readBrowserStorage("activeTenantId"),
+    tenantPlan: parseTenantPlan(readBrowserStorage("tenantPlan")),
     demo: token ? loadDemoMetadata() : null,
   };
 }
 
 function saveTokenData(data: TokenResponse) {
-  localStorage.setItem("token", data.access_token);
-  localStorage.setItem("refreshToken", data.refresh_token);
-  localStorage.setItem("user", JSON.stringify(data.user));
+  writeBrowserStorage("token", data.access_token);
+  writeBrowserStorage("refreshToken", data.refresh_token);
+  writeBrowserStorage("user", JSON.stringify(data.user));
   if (data.active_tenant_id) {
-    localStorage.setItem("activeTenantId", data.active_tenant_id);
+    writeBrowserStorage("activeTenantId", data.active_tenant_id);
   } else {
-    localStorage.removeItem("activeTenantId");
+    removeBrowserStorage("activeTenantId");
   }
   if (data.tenant_plan) {
-    localStorage.setItem("tenantPlan", data.tenant_plan);
+    writeBrowserStorage("tenantPlan", data.tenant_plan);
   } else {
-    localStorage.removeItem("tenantPlan");
+    removeBrowserStorage("tenantPlan");
   }
   const demo = metadataFromToken(data);
   if (demo) {
-    localStorage.setItem("demoMetadata", JSON.stringify(demo));
+    writeBrowserStorage("demoMetadata", JSON.stringify(demo));
   } else {
-    localStorage.removeItem("demoMetadata");
+    removeBrowserStorage("demoMetadata");
   }
 }
 
 function saveDemoMetadata(demo: DemoAuthMetadata | null) {
   if (demo) {
-    localStorage.setItem("demoMetadata", JSON.stringify(demo));
+    writeBrowserStorage("demoMetadata", JSON.stringify(demo));
   } else {
-    localStorage.removeItem("demoMetadata");
+    removeBrowserStorage("demoMetadata");
   }
 }
 
 function clearTokenData() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
-  localStorage.removeItem("activeTenantId");
-  localStorage.removeItem("tenantPlan");
-  localStorage.removeItem("demoMetadata");
+  removeBrowserStorage("token");
+  removeBrowserStorage("refreshToken");
+  removeBrowserStorage("user");
+  removeBrowserStorage("activeTenantId");
+  removeBrowserStorage("tenantPlan");
+  removeBrowserStorage("demoMetadata");
 }
 
 function stateFromToken(data: TokenResponse, demo: DemoAuthMetadata | null) {
@@ -329,7 +340,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       saveDemoMetadata(demo);
       if (data.tenant_plan) {
-        localStorage.setItem("tenantPlan", data.tenant_plan);
+        writeBrowserStorage("tenantPlan", data.tenant_plan);
       }
       set({
         demo,
@@ -356,7 +367,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    const currentRefresh = localStorage.getItem("refreshToken");
+    const currentRefresh = readBrowserStorage("refreshToken");
     try {
       await logoutApi(currentRefresh);
     } catch {
@@ -382,9 +393,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const current = get();
     const previousPlan = current.tenantPlan;
     if (plan) {
-      localStorage.setItem("tenantPlan", plan);
+      writeBrowserStorage("tenantPlan", plan);
     } else {
-      localStorage.removeItem("tenantPlan");
+      removeBrowserStorage("tenantPlan");
     }
     const dataSource = createDataSource(
       {

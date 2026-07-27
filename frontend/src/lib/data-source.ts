@@ -1,5 +1,9 @@
 import type { DemoAuthMetadata } from "@/store/auth";
-import { createDemoWorkspaceRepository, type DemoWorkspaceRepository } from "@/features/demo/services/demo-workspace";
+import {
+  createDemoWorkspaceRepository,
+  DemoWorkspaceStorageError,
+  type DemoWorkspaceRepository,
+} from "@/features/demo/services/demo-workspace";
 import type { TenantPlan } from "@/features/auth/services/auth-api";
 import {
   getTenantDashboard,
@@ -347,6 +351,11 @@ export function createDataSource(
     const demo = context.demo;
     const workspace =
       existingWorkspace ?? createDemoWorkspaceRepository(demo.tenantId);
+    try {
+      workspace.ensure(demo, createDemoBaseline);
+    } catch (error) {
+      if (!(error instanceof DemoWorkspaceStorageError)) throw error;
+    }
     return {
       mode: "demo",
       context,

@@ -38,7 +38,7 @@ function fakeStorage(): Storage {
     },
     clear: () => store.clear(),
     getItem: (key: string) => store.get(key) ?? null,
-    key: (_index: number) => null,
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
     removeItem: (key: string) => {
       store.delete(key);
     },
@@ -46,6 +46,14 @@ function fakeStorage(): Storage {
       store.set(key, value);
     },
   };
+}
+
+function baselineFactory(value: Record<string, unknown>, version = 9): PlanBaselineFactory {
+  return vi.fn(() => ({
+    plan_specific: value,
+    tour_state: { baselineTour: false },
+    baseline_version: version,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +179,11 @@ describe("DemoWorkspaceRepository", () => {
       };
       storage.setItem(oldKey, JSON.stringify(oldEnvelope));
 
-      expect(repo.read()).toBeNull();
+      expect(repo.read()).toMatchObject({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: TENANT_ID,
+        baseline_version: 1,
+      });
     });
   });
 
@@ -185,7 +197,7 @@ describe("DemoWorkspaceRepository", () => {
     });
 
     it("invokes the baseline factory when no workspace exists", () => {
-      const baseline: PlanBaselineFactory = vi.fn((plan, _metadata) => ({
+      const baseline: PlanBaselineFactory = vi.fn((plan) => ({
         plan_specific: { seeded: true, plan },
         tour_state: { toursCompleted: [] },
         baseline_version: 2,
@@ -346,6 +358,174 @@ describe("DemoWorkspaceRepository", () => {
     });
   });
 
+  describe("migration and recovery", () => {
+    it("migrates a known version without losing lifecycle, business, or tour state", () => {
+      storage.setItem(repo.key, JSON.stringify({
+        schema_version: 1,
+        tenant_id: TENANT_ID,
+        source_name: "Migrated Demo",
+        plan: "starter",
+        activated_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-08-01T00:00:00.000Z",
+        plan_specific: { preserved: true },
+        tour_state: { completed: true },
+        saved_at: "2026-07-25T12:00:00.000Z",
+      }));
+
+      const migrated = repo.read();
+
+      expect(migrated).toMatchObject({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: TENANT_ID,
+        source_name: "Migrated Demo",
+        plan: "starter",
+        activated_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-08-01T00:00:00.000Z",
+        plan_specific: { preserved: true },
+        tour_state: { completed: true },
+        baseline_version: 1,
+      });
+      expect(JSON.parse(storage.getItem(repo.key)!)).toHaveProperty(
+        "schema_version",
+        DEMO_WORKSPACE_SCHEMA_VERSION,
+      );
+    });
+
+    it("recovers incompatible data to the authenticated plan without merging plans", () => {
+      storage.setItem(repo.key, JSON.stringify({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: TENANT_ID,
+        source_name: "Wrong Plan",
+        plan: "pro",
+        activated_at: baseMetadata().activatedAt,
+        expires_at: baseMetadata().expiresAt,
+        baseline_version: 2,
+        plan_specific: { proOnly: true },
+        tour_state: { completed: true },
+        saved_at: baseMetadata().serverTime,
+      }));
+      const baseline = baselineFactory({ starterOnly: true });
+
+      const recovered = repo.ensure(baseMetadata(), baseline);
+
+      expect(recovered.plan).toBe("starter");
+      expect(recovered.plan_specific).toEqual({ starterOnly: true });
+      expect(recovered.plan_specific).not.toHaveProperty("proOnly");
+      expect(recovered.tour_state).toEqual({ baselineTour: false });
+      expect(repo.consumeRecoveryNotice()).toMatchObject({ kind: "reset" });
+      expect(repo.consumeRecoveryNotice()).toBeNull();
+    });
+
+    it("recovers impossible timestamps and malformed state to a fresh baseline", () => {
+      storage.setItem(repo.key, JSON.stringify({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: TENANT_ID,
+        source_name: "Broken Demo",
+        plan: "starter",
+        activated_at: "2026-08-02T00:00:00.000Z",
+        expires_at: "2026-08-01T00:00:00.000Z",
+        baseline_version: 2,
+        plan_specific: [],
+        tour_state: {},
+        saved_at: "not-a-timestamp",
+      }));
+      const baseline = baselineFactory({ recovered: true });
+
+      const recovered = repo.ensure(baseMetadata(), baseline);
+
+      expect(recovered.plan_specific).toEqual({ recovered: true });
+      expect(repo.consumeRecoveryNotice()).toEqual({ kind: "reset" });
+      expect(repo.consumeRecoveryNotice()).toBeNull();
+    });
+
+    it("removes expired orphan keys during bootstrap without hydrating their contents", () => {
+      const orphanKey = `${DEMO_WORKSPACE_KEY_PREFIX}orphan-tenant`;
+      storage.setItem(orphanKey, JSON.stringify({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: "orphan-tenant",
+        source_name: "Expired Orphan",
+        plan: "pro",
+        activated_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-07-20T00:00:00.000Z",
+        baseline_version: 2,
+        plan_specific: {},
+        tour_state: {},
+        saved_at: "2026-07-20T00:00:00.000Z",
+      }));
+
+      repo.ensure(baseMetadata({ serverTime: "2026-07-25T12:00:00.000Z" }), baselineFactory({ fresh: true }));
+
+      expect(storage.getItem(orphanKey)).toBeNull();
+    });
+
+    it("removes an expired orphan before creating the current plan baseline", () => {
+      storage.setItem(repo.key, JSON.stringify({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: TENANT_ID,
+        source_name: "Expired Demo",
+        plan: "starter",
+        activated_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-07-20T00:00:00.000Z",
+        baseline_version: 2,
+        plan_specific: { stale: true },
+        tour_state: {},
+        saved_at: "2026-07-20T00:00:00.000Z",
+      }));
+      const baseline = baselineFactory({ fresh: true });
+
+      const recovered = repo.ensure(baseMetadata({ serverTime: "2026-07-25T12:00:00.000Z" }), baseline);
+
+      expect(recovered.plan_specific).toEqual({ fresh: true });
+      expect(repo.read()?.plan_specific).toEqual({ fresh: true });
+    });
+  });
+
+  describe("storage failures", () => {
+    it("exposes unavailable storage and never falls back to another persistence boundary", () => {
+      const unavailableStorage: Storage = {
+        get length() {
+          return 0;
+        },
+        clear: () => undefined,
+        getItem: () => {
+          throw new DOMException("Blocked", "SecurityError");
+        },
+        key: () => null,
+        removeItem: () => undefined,
+        setItem: () => {
+          throw new DOMException("Blocked", "SecurityError");
+        },
+      };
+      const unavailableRepo = createDemoWorkspaceRepository("blocked-demo", unavailableStorage);
+
+      expect(unavailableRepo.storageState()).toBe("unavailable");
+      expect(() => unavailableRepo.ensure(baseMetadata({ tenantId: "blocked-demo" }), baselineFactory({ value: true }))).toThrow(
+        "demo_workspace_storage_unavailable",
+      );
+    });
+
+    it("classifies quota failures explicitly", () => {
+      const quotaStorage: Storage = {
+        get length() {
+          return 0;
+        },
+        clear: () => undefined,
+        getItem: () => null,
+        key: () => null,
+        removeItem: () => undefined,
+        setItem: () => {
+          throw new DOMException("Full", "QuotaExceededError");
+        },
+      };
+      const quotaRepo = createDemoWorkspaceRepository("quota-demo", quotaStorage);
+
+      expect(() => quotaRepo.ensure(baseMetadata({ tenantId: "quota-demo" }), baselineFactory({ value: true }))).toThrow(
+        "demo_workspace_quota_exceeded",
+      );
+      expect(quotaRepo.storageState()).toBe("quota_exceeded");
+    });
+  });
+
   describe("saveTourState", () => {
     it("merges tour state into existing envelope", () => {
       repo.ensure(baseMetadata());
@@ -403,7 +583,7 @@ describe("DemoWorkspaceRepository", () => {
         baseline_version: 1,
       }));
 
-      const meta = baseMetadata({ tenantId: "t1", plan: "pro" });
+      const meta = baseMetadata({ tenantId: TENANT_ID, plan: "pro" });
       repo.ensure(meta, factory);
 
       expect(factory).toHaveBeenCalledWith("pro", meta);

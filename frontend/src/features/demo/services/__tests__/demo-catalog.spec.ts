@@ -89,17 +89,19 @@ describe("Pro Demo Catalog", () => {
     const pro = readProDemoState(state.plan_specific)!;
     const target = pro.services[0];
     const targetPlan = pro.plans.find((plan) => plan.service_id === target.id)!;
+    const injectedSubscription = {
+      ...pro.subscriptions[0],
+      id: "sub-active",
+      tenant_id: metadata.tenantId,
+      service_id: target.id,
+      plan_id: targetPlan.id,
+      client_id: pro.clients[0].id,
+      status: "active" as const,
+      streaming_email: "active@example.com",
+    };
     source.workspace!.updatePlanSpecific((current) => ({
       ...current,
-      subscriptions: [{
-        id: "sub-active",
-        service_id: target.id,
-        plan_id: targetPlan.id,
-        client_id: pro.clients[0].id,
-        status: "active",
-        streaming_email: "active@example.com",
-        expires_at: null,
-      }],
+      subscriptions: [injectedSubscription],
     }));
 
     const preview = await source.catalog.getServiceDeletePreview(target.id);

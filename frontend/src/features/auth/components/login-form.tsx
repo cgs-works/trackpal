@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sun, Moon, Globe } from "lucide-react";
 import { BrandLogo } from "@/components/layout/brand-logo";
+import { readBrowserStorage, writeBrowserStorage } from "@/lib/browser-storage";
 
 /* ── Atmospheric Panel ─────────────────────────────────────────── */
 
@@ -95,7 +96,7 @@ export function LoginForm() {
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("theme");
+    const stored = readBrowserStorage("theme");
     if (stored) return stored === "dark";
     return true;
   });
@@ -107,7 +108,7 @@ export function LoginForm() {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem("theme", isDark ? "dark" : "light");
+    writeBrowserStorage("theme", isDark ? "dark" : "light");
   }, [isDark]);
 
   useEffect(() => subscribeLocale(() => setTick((n) => n + 1)), []);

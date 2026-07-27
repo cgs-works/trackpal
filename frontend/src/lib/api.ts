@@ -1,4 +1,5 @@
 import axios from "axios";
+import { readBrowserStorage, removeBrowserStorage } from "@/lib/browser-storage";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -7,7 +8,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = readBrowserStorage("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -22,11 +23,11 @@ api.interceptors.response.use(
       detail === "demo_ended" || detail === "demo_credentials_replaced";
 
     if (error.response?.status === 401 && !isDemoLifecycleFailure) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      localStorage.removeItem("activeTenantId");
-      localStorage.removeItem("demoMetadata");
+      removeBrowserStorage("token");
+      removeBrowserStorage("refreshToken");
+      removeBrowserStorage("user");
+      removeBrowserStorage("activeTenantId");
+      removeBrowserStorage("demoMetadata");
       window.location.href = "/login";
     }
     return Promise.reject(error);

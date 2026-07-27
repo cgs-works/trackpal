@@ -3,20 +3,21 @@ import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { loadCatalog, isCatalogReady } from "@/i18n";
+import { readBrowserStorage } from "@/lib/browser-storage";
 
 function RootComponent() {
   const [catalogLoaded, setCatalogLoaded] = useState(isCatalogReady());
 
   // Initialize theme from localStorage before first paint
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
+    const stored = readBrowserStorage("theme");
     const shouldBeDark = stored ? stored === "dark" : true;
     document.documentElement.classList.toggle("dark", shouldBeDark);
   }, []);
 
   // Load i18n catalog if authenticated, block rendering until done
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = readBrowserStorage("token");
     if (!token || isCatalogReady()) {
       setCatalogLoaded(true);
       return;

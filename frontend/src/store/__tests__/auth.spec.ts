@@ -104,7 +104,7 @@ describe("auth context persistence", () => {
       name: "Demo Workspace",
       plan: "pro",
     });
-    expect(localStorage.getItem("trackpal:demo-workspace:demo-tenant")).toBeNull();
+    expect(localStorage.getItem("trackpal:demo-workspace:demo-tenant")).not.toBeNull();
     expect(vi.mocked(loadCatalog)).toHaveBeenCalledOnce();
   });
 
