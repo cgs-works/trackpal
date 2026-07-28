@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sun, Moon, Globe } from "lucide-react";
 import { BrandLogo } from "@/components/layout/brand-logo";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { readBrowserStorage, writeBrowserStorage } from "@/lib/browser-storage";
 
 /* ── Atmospheric Panel ─────────────────────────────────────────── */
@@ -158,11 +159,13 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <AtmosphericPanel />
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <AtmosphericPanel />
 
-      <div className="flex w-full items-center justify-center p-6 sm:p-10 md:w-[480px] lg:w-[520px]">
-        <div className="w-full max-w-sm flex flex-col gap-8">
+        <div className="flex w-full flex-1 flex-col p-6 sm:p-10 md:w-[480px] md:flex-none lg:w-[520px]">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm flex flex-col gap-8">
           {/* Mobile brand */}
           <div className="flex flex-col items-center gap-3 md:hidden">
             <BrandLogo />
@@ -192,10 +195,16 @@ export function LoginForm() {
               <select
                 value={getLocale()}
                 onChange={(e) => setLocale(e.target.value as "en" | "es")}
-                className="h-8 rounded-lg border border-input bg-transparent dark:bg-transparent px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                aria-label={t("login.language")}
+                className="h-8 rounded-lg border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                style={{ colorScheme: isDark ? "dark" : "light" }}
               >
-                <option value="en">English</option>
-                <option value="es">Español</option>
+                <option className="bg-background text-foreground" value="en">
+                  English
+                </option>
+                <option className="bg-background text-foreground" value="es">
+                  Español
+                </option>
               </select>
             </div>
 
@@ -242,9 +251,12 @@ export function LoginForm() {
             <Button className="w-full h-10" type="submit" disabled={isLoading}>
               {isLoading ? t("login.signing_in") : t("login.sign_in")}
             </Button>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
+      </div>
+      <LegalFooter className="px-6 pb-6 sm:px-10 md:px-12 lg:px-16" />
     </div>
   );
 }

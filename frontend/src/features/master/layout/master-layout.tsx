@@ -8,6 +8,7 @@ import {
   type SidebarItem,
 } from "@/components/layout/app-sidebar";
 import { CodeServicesDialog } from "../components/code-services-dialog";
+import { LegalFooter } from "@/components/layout/legal-footer";
 
 export function MasterLayout() {
   const navigate = useNavigate();
@@ -52,8 +53,11 @@ export function MasterLayout() {
           onLogout={handleLogout}
         />
 
-        <div className="flex-1 flex flex-col min-h-screen overflow-auto">
+        <div className="flex-1 flex min-h-screen flex-col overflow-auto">
           <Outlet />
+          <div className="px-4 pb-6 pt-8 sm:px-6">
+            <LegalFooter />
+          </div>
         </div>
       </div>
 

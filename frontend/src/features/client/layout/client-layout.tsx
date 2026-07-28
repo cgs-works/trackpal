@@ -10,6 +10,7 @@ import {
 } from "@/components/layout/role-navigation";
 import { ContextualHelpSheet } from "@/features/help/components/contextual-help-sheet";
 import { isPrivateHelpEnabled } from "@/features/help/config";
+import { LegalFooter } from "@/components/layout/legal-footer";
 
 export function ClientLayout() {
   const { username, logout, user, role, activeTenantId } = useAuthStore();
@@ -50,6 +51,9 @@ export function ClientLayout() {
           </div>
         )}
         <Outlet />
+        <div className="px-4 pb-6 pt-8 sm:px-6">
+          <LegalFooter />
+        </div>
       </main>
     </div>
   );

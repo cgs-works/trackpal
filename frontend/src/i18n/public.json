@@ -19,7 +19,11 @@
     "demo_ended.description": "This demo evaluation is no longer available. Contact us to continue the conversation.",
     "demo_ended.contact.whatsapp": "WhatsApp",
     "demo_ended.contact.telegram": "Telegram",
-    "demo_ended.contact.email": "Email"
+    "demo_ended.contact.email": "Email",
+    "legal.footer_label": "Legal information",
+    "legal.copyright": "© 2026 Camacho Global Software · TrackPal",
+    "legal.privacy_policy": "Privacy Policy",
+    "legal.terms_of_service": "Terms of Service"
   },
   "es": {
     "login.title": "Iniciar sesión",
@@ -41,6 +45,10 @@
     "demo_ended.description": "Esta evaluación de demo ya no está disponible. Contáctanos para continuar la conversación.",
     "demo_ended.contact.whatsapp": "WhatsApp",
     "demo_ended.contact.telegram": "Telegram",
-    "demo_ended.contact.email": "Correo"
+    "demo_ended.contact.email": "Correo",
+    "legal.footer_label": "Información legal",
+    "legal.copyright": "© 2026 Camacho Global Software · TrackPal",
+    "legal.privacy_policy": "Política de privacidad",
+    "legal.terms_of_service": "Términos de servicio"
   }
 }

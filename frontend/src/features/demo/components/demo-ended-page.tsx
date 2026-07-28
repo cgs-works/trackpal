@@ -1,4 +1,5 @@
 import { t } from "@/i18n/public";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { MessageCircle, Send, Mail } from "lucide-react";
 
 const WHATSAPP_URL = "https://wa.me/584243106642";
@@ -40,22 +41,27 @@ function ContactLinks() {
 
 export function DemoEndedPage() {
   return (
-    <main
-      className="flex min-h-screen items-center justify-center bg-background px-4 py-8"
-      aria-labelledby="demo-ended-title"
-      aria-describedby="demo-ended-description"
-    >
-      <div className="w-full max-w-md space-y-6 text-center">
-        <div className="space-y-2">
-          <h1 id="demo-ended-title" className="text-2xl font-semibold text-foreground">
-            {t("demo_ended.title")}
-          </h1>
-          <p id="demo-ended-description" className="text-muted-foreground">
-            {t("demo_ended.description")}
-          </p>
+    <div className="flex min-h-screen flex-col bg-background">
+      <main
+        className="flex flex-1 items-center justify-center px-4 py-8"
+        aria-labelledby="demo-ended-title"
+        aria-describedby="demo-ended-description"
+      >
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="space-y-2">
+            <h1 id="demo-ended-title" className="text-2xl font-semibold text-foreground">
+              {t("demo_ended.title")}
+            </h1>
+            <p id="demo-ended-description" className="text-muted-foreground">
+              {t("demo_ended.description")}
+            </p>
+          </div>
+          <ContactLinks />
         </div>
-        <ContactLinks />
+      </main>
+      <div className="px-4 pb-8">
+        <LegalFooter className="mx-auto max-w-md" />
       </div>
-    </main>
+    </div>
   );
 }

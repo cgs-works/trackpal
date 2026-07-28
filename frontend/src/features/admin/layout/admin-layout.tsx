@@ -16,6 +16,7 @@ import { useDemoHeartbeat } from "@/features/demo/hooks/use-demo-heartbeat";
 import { ContextualHelpSheet } from "@/features/help/components/contextual-help-sheet";
 import { isPrivateHelpEnabled } from "@/features/help/config";
 import { OrientationTour } from "@/features/help/components/orientation-tour";
+import { LegalFooter } from "@/components/layout/legal-footer";
 
 export function AdminLayout() {
   const {
@@ -99,6 +100,9 @@ export function AdminLayout() {
           </div>
         )}
         <Outlet />
+        <div className="px-4 pb-6 pt-8 sm:px-6">
+          <LegalFooter />
+        </div>
         <OrientationTour />
       </main>
       {isPaused && <DemoOverlay onRetry={retry} />}
