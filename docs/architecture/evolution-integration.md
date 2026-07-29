@@ -38,7 +38,7 @@ The following methods are exposed by `EvolutionClient` for self-linking manageme
 
 Upsert flow:
 1. Attempt `POST /webhook/create/{instanceId}` with:
-   - `enabled=true`, `webhookUrl=https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient`
+   - `enabled=true`, `webhookUrl=https://n8n-2-8-3-wilfredo.onrender.com/webhook/trackpalmastertenantclient`
    - `triggerType=keyword`, `triggerOperator=startsWith`, `triggerValue=/menu`
    - `isTrusted=true` (includes `apiKey` in payload)
    - `listeningFromMe=true` (enables outgoing-message webhook dispatch)

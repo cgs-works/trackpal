@@ -56,7 +56,7 @@ IF skip_console_call?
 Receives inbound WhatsApp messages forwarded by Evolution Go.
 
 The full webhook URL is:
-`https://rs-n8n.wilfredocamacho.dev/webhook/trackpalmastertenantclient`
+`https://n8n-2-8-3-wilfredo.onrender.com/webhook/trackpalmastertenantclient`
 
 This URL is configured in `EvolutionClient.register_webhook()` in the backend, which registers it with Evolution Go per-instance at tenant creation time. The webhook is registered with `isTrusted=true`, so Evolution Go includes the instance `apiKey` in the payload for per-message authentication.
 
