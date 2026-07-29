@@ -57,6 +57,11 @@ class TestGoogleOAuthProvider:
         assert "access_type=offline" in url
         assert "prompt=consent" in url
         assert "state=test-state-123" in url
+        assert (
+            "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly+openid+email"
+            in url
+        )
+        assert "profile" not in url
         assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth")
 
     @pytest.mark.asyncio

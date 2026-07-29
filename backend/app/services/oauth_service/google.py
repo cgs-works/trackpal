@@ -7,7 +7,7 @@ import httpx
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-GOOGLE_SCOPES = "https://www.googleapis.com/auth/gmail.readonly openid email profile"
+GOOGLE_SCOPES = "https://www.googleapis.com/auth/gmail.readonly openid email"
 
 
 @dataclass

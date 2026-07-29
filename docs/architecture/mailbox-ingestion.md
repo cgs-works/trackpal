@@ -73,7 +73,7 @@ permissions) fail immediately.
 
 ### Google (Gmail Read-Only)
 
-- Scopes: `gmail.readonly openid email profile`.
+- Scopes: `gmail.readonly openid email`.
 - `access_type=offline` + `prompt=consent` ensures refresh token on first auth.
 - Token refresh on expiry; `invalid_grant` marks mailbox as `revoked`.
 
