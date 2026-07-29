@@ -7,6 +7,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 `app/main.py` creates the FastAPI app with:
 - CORS middleware (configurable origins via `CORS_ORIGINS`)
 - Redis connection manager lifecycle (init on startup, close on shutdown)
+- Public root at `GET /` → permanent redirect to `https://trackpal.wilfredocamacho.dev`
 - Health check at `GET /health` → `{"status": "ok"}`
 - Router inclusion under `/api/v1`
 

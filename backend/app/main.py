@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -96,6 +97,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router, prefix="/api/v1")
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(
+        url="https://trackpal.wilfredocamacho.dev",
+        status_code=308,
+    )
 
 
 @app.get("/health")
