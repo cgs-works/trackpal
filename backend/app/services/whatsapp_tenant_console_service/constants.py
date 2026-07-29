@@ -223,14 +223,15 @@ KEY_CODIGO_NO_CODE_SERVICES_TENANT = "wa.tenant.codigo.no_code_services_tenant"
 KEY_CODIGO_NO_CODE_SERVICES_CLIENT = "wa.tenant.codigo.no_code_services_client"
 
 # Global service keys available for code lookup
-# Alphabetical order by visible label (Disney+, HBO Max, Netflix, Prime Video, Spotify, Universal+)
+# Alphabetical order by visible label
 STREAMING_SERVICE_KEYS: list[str] = [
     "disney",  # 1️⃣ Disney+
     "hbo_max",  # 2️⃣ HBO Max
     "netflix",  # 3️⃣ Netflix
     "prime_video",  # 4️⃣ Prime Video
     "spotify",  # 5️⃣ Spotify
-    "universal_plus",  # 6️⃣ Universal+
+    "trackpal_demo",  # 6️⃣ TrackPal Demo
+    "universal_plus",  # 7️⃣ Universal+
 ]
 
 # -- Access control flow constants ---------------------------------------

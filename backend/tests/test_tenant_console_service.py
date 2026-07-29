@@ -2054,7 +2054,8 @@ class TestCodigoFlow:
             "netflix",  # 3
             "prime_video",  # 4
             "spotify",  # 5
-            "universal_plus",  # 6
+            "trackpal_demo",  # 6
+            "universal_plus",  # 7
         ]
         keys = console_service.STREAMING_SERVICE_KEYS
         assert keys == expected_keys

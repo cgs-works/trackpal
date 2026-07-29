@@ -41,6 +41,12 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Tenant Data Export Domain Contract](adr/0003-tenant-export-domain-contract.md) | Stable business-facing export contract with semantic field names, independent of persistence model |
 | [Browser-local Demo Tenant Workspaces](adr/0004-browser-local-demo-tenant-workspaces.md) | Server-enforced demo identity and lifecycle with plan-aware business state isolated to each browser |
 
+## Verification Guides
+
+| File | Description |
+|------|-------------|
+| [Google OAuth Demo](verification/google-oauth-demo.md) | Synthetic TrackPal Demo service and HTML email for the Gmail restricted-scope verification recording |
+
 ## Release Operations
 
 | File | Description |

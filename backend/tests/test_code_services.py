@@ -112,6 +112,10 @@ class TestGlobalCodeServices:
         assert len(services) == len(VALID_SERVICE_KEYS)
         keys = {s["service_key"] for s in services}
         assert keys == VALID_SERVICE_KEYS
+        trackpal_demo = next(
+            service for service in services if service["service_key"] == "trackpal_demo"
+        )
+        assert trackpal_demo["label"] == "TrackPal Demo"
 
     @pytest.mark.asyncio
     async def test_toggle_single_service(
