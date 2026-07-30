@@ -83,7 +83,7 @@ async def test_block_phone_cancels_active_codigo_session_and_job(client, db_sess
     from app.services import access_control_service
 
     tenant = await _tenant(db_session, active_tenant_user)
-    mailbox = TenantMailbox(tenant_id=tenant.id, mailbox_email="codes@example.com", provider="google", auth_method="oauth", status="connected")
+    mailbox = TenantMailbox(tenant_id=tenant.id, mailbox_email="codes@example.com", auth_method="oauth", status="connected")
     db_session.add(mailbox)
     await db_session.flush()
     job = MailLookupJob(

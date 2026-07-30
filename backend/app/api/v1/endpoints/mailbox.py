@@ -114,7 +114,6 @@ async def upsert_mailbox(
     values = {
         "mailbox_email": payload.mailbox_email,
         "auth_method": "app_password",
-        "provider": "google",
         "status": "connected",
         "app_password_encrypted": encrypt_value(normalized_password),
         "oauth_provider_user_id": None,
@@ -168,48 +167,28 @@ async def test_mailbox_connection(
         return MailboxTestResponse(success=False, message=str(exc))
 
 
-@router.post("/oauth/{provider}/start", response_model=OAuthStartResponse)
+@router.post("/oauth/google/start", response_model=OAuthStartResponse)
 async def oauth_start(
-    provider: str,
     db: DbDep,
     tenant_id: ActiveTenantId,
 ):
-    """Start OAuth flow for Google or Microsoft."""
-    if provider not in ("google", "microsoft"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider: {provider}",
-        )
-
-    result = await oauth_service.start_oauth(db, tenant_id, provider)
-    if result is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to start OAuth for {provider}",
-        )
-    return result
+    """Start Google OAuth flow."""
+    return await oauth_service.start_oauth(db, tenant_id)
 
 
-@router.get("/oauth/{provider}/callback", response_class=HTMLResponse)
+@router.get("/oauth/google/callback", response_class=HTMLResponse)
 async def oauth_callback(
-    provider: str,
     db: DbDep,
     code: str = Query(...),
     state: str = Query(...),
 ):
-    """Handle OAuth callback from Google or Microsoft.
+    """Handle OAuth callback from Google.
 
     Public endpoint (no bearer token). Security relies on
     state token validation which encodes tenant context.
     """
-    if provider not in ("google", "microsoft"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider: {provider}",
-        )
-
     try:
-        await oauth_service.complete_oauth(db, provider, code, state)
+        await oauth_service.complete_oauth(db, code, state)
     except DemoGuardrailError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

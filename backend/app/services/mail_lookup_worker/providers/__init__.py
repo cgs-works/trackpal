@@ -1,8 +1,8 @@
 """Provider-specific email fetch adapters.
 
 Each adapter fetches recent emails from a mailbox using its configured
-authentication method (OAuth2 for Google/Microsoft, app-password for
-IMAP).  The stub adapter is used for integration tests.
+authentication method (OAuth2 for Google, app-password for Gmail).
+The stub adapter is used for integration tests.
 
 Error taxonomy:
 - ``TransientProviderError`` — network/rate-limit/timeout (retryable)
@@ -15,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tenant_mailbox import TenantMailbox
 from app.services.mail_lookup_worker.providers._google import fetch_google_emails
-from app.services.mail_lookup_worker.providers._imap import fetch_imap_emails
-from app.services.mail_lookup_worker.providers._microsoft import fetch_microsoft_emails
+from app.services.mail_lookup_worker.providers._gmail_app_password import (
+    fetch_gmail_app_password_emails,
+)
 from app.services.mail_lookup_worker.providers._types import (
     EmailMessage,
     NonTransientProviderError,
@@ -58,7 +59,7 @@ async def fetch_recent_emails(
     target_email: str | None = None,
     db: AsyncSession | None = None,
 ) -> list[EmailMessage]:
-    """Dispatch to the appropriate provider based on mailbox config.
+    """Dispatch to the appropriate adapter based on auth_method.
 
     If ``active_provider`` is set (testing), delegates to it instead.
     Content-level ``target_email`` filtering (subject/body) is handled
@@ -72,23 +73,15 @@ async def fetch_recent_emails(
     elif mailbox.auth_method == "oauth":
         if db is None:
             raise NonTransientProviderError(
-                "DB session required for OAuth provider fetch",
+                "DB session required for OAuth fetch",
                 error_code="provider_config_error",
             )
-        if mailbox.provider == "google":
-            emails = await fetch_google_emails(mailbox, window_minutes, db=db)
-        elif mailbox.provider == "microsoft":
-            emails = await fetch_microsoft_emails(mailbox, window_minutes, db=db)
-        else:
-            raise NonTransientProviderError(
-                f"Unsupported OAuth provider: {mailbox.provider}",
-                error_code="provider_config_error",
-            )
-    elif mailbox.auth_method == "imap_app_password":
-        emails = await fetch_imap_emails(mailbox, window_minutes)
+        emails = await fetch_google_emails(mailbox, window_minutes, db=db)
+    elif mailbox.auth_method == "app_password":
+        emails = await fetch_gmail_app_password_emails(mailbox, window_minutes)
     else:
         raise NonTransientProviderError(
-            f"Unsupported provider/auth: {mailbox.provider}/{mailbox.auth_method}",
+            f"Unsupported auth method: {mailbox.auth_method}",
             error_code="provider_config_error",
         )
 

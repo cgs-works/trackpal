@@ -72,7 +72,6 @@ async def _seed_mailbox(db_session, tenant_id, **overrides):
     kwargs = {
         "tenant_id": tenant_id,
         "mailbox_email": "codes@tenant.com",
-        "provider": "google",
         "auth_method": "oauth",
         "status": "connected",
     }

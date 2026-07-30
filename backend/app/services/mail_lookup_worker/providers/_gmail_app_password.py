@@ -1,4 +1,4 @@
-"""IMAP email fetch adapter with app-password auth."""
+"""Gmail app-password email fetch adapter."""
 
 from __future__ import annotations
 
@@ -14,7 +14,11 @@ from typing import Any
 
 from app.core.encryption import decrypt_value
 from app.models.tenant_mailbox import TenantMailbox
-from app.services.gmail_app_password import GMAIL_IMAP_HOST, GMAIL_IMAP_PORT, GMAIL_IMAP_SSL
+from app.services.gmail_app_password import (
+    GMAIL_IMAP_HOST,
+    GMAIL_IMAP_PORT,
+    GMAIL_IMAP_SSL,
+)
 from app.services.mail_lookup_worker.providers._types import (
     IMAP_FETCH_TIMEOUT,
     EmailMessage,
@@ -27,16 +31,15 @@ from app.services.mail_lookup_worker.providers._types import (
 logger = logging.getLogger(__name__)
 
 
-async def fetch_imap_emails(
+async def fetch_gmail_app_password_emails(
     mailbox: TenantMailbox,
     window_minutes: int,
 ) -> list[EmailMessage]:
-    """Fetch recent emails via IMAP with app-password auth."""
+    """Fetch recent emails via IMAP with Gmail app-password auth."""
     host = GMAIL_IMAP_HOST
     port = GMAIL_IMAP_PORT
     ssl = GMAIL_IMAP_SSL
-    username = mailbox.mailbox_email
-    password = _get_imap_password(mailbox)
+    password = _get_app_password(mailbox)
 
     since_str = _build_since_query(window_minutes)
 
@@ -55,7 +58,7 @@ async def fetch_imap_emails(
             ) from exc
 
         try:
-            result = conn.login(username, password)
+            result = conn.login(mailbox.mailbox_email, password)
             if result[0] != "OK":
                 raise NonTransientProviderError(
                     f"IMAP auth failed: {result[1].decode('utf-8', errors='replace')}"
@@ -100,7 +103,7 @@ async def fetch_imap_emails(
         ) from exc
 
 
-def _get_imap_password(mailbox: TenantMailbox) -> str:
+def _get_app_password(mailbox: TenantMailbox) -> str:
     """Decrypt and return app password, or raise NonTransient."""
     encrypted = mailbox.app_password_encrypted
     if not encrypted:

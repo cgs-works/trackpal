@@ -1,4 +1,4 @@
-"""Tests for Phase 2: OAuth service, IMAP test, exclusivity, refresh failure."""
+"""Tests for Google-only OAuth service, IMAP test, exclusivity, refresh failure."""
 
 import asyncio
 import imaplib
@@ -27,15 +27,6 @@ from app.services.oauth_service.google import build_auth_url as google_build_aut
 from app.services.oauth_service.google import exchange_code as google_exchange_code
 from app.services.oauth_service.google import (
     refresh_access_token as google_refresh_token,
-)
-from app.services.oauth_service.microsoft import (
-    build_auth_url as microsoft_build_auth_url,
-)
-from app.services.oauth_service.microsoft import (
-    exchange_code as microsoft_exchange_code,
-)
-from app.services.oauth_service.microsoft import (
-    refresh_access_token as microsoft_refresh_token,
 )
 from app.services.oauth_service.service import _create_state_token, _decode_state_token
 
@@ -178,111 +169,28 @@ class TestGoogleOAuthProvider:
             )
 
 
-# ─── Microsoft OAuth provider ─────────────────────────────────────────────
-
-
-class TestMicrosoftOAuthProvider:
-    """Unit tests for Microsoft OAuth helpers (mock HTTP)."""
-
-    MS_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-
-    def test_build_auth_url_includes_all_params(self):
-        url = microsoft_build_auth_url(
-            client_id="ms-client-id",
-            redirect_uri="https://app.com/callback",
-            state="ms-state-456",
-        )
-        assert "client_id=ms-client-id" in url
-        assert "response_type=code" in url
-        assert "Mail.Read" in url
-        assert "offline_access" in url
-        assert "state=ms-state-456" in url
-
-    @pytest.mark.asyncio
-    @respx.mock
-    async def test_exchange_code_success(self):
-        respx.post(self.MS_TOKEN_URL).respond(
-            200,
-            json={
-                "access_token": "ms-access-token",
-                "refresh_token": "ms-refresh-token",
-                "expires_in": 3600,
-                "scope": "Mail.Read offline_access",
-            },
-        )
-        result = await microsoft_exchange_code(
-            client_id="id",
-            client_secret="secret",
-            redirect_uri="https://app.com/callback",
-            code="ms-code",
-        )
-        assert result.access_token == "ms-access-token"
-        assert result.refresh_token == "ms-refresh-token"
-
-    @pytest.mark.asyncio
-    @respx.mock
-    async def test_exchange_code_invalid_grant(self):
-        respx.post(self.MS_TOKEN_URL).respond(
-            400,
-            json={"error": "invalid_grant", "error_description": "Bad code"},
-        )
-        with pytest.raises(InvalidGrantError):
-            await microsoft_exchange_code(
-                client_id="id",
-                client_secret="secret",
-                redirect_uri="https://app.com/callback",
-                code="bad",
-            )
-
-    @pytest.mark.asyncio
-    @respx.mock
-    async def test_refresh_token_success(self):
-        respx.post(self.MS_TOKEN_URL).respond(
-            200,
-            json={
-                "access_token": "ms-new-access",
-                "expires_in": 3600,
-                "scope": "Mail.Read",
-            },
-        )
-        result = await microsoft_refresh_token(
-            client_id="id",
-            client_secret="secret",
-            refresh_token="ms-refresh",
-        )
-        assert result.access_token == "ms-new-access"
-
-    @pytest.mark.asyncio
-    @respx.mock
-    async def test_refresh_token_invalid_grant(self):
-        respx.post(self.MS_TOKEN_URL).respond(
-            400,
-            json={"error": "invalid_grant", "error_description": "Revoked"},
-        )
-        with pytest.raises(InvalidGrantError):
-            await microsoft_refresh_token(
-                client_id="id",
-                client_secret="secret",
-                refresh_token="bad",
-            )
-
-
-# ─── State token ──────────────────────────────────────────────────────────
+# ─── State token (Google-only) ────────────────────────────────────────────
 
 
 class TestOAuthStateToken:
-    """State token creation and decoding."""
+    """State token creation and decoding — Google-only, no provider field."""
+
+    def test_state_token_contains_no_provider(self):
+        tenant_id = uuid.uuid4()
+        payload = _decode_state_token(_create_state_token(tenant_id))
+        assert payload is not None
+        assert payload["tenant_id"] == str(tenant_id)
+        assert "provider" not in payload
 
     def test_create_and_decode(self):
         tenant_id = uuid.uuid4()
-        token = _create_state_token(tenant_id, "google")
+        token = _create_state_token(tenant_id)
         assert isinstance(token, str)
         assert len(token) > 20
 
         payload = _decode_state_token(token)
         assert payload is not None
         assert payload["tenant_id"] == str(tenant_id)
-        assert payload["provider"] == "google"
         assert payload["type"] == "oauth_state"
 
     def test_decode_invalid_token(self):
@@ -293,7 +201,6 @@ class TestOAuthStateToken:
         expired = jwt.encode(
             {
                 "tenant_id": str(uuid.uuid4()),
-                "provider": "google",
                 "nonce": "test",
                 "exp": datetime.now(timezone.utc) - timedelta(hours=1),
                 "type": "oauth_state",
@@ -305,12 +212,9 @@ class TestOAuthStateToken:
 
     def test_decode_wrong_type(self):
         """Token with wrong type should be rejected."""
-        from jose import jwt
-
         bad = jwt.encode(
             {
                 "tenant_id": str(uuid.uuid4()),
-                "provider": "google",
                 "nonce": "test",
                 "exp": datetime.now(timezone.utc) + timedelta(hours=1),
                 "type": "access",
@@ -321,7 +225,7 @@ class TestOAuthStateToken:
         assert _decode_state_token(bad) is None
 
 
-# ─── OAuth Service orchestration ──────────────────────────────────────────
+# ─── OAuth Service orchestration (Google-only) ────────────────────────────
 
 
 class TestMailboxOAuthService:
@@ -329,39 +233,20 @@ class TestMailboxOAuthService:
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_start_google_oauth(self):
+    async def test_start_oauth_is_google_only(self):
         tenant_id = uuid.uuid4()
-        result = await oauth_service.start_oauth(None, tenant_id, "google")
+        result = await oauth_service.start_oauth(None, tenant_id)
 
         assert isinstance(result, OAuthStartResponse)
-        assert result.auth_url.startswith(
-            "https://accounts.google.com/o/oauth2/v2/auth"
-        )
+        assert "accounts.google.com" in result.auth_url
         assert "client_id=" in result.auth_url
         assert result.state is not None
 
-        # State should decode back to the tenant_id
+        # State should decode back to the tenant_id, without provider
         payload = _decode_state_token(result.state)
         assert payload is not None
         assert payload["tenant_id"] == str(tenant_id)
-        assert payload["provider"] == "google"
-
-    @pytest.mark.asyncio
-    @respx.mock
-    async def test_start_microsoft_oauth(self):
-        tenant_id = uuid.uuid4()
-        result = await oauth_service.start_oauth(None, tenant_id, "microsoft")
-
-        assert isinstance(result, OAuthStartResponse)
-        assert "login.microsoftonline.com" in result.auth_url
-        payload = _decode_state_token(result.state)
-        assert payload is not None
-        assert payload["provider"] == "microsoft"
-
-    @pytest.mark.asyncio
-    async def test_start_unsupported_provider(self):
-        result = await oauth_service.start_oauth(None, uuid.uuid4(), "yahoo")
-        assert result is None
+        assert "provider" not in payload
 
     @pytest.mark.asyncio
     @respx.mock
@@ -370,10 +255,8 @@ class TestMailboxOAuthService:
         tenant = await _seed_tenant(db_session)
         await _seed_mailbox(db_session, tenant.id, status="disconnected")
 
-        # Create a valid state token
-        state = _create_state_token(tenant.id, "google")
+        state = _create_state_token(tenant.id)
 
-        # Mock Google token exchange
         respx.post("https://oauth2.googleapis.com/token").respond(
             200,
             json={
@@ -384,9 +267,7 @@ class TestMailboxOAuthService:
             },
         )
 
-        mailbox = await oauth_service.complete_oauth(
-            db_session, "google", "auth-code-123", state
-        )
+        mailbox = await oauth_service.complete_oauth(db_session, "auth-code-123", state)
 
         assert mailbox.status == "connected"
         assert mailbox.auth_method == "oauth"
@@ -395,22 +276,16 @@ class TestMailboxOAuthService:
         assert mailbox.oauth_token_expires_at is not None
 
     @pytest.mark.asyncio
-    @respx.mock
-    async def test_complete_oauth_state_mismatch(self, db_session):
-        tenant = await _seed_tenant(db_session)
-        await _seed_mailbox(db_session, tenant.id)
-        state = _create_state_token(tenant.id, "google")
-
-        # Call with different provider than state encodes
-        with pytest.raises(ValueError, match="State provider mismatch"):
-            await oauth_service.complete_oauth(db_session, "microsoft", "code", state)
+    async def test_complete_oauth_invalid_state(self, db_session):
+        with pytest.raises(ValueError, match="Invalid or expired"):
+            await oauth_service.complete_oauth(db_session, "code", "invalid-state")
 
     @pytest.mark.asyncio
     @respx.mock
     async def test_complete_oauth_creates_mailbox_from_provider_email(self, db_session):
         """Should create mailbox when OAuth succeeds and tenant had no mailbox."""
         tenant = await _seed_tenant(db_session)
-        state = _create_state_token(tenant.id, "google")
+        state = _create_state_token(tenant.id)
 
         respx.post("https://oauth2.googleapis.com/token").respond(
             200,
@@ -426,9 +301,7 @@ class TestMailboxOAuthService:
             json={"sub": "google-user-1", "email": "tenant-mailbox@example.com"},
         )
 
-        mailbox = await oauth_service.complete_oauth(
-            db_session, "google", "code", state
-        )
+        mailbox = await oauth_service.complete_oauth(db_session, "code", state)
 
         assert mailbox.status == "connected"
         assert mailbox.auth_method == "oauth"
@@ -436,11 +309,38 @@ class TestMailboxOAuthService:
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_complete_oauth_invalid_state(self, db_session):
-        with pytest.raises(ValueError, match="Invalid or expired"):
-            await oauth_service.complete_oauth(
-                db_session, "google", "code", "invalid-state"
-            )
+    async def test_google_oauth_replaces_app_password(self, db_session):
+        """OAuth completion clears app_password_encrypted, sets auth_method=oauth."""
+        tenant = await _seed_tenant(db_session)
+        await _seed_mailbox(
+            db_session,
+            tenant.id,
+            auth_method="app_password",
+            status="connected",
+            app_password_encrypted=encrypt_value("old-app-pass"),
+        )
+
+        state = _create_state_token(tenant.id)
+
+        respx.post("https://oauth2.googleapis.com/token").respond(
+            200,
+            json={
+                "access_token": "ya29.new-token",
+                "refresh_token": "1//refresh-new",
+                "expires_in": 3600,
+                "scope": "gmail.readonly",
+            },
+        )
+        respx.get("https://www.googleapis.com/oauth2/v3/userinfo").respond(
+            200,
+            json={"sub": "google-user-1", "email": "codes@tenant.com"},
+        )
+
+        mailbox = await oauth_service.complete_oauth(db_session, "code", state)
+
+        assert mailbox.status == "connected"
+        assert mailbox.auth_method == "oauth"
+        assert mailbox.app_password_encrypted is None
 
     @pytest.mark.asyncio
     @respx.mock
@@ -505,8 +405,8 @@ class TestMailboxOAuthService:
         """Non-OAuth mailbox should return mailbox unchanged."""
         mb = TenantMailbox(
             tenant_id=uuid.uuid4(),
-            mailbox_email="test@imap.com",
-            auth_method="imap_app_password",
+            mailbox_email="test@gmail.com",
+            auth_method="app_password",
             status="connected",
         )
         result = await oauth_service.refresh_token(db_session, mb)
@@ -530,32 +430,6 @@ class TestMailboxOAuthService:
         assert mb.oauth_access_token_encrypted is None
         assert mb.oauth_refresh_token_encrypted is None
         assert mb.app_password_encrypted is None
-
-    @pytest.mark.asyncio
-    async def test_refresh_token_microsoft_revokes(self, db_session):
-        """Same invalid_grant flow for Microsoft."""
-        tenant = await _seed_tenant(db_session)
-        mb = await _seed_mailbox(
-            db_session,
-            tenant.id,
-            auth_method="oauth",
-            provider="microsoft",
-            status="connected",
-            oauth_access_token_encrypted=encrypt_value("ms-access"),
-            oauth_refresh_token_encrypted=encrypt_value("ms-refresh"),
-            oauth_token_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
-        )
-
-        respx.post(
-            "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        ).respond(
-            400,
-            json={"error": "invalid_grant", "error_description": "Bad refresh"},
-        )
-
-        result = await oauth_service.refresh_token(db_session, mb)
-        assert result.status == "revoked"
-        assert result.oauth_access_token_encrypted is None
 
 
 # ─── IMAP Service ─────────────────────────────────────────────────────────
@@ -695,7 +569,7 @@ class TestImapService:
             )
 
 
-# ─── Exclusivity (OAuth vs IMAP) ──────────────────────────────────────────
+# ─── Exclusivity (OAuth vs app_password) ──────────────────────────────────
 
 
 class TestExclusivityEnforcement:
@@ -724,7 +598,7 @@ class TestExclusivityEnforcement:
         assert mb.app_password_encrypted is None
 
     @pytest.mark.asyncio
-    async def test_imap_connect_clears_oauth_fields(self, db_session):
+    async def test_app_password_connect_clears_oauth_fields(self, db_session):
         """Configuring app password should clear OAuth tokens."""
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(
@@ -750,6 +624,33 @@ class TestExclusivityEnforcement:
         assert mb.oauth_access_token_encrypted is None
         assert mb.oauth_refresh_token_encrypted is None
         assert mb.app_password_encrypted is not None
+
+
+# ─── Provider dispatch tests (auth_method based) ─────────────────────────
+
+
+class TestProviderDispatch:
+    """Dispatch by auth_method only — no provider branching."""
+
+    pytestmark = pytest.mark.asyncio
+
+    async def test_fetch_dispatches_oauth_to_gmail(self, monkeypatch):
+        from app.services.mail_lookup_worker import providers as pmod
+
+        mailbox = TenantMailbox(auth_method="oauth")
+        fetch = AsyncMock(return_value=[])
+        monkeypatch.setattr(pmod, "fetch_google_emails", fetch)
+        await pmod.fetch_recent_emails(mailbox, 5, db=AsyncMock())
+        fetch.assert_awaited_once()
+
+    async def test_fetch_dispatches_app_password_to_gmail_adapter(self, monkeypatch):
+        from app.services.mail_lookup_worker import providers as pmod
+
+        mailbox = TenantMailbox(auth_method="app_password")
+        fetch = AsyncMock(return_value=[])
+        monkeypatch.setattr(pmod, "fetch_gmail_app_password_emails", fetch)
+        await pmod.fetch_recent_emails(mailbox, 5)
+        fetch.assert_awaited_once_with(mailbox, 5)
 
 
 # ─── Provider token refresh (401 + auto-refresh) ──────────────────────────
@@ -969,147 +870,6 @@ class TestMailboxProviderTokenRefresh:
         ):
             await fetch_google_emails(mb, 5, db=None)
 
-    # ── Microsoft: refresh success ───────────────────────────────────────
-
-    @respx.mock
-    async def test_microsoft_refresh_on_401_success(self, db_session):
-        """401 triggers refresh for Microsoft, new token retried."""
-        tenant = await _seed_tenant(db_session)
-        mb = await _seed_mailbox(
-            db_session,
-            tenant.id,
-            auth_method="oauth",
-            provider="microsoft",
-            status="connected",
-            oauth_access_token_encrypted=encrypt_value("expired-ms-token"),
-            oauth_refresh_token_encrypted=encrypt_value("valid-ms-refresh"),
-            oauth_token_expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
-        )
-
-        graph_url = "https://graph.microsoft.com/v1.0/me/messages"
-
-        # First call 401, second succeeds
-        route = respx.get(graph_url)
-        route.side_effect = [
-            httpx.Response(401),
-            httpx.Response(
-                200,
-                json={
-                    "value": [
-                        {
-                            "id": "ms-msg-1",
-                            "subject": "Your Netflix code",
-                            "body": {
-                                "content": "Code: 789012",
-                                "contentType": "text",
-                            },
-                            "from": {"emailAddress": {"address": "info@netflix.com"}},
-                            "receivedDateTime": "2026-05-27T12:00:00Z",
-                            "internetMessageId": "<ms-msg@mail>",
-                            "toRecipients": [],
-                            "ccRecipients": [],
-                        }
-                    ]
-                },
-            ),
-        ]
-
-        # Refresh token endpoint succeeds
-        respx.post(
-            "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        ).respond(
-            200,
-            json={
-                "access_token": "new-ms-access",
-                "expires_in": 3600,
-                "scope": "Mail.Read",
-            },
-        )
-
-        from app.services.mail_lookup_worker.providers._microsoft import (
-            fetch_microsoft_emails,
-        )
-
-        result = await fetch_microsoft_emails(mb, 5, db=db_session)
-
-        assert len(result) == 1
-        assert "789012" in result[0].body
-
-        # Token was updated
-        new_token = decrypt_value(mb.oauth_access_token_encrypted)
-        assert new_token == "new-ms-access"
-
-    # ── Microsoft: invalid_grant revoked ─────────────────────────────────
-
-    @respx.mock
-    async def test_microsoft_refresh_invalid_grant_revokes(self, db_session):
-        """401 + invalid_grant for Microsoft revokes mailbox."""
-        tenant = await _seed_tenant(db_session)
-        mb = await _seed_mailbox(
-            db_session,
-            tenant.id,
-            auth_method="oauth",
-            provider="microsoft",
-            status="connected",
-            oauth_access_token_encrypted=encrypt_value("expired-ms"),
-            oauth_refresh_token_encrypted=encrypt_value("bad-ms-refresh"),
-            oauth_token_expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
-        )
-
-        graph_url = "https://graph.microsoft.com/v1.0/me/messages"
-        respx.get(graph_url).respond(401)
-
-        respx.post(
-            "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        ).respond(
-            400,
-            json={"error": "invalid_grant", "error_description": "Revoked"},
-        )
-
-        from app.services.mail_lookup_worker.providers import RevokedMailboxError
-        from app.services.mail_lookup_worker.providers._microsoft import (
-            fetch_microsoft_emails,
-        )
-
-        with pytest.raises(RevokedMailboxError, match="revoked"):
-            await fetch_microsoft_emails(mb, 5, db=db_session)
-
-        assert mb.status == "revoked"
-        assert mb.oauth_access_token_encrypted is None
-
-    # ── Microsoft: no db provided → no refresh attempted ─────────────────
-
-    @respx.mock
-    async def test_microsoft_no_db_no_refresh(self, db_session):
-        """Without db, Microsoft 401 raises NonTransientProviderError."""
-        tenant = await _seed_tenant(db_session)
-        mb = await _seed_mailbox(
-            db_session,
-            tenant.id,
-            auth_method="oauth",
-            provider="microsoft",
-            status="connected",
-            oauth_access_token_encrypted=encrypt_value("expired-ms"),
-            oauth_refresh_token_encrypted=encrypt_value("ms-refresh"),
-            oauth_token_expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
-        )
-
-        graph_url = "https://graph.microsoft.com/v1.0/me/messages"
-        respx.get(graph_url).respond(401)
-
-        from app.services.mail_lookup_worker.providers import (
-            NonTransientProviderError,
-        )
-        from app.services.mail_lookup_worker.providers._microsoft import (
-            fetch_microsoft_emails,
-        )
-
-        with pytest.raises(
-            NonTransientProviderError,
-            match="Microsoft token expired/revoked",
-        ):
-            await fetch_microsoft_emails(mb, 5, db=None)
-
 
 # ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -1144,9 +904,6 @@ async def _seed_mailbox(db_session, tenant_id, **overrides):
         "status": "connected",
     }
     kwargs.update(overrides)
-    # Default provider to "google" for OAuth mailboxes unless explicitly set.
-    if "provider" not in kwargs and kwargs["auth_method"] == "oauth":
-        kwargs["provider"] = "google"
     mb = TenantMailbox(**kwargs)
     db_session.add(mb)
     await db_session.commit()
