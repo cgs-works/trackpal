@@ -53,7 +53,7 @@ TrackPal checks this mailbox when someone requests an access code in WhatsApp. U
 
 ## Google Connection (OAuth)
 
-If the `VITE_GMAIL_OAUTH_CONNECT_ENABLED` feature flag is active for your deployment, you can also connect using **Google Connection**. This uses OAuth to grant TrackPal access without sharing an app password.
+If **Google Connection** appears on your screen, you can also use it to connect your mailbox by following the instructions provided.
 
 ## App password eligibility
 

@@ -53,7 +53,7 @@ TrackPal revisa este buzón cuando alguien solicita un código de acceso desde W
 
 ## Conexión de Google (OAuth)
 
-Si el indicador de funcionalidad `VITE_GMAIL_OAUTH_CONNECT_ENABLED` está activo en tu despliegue, también puedes conectar usando **Conexión de Google**. Esto usa OAuth para otorgar acceso a TrackPal sin compartir una contraseña de aplicación.
+Si la opción **Conexión de Google** aparece en tu pantalla, también puedes usarla para conectar tu buzón siguiendo las instrucciones indicadas.
 
 ## Elegibilidad para contraseñas de aplicación
 

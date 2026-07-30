@@ -463,15 +463,13 @@ def test_mailbox_help_mentions_google_connection_is_conditional() -> None:
         for locale in ("en", "es")
     }
 
-    for locale, flag_phrase in (
-        ("en", "VITE_GMAIL_OAUTH_CONNECT_ENABLED"),
-        ("es", "VITE_GMAIL_OAUTH_CONNECT_ENABLED"),
+    for locale, conditional_phrase in (
+        ("en", "If **Google Connection** appears on your screen"),
+        ("es", "Si la opción **Conexión de Google** aparece en tu pantalla"),
     ):
         body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"]
-        assert flag_phrase in body, (
-            f"Mailbox tutorial must mention {flag_phrase} to indicate "
-            f"conditional Google Connection availability"
-        )
+        assert conditional_phrase in body
+        assert "VITE_GMAIL_OAUTH_CONNECT_ENABLED" not in body
 
 
 def test_mailbox_help_covers_app_password_eligibility_causes() -> None:
