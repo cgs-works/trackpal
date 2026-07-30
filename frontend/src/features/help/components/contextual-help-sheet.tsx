@@ -13,10 +13,7 @@ import {
   HELP_TARGET_CONTRACT_VERSION,
   isPrivateHelpEnabled,
 } from "../config";
-import {
-  CONTEXTUAL_HELP_REQUEST_EVENT,
-  requestContextualHelp,
-} from "../contextual-help";
+import { CONTEXTUAL_HELP_REQUEST_EVENT } from "../contextual-help";
 import { findActiveHelpTarget, type HelpTargetId } from "../help-targets";
 import {
   getHelpIndex,
@@ -38,11 +35,9 @@ export function ContextualHelpSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  if (!isPrivateHelpEnabled()) {
-    return null;
-  }
-
   const openHelp = useCallback(async (requestedTarget?: HelpTargetId) => {
+    if (!isPrivateHelpEnabled()) return;
+
     setOpen(true);
     setTopic(null);
     setLoading(true);
@@ -72,8 +67,11 @@ export function ContextualHelpSheet({
   }, []);
 
   useEffect(() => {
-    function handleContextualHelpRequest(event: CustomEvent<HelpTargetId>) {
-      void openHelp(event.detail);
+    if (!isPrivateHelpEnabled()) return;
+
+    function handleContextualHelpRequest(event: Event) {
+      const detail = (event as CustomEvent<HelpTargetId>).detail;
+      void openHelp(detail);
     }
 
     window.addEventListener(CONTEXTUAL_HELP_REQUEST_EVENT, handleContextualHelpRequest);
@@ -81,6 +79,10 @@ export function ContextualHelpSheet({
       window.removeEventListener(CONTEXTUAL_HELP_REQUEST_EVENT, handleContextualHelpRequest);
     };
   }, [openHelp]);
+
+  if (!isPrivateHelpEnabled()) {
+    return null;
+  }
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);

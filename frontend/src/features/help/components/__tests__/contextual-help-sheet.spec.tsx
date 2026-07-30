@@ -62,6 +62,23 @@ describe("ContextualHelpSheet", () => {
     vi.mocked(getHelpTopic).mockResolvedValue(topic);
   });
 
+  it("returns null when private help is disabled without violating hooks rules", () => {
+    vi.stubEnv("VITE_PRIVATE_HELP_ENABLED", "false");
+    const { container } = render(<ContextualHelpSheet />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("does not crash when toggling help enabled → disabled (hooks stability)", () => {
+    const { rerender, unmount } = render(<ContextualHelpSheet />);
+    expect(screen.getByRole("button", { name: "frontend.help.about_screen" })).toBeInTheDocument();
+
+    vi.stubEnv("VITE_PRIVATE_HELP_ENABLED", "false");
+    rerender(<ContextualHelpSheet />);
+    expect(screen.queryByRole("button", { name: "frontend.help.about_screen" })).not.toBeInTheDocument();
+
+    unmount();
+  });
+
   it("opens only the Client topic for a Client target", async () => {
     vi.mocked(getHelpIndex).mockResolvedValue({
       schema_version: 1,
