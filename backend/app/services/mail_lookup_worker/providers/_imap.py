@@ -14,6 +14,7 @@ from typing import Any
 
 from app.core.encryption import decrypt_value
 from app.models.tenant_mailbox import TenantMailbox
+from app.services.gmail_app_password import GMAIL_IMAP_HOST, GMAIL_IMAP_PORT, GMAIL_IMAP_SSL
 from app.services.mail_lookup_worker.providers._types import (
     IMAP_FETCH_TIMEOUT,
     EmailMessage,
@@ -31,13 +32,9 @@ async def fetch_imap_emails(
     window_minutes: int,
 ) -> list[EmailMessage]:
     """Fetch recent emails via IMAP with app-password auth."""
-    host = mailbox.imap_host
-    if not host:
-        raise NonTransientProviderError(
-            "IMAP host not configured", error_code="provider_config_error"
-        )
-    port = mailbox.imap_port or 993
-    ssl = mailbox.imap_ssl if mailbox.imap_ssl is not None else True
+    host = GMAIL_IMAP_HOST
+    port = GMAIL_IMAP_PORT
+    ssl = GMAIL_IMAP_SSL
     username = mailbox.mailbox_email
     password = _get_imap_password(mailbox)
 
@@ -104,15 +101,15 @@ async def fetch_imap_emails(
 
 
 def _get_imap_password(mailbox: TenantMailbox) -> str:
-    """Decrypt and return IMAP password, or raise NonTransient."""
-    encrypted = mailbox.imap_password_encrypted
+    """Decrypt and return app password, or raise NonTransient."""
+    encrypted = mailbox.app_password_encrypted
     if not encrypted:
         raise NonTransientProviderError(
-            "No IMAP password stored", error_code="provider_config_error"
+            "No app password stored", error_code="provider_config_error"
         )
     password = decrypt_value(encrypted)
     if password is None:
-        raise NonTransientProviderError("Failed to decrypt IMAP password")
+        raise NonTransientProviderError("Failed to decrypt app password")
     return password
 
 

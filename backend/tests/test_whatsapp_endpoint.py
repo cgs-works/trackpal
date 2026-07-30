@@ -955,8 +955,7 @@ async def _setup_tenant_for_codigo(db_session, active_tenant_user) -> Tenant:
     mailbox = TenantMailbox(
         tenant_id=tenant.id,
         mailbox_email="tech@example.com",
-        provider="imap",
-        auth_method="password",
+        auth_method="app_password",
         status="connected",
     )
     db_session.add(mailbox)

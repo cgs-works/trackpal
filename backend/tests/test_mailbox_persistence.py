@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from pydantic import ValidationError
 
 from app.core.encryption import encrypt_value
 from app.models import (
@@ -15,6 +16,7 @@ from app.repositories import (
     mailbox_dedupe_repository,
     mailbox_lookup_repository,
 )
+from app.schemas.mailbox import GmailAppPasswordConnectRequest, MailboxAuthMethod
 
 # ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -45,7 +47,6 @@ async def _seed_mailbox(db_session, tenant_id: uuid.UUID, **overrides) -> Tenant
     kwargs = {
         "tenant_id": tenant_id,
         "mailbox_email": "codes@tenant.com",
-        "provider": "google",
         "auth_method": "oauth",
         "status": "connected",
     }
@@ -55,6 +56,26 @@ async def _seed_mailbox(db_session, tenant_id: uuid.UUID, **overrides) -> Tenant
     await db_session.commit()
     await db_session.refresh(mb)
     return mb
+
+
+# ─── Gmail Schema Tests ────────────────────────────────────────────────────
+
+
+def test_gmail_connect_request_requires_email_and_app_password() -> None:
+    payload = GmailAppPasswordConnectRequest(
+        mailbox_email="codes@example.com",
+        app_password="abcd efgh ijkl mnop",
+    )
+    assert payload.mailbox_email == "codes@example.com"
+    assert payload.app_password == "abcd efgh ijkl mnop"
+    assert MailboxAuthMethod.app_password.value == "app_password"
+
+
+def test_gmail_connect_request_rejects_empty_password() -> None:
+    with pytest.raises(ValidationError):
+        GmailAppPasswordConnectRequest(
+            mailbox_email="codes@example.com", app_password=""
+        )
 
 
 # ─── TenantMailbox Repository ──────────────────────────────────────────────
@@ -70,14 +91,13 @@ class TestMailboxConfigRepository:
         mb = TenantMailbox(
             tenant_id=tenant.id,
             mailbox_email="test@example.com",
-            provider="google",
             auth_method="oauth",
             status="disconnected",
         )
         created = await mailbox_config_repository.create(db_session, tenant.id, mb)
         assert created.id is not None
         assert created.mailbox_email == "test@example.com"
-        assert created.provider == "google"
+        assert created.auth_method == "oauth"
 
         fetched = await mailbox_config_repository.get_by_tenant(db_session, tenant.id)
         assert fetched is not None
@@ -129,10 +149,9 @@ class TestMailboxConfigRepository:
         mb = await _seed_mailbox(db_session, tenant.id)
 
         await mailbox_config_repository.update(
-            db_session, mb, mailbox_email="new@example.com", provider="microsoft"
+            db_session, mb, mailbox_email="new@example.com"
         )
         assert mb.mailbox_email == "new@example.com"
-        assert mb.provider == "microsoft"
 
     async def test_delete_mailbox(self, db_session):
         tenant = await _seed_tenant(db_session)
@@ -492,37 +511,14 @@ class TestMailboxDedupeRepository:
 class TestMailboxSchemas:
     """Schema validation tests — no async needed."""
 
-    def test_mailbox_config_update_valid(self):
-        from app.schemas.mailbox import MailboxConfigUpdate, MailboxProvider
+    def test_gmail_connect_request_valid(self):
+        from app.schemas.mailbox import GmailAppPasswordConnectRequest
 
-        payload = MailboxConfigUpdate(
-            provider=MailboxProvider.google,
-            mailbox_email="codes@tenant.com",
+        req = GmailAppPasswordConnectRequest(
+            mailbox_email="user@gmail.com", app_password="abcd efgh ijkl mnop"
         )
-        assert payload.provider == "google"
-        assert payload.mailbox_email == "codes@tenant.com"
-
-    def test_mailbox_config_update_imap_requires_fields(self):
-        from app.schemas.mailbox import MailboxConfigUpdate, MailboxProvider
-
-        with pytest.raises(ValueError, match="IMAP fields required"):
-            MailboxConfigUpdate(
-                provider=MailboxProvider.imap_custom,
-                mailbox_email="imap@tenant.com",
-            )
-
-    def test_mailbox_config_update_imap_with_fields(self):
-        from app.schemas.mailbox import MailboxConfigUpdate, MailboxProvider
-
-        payload = MailboxConfigUpdate(
-            provider=MailboxProvider.imap_custom,
-            mailbox_email="imap@tenant.com",
-            imap_host="imap.example.com",
-            imap_port=993,
-            imap_password="app-password",
-        )
-        assert payload.imap_host == "imap.example.com"
-        assert payload.imap_port == 993
+        assert req.mailbox_email == "user@gmail.com"
+        assert req.app_password == "abcd efgh ijkl mnop"
 
     def test_lookup_create_request(self):
         from app.schemas.mailbox import LookupCreateRequest
@@ -534,7 +530,6 @@ class TestMailboxSchemas:
         assert req.target_email == "user@example.com"
 
     def test_lookup_create_request_empty_fails(self):
-        from pydantic import ValidationError
         from app.schemas.mailbox import LookupCreateRequest
 
         with pytest.raises(ValidationError):
@@ -542,15 +537,14 @@ class TestMailboxSchemas:
 
     def test_enums_values(self):
         from app.schemas.mailbox import (
-            MailboxProvider,
             MailboxAuthMethod,
             MailboxStatus,
             LookupJobStatus,
             LookupResultType,
         )
 
-        assert MailboxProvider.google.value == "google"
         assert MailboxAuthMethod.oauth.value == "oauth"
+        assert MailboxAuthMethod.app_password.value == "app_password"
         assert MailboxStatus.connected.value == "connected"
         assert LookupJobStatus.completed.value == "completed"
         assert LookupResultType.code.value == "code"

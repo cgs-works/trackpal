@@ -389,7 +389,6 @@ class TestMailboxOAuthService:
         )
 
         assert mailbox.status == "connected"
-        assert mailbox.provider == "google"
         assert mailbox.auth_method == "oauth"
         assert mailbox.oauth_access_token_encrypted is not None
         assert mailbox.oauth_refresh_token_encrypted is not None
@@ -432,7 +431,6 @@ class TestMailboxOAuthService:
         )
 
         assert mailbox.status == "connected"
-        assert mailbox.provider == "google"
         assert mailbox.auth_method == "oauth"
         assert mailbox.mailbox_email == "tenant-mailbox@example.com"
 
@@ -453,7 +451,6 @@ class TestMailboxOAuthService:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("old-access"),
@@ -484,7 +481,6 @@ class TestMailboxOAuthService:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("old-access"),
@@ -510,7 +506,6 @@ class TestMailboxOAuthService:
         mb = TenantMailbox(
             tenant_id=uuid.uuid4(),
             mailbox_email="test@imap.com",
-            provider="imap_custom",
             auth_method="imap_app_password",
             status="connected",
         )
@@ -523,19 +518,18 @@ class TestMailboxOAuthService:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("token"),
             oauth_refresh_token_encrypted=encrypt_value("refresh"),
-            imap_password_encrypted=encrypt_value("imap-pass"),
+            app_password_encrypted=encrypt_value("app-pass"),
         )
 
         await oauth_service.disconnect(db_session, mb)
         assert mb.status == "disconnected"
         assert mb.oauth_access_token_encrypted is None
         assert mb.oauth_refresh_token_encrypted is None
-        assert mb.imap_password_encrypted is None
+        assert mb.app_password_encrypted is None
 
     @pytest.mark.asyncio
     async def test_refresh_token_microsoft_revokes(self, db_session):
@@ -544,7 +538,6 @@ class TestMailboxOAuthService:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="microsoft",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("ms-access"),
@@ -710,64 +703,53 @@ class TestExclusivityEnforcement:
 
     @pytest.mark.asyncio
     async def test_oauth_connect_clears_imap_fields(self, db_session):
-        """Connecting via OAuth should clear IMAP password."""
+        """Connecting via OAuth should clear app password."""
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="imap_custom",
-            auth_method="imap_app_password",
+            auth_method="app_password",
             status="connected",
-            imap_host="imap.example.com",
-            imap_port=993,
-            imap_password_encrypted=encrypt_value("imap-password"),
+            app_password_encrypted=encrypt_value("app-password"),
         )
 
         # Switch to OAuth via update
         await mailbox_config_repository.update(
             db_session,
             mb,
-            provider="google",
             auth_method="oauth",
             status="disconnected",
-            imap_host=None,
-            imap_port=None,
-            imap_password_encrypted=None,
+            app_password_encrypted=None,
         )
-        assert mb.imap_password_encrypted is None
-        assert mb.imap_host is None
+        assert mb.app_password_encrypted is None
 
     @pytest.mark.asyncio
     async def test_imap_connect_clears_oauth_fields(self, db_session):
-        """Configuring IMAP should clear OAuth tokens."""
+        """Configuring app password should clear OAuth tokens."""
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("token"),
             oauth_refresh_token_encrypted=encrypt_value("refresh"),
         )
 
-        # Switch to IMAP
+        # Switch to app_password
         await mailbox_config_repository.update(
             db_session,
             mb,
-            provider="imap_custom",
-            auth_method="imap_app_password",
+            auth_method="app_password",
             status="connected",
-            imap_host="imap.test.com",
-            imap_port=993,
-            imap_password_encrypted=encrypt_value("new-pass"),
+            app_password_encrypted=encrypt_value("new-pass"),
             oauth_access_token_encrypted=None,
             oauth_refresh_token_encrypted=None,
             oauth_token_expires_at=None,
         )
         assert mb.oauth_access_token_encrypted is None
         assert mb.oauth_refresh_token_encrypted is None
-        assert mb.imap_password_encrypted is not None
+        assert mb.app_password_encrypted is not None
 
 
 # ─── Provider token refresh (401 + auto-refresh) ──────────────────────────
@@ -787,7 +769,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-token"),
@@ -866,7 +847,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("valid-token"),
@@ -923,7 +903,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-token"),
@@ -967,7 +946,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="google",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-token"),
@@ -1000,7 +978,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="microsoft",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-ms-token"),
@@ -1070,7 +1047,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="microsoft",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-ms"),
@@ -1108,7 +1084,6 @@ class TestMailboxProviderTokenRefresh:
         mb = await _seed_mailbox(
             db_session,
             tenant.id,
-            provider="microsoft",
             auth_method="oauth",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-ms"),
@@ -1162,7 +1137,6 @@ async def _seed_mailbox(db_session, tenant_id, **overrides):
     kwargs = {
         "tenant_id": tenant_id,
         "mailbox_email": "codes@tenant.com",
-        "provider": "google",
         "auth_method": "oauth",
         "status": "connected",
     }

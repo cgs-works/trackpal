@@ -153,7 +153,6 @@ class MailboxOAuthService:
             mailbox = TenantMailbox(
                 tenant_id=tenant_id,
                 mailbox_email=mailbox_email,
-                provider=provider,
                 auth_method="oauth",
                 status="connected",
                 oauth_provider_user_id=provider_user_id,
@@ -170,13 +169,9 @@ class MailboxOAuthService:
                 db,
                 mailbox,
                 mailbox_email=mailbox_email,
-                provider=provider,
                 auth_method="oauth",
                 status="connected",
-                imap_host=None,
-                imap_port=None,
-                imap_ssl=None,
-                imap_password_encrypted=None,
+                app_password_encrypted=None,
                 oauth_provider_user_id=provider_user_id,
                 oauth_provider_email=mailbox_email,
                 oauth_access_token_encrypted=encrypt_value(token_info.access_token),
@@ -186,7 +181,7 @@ class MailboxOAuthService:
                 last_connection_error=None,
             )
 
-        metrics.inc("oauth_complete_total", provider=provider, status="connected")
+        metrics.inc("oauth_complete_total", provider=provider, status="ok")
         return mailbox
 
     async def refresh_token(
@@ -209,14 +204,21 @@ class MailboxOAuthService:
             )
             return mailbox
 
+        # Determine provider from email domain (Gmail vs Outlook)
+        email = (mailbox.mailbox_email or "").lower()
+        if email.endswith("@gmail.com"):
+            provider = "google"
+        else:
+            provider = "microsoft"
+
         try:
-            if mailbox.provider == "google":
+            if provider == "google":
                 result = await google_refresh(
                     settings.google_oauth_client_id,
                     settings.google_oauth_client_secret,
                     refresh_token,
                 )
-            elif mailbox.provider == "microsoft":
+            elif provider == "microsoft":
                 result = await microsoft_refresh(
                     settings.microsoft_oauth_client_id,
                     settings.microsoft_oauth_client_secret,
@@ -235,9 +237,7 @@ class MailboxOAuthService:
                 oauth_token_expires_at=None,
                 last_connection_error=str(exc),
             )
-            metrics.inc(
-                "oauth_refresh_total", provider=mailbox.provider, status="revoked"
-            )
+            metrics.inc("oauth_refresh_total", provider=provider, status="revoked")
             return mailbox
 
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=result.expires_in)
@@ -249,7 +249,7 @@ class MailboxOAuthService:
             oauth_scope=result.scope,
             last_connection_error=None,
         )
-        metrics.inc("oauth_refresh_total", provider=mailbox.provider, status="ok")
+        metrics.inc("oauth_refresh_total", provider=provider, status="ok")
         return mailbox
 
     async def disconnect(
@@ -266,8 +266,8 @@ class MailboxOAuthService:
             oauth_scope=None,
             oauth_provider_user_id=None,
             oauth_provider_email=None,
-            imap_password_encrypted=None,
+            app_password_encrypted=None,
             last_connection_error=None,
         )
-        metrics.inc("oauth_disconnect_total", provider=mailbox.provider)
+        metrics.inc("oauth_disconnect_total", provider="oauth")
         return mailbox

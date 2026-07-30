@@ -41,7 +41,9 @@ async def test_validate_uses_fixed_gmail_settings(monkeypatch) -> None:
         (gmail_app_password.ImapUnavailableError, "unavailable"),
     ],
 )
-async def test_validate_maps_imap_failures(monkeypatch, error_type, expected_code) -> None:
+async def test_validate_maps_imap_failures(
+    monkeypatch, error_type, expected_code
+) -> None:
     monkeypatch.setattr(
         gmail_app_password,
         "test_imap_connection",

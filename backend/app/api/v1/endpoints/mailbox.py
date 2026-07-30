@@ -1,12 +1,12 @@
 """Tenant mailbox configuration endpoints."""
 
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 
 from app.api.dependencies import ActiveTenantId, DbDep
 from app.api.v1.endpoints._mailbox_helpers import (
-    derive_auth_method,
     handle_test_error,
     mailbox_response,
     oauth_service,
@@ -18,10 +18,14 @@ from app.core.metrics import metrics
 from app.models import TenantMailbox
 from app.repositories import mailbox_config_repository
 from app.schemas.mailbox import (
-    MailboxConfigUpdate,
+    GmailAppPasswordConnectRequest,
     MailboxResponse,
     MailboxTestResponse,
     OAuthStartResponse,
+)
+from app.services.gmail_app_password import (
+    GmailAppPasswordError,
+    validate_gmail_app_password,
 )
 from app.services.imap_service import ImapConnectionError
 
@@ -59,6 +63,7 @@ def _oauth_callback_html(status_value: str) -> str:
   </body>
 </html>"""
 
+
 @router.get("/", response_model=MailboxResponse)
 async def get_mailbox(
     db: DbDep,
@@ -76,60 +81,62 @@ async def get_mailbox(
 
 @router.put("/", response_model=MailboxResponse)
 async def upsert_mailbox(
-    payload: MailboxConfigUpdate,
+    payload: GmailAppPasswordConnectRequest,
     db: DbDep,
     tenant_id: ActiveTenantId,
 ):
-    """Create or update mailbox configuration."""
-    auth_method = derive_auth_method(payload.provider.value)
+    """Create or update mailbox configuration.
+
+    Validates the Gmail app password before persisting. On success,
+    atomically creates or replaces the mailbox row. On validation failure,
+    returns a safe error code without mutating existing data.
+    """
+    # Validate before loading or mutating the existing mailbox
+    try:
+        normalized_password = await validate_gmail_app_password(
+            payload.mailbox_email, payload.app_password
+        )
+    except GmailAppPasswordError as exc:
+        if exc.code == "authentication_rejected":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="gmail_app_password_rejected",
+            ) from exc
+        # timeout and unavailable -> 503
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="gmail_connection_unavailable",
+        ) from exc
+
     existing = await mailbox_config_repository.get_by_tenant(db, tenant_id)
 
+    now = datetime.now(timezone.utc)
+    values = {
+        "mailbox_email": payload.mailbox_email,
+        "auth_method": "app_password",
+        "status": "connected",
+        "app_password_encrypted": encrypt_value(normalized_password),
+        "oauth_provider_user_id": None,
+        "oauth_provider_email": None,
+        "oauth_access_token_encrypted": None,
+        "oauth_refresh_token_encrypted": None,
+        "oauth_token_expires_at": None,
+        "oauth_scope": None,
+        "last_connection_test_at": now,
+        "last_connection_error": None,
+    }
+
     if existing:
-        kwargs: dict[str, object | None] = {
-            "mailbox_email": payload.mailbox_email,
-            "provider": payload.provider.value,
-            "auth_method": auth_method,
-            "status": "disconnected",
-        }
-        if payload.provider.value == "imap_custom":
-            # Validated by schema model_validator for imap_custom
-            if payload.imap_password is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="IMAP password is required",
-                )
-            kwargs["imap_host"] = payload.imap_host
-            kwargs["imap_port"] = payload.imap_port
-            kwargs["imap_ssl"] = payload.imap_ssl
-            kwargs["imap_password_encrypted"] = encrypt_value(payload.imap_password)
-            kwargs["oauth_access_token_encrypted"] = None
-            kwargs["oauth_refresh_token_encrypted"] = None
-            kwargs["oauth_token_expires_at"] = None
-        else:
-            kwargs["imap_host"] = None
-            kwargs["imap_port"] = None
-            kwargs["imap_password_encrypted"] = None
-        mailbox = await mailbox_config_repository.update(db, existing, **kwargs)
+        mailbox = await mailbox_config_repository.update(db, existing, **values)
     else:
         mailbox = TenantMailbox(
             tenant_id=tenant_id,
-            mailbox_email=payload.mailbox_email,
-            provider=payload.provider.value,
-            auth_method=auth_method,
-            status="disconnected",
+            **values,
         )
-        if payload.provider.value == "imap_custom":
-            mailbox.imap_host = payload.imap_host
-            mailbox.imap_port = payload.imap_port
-            mailbox.imap_ssl = payload.imap_ssl
-            mailbox.imap_password_encrypted = (
-                encrypt_value(payload.imap_password)
-                if payload.imap_password is not None
-                else None
-            )
         mailbox = await mailbox_config_repository.create(db, tenant_id, mailbox)
 
     await db.commit()
+    await db.refresh(mailbox)
     metrics.inc("mailbox_api_request", endpoint="upsert_mailbox", status="ok")
     return mailbox_response(mailbox)
 
@@ -143,12 +150,6 @@ async def test_mailbox_connection(
     mailbox = await mailbox_config_repository.get_by_tenant(db, tenant_id)
     if mailbox is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Mailbox not configured")
-
-    if mailbox.auth_method == "oauth":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Manual test is only available for IMAP mailboxes",
-        )
 
     try:
         result = await _run_mailbox_test(db, mailbox)

@@ -4,21 +4,15 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Enums ---
 
 
-class MailboxProvider(str, Enum):
-    google = "google"
-    microsoft = "microsoft"
-    imap_custom = "imap_custom"
-
-
 class MailboxAuthMethod(str, Enum):
     oauth = "oauth"
-    imap_app_password = "imap_app_password"
+    app_password = "app_password"
 
 
 class MailboxStatus(str, Enum):
@@ -43,34 +37,17 @@ class LookupResultType(str, Enum):
     duplicate_suppressed = "duplicate_suppressed"
 
 
+# --- Gmail-only connect schema ---
+
+
+class GmailAppPasswordConnectRequest(BaseModel):
+    """Payload for connecting a Gmail mailbox via app password."""
+
+    mailbox_email: str = Field(min_length=3, max_length=255)
+    app_password: str = Field(min_length=1, max_length=500)
+
+
 # --- Tenant dashboard schemas ---
-
-
-class MailboxConfigUpdate(BaseModel):
-    model_config = ConfigDict()
-
-    provider: MailboxProvider
-    mailbox_email: str = Field(min_length=1, max_length=255)
-
-    # IMAP fields (required when provider=imap_custom)
-    imap_host: str | None = Field(None, max_length=255)
-    imap_port: int | None = Field(None, ge=1, le=65535)
-    imap_ssl: bool | None = True
-    imap_password: str | None = Field(None, min_length=1, max_length=500)
-
-    @model_validator(mode="after")
-    def validate_imap_fields(self):
-        if self.provider == MailboxProvider.imap_custom:
-            missing = []
-            if not self.imap_host:
-                missing.append("imap_host")
-            if not self.imap_port:
-                missing.append("imap_port")
-            if not self.imap_password:
-                missing.append("imap_password")
-            if missing:
-                raise ValueError(f"IMAP fields required: {', '.join(missing)}")
-        return self
 
 
 class MailboxResponse(BaseModel):
@@ -79,14 +56,10 @@ class MailboxResponse(BaseModel):
     id: UUID
     tenant_id: UUID
     mailbox_email: str
-    provider: str
     auth_method: str
     status: str
     oauth_provider_user_id: str | None = None
     oauth_provider_email: str | None = None
-    imap_host: str | None = None
-    imap_port: int | None = None
-    imap_ssl: bool | None = None
     last_connection_test_at: datetime | None = None
     last_connection_error: str | None = None
     created_at: datetime

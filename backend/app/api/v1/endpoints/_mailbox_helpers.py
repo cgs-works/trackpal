@@ -7,6 +7,11 @@ from app.core.metrics import metrics
 from app.models import TenantMailbox
 from app.repositories import mailbox_config_repository
 from app.schemas.mailbox import MailboxResponse, MailboxTestResponse
+from app.services.gmail_app_password import (
+    GMAIL_IMAP_HOST,
+    GMAIL_IMAP_PORT,
+    GMAIL_IMAP_SSL,
+)
 from app.services.imap_service import ImapConnectionError, test_imap_connection
 from app.services.oauth_service import MailboxOAuthService
 
@@ -19,14 +24,10 @@ def mailbox_response(mb: TenantMailbox) -> MailboxResponse:
         id=mb.id,
         tenant_id=mb.tenant_id,
         mailbox_email=mb.mailbox_email,
-        provider=mb.provider,
         auth_method=mb.auth_method,
         status=mb.status,
         oauth_provider_user_id=mb.oauth_provider_user_id,
         oauth_provider_email=mb.oauth_provider_email,
-        imap_host=mb.imap_host,
-        imap_port=mb.imap_port,
-        imap_ssl=mb.imap_ssl,
         last_connection_test_at=mb.last_connection_test_at,
         last_connection_error=mb.last_connection_error,
         created_at=mb.created_at,
@@ -34,36 +35,24 @@ def mailbox_response(mb: TenantMailbox) -> MailboxResponse:
     )
 
 
-def derive_auth_method(provider: str) -> str:
-    """Derive ``auth_method`` from provider string."""
-    if provider in ("google", "microsoft"):
-        return "oauth"
-    if provider == "imap_custom":
-        return "imap_app_password"
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Unsupported provider: {provider}",
-    )
-
-
-async def _perform_imap_test(db, mailbox: TenantMailbox) -> MailboxTestResponse:
-    """Test IMAP connection using stored credentials."""
-    if not mailbox.imap_host or not mailbox.imap_password_encrypted:
+async def _perform_app_password_test(db, mailbox: TenantMailbox) -> MailboxTestResponse:
+    """Test Gmail app-password connection using stored credentials."""
+    if not mailbox.app_password_encrypted:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="IMAP configuration incomplete",
+            detail="App password not configured",
         )
-    password = decrypt_value(mailbox.imap_password_encrypted)
+    password = decrypt_value(mailbox.app_password_encrypted)
     if password is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="IMAP password not available",
+            detail="App password not available",
         )
     try:
         await test_imap_connection(
-            host=mailbox.imap_host,
-            port=mailbox.imap_port or 993,
-            ssl=mailbox.imap_ssl if mailbox.imap_ssl is not None else True,
+            host=GMAIL_IMAP_HOST,
+            port=GMAIL_IMAP_PORT,
+            ssl=GMAIL_IMAP_SSL,
             username=mailbox.mailbox_email,
             password=password,
         )
@@ -112,9 +101,9 @@ async def _record_test_success(
 
 
 async def test_mailbox_connection(db, mailbox: TenantMailbox) -> MailboxTestResponse:
-    """Route test to the correct provider/auth method."""
-    if mailbox.auth_method == "imap_app_password":
-        return await _perform_imap_test(db, mailbox)
+    """Route test to the correct auth method."""
+    if mailbox.auth_method == "app_password":
+        return await _perform_app_password_test(db, mailbox)
     if mailbox.auth_method == "oauth":
         return await _perform_oauth_test(db, mailbox)
     raise HTTPException(

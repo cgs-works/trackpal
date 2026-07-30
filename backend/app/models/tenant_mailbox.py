@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,7 +21,6 @@ class TenantMailbox(Base, TimestampMixin):
         nullable=False,
     )
     mailbox_email: Mapped[str] = mapped_column(String(255), nullable=False)
-    provider: Mapped[str] = mapped_column(String(50), nullable=False)
     auth_method: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(
         String(50),
@@ -30,13 +29,8 @@ class TenantMailbox(Base, TimestampMixin):
         nullable=False,
     )
 
-    # IMAP fields
-    imap_host: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    imap_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    imap_ssl: Mapped[bool | None] = mapped_column(
-        Boolean, default=True, server_default="true", nullable=True
-    )
-    imap_password_encrypted: Mapped[str | None] = mapped_column(
+    # Gmail app-password credential
+    app_password_encrypted: Mapped[str | None] = mapped_column(
         String(500), nullable=True
     )
 
