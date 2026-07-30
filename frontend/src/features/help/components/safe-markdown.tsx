@@ -4,14 +4,52 @@ interface SafeMarkdownProps {
   source: string;
 }
 
+const ALLOWED_EXTERNAL_HELP_HOSTS = new Set([
+  "myaccount.google.com",
+  "support.google.com",
+]);
+
+function allowedExternalHelpUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && ALLOWED_EXTERNAL_HELP_HOSTS.has(url.hostname)
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const INLINE_TOKEN_PATTERN = /(\*\*[^*]+\*\*|\[[^\]]+\]\(https:\/\/[^)]+\))/g;
+
 function renderInlineMarkdown(value: string): ReactNode {
-  return value.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>
-    ) : (
-      part
-    ),
-  );
+  const tokens = value.split(INLINE_TOKEN_PATTERN);
+  return tokens.map((token, index) => {
+    if (token.startsWith("**") && token.endsWith("**")) {
+      return <strong key={`${token}-${index}`}>{token.slice(2, -2)}</strong>;
+    }
+
+    const linkMatch = token.match(/^\[([^\]]+)\]\((https:\/\/[^)]+)\)$/);
+    if (linkMatch) {
+      const [, label, destination] = linkMatch;
+      const href = allowedExternalHelpUrl(destination);
+      return href ? (
+        <a
+          key={`${href}-${index}`}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {label}
+        </a>
+      ) : (
+        label
+      );
+    }
+
+    return token;
+  });
 }
 
 export function SafeMarkdown({ source }: SafeMarkdownProps) {
@@ -50,6 +88,21 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
                 </li>
               ))}
             </ul>
+          );
+        }
+
+        if (lines.length > 0 && lines.every((line) => /^\d+\.\s+/.test(line))) {
+          return (
+            <ol
+              key={`ordered-list-${index}`}
+              className="flex max-w-none list-decimal flex-col gap-2 pl-5 text-justify text-muted-foreground"
+            >
+              {lines.map((line, lineIndex) => (
+                <li key={`${line}-${lineIndex}`}>
+                  {renderInlineMarkdown(line.replace(/^\d+\.\s+/, ""))}
+                </li>
+              ))}
+            </ol>
           );
         }
 

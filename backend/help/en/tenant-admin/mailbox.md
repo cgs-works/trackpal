@@ -18,10 +18,11 @@ summary: Connect the inbox that receives emails containing access codes.
 search_tags:
   - mailbox
   - email inbox
-  - OAuth
-  - IMAP
+  - Gmail
+  - Google
   - connection test
   - access-code email
+  - app password
 synonyms:
   - code mailbox
   - central inbox
@@ -40,13 +41,26 @@ related_topics:
 
 TrackPal checks this mailbox when someone requests an access code in WhatsApp. Use an inbox managed by the business, not a client's personal email.
 
-## Choose how to connect
+## Connect your Gmail inbox
 
-- **Google or Microsoft:** guided connection. Approve access in the provider window without entering your password in TrackPal. This option uses OAuth.
-- **IMAP:** manual setup for other providers or anyone who prefers to enter the connection details. You can choose IMAP as an alternative to OAuth.
+1. Go to [App passwords](https://myaccount.google.com/apppasswords) and make sure **2-Step Verification** is enabled on your Google Account.
+2. If 2-Step Verification is not enabled, follow Google's guide at [2-Step Verification help](https://support.google.com/accounts/answer/185833) to activate it first.
+3. On the App passwords page, select **Mail** as the app and **Other (Custom name)** as the device. Enter a name like "TrackPal" and click **Generate**.
+4. Copy the 16-character password that appears.
+5. In TrackPal, go to **Settings > Mailbox** and select **Google Connection**.
+6. Enter your Gmail address and paste the app password you generated.
+7. Click **Test connection**. When the status shows **Connected**, your mailbox is ready.
 
-After connecting the account, select **Test connection**. Continue when the status is **Connected**.
+## App password eligibility
+
+You can generate an app password only when **2-Step Verification** is enabled on your Google Account. If you don't see the App passwords option, enable 2-Step Verification first.
+
+## Important security notes
+
+- **Do not use your normal Gmail password.** Always use an app password for the connection.
+- If you change your Google Account password, the app password is automatically revoked. You'll need to generate a new one and reconnect.
+- If you lose access, generate a new app password at [App passwords](https://myaccount.google.com/apppasswords) and update the connection in TrackPal.
 
 ## If the connection fails
 
-Review the visible message and test again. If Google or Microsoft permission expired, reconnect the account. For IMAP, confirm the details supplied by your email provider. Disconnect the mailbox only when you intend to replace it, because access-code search pauses until a new connection is ready.
+Review the visible message and test again. Make sure you're using an app password, not your regular password. If the connection was working before and stopped, check whether your Google Account password was changed — this revokes all app passwords.

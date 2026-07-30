@@ -7,6 +7,7 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -97,6 +98,7 @@ ALLOWED_SETTINGS_CATEGORIES = {
     "timezone",
     "whatsapp-link",
 }
+ALLOWED_EXTERNAL_HELP_HOSTS = {"myaccount.google.com", "support.google.com"}
 REQUIRED_FIELDS = {
     "id",
     "audience",
@@ -122,6 +124,7 @@ HTML_PATTERN = re.compile(r"(?is)<\s*(?:/?\s*[a-zA-Z][^>]*|!--|!doctype\b|\?.*?\
 EXECUTABLE_PATTERN = re.compile(
     r"(?im)(?:javascript\s*:|data\s*:\s*text/html|\bon[a-z]+\s*=|^\s*(?:import|export)\s+|^\s*[{}])"
 )
+MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
 class HelpValidationError(ValueError):
@@ -202,6 +205,7 @@ class HelpCompiler:
         frontmatter, body = _split_frontmatter(path)
         self._validate_frontmatter(frontmatter, path)
         _reject_unsafe_content(body, path)
+        _validate_external_help_links(body, path)
 
         topic_id = _string(frontmatter, "id", path)
         return {
@@ -352,6 +356,12 @@ class HelpCompiler:
                 raise HelpValidationError(
                     f"Topic metadata parity mismatch for {topic_id}: tour"
                 )
+            english_links = _absolute_link_destinations(english_topic["body"])
+            spanish_links = _absolute_link_destinations(spanish_topic["body"])
+            if english_links != spanish_links:
+                raise HelpValidationError(
+                    f"External URL parity mismatch for {topic_id}"
+                )
 
     def _compile_tour_releases(
         self, topics_by_locale: dict[str, list[dict[str, Any]]]
@@ -460,6 +470,29 @@ def validate_artifact(
                 raise HelpValidationError(
                     f"Help artifact is missing {locale} {key} data"
                 )
+
+
+def _absolute_link_destinations(body: str) -> set[str]:
+    """Extract absolute link destinations from Markdown body."""
+    return {
+        destination
+        for _, destination in MARKDOWN_LINK_PATTERN.findall(body)
+        if urlsplit(destination).scheme or urlsplit(destination).netloc
+    }
+
+
+def _validate_external_help_links(body: str, path: Path) -> None:
+    """Validate that external links use HTTPS and allowed hosts."""
+    for destination in _absolute_link_destinations(body):
+        parsed = urlsplit(destination)
+        if parsed.scheme != "https":
+            raise HelpValidationError(
+                f"External Help URL must use HTTPS in {path.name}"
+            )
+        if parsed.hostname not in ALLOWED_EXTERNAL_HELP_HOSTS:
+            raise HelpValidationError(
+                f"Unknown external Help host in {path.name}"
+            )
 
 
 def _split_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
