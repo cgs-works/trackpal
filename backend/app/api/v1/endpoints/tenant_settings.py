@@ -2,7 +2,13 @@
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.dependencies import ActiveTenantId, CurrentUser, DemoGuardedUser, DbDep, TenantPlanDep
+from app.api.dependencies import (
+    ActiveTenantId,
+    CurrentUser,
+    DemoGuardedUser,
+    DbDep,
+    TenantPlanDep,
+)
 from app.api.v1.endpoints.subscriptions._common import require_tenant_or_master
 from app.schemas.tenant_settings import TenantSettingsResponse, TenantSettingsUpdate
 from app.services.subscription_service.timezone_catalog import list_timezones
@@ -35,12 +41,18 @@ async def update_tenant_settings(
     tenant_plan: TenantPlanDep,
 ):
     require_tenant_or_master(current_user)
-    if current_user.role == "tenant" and tenant_plan == "starter" and payload.timezone is not None:
+    if (
+        current_user.role == "tenant"
+        and tenant_plan == "starter"
+        and payload.timezone is not None
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     try:
         settings = await service.update_settings(db, tenant_id, payload)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if current_user.role == "tenant" and tenant_plan == "starter":
         settings.timezone = None
     return settings

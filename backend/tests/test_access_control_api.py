@@ -19,7 +19,9 @@ class _FakeRedis:
     async def get(self, key: str) -> str | None:
         return self.store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self.store[key] = value
 
     async def delete(self, key: str) -> int:
@@ -35,20 +37,28 @@ class _FakeManager:
 
 
 async def _tenant_headers(client):
-    login = await client.post("/api/v1/auth/login", json={"username": "tenant", "password": "tenant-password"})
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "tenant", "password": "tenant-password"}
+    )
     assert login.status_code == 200, login.text
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
 async def _tenant(db_session, active_tenant_user):
-    row = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    row = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     return row.scalar_one()
 
 
-async def test_access_control_list_block_duplicate_and_unblock(client, db_session, active_tenant_user):
+async def test_access_control_list_block_duplicate_and_unblock(
+    client, db_session, active_tenant_user
+):
     headers = await _tenant_headers(client)
 
-    created = await client.post("/api/v1/access-control/blocks", json={"phone": "+12015550222"}, headers=headers)
+    created = await client.post(
+        "/api/v1/access-control/blocks", json={"phone": "+12015550222"}, headers=headers
+    )
     assert created.status_code == 201, created.text
     body = created.json()
     assert body["phone"] == "12015550222"
@@ -59,7 +69,9 @@ async def test_access_control_list_block_duplicate_and_unblock(client, db_sessio
     assert row is not None
     assert row.tenant_id == tenant.id
 
-    duplicate = await client.post("/api/v1/access-control/blocks", json={"phone": "+12015550222"}, headers=headers)
+    duplicate = await client.post(
+        "/api/v1/access-control/blocks", json={"phone": "+12015550222"}, headers=headers
+    )
     assert duplicate.status_code == 409
 
     listed = await client.get("/api/v1/access-control/blocks", headers=headers)
@@ -67,7 +79,9 @@ async def test_access_control_list_block_duplicate_and_unblock(client, db_sessio
     assert [row["phone"] for row in listed.json()] == ["12015550222"]
     assert "is_active" not in listed.json()[0]
 
-    deleted = await client.delete(f"/api/v1/access-control/blocks/{body['id']}", headers=headers)
+    deleted = await client.delete(
+        f"/api/v1/access-control/blocks/{body['id']}", headers=headers
+    )
     assert deleted.status_code == 204
 
     listed_again = await client.get("/api/v1/access-control/blocks", headers=headers)
@@ -79,11 +93,18 @@ async def test_access_control_list_block_duplicate_and_unblock(client, db_sessio
     assert await db_session.get(BlockedClient, uuid.UUID(body["id"])) is None
 
 
-async def test_block_phone_cancels_active_codigo_session_and_job(client, db_session, active_tenant_user, monkeypatch):
+async def test_block_phone_cancels_active_codigo_session_and_job(
+    client, db_session, active_tenant_user, monkeypatch
+):
     from app.services import access_control_service
 
     tenant = await _tenant(db_session, active_tenant_user)
-    mailbox = TenantMailbox(tenant_id=tenant.id, mailbox_email="codes@example.com", auth_method="oauth", status="connected")
+    mailbox = TenantMailbox(
+        tenant_id=tenant.id,
+        mailbox_email="codes@example.com",
+        auth_method="oauth",
+        status="connected",
+    )
     db_session.add(mailbox)
     await db_session.flush()
     job = MailLookupJob(
@@ -105,10 +126,14 @@ async def test_block_phone_cancels_active_codigo_session_and_job(client, db_sess
         step="awaiting_result",
         temp_data={"lookup_job_id": str(job.id)},
     ).model_dump_json()
-    monkeypatch.setattr(access_control_service, "get_redis_manager", lambda: _FakeManager(redis))
+    monkeypatch.setattr(
+        access_control_service, "get_redis_manager", lambda: _FakeManager(redis)
+    )
 
     headers = await _tenant_headers(client)
-    created = await client.post("/api/v1/access-control/blocks", json={"phone": "+12015550223"}, headers=headers)
+    created = await client.post(
+        "/api/v1/access-control/blocks", json={"phone": "+12015550223"}, headers=headers
+    )
     assert created.status_code == 201, created.text
 
     assert session_key not in redis.store

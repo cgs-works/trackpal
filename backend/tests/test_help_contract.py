@@ -483,7 +483,10 @@ def test_mailbox_help_covers_app_password_eligibility_causes() -> None:
 
     for locale, phrases in (
         ("en", ("2-step verification", "work or school", "advanced protection")),
-        ("es", ("verificación en dos pasos", "trabajo o escuela", "protección avanzada")),
+        (
+            "es",
+            ("verificación en dos pasos", "trabajo o escuela", "protección avanzada"),
+        ),
     ):
         body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"].lower()
         for phrase in phrases:

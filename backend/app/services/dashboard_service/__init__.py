@@ -5,7 +5,14 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 
-from app.models import BlockedClient, Client, Service, Subscription, TenantMailbox, TenantSettings
+from app.models import (
+    BlockedClient,
+    Client,
+    Service,
+    Subscription,
+    TenantMailbox,
+    TenantSettings,
+)
 from app.models.user import User
 from app.repositories import code_services_repository, tenants_repository
 from app.schemas.dashboard import (
@@ -48,7 +55,9 @@ class DashboardService:
     async def _tenant_dashboard(self, db, profile) -> TenantDashboardResponse:
         tenant_id = profile.id
         mailbox_status = await self._mailbox_status(db, tenant_id)
-        enabled = await code_services_repository.get_effective_service_keys(db, tenant_id)
+        enabled = await code_services_repository.get_effective_service_keys(
+            db, tenant_id
+        )
         access_count = await self._access_control_count(db, tenant_id)
         payload = TenantDashboardResponse(
             full_name=profile.full_name,
@@ -59,39 +68,57 @@ class DashboardService:
             access_control_count=access_count,
         )
         if profile.plan == "pro":
-            payload.active_clients = await self._count(db, Client, tenant_id, Client.is_active.is_(True))
+            payload.active_clients = await self._count(
+                db, Client, tenant_id, Client.is_active.is_(True)
+            )
             payload.catalog_services = await self._count(db, Service, tenant_id)
-            payload.active_subscriptions = await self._count(db, Subscription, tenant_id, Subscription.status == "active")
-            payload.subscriptions_expiring_soon = await self._subscriptions_expiring_soon(db, tenant_id)
+            payload.active_subscriptions = await self._count(
+                db, Subscription, tenant_id, Subscription.status == "active"
+            )
+            payload.subscriptions_expiring_soon = (
+                await self._subscriptions_expiring_soon(db, tenant_id)
+            )
         return payload
 
     async def _mailbox_status(self, db, tenant_id) -> str:
-        row = await db.execute(select(TenantMailbox.status).where(TenantMailbox.tenant_id == tenant_id))
+        row = await db.execute(
+            select(TenantMailbox.status).where(TenantMailbox.tenant_id == tenant_id)
+        )
         return row.scalar_one_or_none() or "missing"
 
     async def _access_control_count(self, db, tenant_id) -> int:
         row = await db.execute(
-            select(func.count()).select_from(BlockedClient).where(BlockedClient.tenant_id == tenant_id)
+            select(func.count())
+            .select_from(BlockedClient)
+            .where(BlockedClient.tenant_id == tenant_id)
         )
         return int(row.scalar_one())
 
     async def _count(self, db, model, tenant_id, *conditions) -> int:
-        stmt = select(func.count()).select_from(model).where(model.tenant_id == tenant_id)
+        stmt = (
+            select(func.count()).select_from(model).where(model.tenant_id == tenant_id)
+        )
         for condition in conditions:
             stmt = stmt.where(condition)
         row = await db.execute(stmt)
         return int(row.scalar_one())
 
     async def _subscriptions_expiring_soon(self, db, tenant_id) -> int:
-        settings_row = await db.execute(select(TenantSettings.timezone).where(TenantSettings.tenant_id == tenant_id))
+        settings_row = await db.execute(
+            select(TenantSettings.timezone).where(TenantSettings.tenant_id == tenant_id)
+        )
         tz_name = settings_row.scalar_one_or_none() or "UTC"
         try:
             tz = ZoneInfo(tz_name)
         except (KeyError, TypeError, ValueError):
             tz = ZoneInfo("UTC")
         local_today = datetime.now(timezone.utc).astimezone(tz).date()
-        start_utc = datetime.combine(local_today, time.min, tzinfo=tz).astimezone(timezone.utc)
-        end_utc = datetime.combine(local_today + timedelta(days=7), time.max, tzinfo=tz).astimezone(timezone.utc)
+        start_utc = datetime.combine(local_today, time.min, tzinfo=tz).astimezone(
+            timezone.utc
+        )
+        end_utc = datetime.combine(
+            local_today + timedelta(days=7), time.max, tzinfo=tz
+        ).astimezone(timezone.utc)
         row = await db.execute(
             select(func.count())
             .select_from(Subscription)

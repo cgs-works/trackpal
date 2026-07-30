@@ -642,8 +642,14 @@ async def test_zip_contains_all_expected_files(db_session, active_tenant_user):
     assert tenant is not None
 
     zip_bytes = await _build_zip(
-        tenant, "en", "UTC", clients=[], blocked_phones=[],
-        services=[], plans_by_service={}, subscription_rows=[],
+        tenant,
+        "en",
+        "UTC",
+        clients=[],
+        blocked_phones=[],
+        services=[],
+        plans_by_service={},
+        subscription_rows=[],
     )
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         names = sorted(zf.namelist())
@@ -1177,7 +1183,9 @@ async def test_service_catalog_sorted_by_service_name_then_plan_name(
 
     assert len(lines) == 4  # header + 3 data rows
     # Expected order: Alpha Service/A Plan, Alpha Service/Z Plan, Beta Service/Only Plan
-    pairs = [(line.split(",")[0].strip(), line.split(",")[3].strip()) for line in lines[1:]]
+    pairs = [
+        (line.split(",")[0].strip(), line.split(",")[3].strip()) for line in lines[1:]
+    ]
     assert pairs == [
         ("Alpha Service", "A Plan"),
         ("Alpha Service", "Z Plan"),
@@ -1252,7 +1260,11 @@ async def test_subscription_snapshot_csv_has_approved_fields(
     # Create minimal dependencies
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="C", username="c", is_active=True
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="C",
+        username="c",
+        is_active=True,
     )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Svc")
@@ -1305,8 +1317,11 @@ async def test_subscription_snapshot_csv_data_rows(db_session, active_tenant_use
 
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="Test Client",
-        username="test_client", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="Test Client",
+        username="test_client",
+        is_active=True,
     )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Netflix")
@@ -1359,16 +1374,25 @@ async def test_subscription_snapshot_sorted_by_started_on_descending(
 
     user1_id, user2_id, user3_id = uuid4(), uuid4(), uuid4()
     client1 = Client(
-        tenant_id=tenant.id, owner_user_id=user1_id, full_name="C1",
-        username="c1", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user1_id,
+        full_name="C1",
+        username="c1",
+        is_active=True,
     )
     client2 = Client(
-        tenant_id=tenant.id, owner_user_id=user2_id, full_name="C2",
-        username="c2", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user2_id,
+        full_name="C2",
+        username="c2",
+        is_active=True,
     )
     client3 = Client(
-        tenant_id=tenant.id, owner_user_id=user3_id, full_name="C3",
-        username="c3", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user3_id,
+        full_name="C3",
+        username="c3",
+        is_active=True,
     )
     db_session.add_all([client1, client2, client3])
     service = Service(tenant_id=tenant.id, name="Svc")
@@ -1379,24 +1403,33 @@ async def test_subscription_snapshot_sorted_by_started_on_descending(
     await db_session.flush()
 
     sub1 = Subscription(
-        tenant_id=tenant.id, client_id=client1.id, service_id=service.id,
-        plan_id=plan.id, streaming_email="a@a.com",
+        tenant_id=tenant.id,
+        client_id=client1.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="a@a.com",
         duration_type="1_month",
         starts_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         expires_at=datetime(2024, 2, 1, tzinfo=timezone.utc),
         status="active",
     )
     sub2 = Subscription(
-        tenant_id=tenant.id, client_id=client2.id, service_id=service.id,
-        plan_id=plan.id, streaming_email="b@b.com",
+        tenant_id=tenant.id,
+        client_id=client2.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="b@b.com",
         duration_type="1_month",
         starts_at=datetime(2024, 6, 1, tzinfo=timezone.utc),
         expires_at=datetime(2024, 7, 1, tzinfo=timezone.utc),
         status="active",
     )
     sub3 = Subscription(
-        tenant_id=tenant.id, client_id=client3.id, service_id=service.id,
-        plan_id=plan.id, streaming_email="c@c.com",
+        tenant_id=tenant.id,
+        client_id=client3.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="c@c.com",
         duration_type="1_month",
         starts_at=datetime(2023, 6, 1, tzinfo=timezone.utc),
         expires_at=datetime(2023, 7, 1, tzinfo=timezone.utc),
@@ -1405,7 +1438,11 @@ async def test_subscription_snapshot_sorted_by_started_on_descending(
     db_session.add_all([sub1, sub2, sub3])
     await db_session.commit()
 
-    rows = [(sub2, client2, service, plan), (sub1, client1, service, plan), (sub3, client3, service, plan)]
+    rows = [
+        (sub2, client2, service, plan),
+        (sub1, client1, service, plan),
+        (sub3, client3, service, plan),
+    ]
     csv_content = _build_subscription_snapshot_csv(rows, "UTC")
     lines = csv_content.strip().split("\n")
 
@@ -1413,7 +1450,9 @@ async def test_subscription_snapshot_sorted_by_started_on_descending(
     # Rows already sorted by started_on descending — verify order
     dates = [line.split(",")[7].strip() for line in lines[1:]]
     for i in range(len(dates) - 1):
-        assert dates[i] >= dates[i + 1], f"Row {i} not sorted: {dates[i]} < {dates[i + 1]}"
+        assert dates[i] >= dates[i + 1], (
+            f"Row {i} not sorted: {dates[i]} < {dates[i + 1]}"
+        )
 
 
 async def test_subscription_snapshot_empty_produces_only_header(
@@ -1435,8 +1474,11 @@ async def test_subscription_snapshot_cancelled_on_is_preserved(
 
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="Cancelled Client",
-        username="cancelled", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="Cancelled Client",
+        username="cancelled",
+        is_active=True,
     )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Svc")
@@ -1446,8 +1488,11 @@ async def test_subscription_snapshot_cancelled_on_is_preserved(
     db_session.add(plan)
     await db_session.flush()
     sub = Subscription(
-        tenant_id=tenant.id, client_id=client.id, service_id=service.id,
-        plan_id=plan.id, streaming_email="a@a.com",
+        tenant_id=tenant.id,
+        client_id=client.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="a@a.com",
         duration_type="1_month",
         starts_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         expires_at=datetime(2024, 2, 1, tzinfo=timezone.utc),
@@ -1500,7 +1545,11 @@ async def test_json_catalog_nests_plans_under_service(db_session, active_tenant_
     services = [service]
     data = json.loads(
         _build_json(
-            tenant, "en", "UTC", services=services, plans_by_service=plans_by_service,
+            tenant,
+            "en",
+            "UTC",
+            services=services,
+            plans_by_service=plans_by_service,
         )
     )
     catalog = data["service_catalog"]
@@ -1525,7 +1574,11 @@ async def test_json_service_without_plans_has_empty_plans_list(
     plans_by_service: dict = {}
     data = json.loads(
         _build_json(
-            tenant, "en", "UTC", services=services, plans_by_service=plans_by_service,
+            tenant,
+            "en",
+            "UTC",
+            services=services,
+            plans_by_service=plans_by_service,
         )
     )
     catalog = data["service_catalog"]
@@ -1543,8 +1596,11 @@ async def test_json_subscription_snapshot_has_all_fields(
 
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="C",
-        username="c", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="C",
+        username="c",
+        is_active=True,
     )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Svc")
@@ -1554,8 +1610,11 @@ async def test_json_subscription_snapshot_has_all_fields(
     db_session.add(plan)
     await db_session.flush()
     sub = Subscription(
-        tenant_id=tenant.id, client_id=client.id, service_id=service.id,
-        plan_id=plan.id, streaming_email="e@e.com",
+        tenant_id=tenant.id,
+        client_id=client.id,
+        service_id=service.id,
+        plan_id=plan.id,
+        streaming_email="e@e.com",
         duration_type="1_month",
         starts_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         expires_at=datetime(2024, 2, 1, tzinfo=timezone.utc),
@@ -1567,7 +1626,10 @@ async def test_json_subscription_snapshot_has_all_fields(
     rows = [(sub, client, service, plan)]
     data = json.loads(
         _build_json(
-            tenant, "en", "UTC", subscription_rows=rows,
+            tenant,
+            "en",
+            "UTC",
+            subscription_rows=rows,
         )
     )
     entry = data["subscription_snapshot"][0]
@@ -1608,7 +1670,11 @@ async def test_json_record_counts_include_catalog_and_subscription(
     plans_by_service = {service.id: [plan]}
     data = json.loads(
         _build_json(
-            tenant, "en", "UTC", services=[service], plans_by_service=plans_by_service,
+            tenant,
+            "en",
+            "UTC",
+            services=[service],
+            plans_by_service=plans_by_service,
             subscription_rows=[],
         )
     )
@@ -1632,8 +1698,14 @@ async def test_zip_contains_all_expected_files_including_new(
     assert tenant is not None
 
     zip_bytes = await _build_zip(
-        tenant, "en", "UTC", clients=[], blocked_phones=[],
-        services=[], plans_by_service={}, subscription_rows=[],
+        tenant,
+        "en",
+        "UTC",
+        clients=[],
+        blocked_phones=[],
+        services=[],
+        plans_by_service={},
+        subscription_rows=[],
     )
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         names = sorted(zf.namelist())
@@ -1656,8 +1728,14 @@ async def test_zip_new_csv_files_have_bom(db_session, active_tenant_user):
     assert tenant is not None
 
     zip_bytes = await _build_zip(
-        tenant, "en", "UTC", clients=[], blocked_phones=[],
-        services=[], plans_by_service={}, subscription_rows=[],
+        tenant,
+        "en",
+        "UTC",
+        clients=[],
+        blocked_phones=[],
+        services=[],
+        plans_by_service={},
+        subscription_rows=[],
     )
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         for name in ["service-catalog.csv", "subscription-snapshot.csv"]:
@@ -1677,8 +1755,11 @@ async def test_no_internal_identifiers_in_catalog_and_subscription(
 
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="Safe",
-        username="safe", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="Safe",
+        username="safe",
+        is_active=True,
     )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Netflix")
@@ -1707,8 +1788,13 @@ async def test_no_internal_identifiers_in_catalog_and_subscription(
     plans_by_service = {service.id: [plan]}
     rows = [(sub, client, service, plan)]
     zip_bytes = await _build_zip(
-        tenant, "en", "UTC", clients=[client], blocked_phones=[],
-        services=[service], plans_by_service=plans_by_service,
+        tenant,
+        "en",
+        "UTC",
+        clients=[client],
+        blocked_phones=[],
+        services=[service],
+        plans_by_service=plans_by_service,
         subscription_rows=rows,
     )
 
@@ -1745,8 +1831,13 @@ async def test_no_internal_identifiers_in_catalog_and_subscription(
 
     for entry in json_data["subscription_snapshot"]:
         for forbidden in (
-            "id", "tenant_id", "client_id", "service_id", "plan_id",
-            "streaming_password", "profile_pin",
+            "id",
+            "tenant_id",
+            "client_id",
+            "service_id",
+            "plan_id",
+            "streaming_password",
+            "profile_pin",
         ):
             assert forbidden not in entry, f"JSON subscription contains {forbidden}"
 
@@ -1760,8 +1851,11 @@ async def test_no_encrypted_secrets_in_subscription_snapshot(
 
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="Secret",
-        username="secret", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="Secret",
+        username="secret",
+        is_active=True,
     )
     db_session.add(client)
     service = Service(tenant_id=tenant.id, name="Svc")
@@ -1787,9 +1881,7 @@ async def test_no_encrypted_secrets_in_subscription_snapshot(
     await db_session.commit()
 
     rows = [(sub, client, service, plan)]
-    data = json.loads(
-        _build_json(tenant, "en", "UTC", subscription_rows=rows)
-    )
+    data = json.loads(_build_json(tenant, "en", "UTC", subscription_rows=rows))
     for entry in data["subscription_snapshot"]:
         assert "streaming_password" not in entry
         assert "profile_pin" not in entry
@@ -1827,8 +1919,11 @@ async def test_worker_zip_contains_catalog_and_subscription_data(
     # Add a client and subscription
     user_id = uuid4()
     client = Client(
-        tenant_id=tenant.id, owner_user_id=user_id, full_name="Sub Client",
-        username="sub_client", is_active=True,
+        tenant_id=tenant.id,
+        owner_user_id=user_id,
+        full_name="Sub Client",
+        username="sub_client",
+        is_active=True,
     )
     db_session.add(client)
     await db_session.flush()
@@ -1876,7 +1971,9 @@ async def test_worker_zip_contains_catalog_and_subscription_data(
         new_svc_line = [ln for ln in catalog_lines if "New Service" in ln]
         assert len(new_svc_line) == 1
         # Check that plan column is empty for service without plans
-        assert new_svc_line[0].endswith(",,") or new_svc_line[0].count(",") == 5  # six columns
+        assert (
+            new_svc_line[0].endswith(",,") or new_svc_line[0].count(",") == 5
+        )  # six columns
 
         sub_csv = zf.read("subscription-snapshot.csv").decode("utf-8-sig")
         assert "sub@netflix.com" in sub_csv
@@ -1887,7 +1984,9 @@ async def test_worker_zip_contains_catalog_and_subscription_data(
         assert len(json_data["service_catalog"]) == 2
         assert len(json_data["subscription_snapshot"]) == 1
         assert json_data["export_metadata"]["record_counts"]["service_catalog"] == 2
-        assert json_data["export_metadata"]["record_counts"]["subscription_snapshot"] == 1
+        assert (
+            json_data["export_metadata"]["record_counts"]["subscription_snapshot"] == 1
+        )
 
 
 async def test_worker_with_empty_catalog_and_subscription_data(
@@ -1929,4 +2028,6 @@ async def test_worker_with_empty_catalog_and_subscription_data(
         assert json_data["service_catalog"] == []
         assert json_data["subscription_snapshot"] == []
         assert json_data["export_metadata"]["record_counts"]["service_catalog"] == 0
-        assert json_data["export_metadata"]["record_counts"]["subscription_snapshot"] == 0
+        assert (
+            json_data["export_metadata"]["record_counts"]["subscription_snapshot"] == 0
+        )

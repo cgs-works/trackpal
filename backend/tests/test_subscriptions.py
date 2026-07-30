@@ -426,7 +426,10 @@ async def test_subscription_api_rejects_plan_service_mismatch(
     )
 
     assert response.status_code == 409
-    assert "plan not found" in response.json()["detail"].lower() or "plan no encontrado" in response.json()["detail"].lower()
+    assert (
+        "plan not found" in response.json()["detail"].lower()
+        or "plan no encontrado" in response.json()["detail"].lower()
+    )
 
 
 @pytest.mark.asyncio
@@ -1324,7 +1327,10 @@ async def test_subscription_reactivate_userfacing_error_translated(
     assert response.status_code == 409
     detail = response.json()["detail"]
     assert "subscription_reactivate_failed" not in detail
-    assert "Failed to reactivate subscription" in detail or "No se pudo reactivar" in detail
+    assert (
+        "Failed to reactivate subscription" in detail
+        or "No se pudo reactivar" in detail
+    )
 
 
 @pytest.mark.asyncio

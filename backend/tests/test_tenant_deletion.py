@@ -708,7 +708,12 @@ async def test_master_delete_requires_authentication(client):
 
 
 async def test_master_delete_requires_master_role(
-    client, db_session, master_user, active_tenant_user, fake_export_storage, fake_step_up_limiter
+    client,
+    db_session,
+    master_user,
+    active_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
 ):
     """Tenant users cannot use Master deletion endpoint."""
     tenant_id = await _tenant_id_from_user(db_session, active_tenant_user)
@@ -735,7 +740,11 @@ async def test_master_delete_rejects_active_tenant(
 
 @pytest.mark.usefixtures("master_user")
 async def test_master_delete_succeeds_for_inactive_tenant(
-    client, db_session, deactivated_tenant_user, fake_export_storage, fake_step_up_limiter
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
 ):
     """Master can delete an inactive tenant with valid password + destructive word."""
     tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
@@ -757,7 +766,11 @@ async def test_master_delete_succeeds_for_inactive_tenant(
 
 @pytest.mark.usefixtures("master_user")
 async def test_master_delete_wrong_password(
-    client, db_session, deactivated_tenant_user, fake_export_storage, fake_step_up_limiter
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
 ):
     """Wrong Master password returns 401."""
     tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)
@@ -767,7 +780,11 @@ async def test_master_delete_wrong_password(
 
 @pytest.mark.usefixtures("master_user")
 async def test_master_delete_wrong_destructive_word(
-    client, db_session, deactivated_tenant_user, fake_export_storage, fake_step_up_limiter
+    client,
+    db_session,
+    deactivated_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
 ):
     """Wrong destructive word returns 401."""
     tenant_id = await _tenant_id_from_user(db_session, deactivated_tenant_user)

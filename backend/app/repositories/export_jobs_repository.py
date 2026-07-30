@@ -413,9 +413,7 @@ async def get_all_for_tenant(
     tenant_id: UUID,
 ) -> list[ExportJob]:
     """Return all export jobs for a tenant."""
-    result = await db.execute(
-        select(ExportJob).where(ExportJob.tenant_id == tenant_id)
-    )
+    result = await db.execute(select(ExportJob).where(ExportJob.tenant_id == tenant_id))
     return list(result.scalars().all())
 
 

@@ -27,9 +27,7 @@ class DemoGuardrailError(Exception):
         super().__init__(self.code)
 
 
-def assert_demo_operation_allowed(
-    tenant: DemoTenantLike, *, operation: str
-) -> None:
+def assert_demo_operation_allowed(tenant: DemoTenantLike, *, operation: str) -> None:
     """Reject production operations for Demo Tenants without touching side effects."""
     if not tenant.is_demo:
         return

@@ -85,7 +85,9 @@ async def test_export_job_tenant_relationship(db_session, active_tenant_user):
     assert job.tenant.name == "Active Tenant"
 
 
-async def test_export_job_can_transition_through_statuses(db_session, active_tenant_user):
+async def test_export_job_can_transition_through_statuses(
+    db_session, active_tenant_user
+):
     """Status transitions persist correctly."""
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     assert tenant is not None
@@ -187,9 +189,7 @@ async def test_create_and_get_latest_job(db_session, active_tenant_user):
     assert job.status == "pending"
     assert job.attempts == 0
 
-    latest = await export_jobs_repository.get_latest_by_tenant(
-        db_session, tenant.id
-    )
+    latest = await export_jobs_repository.get_latest_by_tenant(db_session, tenant.id)
     assert latest is not None
     assert latest.id == job.id
 
@@ -200,18 +200,20 @@ async def test_get_latest_by_tenant_has_correct_tenant(db_session, active_tenant
     assert tenant is not None
 
     job = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
 
-    latest = await export_jobs_repository.get_latest_by_tenant(
-        db_session, tenant.id
-    )
+    latest = await export_jobs_repository.get_latest_by_tenant(db_session, tenant.id)
     assert latest is not None
     assert latest.id == job.id
     assert latest.tenant_id == tenant.id
 
 
-async def test_get_ready_by_tenant_returns_unexpired_ready(db_session, active_tenant_user):
+async def test_get_ready_by_tenant_returns_unexpired_ready(
+    db_session, active_tenant_user
+):
     """get_ready_by_tenant returns only the most recent ready + unexpired job."""
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     assert tenant is not None
@@ -219,10 +221,14 @@ async def test_get_ready_by_tenant_returns_unexpired_ready(db_session, active_te
     now = datetime.now(timezone.utc)
     # Create an expired ready job
     expired = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
     await export_jobs_repository.update_status(
-        db_session, expired.id, "ready",
+        db_session,
+        expired.id,
+        "ready",
         r2_key="expired-key",
         expires_at=now - timedelta(hours=1),
         clear_lease=True,
@@ -230,10 +236,14 @@ async def test_get_ready_by_tenant_returns_unexpired_ready(db_session, active_te
 
     # Create a valid ready job
     ready = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
     await export_jobs_repository.update_status(
-        db_session, ready.id, "ready",
+        db_session,
+        ready.id,
+        "ready",
         r2_key="valid-key",
         expires_at=now + timedelta(hours=48),
         clear_lease=True,
@@ -251,7 +261,9 @@ async def test_claim_pending_returns_oldest_unclaimed(db_session, active_tenant_
     assert tenant is not None
 
     await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
 
     claimed = await export_jobs_repository.claim_pending(db_session)
@@ -268,10 +280,13 @@ async def test_claim_pending_skips_maxed_attempts(db_session, active_tenant_user
 
     # Create a job at max attempts
     job = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, max_attempts=2,
+        db_session,
+        tenant_id=tenant.id,
+        max_attempts=2,
     )
     # Bump attempts to max
     from sqlalchemy import update as sa_update
+
     stmt = sa_update(ExportJob).where(ExportJob.id == job.id).values(attempts=2)
     await db_session.execute(stmt)
     await db_session.commit()
@@ -286,10 +301,14 @@ async def test_update_status_to_ready(db_session, active_tenant_user):
     assert tenant is not None
 
     job = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
     updated = await export_jobs_repository.update_status(
-        db_session, job.id, "ready",
+        db_session,
+        job.id,
+        "ready",
         r2_key="my-key",
         artifact_size_bytes=4096,
         clear_lease=True,
@@ -308,10 +327,14 @@ async def test_update_status_to_failed(db_session, active_tenant_user):
     assert tenant is not None
 
     job = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
     updated = await export_jobs_repository.update_status(
-        db_session, job.id, "failed",
+        db_session,
+        job.id,
+        "failed",
         error_code="GENERATION_ERROR",
     )
     assert updated is not None
@@ -325,7 +348,9 @@ async def test_get_by_id_returns_correct_job(db_session, active_tenant_user):
     assert tenant is not None
 
     job = await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
     found = await export_jobs_repository.get_by_id(db_session, job.id)
     assert found is not None
@@ -341,10 +366,14 @@ async def test_count_by_tenant_and_status(db_session, active_tenant_user):
     assert tenant is not None
 
     await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
     await export_jobs_repository.create(
-        db_session, tenant_id=tenant.id, requested_by=active_tenant_user.id,
+        db_session,
+        tenant_id=tenant.id,
+        requested_by=active_tenant_user.id,
     )
 
     count = await export_jobs_repository.count_by_tenant_and_status(

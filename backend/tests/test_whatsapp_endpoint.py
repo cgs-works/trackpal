@@ -1990,7 +1990,10 @@ async def test_inactivity_timeout_reply_uses_tenant_locale(
 
     assert response.status_code == 200
     reply = response.json()["reply"]
-    assert "session was closed due to inactivity" in reply.lower() or "sesión cerrada por inactividad" in reply.lower()
+    assert (
+        "session was closed due to inactivity" in reply.lower()
+        or "sesión cerrada por inactividad" in reply.lower()
+    )
     assert "Sesión cerrada" not in reply
 
 
@@ -2894,7 +2897,11 @@ async def test_context_shortcut_no_context_falls_through(
     body = response.json()
     assert "reply" in body
     # Should be Tenant console reply, not context shortcut
-    assert ("Consola de administración" in body["reply"] or "Consola de administración" in body["reply"] or "No entendí" in body["reply"])
+    assert (
+        "Consola de administración" in body["reply"]
+        or "Consola de administración" in body["reply"]
+        or "No entendí" in body["reply"]
+    )
     # No context fields
     assert "reply_to" not in body or body.get("no_reply") is not True
 
@@ -3103,7 +3110,6 @@ async def test_context_shortcut_bloquear_creates_block(
     assert db_block is not None
 
 
-
 async def test_context_shortcut_desbloquear_unblocks(
     client, db_session, active_tenant_user
 ):
@@ -3149,7 +3155,6 @@ async def test_context_shortcut_desbloquear_unblocks(
     )
     db_block = result.scalar_one_or_none()
     assert db_block is None
-
 
 
 async def test_context_shortcut_zero_closes_context(

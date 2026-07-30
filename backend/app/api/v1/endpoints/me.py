@@ -93,7 +93,9 @@ async def get_profile(db: DbDep, current_user: DemoGuardedUser):
 
 
 @router.put("", response_model=ProfileResponse)
-async def update_profile(payload: ProfileUpdate, db: DbDep, current_user: DemoGuardedUser):
+async def update_profile(
+    payload: ProfileUpdate, db: DbDep, current_user: DemoGuardedUser
+):
     try:
         profile = await profile_service.update_profile(db, current_user, payload)
     except PermissionError as exc:

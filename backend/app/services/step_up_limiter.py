@@ -59,9 +59,7 @@ class StepUpRateLimiter:
         try:
             count = await self._get_count(key)
         except (RedisUnavailableError, OSError, ConnectionError) as exc:
-            raise StepUpRedisError(
-                "Step-up rate limiter unavailable"
-            ) from exc
+            raise StepUpRedisError("Step-up rate limiter unavailable") from exc
 
         if count >= _STEP_UP_MAX_ATTEMPTS:
             remaining = await self._ttl(key)
@@ -79,9 +77,7 @@ class StepUpRateLimiter:
             )
         except (RedisUnavailableError, OSError, ConnectionError):
             # Fail-closed: caller MUST NOT proceed
-            raise StepUpRedisError(
-                "Step-up rate limiter unavailable"
-            )
+            raise StepUpRedisError("Step-up rate limiter unavailable")
 
     async def record_success(self, actor_id: str) -> None:
         """Reset the failure counter for *actor_id* after a successful step-up."""

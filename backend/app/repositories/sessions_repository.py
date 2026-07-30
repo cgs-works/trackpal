@@ -45,7 +45,9 @@ async def revoke_all_for_user(db: AsyncSession, user_id: UUID) -> None:
 
 async def revoke_all_for_tenant_clients(db: AsyncSession, tenant_id: UUID) -> None:
     """Revoke all active refresh sessions for every client user in a tenant."""
-    result = await db.execute(select(Client.owner_user_id).where(Client.tenant_id == tenant_id))
+    result = await db.execute(
+        select(Client.owner_user_id).where(Client.tenant_id == tenant_id)
+    )
     user_ids = [row[0] for row in result.all()]
     if not user_ids:
         return

@@ -86,7 +86,9 @@ def test_compiler_rejects_unknown_external_help_host(tmp_path: Path) -> None:
         + "\n\n[Unsafe](https://example.com/account)\n",
         encoding="utf-8",
     )
-    with pytest.raises(HelpValidationError, match="External Help URL not on allow-list"):
+    with pytest.raises(
+        HelpValidationError, match="External Help URL not on allow-list"
+    ):
         compile_help(source_dir)
 
 

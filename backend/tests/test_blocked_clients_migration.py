@@ -5,8 +5,15 @@ from pathlib import Path
 
 
 def _load_migration_module():
-    path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "e013fe74cab3_remove_blocked_clients_is_active.py"
-    spec = importlib.util.spec_from_file_location("remove_blocked_clients_is_active", path)
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "e013fe74cab3_remove_blocked_clients_is_active.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "remove_blocked_clients_is_active", path
+    )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

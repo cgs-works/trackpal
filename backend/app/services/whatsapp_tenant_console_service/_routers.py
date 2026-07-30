@@ -367,6 +367,7 @@ async def _route_codigo_flow(
         )
     return self._t(self.KEY_FALLBACK_ACTIVE_FLOW)
 
+
 async def _route_access_control_flow(
     self, phone, msg, step, session, session_service, tenant_id, db
 ):
