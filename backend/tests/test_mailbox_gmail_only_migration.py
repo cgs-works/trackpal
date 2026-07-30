@@ -64,9 +64,7 @@ class _FakeOp:
     def drop_constraint(
         self, constraint_name: str, table_name: str, type_: str = ""
     ) -> None:
-        self.calls.append(
-            ("drop_constraint", (constraint_name, table_name, type_), {})
-        )
+        self.calls.append(("drop_constraint", (constraint_name, table_name, type_), {}))
 
 
 def test_upgrade_drops_provider_column(monkeypatch) -> None:
@@ -132,7 +130,9 @@ def test_downgrade_restores_provider_as_non_null(monkeypatch) -> None:
     # After population, must alter to NOT NULL
     alter_calls = [c for c in fake.calls if c[0] == "alter_column"]
     provider_alters = [
-        c for c in alter_calls if c[1][0] == "tenant_mailboxes" and c[1][1] == "provider"
+        c
+        for c in alter_calls
+        if c[1][0] == "tenant_mailboxes" and c[1][1] == "provider"
     ]
     assert len(provider_alters) == 1, (
         f"downgrade must alter provider to NOT NULL; found {len(provider_alters)}"
