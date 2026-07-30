@@ -15,7 +15,10 @@ from app.core.encryption import decrypt_value, encrypt_value
 from app.models import TenantMailbox
 from app.repositories import mailbox_config_repository
 from app.schemas.mailbox import OAuthStartResponse
+from app.services.imap_service import ImapAuthenticationError
 from app.services.imap_service import ImapConnectionError
+from app.services.imap_service import ImapTimeoutError
+from app.services.imap_service import ImapUnavailableError
 from app.services.imap_service import test_imap_connection as _test_imap_connection
 from app.services.oauth_service import MailboxOAuthService
 from app.services.oauth_service.google import InvalidGrantError, OAuthTokenError
@@ -579,7 +582,7 @@ class TestImapService:
                 "app.services.imap_service.asyncio.wait_for",
                 side_effect=asyncio.TimeoutError,
             ),
-            pytest.raises(ImapConnectionError, match="timed out"),
+            pytest.raises(ImapTimeoutError, match="timed out"),
         ):
             await _test_imap_connection(
                 host="imap.example.com",
@@ -596,7 +599,7 @@ class TestImapService:
         with (
             patch(
                 "app.services.imap_service._connect_and_login",
-                side_effect=ImapConnectionError("Cannot connect"),
+                side_effect=ImapUnavailableError("Cannot connect"),
             ),
             pytest.raises(ImapConnectionError, match="Cannot connect"),
         ):
@@ -631,7 +634,7 @@ class TestImapService:
         with (
             patch(
                 "app.services.imap_service._connect_and_login",
-                side_effect=ImapConnectionError("Authentication failed"),
+                side_effect=ImapAuthenticationError("Authentication failed"),
             ),
             pytest.raises(ImapConnectionError, match="Authentication failed"),
         ):
@@ -642,6 +645,13 @@ class TestImapService:
                 username="user",
                 password="wrong",
             )
+
+
+    def test_imap_error_subclasses_inherit_from_base(self):
+        """All typed IMAP errors inherit from ImapConnectionError."""
+        assert issubclass(ImapAuthenticationError, ImapConnectionError)
+        assert issubclass(ImapTimeoutError, ImapConnectionError)
+        assert issubclass(ImapUnavailableError, ImapConnectionError)
 
 
 # ─── Exclusivity (OAuth vs IMAP) ──────────────────────────────────────────

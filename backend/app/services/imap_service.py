@@ -11,7 +11,19 @@ IMAP_TEST_TIMEOUT = 10  # seconds
 
 
 class ImapConnectionError(Exception):
-    """Raised when IMAP connection or authentication fails."""
+    """Base class for safe IMAP connection-test failures."""
+
+
+class ImapAuthenticationError(ImapConnectionError):
+    """The server rejected the supplied username or credential."""
+
+
+class ImapTimeoutError(ImapConnectionError):
+    """The connection attempt exceeded the configured timeout."""
+
+
+class ImapUnavailableError(ImapConnectionError):
+    """The server could not be reached or the connection failed."""
 
 
 async def test_imap_connection(
@@ -34,17 +46,17 @@ async def test_imap_connection(
             timeout=timeout,
         )
     except asyncio.TimeoutError:
-        raise ImapConnectionError(
+        raise ImapTimeoutError(
             f"Connection timed out after {timeout}s connecting to {host}:{port}"
         ) from None
     except ImapConnectionError:
         raise
     except Exception as exc:
         logger.warning("Unexpected IMAP test error: %s", exc)
-        raise ImapConnectionError(f"Connection failed: {exc}") from exc
+        raise ImapUnavailableError(f"Connection failed: {exc}") from exc
 
     if not connected:
-        raise ImapConnectionError("IMAP connection closed unexpectedly")
+        raise ImapUnavailableError("IMAP connection closed unexpectedly")
 
 
 async def _connect_and_login(
@@ -63,18 +75,20 @@ async def _connect_and_login(
 
             result = conn.login(username, password)
             if result[0] != "OK":
-                raise ImapConnectionError(
-                    f"Authentication failed: {result[1].decode('utf-8', errors='replace')}"
+                raise ImapAuthenticationError(
+                    "Authentication failed"
                 )
             return True
         except ImapConnectionError:
             raise
+        except imaplib.IMAP4.error as exc:
+            raise ImapAuthenticationError("Authentication failed") from exc
         except Exception as exc:
             if conn is None:
-                raise ImapConnectionError(
+                raise ImapUnavailableError(
                     f"Cannot connect to {host}:{port}: {exc}"
                 ) from exc
-            raise ImapConnectionError(f"Login failed: {exc}") from exc
+            raise ImapUnavailableError(f"Login failed: {exc}") from exc
         finally:
             if conn is not None:
                 with suppress(Exception):
