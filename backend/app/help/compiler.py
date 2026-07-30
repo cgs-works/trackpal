@@ -98,7 +98,10 @@ ALLOWED_SETTINGS_CATEGORIES = {
     "timezone",
     "whatsapp-link",
 }
-ALLOWED_EXTERNAL_HELP_HOSTS = {"myaccount.google.com", "support.google.com"}
+ALLOWED_EXTERNAL_HELP_URLS = {
+    "https://myaccount.google.com/apppasswords",
+    "https://support.google.com/accounts/answer/185833",
+}
 REQUIRED_FIELDS = {
     "id",
     "audience",
@@ -482,16 +485,16 @@ def _absolute_link_destinations(body: str) -> set[str]:
 
 
 def _validate_external_help_links(body: str, path: Path) -> None:
-    """Validate that external links use HTTPS and allowed hosts."""
+    """Validate that external links use HTTPS and exact allowed URLs."""
     for destination in _absolute_link_destinations(body):
         parsed = urlsplit(destination)
         if parsed.scheme != "https":
             raise HelpValidationError(
                 f"External Help URL must use HTTPS in {path.name}"
             )
-        if parsed.hostname not in ALLOWED_EXTERNAL_HELP_HOSTS:
+        if destination not in ALLOWED_EXTERNAL_HELP_URLS:
             raise HelpValidationError(
-                f"Unknown external Help host in {path.name}"
+                f"External Help URL not on allow-list in {path.name}"
             )
 
 

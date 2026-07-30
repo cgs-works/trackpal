@@ -4,20 +4,13 @@ interface SafeMarkdownProps {
   source: string;
 }
 
-const ALLOWED_EXTERNAL_HELP_HOSTS = new Set([
-  "myaccount.google.com",
-  "support.google.com",
+const ALLOWED_EXTERNAL_HELP_URLS = new Set([
+  "https://myaccount.google.com/apppasswords",
+  "https://support.google.com/accounts/answer/185833",
 ]);
 
 function allowedExternalHelpUrl(value: string): string | null {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && ALLOWED_EXTERNAL_HELP_HOSTS.has(url.hostname)
-      ? url.toString()
-      : null;
-  } catch {
-    return null;
-  }
+  return ALLOWED_EXTERNAL_HELP_URLS.has(value) ? value : null;
 }
 
 const INLINE_TOKEN_PATTERN = /(\*\*[^*]+\*\*|\[[^\]]+\]\(https:\/\/[^)]+\))/g;

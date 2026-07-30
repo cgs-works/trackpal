@@ -25,8 +25,40 @@ describe("SafeMarkdown", () => {
     );
   });
 
+  it("renders the second allowed Google link safely", () => {
+    render(
+      <SafeMarkdown
+        source={"[2SV help](https://support.google.com/accounts/answer/185833)"}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "2SV help" })).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+  });
+
   it("does not create a link for an unknown host", () => {
     render(<SafeMarkdown source={"[Unsafe](https://example.com)"} />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("degrades to plain text for allowed host with wrong path", () => {
+    render(
+      <SafeMarkdown
+        source={"[Wrong path](https://support.google.com/anything-else)"}
+      />,
+    );
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("Wrong path")).toBeInTheDocument();
+  });
+
+  it("degrades to plain text for allowed host with no path", () => {
+    render(
+      <SafeMarkdown
+        source={"[Bare host](https://myaccount.google.com/)"}
+      />,
+    );
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("Bare host")).toBeInTheDocument();
   });
 });

@@ -86,7 +86,22 @@ def test_compiler_rejects_unknown_external_help_host(tmp_path: Path) -> None:
         + "\n\n[Unsafe](https://example.com/account)\n",
         encoding="utf-8",
     )
-    with pytest.raises(HelpValidationError, match="external Help host"):
+    with pytest.raises(HelpValidationError, match="External Help URL not on allow-list"):
+        compile_help(source_dir)
+
+
+def test_compiler_rejects_allowed_host_with_unexpected_path(tmp_path: Path) -> None:
+    source_dir = tmp_path / "help"
+    shutil.copytree(SOURCE_DIR, source_dir)
+    # Add the disallowed URL to both locales so parity passes and URL validation runs
+    for locale in ("en", "es"):
+        path = source_dir / locale / "tenant-admin" / "mailbox.md"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + "\n\n[Unexpected path](https://support.google.com/anything-else)\n",
+            encoding="utf-8",
+        )
+    with pytest.raises(HelpValidationError, match="External Help URL"):
         compile_help(source_dir)
 
 

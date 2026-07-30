@@ -456,6 +456,43 @@ def test_mailbox_help_covers_gmail_app_password_setup() -> None:
         assert "Outlook" not in body
 
 
+def test_mailbox_help_mentions_google_connection_is_conditional() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics_by_locale = {
+        locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
+        for locale in ("en", "es")
+    }
+
+    for locale, flag_phrase in (
+        ("en", "VITE_GMAIL_OAUTH_CONNECT_ENABLED"),
+        ("es", "VITE_GMAIL_OAUTH_CONNECT_ENABLED"),
+    ):
+        body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"]
+        assert flag_phrase in body, (
+            f"Mailbox tutorial must mention {flag_phrase} to indicate "
+            f"conditional Google Connection availability"
+        )
+
+
+def test_mailbox_help_covers_app_password_eligibility_causes() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics_by_locale = {
+        locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
+        for locale in ("en", "es")
+    }
+
+    for locale, phrases in (
+        ("en", ("2-step verification", "work or school", "advanced protection")),
+        ("es", ("verificación en dos pasos", "trabajo o escuela", "protección avanzada")),
+    ):
+        body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"].lower()
+        for phrase in phrases:
+            assert phrase in body, (
+                f"Mailbox tutorial must mention '{phrase}' as an "
+                f"app-password eligibility cause"
+            )
+
+
 def test_checked_in_artifact_matches_the_compiled_sources() -> None:
     checked_in = json.loads(ARTIFACT_PATH.read_text(encoding="utf-8"))
 
