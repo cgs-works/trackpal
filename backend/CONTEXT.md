@@ -34,7 +34,9 @@
 | **Public API Key** | Credencial tenant-scoped que habilita el Public API Catalog. Es visible para el tenant, revocable y regenerable; una key activa representa una integración pública de catálogo. Implementation table: `tenant_api_keys`. One row per tenant, plain-text `api_key`, JSON `allowed_origins`. |
 | **Allowed Origin** | Origin web exacto registrado por el tenant para usar su Public API Key desde navegador. Incluye scheme, host y puerto opcional; no representa un dominio wildcard ni acceso server-to-server. |
 | **Subscription** | Vincula un cliente, servicio y plan. Tiene credenciales encriptadas (Fernet), fechas de inicio/fin y estados (active/expired/cancelled). |
-| **Mailbox** | Conexión IMAP/OAuth (Google/Microsoft) de un tenant para extracción automática de códigos de acceso a streaming. |
+| **Mailbox** | The Tenant's single connected Gmail account used to retrieve access-code messages. Gmail is the only supported mailbox provider. |
+| **App Password Connection** | Gmail connection method that uses a Google-generated, revocable app password instead of the account's primary password. Avoid the user-facing term **IMAP**. |
+| **Google Connection** | Optional Gmail OAuth method that uses Google's authorization screen and read-only Gmail permission. Avoid using **OAuth** as the primary customer-facing label. |
 | **Mail Lookup Job** | Trabajo asíncrono de extracción de código: pending → processing → completed/failed/timeout. |
 | **Code Service** | Servicio de extracción de código (netflix, hbo, spotify, etc.). Tiene activación global (Master) y selección por tenant. |
 | **Codigo** | Flujo de búsqueda de código de acceso via WhatsApp. El cliente selecciona servicio → ingresa email → el sistema busca en el mailbox. |

@@ -12,3 +12,4 @@ skills-lock.json
 /.ralph
 # Local Pi runtime state
 .atl/
+.superpowers/
