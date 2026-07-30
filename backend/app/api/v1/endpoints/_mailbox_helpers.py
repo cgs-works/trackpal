@@ -17,6 +17,10 @@ from app.services.oauth_service import MailboxOAuthService
 
 oauth_service = MailboxOAuthService()
 
+# Safe error messages for test connection failures — no IMAP internals.
+_APP_PASSWORD_AUTH_ERROR = "gmail_app_password_rejected"
+_APP_PASSWORD_CONN_ERROR = "gmail_connection_unavailable"
+
 
 def mailbox_response(mb: TenantMailbox) -> MailboxResponse:
     """Convert ``TenantMailbox`` to response schema."""
@@ -56,10 +60,31 @@ async def _perform_app_password_test(db, mailbox: TenantMailbox) -> MailboxTestR
             username=mailbox.mailbox_email,
             password=password,
         )
-    except ImapConnectionError:
-        raise
+    except ImapConnectionError as exc:
+        # Map IMAP errors to safe messages — no host/port/SSL details.
+        from app.services.imap_service import ImapAuthenticationError, ImapTimeoutError
+
+        if isinstance(exc, ImapAuthenticationError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=_APP_PASSWORD_AUTH_ERROR,
+            ) from exc
+        if isinstance(exc, ImapTimeoutError):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=_APP_PASSWORD_CONN_ERROR,
+            ) from exc
+        # ImapUnavailableError and any other subclass
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_APP_PASSWORD_CONN_ERROR,
+        ) from exc
     except Exception as exc:
-        raise ImapConnectionError(str(exc)) from exc
+        # Unexpected errors — map to safe connection error.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_APP_PASSWORD_CONN_ERROR,
+        ) from exc
     return await _record_test_success(db, mailbox)
 
 

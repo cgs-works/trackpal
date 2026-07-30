@@ -154,6 +154,7 @@ class MailboxOAuthService:
                 tenant_id=tenant_id,
                 mailbox_email=mailbox_email,
                 auth_method="oauth",
+                provider=provider,
                 status="connected",
                 oauth_provider_user_id=provider_user_id,
                 oauth_provider_email=mailbox_email,
@@ -170,6 +171,7 @@ class MailboxOAuthService:
                 mailbox,
                 mailbox_email=mailbox_email,
                 auth_method="oauth",
+                provider=provider,
                 status="connected",
                 app_password_encrypted=None,
                 oauth_provider_user_id=provider_user_id,
@@ -204,12 +206,8 @@ class MailboxOAuthService:
             )
             return mailbox
 
-        # Determine provider from email domain (Gmail vs Outlook)
-        email = (mailbox.mailbox_email or "").lower()
-        if email.endswith("@gmail.com"):
-            provider = "google"
-        else:
-            provider = "microsoft"
+        # Use stored provider column (temporary — Task 3 removes this field).
+        provider = mailbox.provider or "google"
 
         try:
             if provider == "google":

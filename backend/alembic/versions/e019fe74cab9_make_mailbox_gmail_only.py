@@ -1,4 +1,4 @@
-"""Make mailbox Gmail-only — remove provider/IMAP columns, add constraint.
+"""Make mailbox Gmail-only — remove IMAP columns, add constraint.
 
 Revision ID: e019fe74cab9
 Revises: e018fe74cab8
@@ -46,11 +46,10 @@ def upgrade() -> None:
         new_column_name="app_password_encrypted",
     )
 
-    # 4. Drop provider/server columns
+    # 4. Drop IMAP server columns (keep provider — Task 3 removes it)
     op.drop_column("tenant_mailboxes", "imap_host")
     op.drop_column("tenant_mailboxes", "imap_port")
     op.drop_column("tenant_mailboxes", "imap_ssl")
-    op.drop_column("tenant_mailboxes", "provider")
 
     # 5. Add auth_method check constraint
     op.create_check_constraint(
@@ -71,10 +70,6 @@ def downgrade() -> None:
     # 2. Restore dropped columns as nullable
     op.add_column(
         "tenant_mailboxes",
-        sa.Column("provider", sa.String(50), nullable=True),
-    )
-    op.add_column(
-        "tenant_mailboxes",
         sa.Column("imap_host", sa.String(255), nullable=True),
     )
     op.add_column(
@@ -86,19 +81,7 @@ def downgrade() -> None:
         sa.Column("imap_ssl", sa.Boolean(), server_default="true", nullable=True),
     )
 
-    # 3. Derive provider values from auth_method
-    op.execute("""
-        UPDATE tenant_mailboxes
-        SET provider = 'google'
-        WHERE auth_method = 'oauth'
-    """)
-    op.execute("""
-        UPDATE tenant_mailboxes
-        SET provider = 'imap_custom'
-        WHERE auth_method = 'app_password'
-    """)
-
-    # 4. Restore Gmail server values for app-password rows
+    # 3. Restore Gmail server values for app-password rows
     op.execute("""
         UPDATE tenant_mailboxes
         SET imap_host = 'imap.gmail.com',
@@ -107,24 +90,28 @@ def downgrade() -> None:
         WHERE auth_method = 'app_password'
     """)
 
-    # 5. Map app_password back to imap_app_password
+    # 4. Map app_password back to imap_app_password
     op.execute("""
         UPDATE tenant_mailboxes
         SET auth_method = 'imap_app_password'
         WHERE auth_method = 'app_password'
     """)
 
-    # 6. Rename encrypted column back
+    # 5. Rename encrypted column back
     op.alter_column(
         "tenant_mailboxes",
         "app_password_encrypted",
         new_column_name="imap_password_encrypted",
     )
 
-    # 7. Make provider non-null after population
-    op.alter_column(
-        "tenant_mailboxes",
-        "provider",
-        nullable=False,
-        server_default="google",
-    )
+    # 6. Derive provider values from auth_method (for rows where provider is NULL)
+    op.execute("""
+        UPDATE tenant_mailboxes
+        SET provider = 'google'
+        WHERE provider IS NULL AND auth_method = 'oauth'
+    """)
+    op.execute("""
+        UPDATE tenant_mailboxes
+        SET provider = 'imap_custom'
+        WHERE provider IS NULL AND auth_method = 'imap_app_password'
+    """)

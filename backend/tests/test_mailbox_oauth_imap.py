@@ -539,6 +539,7 @@ class TestMailboxOAuthService:
             db_session,
             tenant.id,
             auth_method="oauth",
+            provider="microsoft",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("ms-access"),
             oauth_refresh_token_encrypted=encrypt_value("ms-refresh"),
@@ -639,7 +640,6 @@ class TestImapService:
                 username="user",
                 password="wrong",
             )
-
 
     def test_imap_error_subclasses_inherit_from_base(self):
         """All typed IMAP errors inherit from ImapConnectionError."""
@@ -979,6 +979,7 @@ class TestMailboxProviderTokenRefresh:
             db_session,
             tenant.id,
             auth_method="oauth",
+            provider="microsoft",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-ms-token"),
             oauth_refresh_token_encrypted=encrypt_value("valid-ms-refresh"),
@@ -1048,6 +1049,7 @@ class TestMailboxProviderTokenRefresh:
             db_session,
             tenant.id,
             auth_method="oauth",
+            provider="microsoft",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-ms"),
             oauth_refresh_token_encrypted=encrypt_value("bad-ms-refresh"),
@@ -1085,6 +1087,7 @@ class TestMailboxProviderTokenRefresh:
             db_session,
             tenant.id,
             auth_method="oauth",
+            provider="microsoft",
             status="connected",
             oauth_access_token_encrypted=encrypt_value("expired-ms"),
             oauth_refresh_token_encrypted=encrypt_value("ms-refresh"),
@@ -1141,6 +1144,9 @@ async def _seed_mailbox(db_session, tenant_id, **overrides):
         "status": "connected",
     }
     kwargs.update(overrides)
+    # Default provider to "google" for OAuth mailboxes unless explicitly set.
+    if "provider" not in kwargs and kwargs["auth_method"] == "oauth":
+        kwargs["provider"] = "google"
     mb = TenantMailbox(**kwargs)
     db_session.add(mb)
     await db_session.commit()

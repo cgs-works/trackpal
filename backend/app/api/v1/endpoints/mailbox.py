@@ -114,6 +114,7 @@ async def upsert_mailbox(
     values = {
         "mailbox_email": payload.mailbox_email,
         "auth_method": "app_password",
+        "provider": "google",
         "status": "connected",
         "app_password_encrypted": encrypt_value(normalized_password),
         "oauth_provider_user_id": None,
