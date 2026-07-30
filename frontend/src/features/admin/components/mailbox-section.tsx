@@ -55,6 +55,7 @@ export function MailboxSection() {
 
   // Form state
   const [provider, setProvider] = useState("google");
+  const [oauthConsentAccepted, setOauthConsentAccepted] = useState(false);
   const [email, setEmail] = useState("");
   const [imapHost, setImapHost] = useState("");
   const [imapPort, setImapPort] = useState("993");
@@ -108,9 +109,12 @@ export function MailboxSection() {
 
   // ── OAuth connect ─────────────────────────────────────────
   async function handleOAuthConnect(prov: "google" | "microsoft") {
+    if (!oauthConsentAccepted) return;
+
     try {
       const { auth_url } = await startOAuth(prov);
       window.open(auth_url, "_blank", "width=500,height=600");
+      setOauthConsentAccepted(false);
       toast.info(t("frontend.mailbox.oauth_started"));
     } catch (err) {
       toast.error(
@@ -180,6 +184,11 @@ export function MailboxSection() {
     } finally {
       setDisconnecting(false);
     }
+  }
+
+  function handleProviderSelect(value: string) {
+    setProvider(value);
+    setOauthConsentAccepted(false);
   }
 
   // Provider display names for status card (resolved at render time)
@@ -282,7 +291,7 @@ export function MailboxSection() {
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => setProvider(opt.value)}
+                  onClick={() => handleProviderSelect(opt.value)}
                   className={
                     "relative flex flex-col items-center gap-2 p-4 rounded-lg border text-left transition-colors " +
                     (isSelected
@@ -312,12 +321,48 @@ export function MailboxSection() {
 
           {/* OAuth option */}
           {provider !== "imap_custom" && (
-            <Button
-              onClick={() => handleOAuthConnect(provider as "google" | "microsoft")}
-              className="w-full"
-            >
-              {t("frontend.mailbox.connect_oauth")}
-            </Button>
+            <div className="space-y-3">
+              <div
+                id="mailbox-oauth-consent-description"
+                className="space-y-3 rounded-lg border bg-muted/30 p-4"
+              >
+                <h3 className="text-sm font-medium">
+                  {t("frontend.mailbox.oauth_consent_title")}
+                </h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>{t("frontend.mailbox.oauth_consent_data")}</p>
+                  <p>{t("frontend.mailbox.oauth_consent_transfer")}</p>
+                  <p>{t("frontend.mailbox.oauth_consent_storage")}</p>
+                </div>
+                <a
+                  href="https://trackpal.wilfredocamacho.dev/privacy-policy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {t("frontend.mailbox.oauth_consent_privacy")}
+                </a>
+                <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={oauthConsentAccepted}
+                    onChange={(event) => setOauthConsentAccepted(event.target.checked)}
+                    aria-describedby="mailbox-oauth-consent-description"
+                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                  />
+                  <span>{t("frontend.mailbox.oauth_consent_checkbox")}</span>
+                </label>
+              </div>
+              <Button
+                onClick={() => handleOAuthConnect(provider as "google" | "microsoft")}
+                disabled={!oauthConsentAccepted}
+                className="w-full"
+              >
+                {provider === "google"
+                  ? t("frontend.mailbox.continue_google")
+                  : t("frontend.mailbox.continue_microsoft")}
+              </Button>
+            </div>
           )}
 
           {/* IMAP option */}

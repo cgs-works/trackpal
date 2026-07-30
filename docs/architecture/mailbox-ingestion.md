@@ -74,6 +74,7 @@ permissions) fail immediately.
 ### Google (Gmail Read-Only)
 
 - Scopes: `gmail.readonly openid email`.
+- Before opening Google OAuth, the mailbox UI discloses the message data read, the WhatsApp delivery purpose, temporary processing, and read-only limitations. The administrator must affirmatively accept this use for each connection attempt.
 - `access_type=offline` + `prompt=consent` ensures refresh token on first auth.
 - Token refresh on expiry; `invalid_grant` marks mailbox as `revoked`.
 
