@@ -47,9 +47,13 @@ TrackPal revisa este buzón cuando alguien solicita un código de acceso desde W
 2. Si la Verificación en dos pasos no está activada, sigue la guía de Google en [Ayuda de Verificación en dos pasos](https://support.google.com/accounts/answer/185833) para activarla primero.
 3. En la página de Contraseñas de aplicación, selecciona **Correo** como la aplicación y **Otra (Nombre personalizado)** como el dispositivo. Ingresa un nombre como "TrackPal" y haz clic en **Generar**.
 4. Copia la contraseña de 16 caracteres que aparece.
-5. En TrackPal, ve a **Configuración > Buzón** y selecciona **Conexión de Google**. Esta opción solo está disponible cuando el indicador de funcionalidad `VITE_GMAIL_OAUTH_CONNECT_ENABLED` está activo en tu despliegue.
+5. En TrackPal, ve a **Configuración > Buzón** y haz clic en **Tengo una contraseña de aplicación**. Esto abre el formulario de conexión por contraseña de aplicación de Gmail.
 6. Ingresa tu dirección de Gmail y pega la contraseña de aplicación que generaste.
 7. Haz clic en **Probar conexión**. Cuando el estado muestre **Conectado**, tu buzón está listo.
+
+## Conexión de Google (OAuth)
+
+Si el indicador de funcionalidad `VITE_GMAIL_OAUTH_CONNECT_ENABLED` está activo en tu despliegue, también puedes conectar usando **Conexión de Google**. Esto usa OAuth para otorgar acceso a TrackPal sin compartir una contraseña de aplicación.
 
 ## Elegibilidad para contraseñas de aplicación
 

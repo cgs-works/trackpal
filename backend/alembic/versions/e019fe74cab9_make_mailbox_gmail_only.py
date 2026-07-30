@@ -51,6 +51,9 @@ def upgrade() -> None:
     op.drop_column("tenant_mailboxes", "imap_port")
     op.drop_column("tenant_mailboxes", "imap_ssl")
 
+    # Provider is no longer needed — auth_method alone identifies the connection type.
+    op.drop_column("tenant_mailboxes", "provider")
+
     # Restrict mailbox authentication to the two Gmail connection methods.
     op.create_check_constraint(
         "ck_tenant_mailboxes_auth_method",
@@ -81,6 +84,12 @@ def downgrade() -> None:
         sa.Column("imap_ssl", sa.Boolean(), server_default="true", nullable=True),
     )
 
+    # Restore provider as nullable initially (populated below, then made NOT NULL).
+    op.add_column(
+        "tenant_mailboxes",
+        sa.Column("provider", sa.String(50), nullable=True),
+    )
+
     # Repopulate Gmail server values for app-password rows.
     op.execute("""
         UPDATE tenant_mailboxes
@@ -104,14 +113,21 @@ def downgrade() -> None:
         new_column_name="imap_password_encrypted",
     )
 
-    # Restore missing legacy provider values from the authentication method.
+    # Restore provider values from the authentication method.
     op.execute("""
         UPDATE tenant_mailboxes
         SET provider = 'google'
-        WHERE provider IS NULL AND auth_method = 'oauth'
+        WHERE auth_method = 'oauth'
     """)
     op.execute("""
         UPDATE tenant_mailboxes
         SET provider = 'imap_custom'
-        WHERE provider IS NULL AND auth_method = 'imap_app_password'
+        WHERE auth_method = 'imap_app_password'
     """)
+
+    # Make provider NOT NULL now that all rows are populated.
+    op.alter_column(
+        "tenant_mailboxes",
+        "provider",
+        nullable=False,
+    )

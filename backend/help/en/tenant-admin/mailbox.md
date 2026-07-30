@@ -47,9 +47,13 @@ TrackPal checks this mailbox when someone requests an access code in WhatsApp. U
 2. If 2-Step Verification is not enabled, follow Google's guide at [2-Step Verification help](https://support.google.com/accounts/answer/185833) to activate it first.
 3. On the App passwords page, select **Mail** as the app and **Other (Custom name)** as the device. Enter a name like "TrackPal" and click **Generate**.
 4. Copy the 16-character password that appears.
-5. In TrackPal, go to **Settings > Mailbox** and select **Google Connection**. This option is only available when the `VITE_GMAIL_OAUTH_CONNECT_ENABLED` feature flag is active for your deployment.
+5. In TrackPal, go to **Settings > Mailbox** and click **I have an app password**. This opens the Gmail app-password connection form.
 6. Enter your Gmail address and paste the app password you generated.
 7. Click **Test connection**. When the status shows **Connected**, your mailbox is ready.
+
+## Google Connection (OAuth)
+
+If the `VITE_GMAIL_OAUTH_CONNECT_ENABLED` feature flag is active for your deployment, you can also connect using **Google Connection**. This uses OAuth to grant TrackPal access without sharing an app password.
 
 ## App password eligibility
 
