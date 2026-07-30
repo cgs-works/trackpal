@@ -17,6 +17,8 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
+import { toast } from "sonner";
+
 vi.mock("@/features/admin/services/settings-api", async (importOriginal) => {
   const actual = await importOriginal<
     typeof import("@/features/admin/services/settings-api")
@@ -60,9 +62,10 @@ describe("MailboxSection", () => {
     expect(screen.queryByText("frontend.mailbox.use_google_connection")).not.toBeInTheDocument();
   });
 
-  it("shows Google Connection option when flag is exact true", () => {
+  it("shows Google Connection option inside assistant when flag is exact true", () => {
     vi.stubEnv("VITE_GMAIL_OAUTH_CONNECT_ENABLED", "true");
     render(<MailboxSection />);
+    // The "Use Google Connection" button is now inside GmailSetupAssistant
     expect(screen.getByText("frontend.mailbox.use_google_connection")).toBeInTheDocument();
   });
 
@@ -136,33 +139,37 @@ describe("MailboxSection", () => {
     ).toHaveAttribute("href", "https://myaccount.google.com/apppasswords");
   });
 
-  it("requires consent before starting OAuth when flag is true", async () => {
-    vi.stubEnv("VITE_GMAIL_OAUTH_CONNECT_ENABLED", "true");
+  it("shows safe generic error message for unknown error codes", async () => {
     const user = userEvent.setup();
+    mockConnectGmail.mockRejectedValueOnce({
+      response: { data: { detail: "some_unexpected_error_code" } },
+    });
     render(<MailboxSection />);
 
-    const useGoogleBtn = screen.getByText("frontend.mailbox.use_google_connection");
-    await user.click(useGoogleBtn);
-
-    expect(screen.getByText("frontend.mailbox.oauth_consent_title")).toBeInTheDocument();
-    const consent = screen.getByRole("checkbox", {
-      name: "frontend.mailbox.oauth_consent_checkbox",
-    });
-    const startBtn = screen.getByRole("button", {
-      name: "frontend.mailbox.continue_google",
-    });
-    expect(consent).not.toBeChecked();
-    expect(startBtn).toBeDisabled();
-
-    await user.click(consent);
-    expect(startBtn).toBeEnabled();
-
-    await user.click(startBtn);
-    await waitFor(() => expect(mockStartGoogleOAuth).toHaveBeenCalled());
-    expect(window.open).toHaveBeenCalledWith(
-      "https://accounts.google.com/oauth",
-      "_blank",
-      "width=500,height=600",
+    // Navigate to credentials
+    await user.click(
+      screen.getByRole("button", {
+        name: "frontend.mailbox.have_app_password",
+      }),
     );
+
+    // Fill and submit
+    await user.type(
+      screen.getByLabelText("frontend.mailbox.google_email"),
+      "test@gmail.com",
+    );
+    await user.type(
+      screen.getByLabelText("frontend.mailbox.app_password"),
+      "test-password",
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "frontend.mailbox.connect_gmail",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("frontend.mailbox.error_save");
+    });
   });
 });

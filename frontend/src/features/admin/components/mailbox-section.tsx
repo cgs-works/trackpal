@@ -16,14 +16,12 @@ import {
   testMailbox,
   startGoogleOAuth,
   disconnectMailbox,
+  type GmailAppPasswordConnect,
 } from "../services/settings-api";
 import { useSettingsStore } from "@/store/settings";
 import { useAuthStore } from "@/store/auth";
 import { isGmailOAuthConnectEnabled } from "../mailbox-config";
-import {
-  GmailSetupAssistant,
-  type GmailAppPasswordConnect,
-} from "./gmail-setup-assistant";
+import { GmailSetupAssistant } from "./gmail-setup-assistant";
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
@@ -61,7 +59,6 @@ function mailboxErrorMessage(error: unknown): string {
   if (detail === "gmail_connection_unavailable") {
     return t("frontend.mailbox.error_connection_unavailable");
   }
-  if (error instanceof Error) return error.message;
   return t("frontend.mailbox.error_save");
 }
 
@@ -82,8 +79,6 @@ export function MailboxSection() {
   const channelRef = useRef<BroadcastChannel | null>(null);
 
   const oauthConnectEnabled = isGmailOAuthConnectEnabled();
-  const [oauthStep, setOauthStep] = useState<"idle" | "consent">("idle");
-  const [oauthConsentAccepted, setOauthConsentAccepted] = useState(false);
 
   const loadMailboxData = useCallback(async () => {
     if (mailboxLoaded) {
@@ -142,12 +137,9 @@ export function MailboxSection() {
 
   // ── OAuth connect ─────────────────────────────────────────
   async function handleOAuthStart() {
-    if (!oauthConsentAccepted) return;
     try {
       const { auth_url } = await startGoogleOAuth();
       window.open(auth_url, "_blank", "width=500,height=600");
-      setOauthConsentAccepted(false);
-      setOauthStep("idle");
       toast.info(t("frontend.mailbox.oauth_started"));
     } catch (err) {
       toast.error(
@@ -259,84 +251,11 @@ export function MailboxSection() {
 
       {/* Setup assistant */}
       {!mailbox && !isDemo && (
-        <div className="space-y-4">
-          {/* Optional OAuth path */}
-          {oauthConnectEnabled && (
-            <div className="space-y-3">
-              {oauthStep === "idle" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setOauthStep("consent")}
-                  className="w-full"
-                >
-                  {t("frontend.mailbox.use_google_connection")}
-                </Button>
-              )}
-
-              {oauthStep === "consent" && (
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOauthStep("idle");
-                      setOauthConsentAccepted(false);
-                    }}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    ← {t("frontend.mailbox.back")}
-                  </button>
-                  <div
-                    id="mailbox-oauth-consent-description"
-                    className="space-y-3 rounded-lg border bg-muted/30 p-4"
-                  >
-                    <h3 className="text-sm font-medium">
-                      {t("frontend.mailbox.oauth_consent_title")}
-                    </h3>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>{t("frontend.mailbox.oauth_consent_data")}</p>
-                      <p>{t("frontend.mailbox.oauth_consent_transfer")}</p>
-                      <p>{t("frontend.mailbox.oauth_consent_storage")}</p>
-                    </div>
-                    <a
-                      href="https://trackpal.wilfredocamacho.dev/privacy-policy"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      {t("frontend.mailbox.oauth_consent_privacy")}
-                    </a>
-                    <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={oauthConsentAccepted}
-                        onChange={(event) => setOauthConsentAccepted(event.target.checked)}
-                        aria-describedby="mailbox-oauth-consent-description"
-                        className="mt-0.5 size-4 shrink-0 accent-primary"
-                      />
-                      <span>{t("frontend.mailbox.oauth_consent_checkbox")}</span>
-                    </label>
-                  </div>
-                  <Button
-                    onClick={handleOAuthStart}
-                    disabled={!oauthConsentAccepted}
-                    className="w-full"
-                  >
-                    {t("frontend.mailbox.continue_google")}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* App-password assistant */}
-          <GmailSetupAssistant
-            oauthConnectEnabled={oauthConnectEnabled}
-            onConnect={handleConnectAppPassword}
-            onStartOAuth={async () => {
-              setOauthStep("consent");
-            }}
-          />
-        </div>
+        <GmailSetupAssistant
+          oauthConnectEnabled={oauthConnectEnabled}
+          onConnect={handleConnectAppPassword}
+          onStartOAuth={handleOAuthStart}
+        />
       )}
 
       {/* Test connection */}

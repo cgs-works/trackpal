@@ -490,6 +490,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.mailbox.use_google_connection": "Usar conexión de Google",
     "frontend.mailbox.method_google_connection": "Conexión de Google",
     "frontend.mailbox.method_app_password": "App Password",
+    "frontend.mailbox.setup_method_title": "¿Cómo prefieres conectar?",
     "frontend.mailbox.app_password_step_title": "Paso 1: Generar un App Password",
     "frontend.mailbox.app_password_step_description": "Abre la página de Contraseñas de aplicación de Google y crea una nueva contraseña de aplicación para TrackPal.",
     "frontend.mailbox.app_password_step_help": "Necesitarás esta contraseña de aplicación (no tu contraseña normal de correo) para conectarte.",

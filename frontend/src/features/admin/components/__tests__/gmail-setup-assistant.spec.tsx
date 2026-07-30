@@ -220,4 +220,87 @@ describe("GmailSetupAssistant", () => {
 
     expect(screen.queryByText(/OAuth/i)).not.toBeInTheDocument();
   });
+
+  // ── OAuth path inside the assistant ────────────────────────
+
+  it("shows two-option selector when oauthConnectEnabled is true", () => {
+    render(
+      <GmailSetupAssistant
+        oauthConnectEnabled={true}
+        onConnect={vi.fn()}
+        onStartOAuth={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "frontend.mailbox.have_app_password" }),
+    ).toBeInTheDocument();
+  });
+
+  it("navigates to OAuth consent flow and requires consent before calling onStartOAuth", async () => {
+    const user = userEvent.setup();
+    const onStartOAuth = vi.fn().mockResolvedValue(undefined);
+    render(
+      <GmailSetupAssistant
+        oauthConnectEnabled={true}
+        onConnect={vi.fn()}
+        onStartOAuth={onStartOAuth}
+      />,
+    );
+
+    // Click "Use Google Connection"
+    await user.click(
+      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
+    );
+
+    // Consent screen visible
+    expect(screen.getByText("frontend.mailbox.oauth_consent_title")).toBeInTheDocument();
+    const consent = screen.getByRole("checkbox", {
+      name: "frontend.mailbox.oauth_consent_checkbox",
+    });
+    const startBtn = screen.getByRole("button", {
+      name: "frontend.mailbox.continue_google",
+    });
+    expect(consent).not.toBeChecked();
+    expect(startBtn).toBeDisabled();
+
+    // Accept consent
+    await user.click(consent);
+    expect(startBtn).toBeEnabled();
+
+    // Start OAuth
+    await user.click(startBtn);
+    expect(onStartOAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows going back from OAuth consent to the two-option selector", async () => {
+    const user = userEvent.setup();
+    render(
+      <GmailSetupAssistant
+        oauthConnectEnabled={true}
+        onConnect={vi.fn()}
+        onStartOAuth={vi.fn()}
+      />,
+    );
+
+    // Enter OAuth consent
+    await user.click(
+      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
+    );
+    expect(screen.getByText("frontend.mailbox.oauth_consent_title")).toBeInTheDocument();
+
+    // Click back
+    await user.click(screen.getByText(/frontend\.mailbox\.back/));
+
+    // Back to selector
+    expect(
+      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "frontend.mailbox.have_app_password" }),
+    ).toBeInTheDocument();
+  });
 });
