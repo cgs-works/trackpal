@@ -1,4 +1,4 @@
-"""MailboxOAuthService — orchestrate Google/Microsoft OAuth flows."""
+"""MailboxOAuthService — orchestrate Google-only OAuth flows."""
 
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -20,21 +20,16 @@ from .google import build_auth_url as google_auth_url
 from .google import exchange_code as google_exchange
 from .google import fetch_user_info as google_user_info
 from .google import refresh_access_token as google_refresh
-from .microsoft import build_auth_url as microsoft_auth_url
-from .microsoft import exchange_code as microsoft_exchange
-from .microsoft import fetch_user_info as microsoft_user_info
-from .microsoft import refresh_access_token as microsoft_refresh
 
 STATE_ALGORITHM = "HS256"
 STATE_EXPIRE_MINUTES = 10
 
 
-def _create_state_token(tenant_id: UUID, provider: str) -> str:
-    """Create a signed JWT state token encoding tenant+provider context."""
+def _create_state_token(tenant_id: UUID) -> str:
+    """Create a signed JWT state token encoding tenant context (Google-only)."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=STATE_EXPIRE_MINUTES)
     payload = {
         "tenant_id": str(tenant_id),
-        "provider": provider,
         "nonce": secrets.token_urlsafe(16),
         "exp": expire,
         "type": "oauth_state",
@@ -54,54 +49,41 @@ def _decode_state_token(state: str) -> dict | None:
 
 
 class MailboxOAuthService:
-    """Orchestrate OAuth flows for tenant mailbox connections."""
+    """Orchestrate Google-only OAuth flows for tenant mailbox connections."""
 
     async def start_oauth(
         self,
         db: AsyncSession | None,
         tenant_id: UUID,
-        provider: str,
-    ) -> OAuthStartResponse | None:
-        """Generate OAuth authorization URL for the given provider.
+    ) -> OAuthStartResponse:
+        """Generate Google OAuth authorization URL."""
+        state = _create_state_token(tenant_id)
 
-        Returns ``None`` if provider is unsupported.
-        """
-        state = _create_state_token(tenant_id, provider)
+        url = google_auth_url(
+            settings.google_oauth_client_id,
+            settings.google_oauth_redirect_uri,
+            state,
+        )
 
-        if provider == "google":
-            url = google_auth_url(
-                settings.google_oauth_client_id,
-                settings.google_oauth_redirect_uri,
-                state,
-            )
-        elif provider == "microsoft":
-            url = microsoft_auth_url(
-                settings.microsoft_oauth_client_id,
-                settings.microsoft_oauth_redirect_uri,
-                state,
-            )
-        else:
-            return None
-
-        metrics.inc("oauth_start_total", provider=provider)
+        metrics.inc("oauth_start_total", provider="gmail")
         return OAuthStartResponse(auth_url=url, state=state)
 
     async def complete_oauth(
         self,
         db: AsyncSession,
-        provider: str,
         code: str,
         state: str,
     ) -> TenantMailbox:
-        """Complete OAuth callback: validate state, exchange code, store tokens."""
+        """Complete OAuth callback: validate state, exchange code, store tokens.
+
+        Always uses Google. Stores auth_method="oauth", clears any
+        app_password_encrypted, and records metrics with provider="gmail".
+        """
         payload = _decode_state_token(state)
         if payload is None:
             raise ValueError("Invalid or expired OAuth state token")
 
         tenant_id = UUID(payload["tenant_id"])
-        state_provider = payload["provider"]
-        if state_provider != provider:
-            raise ValueError(f"State provider mismatch: {state_provider} != {provider}")
 
         tenant = await tenants_repository.get(db, tenant_id)
         if tenant is not None:
@@ -109,30 +91,16 @@ class MailboxOAuthService:
 
         mailbox = await mailbox_config_repository.get_by_tenant(db, tenant_id)
 
-        if provider == "google":
-            token_info = await google_exchange(
-                settings.google_oauth_client_id,
-                settings.google_oauth_client_secret,
-                settings.google_oauth_redirect_uri,
-                code,
-            )
-            try:
-                user_info = await google_user_info(token_info.access_token)
-            except Exception:
-                user_info = None
-        elif provider == "microsoft":
-            token_info = await microsoft_exchange(
-                settings.microsoft_oauth_client_id,
-                settings.microsoft_oauth_client_secret,
-                settings.microsoft_oauth_redirect_uri,
-                code,
-            )
-            try:
-                user_info = await microsoft_user_info(token_info.access_token)
-            except Exception:
-                user_info = None
-        else:
-            raise ValueError(f"Unsupported OAuth provider: {provider}")
+        token_info = await google_exchange(
+            settings.google_oauth_client_id,
+            settings.google_oauth_client_secret,
+            settings.google_oauth_redirect_uri,
+            code,
+        )
+        try:
+            user_info = await google_user_info(token_info.access_token)
+        except Exception:
+            user_info = None
 
         mailbox_email: str | None = None
         provider_user_id: str | None = None
@@ -153,7 +121,6 @@ class MailboxOAuthService:
             mailbox = TenantMailbox(
                 tenant_id=tenant_id,
                 mailbox_email=mailbox_email,
-                provider=provider,
                 auth_method="oauth",
                 status="connected",
                 oauth_provider_user_id=provider_user_id,
@@ -170,13 +137,9 @@ class MailboxOAuthService:
                 db,
                 mailbox,
                 mailbox_email=mailbox_email,
-                provider=provider,
                 auth_method="oauth",
                 status="connected",
-                imap_host=None,
-                imap_port=None,
-                imap_ssl=None,
-                imap_password_encrypted=None,
+                app_password_encrypted=None,
                 oauth_provider_user_id=provider_user_id,
                 oauth_provider_email=mailbox_email,
                 oauth_access_token_encrypted=encrypt_value(token_info.access_token),
@@ -186,18 +149,18 @@ class MailboxOAuthService:
                 last_connection_error=None,
             )
 
-        metrics.inc("oauth_complete_total", provider=provider, status="connected")
+        metrics.inc("oauth_complete_total", provider="gmail", status="ok")
         return mailbox
 
     async def refresh_token(
         self, db: AsyncSession, mailbox: TenantMailbox
     ) -> TenantMailbox:
-        """Refresh an OAuth access token.
+        """Refresh an OAuth access token (Google-only).
 
         On success: updates ``oauth_access_token_encrypted`` and ``expires_at``.
         On ``invalid_grant``: marks mailbox as ``revoked``, clears tokens.
 
-        Returns updated mailbox, or ``None`` if mailbox doesn't use OAuth.
+        Returns updated mailbox, or unchanged mailbox if not OAuth.
         """
         if mailbox.auth_method != "oauth":
             return mailbox
@@ -210,20 +173,11 @@ class MailboxOAuthService:
             return mailbox
 
         try:
-            if mailbox.provider == "google":
-                result = await google_refresh(
-                    settings.google_oauth_client_id,
-                    settings.google_oauth_client_secret,
-                    refresh_token,
-                )
-            elif mailbox.provider == "microsoft":
-                result = await microsoft_refresh(
-                    settings.microsoft_oauth_client_id,
-                    settings.microsoft_oauth_client_secret,
-                    refresh_token,
-                )
-            else:
-                return mailbox
+            result = await google_refresh(
+                settings.google_oauth_client_id,
+                settings.google_oauth_client_secret,
+                refresh_token,
+            )
         except InvalidGrantError as exc:
             # Refresh token invalid/revoked → mark mailbox revoked
             await mailbox_config_repository.update(
@@ -235,9 +189,7 @@ class MailboxOAuthService:
                 oauth_token_expires_at=None,
                 last_connection_error=str(exc),
             )
-            metrics.inc(
-                "oauth_refresh_total", provider=mailbox.provider, status="revoked"
-            )
+            metrics.inc("oauth_refresh_total", provider="gmail", status="revoked")
             return mailbox
 
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=result.expires_in)
@@ -249,7 +201,7 @@ class MailboxOAuthService:
             oauth_scope=result.scope,
             last_connection_error=None,
         )
-        metrics.inc("oauth_refresh_total", provider=mailbox.provider, status="ok")
+        metrics.inc("oauth_refresh_total", provider="gmail", status="ok")
         return mailbox
 
     async def disconnect(
@@ -266,8 +218,8 @@ class MailboxOAuthService:
             oauth_scope=None,
             oauth_provider_user_id=None,
             oauth_provider_email=None,
-            imap_password_encrypted=None,
+            app_password_encrypted=None,
             last_connection_error=None,
         )
-        metrics.inc("oauth_disconnect_total", provider=mailbox.provider)
+        metrics.inc("oauth_disconnect_total", provider="gmail")
         return mailbox

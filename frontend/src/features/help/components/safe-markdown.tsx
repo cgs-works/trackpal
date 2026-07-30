@@ -4,14 +4,52 @@ interface SafeMarkdownProps {
   source: string;
 }
 
+const ALLOWED_EXTERNAL_HELP_URLS = new Set([
+  "https://myaccount.google.com/apppasswords",
+  "https://support.google.com/accounts/answer/185833",
+]);
+
+function allowedExternalHelpUrl(value: string): string | null {
+  return ALLOWED_EXTERNAL_HELP_URLS.has(value) ? value : null;
+}
+
+const INLINE_TOKEN_PATTERN = /(\*\*[^*]+\*\*|\[[^\]]+\]\(https:\/\/[^)]+\))/g;
+const INLINE_LINK_PATTERN = /^\[([^\]]+)\]\((https:\/\/[^)]+)\)$/;
+
+function headingTag(level: number): "h1" | "h2" | "h3" {
+  if (level === 1) return "h1";
+  if (level === 2) return "h2";
+  return "h3";
+}
+
 function renderInlineMarkdown(value: string): ReactNode {
-  return value.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>
-    ) : (
-      part
-    ),
-  );
+  const tokens = value.split(INLINE_TOKEN_PATTERN);
+  return tokens.map((token, index) => {
+    if (token.startsWith("**") && token.endsWith("**")) {
+      return <strong key={`${token}-${index}`}>{token.slice(2, -2)}</strong>;
+    }
+
+    const linkMatch = token.match(INLINE_LINK_PATTERN);
+    if (linkMatch) {
+      const [, label, destination] = linkMatch;
+      const href = allowedExternalHelpUrl(destination);
+      return href ? (
+        <a
+          key={`${href}-${index}`}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {label}
+        </a>
+      ) : (
+        label
+      );
+    }
+
+    return token;
+  });
 }
 
 export function SafeMarkdown({ source }: SafeMarkdownProps) {
@@ -23,7 +61,7 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
         const lines = block.split("\n");
         const heading = lines[0]?.match(/^(#{1,3})\s+(.+)$/);
         if (heading) {
-          const Heading = heading[1].length === 1 ? "h1" : heading[1].length === 2 ? "h2" : "h3";
+          const Heading = headingTag(heading[1].length);
           return (
             <Heading
               key={`${heading[1]}-${index}`}
@@ -53,8 +91,26 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
           );
         }
 
+        if (lines.length > 0 && lines.every((line) => /^\d+\.\s+/.test(line))) {
+          return (
+            <ol
+              key={`ordered-list-${index}`}
+              className="flex max-w-none list-decimal flex-col gap-2 pl-5 text-justify text-muted-foreground"
+            >
+              {lines.map((line, lineIndex) => (
+                <li key={`${line}-${lineIndex}`}>
+                  {renderInlineMarkdown(line.replace(/^\d+\.\s+/, ""))}
+                </li>
+              ))}
+            </ol>
+          );
+        }
+
         return (
-          <p key={`paragraph-${index}`} className="max-w-none text-justify leading-7 text-muted-foreground">
+          <p
+            key={`paragraph-${index}`}
+            className="max-w-none text-justify leading-7 text-muted-foreground"
+          >
             {renderInlineMarkdown(lines.join(" "))}
           </p>
         );

@@ -268,7 +268,7 @@ async def test_help_topics_are_searchable_with_safe_cross_module_links(
     headers = await _login(client, "tenant", "tenant-password")
 
     search_response = await client.get(
-        "/api/v1/help/search", params={"q": "revocado"}, headers=headers
+        "/api/v1/help/search", params={"q": "contraseña de aplicación"}, headers=headers
     )
     topic_response = await client.get(
         "/api/v1/help/topics/tenant-admin.activate-access-code-lookup",

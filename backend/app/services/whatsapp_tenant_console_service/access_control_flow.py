@@ -64,7 +64,9 @@ async def _handle_access_control_block_phone(
         return self._t(self.KEY_ACCESS_CONTROL_MENU)
 
     # Check if already blocked
-    existing = await blocked_clients_repository.find_active(db, tenant_id, phone=msg.strip())
+    existing = await blocked_clients_repository.find_active(
+        db, tenant_id, phone=msg.strip()
+    )
     if existing:
         return self._t(self.KEY_ACCESS_CONTROL_DUPLICATE)
 

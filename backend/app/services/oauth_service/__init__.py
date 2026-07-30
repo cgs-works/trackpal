@@ -1,4 +1,4 @@
-"""OAuth service for Google/Microsoft mailbox authentication."""
+"""OAuth service for Google mailbox authentication."""
 
 from .service import MailboxOAuthService
 

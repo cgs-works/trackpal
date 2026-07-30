@@ -77,9 +77,7 @@ class PublicApiKeyService:
                 await db.commit()
             except IntegrityError:
                 await db.rollback()
-                row = await tenant_api_keys_repository.get_by_tenant_id(
-                    db, tenant_id
-                )
+                row = await tenant_api_keys_repository.get_by_tenant_id(db, tenant_id)
                 # ponytail: row is guaranteed to exist after the conflict
                 row.allowed_origins = allowed_origins
                 await db.commit()

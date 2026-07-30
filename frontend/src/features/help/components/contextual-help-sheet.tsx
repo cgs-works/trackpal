@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,8 @@ import {
   HELP_TARGET_CONTRACT_VERSION,
   isPrivateHelpEnabled,
 } from "../config";
-import { findActiveHelpTarget } from "../help-targets";
+import { CONTEXTUAL_HELP_REQUEST_EVENT } from "../contextual-help";
+import { findActiveHelpTarget, type HelpTargetId } from "../help-targets";
 import {
   getHelpIndex,
   getHelpTopic,
@@ -34,18 +35,16 @@ export function ContextualHelpSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  if (!isPrivateHelpEnabled()) {
-    return null;
-  }
+  const openHelp = useCallback(async (requestedTarget?: HelpTargetId) => {
+    if (!isPrivateHelpEnabled()) return;
 
-  async function openHelp() {
     setOpen(true);
     setTopic(null);
     setLoading(true);
     setError(false);
 
     try {
-      const target = findActiveHelpTarget();
+      const target = requestedTarget ?? findActiveHelpTarget();
       if (!target) {
         throw new Error("No Help target is present on this screen.");
       }
@@ -65,6 +64,24 @@ export function ContextualHelpSheet({
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isPrivateHelpEnabled()) return;
+
+    function handleContextualHelpRequest(event: Event) {
+      const detail = (event as CustomEvent<HelpTargetId>).detail;
+      void openHelp(detail);
+    }
+
+    window.addEventListener(CONTEXTUAL_HELP_REQUEST_EVENT, handleContextualHelpRequest);
+    return () => {
+      window.removeEventListener(CONTEXTUAL_HELP_REQUEST_EVENT, handleContextualHelpRequest);
+    };
+  }, [openHelp]);
+
+  if (!isPrivateHelpEnabled()) {
+    return null;
   }
 
   function handleOpenChange(nextOpen: boolean) {

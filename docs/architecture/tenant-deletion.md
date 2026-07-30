@@ -68,7 +68,7 @@ If external cleanup fails, the Tenant remains fully present and the operation ca
 
 ## What is NOT deleted
 
-- Google/Microsoft OAuth grants at the provider (local credentials are destroyed)
+- Google OAuth grants at the provider (local credentials are destroyed)
 - Infrastructure backups and logs (follow operational retention policies)
 - WhatsApp/Session Redis keys (best-effort cleanup; keys expire in 5 minutes)
 

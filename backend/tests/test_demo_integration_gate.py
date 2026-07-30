@@ -69,9 +69,7 @@ async def test_demo_creation_login_workspace_lifecycle_and_ending_contract(
     tenant.demo_expires_at = expired_at
     await db_session.commit()
 
-    ended_heartbeat = await client.post(
-        "/api/v1/auth/heartbeat", headers=demo_headers
-    )
+    ended_heartbeat = await client.post("/api/v1/auth/heartbeat", headers=demo_headers)
     assert ended_heartbeat.status_code == 410, ended_heartbeat.text
     assert ended_heartbeat.json()["detail"] == "demo_ended"
 

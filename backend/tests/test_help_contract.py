@@ -441,21 +441,59 @@ def test_frontend_i18n_copy_avoids_internal_tenant_jargon() -> None:
         assert "tenant" not in " ".join(catalog.values()).casefold()
 
 
-def test_mailbox_help_explains_imap_as_an_oauth_alternative() -> None:
+def test_mailbox_help_covers_gmail_app_password_setup() -> None:
     artifact = compile_help(SOURCE_DIR)
     topics_by_locale = {
         locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
         for locale in ("en", "es")
     }
 
-    assert (
-        "you can choose imap as an alternative"
-        in topics_by_locale["en"]["tenant-admin.mailbox"]["body"].casefold()
-    )
-    assert (
-        "puedes elegir imap como alternativa"
-        in topics_by_locale["es"]["tenant-admin.mailbox"]["body"].casefold()
-    )
+    for locale in ("en", "es"):
+        body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"]
+        assert "myaccount.google.com/apppasswords" in body
+        assert "support.google.com/accounts/answer/185833" in body
+        assert "Microsoft" not in body
+        assert "Outlook" not in body
+
+
+def test_mailbox_help_mentions_google_connection_is_conditional() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics_by_locale = {
+        locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
+        for locale in ("en", "es")
+    }
+
+    for locale, flag_phrase in (
+        ("en", "VITE_GMAIL_OAUTH_CONNECT_ENABLED"),
+        ("es", "VITE_GMAIL_OAUTH_CONNECT_ENABLED"),
+    ):
+        body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"]
+        assert flag_phrase in body, (
+            f"Mailbox tutorial must mention {flag_phrase} to indicate "
+            f"conditional Google Connection availability"
+        )
+
+
+def test_mailbox_help_covers_app_password_eligibility_causes() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics_by_locale = {
+        locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
+        for locale in ("en", "es")
+    }
+
+    for locale, phrases in (
+        ("en", ("2-step verification", "work or school", "advanced protection")),
+        (
+            "es",
+            ("verificación en dos pasos", "trabajo o escuela", "protección avanzada"),
+        ),
+    ):
+        body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"].lower()
+        for phrase in phrases:
+            assert phrase in body, (
+                f"Mailbox tutorial must mention '{phrase}' as an "
+                f"app-password eligibility cause"
+            )
 
 
 def test_checked_in_artifact_matches_the_compiled_sources() -> None:

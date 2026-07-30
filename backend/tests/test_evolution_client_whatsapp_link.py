@@ -16,6 +16,7 @@ from app.services.evolution_client import EvolutionClient, EvolutionClientError
 
 class TestGetInstanceStatus:
     """GET /instance/status with instance-token auth."""
+
     pytestmark = pytest.mark.asyncio
 
     async def test_uses_instance_token_auth_not_global_key(self) -> None:
@@ -68,7 +69,9 @@ class TestGetInstanceStatus:
         assert result == {"connected": False, "loggedIn": False, "phone": "already-set"}
 
     @pytest.mark.parametrize("status_code", [401, 403])
-    async def test_401_403_maps_to_invalid_instance_token(self, status_code: int) -> None:
+    async def test_401_403_maps_to_invalid_instance_token(
+        self, status_code: int
+    ) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
         response = MagicMock()
         response.status_code = status_code
@@ -80,7 +83,9 @@ class TestGetInstanceStatus:
             mock_ctx.request.return_value = response
 
             with pytest.raises(EvolutionClientError) as exc_info:
-                await client.get_instance_status(instance_name="acme", instance_token="bad")
+                await client.get_instance_status(
+                    instance_name="acme", instance_token="bad"
+                )
             assert exc_info.value.code == "invalid_instance_token"
 
     @pytest.mark.parametrize("status_code", [500, 502, 503])
@@ -96,7 +101,9 @@ class TestGetInstanceStatus:
             mock_ctx.request.return_value = response
 
             with pytest.raises(EvolutionClientError) as exc_info:
-                await client.get_instance_status(instance_name="acme", instance_token="tok")
+                await client.get_instance_status(
+                    instance_name="acme", instance_token="tok"
+                )
             assert exc_info.value.code == "service_unavailable"
 
     async def test_network_error_maps_to_service_unavailable(self) -> None:
@@ -107,7 +114,9 @@ class TestGetInstanceStatus:
             mock_ctx.request.side_effect = httpx.RequestError("Connection refused")
 
             with pytest.raises(EvolutionClientError) as exc_info:
-                await client.get_instance_status(instance_name="acme", instance_token="tok")
+                await client.get_instance_status(
+                    instance_name="acme", instance_token="tok"
+                )
             assert exc_info.value.code == "service_unavailable"
 
     async def test_missing_base_url_raises_service_unavailable(self) -> None:
@@ -130,12 +139,15 @@ class TestGetInstanceStatus:
             mock_httpx.return_value.__aenter__.return_value = mock_ctx
             mock_ctx.request.return_value = response
 
-            result = await client.get_instance_status(instance_name="acme", instance_token="tok")
+            result = await client.get_instance_status(
+                instance_name="acme", instance_token="tok"
+            )
         assert result == {}  # _response_data returns {} as-is (no "data" key)
 
 
 class TestGetQrCode:
     """GET /instance/qr with instance-token auth and response normalization."""
+
     pytestmark = pytest.mark.asyncio
 
     async def test_uses_instance_token_auth(self) -> None:
@@ -240,8 +252,12 @@ class TestGetQrCode:
 
     @pytest.mark.parametrize(
         ("status_code", "expected_code"),
-        [(401, "invalid_instance_token"), (403, "invalid_instance_token"),
-         (500, "service_unavailable"), (503, "service_unavailable")],
+        [
+            (401, "invalid_instance_token"),
+            (403, "invalid_instance_token"),
+            (500, "service_unavailable"),
+            (503, "service_unavailable"),
+        ],
     )
     async def test_error_mapping(self, status_code: int, expected_code: str) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
@@ -261,6 +277,7 @@ class TestGetQrCode:
 
 class TestPairInstance:
     """POST /instance/pair with instance-token auth, phone payload, and response normalization."""
+
     pytestmark = pytest.mark.asyncio
 
     async def test_uses_instance_token_auth_and_sends_phone(self) -> None:
@@ -363,8 +380,11 @@ class TestPairInstance:
 
     @pytest.mark.parametrize(
         ("status_code", "expected_code"),
-        [(401, "invalid_instance_token"), (403, "invalid_instance_token"),
-         (500, "service_unavailable")],
+        [
+            (401, "invalid_instance_token"),
+            (403, "invalid_instance_token"),
+            (500, "service_unavailable"),
+        ],
     )
     async def test_error_mapping(self, status_code: int, expected_code: str) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
@@ -386,6 +406,7 @@ class TestPairInstance:
 
 class TestLogoutInstance:
     """POST /instance/logout with instance-token auth."""
+
     pytestmark = pytest.mark.asyncio
 
     async def test_uses_instance_token_auth(self) -> None:
@@ -431,8 +452,11 @@ class TestLogoutInstance:
 
     @pytest.mark.parametrize(
         ("status_code", "expected_code"),
-        [(401, "invalid_instance_token"), (403, "invalid_instance_token"),
-         (500, "service_unavailable")],
+        [
+            (401, "invalid_instance_token"),
+            (403, "invalid_instance_token"),
+            (500, "service_unavailable"),
+        ],
     )
     async def test_error_mapping(self, status_code: int, expected_code: str) -> None:
         client = EvolutionClient(base_url="https://evo.test", api_key="global-key")
@@ -446,9 +470,7 @@ class TestLogoutInstance:
             mock_ctx.request.return_value = response
 
             with pytest.raises(EvolutionClientError) as exc_info:
-                await client.logout_instance(
-                    instance_name="acme", instance_token="tok"
-                )
+                await client.logout_instance(instance_name="acme", instance_token="tok")
             assert exc_info.value.code == expected_code
 
     async def test_logout_with_content_still_returns_none(self) -> None:

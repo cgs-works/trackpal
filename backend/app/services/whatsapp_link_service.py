@@ -158,9 +158,7 @@ class WhatsAppLinkService:
         await _ensure_not_connected(instance_name, instance_token)
 
         try:
-            result = await evolution_client.get_qr_code(
-                instance_name, instance_token
-            )
+            result = await evolution_client.get_qr_code(instance_name, instance_token)
         except EvolutionClientError as exc:
             raise _map_evolution_error(exc) from exc
 

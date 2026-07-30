@@ -1,4 +1,4 @@
-"""IMAP email fetch adapter with app-password auth."""
+"""Gmail app-password email fetch adapter."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from typing import Any
 
 from app.core.encryption import decrypt_value
 from app.models.tenant_mailbox import TenantMailbox
+from app.services.gmail_app_password import GMAIL_IMAP_HOST, GMAIL_IMAP_PORT
 from app.services.mail_lookup_worker.providers._types import (
     IMAP_FETCH_TIMEOUT,
     EmailMessage,
@@ -26,39 +27,27 @@ from app.services.mail_lookup_worker.providers._types import (
 logger = logging.getLogger(__name__)
 
 
-async def fetch_imap_emails(
+async def fetch_gmail_app_password_emails(
     mailbox: TenantMailbox,
     window_minutes: int,
 ) -> list[EmailMessage]:
-    """Fetch recent emails via IMAP with app-password auth."""
-    host = mailbox.imap_host
-    if not host:
-        raise NonTransientProviderError(
-            "IMAP host not configured", error_code="provider_config_error"
-        )
-    port = mailbox.imap_port or 993
-    ssl = mailbox.imap_ssl if mailbox.imap_ssl is not None else True
-    username = mailbox.mailbox_email
-    password = _get_imap_password(mailbox)
+    """Fetch recent emails via IMAP with Gmail app-password auth."""
+    password = _get_app_password(mailbox)
 
     since_str = _build_since_query(window_minutes)
 
     loop = asyncio.get_running_loop()
 
     def _sync_fetch() -> list[EmailMessage]:
-        imap_host: str = host
         try:
-            if ssl:
-                conn = imaplib.IMAP4_SSL(imap_host, port)
-            else:
-                conn = imaplib.IMAP4(imap_host, port)
+            conn = imaplib.IMAP4_SSL(GMAIL_IMAP_HOST, GMAIL_IMAP_PORT)
         except Exception as exc:
             raise TransientProviderError(
-                f"Cannot connect to {host}:{port}: {exc}"
+                f"Cannot connect to {GMAIL_IMAP_HOST}:{GMAIL_IMAP_PORT}: {exc}"
             ) from exc
 
         try:
-            result = conn.login(username, password)
+            result = conn.login(mailbox.mailbox_email, password)
             if result[0] != "OK":
                 raise NonTransientProviderError(
                     f"IMAP auth failed: {result[1].decode('utf-8', errors='replace')}"
@@ -103,16 +92,16 @@ async def fetch_imap_emails(
         ) from exc
 
 
-def _get_imap_password(mailbox: TenantMailbox) -> str:
-    """Decrypt and return IMAP password, or raise NonTransient."""
-    encrypted = mailbox.imap_password_encrypted
+def _get_app_password(mailbox: TenantMailbox) -> str:
+    """Decrypt and return app password, or raise NonTransient."""
+    encrypted = mailbox.app_password_encrypted
     if not encrypted:
         raise NonTransientProviderError(
-            "No IMAP password stored", error_code="provider_config_error"
+            "No app password stored", error_code="provider_config_error"
         )
     password = decrypt_value(encrypted)
     if password is None:
-        raise NonTransientProviderError("Failed to decrypt IMAP password")
+        raise NonTransientProviderError("Failed to decrypt app password")
     return password
 
 

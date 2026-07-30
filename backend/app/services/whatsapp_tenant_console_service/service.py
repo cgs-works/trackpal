@@ -254,7 +254,11 @@ class WhatsAppTenantConsoleService(
                 )
 
             # ── No active flow ───────────────────────────────────────
-            menu_key = "wa.tenant.main_menu.starter" if tenant_plan == "starter" else "wa.tenant.main_menu.pro"
+            menu_key = (
+                "wa.tenant.main_menu.starter"
+                if tenant_plan == "starter"
+                else "wa.tenant.main_menu.pro"
+            )
 
             if msg.lower() in self.RESET_COMMANDS:
                 if session_service is not None:

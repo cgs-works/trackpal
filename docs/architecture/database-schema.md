@@ -204,21 +204,23 @@ RLS policies restrict access to the owning tenant and master role.
 
 ### `TenantMailbox` -- `tenant_mailboxes`
 
-Tenant-scoped technical mailbox used for centralized code ingestion.
+Tenant-scoped Gmail mailbox used for centralized code ingestion. Gmail is the only supported provider.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | UUID | PK |
 | tenant_id | UUID | Unique FK -> tenants.id CASCADE |
-| mailbox_email | VARCHAR(255) | Required |
-| provider | VARCHAR(50) | `google`, `microsoft`, `imap_custom` |
-| auth_method | VARCHAR(50) | `oauth`, `imap_app_password` |
+| mailbox_email | VARCHAR(255) | Required, Gmail address |
+| provider | VARCHAR(50) | Legacy column; always `google` for active rows |
+| auth_method | VARCHAR(50) | `app_password` or `oauth` |
 | status | VARCHAR(50) | `disconnected`, `connected`, `error`, `revoked` |
-| oauth_access_token_encrypted | VARCHAR(500) | Nullable, encrypted |
-| oauth_refresh_token_encrypted | VARCHAR(500) | Nullable, encrypted |
+| app_password_encrypted | VARCHAR(500) | Nullable, Fernet-encrypted Gmail app password |
+| oauth_provider_user_id | VARCHAR(255) | Nullable, Google user ID |
+| oauth_provider_email | VARCHAR(255) | Nullable, Google email |
+| oauth_access_token_encrypted | VARCHAR(2000) | Nullable, Fernet-encrypted |
+| oauth_refresh_token_encrypted | VARCHAR(500) | Nullable, Fernet-encrypted |
 | oauth_token_expires_at | TIMESTAMPTZ | Nullable |
-| imap_host / imap_port / imap_ssl | mixed | IMAP fallback config |
-| imap_password_encrypted | VARCHAR(500) | Nullable, encrypted |
+| oauth_scope | VARCHAR(500) | Nullable, granted OAuth scopes |
 | last_connection_test_at | TIMESTAMPTZ | Nullable |
 | last_connection_error | TEXT | Nullable, safe error string |
 
@@ -363,6 +365,7 @@ Alembic migrations:
 25. `e015fe74cab5` — Add `export_jobs` table with tenant FK, status, timestamps, lease, cooldown, replacement chain, R2 storage key, ready/expiry lifecycle, and RLS policies
 26. `e016fe74cab6` — Add export job lifecycle columns for failure, cooldown, and actor role
 27. `e017fe74cab7` — Add Demo Tenant flag, lifecycle timestamps, credential/session version, constraints, and lifecycle index
+28. `e019fe74cab9` — Make mailbox Gmail-only: rename `imap_password_encrypted` to `app_password_encrypted`, drop `imap_host`/`imap_port`/`imap_ssl`, add auth-method check constraint
 
 ## Key Constraints
 

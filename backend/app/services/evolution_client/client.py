@@ -321,9 +321,7 @@ class EvolutionClient:
                 return {"code": data["pairingCode"]}
         return {"code": ""}
 
-    async def logout_instance(
-        self, instance_name: str, instance_token: str
-    ) -> None:
+    async def logout_instance(self, instance_name: str, instance_token: str) -> None:
         """Log out a WhatsApp instance without deleting it.
 
         The Evolution instance is preserved so the tenant can re-link later.

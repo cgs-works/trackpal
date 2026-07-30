@@ -37,14 +37,6 @@ class Settings(BaseSettings):
         "http://localhost:8000/api/v1/tenant/mailbox/oauth/google/callback"
     )
 
-    # Microsoft OAuth
-    microsoft_oauth_client_id: str = ""
-    microsoft_oauth_client_secret: str = ""
-    microsoft_oauth_tenant_id: str = "common"
-    microsoft_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/tenant/mailbox/oauth/microsoft/callback"
-    )
-
     # R2 / S3 for debug uploads
     r2_access_key_id: str = ""
     r2_secret_access_key: str = ""

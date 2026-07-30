@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -60,6 +60,23 @@ describe("ContextualHelpSheet", () => {
       ],
     });
     vi.mocked(getHelpTopic).mockResolvedValue(topic);
+  });
+
+  it("returns null when private help is disabled without violating hooks rules", () => {
+    vi.stubEnv("VITE_PRIVATE_HELP_ENABLED", "false");
+    const { container } = render(<ContextualHelpSheet />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("does not crash when toggling help enabled → disabled (hooks stability)", () => {
+    const { rerender, unmount } = render(<ContextualHelpSheet />);
+    expect(screen.getByRole("button", { name: "frontend.help.about_screen" })).toBeInTheDocument();
+
+    vi.stubEnv("VITE_PRIVATE_HELP_ENABLED", "false");
+    rerender(<ContextualHelpSheet />);
+    expect(screen.queryByRole("button", { name: "frontend.help.about_screen" })).not.toBeInTheDocument();
+
+    unmount();
   });
 
   it("opens only the Client topic for a Client target", async () => {
@@ -128,5 +145,59 @@ describe("ContextualHelpSheet", () => {
     await user.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.getByRole("button", { name: "frontend.help.about_screen" })).toHaveFocus();
+  });
+
+  it("opens a requested authorized target without unmounting local state", async () => {
+    const { requestContextualHelp } = await import("../../contextual-help");
+    const { HELP_TARGETS } = await import("../../help-targets");
+
+    vi.mocked(getHelpIndex).mockResolvedValue({
+      schema_version: 1,
+      content_version: "help-client-manual-1",
+      frontend_target_contract_version: "2",
+      locale: "en",
+      topics: [
+        {
+          id: "tenant-admin.mailbox",
+          title: "Central mailbox",
+          summary: "Gmail guidance",
+          module: "settings",
+          route: "/admin/settings",
+          order: 70,
+          help_targets: [HELP_TARGETS.mailbox],
+          safe_navigation: {
+            route: "/admin/settings",
+            settings_category: "mailbox",
+          },
+        },
+      ],
+    });
+    vi.mocked(getHelpTopic).mockResolvedValue({
+      id: "tenant-admin.mailbox",
+      title: "Central mailbox",
+      summary: "Gmail guidance",
+      module: "settings",
+      route: "/admin/settings",
+      order: 70,
+      help_targets: [HELP_TARGETS.mailbox],
+      safe_navigation: {
+        route: "/admin/settings",
+        settings_category: "mailbox",
+      },
+      body: "# Gmail setup\n\nTutorial body.",
+    });
+
+    render(
+      <>
+        <input aria-label="Draft email" defaultValue="unsaved@example.com" />
+        <ContextualHelpSheet />
+      </>,
+    );
+
+    act(() => requestContextualHelp(HELP_TARGETS.mailbox));
+
+    await waitFor(() => expect(screen.getByText("Tutorial body.")).toBeInTheDocument());
+    expect(screen.getByLabelText("Draft email")).toHaveValue("unsaved@example.com");
+    expect(getHelpTopic).toHaveBeenCalledWith("tenant-admin.mailbox");
   });
 });

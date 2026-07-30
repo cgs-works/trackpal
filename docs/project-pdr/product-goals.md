@@ -59,7 +59,7 @@ Client password changes are available through the authenticated Web Dashboard, n
 ### Mailbox Ingestion (automated)
 
 System features a fully automated mailbox code-extraction pipeline:
-1. **Mailbox config** — Tenant connects mailbox via OAuth (Google/Microsoft) or IMAP app password
+1. **Mailbox config** — Tenant connects Gmail account via app password or Google OAuth
 2. **Code extraction** — When a WhatsApp user requests an access code, system creates a lookup job and polls the connected mailbox for incoming messages from known streaming services, extracts codes via regex catalogs
 3. **Netflix OTP resolution** — For Netflix, resolves travel-verify URLs by fetching the OTP page and extracting the challenge code via HTML parsing
 4. **Delivery logging** — All extractions logged with deduplication (by `message_id`) to prevent re-delivery of the same code
@@ -122,6 +122,6 @@ Programmatic access for frontend SPA and n8n integration:
 - **WhatsApp Console export or deletion**: Self-service export and deletion are Web Dashboard capabilities only
 - **Email or WhatsApp delivery of export**: Exports are downloaded via authenticated Web session only
 - **Export restoration or import**: The export contract is not designed as an import contract
-- **Revoking provider OAuth grants**: Local credentials are deleted; Google/Microsoft grants are not revoked
+- **Revoking provider OAuth grants**: Local credentials are deleted; Google grants are not revoked
 - **Grace period or recovery window**: Tenant Admin deletion is immediate with no pending-deletion state
 - **Selective infrastructure cleanup**: Backups and logs follow operational retention; no per-Tenant purge

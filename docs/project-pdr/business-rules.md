@@ -12,7 +12,7 @@
 8. Tenant Admin self-deletion: requires current password + locale-aware destructive word (ELIMINAR/DELETE); fail-closed on external cleanup (R2, Evolution)
 9. Master deletion: requires prior deactivation + password step-up + destructive word; same external-first cleanup contract
 10. Master Support Context does not expose self-service deletion action; guides back to Master Dashboard
-11. Deleting a tenant does not revoke Google/Microsoft OAuth grants (local credentials are destroyed)
+11. Deleting a tenant does not revoke Google OAuth grants (local credentials are destroyed)
 12. Redis session cleanup after deletion is best-effort (keys expire in 5 minutes)
 13. Changing `evolution_instance_name` does not recreate or rename the Evolution instance (field is for reference only)
 14. No application tombstone is retained after deletion
@@ -145,13 +145,13 @@ All field validation goes through centralized `app/core/input_validation/`:
 
 ## Mailbox Lifecycle
 
-1. One mailbox per tenant, identified by `mailbox_email` + `provider` (google/microsoft/imap_custom)
-2. Auth methods: `oauth` (Google/Microsoft) or `imap_app_password` (IMAP with app password)
+1. One mailbox per tenant, identified by `mailbox_email` (Gmail is the only supported provider)
+2. Auth methods: `app_password` (Gmail app password validated before persistence) or `oauth` (Google OAuth with read-only Gmail scope)
 3. Status transitions: `disconnected` → `connected` (on successful config/test), `connected` → `error` (on fetch failure), `connected`/`error` → `revoked` (on OAuth grant invalid), any → `disconnected` (on manual disconnect)
 4. Tenant can have only one mailbox; upsert replaces existing (one-to-one with tenant)
 5. OAuth tokens encrypted via Fernet (`ACCESS_TOKEN_ENCRYPTION_KEY`) and stored in `tenant_mailboxes`
-6. IMAP password encrypted via Fernet
-7. Test connection (`POST /api/v1/tenant/mailbox/test`) attempts actual IMAP/IMAP-OAuth fetch of last N minutes of emails; returns count or error
+6. App password encrypted via Fernet
+7. Test connection (`POST /api/v1/tenant/mailbox/test`) validates either app_password or oauth by attempting a Gmail IMAP fetch of the last N minutes of emails; returns count or error
 8. Disconnect clears stored credentials and resets status to `disconnected`
 9. OAuth tokens refreshed automatically on 401; `invalid_grant` → mailbox marked `revoked` (manual re-auth required)
 

@@ -63,9 +63,7 @@ AuthDep = Annotated[None, Depends(_check_role_and_plan)]
 # ── Error handler helper ─────────────────────────────────────────────────
 
 
-def _handle_user_error(
-    exc: UserFacingError, locale: str
-) -> HTTPException:
+def _handle_user_error(exc: UserFacingError, locale: str) -> HTTPException:
     """Convert a ``UserFacingError`` to an ``HTTPException`` with the
     correct status code and translated message."""
     http_status = ERROR_STATUS.get(exc.code, DEFAULT_ERROR_STATUS)
@@ -76,6 +74,7 @@ def _handle_user_error(
 async def _resolve_locale(db: DbDep, tenant_id: ActiveTenantId) -> str:
     """Resolve the tenant locale for error translations."""
     from app.api.dependencies import resolve_locale
+
     return await resolve_locale(db, tenant_id)
 
 

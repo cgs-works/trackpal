@@ -18,15 +18,15 @@ summary: Conecta el correo donde recibes los mensajes con códigos de acceso.
 search_tags:
   - buzón
   - bandeja de entrada
-  - OAuth
-  - IMAP
+  - Gmail
+  - Google
   - prueba de conexión
   - correo de código
+  - contraseña de aplicación
 synonyms:
   - buzón de códigos
   - bandeja central
   - conexión de correo
-  - revocado
 order: 70
 safe_navigation:
   route: /admin/settings
@@ -41,13 +41,36 @@ related_topics:
 
 TrackPal revisa este buzón cuando alguien solicita un código de acceso desde WhatsApp. Usa una cuenta administrada por tu negocio, no el correo personal de un cliente.
 
-## Elige cómo conectarlo
+## Conecta tu bandeja de Gmail
 
-- **Google o Microsoft:** conexión guiada. Autoriza el acceso en la ventana del proveedor sin escribir tu contraseña en TrackPal. Esta opción usa OAuth.
-- **IMAP:** configuración manual para otros proveedores o para quien prefiera introducir los datos de conexión. Puedes elegir IMAP como alternativa a OAuth.
+1. Ve a [Contraseñas de aplicación](https://myaccount.google.com/apppasswords) y asegúrate de que la **Verificación en dos pasos** esté activada en tu cuenta de Google.
+2. Si la Verificación en dos pasos no está activada, sigue la guía de Google en [Ayuda de Verificación en dos pasos](https://support.google.com/accounts/answer/185833) para activarla primero.
+3. En la página de Contraseñas de aplicación, selecciona **Correo** como la aplicación y **Otra (Nombre personalizado)** como el dispositivo. Ingresa un nombre como "TrackPal" y haz clic en **Generar**.
+4. Copia la contraseña de 16 caracteres que aparece.
+5. En TrackPal, ve a **Configuración > Buzón** y haz clic en **Tengo una contraseña de aplicación**. Esto abre el formulario de conexión por contraseña de aplicación de Gmail.
+6. Ingresa tu dirección de Gmail y pega la contraseña de aplicación que generaste.
+7. Haz clic en **Probar conexión**. Cuando el estado muestre **Conectado**, tu buzón está listo.
 
-Después de conectar la cuenta, pulsa **Probar conexión**. Continúa cuando el estado sea **Conectado**.
+## Conexión de Google (OAuth)
+
+Si el indicador de funcionalidad `VITE_GMAIL_OAUTH_CONNECT_ENABLED` está activo en tu despliegue, también puedes conectar usando **Conexión de Google**. Esto usa OAuth para otorgar acceso a TrackPal sin compartir una contraseña de aplicación.
+
+## Elegibilidad para contraseñas de aplicación
+
+Solo puedes generar una contraseña de aplicación cuando la **Verificación en dos pasos** esté activada en tu cuenta de Google. Si no ves la opción de Contraseñas de aplicación, verifica lo siguiente:
+
+- **La Verificación en dos pasos no está activada.** Sigue la guía de Google para activarla primero.
+- **Cuenta de trabajo o escuela.** Las cuentas de Google Workspace pueden no tener contraseñas de aplicación disponibles. Contacta a tu administrador.
+- **Programa de Protección Avanzada.** Las cuentas inscritas en Protección Avanzada no pueden generar contraseñas de aplicación. Debes usar una cuenta diferente.
+
+Si ninguno de estos aplica y aún no encuentras la opción, visita la [Ayuda de Verificación en dos pasos](https://support.google.com/accounts/answer/185833) de Google para solucionar problemas adicionales.
+
+## Notas importantes de seguridad
+
+- **No uses tu contraseña normal de Gmail.** Siempre usa una contraseña de aplicación para la conexión.
+- Si cambias la contraseña de tu cuenta de Google, la contraseña de aplicación se revoca automáticamente. Necesitarás generar una nueva y reconectar.
+- Si pierdes el acceso, genera una nueva contraseña de aplicación en [Contraseñas de aplicación](https://myaccount.google.com/apppasswords) y actualiza la conexión en TrackPal.
 
 ## Si la conexión falla
 
-Revisa el mensaje visible y vuelve a probar. Si el permiso de Google o Microsoft venció, conecta la cuenta de nuevo. Con IMAP, confirma los datos entregados por tu proveedor de correo. Desconecta el buzón solo si realmente quieres reemplazarlo, porque la búsqueda quedará pausada hasta completar una conexión nueva.
+Revisa el mensaje visible y vuelve a probar. Asegúrate de estar usando una contraseña de aplicación, no tu contraseña regular. Si la conexión funcionaba antes y se detuvo, verifica si se cambió la contraseña de tu cuenta de Google — esto revoca todas las contraseñas de aplicación.

@@ -39,13 +39,17 @@ async def test_create_tenant_accepts_starter_plan(client, auth_headers, db_sessi
     body = response.json()
     assert body["plan"] == "starter"
 
-    row = await db_session.execute(select(Tenant).where(Tenant.id == uuid.UUID(body["id"])))
+    row = await db_session.execute(
+        select(Tenant).where(Tenant.id == uuid.UUID(body["id"]))
+    )
     tenant = row.scalar_one()
     assert tenant.plan == "starter"
 
 
 async def test_update_tenant_preserves_plan_when_omitted(client, auth_headers):
-    created = await _create_tenant(client, auth_headers, username="preserve_plan", phone="+12015550101", plan="pro")
+    created = await _create_tenant(
+        client, auth_headers, username="preserve_plan", phone="+12015550101", plan="pro"
+    )
     assert created.status_code == 201, created.text
     tenant_id = created.json()["id"]
 
@@ -61,7 +65,9 @@ async def test_update_tenant_preserves_plan_when_omitted(client, auth_headers):
 
 
 async def test_update_tenant_can_change_plan(client, auth_headers):
-    created = await _create_tenant(client, auth_headers, username="change_plan", phone="+12015550102", plan="pro")
+    created = await _create_tenant(
+        client, auth_headers, username="change_plan", phone="+12015550102", plan="pro"
+    )
     assert created.status_code == 201, created.text
 
     updated = await client.put(
@@ -92,7 +98,9 @@ async def _login(client, username: str, password: str) -> dict:
     return response.json()
 
 
-async def test_auth_responses_include_tenant_plan(client, auth_headers, active_tenant_user):
+async def test_auth_responses_include_tenant_plan(
+    client, auth_headers, active_tenant_user
+):
     tenant_login = await _login(client, "tenant", "tenant-password")
     assert tenant_login["tenant_plan"] == "pro"
 
@@ -108,7 +116,9 @@ async def test_auth_responses_include_tenant_plan(client, auth_headers, active_t
     assert switch.json()["tenant_plan"] == "pro"
 
 
-async def test_starter_tenant_gets_404_for_pro_endpoints(client, auth_headers, active_tenant_user):
+async def test_starter_tenant_gets_404_for_pro_endpoints(
+    client, auth_headers, active_tenant_user
+):
     tenant = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"plan": "starter"},
@@ -119,12 +129,19 @@ async def test_starter_tenant_gets_404_for_pro_endpoints(client, auth_headers, a
     login = await _login(client, "tenant", "tenant-password")
     headers = {"Authorization": f"Bearer {login['access_token']}"}
 
-    for path in ("/api/v1/clients", "/api/v1/catalog/services", "/api/v1/subscriptions", "/api/v1/subscription-settings"):
+    for path in (
+        "/api/v1/clients",
+        "/api/v1/catalog/services",
+        "/api/v1/subscriptions",
+        "/api/v1/subscription-settings",
+    ):
         response = await client.get(path, headers=headers)
         assert response.status_code == 404, path + response.text
 
 
-async def test_master_switched_into_starter_bypasses_pro_gate(client, auth_headers, active_tenant_user):
+async def test_master_switched_into_starter_bypasses_pro_gate(
+    client, auth_headers, active_tenant_user
+):
     response = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"plan": "starter"},
@@ -144,8 +161,12 @@ async def test_master_switched_into_starter_bypasses_pro_gate(client, auth_heade
     assert pro_endpoint.status_code == 200, pro_endpoint.text
 
 
-async def test_client_login_under_starter_returns_generic_401(client, db_session, auth_headers, active_tenant_user):
-    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+async def test_client_login_under_starter_returns_generic_401(
+    client, db_session, auth_headers, active_tenant_user
+):
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = result.scalar_one()
     client_user = User(
         username=f"{tenant.client_prefix}_starter_client",
@@ -184,7 +205,9 @@ async def test_client_login_under_starter_returns_generic_401(client, db_session
 # ── Task 3: Starter timezone behavior ──────────────────────────────────
 
 
-async def test_starter_tenant_settings_hides_and_blocks_timezone(client, auth_headers, active_tenant_user):
+async def test_starter_tenant_settings_hides_and_blocks_timezone(
+    client, auth_headers, active_tenant_user
+):
     changed = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"plan": "starter"},
@@ -199,16 +222,22 @@ async def test_starter_tenant_settings_hides_and_blocks_timezone(client, auth_he
     assert read.json()["locale"] in {"en", "es"}
     assert read.json()["timezone"] is None
 
-    locale_update = await client.put("/api/v1/tenant-settings", json={"locale": "es"}, headers=headers)
+    locale_update = await client.put(
+        "/api/v1/tenant-settings", json={"locale": "es"}, headers=headers
+    )
     assert locale_update.status_code == 200, locale_update.text
     assert locale_update.json()["locale"] == "es"
     assert locale_update.json()["timezone"] is None
 
-    timezone_update = await client.put("/api/v1/tenant-settings", json={"timezone": "America/Bogota"}, headers=headers)
+    timezone_update = await client.put(
+        "/api/v1/tenant-settings", json={"timezone": "America/Bogota"}, headers=headers
+    )
     assert timezone_update.status_code == 404
 
 
-async def test_master_switched_starter_can_see_timezone(client, auth_headers, active_tenant_user):
+async def test_master_switched_starter_can_see_timezone(
+    client, auth_headers, active_tenant_user
+):
     changed = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"plan": "starter"},
@@ -230,9 +259,13 @@ async def test_master_switched_starter_can_see_timezone(client, auth_headers, ac
 # ── Task 4: Downgrade side effects (pro → starter) ────────────────────
 
 
-async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_headers, db_session, active_tenant_user):
+async def test_downgrade_pro_to_starter_triggers_side_effects(
+    client, auth_headers, db_session, active_tenant_user
+):
     """Verify pro→downgrade revokes sessions and clears Redis admin session."""
-    result = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = result.scalar_one()
 
     # Set evolution_instance_name so the close path is triggered
@@ -269,8 +302,14 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
     fake_manager = AsyncMock()
     fake_evo_close = AsyncMock()
     with (
-        patch("app.services.tenant_service.mutations.get_redis_manager", return_value=fake_manager),
-        patch("app.services.tenant_service.mutations.evolution_client.close_chat_session", new=fake_evo_close),
+        patch(
+            "app.services.tenant_service.mutations.get_redis_manager",
+            return_value=fake_manager,
+        ),
+        patch(
+            "app.services.tenant_service.mutations.evolution_client.close_chat_session",
+            new=fake_evo_close,
+        ),
     ):
         response = await client.put(
             f"/api/v1/tenants/{active_tenant_user.id}",
@@ -282,7 +321,9 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
     assert response.json()["plan"] == "starter"
 
     # Session revocation verified
-    session_row = await db_session.execute(select(RefreshSession).where(RefreshSession.user_id == client_user.id))
+    session_row = await db_session.execute(
+        select(RefreshSession).where(RefreshSession.user_id == client_user.id)
+    )
     assert session_row.scalar_one().revoked is True
 
     # Redis session clear was attempted (active_tenant_user has whatsapp_phone set)
@@ -303,7 +344,9 @@ async def test_downgrade_pro_to_starter_triggers_side_effects(client, auth_heade
 # ── Task 5: Dashboard payload for Starter / Pro ───────────────────────
 
 
-async def test_dashboard_returns_starter_common_widgets(client, auth_headers, active_tenant_user):
+async def test_dashboard_returns_starter_common_widgets(
+    client, auth_headers, active_tenant_user
+):
     changed = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"plan": "starter"},
@@ -317,7 +360,13 @@ async def test_dashboard_returns_starter_common_widgets(client, auth_headers, ac
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["tenant_plan"] == "starter"
-    assert body["mailbox_status"] in {"missing", "disconnected", "connected", "error", "revoked"}
+    assert body["mailbox_status"] in {
+        "missing",
+        "disconnected",
+        "connected",
+        "error",
+        "revoked",
+    }
     assert body["enabled_code_services"] == []
     assert body["access_control_count"] == 0
     assert body["active_clients"] is None
@@ -351,7 +400,9 @@ class _FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None, keepttl: bool = False) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, keepttl: bool = False
+    ) -> None:
         self._store[key] = value
         if ex is not None:
             self._ttls[key] = ex
@@ -376,6 +427,7 @@ class _FakeRedis:
 class _FakeManager:
     def __init__(self, *, used_backup: bool = False, fail_on_execute: bool = False):
         from app.core.redis_client import RedisUnavailableError
+
         self._redis = _FakeRedis()
         self._used_backup = used_backup
         self._fail_on_execute = fail_on_execute
@@ -391,7 +443,9 @@ class _FakeManager:
         return await async_callable(self._redis)
 
 
-async def test_whatsapp_starter_menu_is_reduced(client, auth_headers, active_tenant_user):
+async def test_whatsapp_starter_menu_is_reduced(
+    client, auth_headers, active_tenant_user
+):
     """Starter tenant sees reduced menu: Profile, Codigo, Access Control, Help — no Clients/Catalog/Subscriptions."""
     from app.core.config import settings
 
@@ -403,10 +457,17 @@ async def test_whatsapp_starter_menu_is_reduced(client, auth_headers, active_ten
     assert changed.status_code == 200, changed.text
 
     fake_mgr = _FakeManager()
-    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
         response = await client.post(
             "/api/v1/integrations/n8n/console",
-            json={"phone": "+12015550002", "message": "menu", "instance": changed.json()["evolution_instance_name"]},
+            json={
+                "phone": "+12015550002",
+                "message": "menu",
+                "instance": changed.json()["evolution_instance_name"],
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200, response.text
@@ -417,13 +478,17 @@ async def test_whatsapp_starter_menu_is_reduced(client, auth_headers, active_ten
     assert "Suscripciones" not in reply and "Subscriptions" not in reply
 
 
-async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, active_tenant_user):
+async def test_whatsapp_blocked_identity_receives_no_reply(
+    client, db_session, active_tenant_user
+):
     """A blocked identity always receives no_reply=true."""
     from app.core.config import settings
     from sqlalchemy import select as sa_select
     from app.models import BlockedClient, Tenant
 
-    row = await db_session.execute(sa_select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    row = await db_session.execute(
+        sa_select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = row.scalar_one()
 
     if not tenant.evolution_instance_name:
@@ -434,10 +499,17 @@ async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, a
     await db_session.commit()
 
     fake_mgr = _FakeManager()
-    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
         response = await client.post(
             "/api/v1/integrations/n8n/console",
-            json={"phone": "+12015550999", "message": "codigo", "instance": tenant.evolution_instance_name},
+            json={
+                "phone": "+12015550999",
+                "message": "codigo",
+                "instance": tenant.evolution_instance_name,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200, response.text
@@ -445,14 +517,18 @@ async def test_whatsapp_blocked_identity_receives_no_reply(client, db_session, a
     assert response.json()["reply"] == ""
 
 
-async def test_whatsapp_starter_client_denied_non_codigo(client, db_session, auth_headers, active_tenant_user):
+async def test_whatsapp_starter_client_denied_non_codigo(
+    client, db_session, auth_headers, active_tenant_user
+):
     """Registered client under Starter gets access_denied for non-codigo messages."""
     from app.core.config import settings
     from sqlalchemy import select as sa_select
     from app.models import Client, Tenant, User
     from app.core.security import get_password_hash
 
-    row = await db_session.execute(sa_select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    row = await db_session.execute(
+        sa_select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = row.scalar_one()
 
     if not tenant.evolution_instance_name:
@@ -488,10 +564,17 @@ async def test_whatsapp_starter_client_denied_non_codigo(client, db_session, aut
     await db_session.commit()
 
     fake_mgr = _FakeManager()
-    with patch("app.api.v1.endpoints.integrations.console.get_redis_manager", return_value=fake_mgr):
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
         response = await client.post(
             "/api/v1/integrations/n8n/console",
-            json={"phone": "+12015550555", "message": "menu", "instance": tenant.evolution_instance_name},
+            json={
+                "phone": "+12015550555",
+                "message": "menu",
+                "instance": tenant.evolution_instance_name,
+            },
             headers={"X-API-Key": settings.n8n_api_key},
         )
     assert response.status_code == 200, response.text
@@ -503,19 +586,33 @@ async def test_whatsapp_starter_client_denied_non_codigo(client, db_session, aut
 # ── Task 8: Subscription automation ignores Starter tenants ────────────
 
 
-async def test_subscription_cleanup_ignores_starter_tenant(client, db_session, auth_headers, active_tenant_user):
+async def test_subscription_cleanup_ignores_starter_tenant(
+    client, db_session, auth_headers, active_tenant_user
+):
     """Cleanup must not mutate subscriptions belonging to Starter tenants."""
     from datetime import datetime, timedelta, timezone
     from app.models import Client, Plan, Service, Subscription
     from app.services.subscription_job_service import SubscriptionJobService
 
-    row = await db_session.execute(select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id))
+    row = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
     tenant = row.scalar_one()
     tenant.plan = "starter"
-    client_user = User(username="cleanup_client", password_hash=get_password_hash("x-password"), role="client")
+    client_user = User(
+        username="cleanup_client",
+        password_hash=get_password_hash("x-password"),
+        role="client",
+    )
     db_session.add(client_user)
     await db_session.flush()
-    c = Client(tenant_id=tenant.id, owner_user_id=client_user.id, full_name="Cleanup Client", username="cleanup_client", is_active=True)
+    c = Client(
+        tenant_id=tenant.id,
+        owner_user_id=client_user.id,
+        full_name="Cleanup Client",
+        username="cleanup_client",
+        is_active=True,
+    )
     s = Service(tenant_id=tenant.id, name="Netflix")
     db_session.add_all([c, s])
     await db_session.flush()

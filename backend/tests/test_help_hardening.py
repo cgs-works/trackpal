@@ -77,6 +77,64 @@ def test_artifact_validator_rejects_incompatible_schema_and_target_contract() ->
         validate_artifact(artifact)
 
 
+def test_compiler_rejects_unknown_external_help_host(tmp_path: Path) -> None:
+    source_dir = tmp_path / "help"
+    shutil.copytree(SOURCE_DIR, source_dir)
+    path = source_dir / "en" / "tenant-admin" / "mailbox.md"
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        + "\n\n[Unsafe](https://example.com/account)\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(
+        HelpValidationError, match="External Help URL not on allow-list"
+    ):
+        compile_help(source_dir)
+
+
+def test_compiler_rejects_allowed_host_with_unexpected_path(tmp_path: Path) -> None:
+    source_dir = tmp_path / "help"
+    shutil.copytree(SOURCE_DIR, source_dir)
+    # Add the disallowed URL to both locales so parity passes and URL validation runs
+    for locale in ("en", "es"):
+        path = source_dir / locale / "tenant-admin" / "mailbox.md"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + "\n\n[Unexpected path](https://support.google.com/anything-else)\n",
+            encoding="utf-8",
+        )
+    with pytest.raises(HelpValidationError, match="External Help URL"):
+        compile_help(source_dir)
+
+
+def test_compiler_rejects_http_external_help_url(tmp_path: Path) -> None:
+    source_dir = tmp_path / "help"
+    shutil.copytree(SOURCE_DIR, source_dir)
+    path = source_dir / "en" / "tenant-admin" / "mailbox.md"
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        + "\n\n[Insecure](http://support.google.com/accounts)\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(HelpValidationError, match="HTTPS"):
+        compile_help(source_dir)
+
+
+def test_compiler_rejects_external_url_locale_mismatch(tmp_path: Path) -> None:
+    source_dir = tmp_path / "help"
+    shutil.copytree(SOURCE_DIR, source_dir)
+    path = source_dir / "es" / "tenant-admin" / "mailbox.md"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "https://support.google.com/accounts/answer/185833",
+            "https://myaccount.google.com/apppasswords",
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(HelpValidationError, match="External URL parity"):
+        compile_help(source_dir)
+
+
 @pytest.mark.asyncio
 async def test_help_artifact_failure_is_scoped_to_help_api(
     client, active_tenant_user, monkeypatch

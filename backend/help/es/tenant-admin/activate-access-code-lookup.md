@@ -14,17 +14,17 @@ route: /admin/settings
 help_targets:
   - admin.settings.code-services
 title: Preparar la búsqueda de códigos
-summary: Completa WhatsApp, plataformas y buzón en el orden correcto.
+summary: Prepara WhatsApp, plataformas y el buzón en el orden correcto.
 search_tags:
-  - activar búsqueda de códigos
+  - activar búsqueda de código
   - primera búsqueda de código
-  - configuración de códigos de acceso
-  - requisitos de búsqueda
-  - recuperación de búsqueda de códigos
+  - configurar acceso código
+  - prerequisitos búsqueda
+  - recuperar búsqueda código
 synonyms:
-  - habilitar búsqueda de códigos
-  - primer código de acceso
-  - configurar búsqueda de códigos
+  - habilitar búsqueda código
+  - primer código acceso
+  - configurar búsqueda código
 order: 90
 safe_navigation:
   route: /admin/settings
@@ -41,13 +41,13 @@ tour:
     conditional: false
     plans:
       - starter
-    title: Prepara la búsqueda de códigos
+    title: Preparar la búsqueda de códigos
     content: |
-      # Prepara la búsqueda de códigos
+      # Preparar la búsqueda de códigos
 
-      Elige al menos una plataforma y conecta el buzón central. Después abre **Buscar código de acceso** desde WhatsApp.
+      Elige al menos una plataforma y conecta el buzón central. Después abre **Buscar código de acceso** en WhatsApp.
 
-      Pulsa **Más información** si quieres ver la preparación completa.
+      Selecciona **Saber más** para la configuración completa.
 ---
 
 # Preparar la búsqueda de códigos
@@ -56,7 +56,7 @@ La búsqueda estará lista cuando completes estos tres pasos:
 
 1. **Vincula WhatsApp** desde Configuración y espera el estado **Conectado**.
 2. **Elige al menos una plataforma** en Plataformas habilitadas.
-3. **Conecta y prueba el buzón central** con Google, Microsoft o IMAP.
+3. **Conecta y prueba el buzón central** con tu cuenta de Gmail.
 
 Después abre **Buscar código de acceso** en WhatsApp: opción `2` en **TrackPal Starter** u opción `7` en **TrackPal Pro**. Elige el servicio, escribe el correo de la suscripción y confirma.
 
@@ -68,4 +68,4 @@ Después abre **Buscar código de acceso** en WhatsApp: opción `2` en **TrackPa
 - **Duplicado:** espera el tiempo indicado antes de otra búsqueda.
 - **Error o timeout:** comprueba primero el buzón y la plataforma.
 
-Dentro del menú usa `8` para avanzar cuando aparezca, `9` para regresar y `0` para cancelar. Si el problema continúa, comparte el servicio, el estado visible y la hora aproximada, nunca el código ni la contraseña del correo.
+Usa `8` para avanzar cuando se muestre, `9` para regresar, y `0` para cancelar. Si el problema persiste, comparte el servicio, el estado visible y la hora aproximada, nunca el código o la contraseña del correo.

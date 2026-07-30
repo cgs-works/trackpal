@@ -21,7 +21,9 @@ class AccessControlService:
         return await blocked_clients_repository.list_active(db, tenant_id)
 
     async def block_phone(self, db: AsyncSession, tenant_id: UUID, phone: str):
-        existing = await blocked_clients_repository.find_active(db, tenant_id, phone=phone)
+        existing = await blocked_clients_repository.find_active(
+            db, tenant_id, phone=phone
+        )
         if existing is not None:
             raise DuplicateAccessBlockError("Phone is already blocked")
         block = await blocked_clients_repository.create(db, tenant_id, phone=phone)
@@ -37,7 +39,9 @@ class AccessControlService:
         await db.commit()
         return block
 
-    async def _cancel_codigo_for_phone(self, db: AsyncSession, tenant_id: UUID, phone: str) -> None:
+    async def _cancel_codigo_for_phone(
+        self, db: AsyncSession, tenant_id: UUID, phone: str
+    ) -> None:
         manager = get_redis_manager()
         if manager is None:
             return
@@ -53,13 +57,23 @@ class AccessControlService:
                     lookup_job_id = (session.temp_data or {}).get("lookup_job_id")
                     if lookup_job_id:
                         try:
-                            await mailbox_lookup_repository.cancel_active_job_if_present(
-                                db,
-                                UUID(lookup_job_id),
-                                tenant_id=tenant_id,
+                            await (
+                                mailbox_lookup_repository.cancel_active_job_if_present(
+                                    db,
+                                    UUID(lookup_job_id),
+                                    tenant_id=tenant_id,
+                                )
                             )
                         except ValueError:
-                            logger.warning("Invalid lookup job id while blocking phone: %s", lookup_job_id)
+                            logger.warning(
+                                "Invalid lookup job id while blocking phone: %s",
+                                lookup_job_id,
+                            )
                     await session_service.clear_session(logical_key)
             except Exception:
-                logger.warning("Failed to clear codigo session for blocked phone tenant=%s phone=%s", tenant_id, phone, exc_info=True)
+                logger.warning(
+                    "Failed to clear codigo session for blocked phone tenant=%s phone=%s",
+                    tenant_id,
+                    phone,
+                    exc_info=True,
+                )

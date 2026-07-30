@@ -36,7 +36,7 @@ def resolve_provider_label(job: MailLookupJob) -> str:
     """Derive a provider label from the job for metrics."""
     try:
         if job.mailbox is not None:
-            return job.mailbox.provider
+            return "gmail"
     except Exception:
         pass
     return "unknown"

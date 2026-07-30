@@ -31,31 +31,23 @@ export interface PasswordChange {
 }
 
 // ── Mailbox ───────────────────────────────────────────────────
+export type MailboxAuthMethod = "app_password" | "oauth" | "demo";
+
 export interface Mailbox {
   id: string;
   tenant_id: string;
   mailbox_email: string;
-  provider: string;
-  auth_method: string;
+  auth_method: MailboxAuthMethod;
   status: string;
-  oauth_provider_user_id: string | null;
-  oauth_provider_email: string | null;
-  imap_host: string | null;
-  imap_port: number | null;
-  imap_ssl: boolean | null;
   last_connection_test_at: string | null;
   last_connection_error: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface MailboxConfigUpdate {
-  provider: "google" | "microsoft" | "imap_custom";
+export interface GmailAppPasswordConnect {
   mailbox_email: string;
-  imap_host?: string;
-  imap_port?: number;
-  imap_ssl?: boolean;
-  imap_password?: string;
+  app_password: string;
 }
 
 // ── Code Services ─────────────────────────────────────────────
@@ -147,9 +139,7 @@ export async function getMailbox(): Promise<Mailbox | null> {
   }
 }
 
-export async function upsertMailbox(
-  payload: MailboxConfigUpdate
-): Promise<Mailbox> {
+export async function connectGmail(payload: GmailAppPasswordConnect): Promise<Mailbox> {
   const { data } = await api.put("/tenant/mailbox/", payload);
   return data;
 }
@@ -162,12 +152,8 @@ export async function testMailbox(): Promise<{
   return data;
 }
 
-export async function startOAuth(
-  provider: "google" | "microsoft"
-): Promise<{ auth_url: string; state: string }> {
-  const { data } = await api.post(
-    `/tenant/mailbox/oauth/${provider}/start`
-  );
+export async function startGoogleOAuth(): Promise<{ auth_url: string; state: string }> {
+  const { data } = await api.post("/tenant/mailbox/oauth/google/start");
   return data;
 }
 
