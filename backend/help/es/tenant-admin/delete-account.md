@@ -59,7 +59,7 @@ Puedes eliminar permanentemente tu cuenta de TrackPal y todos los datos asociado
 
 ## Qué NO se elimina con esta acción
 
-- **Concesiones OAuth del proveedor**: Los permisos de Google y Microsoft no se revocan. Puedes gestionarlos desde la configuración de seguridad de tu proveedor.
+- **Concesiones OAuth del proveedor**: Los permisos de Google no se revocan. Puedes gestionarlos desde la configuración de seguridad de tu cuenta de Google.
 - **Respaldos de infraestructura**: Las copias de seguridad operativas y los registros siguen sus políticas de retención estándar. Se usan solo para recuperación de desastres y no son accesibles después de la eliminación.
 - **Sesiones efímeras**: Cualquier sesión activa de WhatsApp o Web expira en minutos.
 

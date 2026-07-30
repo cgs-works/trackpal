@@ -102,12 +102,12 @@ Inline panel for reminder configuration (warning days, reminder time, recipient 
 
 ### MailboxSection (`features/admin/components/mailbox-section.tsx`)
 
-IMAP/OAuth mailbox configuration.
+Gmail mailbox configuration via the Gmail Setup Assistant.
 
 - Cached in `settingsStore.mailbox`
-- Provider selection: Google, Microsoft, IMAP custom
-- OAuth flow: opens provider auth URL in popup
-- IMAP form: host, port, SSL toggle, password
+- Gmail Setup Assistant: two-step flow (instructions → credentials)
+- App-password connect: validates before persisting
+- Optional Google Connection (OAuth) behind `VITE_GMAIL_OAUTH_CONNECT_ENABLED` gate
 - Test connection, disconnect actions
 - After mutations: `clearSettingsCache()` + reload
 

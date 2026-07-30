@@ -131,7 +131,7 @@ backend/
 │       ├── mail_code_extractor/   # Regex catalog v1 + pure extractor + per-service catalogs
 │       ├── mail_lookup_worker/    # Queue, providers (google/microsoft/imap), worker pipeline
 │       ├── mailbox_cleanup.py     # Retention/cleanup loop
-│       ├── oauth_service/         # Google/Microsoft OAuth start/callback/refresh + revocation
+│       ├── oauth_service/         # Google OAuth start/callback/refresh + revocation
 │       ├── profile_service/
 │       ├── subscription_job_service/
 │       ├── subscription_service/
@@ -270,7 +270,7 @@ backend/
 | `app/services/access_control_service.py` | Block/unblock identities + codigo session cleanup |
 | `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
 | `app/services/mail_lookup_worker/` | Async mailbox lookup worker, provider fetchers (google/microsoft/imap), retries, dedupe pipeline, Redis queue |
-| `app/services/oauth_service/` | Google/Microsoft OAuth start/callback/refresh and revocation handling |
+| `app/services/oauth_service/` | Google OAuth start/callback/refresh and revocation handling |
 | `app/services/mail_code_extractor/` | Regex-based code extraction: catalog_v1 (multi-service) + per-service catalog files (netflix, disney, spotify, etc.) + pure extractor |
 | `app/services/tenant_console_protocols/` | Protocols for tenant console DI (package) |
 | `app/services/imap_service.py` | IMAP connection test helper |

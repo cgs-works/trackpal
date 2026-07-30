@@ -59,7 +59,7 @@ You can permanently delete your TrackPal account and all associated data. This a
 
 ## What is NOT deleted by this action
 
-- **Provider OAuth grants**: Google and Microsoft access grants are not revoked. You can manage these from your provider's security settings.
+- **Provider OAuth grants**: Google access grants are not revoked. You can manage these from your Google account security settings.
 - **Infrastructure backups**: Operational backups and logs follow their standard retention policies. They are used only for disaster recovery and are not accessible after deletion.
 - **Ephemeral sessions**: Any active WhatsApp or Web sessions expire within minutes.
 

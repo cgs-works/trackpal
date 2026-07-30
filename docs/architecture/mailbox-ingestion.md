@@ -1,8 +1,8 @@
-# Mailbox Ingestion (Multi-OAuth + IMAP Fallback)
+# Mailbox Ingestion (Gmail-Only)
 
 ## Overview
 
-Tenant mailbox ingestion lets each tenant configure a tech mailbox for
+Tenant mailbox ingestion lets each tenant configure a Gmail account for
 extracting streaming-service access codes without deploying Python bots
 per tenant.  Execution is centralised in the TrackPal backend and runs
 on-demand when n8n requests a code lookup.
@@ -11,8 +11,8 @@ on-demand when n8n requests a code lookup.
 
 | Component | Responsibility |
 |-----------|---------------|
-| **Tenant Dashboard (frontend)** | Mailbox config, OAuth connect/disconnect, connection tests |
-| **Backend API (FastAPI)** | Mailbox config CRUD, OAuth start/callback, lookup job create/poll |
+| **Tenant Dashboard (frontend)** | Mailbox config, Gmail Setup Assistant, connection tests |
+| **Backend API (FastAPI)** | Mailbox config CRUD, Google OAuth start/callback, lookup job create/poll |
 | **Mailbox Lookup Worker** | Background asyncio task — processes pending jobs, fetches emails, extracts codes, dedupes |
 | **Mailbox Cleanup** | Periodic background task — expires stale jobs, hard-deletes expired data |
 | **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log` |
@@ -22,10 +22,12 @@ on-demand when n8n requests a code lookup.
 
 ### `tenant_mailboxes`
 
-- One mailbox per tenant (v1; `tenant_id` unique).
-- Stores OAuth tokens and IMAP passwords **encrypted** at rest via `app.core.encryption` (Fernet).
-- Exclusivity: `auth_method` is either `oauth` or `imap_app_password` — the other's secrets are null.
+- One mailbox per tenant (`tenant_id` unique).
+- Stores credentials **encrypted** at rest via `app.core.encryption` (Fernet).
+- Gmail is the only supported mailbox provider; `provider` is a legacy column retained for backward compatibility.
+- Auth methods: `app_password` (Gmail app password via IMAP) or `oauth` (Google OAuth with read-only Gmail scope).
 - Status: `disconnected` | `connected` | `error` | `revoked`.
+- Server details (host, port, SSL) are fixed Gmail IMAP values; they are not configurable by the user.
 
 ### `mail_lookup_jobs`
 
@@ -69,20 +71,24 @@ Transient errors (network, rate-limit) retry up to 3 times with
 exponential backoff (1s, 2s, 4s).  Non-transient errors (revoked,
 permissions) fail immediately.
 
-## OAuth Flows
+## Gmail App-Password Connection
 
-### Google (Gmail Read-Only)
+The primary connection method uses a Google-generated app password:
+
+1. The Tenant Admin creates an app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+2. The Gmail Setup Assistant collects the Gmail address and app password.
+3. Backend validates the credential by testing an IMAP connection to `imap.gmail.com:993` with SSL before persisting.
+4. The normalized credential is encrypted and stored as `app_password_encrypted`.
+5. Gmail server details (`imap.gmail.com`, port 993, SSL=true) are fixed implementation details; the user never sees or configures them.
+
+## Google OAuth Connection
+
+An optional Google OAuth method is available behind the `VITE_GMAIL_OAUTH_CONNECT_ENABLED` release gate:
 
 - Scopes: `gmail.readonly openid email`.
 - Before opening Google OAuth, the mailbox UI discloses the message data read, the WhatsApp delivery purpose, temporary processing, and read-only limitations. The administrator must affirmatively accept this use for each connection attempt.
 - `access_type=offline` + `prompt=consent` ensures refresh token on first auth.
 - Token refresh on expiry; `invalid_grant` marks mailbox as `revoked`.
-
-### Microsoft (Mail.Read)
-
-- Scopes: `Mail.Read offline_access openid profile email`.
-- Delegated permissions via Microsoft identity platform.
-- Same refresh cycle + revocation handling.
 
 ## API Contracts
 
@@ -91,10 +97,10 @@ permissions) fail immediately.
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/tenant/mailbox/` | Get config |
-| PUT | `/tenant/mailbox/` | Create/update |
+| PUT | `/tenant/mailbox/` | Validate app password and connect (app-password only) |
 | POST | `/tenant/mailbox/test` | Test connection |
-| POST | `/tenant/mailbox/oauth/{provider}/start` | Start OAuth |
-| GET | `/tenant/mailbox/oauth/{provider}/callback` | OAuth callback |
+| POST | `/tenant/mailbox/oauth/google/start` | Start Google OAuth |
+| GET | `/tenant/mailbox/oauth/google/callback` | Google OAuth callback |
 | POST | `/tenant/mailbox/disconnect` | Disconnect + clear secrets |
 
 ### n8n Integration (auth: X-API-Key)
@@ -122,11 +128,11 @@ Durability contract for WhatsApp `codigo` handoff:
 
 ### Metrics (`GET /metrics`)
 
-- `lookup_job_total{status,provider,service}` — job results by outcome.
+- `lookup_job_total{status,provider,service}` — job results by outcome (provider is fixed `gmail`).
 - `lookup_job_latency{quantile}` — p50/avg/count of job processing time.
 - `lookup_api_create{status}` — job creation outcomes.
 - `lookup_api_poll{status}` — poll status distribution.
-- `oauth_*_total{provider,status}` — OAuth flow counts.
+- `oauth_*_total{provider,status}` — OAuth flow counts (provider is fixed `google`).
 - `mailbox_test_total{method,status}` — connection test outcomes.
 - `mailbox_cleanup_total{step,status}` — cleanup runs.
 
@@ -161,9 +167,8 @@ Configurable via:
 
 ### Mailbox shows `revoked`
 
-1. Tenant must reconnect OAuth via dashboard.
-2. If refresh token was permanently revoked (Google/Microsoft deauthorised),
-   tenant must complete a fresh OAuth flow.
+1. Tenant must reconnect via the Gmail Setup Assistant (app password) or re-authorize Google OAuth.
+2. If the app password was revoked (e.g. main Google password changed), generate a new app password and reconnect.
 
 ### Lookup jobs stuck in `pending`
 

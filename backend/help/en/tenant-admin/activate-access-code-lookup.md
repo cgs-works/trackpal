@@ -56,7 +56,7 @@ Search is ready after these three steps:
 
 1. **Link WhatsApp** in Settings and wait for **Connected**.
 2. **Choose at least one platform** under Enabled platforms.
-3. **Connect and test the central mailbox** with Google, Microsoft, or IMAP.
+3. **Connect and test the central mailbox** with your Gmail account.
 
 Then open **Search for an access code** in WhatsApp: option `2` in **TrackPal Starter** or option `7` in **TrackPal Pro**. Choose the service, enter the subscription email, and confirm it.
 
