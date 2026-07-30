@@ -20,11 +20,8 @@ export interface GmailSetupAssistantProps {
 
 type Step = "instructions" | "credentials";
 
-export function GmailSetupAssistant({
-  oauthConnectEnabled,
-  onConnect,
-  onStartOAuth,
-}: GmailSetupAssistantProps) {
+export function GmailSetupAssistant(props: GmailSetupAssistantProps) {
+  const { onConnect } = props;
   const [step, setStep] = useState<Step>("instructions");
   const [email, setEmail] = useState("");
   const [appPassword, setAppPassword] = useState("");

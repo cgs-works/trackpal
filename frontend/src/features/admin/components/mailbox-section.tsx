@@ -16,15 +16,13 @@ import {
   testMailbox,
   startGoogleOAuth,
   disconnectMailbox,
-  type GmailAppPasswordConnect,
-  type Mailbox,
 } from "../services/settings-api";
 import { useSettingsStore } from "@/store/settings";
 import { useAuthStore } from "@/store/auth";
 import { isGmailOAuthConnectEnabled } from "../mailbox-config";
 import {
   GmailSetupAssistant,
-  type GmailAppPasswordConnect as AssistantConnectPayload,
+  type GmailAppPasswordConnect,
 } from "./gmail-setup-assistant";
 
 function StatusBadge({ status }: { status: string }) {
@@ -128,7 +126,7 @@ export function MailboxSection() {
 
   // ── App-password connect ──────────────────────────────────
   async function handleConnectAppPassword(
-    payload: AssistantConnectPayload,
+    payload: GmailAppPasswordConnect,
   ): Promise<boolean> {
     try {
       await connectGmail(payload);
