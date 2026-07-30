@@ -68,27 +68,35 @@ async def _connect_and_login(
     def _sync_imap() -> bool:
         conn: imaplib.IMAP4 | imaplib.IMAP4_SSL | None = None
         try:
-            if ssl:
-                conn = imaplib.IMAP4_SSL(host, port)
-            else:
-                conn = imaplib.IMAP4(host, port)
-
-            result = conn.login(username, password)
-            if result[0] != "OK":
-                raise ImapAuthenticationError(
-                    "Authentication failed"
-                )
-            return True
-        except ImapConnectionError:
-            raise
-        except imaplib.IMAP4.error as exc:
-            raise ImapAuthenticationError("Authentication failed") from exc
-        except Exception as exc:
-            if conn is None:
+            # --- Connection phase: constructor errors are availability ---
+            try:
+                if ssl:
+                    conn = imaplib.IMAP4_SSL(host, port)
+                else:
+                    conn = imaplib.IMAP4(host, port)
+            except ImapConnectionError:
+                raise
+            except imaplib.IMAP4.error as exc:
                 raise ImapUnavailableError(
                     f"Cannot connect to {host}:{port}: {exc}"
                 ) from exc
-            raise ImapUnavailableError(f"Login failed: {exc}") from exc
+            except Exception as exc:
+                raise ImapUnavailableError(
+                    f"Cannot connect to {host}:{port}: {exc}"
+                ) from exc
+
+            # --- Authentication phase: login errors are auth failures ---
+            try:
+                result = conn.login(username, password)
+                if result[0] != "OK":
+                    raise ImapAuthenticationError("Authentication failed")
+                return True
+            except ImapConnectionError:
+                raise
+            except imaplib.IMAP4.error as exc:
+                raise ImapAuthenticationError("Authentication failed") from exc
+            except Exception as exc:
+                raise ImapUnavailableError(f"Login failed: {exc}") from exc
         finally:
             if conn is not None:
                 with suppress(Exception):

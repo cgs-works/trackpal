@@ -1,6 +1,7 @@
 """Tests for Phase 2: OAuth service, IMAP test, exclusivity, refresh failure."""
 
 import asyncio
+import imaplib
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock, patch
@@ -652,6 +653,53 @@ class TestImapService:
         assert issubclass(ImapAuthenticationError, ImapConnectionError)
         assert issubclass(ImapTimeoutError, ImapConnectionError)
         assert issubclass(ImapUnavailableError, ImapConnectionError)
+
+    @pytest.mark.asyncio
+    async def test_imap_constructor_error_becomes_unavailable(self):
+        """imaplib.IMAP4.error during construction must be ImapUnavailableError.
+
+        The SSL constructor failing (e.g. DNS failure, connection refused)
+        is an availability problem, not an authentication problem.
+        """
+        with (
+            patch(
+                "app.services.imap_service.imaplib.IMAP4_SSL",
+                side_effect=imaplib.IMAP4.error("Connection refused"),
+            ),
+            pytest.raises(ImapUnavailableError, match="Cannot connect"),
+        ):
+            await _test_imap_connection(
+                host="unreachable.host",
+                port=993,
+                ssl=True,
+                username="user",
+                password="pass",
+            )
+
+    @pytest.mark.asyncio
+    async def test_imap_login_error_becomes_auth_error(self):
+        """imaplib.IMAP4.error from login() must be ImapAuthenticationError.
+
+        Only a credential failure during login should be classified as
+        authentication error.  Connection success + login failure is the
+        distinguishing signal.
+        """
+        mock_conn = Mock()
+        mock_conn.login.side_effect = imaplib.IMAP4.error("Invalid credentials")
+        with (
+            patch(
+                "app.services.imap_service.imaplib.IMAP4_SSL",
+                return_value=mock_conn,
+            ),
+            pytest.raises(ImapAuthenticationError, match="Authentication failed"),
+        ):
+            await _test_imap_connection(
+                host="imap.gmail.com",
+                port=993,
+                ssl=True,
+                username="user",
+                password="wrong",
+            )
 
 
 # ─── Exclusivity (OAuth vs IMAP) ──────────────────────────────────────────
