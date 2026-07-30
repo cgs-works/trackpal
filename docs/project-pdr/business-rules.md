@@ -150,8 +150,8 @@ All field validation goes through centralized `app/core/input_validation/`:
 3. Status transitions: `disconnected` → `connected` (on successful config/test), `connected` → `error` (on fetch failure), `connected`/`error` → `revoked` (on OAuth grant invalid), any → `disconnected` (on manual disconnect)
 4. Tenant can have only one mailbox; upsert replaces existing (one-to-one with tenant)
 5. OAuth tokens encrypted via Fernet (`ACCESS_TOKEN_ENCRYPTION_KEY`) and stored in `tenant_mailboxes`
-6. IMAP password encrypted via Fernet
-7. Test connection (`POST /api/v1/tenant/mailbox/test`) attempts actual IMAP/IMAP-OAuth fetch of last N minutes of emails; returns count or error
+6. App password encrypted via Fernet
+7. Test connection (`POST /api/v1/tenant/mailbox/test`) validates either app_password or oauth by attempting a Gmail IMAP fetch of the last N minutes of emails; returns count or error
 8. Disconnect clears stored credentials and resets status to `disconnected`
 9. OAuth tokens refreshed automatically on 401; `invalid_grant` → mailbox marked `revoked` (manual re-auth required)
 

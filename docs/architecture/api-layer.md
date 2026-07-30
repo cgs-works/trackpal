@@ -141,7 +141,7 @@ Tenant prefix edits update client technical usernames transactionally.
 
 - `GET /api/v1/tenant/mailbox/` — Current tenant Gmail mailbox config
 - `PUT /api/v1/tenant/mailbox/` — Gmail app-password validate-and-connect
-- `POST /api/v1/tenant/mailbox/test` — Test current mailbox connection
+- `POST /api/v1/tenant/mailbox/test` — Test current mailbox connection (app_password or oauth)
 - `POST /api/v1/tenant/mailbox/oauth/google/start` — Start Google OAuth
 - `GET /api/v1/tenant/mailbox/oauth/google/callback` — Complete Google OAuth callback
 - `POST /api/v1/tenant/mailbox/disconnect` — Disconnect and clear stored credentials

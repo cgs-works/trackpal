@@ -46,7 +46,7 @@ All plans:
 - Language
 - WhatsApp linking, status, pairing code, QR code, and disconnect
 - Enabled code platforms
-- Central lookup mailbox through OAuth or IMAP, connection test, and disconnect
+- Central lookup mailbox through Gmail app password or Google OAuth, connection test, and disconnect
 - WhatsApp access control: list, search, block, and unblock
 - Profile identity fields
 - Password change
