@@ -14,6 +14,13 @@ function allowedExternalHelpUrl(value: string): string | null {
 }
 
 const INLINE_TOKEN_PATTERN = /(\*\*[^*]+\*\*|\[[^\]]+\]\(https:\/\/[^)]+\))/g;
+const INLINE_LINK_PATTERN = /^\[([^\]]+)\]\((https:\/\/[^)]+)\)$/;
+
+function headingTag(level: number): "h1" | "h2" | "h3" {
+  if (level === 1) return "h1";
+  if (level === 2) return "h2";
+  return "h3";
+}
 
 function renderInlineMarkdown(value: string): ReactNode {
   const tokens = value.split(INLINE_TOKEN_PATTERN);
@@ -22,7 +29,7 @@ function renderInlineMarkdown(value: string): ReactNode {
       return <strong key={`${token}-${index}`}>{token.slice(2, -2)}</strong>;
     }
 
-    const linkMatch = token.match(/^\[([^\]]+)\]\((https:\/\/[^)]+)\)$/);
+    const linkMatch = token.match(INLINE_LINK_PATTERN);
     if (linkMatch) {
       const [, label, destination] = linkMatch;
       const href = allowedExternalHelpUrl(destination);
@@ -54,7 +61,7 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
         const lines = block.split("\n");
         const heading = lines[0]?.match(/^(#{1,3})\s+(.+)$/);
         if (heading) {
-          const Heading = heading[1].length === 1 ? "h1" : heading[1].length === 2 ? "h2" : "h3";
+          const Heading = headingTag(heading[1].length);
           return (
             <Heading
               key={`${heading[1]}-${index}`}
@@ -100,7 +107,10 @@ export function SafeMarkdown({ source }: SafeMarkdownProps) {
         }
 
         return (
-          <p key={`paragraph-${index}`} className="max-w-none text-justify leading-7 text-muted-foreground">
+          <p
+            key={`paragraph-${index}`}
+            className="max-w-none text-justify leading-7 text-muted-foreground"
+          >
             {renderInlineMarkdown(lines.join(" "))}
           </p>
         );

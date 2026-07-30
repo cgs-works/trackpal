@@ -22,7 +22,7 @@ class TenantMailbox(Base, TimestampMixin):
     )
     mailbox_email: Mapped[str] = mapped_column(String(255), nullable=False)
     auth_method: Mapped[str] = mapped_column(String(50), nullable=False)
-    # Temporary column — kept for OAuth provider routing; Task 3 removes it.
+    # Legacy column retained for backward-compatible database migrations.
     provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(
         String(50),

@@ -14,11 +14,7 @@ from typing import Any
 
 from app.core.encryption import decrypt_value
 from app.models.tenant_mailbox import TenantMailbox
-from app.services.gmail_app_password import (
-    GMAIL_IMAP_HOST,
-    GMAIL_IMAP_PORT,
-    GMAIL_IMAP_SSL,
-)
+from app.services.gmail_app_password import GMAIL_IMAP_HOST, GMAIL_IMAP_PORT
 from app.services.mail_lookup_worker.providers._types import (
     IMAP_FETCH_TIMEOUT,
     EmailMessage,
@@ -36,9 +32,6 @@ async def fetch_gmail_app_password_emails(
     window_minutes: int,
 ) -> list[EmailMessage]:
     """Fetch recent emails via IMAP with Gmail app-password auth."""
-    host = GMAIL_IMAP_HOST
-    port = GMAIL_IMAP_PORT
-    ssl = GMAIL_IMAP_SSL
     password = _get_app_password(mailbox)
 
     since_str = _build_since_query(window_minutes)
@@ -46,15 +39,11 @@ async def fetch_gmail_app_password_emails(
     loop = asyncio.get_running_loop()
 
     def _sync_fetch() -> list[EmailMessage]:
-        imap_host: str = host
         try:
-            if ssl:
-                conn = imaplib.IMAP4_SSL(imap_host, port)
-            else:
-                conn = imaplib.IMAP4(imap_host, port)
+            conn = imaplib.IMAP4_SSL(GMAIL_IMAP_HOST, GMAIL_IMAP_PORT)
         except Exception as exc:
             raise TransientProviderError(
-                f"Cannot connect to {host}:{port}: {exc}"
+                f"Cannot connect to {GMAIL_IMAP_HOST}:{GMAIL_IMAP_PORT}: {exc}"
             ) from exc
 
         try:

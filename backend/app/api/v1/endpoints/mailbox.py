@@ -27,7 +27,6 @@ from app.services.gmail_app_password import (
     GmailAppPasswordError,
     validate_gmail_app_password,
 )
-from app.services.imap_service import ImapConnectionError
 
 router = APIRouter(prefix="/tenant/mailbox", tags=["tenant-mailbox"])
 
@@ -155,10 +154,6 @@ async def test_mailbox_connection(
         result = await _run_mailbox_test(db, mailbox)
         await db.commit()
         return result
-    except ImapConnectionError as exc:
-        await handle_test_error(db, mailbox, exc)
-        await db.commit()
-        return MailboxTestResponse(success=False, message=str(exc))
     except HTTPException:
         raise
     except Exception as exc:

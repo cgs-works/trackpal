@@ -12,7 +12,7 @@ from app.services.gmail_app_password import (
     GMAIL_IMAP_PORT,
     GMAIL_IMAP_SSL,
 )
-from app.services.imap_service import ImapConnectionError, test_imap_connection
+from app.services.imap_service import ImapAuthenticationError, test_imap_connection
 from app.services.oauth_service import MailboxOAuthService
 
 oauth_service = MailboxOAuthService()
@@ -60,27 +60,12 @@ async def _perform_app_password_test(db, mailbox: TenantMailbox) -> MailboxTestR
             username=mailbox.mailbox_email,
             password=password,
         )
-    except ImapConnectionError as exc:
-        # Map IMAP errors to safe messages — no host/port/SSL details.
-        from app.services.imap_service import ImapAuthenticationError, ImapTimeoutError
-
-        if isinstance(exc, ImapAuthenticationError):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=_APP_PASSWORD_AUTH_ERROR,
-            ) from exc
-        if isinstance(exc, ImapTimeoutError):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=_APP_PASSWORD_CONN_ERROR,
-            ) from exc
-        # ImapUnavailableError and any other subclass
+    except ImapAuthenticationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_APP_PASSWORD_CONN_ERROR,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_APP_PASSWORD_AUTH_ERROR,
         ) from exc
     except Exception as exc:
-        # Unexpected errors — map to safe connection error.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=_APP_PASSWORD_CONN_ERROR,
@@ -91,11 +76,6 @@ async def _perform_app_password_test(db, mailbox: TenantMailbox) -> MailboxTestR
 async def _perform_oauth_test(db, mailbox: TenantMailbox) -> MailboxTestResponse:
     """Test OAuth connection by attempting token refresh."""
     result = await oauth_service.refresh_token(db, mailbox)
-    if result is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mailbox is not OAuth-configured",
-        )
     if result.status == "revoked":
         await mailbox_config_repository.update_connection_test(
             db,

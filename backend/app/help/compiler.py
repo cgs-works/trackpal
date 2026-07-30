@@ -477,11 +477,12 @@ def validate_artifact(
 
 def _absolute_link_destinations(body: str) -> set[str]:
     """Extract absolute link destinations from Markdown body."""
-    return {
-        destination
-        for _, destination in MARKDOWN_LINK_PATTERN.findall(body)
-        if urlsplit(destination).scheme or urlsplit(destination).netloc
-    }
+    destinations = set()
+    for _, destination in MARKDOWN_LINK_PATTERN.findall(body):
+        parsed = urlsplit(destination)
+        if parsed.scheme or parsed.netloc:
+            destinations.add(destination)
+    return destinations
 
 
 def _validate_external_help_links(body: str, path: Path) -> None:

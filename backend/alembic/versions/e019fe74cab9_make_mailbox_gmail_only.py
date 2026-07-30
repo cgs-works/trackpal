@@ -17,7 +17,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # 1. Delete non-Gmail rows
+    # Delete unsupported mailbox rows before tightening the auth-method contract.
     op.execute("""
         DELETE FROM tenant_mailboxes
         WHERE NOT (
@@ -32,26 +32,26 @@ def upgrade() -> None:
         )
     """)
 
-    # 2. Map imap_app_password -> app_password
+    # Rename the Gmail app-password authentication method.
     op.execute("""
         UPDATE tenant_mailboxes
         SET auth_method = 'app_password'
         WHERE auth_method = 'imap_app_password'
     """)
 
-    # 3. Rename credential column
+    # Rename the encrypted credential column to match the new method name.
     op.alter_column(
         "tenant_mailboxes",
         "imap_password_encrypted",
         new_column_name="app_password_encrypted",
     )
 
-    # 4. Drop IMAP server columns (keep provider — Task 3 removes it)
+    # Gmail server settings are fixed, so per-mailbox server columns are obsolete.
     op.drop_column("tenant_mailboxes", "imap_host")
     op.drop_column("tenant_mailboxes", "imap_port")
     op.drop_column("tenant_mailboxes", "imap_ssl")
 
-    # 5. Add auth_method check constraint
+    # Restrict mailbox authentication to the two Gmail connection methods.
     op.create_check_constraint(
         "ck_tenant_mailboxes_auth_method",
         "tenant_mailboxes",
@@ -60,14 +60,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 1. Drop the check constraint first so restoration is not blocked
+    # Drop the constraint first so legacy values can be restored.
     op.drop_constraint(
         "ck_tenant_mailboxes_auth_method",
         "tenant_mailboxes",
         type_="check",
     )
 
-    # 2. Restore dropped columns as nullable
+    # Restore the removed Gmail server columns as nullable.
     op.add_column(
         "tenant_mailboxes",
         sa.Column("imap_host", sa.String(255), nullable=True),
@@ -81,7 +81,7 @@ def downgrade() -> None:
         sa.Column("imap_ssl", sa.Boolean(), server_default="true", nullable=True),
     )
 
-    # 3. Restore Gmail server values for app-password rows
+    # Repopulate Gmail server values for app-password rows.
     op.execute("""
         UPDATE tenant_mailboxes
         SET imap_host = 'imap.gmail.com',
@@ -90,21 +90,21 @@ def downgrade() -> None:
         WHERE auth_method = 'app_password'
     """)
 
-    # 4. Map app_password back to imap_app_password
+    # Restore the legacy app-password authentication method name.
     op.execute("""
         UPDATE tenant_mailboxes
         SET auth_method = 'imap_app_password'
         WHERE auth_method = 'app_password'
     """)
 
-    # 5. Rename encrypted column back
+    # Restore the legacy encrypted credential column name.
     op.alter_column(
         "tenant_mailboxes",
         "app_password_encrypted",
         new_column_name="imap_password_encrypted",
     )
 
-    # 6. Derive provider values from auth_method (for rows where provider is NULL)
+    # Restore missing legacy provider values from the authentication method.
     op.execute("""
         UPDATE tenant_mailboxes
         SET provider = 'google'
