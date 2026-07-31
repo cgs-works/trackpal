@@ -384,6 +384,7 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.catalog.service_name_exists": "A service with this name already exists.",
     "frontend.catalog.plan_name_exists": "A plan with this name already exists for this service.",
     "frontend.catalog.invalid_name": "Enter a valid name of 200 characters or fewer.",
+    "frontend.catalog.invalid_icon": "Enter a valid icon reference (e.g. simple-icons:netflix).",
     "frontend.catalog.target_not_found": "The selected catalog item no longer exists.",
     "frontend.catalog.error_create_service": "Could not create service.",
     "frontend.catalog.error_update_service": "Could not update service.",

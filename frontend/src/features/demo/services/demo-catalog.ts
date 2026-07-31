@@ -15,12 +15,14 @@ import {
   type ProDemoWorkspaceState,
 } from "./demo-baseline";
 import type { DemoWorkspaceRepository } from "./demo-workspace";
+import { parseIconReference } from "@/features/catalog/services/icon-reference";
 
 export type DemoCatalogErrorCode =
   | "service_name_already_exists"
   | "plan_name_already_exists"
   | "catalog_name_required"
   | "catalog_name_too_long"
+  | "catalog_icon_invalid"
   | "service_not_found"
   | "plan_not_found"
   | "invalid_demo_workspace";
@@ -40,6 +42,13 @@ function cleanName(value: string): string {
   if (!name) throw new DemoCatalogError("catalog_name_required");
   if (name.length > 200) throw new DemoCatalogError("catalog_name_too_long");
   return name;
+}
+
+function validateIcon(value: string | null | undefined): string | null {
+  if (value === undefined) return undefined as unknown as null;
+  if (value === null) return null;
+  if (parseIconReference(value) === null) throw new DemoCatalogError("catalog_icon_invalid");
+  return value;
 }
 
 function sortByName<T extends { name: string; created_at: string }>(items: T[]): T[] {
@@ -146,6 +155,7 @@ export function createDemoCatalog(
 
     async createService(payload: ServiceCreate): Promise<Service> {
       const name = cleanName(payload.name);
+      const icon = validateIcon(payload.icon);
       const current = requireState(workspace, metadata);
       if (current.services.some((service) => service.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
         throw new DemoCatalogError("service_name_already_exists");
@@ -155,6 +165,7 @@ export function createDemoCatalog(
         id: `service-${metadata.tenantId}-${Date.now()}`,
         tenant_id: metadata.tenantId,
         name,
+        icon,
         created_at: now,
         updated_at: now,
       };
@@ -169,11 +180,12 @@ export function createDemoCatalog(
       const current = requireState(workspace, metadata);
       const existing = current.services.find((service) => service.id === id);
       if (!existing) throw new DemoCatalogError("service_not_found");
-      const name = cleanName(payload.name);
+      const name = payload.name !== undefined ? cleanName(payload.name) : existing.name;
       if (current.services.some((service) => service.id !== id && service.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
         throw new DemoCatalogError("service_name_already_exists");
       }
-      const updated = { ...existing, name, updated_at: new Date().toISOString() };
+      const icon = "icon" in payload ? validateIcon(payload.icon) : existing.icon;
+      const updated = { ...existing, name, icon, updated_at: new Date().toISOString() };
       updateState(workspace, (state) => ({
         ...state,
         services: state.services.map((service) => service.id === id ? updated : service),

@@ -5,16 +5,19 @@ export interface Service {
   id: string;
   tenant_id: string;
   name: string;
+  icon: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface ServiceCreate {
   name: string;
+  icon?: string | null;
 }
 
 export interface ServiceUpdate {
-  name: string;
+  name?: string;
+  icon?: string | null;
 }
 
 // ── Plan ─────────────────────────────────────────────────────
