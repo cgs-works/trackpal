@@ -71,7 +71,8 @@ it("waits for two characters and debounces search by 300ms", async () => {
   expect(search).toHaveBeenCalledWith("ne", 0, expect.any(AbortSignal));
 });
 
-it("shows collection license before enabling selection", async () => {
+// Finding 1: canConfirm requires explicit selection, not just license on first result
+it("shows collection license but keeps select disabled until user picks an icon", async () => {
   search.mockResolvedValue(searchPageWithNetflix);
   renderPicker({ initialQuery: "netflix" });
   expect(await screen.findByText("CC0 1.0")).toBeInTheDocument();
@@ -79,6 +80,11 @@ it("shows collection license before enabling selection", async () => {
     "href",
     "https://creativecommons.org/publicdomain/zero/1.0/",
   );
+  // Button disabled — no explicit selection yet
+  expect(screen.getByRole("button", { name: "frontend.icon_picker.select" })).toBeDisabled();
+
+  // Select the icon → button enables
+  await userEvent.click(screen.getByRole("option", { name: /simple-icons:netflix/ }));
   expect(screen.getByRole("button", { name: "frontend.icon_picker.select" })).toBeEnabled();
 });
 
@@ -97,6 +103,77 @@ it("aborts an obsolete search when the query changes", async () => {
 
   expect(firstSignal.aborted).toBe(true);
   expect(search).toHaveBeenLastCalledWith("net", 0, expect.any(AbortSignal));
+});
+
+// Finding 3: short query aborts in-flight search
+it("aborts in-flight search when query drops below minimum length", async () => {
+  vi.useFakeTimers();
+  search.mockImplementation(
+    (_q: string, _s: number, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }),
+  );
+  renderPicker();
+  const input = screen.getByRole("searchbox");
+
+  // Trigger a search
+  fireEvent.change(input, { target: { value: "ne" } });
+  await vi.advanceTimersByTimeAsync(300);
+  expect(search).toHaveBeenCalledTimes(1);
+
+  // Drop below minimum — should abort the in-flight request
+  fireEvent.change(input, { target: { value: "n" } });
+  // The debounce effect should clear state and abort
+  await vi.advanceTimersByTimeAsync(0);
+
+  // Abort signal should be triggered
+  const signal = search.mock.calls[0][2] as AbortSignal;
+  expect(signal.aborted).toBe(true);
+});
+
+// Finding 4: reopen with same initialQuery re-searches
+it("re-searches when reopened with the same initialQuery", async () => {
+  vi.useFakeTimers();
+  search.mockResolvedValue(searchPageWithNetflix);
+
+  const onOpenChange = vi.fn();
+  const { rerender } = render(<IconPicker
+    open={true}
+    value={null}
+    initialQuery="netflix"
+    onOpenChange={onOpenChange}
+    onSelect={vi.fn()}
+  />);
+
+  // Wait for initial search
+  await vi.advanceTimersByTimeAsync(300);
+  expect(search).toHaveBeenCalledTimes(1);
+  expect(search).toHaveBeenCalledWith("netflix", 0, expect.any(AbortSignal));
+
+  // Close the dialog
+  rerender(<IconPicker
+    open={false}
+    value={null}
+    initialQuery="netflix"
+    onOpenChange={onOpenChange}
+    onSelect={vi.fn()}
+  />);
+  search.mockClear();
+
+  // Reopen with same initialQuery
+  rerender(<IconPicker
+    open={true}
+    value={null}
+    initialQuery="netflix"
+    onOpenChange={onOpenChange}
+    onSelect={vi.fn()}
+  />);
+
+  // Should re-search
+  await vi.advanceTimersByTimeAsync(300);
+  expect(search).toHaveBeenCalledTimes(1);
+  expect(search).toHaveBeenCalledWith("netflix", 0, expect.any(AbortSignal));
 });
 
 it("shows an empty state for a successful search with no matches", async () => {

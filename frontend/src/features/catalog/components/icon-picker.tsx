@@ -44,12 +44,14 @@ export function IconPicker({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setResetKey((k) => k + 1);
     setQuery(initialQuery);
     setResults([]);
     setCollections({});
@@ -108,7 +110,10 @@ export function IconPicker({
         if (controller.signal.aborted) return;
         setError(t("frontend.icon_picker.error"));
       } finally {
-        setLoading(false);
+        // Only clear loading if this controller is still the active one
+        if (abortRef.current === controller && !controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     },
     [],
@@ -118,6 +123,8 @@ export function IconPicker({
     if (timerRef.current) clearTimeout(timerRef.current);
 
     if (query.length < MIN_QUERY_LENGTH) {
+      // Abort any in-flight search for the discarded query
+      if (abortRef.current) abortRef.current.abort();
       setResults([]);
       setCollections({});
       setPageStart(0);
@@ -134,7 +141,7 @@ export function IconPicker({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [query, performSearch]);
+  }, [query, performSearch, resetKey]);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
@@ -190,8 +197,9 @@ export function IconPicker({
   }, [selectedDetails, results, collections]);
 
   const canConfirm = Boolean(
-    activeDetails?.collection.license.title &&
-    activeDetails.collection.license.url,
+    selected !== null &&
+    selectedDetails?.collection.license.title &&
+    selectedDetails.collection.license.url,
   );
 
   const optionLabel = (iconRef: string): string => {
@@ -327,6 +335,10 @@ export function IconPicker({
                 </div>
 
                 <div className="flex flex-col gap-1 text-xs">
+                  <p>
+                    <span className="text-muted-foreground">{t("frontend.icon_picker.collection")}: </span>
+                    {activeDetails.collection.name}
+                  </p>
                   {activeDetails.collection.author.name && (
                     <p>
                       <span className="text-muted-foreground">{t("frontend.icon_picker.author")}: </span>
