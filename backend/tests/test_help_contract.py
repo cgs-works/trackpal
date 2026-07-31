@@ -484,7 +484,10 @@ def test_mailbox_secret_help_copy_is_app_password_only() -> None:
     delete_es = topics["es"]["tenant-admin.delete-account"]["body"]
 
     assert "Mailbox login credentials or app passwords" in export_en
-    assert "Credenciales de inicio de sesión del correo o contraseñas de aplicación" in export_es
+    assert (
+        "Credenciales de inicio de sesión del correo o contraseñas de aplicación"
+        in export_es
+    )
     assert "Google app password" in delete_en
     assert "Contraseña de aplicación de Google" in delete_es
     for body in (export_en, export_es, delete_en, delete_es):

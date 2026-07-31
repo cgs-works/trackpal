@@ -695,7 +695,6 @@ class TestLegacyCompatibility:
                 f"{CODE_6} - Your Spotify login code",
                 f"{CODE_6} This code is valid for 5 minutes",
             ],
-
             "universal_plus": [
                 f"<p>código de activación</p><strong>{UNIVERSAL_CODE}</strong>",
                 f"<strong>{UNIVERSAL_CODE}</strong>",

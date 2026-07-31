@@ -116,7 +116,6 @@ class TestGlobalCodeServices:
         keys = {s["service_key"] for s in services}
         assert keys == VALID_SERVICE_KEYS
 
-
     @pytest.mark.asyncio
     async def test_toggle_single_service(
         self, client: AsyncClient, master_headers: dict, seed_global_services

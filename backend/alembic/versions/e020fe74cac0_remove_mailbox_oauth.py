@@ -37,12 +37,10 @@ def upgrade() -> None:
     )
     op.execute("DELETE FROM tenant_mailboxes WHERE auth_method = 'oauth'")
     op.execute(
-        "DELETE FROM tenant_code_service_selections "
-        "WHERE service_key = 'trackpal_demo'"
+        "DELETE FROM tenant_code_service_selections WHERE service_key = 'trackpal_demo'"
     )
     op.execute(
-        "DELETE FROM code_service_global_status "
-        "WHERE service_key = 'trackpal_demo'"
+        "DELETE FROM code_service_global_status WHERE service_key = 'trackpal_demo'"
     )
     for column in _OAUTH_COLUMNS:
         op.drop_column("tenant_mailboxes", column)
