@@ -64,6 +64,10 @@ tour:
 
 You do not need to write code. The package includes examples for several technologies and uses `YOUR_PUBLIC_API_KEY` as a placeholder. Your developer must replace it with the real key and protect `GET /api/v1/public/catalog` with a Cloudflare rate-limit or WAF rule.
 
+## Service icons in the public API
+
+Public Catalog services include an optional `icon` field with an Iconify `prefix:name` reference. The developer package shows how to turn this into an Iconify SVG URL. Your website must provide a generic fallback icon. Visitors''' browsers contact Iconify directly to display service icons.
+
 ## If the website does not show the Catalog
 
 Confirm that the saved address exactly matches the browser's allowed origin. Regenerating the key invalidates the old one; revoking it disables the public Catalog. Never post the key in screenshots, repositories, or open chats.

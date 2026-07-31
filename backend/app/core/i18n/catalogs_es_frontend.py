@@ -953,4 +953,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.icon_picker.license_unavailable": "Los datos de licencia no están disponibles, por lo que aún no se puede seleccionar este icono.",
     "frontend.icon_picker.select": "Seleccionar icono",
     "frontend.icon_picker.cancel": "Cancelar",
+    # Public API Icon Instruction
+    "frontend.public_api.handoff_icon_prefix": "Referencia de icono",
+    "frontend.public_api.handoff_icon_suffix": "El navegador contacta Iconify para mostrar los iconos de servicio. Proporciona un respaldo genérico si Iconify no está disponible."
 }

@@ -64,6 +64,10 @@ Con **TrackPal Pro** puedes mostrar los servicios y planes de tu Catálogo en tu
 
 No necesitas programar. El paquete incluye ejemplos para distintas tecnologías y usa `YOUR_PUBLIC_API_KEY` como marcador. Tu desarrollador debe reemplazarlo con la clave real y proteger `GET /api/v1/public/catalog` con rate-limit o WAF de Cloudflare.
 
+## Iconos de servicio en la API pública
+
+Los servicios del Catálogo público incluyen un campo opcional `icon` con una referencia Iconify `prefix:name`. El paquete para desarrollador muestra cómo convertirla en una URL SVG de Iconify. Tu sitio web debe proporcionar un icono de respaldo genérico. Los navegadores de los visitantes contactan Iconify directamente para mostrar los iconos de servicio.
+
 ## Si el sitio no muestra el Catálogo
 
 Comprueba que la dirección registrada coincida exactamente con el allowed origin del navegador. Regenerar la clave invalida la anterior; revocarla desactiva el Catálogo público. Nunca publiques la clave en capturas, repositorios o chats abiertos.

@@ -70,6 +70,10 @@ In **TrackPal Pro**, the Catalog contains your services and the plans available 
 
 Create a service, open it, and add its plans. You can also rename them on the Web or from **Catalog** in the **TrackPal Pro** WhatsApp menu. An empty list simply means the first service or plan has not been created yet.
 
+## Service icons
+
+Each service can have an optional icon. Choose, replace, or remove an icon from the Web catalog editor — these are visual-only actions. WhatsApp continues to manage service names and plans as text. If Iconify is temporarily unavailable, save with the current or generic icon and retry later.
+
 ## Before deleting
 
 TrackPal shows how many active subscriptions and historical subscriptions depend on the service or plan. Review them carefully: deletion is irreversible and also removes the related subscriptions.

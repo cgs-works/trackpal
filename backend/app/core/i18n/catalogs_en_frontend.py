@@ -953,4 +953,7 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.icon_picker.license_unavailable": "License details are unavailable, so this icon cannot be selected yet.",
     "frontend.icon_picker.select": "Select icon",
     "frontend.icon_picker.cancel": "Cancel",
+    # Public API Icon Instruction
+    "frontend.public_api.handoff_icon_prefix": "Icon reference",
+    "frontend.public_api.handoff_icon_suffix": "The browser contacts Iconify to display service icons. Provide a generic fallback if Iconify is unavailable."
 }

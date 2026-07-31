@@ -48,6 +48,16 @@ describe("PublicApiSection", () => {
     expect(packageText).toContain("frontend.public_api.lang_alpine");
   });
 
+  it("includes Iconify icon reference guidance in handoff", () => {
+    const packageText = buildDeveloperHandoffPackage("https://api.example.com/api/v1", ["https://example.com"]);
+
+    expect(packageText).toContain("service.icon");
+    expect(packageText).toContain("https://api.iconify.design");
+    expect(packageText).toContain("prefix:name");
+    expect(packageText).toContain("YOUR_PUBLIC_API_KEY");
+    expect(packageText).not.toContain("tpk_abc");
+  });
+
   it("loads and keeps the existing key hidden until requested", async () => {
     const user = userEvent.setup();
     const clipboardSpy = vi.spyOn(navigator.clipboard, "writeText");
