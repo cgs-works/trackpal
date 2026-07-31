@@ -177,4 +177,4 @@ Configurable via:
 - [Input Validation Policy](input-validation-policy.md)
 - [Code-Services Governance](code-services.md)
 - [Backend Conventions](../code-standard/backend-conventions.md)
-- [Error Handling](../code-standard/error-handing.md)
+- [Error Handling](../code-standard/error-handling.md)

@@ -43,7 +43,7 @@ One generic localized authentication error is returned when either input is wron
    - TenantMailbox → MailLookupJobs, DeliveryLogs cascade
    - TenantSettings, ExportJobs, BlockedClients, TenantCodeServiceSelections
    - TenantHelpAcknowledgements
-6. Delete stored mailbox OAuth/app-password credentials (NO provider revocation)
+6. Delete stored mailbox app-password credentials (NO provider revocation)
 7. Clear frontend auth and redirect to login (Tenant Admin self-deletion)
 ```
 
