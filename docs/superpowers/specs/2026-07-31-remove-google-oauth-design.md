@@ -15,8 +15,11 @@ This change removes Google OAuth only from Mailbox ingestion. It does not replac
 The implementation will also remove historical documents that describe Google OAuth as a supported Mailbox connection method:
 
 - `docs/verification/google-oauth-demo.md`
+- `docs/verification/trackpal-demo-code-email.html`
 - `docs/superpowers/plans/2026-07-30-gmail-only-mailbox-connection.md`
 - `docs/superpowers/specs/2026-07-30-gmail-only-mailbox-connection-design.md`
+
+The synthetic `trackpal_demo` Code Service was created solely for Google OAuth verification recordings. Remove its extractor catalog entry, WhatsApp selection entry, tests, global database row, and tenant selections.
 
 Published Alembic migrations remain immutable even when they contain historical OAuth schema definitions. This removal design and its implementation plan remain as the intentional record explaining why the support was removed.
 
@@ -88,22 +91,24 @@ The migration executes in this order:
 
 1. Drop the existing `ck_tenant_mailboxes_auth_method` constraint.
 2. Delete every `tenant_mailboxes` row whose `auth_method = 'oauth'`.
-3. Drop the OAuth credential and identity columns:
+3. Delete `trackpal_demo` rows from `tenant_code_service_selections`.
+4. Delete `trackpal_demo` from `code_service_global_status`.
+5. Drop the OAuth credential and identity columns:
    - `oauth_provider_user_id`
    - `oauth_provider_email`
    - `oauth_access_token_encrypted`
    - `oauth_refresh_token_encrypted`
    - `oauth_token_expires_at`
    - `oauth_scope`
-4. Drop `auth_method` because App Password Connection is the only remaining method.
+6. Drop `auth_method` because App Password Connection is the only remaining method.
 
 Rows connected through app passwords remain intact, including their encrypted app password and connection monitoring fields.
 
 ### Downgrade
 
-The downgrade restores the removed nullable OAuth columns and restores `auth_method` with `app_password` populated for surviving rows. It restores the historical constraint allowing `oauth` and `app_password` so the previous application version can start.
+The downgrade restores the removed nullable OAuth columns and restores `auth_method` with `app_password` populated for surviving rows. It restores the historical constraint allowing `oauth` and `app_password` and recreates the globally active `trackpal_demo` row so the previous application version can start.
 
-The downgrade cannot recover deleted OAuth Mailbox rows or token values. This irreversibility must be documented in the migration and deployment notes.
+The downgrade cannot recover deleted OAuth Mailbox rows, token values, or prior tenant selections for `trackpal_demo`. This irreversibility must be documented in the migration and deployment notes.
 
 ## Backend Changes
 
@@ -118,7 +123,10 @@ The implementation removes:
 - OAuth columns from `TenantMailbox`;
 - OAuth and revoked status branches from worker provider types and worker error handling;
 - OAuth-specific metrics and labels;
-- imports and package exports made obsolete by these deletions.
+- imports and package exports made obsolete by these deletions;
+- `backend/app/services/mail_code_extractor/catalog/trackpal_demo.py` and its catalog registration;
+- `trackpal_demo` from Code Service schemas, WhatsApp selection constants, labels, and tests;
+- `backend/tests/test_trackpal_demo_verification.py`.
 
 The app-password connection retains validate-before-persist behavior. A rejected replacement must leave an existing Mailbox unchanged.
 
@@ -171,7 +179,7 @@ Update all current documentation to describe App Password Connection as the sole
 - generated `backend/app/help/artifact.json`;
 - environment examples and codebase structure references.
 
-Remove OAuth verification instructions and the prior hybrid-connection Superpowers plan/spec listed in Scope.
+Remove OAuth verification instructions, the synthetic verification HTML, the prior hybrid-connection Superpowers plan/spec listed in Scope, and all current documentation that lists `trackpal_demo` as a supported Code Service.
 
 References unrelated to Mailbox OAuth remain, especially TrackPal JWT/Bearer authentication and immutable historical Alembic migrations.
 
@@ -185,7 +193,9 @@ Verify that the new migration:
 - preserves app-password Mailbox rows and encrypted credentials;
 - removes all OAuth columns and `auth_method` on upgrade;
 - restores the historical column shape and constraint on downgrade;
-- documents that deleted OAuth data is not recoverable.
+- deletes the `trackpal_demo` global row and tenant selections;
+- restores the global `trackpal_demo` row on downgrade without claiming to restore tenant selections;
+- documents that deleted OAuth and `trackpal_demo` selection data is not recoverable.
 
 ### Backend Tests
 
@@ -225,10 +235,11 @@ Regenerate and verify the Help artifact. Update Help contract tests so the tutor
 4. No OAuth start, callback, refresh, Gmail API fetch, consent, popup, or feature-gate code remains.
 5. No OAuth-specific runtime metric, status, error class, schema, environment variable, or translation remains.
 6. Current product, architecture, Help, and verification documentation no longer presents Google OAuth as supported.
-7. The prior hybrid implementation plan, design, and verification guide are removed.
-8. JWT/Bearer login behavior remains unchanged.
-9. Google OAuth references remain only where required to migrate or remove historical state, preserve JWT/Bearer transport, document this removal, or assert through negative regression tests that removed routes stay absent.
-10. Backend tests, frontend tests, Ruff, frontend production build, Alembic validation, and Help verification pass.
+7. The prior hybrid implementation plan, design, verification guide, and synthetic verification HTML are removed.
+8. `trackpal_demo` is absent from the extractor catalog, Code Service interfaces, WhatsApp selection flow, tests, global database state, and tenant selections.
+9. JWT/Bearer login behavior remains unchanged.
+10. Google OAuth references remain only where required to migrate or remove historical state, preserve JWT/Bearer transport, document this removal, or assert through negative regression tests that removed routes stay absent.
+11. Backend tests, frontend tests, Ruff, frontend production build, Alembic validation, and Help verification pass.
 
 ## Non-Goals
 
