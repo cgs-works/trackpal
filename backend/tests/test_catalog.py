@@ -359,3 +359,76 @@ async def test_plan_duplicate_name_is_scoped_to_same_service(
     assert first_plan.status_code == 201
     assert same_other_service.status_code == 201
     assert duplicate_same_service.status_code == 409
+
+
+# ── Service Icon Tests ──────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "icon",
+    ["netflix", "Simple-Icons:netflix", "simple-icons:", "a" * 256],
+)
+async def test_service_icon_rejects_invalid_references(
+    client, active_tenant_user, icon: str
+):
+    headers = await _login(client)
+    response = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Icon validation", "icon": icon},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
+async def test_service_icon_create_preserve_replace_and_clear(
+    client, active_tenant_user
+):
+    headers = await _login(client)
+    created = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Netflix", "icon": "simple-icons:netflix"},
+        headers=headers,
+    )
+    assert created.status_code == 201
+    service_id = created.json()["id"]
+    assert created.json()["icon"] == "simple-icons:netflix"
+
+    renamed = await client.put(
+        f"/api/v1/catalog/services/{service_id}",
+        json={"name": "Netflix Premium"},
+        headers=headers,
+    )
+    assert renamed.json()["icon"] == "simple-icons:netflix"
+
+    replaced = await client.put(
+        f"/api/v1/catalog/services/{service_id}",
+        json={"icon": "logos:netflix-icon"},
+        headers=headers,
+    )
+    assert replaced.json()["icon"] == "logos:netflix-icon"
+
+    cleared = await client.put(
+        f"/api/v1/catalog/services/{service_id}",
+        json={"icon": None},
+        headers=headers,
+    )
+    assert cleared.json()["icon"] is None
+
+
+async def test_service_icon_save_does_not_call_iconify(
+    db_session, active_tenant_user, monkeypatch
+):
+    tenant_id = await _tenant_id(db_session, active_tenant_user)
+    request = AsyncMock(side_effect=AssertionError("unexpected external HTTP request"))
+    monkeypatch.setattr("httpx.AsyncClient.request", request)
+
+    from app.schemas.catalog import ServiceCreate
+
+    saved = await CatalogService().create_service(
+        db_session,
+        tenant_id,
+        ServiceCreate(name="Offline-safe", icon="mdi:cloud-off-outline"),
+    )
+
+    assert saved.icon == "mdi:cloud-off-outline"
+    request.assert_not_awaited()

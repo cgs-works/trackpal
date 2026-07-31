@@ -110,7 +110,7 @@ class CatalogService:
         name = _clean_name(payload.name)
         if await self._service_name_exists(db, tenant_id, name):
             raise UserFacingError("service_name_already_exists")
-        service = Service(tenant_id=tenant_id, name=name)
+        service = Service(tenant_id=tenant_id, name=name, icon=payload.icon)
         db.add(service)
         await self._commit_catalog_change(db, "service_name_already_exists")
         await restore_rls_context(db)
@@ -132,6 +132,8 @@ class CatalogService:
             if await self._service_name_exists(db, tenant_id, name, service_id):
                 raise UserFacingError("service_name_already_exists")
             service.name = name
+        if "icon" in payload.model_fields_set:
+            service.icon = payload.icon
         await self._commit_catalog_change(db, "service_name_already_exists")
         await restore_rls_context(db)
         await db.refresh(service)
