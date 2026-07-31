@@ -133,7 +133,7 @@ function isValidIcon(value: unknown): boolean {
 
 function isServiceIconValid(service: unknown): boolean {
   if (!isRecord(service)) return false;
-  return "icon" in service ? isValidIcon(service.icon) : true;
+  return isValidIcon(service.icon);
 }
 
 function migrateServiceIcons(planSpecific: unknown): unknown {

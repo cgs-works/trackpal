@@ -45,10 +45,11 @@ function cleanName(value: string): string {
 }
 
 function validateIcon(value: string | null | undefined): string | null {
-  if (value === undefined) return undefined as unknown as null;
-  if (value === null) return null;
-  if (parseIconReference(value) === null) throw new DemoCatalogError("catalog_icon_invalid");
-  return value;
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (parseIconReference(trimmed) === null) throw new DemoCatalogError("catalog_icon_invalid");
+  return trimmed;
 }
 
 function sortByName<T extends { name: string; created_at: string }>(items: T[]): T[] {

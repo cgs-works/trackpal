@@ -34,6 +34,7 @@ const CATALOG_ERROR_KEYS: Record<string, string> = {
   plan_name_already_exists: "frontend.catalog.plan_name_exists",
   catalog_name_required: "frontend.catalog.invalid_name",
   catalog_name_too_long: "frontend.catalog.invalid_name",
+  catalog_icon_invalid: "frontend.catalog.invalid_icon",
   service_not_found: "frontend.catalog.target_not_found",
   plan_not_found: "frontend.catalog.target_not_found",
   invalid_demo_workspace: "frontend.catalog.target_not_found",

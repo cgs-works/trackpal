@@ -138,6 +138,36 @@ describe("Pro Demo Catalog", () => {
     ).rejects.toMatchObject({ code: "catalog_icon_invalid" });
   });
 
+  it("stores null (not undefined) when icon is omitted on create", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    const created = await catalog.createService({ name: "No Icon Service" });
+    expect(created.icon).toBeNull();
+    expect("icon" in created).toBe(true);
+
+    const raw = source.workspace!.read()!;
+    const pro = readProDemoState(raw.plan_specific)!;
+    const stored = pro.services.find((s) => s.id === created.id)!;
+    expect(stored.icon).toBeNull();
+  });
+
+  it("normalizes empty string icon to null on create", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    const created = await catalog.createService({ name: "Empty Icon Service", icon: "" });
+    expect(created.icon).toBeNull();
+  });
+
   it("previews and cascades service deletion without orphan plans or relations", async () => {
     const source = createDataSource({
       tenantId: metadata.tenantId,
