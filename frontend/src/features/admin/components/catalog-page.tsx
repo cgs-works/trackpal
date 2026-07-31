@@ -39,17 +39,50 @@ const CATALOG_ERROR_KEYS: Record<string, string> = {
   catalog_name_required: "frontend.catalog.invalid_name",
   catalog_name_too_long: "frontend.catalog.invalid_name",
   catalog_icon_invalid: "frontend.catalog.invalid_icon",
+  invalid_icon_reference: "frontend.catalog.invalid_icon",
   service_not_found: "frontend.catalog.target_not_found",
   plan_not_found: "frontend.catalog.target_not_found",
   invalid_demo_workspace: "frontend.catalog.target_not_found",
 };
 
 function catalogErrorMessage(error: unknown, fallbackKey: string): string {
-  if (error instanceof Error) {
-    const key = CATALOG_ERROR_KEYS[error.message];
-    if (key) return t(key);
-    if (error.message) return error.message;
+  // Try to find a known error code from various sources
+  if (error && typeof error === "object") {
+    // 1. Check error.code first
+    if ("code" in error && typeof error.code === "string") {
+      const key = CATALOG_ERROR_KEYS[error.code];
+      if (key) return t(key);
+    }
+
+    // 2. Check error.message for known keys
+    if ("message" in error && typeof error.message === "string") {
+      const key = CATALOG_ERROR_KEYS[error.message];
+      if (key) return t(key);
+    }
+
+    // 3. Check Axios response.data.detail for known keys
+    if (
+      "response" in error &&
+      error.response &&
+      typeof error.response === "object" &&
+      "data" in error.response
+    ) {
+      const data = error.response.data;
+      if (data && typeof data === "object" && "detail" in data) {
+        const detail = data.detail;
+        if (typeof detail === "string") {
+          const key = CATALOG_ERROR_KEYS[detail];
+          if (key) return t(key);
+        }
+      }
+    }
   }
+
+  // Fallback to error.message if available (unmapped error)
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
   return t(fallbackKey);
 }
 
@@ -395,7 +428,10 @@ export function CatalogPage() {
       setServiceFormOpen(false);
     } catch (err) {
       const msg = catalogErrorMessage(err, "frontend.catalog.error_update_service");
-      if (err instanceof Error && CATALOG_ERROR_KEYS[err.message]) {
+      if (
+        err instanceof Error ||
+        (err && typeof err === "object" && "response" in err)
+      ) {
         setServiceFormError(msg);
       } else {
         toast.error(msg);
