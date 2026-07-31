@@ -432,3 +432,110 @@ async def test_service_icon_save_does_not_call_iconify(
 
     assert saved.icon == "mdi:cloud-off-outline"
     request.assert_not_awaited()
+
+
+# --- Finding 1: cross-tenant icon isolation ---
+
+
+async def test_cross_tenant_icon_isolation(client, active_tenant_user, db_session):
+    """Tenant B cannot see or overwrite Tenant A's service icon."""
+    headers_a = await _login(client)
+
+    # Create a service with an icon for Tenant A
+    created = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Spotify", "icon": "simple-icons:spotify"},
+        headers=headers_a,
+    )
+    assert created.status_code == 201
+    svc_a_id = created.json()["id"]
+    assert created.json()["icon"] == "simple-icons:spotify"
+
+    # Create Tenant B user
+    tenant_b_user = User(
+        username=f"isolated_{uuid4().hex[:8]}",
+        password_hash=get_password_hash("isolated-password"),
+        role="tenant",
+    )
+    db_session.add(tenant_b_user)
+    await db_session.flush()
+    tenant_b = Tenant(
+        owner_user_id=tenant_b_user.id,
+        client_prefix="iso01",
+        name="Isolated Tenant",
+        whatsapp_phone="+12015558888",
+        is_active=True,
+    )
+    db_session.add(tenant_b)
+    await db_session.commit()
+
+    headers_b = await _login(
+        client, username=tenant_b_user.username, password="isolated-password"
+    )
+
+    # Tenant B GET → 404 (no icon leak)
+    resp = await client.get(f"/api/v1/catalog/services/{svc_a_id}", headers=headers_b)
+    assert resp.status_code == 404
+
+    # Tenant B PUT → 404 (cannot overwrite icon)
+    resp = await client.put(
+        f"/api/v1/catalog/services/{svc_a_id}",
+        json={"icon": "logos:spotify-icon"},
+        headers=headers_b,
+    )
+    assert resp.status_code == 404
+
+    # Tenant A's icon is untouched
+    resp = await client.get(f"/api/v1/catalog/services/{svc_a_id}", headers=headers_a)
+    assert resp.status_code == 200
+    assert resp.json()["icon"] == "simple-icons:spotify"
+
+
+# --- Finding 2: empty/omitted icon → null ---
+
+
+async def test_service_icon_omitted_on_create_returns_null(client, active_tenant_user):
+    headers = await _login(client)
+    resp = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "No Icon Service"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["icon"] is None
+
+
+async def test_service_icon_empty_string_on_create_returns_null(
+    client, active_tenant_user
+):
+    headers = await _login(client)
+    resp = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Empty Icon Service", "icon": ""},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["icon"] is None
+
+
+# --- Finding 3: non-string icon input rejected ---
+
+
+async def test_service_icon_rejects_non_string_input(client, active_tenant_user):
+    headers = await _login(client)
+    resp = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Bad Icon Type", "icon": 42},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+
+async def test_service_icon_rejects_boolean_input(client, active_tenant_user):
+    headers = await _login(client)
+    resp = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Bool Icon", "icon": True},
+        headers=headers,
+    )
+    assert resp.status_code == 422

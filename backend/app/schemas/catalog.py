@@ -13,6 +13,8 @@ ICON_REFERENCE_PATTERN = re.compile(
 def normalize_icon_reference(value: str | None) -> str | None:
     if value is None:
         return None
+    if not isinstance(value, str):
+        raise ValueError("invalid_icon_reference")
     cleaned = value.strip()
     if not cleaned:
         return None
