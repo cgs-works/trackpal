@@ -24,7 +24,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | React 19 routing, state, API integration, and views |
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract), contextual payload routing, reply_to / no_reply handling, and subscription reminders workflows |
-| [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Multi-OAuth + IMAP mailbox ingestion, lookup worker, metrics, cleanup |
+| [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Gmail app-password mailbox ingestion, lookup worker, metrics, cleanup |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
@@ -40,12 +40,6 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Immediate Confirmed Tenant Deletion](adr/0002-immediate-confirmed-tenant-deletion.md) | Tenant Admin irreversible self-deletion without grace period or Master approval |
 | [Tenant Data Export Domain Contract](adr/0003-tenant-export-domain-contract.md) | Stable business-facing export contract with semantic field names, independent of persistence model |
 | [Browser-local Demo Tenant Workspaces](adr/0004-browser-local-demo-tenant-workspaces.md) | Server-enforced demo identity and lifecycle with plan-aware business state isolated to each browser |
-
-## Verification Guides
-
-| File | Description |
-|------|-------------|
-| [Google OAuth Demo](verification/google-oauth-demo.md) | Synthetic TrackPal Demo service and HTML email for the Gmail restricted-scope verification recording |
 
 ## Release Operations
 

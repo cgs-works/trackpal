@@ -212,15 +212,8 @@ Tenant-scoped Gmail mailbox used for centralized code ingestion. Gmail is the on
 | tenant_id | UUID | Unique FK -> tenants.id CASCADE |
 | mailbox_email | VARCHAR(255) | Required, Gmail address |
 | provider | VARCHAR(50) | Legacy column; always `google` for active rows |
-| auth_method | VARCHAR(50) | `app_password` or `oauth` |
-| status | VARCHAR(50) | `disconnected`, `connected`, `error`, `revoked` |
+| status | VARCHAR(50) | `disconnected`, `connected`, `error` |
 | app_password_encrypted | VARCHAR(500) | Nullable, Fernet-encrypted Gmail app password |
-| oauth_provider_user_id | VARCHAR(255) | Nullable, Google user ID |
-| oauth_provider_email | VARCHAR(255) | Nullable, Google email |
-| oauth_access_token_encrypted | VARCHAR(2000) | Nullable, Fernet-encrypted |
-| oauth_refresh_token_encrypted | VARCHAR(500) | Nullable, Fernet-encrypted |
-| oauth_token_expires_at | TIMESTAMPTZ | Nullable |
-| oauth_scope | VARCHAR(500) | Nullable, granted OAuth scopes |
 | last_connection_test_at | TIMESTAMPTZ | Nullable |
 | last_connection_error | TEXT | Nullable, safe error string |
 

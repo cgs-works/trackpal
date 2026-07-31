@@ -29,7 +29,7 @@ backend/
 │   │           │   ├── identify.py
 │   │           │   └── mail_lookups.py          # n8n create/poll mailbox lookup jobs
 │   │           ├── _mailbox_helpers.py      # Shared mailbox response helpers
-│   │           ├── mailbox.py               # Tenant mailbox CRUD/test/OAuth endpoints
+│   │           ├── mailbox.py               # Tenant mailbox CRUD/test/disconnect endpoints
 │   │           ├── whatsapp_link.py         # Tenant WhatsApp self-linking endpoints
 │   │           └── subscriptions/ # Package: crud, lifecycle, jobs, settings, router
 │   │               ├── __init__.py
@@ -129,9 +129,9 @@ backend/
 │       ├── evolution_client/
 │       ├── imap_service.py        # Internal Gmail IMAP connection-test adapter (used by app_password flow)
 │       ├── mail_code_extractor/   # Regex catalog v1 + pure extractor + per-service catalogs
-│       ├── mail_lookup_worker/    # Queue, providers (google OAuth, gmail_app_password), worker pipeline
+│       ├── mail_lookup_worker/    # Queue, provider (gmail_app_password), worker pipeline
 │       ├── mailbox_cleanup.py     # Retention/cleanup loop
-│       ├── oauth_service/         # Google OAuth start/callback/refresh + revocation
+│       ├── mailbox_app_password.py  # Gmail app-password validation and connection
 │       ├── profile_service/
 │       ├── subscription_job_service/
 │       ├── subscription_service/
@@ -269,8 +269,8 @@ backend/
 | `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
 | `app/services/access_control_service.py` | Block/unblock identities + codigo session cleanup |
 | `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
-| `app/services/mail_lookup_worker/` | Async mailbox lookup worker, provider fetchers (google OAuth, gmail_app_password), retries, dedupe pipeline, Redis queue |
-| `app/services/oauth_service/` | Google OAuth start/callback/refresh and revocation handling |
+| `app/services/mail_lookup_worker/` | Async mailbox lookup worker, Gmail app-password fetcher, retries, dedupe pipeline, Redis queue |
+| `app/services/mailbox_app_password.py` | Gmail app-password validation and IMAP connection testing |
 | `app/services/mail_code_extractor/` | Regex-based code extraction: catalog_v1 (multi-service) + per-service catalog files (netflix, disney, spotify, etc.) + pure extractor |
 | `app/services/tenant_console_protocols/` | Protocols for tenant console DI (package) |
 | `app/services/imap_service.py` | Internal Gmail IMAP connection-test adapter (used by app_password flow) |

@@ -107,7 +107,6 @@ Gmail mailbox configuration via the Gmail Setup Assistant.
 - Cached in `settingsStore.mailbox`
 - Gmail Setup Assistant: two-step flow (instructions → credentials)
 - App-password connect: validates before persisting
-- Optional Google Connection (OAuth) behind `VITE_GMAIL_OAUTH_CONNECT_ENABLED` gate
 - Test connection, disconnect actions
 - After mutations: `clearSettingsCache()` + reload
 

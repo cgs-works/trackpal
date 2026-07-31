@@ -47,14 +47,9 @@ Source of truth is the `SUPPORTED_CODE_SERVICES` dict in `app/schemas/code_servi
 | `netflix` | Netflix |
 | `prime_video` | Prime Video |
 | `spotify` | Spotify |
-| `trackpal_demo` | TrackPal Demo |
 | `universal_plus` | Universal+ |
 
 Invalid `service_key` in any API payload returns HTTP 400 (not 422 — manual validation via `validate_keys()`).
-
-`trackpal_demo` is a synthetic service for Google OAuth verification recordings.
-It uses no third-party brand or customer data and can be disabled globally after
-recording without deleting tenant selections.
 
 ## API Endpoints
 

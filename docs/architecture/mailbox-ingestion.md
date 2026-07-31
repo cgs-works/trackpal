@@ -1,4 +1,4 @@
-# Mailbox Ingestion (Gmail-Only)
+# Mailbox Ingestion (Gmail App-Password Only)
 
 ## Overview
 
@@ -12,7 +12,7 @@ on-demand when n8n requests a code lookup.
 | Component | Responsibility |
 |-----------|---------------|
 | **Tenant Dashboard (frontend)** | Mailbox config, Gmail Setup Assistant, connection tests |
-| **Backend API (FastAPI)** | Mailbox config CRUD, Google OAuth start/callback, lookup job create/poll |
+| **Backend API (FastAPI)** | Mailbox config CRUD, app-password validation, lookup job create/poll |
 | **Mailbox Lookup Worker** | Background asyncio task — processes pending jobs, fetches emails, extracts codes, dedupes |
 | **Mailbox Cleanup** | Periodic background task — expires stale jobs, hard-deletes expired data |
 | **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log` |
@@ -25,8 +25,7 @@ on-demand when n8n requests a code lookup.
 - One mailbox per tenant (`tenant_id` unique).
 - Stores credentials **encrypted** at rest via `app.core.encryption` (Fernet).
 - Gmail is the only supported mailbox provider; `provider` is a legacy column retained for backward compatibility.
-- Auth methods: `app_password` (Gmail app password via IMAP) or `oauth` (Google OAuth with read-only Gmail scope).
-- Status: `disconnected` | `connected` | `error` | `revoked`.
+- Status: `disconnected` | `connected` | `error`.
 - Server details (host, port, SSL) are fixed Gmail IMAP values; they are not configurable by the user.
 
 ### `mail_lookup_jobs`
@@ -81,15 +80,6 @@ The primary connection method uses a Google-generated app password:
 4. The normalized credential is encrypted and stored as `app_password_encrypted`.
 5. Gmail server details (`imap.gmail.com`, port 993, SSL=true) are fixed implementation details; the user never sees or configures them.
 
-## Google OAuth Connection
-
-An optional Google OAuth method is available behind the `VITE_GMAIL_OAUTH_CONNECT_ENABLED` release gate:
-
-- Scopes: `gmail.readonly openid email`.
-- Before opening Google OAuth, the mailbox UI discloses the message data read, the WhatsApp delivery purpose, temporary processing, and read-only limitations. The administrator must affirmatively accept this use for each connection attempt.
-- `access_type=offline` + `prompt=consent` ensures refresh token on first auth.
-- Token refresh on expiry; `invalid_grant` marks mailbox as `revoked`.
-
 ## API Contracts
 
 ### Tenant Dashboard (auth: Bearer JWT)
@@ -97,10 +87,8 @@ An optional Google OAuth method is available behind the `VITE_GMAIL_OAUTH_CONNEC
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/tenant/mailbox/` | Get config |
-| PUT | `/tenant/mailbox/` | Validate app password and connect (app-password only) |
+| PUT | `/tenant/mailbox/` | Validate app password and connect |
 | POST | `/tenant/mailbox/test` | Test connection |
-| POST | `/tenant/mailbox/oauth/google/start` | Start Google OAuth |
-| GET | `/tenant/mailbox/oauth/google/callback` | Google OAuth callback |
 | POST | `/tenant/mailbox/disconnect` | Disconnect + clear secrets |
 
 ### n8n Integration (auth: X-API-Key)
@@ -128,12 +116,11 @@ Durability contract for WhatsApp `codigo` handoff:
 
 ### Metrics (`GET /metrics`)
 
-- `lookup_job_total{status,provider,service}` — job results by outcome (provider is fixed `gmail`).
+- `lookup_job_total{status,service}` — job results by outcome.
 - `lookup_job_latency{quantile}` — p50/avg/count of job processing time.
 - `lookup_api_create{status}` — job creation outcomes.
 - `lookup_api_poll{status}` — poll status distribution.
-- `oauth_*_total{provider,status}` — OAuth flow counts (provider is fixed `google`).
-- `mailbox_test_total{method,status}` — connection test outcomes.
+- `mailbox_test_total{status}` — connection test outcomes.
 - `mailbox_cleanup_total{step,status}` — cleanup runs.
 
 ### Logging
@@ -158,16 +145,14 @@ Configurable via:
 
 - All secrets encrypted at rest via `cryptography.fernet.Fernet`.
 - No `result_value` persisted in database (ephemeral in-memory only).
-- State token signed with HMAC-SHA256; expires after 10 minutes.
-- Refresh token `invalid_grant` → mailbox `revoked`, tokens cleared.
 - Tenant isolation at repository layer: all queries scoped by `tenant_id`.
-- Rate-limit sensitive OAuth endpoints at proxy/reverse-proxy level.
+- Rate-limit sensitive endpoints at proxy/reverse-proxy level.
 
 ## Runbook
 
-### Mailbox shows `revoked`
+### Mailbox shows `error`
 
-1. Tenant must reconnect via the Gmail Setup Assistant (app password) or re-authorize Google OAuth.
+1. Tenant must reconnect via the Gmail Setup Assistant (app password).
 2. If the app password was revoked (e.g. main Google password changed), generate a new app password and reconnect.
 
 ### Lookup jobs stuck in `pending`
@@ -192,4 +177,4 @@ Configurable via:
 - [Input Validation Policy](input-validation-policy.md)
 - [Code-Services Governance](code-services.md)
 - [Backend Conventions](../code-standard/backend-conventions.md)
-- [Error Handling](../code-standard/error-handling.md)
+- [Error Handling](../code-standard/error-handing.md)

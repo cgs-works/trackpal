@@ -40,7 +40,7 @@ One generic localized authentication error is returned when either input is wron
    - Users (Tenant Admin User, Client Users) → RefreshSessions cascade
    - Clients → all linked records cascade
    - Catalog (Services, Plans) → Subscriptions, Events, ReminderLogs cascade
-   - TenantMailbox → OAuth tokens, MailLookupJobs, DeliveryLogs cascade
+   - TenantMailbox → MailLookupJobs, DeliveryLogs cascade
    - TenantSettings, ExportJobs, BlockedClients, TenantCodeServiceSelections
    - TenantHelpAcknowledgements
 6. Delete stored mailbox OAuth/app-password credentials (NO provider revocation)
@@ -61,14 +61,14 @@ If external cleanup fails, the Tenant remains fully present and the operation ca
 - Tenant record, sole Tenant Admin User identity, Client Users
 - Clients, Catalog (Services, Plans), Subscriptions, SubscriptionEvents, SubscriptionReminderLogs
 - SubscriptionReminderSettings, TenantSettings
-- TenantMailbox (OAuth tokens, app passwords), MailLookupJobs, MailCodeDeliveryLogs
+- TenantMailbox (app passwords), MailLookupJobs, MailCodeDeliveryLogs
 - ExportJobs, BlockedClients, TenantCodeServiceSelections
 - TenantHelpAcknowledgements
 - Database refresh sessions (via cascades)
 
 ## What is NOT deleted
 
-- Google OAuth grants at the provider (local credentials are destroyed)
+- **Google app password**: TrackPal deletes its encrypted local copy. Revoke the generated app password separately from your Google Account if you no longer need it.
 - Infrastructure backups and logs (follow operational retention policies)
 - WhatsApp/Session Redis keys (best-effort cleanup; keys expire in 5 minutes)
 

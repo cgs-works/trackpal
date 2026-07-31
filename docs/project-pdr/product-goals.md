@@ -4,7 +4,7 @@
 
 TrackPal is a multi-tenant platform that enables a Master operator to manage WhatsApp-based service delivery for streaming account management. The Master creates and manages tenants (service intermediaries), each with their own Evolution WhatsApp instance. Tenants manage clients, catalog, profiles, subscriptions, and mailbox code ingestion through REST, web dashboard, and WhatsApp.
 
-The system bridges three channels: **WhatsApp Console** (chatbot-driven admin), **Web Dashboard** (full CRUD UI), and **Mailbox Ingestion** (automated code extraction from OAuth/IMAP mailboxes).
+The system bridges three channels: **WhatsApp Console** (chatbot-driven admin), **Web Dashboard** (full CRUD UI), and **Mailbox Ingestion** (automated code extraction from Gmail app-password mailboxes).
 
 ## Core Use Cases
 
@@ -22,7 +22,7 @@ Master interacts via WhatsApp chatbot to:
 
 Master creates and manages bounded Starter or Pro evaluations from the dedicated Demos tab. The first successful Demo Credentials login starts one non-extendable 48-hour period. The backend stores identity and lifecycle only; realistic business changes and simulator operations remain isolated in a versioned browser-local Demo Workspace. Direct business, integration, Public API, export, and self-deletion requests are blocked server-side.
 
-Starter demos preserve Starter navigation and provide the contained access-code Request simulator. Pro demos add local Clients, Catalog, Subscriptions, derived dashboards, plan-correct Settings, and Client/Tenant Admin console simulations. Both plans provide Help, password change, lifecycle heartbeat, reset, bilingual UI, and the neutral Demo Ended route without provisioning Evolution, n8n, mailbox, OAuth, Public API, or export resources.
+Starter demos preserve Starter navigation and provide the contained access-code Request simulator. Pro demos add local Clients, Catalog, Subscriptions, derived dashboards, plan-correct Settings, and Client/Tenant Admin console simulations. Both plans provide Help, password change, lifecycle heartbeat, reset, bilingual UI, and the neutral Demo Ended route without provisioning Evolution, n8n, mailbox, Public API, or export resources.
 
 ### Tenant Console (WhatsApp)
 
@@ -59,7 +59,7 @@ Client password changes are available through the authenticated Web Dashboard, n
 ### Mailbox Ingestion (automated)
 
 System features a fully automated mailbox code-extraction pipeline:
-1. **Mailbox config** — Tenant connects Gmail account via app password or Google OAuth
+1. **Mailbox config** — Tenant connects Gmail account via app password
 2. **Code extraction** — When a WhatsApp user requests an access code, system creates a lookup job and polls the connected mailbox for incoming messages from known streaming services, extracts codes via regex catalogs
 3. **Netflix OTP resolution** — For Netflix, resolves travel-verify URLs by fetching the OTP page and extracting the challenge code via HTML parsing
 4. **Delivery logging** — All extractions logged with deduplication (by `message_id`) to prevent re-delivery of the same code
@@ -83,7 +83,7 @@ Programmatic access for frontend SPA and n8n integration:
 - Role-based authorization (master vs tenant vs client)
 - Full tenant CRUD with Evolution instance lifecycle (deletion requires password step-up and destructive word)
 - Catalog management (services, plans), Client management, Subscriptions
-- Mailbox config (OAuth + IMAP), Mail lookup jobs (n8n-facing)
+- Mailbox config (Gmail app password), Mail lookup jobs (n8n-facing)
 - Code-services governance (global + tenant)
 - WhatsApp self-linking lifecycle management (status, pairing code, QR, disconnect) for Starter and Pro tenants
 - I18n catalog endpoint (en/es)
@@ -122,6 +122,6 @@ Programmatic access for frontend SPA and n8n integration:
 - **WhatsApp Console export or deletion**: Self-service export and deletion are Web Dashboard capabilities only
 - **Email or WhatsApp delivery of export**: Exports are downloaded via authenticated Web session only
 - **Export restoration or import**: The export contract is not designed as an import contract
-- **Revoking provider OAuth grants**: Local credentials are deleted; Google grants are not revoked
+- **Revoking Google app passwords**: Local credentials are deleted; app passwords are not revoked
 - **Grace period or recovery window**: Tenant Admin deletion is immediate with no pending-deletion state
 - **Selective infrastructure cleanup**: Backups and logs follow operational retention; no per-Tenant purge

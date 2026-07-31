@@ -62,7 +62,7 @@ Por tu seguridad, la exportación excluye intencionalmente:
 
 - Contraseñas (tu inicio de sesión, cuentas de clientes, suscripciones de streaming)
 - PINs de perfil y cualquier indicación de que una contraseña o PIN está configurado
-- Credenciales de inicio de sesión del correo, tokens OAuth o contraseñas de aplicación
+- Credenciales de inicio de sesión del correo o contraseñas de aplicación
 - Tokens de Evolution API o Claves de API Pública
 - Identificadores internos de base de datos o identificadores técnicos
 - Identidades solo LID de WhatsApp del control de acceso

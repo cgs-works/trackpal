@@ -456,20 +456,39 @@ def test_mailbox_help_covers_gmail_app_password_setup() -> None:
         assert "Outlook" not in body
 
 
-def test_mailbox_help_mentions_google_connection_is_conditional() -> None:
+def test_mailbox_help_describes_only_app_password_connection() -> None:
     artifact = compile_help(SOURCE_DIR)
     topics_by_locale = {
         locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
         for locale in ("en", "es")
     }
 
-    for locale, conditional_phrase in (
-        ("en", "If **Google Connection** appears on your screen"),
-        ("es", "Si la opción **Conexión de Google** aparece en tu pantalla"),
-    ):
+    for locale in ("en", "es"):
         body = topics_by_locale[locale]["tenant-admin.mailbox"]["body"]
-        assert conditional_phrase in body
-        assert "VITE_GMAIL_OAUTH_CONNECT_ENABLED" not in body
+        assert "myaccount.google.com/apppasswords" in body
+        assert "OAuth" not in body
+        assert "Google Connection" not in body
+        assert "Conexión de Google" not in body
+
+
+def test_mailbox_secret_help_copy_is_app_password_only() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {
+        locale: {topic["id"]: topic for topic in artifact["topics"][locale]}
+        for locale in ("en", "es")
+    }
+
+    export_en = topics["en"]["tenant-admin.data-export"]["body"]
+    export_es = topics["es"]["tenant-admin.data-export"]["body"]
+    delete_en = topics["en"]["tenant-admin.delete-account"]["body"]
+    delete_es = topics["es"]["tenant-admin.delete-account"]["body"]
+
+    assert "Mailbox login credentials or app passwords" in export_en
+    assert "Credenciales de inicio de sesión del correo o contraseñas de aplicación" in export_es
+    assert "Google app password" in delete_en
+    assert "Contraseña de aplicación de Google" in delete_es
+    for body in (export_en, export_es, delete_en, delete_es):
+        assert "OAuth" not in body
 
 
 def test_mailbox_help_covers_app_password_eligibility_causes() -> None:
