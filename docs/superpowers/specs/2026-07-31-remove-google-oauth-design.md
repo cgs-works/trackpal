@@ -227,7 +227,7 @@ Regenerate and verify the Help artifact. Update Help contract tests so the tutor
 6. Current product, architecture, Help, and verification documentation no longer presents Google OAuth as supported.
 7. The prior hybrid implementation plan, design, and verification guide are removed.
 8. JWT/Bearer login behavior remains unchanged.
-9. Immutable Alembic history and this removal record are the only intentional historical Google OAuth references.
+9. Google OAuth references remain only where required to migrate or remove historical state, preserve JWT/Bearer transport, document this removal, or assert through negative regression tests that removed routes stay absent.
 10. Backend tests, frontend tests, Ruff, frontend production build, Alembic validation, and Help verification pass.
 
 ## Non-Goals
