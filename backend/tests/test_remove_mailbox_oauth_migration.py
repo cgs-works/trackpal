@@ -13,7 +13,9 @@ MIGRATION_PATH = (
 
 
 def _load_migration_module():
-    spec = importlib.util.spec_from_file_location("remove_mailbox_oauth", MIGRATION_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "remove_mailbox_oauth", MIGRATION_PATH
+    )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -44,7 +46,9 @@ class _FakeOp:
         self.calls.append(("alter_column", (table, column), kwargs))
 
 
-def test_upgrade_deletes_oauth_and_verification_rows_before_dropping_columns(monkeypatch):
+def test_upgrade_deletes_oauth_and_verification_rows_before_dropping_columns(
+    monkeypatch,
+):
     module = _load_migration_module()
     fake = _FakeOp()
     monkeypatch.setattr(module, "op", fake)
@@ -60,7 +64,9 @@ def test_upgrade_deletes_oauth_and_verification_rows_before_dropping_columns(mon
     assert "tenant_code_service_selections" in sql[1]
     assert "service_key = 'trackpal_demo'" in sql[1]
     assert "code_service_global_status" in sql[2]
-    first_drop = next(i for i, call in enumerate(fake.calls) if call[0] == "drop_column")
+    first_drop = next(
+        i for i, call in enumerate(fake.calls) if call[0] == "drop_column"
+    )
     last_delete = max(i for i, call in enumerate(fake.calls) if call[0] == "execute")
     assert last_delete < first_drop
 

@@ -10,16 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field
 # --- Enums ---
 
 
-class MailboxAuthMethod(str, Enum):
-    oauth = "oauth"
-    app_password = "app_password"
-
-
 class MailboxStatus(str, Enum):
     disconnected = "disconnected"
     connected = "connected"
     error = "error"
-    revoked = "revoked"
 
 
 class LookupJobStatus(str, Enum):
@@ -56,10 +50,7 @@ class MailboxResponse(BaseModel):
     id: UUID
     tenant_id: UUID
     mailbox_email: str
-    auth_method: str
     status: str
-    oauth_provider_user_id: str | None = None
-    oauth_provider_email: str | None = None
     last_connection_test_at: datetime | None = None
     last_connection_error: str | None = None
     created_at: datetime
@@ -73,11 +64,6 @@ class MailboxTestRequest(BaseModel):
 class MailboxTestResponse(BaseModel):
     success: bool
     message: str
-
-
-class OAuthStartResponse(BaseModel):
-    auth_url: str
-    state: str
 
 
 # --- n8n lookup schemas ---

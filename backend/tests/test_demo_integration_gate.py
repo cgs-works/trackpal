@@ -93,7 +93,6 @@ async def test_demo_guardrail_covers_business_and_external_route_families(
         ("get", "/api/v1/code-services/tenants/current", None),
         ("get", "/api/v1/tenant/mailbox/", None),
         ("post", "/api/v1/tenant/mailbox/test", None),
-        ("post", "/api/v1/tenant/mailbox/oauth/google/start", None),
         ("post", "/api/v1/tenant/mailbox/disconnect", None),
         ("get", "/api/v1/tenant/whatsapp-link/status", None),
         ("post", "/api/v1/tenant/whatsapp-link/pair", {}),

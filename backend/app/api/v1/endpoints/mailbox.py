@@ -2,18 +2,15 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import ActiveTenantId, DbDep
 from app.api.v1.endpoints._mailbox_helpers import (
     handle_test_error,
     mailbox_response,
-    oauth_service,
     test_mailbox_connection as _run_mailbox_test,
 )
 from app.core.encryption import encrypt_value
-from app.core.demo_guardrail import DemoGuardrailError
 from app.core.metrics import metrics
 from app.models import TenantMailbox
 from app.repositories import mailbox_config_repository
@@ -21,7 +18,6 @@ from app.schemas.mailbox import (
     GmailAppPasswordConnectRequest,
     MailboxResponse,
     MailboxTestResponse,
-    OAuthStartResponse,
 )
 from app.services.gmail_app_password import (
     GmailAppPasswordError,
@@ -29,38 +25,6 @@ from app.services.gmail_app_password import (
 )
 
 router = APIRouter(prefix="/tenant/mailbox", tags=["tenant-mailbox"])
-
-
-def _oauth_callback_html(status_value: str) -> str:
-    return f"""<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Mailbox OAuth</title>
-  </head>
-  <body>
-    <script>
-      (function () {{
-        try {{
-          var ch = new BroadcastChannel("trackpal_oauth");
-          ch.postMessage("mailbox_oauth_{status_value}");
-          ch.close();
-        }} catch (e) {{}}
-
-        if (window.opener && !window.opener.closed) {{
-          window.opener.location.reload();
-          window.close();
-          return;
-        }}
-
-        window.close();
-      }})();
-    </script>
-    <p style="font-family:system-ui;text-align:center;padding:3rem">
-      Authorization {status_value}. You may close this window.
-    </p>
-  </body>
-</html>"""
 
 
 @router.get("/", response_model=MailboxResponse)
@@ -112,15 +76,8 @@ async def upsert_mailbox(
     now = datetime.now(timezone.utc)
     values = {
         "mailbox_email": payload.mailbox_email,
-        "auth_method": "app_password",
         "status": "connected",
         "app_password_encrypted": encrypt_value(normalized_password),
-        "oauth_provider_user_id": None,
-        "oauth_provider_email": None,
-        "oauth_access_token_encrypted": None,
-        "oauth_refresh_token_encrypted": None,
-        "oauth_token_expires_at": None,
-        "oauth_scope": None,
         "last_connection_test_at": now,
         "last_connection_error": None,
     }
@@ -160,43 +117,6 @@ async def test_mailbox_connection(
         await handle_test_error(db, mailbox, exc)
         await db.commit()
         return MailboxTestResponse(success=False, message=str(exc))
-
-
-@router.post("/oauth/google/start", response_model=OAuthStartResponse)
-async def oauth_start(
-    db: DbDep,
-    tenant_id: ActiveTenantId,
-):
-    """Start Google OAuth flow."""
-    return await oauth_service.start_oauth(db, tenant_id)
-
-
-@router.get("/oauth/google/callback", response_class=HTMLResponse)
-async def oauth_callback(
-    db: DbDep,
-    code: str = Query(...),
-    state: str = Query(...),
-):
-    """Handle OAuth callback from Google.
-
-    Public endpoint (no bearer token). Security relies on
-    state token validation which encodes tenant context.
-    """
-    try:
-        await oauth_service.complete_oauth(db, code, state)
-    except DemoGuardrailError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=exc.code,
-        ) from exc
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-    await db.commit()
-    return HTMLResponse(content=_oauth_callback_html("success"))
 
 
 @router.post("/disconnect", status_code=status.HTTP_204_NO_CONTENT)

@@ -46,7 +46,6 @@ async def test_fetch_uses_exact_gmail_timestamp_query(monkeypatch) -> None:
 
     mailbox = TenantMailbox(
         mailbox_email="mailbox@gmail.com",
-        auth_method="app_password",
         app_password_encrypted=encrypt_value("app-password"),
     )
 

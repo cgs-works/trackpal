@@ -36,7 +36,6 @@ from app.services.mail_lookup_worker._helpers import (
 )
 from app.services.mail_lookup_worker.providers import (
     NonTransientProviderError,
-    RevokedMailboxError,
 )
 from app.services.mail_lookup_worker.r2_upload import upload_netflix_diagnostic
 from app.services.mail_lookup_worker.redis_queue import dequeue_job
@@ -47,9 +46,7 @@ _POLL_INTERVAL_S = 1.0
 
 _NON_TRANSIENT_SAFE_DETAIL: dict[str, str] = {
     "auth_failed": "Authentication failed — check mailbox credentials",
-    "mailbox_revoked": "Mailbox revoked — reconnection required",
     "provider_config_error": "Mailbox configuration error — check settings",
-    "permission_denied": "Access denied by email provider — check permissions",
 }
 
 _DESKTOP_CHROME_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
@@ -241,10 +238,7 @@ async def process_job(
             )
             return
 
-        target_email = job.target_email or None
-        emails = await fetch_with_retry(
-            mailbox, window_minutes, target_email=target_email, db=db
-        )
+        emails = await fetch_with_retry(mailbox, window_minutes)
         if emails is None:
             await fail_job(db, job, "fetch_failed", "Email fetch failed after retries")
             metrics.inc(
@@ -306,27 +300,6 @@ async def process_job(
             service=job.service_key,
             result=str(job.result_type or "ok"),
         )
-
-    except RevokedMailboxError as exc:
-        logger.warning(
-            "Mailbox %s revoked while processing job %s", job.mailbox_id, job.id
-        )
-        metrics.inc(
-            "lookup_job_total",
-            status="failed",
-            provider=provider_label,
-            service=job.service_key,
-        )
-        try:
-            await mailbox_lookup_repository.transition_status(
-                db,
-                job,
-                "failed",
-                error_code=exc.error_code,
-                error_detail_safe="Mailbox revoked — reconnection required",
-            )
-        except Exception:
-            logger.exception("Failed to mark job %s as failed (revoked)", job.id)
 
     except NonTransientProviderError as exc:
         logger.warning(

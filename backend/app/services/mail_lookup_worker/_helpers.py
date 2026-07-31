@@ -45,19 +45,14 @@ def resolve_provider_label(job: MailLookupJob) -> str:
 async def fetch_with_retry(
     mailbox: TenantMailbox,
     window_minutes: int,
-    target_email: str | None = None,
-    db: AsyncSession | None = None,
 ) -> list[EmailMessage] | None:
     """Fetch emails with exponential backoff for transient errors.
 
-    ``db`` is forwarded to the provider for OAuth token refresh on 401.
     Returns ``None`` when all retries exhausted.
     """
     for attempt in range(_MAX_RETRIES):
         try:
-            return await fetch_recent_emails(
-                mailbox, window_minutes, target_email=target_email, db=db
-            )
+            return await fetch_recent_emails(mailbox, window_minutes)
         except NonTransientProviderError:
             raise
         except NotImplementedError:

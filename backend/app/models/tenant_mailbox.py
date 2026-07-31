@@ -21,7 +21,6 @@ class TenantMailbox(Base, TimestampMixin):
         nullable=False,
     )
     mailbox_email: Mapped[str] = mapped_column(String(255), nullable=False)
-    auth_method: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(
         String(50),
         default="disconnected",
@@ -33,22 +32,6 @@ class TenantMailbox(Base, TimestampMixin):
     app_password_encrypted: Mapped[str | None] = mapped_column(
         String(500), nullable=True
     )
-
-    # OAuth fields
-    oauth_provider_user_id: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
-    oauth_provider_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    oauth_access_token_encrypted: Mapped[str | None] = mapped_column(
-        String(2000), nullable=True
-    )
-    oauth_refresh_token_encrypted: Mapped[str | None] = mapped_column(
-        String(500), nullable=True
-    )
-    oauth_token_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    oauth_scope: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Connection monitoring
     last_connection_test_at: Mapped[datetime | None] = mapped_column(

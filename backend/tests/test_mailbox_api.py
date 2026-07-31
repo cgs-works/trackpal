@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import select
 
-from app.core.encryption import decrypt_value
+from app.core.encryption import decrypt_value, encrypt_value
 from app.models import Tenant, TenantMailbox
 
 
@@ -37,10 +37,10 @@ async def test_connect_app_password_validates_before_persisting(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["auth_method"] == "app_password"
+    assert body["mailbox_email"] == "codes@example.com"
     assert body["status"] == "connected"
-    assert "provider" not in body
-    assert "imap_host" not in body
+    assert "auth_method" not in body
+    assert not any(key.startswith("oauth_") for key in body)
     validate.assert_awaited_once_with("codes@example.com", "abcd efgh ijkl mnop")
 
     tenant_id = (
@@ -68,14 +68,12 @@ async def test_connect_replaces_existing_mailbox_atomically(
             select(Tenant.id).where(Tenant.owner_user_id == active_tenant_user.id)
         )
     ).scalar_one()
-    from app.core.encryption import encrypt_value
 
     old = TenantMailbox(
         tenant_id=tenant_id,
         mailbox_email="old@example.com",
-        auth_method="oauth",
         status="connected",
-        oauth_access_token_encrypted=encrypt_value("old-token"),
+        app_password_encrypted=encrypt_value("old-password"),
     )
     db_session.add(old)
     await db_session.commit()
@@ -97,18 +95,17 @@ async def test_connect_replaces_existing_mailbox_atomically(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["auth_method"] == "app_password"
-    assert body["status"] == "connected"
     assert body["mailbox_email"] == "new@example.com"
+    assert body["status"] == "connected"
+    assert "auth_method" not in body
 
-    # Verify old OAuth fields are cleared
+    # Verify old credential is replaced
     db_session.expire_all()
     mailbox = (
         await db_session.execute(
             select(TenantMailbox).where(TenantMailbox.tenant_id == tenant_id)
         )
     ).scalar_one()
-    assert mailbox.oauth_access_token_encrypted is None
     assert decrypt_value(mailbox.app_password_encrypted) == "new-normalized-pw"
 
 
@@ -125,7 +122,6 @@ async def test_connect_validation_error_does_not_mutate_existing(
     client, db_session, active_tenant_user, monkeypatch, error_code, expected_status
 ) -> None:
     """When validation fails, the existing mailbox is left unchanged."""
-    from app.core.encryption import encrypt_value
     from app.services.gmail_app_password import GmailAppPasswordError
 
     tenant_id = (
@@ -138,7 +134,6 @@ async def test_connect_validation_error_does_not_mutate_existing(
     old = TenantMailbox(
         tenant_id=tenant_id,
         mailbox_email="old@example.com",
-        auth_method="app_password",
         status="connected",
         app_password_encrypted=encrypt_value("old-working-password"),
     )
@@ -178,21 +173,19 @@ async def test_connect_validation_error_does_not_mutate_existing(
 
 
 @pytest.mark.asyncio
-async def test_get_mailbox_returns_gmail_shape(
+async def test_get_mailbox_returns_shape_without_oauth_fields(
     client, db_session, active_tenant_user
 ) -> None:
-    """GET mailbox response does not include provider/imap_host/imap_port/imap_ssl."""
+    """GET mailbox response does not include auth_method or oauth fields."""
     tenant_id = (
         await db_session.execute(
             select(Tenant.id).where(Tenant.owner_user_id == active_tenant_user.id)
         )
     ).scalar_one()
-    from app.core.encryption import encrypt_value
 
     mb = TenantMailbox(
         tenant_id=tenant_id,
         mailbox_email="user@gmail.com",
-        auth_method="app_password",
         status="connected",
         app_password_encrypted=encrypt_value("secret"),
     )
@@ -206,9 +199,26 @@ async def test_get_mailbox_returns_gmail_shape(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["auth_method"] == "app_password"
+    assert body["mailbox_email"] == "user@gmail.com"
     assert body["status"] == "connected"
+    assert "auth_method" not in body
+    assert not any(key.startswith("oauth_") for key in body)
     assert "provider" not in body
     assert "imap_host" not in body
     assert "imap_port" not in body
     assert "imap_ssl" not in body
+
+
+@pytest.mark.asyncio
+async def test_removed_oauth_routes_return_404(client, active_tenant_user) -> None:
+    headers = await _tenant_headers(client)
+    start = await client.post(
+        "/api/v1/tenant/mailbox/oauth/google/start",
+        headers=headers,
+    )
+    callback = await client.get(
+        "/api/v1/tenant/mailbox/oauth/google/callback",
+        params={"code": "removed", "state": "removed"},
+    )
+    assert start.status_code == 404
+    assert callback.status_code == 404

@@ -18,7 +18,6 @@ import app.services.mail_lookup_worker.providers as pmod
 from app.services.mail_lookup_worker.providers import (
     EmailMessage,
     NonTransientProviderError,
-    RevokedMailboxError,
     StubProvider,
     TransientProviderError,
     active_provider,
@@ -54,7 +53,6 @@ async def _seed_mailbox(db_session, tenant_id: uuid.UUID, **overrides) -> Tenant
     kwargs = {
         "tenant_id": tenant_id,
         "mailbox_email": "codes@tenant.com",
-        "auth_method": "oauth",
         "status": "connected",
     }
     kwargs.update(overrides)
@@ -405,7 +403,7 @@ class TestWorkerPipeline:
         # Provider that always raises transient error
         class FailingStub(StubProvider):
             async def fetch_recent(  # type: ignore[override]
-                self, mailbox, window_minutes, target_email=None
+                self, mailbox, window_minutes
             ):
                 raise TransientProviderError("Connection refused")
 
@@ -423,20 +421,22 @@ class TestWorkerPipeline:
         assert job.error_code == "fetch_failed"
 
     async def test_process_job_non_transient_error(self, db_session):
-        """Non-transient error (revoked) -> failed immediately, no retry."""
+        """Non-transient error -> failed immediately, no retry."""
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)
         job = await mailbox_lookup_repository.create_job(
             db_session, tenant.id, mb.id, "prime"
         )
 
-        class RevokedStub(StubProvider):
+        class NonTransientStub(StubProvider):
             async def fetch_recent(  # type: ignore[override]
-                self, mailbox, window_minutes, target_email=None, **kwargs
+                self, mailbox, window_minutes
             ):
-                raise NonTransientProviderError("OAuth token revoked")
+                raise NonTransientProviderError(
+                    "Gmail app-password authentication failed"
+                )
 
-        provider = RevokedStub()
+        provider = NonTransientStub()
         old_active = active_provider
         try:
             pmod.active_provider = provider
@@ -464,7 +464,7 @@ class TestNonTransientErrorCodes:
 
         class FailStub(StubProvider):
             async def fetch_recent(  # type: ignore[override]
-                self, mailbox, window_minutes, target_email=None, **kwargs
+                self, mailbox, window_minutes
             ):
                 raise exc
 
@@ -478,45 +478,24 @@ class TestNonTransientErrorCodes:
             pmod.active_provider = old_active
         return job
 
-    async def test_revoked_mailbox_error(self, db_session):
-        """RevokedMailboxError -> error_code=mailbox_revoked."""
-        job = await self._run_stub(
-            db_session,
-            RevokedMailboxError("OAuth token revoked via invalid_grant"),
-        )
-        assert job.status == "failed"
-        assert job.error_code == "mailbox_revoked"
-
     async def test_auth_failed_error(self, db_session):
-        """NonTransientProviderError(default) -> error_code=auth_failed."""
         job = await self._run_stub(
             db_session,
-            NonTransientProviderError("IMAP login failed: Invalid credentials"),
+            NonTransientProviderError("Gmail app-password authentication failed"),
         )
         assert job.status == "failed"
         assert job.error_code == "auth_failed"
 
     async def test_provider_config_error(self, db_session):
-        """NonTransientProviderError(provider_config_error) -> mapped."""
         job = await self._run_stub(
             db_session,
             NonTransientProviderError(
-                "IMAP host not configured", error_code="provider_config_error"
+                "No app password stored",
+                error_code="provider_config_error",
             ),
         )
         assert job.status == "failed"
         assert job.error_code == "provider_config_error"
-
-    async def test_permission_denied_error(self, db_session):
-        """NonTransientProviderError(permission_denied) -> mapped."""
-        job = await self._run_stub(
-            db_session,
-            NonTransientProviderError(
-                "Gmail API access denied", error_code="permission_denied"
-            ),
-        )
-        assert job.status == "failed"
-        assert job.error_code == "permission_denied"
 
     async def test_error_detail_safe_no_secrets(self, db_session):
         """error_detail_safe never contains raw error message."""
@@ -530,7 +509,7 @@ class TestNonTransientErrorCodes:
 
         class SensitiveStub(StubProvider):
             async def fetch_recent(  # type: ignore[override]
-                self, mailbox, window_minutes, target_email=None, **kwargs
+                self, mailbox, window_minutes
             ):
                 raise NonTransientProviderError(sensitive_msg)
 

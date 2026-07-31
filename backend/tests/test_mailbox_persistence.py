@@ -16,7 +16,7 @@ from app.repositories import (
     mailbox_dedupe_repository,
     mailbox_lookup_repository,
 )
-from app.schemas.mailbox import GmailAppPasswordConnectRequest, MailboxAuthMethod
+from app.schemas.mailbox import GmailAppPasswordConnectRequest
 
 # ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -47,7 +47,6 @@ async def _seed_mailbox(db_session, tenant_id: uuid.UUID, **overrides) -> Tenant
     kwargs = {
         "tenant_id": tenant_id,
         "mailbox_email": "codes@tenant.com",
-        "auth_method": "oauth",
         "status": "connected",
     }
     kwargs.update(overrides)
@@ -68,7 +67,6 @@ def test_gmail_connect_request_requires_email_and_app_password() -> None:
     )
     assert payload.mailbox_email == "codes@example.com"
     assert payload.app_password == "abcd efgh ijkl mnop"
-    assert MailboxAuthMethod.app_password.value == "app_password"
 
 
 def test_gmail_connect_request_rejects_empty_password() -> None:
@@ -91,13 +89,11 @@ class TestMailboxConfigRepository:
         mb = TenantMailbox(
             tenant_id=tenant.id,
             mailbox_email="test@example.com",
-            auth_method="oauth",
             status="disconnected",
         )
         created = await mailbox_config_repository.create(db_session, tenant.id, mb)
         assert created.id is not None
         assert created.mailbox_email == "test@example.com"
-        assert created.auth_method == "oauth"
 
         fetched = await mailbox_config_repository.get_by_tenant(db_session, tenant.id)
         assert fetched is not None
@@ -130,9 +126,9 @@ class TestMailboxConfigRepository:
         mb = await _seed_mailbox(db_session, tenant.id, status="connected")
 
         await mailbox_config_repository.update_status(
-            db_session, mb, "revoked", error="Token expired"
+            db_session, mb, "error", error="Token expired"
         )
-        assert mb.status == "revoked"
+        assert mb.status == "error"
         assert mb.last_connection_error == "Token expired"
 
     async def test_update_connection_test(self, db_session):
@@ -332,11 +328,11 @@ class TestMailboxLookupRepository:
             db_session,
             job,
             "failed",
-            error_code="oauth_revoked",
-            error_detail_safe="Mailbox credentials revoked",
+            error_code="auth_failed",
+            error_detail_safe="Mailbox credentials failed",
         )
         assert job.status == "failed"
-        assert job.error_code == "oauth_revoked"
+        assert job.error_code == "auth_failed"
 
     async def test_transition_to_timeout(self, db_session):
         tenant = await _seed_tenant(db_session)
@@ -537,15 +533,13 @@ class TestMailboxSchemas:
 
     def test_enums_values(self):
         from app.schemas.mailbox import (
-            MailboxAuthMethod,
             MailboxStatus,
             LookupJobStatus,
             LookupResultType,
         )
 
-        assert MailboxAuthMethod.oauth.value == "oauth"
-        assert MailboxAuthMethod.app_password.value == "app_password"
         assert MailboxStatus.connected.value == "connected"
+        assert MailboxStatus.error.value == "error"
         assert LookupJobStatus.completed.value == "completed"
         assert LookupResultType.code.value == "code"
 

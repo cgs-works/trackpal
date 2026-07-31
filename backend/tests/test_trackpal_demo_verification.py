@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from app.services.mail_code_extractor import extract_from_body
-from app.services.mail_lookup_worker.providers._google import _html_to_text
+from app.services.mail_lookup_worker.providers._types import _html_to_text
 
 SUBJECT = "Your TrackPal demo access code"
 EXPECTED_CODE = "864215"
