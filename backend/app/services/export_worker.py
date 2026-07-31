@@ -93,6 +93,7 @@ def _build_service_catalog_csv(
     writer.writerow(
         [
             "service_name",
+            "service_icon",
             "service_created_on",
             "service_updated_on",
             "plan_name",
@@ -107,6 +108,7 @@ def _build_service_catalog_csv(
                 writer.writerow(
                     [
                         _neutralize_csv_value(svc.name),
+                        svc.icon or "",
                         _format_timestamp(svc.created_at, tz),
                         _format_timestamp(svc.updated_at, tz),
                         _neutralize_csv_value(p.name),
@@ -118,6 +120,7 @@ def _build_service_catalog_csv(
             writer.writerow(
                 [
                     _neutralize_csv_value(svc.name),
+                    svc.icon or "",
                     _format_timestamp(svc.created_at, tz),
                     _format_timestamp(svc.updated_at, tz),
                     "",
@@ -310,6 +313,7 @@ def _build_json(
             catalog_records.append(
                 {
                     "service_name": svc.name,
+                    "service_icon": svc.icon,
                     "service_created_on": _format_timestamp(svc.created_at, tz) or None,
                     "service_updated_on": _format_timestamp(svc.updated_at, tz) or None,
                     "plans": plan_records,
@@ -344,7 +348,7 @@ def _build_json(
 
     data = {
         "export_metadata": {
-            "export_format_version": "1",
+            "export_format_version": "2",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "record_counts": {
                 "account_profile": 1,
@@ -412,6 +416,7 @@ Fields in client-data.csv / client_accounts in trackpal-data.json:
 
 Fields in service-catalog.csv / service_catalog in trackpal-data.json:
   service_name         — The name of the service
+  service_icon         — The optional Iconify "prefix:name" reference (e.g. "simple-icons:netflix"). TrackPal does not include the SVG asset.
   service_created_on   — When the service was added (timezone of your account)
   service_updated_on   — When the service was last updated (timezone of your account)
   plan_name            — The name of the plan (empty when a service has no plans)
@@ -491,6 +496,7 @@ Campos en client-data.csv / client_accounts en trackpal-data.json:
 
 Campos en service-catalog.csv / service_catalog en trackpal-data.json:
   service_name         — El nombre del servicio
+  service_icon         — La referencia opcional Iconify "prefix:name" (ej. "simple-icons:netflix"). TrackPal no incluye el recurso SVG.
   service_created_on   — Cuándo se agregó el servicio (zona horaria de tu cuenta)
   service_updated_on   — Cuándo se actualizó el servicio por última vez
   plan_name            — El nombre del plan (vacío si el servicio no tiene planes)

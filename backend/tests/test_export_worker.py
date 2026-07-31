@@ -507,6 +507,9 @@ async def test_json_has_record_counts(db_session, active_tenant_user):
     assert counts["client_accounts"] == 1
     assert counts["blocked_phone_list"] == 1
 
+    # Format version bumped to 2 for icon support
+    assert data["export_metadata"]["export_format_version"] == "2"
+
 
 async def test_json_uses_null_for_absent_optionals(db_session, active_tenant_user):
     """JSON uses null for absent optional values like null phones."""
@@ -1106,11 +1109,11 @@ async def test_worker_with_empty_client_and_block_data(
 
 
 async def test_service_catalog_csv_has_approved_fields(db_session, active_tenant_user):
-    """service-catalog.csv contains only the approved 6 fields."""
+    """service-catalog.csv contains only the approved 7 fields."""
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     assert tenant is not None
 
-    service = Service(tenant_id=tenant.id, name="Netflix")
+    service = Service(tenant_id=tenant.id, name="Netflix", icon="simple-icons:netflix")
     db_session.add(service)
     await db_session.commit()
     await db_session.refresh(service)
@@ -1122,13 +1125,14 @@ async def test_service_catalog_csv_has_approved_fields(db_session, active_tenant
     headers = [h.strip() for h in lines[0].split(",")]
     assert headers == [
         "service_name",
+        "service_icon",
         "service_created_on",
         "service_updated_on",
         "plan_name",
         "plan_created_on",
         "plan_updated_on",
     ]
-    assert len(headers) == 6
+    assert len(headers) == 7
 
 
 async def test_service_catalog_csv_data_rows(db_session, active_tenant_user):
@@ -1136,7 +1140,7 @@ async def test_service_catalog_csv_data_rows(db_session, active_tenant_user):
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     assert tenant is not None
 
-    service = Service(tenant_id=tenant.id, name="Netflix")
+    service = Service(tenant_id=tenant.id, name="Netflix", icon="simple-icons:netflix")
     db_session.add(service)
     await db_session.flush()
     plan = Plan(tenant_id=tenant.id, service_id=service.id, name="Standard")
@@ -1153,7 +1157,8 @@ async def test_service_catalog_csv_data_rows(db_session, active_tenant_user):
     assert len(lines) == 2  # header + 1 data row
     row = [v.strip() for v in lines[1].split(",")]
     assert row[0] == "Netflix"  # service_name
-    assert row[3] == "Standard"  # plan_name
+    assert row[1] == "simple-icons:netflix"  # service_icon
+    assert row[4] == "Standard"  # plan_name
 
 
 async def test_service_catalog_sorted_by_service_name_then_plan_name(
@@ -1184,7 +1189,7 @@ async def test_service_catalog_sorted_by_service_name_then_plan_name(
     assert len(lines) == 4  # header + 3 data rows
     # Expected order: Alpha Service/A Plan, Alpha Service/Z Plan, Beta Service/Only Plan
     pairs = [
-        (line.split(",")[0].strip(), line.split(",")[3].strip()) for line in lines[1:]
+        (line.split(",")[0].strip(), line.split(",")[4].strip()) for line in lines[1:]
     ]
     assert pairs == [
         ("Alpha Service", "A Plan"),
@@ -1211,9 +1216,10 @@ async def test_service_without_plans_emits_empty_plan_fields(
     assert len(lines) == 2  # header + 1 data row
     row = [v.strip() for v in lines[1].split(",")]
     assert row[0] == "No Plans Service"  # service_name
-    assert row[3] == ""  # plan_name empty
-    assert row[4] == ""  # plan_created_on empty
-    assert row[5] == ""  # plan_updated_on empty
+    assert row[1] == ""  # service_icon empty
+    assert row[4] == ""  # plan_name empty
+    assert row[5] == ""  # plan_created_on empty
+    assert row[6] == ""  # plan_updated_on empty
 
 
 async def test_service_catalog_empty_produces_only_header(
@@ -1534,7 +1540,7 @@ async def test_json_catalog_nests_plans_under_service(db_session, active_tenant_
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     assert tenant is not None
 
-    service = Service(tenant_id=tenant.id, name="Netflix")
+    service = Service(tenant_id=tenant.id, name="Netflix", icon="simple-icons:netflix")
     db_session.add(service)
     await db_session.flush()
     plan = Plan(tenant_id=tenant.id, service_id=service.id, name="Standard")
@@ -1555,6 +1561,7 @@ async def test_json_catalog_nests_plans_under_service(db_session, active_tenant_
     catalog = data["service_catalog"]
     assert len(catalog) == 1
     assert catalog[0]["service_name"] == "Netflix"
+    assert catalog[0]["service_icon"] == "simple-icons:netflix"
     assert len(catalog[0]["plans"]) == 1
     assert catalog[0]["plans"][0]["plan_name"] == "Standard"
 
@@ -1584,6 +1591,7 @@ async def test_json_service_without_plans_has_empty_plans_list(
     catalog = data["service_catalog"]
     assert len(catalog) == 1
     assert catalog[0]["service_name"] == "Empty Service"
+    assert catalog[0]["service_icon"] is None
     assert catalog[0]["plans"] == []
 
 
@@ -1972,8 +1980,8 @@ async def test_worker_zip_contains_catalog_and_subscription_data(
         assert len(new_svc_line) == 1
         # Check that plan column is empty for service without plans
         assert (
-            new_svc_line[0].endswith(",,") or new_svc_line[0].count(",") == 5
-        )  # six columns
+            new_svc_line[0].endswith(",,") or new_svc_line[0].count(",") == 6
+        )  # seven columns
 
         sub_csv = zf.read("subscription-snapshot.csv").decode("utf-8-sig")
         assert "sub@netflix.com" in sub_csv
