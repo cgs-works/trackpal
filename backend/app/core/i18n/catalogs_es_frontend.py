@@ -926,4 +926,22 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.storage_quota_exceeded": "El almacenamiento del navegador está lleno. Los cambios de esta demo no se guardarán.",
     "frontend.demo.banner.reset_error": "No se pudieron restablecer los datos porque el navegador no tiene espacio disponible.",
     "frontend.demo.overlay.description": "Verificando tu demo antes de continuar…",
+
+    # Icon Picker
+    "frontend.icon_picker.title": "Seleccionar un icono",
+    "frontend.icon_picker.description": "Busca en Iconify un icono para el servicio.",
+    "frontend.icon_picker.search": "Buscar iconos",
+    "frontend.icon_picker.search_hint": "Escribe al menos 2 caracteres…",
+    "frontend.icon_picker.searching": "Buscando…",
+    "frontend.icon_picker.empty": "No se encontraron iconos para esta búsqueda.",
+    "frontend.icon_picker.error": "La búsqueda falló. Inténtalo de nuevo.",
+    "frontend.icon_picker.retry": "Reintentar",
+    "frontend.icon_picker.load_more": "Cargar más",
+    "frontend.icon_picker.results": "{count} iconos encontrados",
+    "frontend.icon_picker.author": "Autor",
+    "frontend.icon_picker.license": "Licencia",
+    "frontend.icon_picker.license_unavailable": "Los metadatos de la licencia están incompletos. No puedes seleccionar este icono.",
+    "frontend.icon_picker.select": "Seleccionar",
+    "frontend.icon_picker.cancel": "Cancelar",
+    "frontend.icon_picker.selected": "Selecciona un icono de la lista.",
 }

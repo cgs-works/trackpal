@@ -926,4 +926,22 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.storage_quota_exceeded": "Browser storage is full. Demo changes will not be saved.",
     "frontend.demo.banner.reset_error": "Could not reset data because browser storage is unavailable.",
     "frontend.demo.overlay.description": "Verifying your demo before continuing…",
+
+    # Icon Picker
+    "frontend.icon_picker.title": "Select an icon",
+    "frontend.icon_picker.description": "Search Iconify for a service icon.",
+    "frontend.icon_picker.search": "Search icons",
+    "frontend.icon_picker.search_hint": "Type at least 2 characters…",
+    "frontend.icon_picker.searching": "Searching…",
+    "frontend.icon_picker.empty": "No icons match this search.",
+    "frontend.icon_picker.error": "Search failed. Please try again.",
+    "frontend.icon_picker.retry": "Retry",
+    "frontend.icon_picker.load_more": "Load more",
+    "frontend.icon_picker.results": "{count} icons found",
+    "frontend.icon_picker.author": "Author",
+    "frontend.icon_picker.license": "License",
+    "frontend.icon_picker.license_unavailable": "License metadata is incomplete. You cannot select this icon.",
+    "frontend.icon_picker.select": "Select",
+    "frontend.icon_picker.cancel": "Cancel",
+    "frontend.icon_picker.selected": "Select an icon from the list.",
 }
