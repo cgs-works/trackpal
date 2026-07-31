@@ -36,7 +36,6 @@ TOKEN = (
 URL = f"https://www.netflix.com/account/travel/verify?nftoken={TOKEN}"
 UNIVERSAL_CODE = "XK4M9P"
 SPOTIFY_CODE = "291846"
-TRACKPAL_DEMO_CODE = "864215"
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
@@ -89,12 +88,6 @@ class TestMatchSubject:
     def test_spotify_match(self):
         assert match_subject("Tu código de inicio de sesión de Spotify:", "spotify")
         assert match_subject("Your Spotify login code", "spotify")
-
-    def test_trackpal_demo_match(self):
-        assert match_subject("Your TrackPal demo access code", "trackpal_demo")
-        assert match_subject(
-            "Tu código de acceso de demostración de TrackPal", "trackpal_demo"
-        )
 
     @pytest.mark.parametrize(
         "subject",
@@ -459,39 +452,6 @@ class TestExtractPrimeVideo:
 
 
 # =====================================================================
-# Extraction — TrackPal Demo
-# =====================================================================
-
-
-class TestExtractTrackPalDemo:
-    def test_extracts_code_from_demo_html(self):
-        body = f"""
-        <html>
-          <body>
-            <p>Your TrackPal demo code is</p>
-            <div style="font-size: 32px">{TRACKPAL_DEMO_CODE}</div>
-          </body>
-        </html>
-        """
-        result = extract_from_body(
-            body,
-            "trackpal_demo",
-            subject="Your TrackPal demo access code",
-        )
-        assert result is not None
-        assert result.value == TRACKPAL_DEMO_CODE
-        assert result.result_type == "code"
-
-    def test_rejects_wrong_subject(self):
-        result = extract_from_body(
-            f"Your TrackPal demo code is {TRACKPAL_DEMO_CODE}",
-            "trackpal_demo",
-            subject="Unrelated test email",
-        )
-        assert result is None
-
-
-# =====================================================================
 # Extraction — subject-scoped
 # =====================================================================
 
@@ -617,13 +577,15 @@ class TestEdgeCases:
         assert result is None
 
     def test_catalog_has_expected_services(self):
-        assert "netflix" in CATALOG_V1
-        assert "disney" in CATALOG_V1
-        assert "hbo_max" in CATALOG_V1
-        assert "spotify" in CATALOG_V1
-        assert "trackpal_demo" in CATALOG_V1
-        assert "universal_plus" in CATALOG_V1
-        assert "prime_video" in CATALOG_V1
+        assert set(CATALOG_V1) == {
+            "disney",
+            "hbo_max",
+            "netflix",
+            "prime_video",
+            "spotify",
+            "universal_plus",
+        }
+        assert "trackpal_demo" not in CATALOG_V1
 
     def test_every_service_has_subject_patterns(self):
         for key, entry in CATALOG_V1.items():
@@ -733,10 +695,7 @@ class TestLegacyCompatibility:
                 f"{CODE_6} - Your Spotify login code",
                 f"{CODE_6} This code is valid for 5 minutes",
             ],
-            "trackpal_demo": [
-                f"Your TrackPal demo code is {TRACKPAL_DEMO_CODE}",
-                f"Tu código de demostración de TrackPal es {TRACKPAL_DEMO_CODE}",
-            ],
+
             "universal_plus": [
                 f"<p>código de activación</p><strong>{UNIVERSAL_CODE}</strong>",
                 f"<strong>{UNIVERSAL_CODE}</strong>",

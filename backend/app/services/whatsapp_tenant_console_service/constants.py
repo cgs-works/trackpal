@@ -230,8 +230,7 @@ STREAMING_SERVICE_KEYS: list[str] = [
     "netflix",  # 3️⃣ Netflix
     "prime_video",  # 4️⃣ Prime Video
     "spotify",  # 5️⃣ Spotify
-    "trackpal_demo",  # 6️⃣ TrackPal Demo
-    "universal_plus",  # 7️⃣ Universal+
+    "universal_plus",  # 6️⃣ Universal+
 ]
 
 # -- Access control flow constants ---------------------------------------

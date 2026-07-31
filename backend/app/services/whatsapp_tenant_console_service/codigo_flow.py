@@ -34,7 +34,6 @@ _CODIGO_SERVICE_LABELS: dict[str, str] = {
     "hbo_max": "HBO Max",
     "prime_video": "Prime Video",
     "spotify": "Spotify",
-    "trackpal_demo": "TrackPal Demo",
     "universal_plus": "Universal+",
 }
 

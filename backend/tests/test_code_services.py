@@ -11,7 +11,10 @@ from app.core.security import get_password_hash
 from app.main import app  # noqa: F401
 from app.models import Tenant, User
 from app.models.code_service_global_status import CodeServiceGlobalStatus
-from app.schemas.code_services import VALID_SERVICE_KEYS
+from app.schemas.code_services import (
+    VALID_SERVICE_KEYS,
+    TenantCodeServiceUpdateRequest,
+)
 
 # ── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -112,10 +115,7 @@ class TestGlobalCodeServices:
         assert len(services) == len(VALID_SERVICE_KEYS)
         keys = {s["service_key"] for s in services}
         assert keys == VALID_SERVICE_KEYS
-        trackpal_demo = next(
-            service for service in services if service["service_key"] == "trackpal_demo"
-        )
-        assert trackpal_demo["label"] == "TrackPal Demo"
+
 
     @pytest.mark.asyncio
     async def test_toggle_single_service(
@@ -390,3 +390,12 @@ class TestEffectiveList:
             headers=tenant_headers,
         )
         assert resp.json() == ["disney", "netflix", "universal_plus"]
+
+
+# ── Regression: removed trackpal_demo key ──────────────────────────────
+
+
+def test_removed_trackpal_demo_key_is_invalid() -> None:
+    request = TenantCodeServiceUpdateRequest(service_keys=["trackpal_demo"])
+    with pytest.raises(ValueError, match="trackpal_demo"):
+        request.validate_keys()
