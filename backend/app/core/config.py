@@ -30,13 +30,6 @@ class Settings(BaseSettings):
     master_whatsapp_instance: str = ""
     data_encryption_key: str = ""
 
-    # Google OAuth
-    google_oauth_client_id: str = ""
-    google_oauth_client_secret: str = ""
-    google_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/tenant/mailbox/oauth/google/callback"
-    )
-
     # R2 / S3 for debug uploads
     r2_access_key_id: str = ""
     r2_secret_access_key: str = ""

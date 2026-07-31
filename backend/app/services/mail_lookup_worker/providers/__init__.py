@@ -1,20 +1,16 @@
 """Provider-specific email fetch adapters.
 
-Each adapter fetches recent emails from a mailbox using its configured
-authentication method (OAuth2 for Google, app-password for Gmail).
-The stub adapter is used for integration tests.
+Each adapter fetches recent emails from a mailbox using Gmail app-password
+authentication. The stub adapter is used for integration tests.
 
 Error taxonomy:
 - ``TransientProviderError`` — network/rate-limit/timeout (retryable)
-- ``NonTransientProviderError`` — auth/revoked/permission (fatal)
+- ``NonTransientProviderError`` — auth/permission (fatal)
 """
 
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models.tenant_mailbox import TenantMailbox
-from app.services.mail_lookup_worker.providers._google import fetch_google_emails
 from app.services.mail_lookup_worker.providers._gmail_app_password import (
     fetch_gmail_app_password_emails,
 )
@@ -22,7 +18,6 @@ from app.services.mail_lookup_worker.providers._types import (
     EmailMessage,
     NonTransientProviderError,
     ProviderFetchError,
-    RevokedMailboxError,
     TransientProviderError,
 )
 
@@ -41,8 +36,6 @@ class StubProvider:
         self,
         mailbox: TenantMailbox,
         window_minutes: int,
-        target_email: str | None = None,
-        db: AsyncSession | None = None,
     ) -> list[EmailMessage]:
         if self._emails is not None:
             return self._emails
@@ -56,45 +49,21 @@ active_provider: StubProvider | None = None
 async def fetch_recent_emails(
     mailbox: TenantMailbox,
     window_minutes: int,
-    target_email: str | None = None,
-    db: AsyncSession | None = None,
 ) -> list[EmailMessage]:
-    """Dispatch to the appropriate adapter based on auth_method.
+    """Dispatch to the Gmail app-password adapter.
 
     If ``active_provider`` is set (testing), delegates to it instead.
     Content-level ``target_email`` filtering (subject/body) is handled
     in ``_helpers._filter_emails_by_target_email`` after fetch.
-    ``db`` is required for OAuth providers to handle token refresh on 401.
     """
     if active_provider is not None:
-        emails = await active_provider.fetch_recent(
-            mailbox, window_minutes, target_email=target_email, db=db
-        )
-    elif mailbox.auth_method == "oauth":
-        if db is None:
-            raise NonTransientProviderError(
-                "DB session required for OAuth fetch",
-                error_code="provider_config_error",
-            )
-        emails = await fetch_google_emails(mailbox, window_minutes, db=db)
-    elif mailbox.auth_method == "app_password":
-        emails = await fetch_gmail_app_password_emails(mailbox, window_minutes)
-    else:
-        raise NonTransientProviderError(
-            f"Unsupported auth method: {mailbox.auth_method}",
-            error_code="provider_config_error",
-        )
-
-    # Content-level semantic filtering (subject/body/recipients) is handled by
-    # ``_helpers._filter_emails_by_target_email`` after fetch, so the extractor
-    # sees all candidates and content matching works for forwarded/aliased mail.
-    return emails
+        return await active_provider.fetch_recent(mailbox, window_minutes)
+    return await fetch_gmail_app_password_emails(mailbox, window_minutes)
 
 
 __all__ = [
     "EmailMessage",
     "ProviderFetchError",
-    "RevokedMailboxError",
     "TransientProviderError",
     "NonTransientProviderError",
     "StubProvider",

@@ -51,10 +51,6 @@ TrackPal checks this mailbox when someone requests an access code in WhatsApp. U
 6. Enter your Gmail address and paste the app password you generated.
 7. Click **Test connection**. When the status shows **Connected**, your mailbox is ready.
 
-## Google Connection (OAuth)
-
-If **Google Connection** appears on your screen, you can also use it to connect your mailbox by following the instructions provided.
-
 ## App password eligibility
 
 You can generate an app password only when **2-Step Verification** is enabled on your Google Account. If you don't see the App passwords option, check the following:

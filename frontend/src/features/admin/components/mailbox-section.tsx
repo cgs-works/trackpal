@@ -14,14 +14,12 @@ import { t } from "@/i18n";
 import {
   connectGmail,
   testMailbox,
-  startGoogleOAuth,
   disconnectMailbox,
   type GmailAppPasswordConnect,
   type Mailbox,
 } from "../services/settings-api";
 import { useSettingsStore } from "@/store/settings";
 import { useAuthStore } from "@/store/auth";
-import { isGmailOAuthConnectEnabled } from "../mailbox-config";
 import { GmailSetupAssistant } from "./gmail-setup-assistant";
 
 function StatusBadge({ status }: { status: string }) {
@@ -68,16 +66,6 @@ function mailboxErrorMessage(error: unknown): string {
   return t("frontend.mailbox.error_save");
 }
 
-function methodLabel(authMethod: string): string {
-  if (authMethod === "oauth") {
-    return t("frontend.mailbox.method_google_connection");
-  }
-  if (authMethod === "app_password") {
-    return t("frontend.mailbox.method_app_password");
-  }
-  return authMethod;
-}
-
 interface MailboxStatusCardProps {
   mailbox: Mailbox;
   isDemo: boolean;
@@ -97,9 +85,6 @@ function MailboxStatusCard({
         <Mail className="size-5 text-muted-foreground" />
         <div>
           <p className="text-sm font-medium">{mailbox.mailbox_email}</p>
-          <p className="text-xs text-muted-foreground">
-            {methodLabel(mailbox.auth_method)}
-          </p>
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -130,11 +115,9 @@ interface MailboxConfigurationProps {
   mailbox: Mailbox | null;
   error: string;
   isDemo: boolean;
-  oauthConnectEnabled: boolean;
   disconnecting: boolean;
   testing: boolean;
   onConnect(payload: GmailAppPasswordConnect): Promise<boolean>;
-  onStartOAuth(): Promise<void>;
   onDisconnect(): Promise<void>;
   onTest(): Promise<void>;
 }
@@ -143,11 +126,9 @@ function MailboxConfiguration({
   mailbox,
   error,
   isDemo,
-  oauthConnectEnabled,
   disconnecting,
   testing,
   onConnect,
-  onStartOAuth,
   onDisconnect,
   onTest,
 }: MailboxConfigurationProps) {
@@ -159,13 +140,7 @@ function MailboxConfiguration({
             {t("frontend.mailbox.not_configured")}
           </div>
         )}
-        {!isDemo && (
-          <GmailSetupAssistant
-            oauthConnectEnabled={oauthConnectEnabled}
-            onConnect={onConnect}
-            onStartOAuth={onStartOAuth}
-          />
-        )}
+        {!isDemo && <GmailSetupAssistant onConnect={onConnect} />}
       </>
     );
   }
@@ -205,8 +180,6 @@ export function MailboxSection() {
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  const oauthConnectEnabled = isGmailOAuthConnectEnabled();
-
   const loadMailboxData = useCallback(async () => {
     if (useSettingsStore.getState().mailboxLoaded) {
       setIsLoading(false);
@@ -234,18 +207,6 @@ export function MailboxSection() {
     await loadMailboxData();
   }, [loadMailboxData]);
 
-  // ── Listen for OAuth popup completion via BroadcastChannel ──
-  useEffect(() => {
-    const channel = new BroadcastChannel("trackpal_oauth");
-    channel.onmessage = async (event) => {
-      if (event.data === "mailbox_oauth_success") {
-        await refreshMailbox();
-        toast.success(t("frontend.mailbox.oauth_connected"));
-      }
-    };
-    return () => channel.close();
-  }, [refreshMailbox]);
-
   // ── App-password connect ──────────────────────────────────
   async function handleConnectAppPassword(
     payload: GmailAppPasswordConnect,
@@ -258,19 +219,6 @@ export function MailboxSection() {
     } catch (err) {
       toast.error(mailboxErrorMessage(err));
       return false;
-    }
-  }
-
-  // ── OAuth connect ─────────────────────────────────────────
-  async function handleOAuthStart() {
-    try {
-      const { auth_url } = await startGoogleOAuth();
-      window.open(auth_url, "_blank", "width=500,height=600");
-      toast.info(t("frontend.mailbox.oauth_started"));
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("frontend.mailbox.error_oauth")
-      );
     }
   }
 
@@ -339,11 +287,9 @@ export function MailboxSection() {
         mailbox={mailbox}
         error={error}
         isDemo={isDemo}
-        oauthConnectEnabled={oauthConnectEnabled}
         disconnecting={disconnecting}
         testing={testing}
         onConnect={handleConnectAppPassword}
-        onStartOAuth={handleOAuthStart}
         onDisconnect={handleDisconnect}
         onTest={handleTest}
       />

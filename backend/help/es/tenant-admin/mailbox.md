@@ -51,10 +51,6 @@ TrackPal revisa este buzón cuando alguien solicita un código de acceso desde W
 6. Ingresa tu dirección de Gmail y pega la contraseña de aplicación que generaste.
 7. Haz clic en **Probar conexión**. Cuando el estado muestre **Conectado**, tu buzón está listo.
 
-## Conexión de Google (OAuth)
-
-Si la opción **Conexión de Google** aparece en tu pantalla, también puedes usarla para conectar tu buzón siguiendo las instrucciones indicadas.
-
 ## Elegibilidad para contraseñas de aplicación
 
 Solo puedes generar una contraseña de aplicación cuando la **Verificación en dos pasos** esté activada en tu cuenta de Google. Si no ves la opción de Contraseñas de aplicación, verifica lo siguiente:

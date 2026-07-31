@@ -14,7 +14,6 @@ SUPPORTED_CODE_SERVICES: dict[str, str] = {
     "netflix": "Netflix",
     "prime_video": "Prime Video",
     "spotify": "Spotify",
-    "trackpal_demo": "TrackPal Demo",
     "universal_plus": "Universal+",
 }
 

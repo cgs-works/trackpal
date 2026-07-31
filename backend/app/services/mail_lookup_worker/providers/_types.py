@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from html import unescape
 
 logger = logging.getLogger(__name__)
 
@@ -57,25 +59,16 @@ class TransientProviderError(ProviderFetchError):
 
 
 class NonTransientProviderError(ProviderFetchError):
-    """Auth failure, revoked, insufficient permissions — do NOT retry.
+    """Auth failure, insufficient permissions — do NOT retry.
 
     ``error_code`` classifies the failure for safe job status recording:
     - ``auth_failed`` — token/password expired, invalid, or decryption failed
     - ``provider_config_error`` — missing host, unsupported provider, no token stored
-    - ``permission_denied`` — API 403, scope insufficient
-    - ``mailbox_revoked`` — OAuth invalid_grant (subclass RevokedMailboxError)
     """
 
     def __init__(self, message: str, error_code: str = "auth_failed") -> None:
         super().__init__(message)
         self.error_code = error_code
-
-
-class RevokedMailboxError(NonTransientProviderError):
-    """Mailbox was revoked due to invalid_grant — explicit revoked signal."""
-
-    def __init__(self, message: str = "") -> None:
-        super().__init__(message, error_code="mailbox_revoked")
 
 
 def _parse_email_date(date_str: str) -> datetime:
@@ -111,3 +104,14 @@ def _extract_email_addresses(*header_values: str) -> list[str]:
                 seen.add(addr)
                 result.append(addr)
     return result
+
+
+def _html_to_text(html_body: str) -> str:
+    """Convert HTML email body to readable text for extractor regexes."""
+    text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html_body)
+    text = re.sub(r"(?is)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?is)</p>|</div>|</tr>|</li>|</h[1-6]>", "\n", text)
+    text = re.sub(r"(?is)<[^>]+>", " ", text)
+    text = unescape(text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()

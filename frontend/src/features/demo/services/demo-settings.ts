@@ -220,7 +220,6 @@ function fixedMailbox(metadata: DemoAuthMetadata): Mailbox {
     id: `mailbox-${metadata.tenantId}`,
     tenant_id: metadata.tenantId,
     mailbox_email: "demo.mailbox@example.test",
-    auth_method: "demo",
     status: "connected",
     last_connection_test_at: timestamp,
     last_connection_error: null,

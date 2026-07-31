@@ -33,9 +33,9 @@ class TestMetricsRegistry:
 
     def test_counter_with_labels(self):
         """Labels are included in the key."""
-        metrics_module.metrics.inc("labeled_count", provider="google", status="ok")
+        metrics_module.metrics.inc("labeled_count", provider="gmail", status="ok")
         output = metrics_module.metrics.dump_prometheus()
-        assert 'provider="google"' in output
+        assert 'provider="gmail"' in output
         assert 'status="ok"' in output
 
     def test_latency_record(self):
@@ -58,7 +58,6 @@ class TestMetricsRegistry:
             "test_",
             "labeled_",
             "lookup_",
-            "oauth_",
             "mailbox_",
             "mailbox_api_",
             "order_test",

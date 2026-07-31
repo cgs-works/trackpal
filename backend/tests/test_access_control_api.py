@@ -102,7 +102,6 @@ async def test_block_phone_cancels_active_codigo_session_and_job(
     mailbox = TenantMailbox(
         tenant_id=tenant.id,
         mailbox_email="codes@example.com",
-        auth_method="oauth",
         status="connected",
     )
     db_session.add(mailbox)

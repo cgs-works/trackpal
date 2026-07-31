@@ -9,12 +9,10 @@ import { t } from "@/i18n";
 import type { GmailAppPasswordConnect } from "../services/settings-api";
 
 export interface GmailSetupAssistantProps {
-  oauthConnectEnabled: boolean;
   onConnect(payload: GmailAppPasswordConnect): Promise<boolean>;
-  onStartOAuth(): Promise<void>;
 }
 
-type Step = "selector" | "instructions" | "credentials" | "oauth";
+type Step = "instructions" | "credentials";
 
 function BackButton({ onClick }: { onClick(): void }) {
   return (
@@ -29,112 +27,17 @@ function BackButton({ onClick }: { onClick(): void }) {
   );
 }
 
-function MethodSelector({ onSelect }: { onSelect(step: Step): void }) {
-  return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-medium">
-        {t("frontend.mailbox.setup_method_title")}
-      </h3>
-      <Button
-        variant="outline"
-        onClick={() => onSelect("oauth")}
-        className="w-full"
-      >
-        {t("frontend.mailbox.use_google_connection")}
-      </Button>
-      <Button
-        variant="ghost"
-        onClick={() => onSelect("instructions")}
-        className="w-full"
-      >
-        {t("frontend.mailbox.have_app_password")}
-      </Button>
-    </div>
-  );
-}
-
-interface OAuthConsentProps {
-  accepted: boolean;
-  submitting: boolean;
-  onAcceptedChange(accepted: boolean): void;
-  onBack(): void;
-  onSubmit(): Promise<void>;
-}
-
-function OAuthConsent({
-  accepted,
-  submitting,
-  onAcceptedChange,
-  onBack,
-  onSubmit,
-}: OAuthConsentProps) {
-  return (
-    <div className="space-y-4">
-      <BackButton onClick={onBack} />
-
-      <div
-        id="mailbox-oauth-consent-description"
-        className="space-y-3 rounded-lg border bg-muted/30 p-4"
-      >
-        <h3 className="text-sm font-medium">
-          {t("frontend.mailbox.oauth_consent_title")}
-        </h3>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{t("frontend.mailbox.oauth_consent_data")}</p>
-          <p>{t("frontend.mailbox.oauth_consent_transfer")}</p>
-          <p>{t("frontend.mailbox.oauth_consent_storage")}</p>
-        </div>
-        <a
-          href="https://trackpal.wilfredocamacho.dev/privacy-policy"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
-        >
-          {t("frontend.mailbox.oauth_consent_privacy")}
-        </a>
-        <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3 text-sm">
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(event) => onAcceptedChange(event.target.checked)}
-            aria-describedby="mailbox-oauth-consent-description"
-            className="mt-0.5 size-4 shrink-0 accent-primary"
-          />
-          <span>{t("frontend.mailbox.oauth_consent_checkbox")}</span>
-        </label>
-      </div>
-
-      <Button
-        onClick={onSubmit}
-        disabled={!accepted || submitting}
-        className="w-full"
-      >
-        {submitting && <Loader2 className="size-4 mr-1 animate-spin" />}
-        {submitting
-          ? t("frontend.mailbox.connecting")
-          : t("frontend.mailbox.continue_google")}
-      </Button>
-    </div>
-  );
-}
-
 interface AppPasswordInstructionsProps {
-  oauthConnectEnabled: boolean;
   privateHelpEnabled: boolean;
-  onBack(): void;
   onContinue(): void;
 }
 
 function AppPasswordInstructions({
-  oauthConnectEnabled,
   privateHelpEnabled,
-  onBack,
   onContinue,
 }: AppPasswordInstructionsProps) {
   return (
     <div className="space-y-4">
-      {oauthConnectEnabled && <BackButton onClick={onBack} />}
-
       <div className="space-y-2">
         <h3 className="text-sm font-medium">
           {t("frontend.mailbox.app_password_step_title")}
@@ -260,20 +163,12 @@ function CredentialsForm({
   );
 }
 
-export function GmailSetupAssistant({
-  oauthConnectEnabled,
-  onConnect,
-  onStartOAuth,
-}: GmailSetupAssistantProps) {
-  const [step, setStep] = useState<Step>(
-    oauthConnectEnabled ? "selector" : "instructions",
-  );
+export function GmailSetupAssistant({ onConnect }: GmailSetupAssistantProps) {
+  const [step, setStep] = useState<Step>("instructions");
   const [email, setEmail] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [oauthConsentAccepted, setOauthConsentAccepted] = useState(false);
-  const [oauthSubmitting, setOauthSubmitting] = useState(false);
   const privateHelpEnabled =
     import.meta.env.VITE_PRIVATE_HELP_ENABLED !== "false";
 
@@ -293,43 +188,11 @@ export function GmailSetupAssistant({
     }
   }
 
-  async function handleStartOAuth() {
-    if (!oauthConsentAccepted) return;
-
-    setOauthSubmitting(true);
-    try {
-      await onStartOAuth();
-      setOauthConsentAccepted(false);
-      setStep("selector");
-    } finally {
-      setOauthSubmitting(false);
-    }
-  }
-
-  function returnToSelector() {
-    setOauthConsentAccepted(false);
-    setStep("selector");
-  }
-
   switch (step) {
-    case "selector":
-      return <MethodSelector onSelect={setStep} />;
-    case "oauth":
-      return (
-        <OAuthConsent
-          accepted={oauthConsentAccepted}
-          submitting={oauthSubmitting}
-          onAcceptedChange={setOauthConsentAccepted}
-          onBack={returnToSelector}
-          onSubmit={handleStartOAuth}
-        />
-      );
     case "instructions":
       return (
         <AppPasswordInstructions
-          oauthConnectEnabled={oauthConnectEnabled}
           privateHelpEnabled={privateHelpEnabled}
-          onBack={() => setStep("selector")}
           onContinue={() => setStep("credentials")}
         />
       );

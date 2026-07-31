@@ -36,7 +36,7 @@ The automated test suite covers:
 - Tenant Deletion full cascades and session teardown
 - R2 and Evolution failure rollback
 - Idempotent retry after partial external cleanup
-- OAuth-token deletion without provider revocation
+- Encrypted app-password deletion without provider revocation
 - Best-effort Redis cleanup
 - Master inactive precondition and Tenant Admin active self-deletion
 

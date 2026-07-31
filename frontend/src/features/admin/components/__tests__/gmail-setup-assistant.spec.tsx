@@ -1,30 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { isGmailOAuthConnectEnabled } from "@/features/admin/mailbox-config";
-
-// ── Release-gate tests ──────────────────────────────────────
-
-describe("isGmailOAuthConnectEnabled", () => {
-  beforeEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it.each([undefined, "", "false", "TRUE", "1"])(
-    "keeps Gmail OAuth hidden for %s",
-    (value) => {
-      vi.stubEnv("VITE_GMAIL_OAUTH_CONNECT_ENABLED", value as string);
-      expect(isGmailOAuthConnectEnabled()).toBe(false);
-    },
-  );
-
-  it("enables Gmail OAuth only for exact true", () => {
-    vi.stubEnv("VITE_GMAIL_OAUTH_CONNECT_ENABLED", "true");
-    expect(isGmailOAuthConnectEnabled()).toBe(true);
-  });
-});
-
-// ── GmailSetupAssistant component tests ──────────────────────
 
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
@@ -47,29 +23,28 @@ const mockRequestContextualHelp = vi.mocked(requestContextualHelp);
 describe("GmailSetupAssistant", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
-  it("guides the user from app-password instructions to credentials", async () => {
-    const user = userEvent.setup();
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={false}
-        onConnect={vi.fn()}
-        onStartOAuth={vi.fn()}
-      />,
-    );
+  it("renders app-password instructions directly without method selector", () => {
+    render(<GmailSetupAssistant onConnect={vi.fn()} />);
 
-    // Step 1: Instructions
     expect(
       screen.getByText("frontend.mailbox.app_password_step_title"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "frontend.mailbox.open_google" }),
     ).toHaveAttribute("href", "https://myaccount.google.com/apppasswords");
-    expect(screen.queryByText("OAuth")).not.toBeInTheDocument();
+    // No checkbox (no OAuth consent) and no method selector
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/Microsoft|Outlook|IMAP/i),
+      screen.queryByText("frontend.mailbox.use_google_connection"),
     ).not.toBeInTheDocument();
+  });
+
+  it("guides the user from instructions to credentials", async () => {
+    const user = userEvent.setup();
+    render(<GmailSetupAssistant onConnect={vi.fn()} />);
 
     // Navigate to credentials
     await user.click(
@@ -88,13 +63,7 @@ describe("GmailSetupAssistant", () => {
   it("submits app-password credentials and calls onConnect", async () => {
     const user = userEvent.setup();
     const connect = vi.fn().mockResolvedValue(true);
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={false}
-        onConnect={connect}
-        onStartOAuth={vi.fn()}
-      />,
-    );
+    render(<GmailSetupAssistant onConnect={connect} />);
 
     // Navigate to credentials
     await user.click(
@@ -129,13 +98,7 @@ describe("GmailSetupAssistant", () => {
   it("clears app-password on failure but keeps email", async () => {
     const user = userEvent.setup();
     const connect = vi.fn().mockResolvedValue(false);
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={false}
-        onConnect={connect}
-        onStartOAuth={vi.fn()}
-      />,
-    );
+    render(<GmailSetupAssistant onConnect={connect} />);
 
     // Navigate to credentials
     await user.click(
@@ -171,13 +134,7 @@ describe("GmailSetupAssistant", () => {
 
   it("calls requestContextualHelp when View full tutorial is clicked", async () => {
     const user = userEvent.setup();
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={false}
-        onConnect={vi.fn()}
-        onStartOAuth={vi.fn()}
-      />,
-    );
+    render(<GmailSetupAssistant onConnect={vi.fn()} />);
 
     await user.click(
       screen.getByRole("button", {
@@ -190,13 +147,7 @@ describe("GmailSetupAssistant", () => {
 
   it("hides tutorial action when private help is disabled", () => {
     vi.stubEnv("VITE_PRIVATE_HELP_ENABLED", "false");
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={false}
-        onConnect={vi.fn()}
-        onStartOAuth={vi.fn()}
-      />,
-    );
+    render(<GmailSetupAssistant onConnect={vi.fn()} />);
 
     expect(
       screen.queryByRole("button", {
@@ -209,98 +160,26 @@ describe("GmailSetupAssistant", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides OAuth path when oauthConnectEnabled is false", () => {
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={false}
-        onConnect={vi.fn()}
-        onStartOAuth={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByText(/OAuth/i)).not.toBeInTheDocument();
-  });
-
-  // ── OAuth path inside the assistant ────────────────────────
-
-  it("shows two-option selector when oauthConnectEnabled is true", () => {
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={true}
-        onConnect={vi.fn()}
-        onStartOAuth={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "frontend.mailbox.have_app_password" }),
-    ).toBeInTheDocument();
-  });
-
-  it("navigates to OAuth consent flow and requires consent before calling onStartOAuth", async () => {
+  it("allows going back from credentials to instructions", async () => {
     const user = userEvent.setup();
-    const onStartOAuth = vi.fn().mockResolvedValue(undefined);
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={true}
-        onConnect={vi.fn()}
-        onStartOAuth={onStartOAuth}
-      />,
-    );
+    render(<GmailSetupAssistant onConnect={vi.fn()} />);
 
-    // Click "Use Google Connection"
+    // Navigate to credentials
     await user.click(
-      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
+      screen.getByRole("button", {
+        name: "frontend.mailbox.have_app_password",
+      }),
     );
-
-    // Consent screen visible
-    expect(screen.getByText("frontend.mailbox.oauth_consent_title")).toBeInTheDocument();
-    const consent = screen.getByRole("checkbox", {
-      name: "frontend.mailbox.oauth_consent_checkbox",
-    });
-    const startBtn = screen.getByRole("button", {
-      name: "frontend.mailbox.continue_google",
-    });
-    expect(consent).not.toBeChecked();
-    expect(startBtn).toBeDisabled();
-
-    // Accept consent
-    await user.click(consent);
-    expect(startBtn).toBeEnabled();
-
-    // Start OAuth
-    await user.click(startBtn);
-    expect(onStartOAuth).toHaveBeenCalledTimes(1);
-  });
-
-  it("allows going back from OAuth consent to the two-option selector", async () => {
-    const user = userEvent.setup();
-    render(
-      <GmailSetupAssistant
-        oauthConnectEnabled={true}
-        onConnect={vi.fn()}
-        onStartOAuth={vi.fn()}
-      />,
-    );
-
-    // Enter OAuth consent
-    await user.click(
-      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
-    );
-    expect(screen.getByText("frontend.mailbox.oauth_consent_title")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("frontend.mailbox.google_email"),
+    ).toBeInTheDocument();
 
     // Click back
     await user.click(screen.getByText(/frontend\.mailbox\.back/));
 
-    // Back to selector
+    // Back to instructions
     expect(
-      screen.getByRole("button", { name: "frontend.mailbox.use_google_connection" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "frontend.mailbox.have_app_password" }),
+      screen.getByText("frontend.mailbox.app_password_step_title"),
     ).toBeInTheDocument();
   });
 });

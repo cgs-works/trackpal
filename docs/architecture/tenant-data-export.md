@@ -85,7 +85,7 @@ One ZIP named `<slugged-account-name>-data-<account-local-timestamp>.zip` contai
 ### Deliberate exclusions
 
 - Internal UUIDs, database IDs, client passwords, subscription passwords, profile PINs, secret-presence indicators
-- Mailbox credentials, OAuth tokens, Evolution tokens, Public API Keys, refresh/access tokens
+- Mailbox login credentials or app passwords, Evolution tokens, Public API Keys
 - Subscription Events, reminder logs, lookup jobs, delivery logs
 - WhatsApp LIDs, LID-only Access Control rows, internal settings
 - Tenant ID, actor IDs, and other internal identifiers

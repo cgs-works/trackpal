@@ -63,7 +63,7 @@ For your security, the export intentionally excludes:
 
 - Passwords (your login, client accounts, streaming subscriptions)
 - Profile PINs and any sign that a password or PIN is set
-- Mailbox login credentials, OAuth tokens, or app passwords
+- Mailbox login credentials or app passwords
 - Evolution API tokens or Public API Keys
 - Internal database IDs or technical identifiers
 - WhatsApp LID-only identities from access control
