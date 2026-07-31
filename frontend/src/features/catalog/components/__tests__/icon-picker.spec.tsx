@@ -132,6 +132,36 @@ it("aborts in-flight search when query drops below minimum length", async () => 
   expect(signal.aborted).toBe(true);
 });
 
+// Finding 5: short query clears loading state
+it("clears loading indicator when query drops below minimum length", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  search.mockImplementation(
+    (_q: string, _s: number, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }),
+  );
+  renderPicker();
+  const input = screen.getByRole("searchbox");
+
+  // Type "ne" — triggers search after debounce
+  fireEvent.change(input, { target: { value: "ne" } });
+  await vi.advanceTimersByTimeAsync(300);
+
+  // Loading is active — sr-only status div has the searching text
+  const srOnly = screen.getByRole("searchbox").closest("section")!.querySelector("[aria-live]");
+  await vi.waitFor(() => {
+    expect(srOnly).toHaveTextContent("frontend.icon_picker.searching");
+  });
+
+  // Drop to "n" — short query aborts, loading should clear
+  fireEvent.change(input, { target: { value: "n" } });
+  await vi.advanceTimersByTimeAsync(0);
+  await vi.waitFor(() => {
+    expect(srOnly).toHaveTextContent("");
+  });
+});
+
 // Finding 4: reopen with same initialQuery re-searches
 it("re-searches when reopened with the same initialQuery", async () => {
   vi.useFakeTimers();

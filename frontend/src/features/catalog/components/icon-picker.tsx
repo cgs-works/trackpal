@@ -125,6 +125,7 @@ export function IconPicker({
     if (query.length < MIN_QUERY_LENGTH) {
       // Abort any in-flight search for the discarded query
       if (abortRef.current) abortRef.current.abort();
+      setLoading(false);
       setResults([]);
       setCollections({});
       setPageStart(0);
