@@ -23,6 +23,10 @@ export function ServiceIcon({
       return;
     }
 
+    // Reset state immediately when icon changes so stale data is not shown
+    setData(null);
+    setFailed(false);
+
     let cancelled = false;
 
     loadIcon(icon)
