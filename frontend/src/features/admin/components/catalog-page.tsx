@@ -70,9 +70,22 @@ function catalogErrorMessage(error: unknown, fallbackKey: string): string {
       const data = error.response.data;
       if (data && typeof data === "object" && "detail" in data) {
         const detail = data.detail;
+        // Bare string detail: "invalid_icon_reference"
         if (typeof detail === "string") {
           const key = CATALOG_ERROR_KEYS[detail];
           if (key) return t(key);
+        }
+        // Pydantic validation error array:
+        // [{ type: "value_error", loc: [...], msg: "Value error, invalid_icon_reference" }]
+        if (Array.isArray(detail)) {
+          for (const item of detail) {
+            if (item && typeof item === "object" && "msg" in item && typeof item.msg === "string") {
+              // Check if any known error key appears in the msg
+              for (const [errorCode, i18nKey] of Object.entries(CATALOG_ERROR_KEYS)) {
+                if (item.msg.includes(errorCode)) return t(i18nKey);
+              }
+            }
+          }
         }
       }
     }

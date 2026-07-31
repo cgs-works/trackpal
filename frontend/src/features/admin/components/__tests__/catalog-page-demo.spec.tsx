@@ -142,11 +142,12 @@ describe("CatalogPage Demo rendering", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    // Verify service was updated by checking that:
-    // 1. Local Service still exists in the list
-    // 2. A service-icon-none element exists (Local Service with null icon)
-    // Note: Due to mock rendering, the icon in the sidebar may still show the old value
-    // in some edge cases, but the important thing is that no API calls were made
+    // Verify the icon was removed: Local Service should now render with service-icon-none
+    // (the mock ServiceIcon renders data-testid="service-icon-none" when icon is null)
+    await waitFor(() => {
+      expect(screen.getByTestId("service-icon-none")).toBeInTheDocument();
+    });
+    // Local Service still exists in the list
     expect(screen.getAllByText("Local Service").length).toBeGreaterThan(0);
 
     // No API calls

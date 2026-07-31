@@ -4,7 +4,7 @@
  * Verifies that catalogErrorMessage properly maps error codes from:
  * - error.code
  * - error.message
- * - Axios response.data.detail
+ * - Axios response.data.detail (string and array formats)
  *
  * to i18n keys via CATALOG_ERROR_KEYS.
  */
@@ -61,6 +61,34 @@ describe("CatalogPage error message handling", () => {
       response: { data: { detail: string } };
     };
     axiosError.response = { data: { detail: "invalid_icon_reference" } };
+
+    vi.spyOn(api, "get").mockRejectedValueOnce(axiosError);
+
+    render(<CatalogPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("frontend.catalog.invalid_icon")).toBeInTheDocument();
+    });
+  });
+
+  it("maps invalid_icon_reference from Pydantic validation error array in response.data.detail", async () => {
+    setupProductionDataSource();
+
+    // FastAPI returns validation errors as an array when Pydantic raises ValueError
+    const axiosError = new Error("Request failed") as Error & {
+      response: { data: { detail: Array<{ type: string; loc: string[]; msg: string }> } };
+    };
+    axiosError.response = {
+      data: {
+        detail: [
+          {
+            type: "value_error",
+            loc: ["body", "icon"],
+            msg: "Value error, invalid_icon_reference",
+          },
+        ],
+      },
+    };
 
     vi.spyOn(api, "get").mockRejectedValueOnce(axiosError);
 
