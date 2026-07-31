@@ -31,13 +31,10 @@ export interface PasswordChange {
 }
 
 // ── Mailbox ───────────────────────────────────────────────────
-export type MailboxAuthMethod = "app_password" | "oauth" | "demo";
-
 export interface Mailbox {
   id: string;
   tenant_id: string;
   mailbox_email: string;
-  auth_method: MailboxAuthMethod;
   status: string;
   last_connection_test_at: string | null;
   last_connection_error: string | null;
@@ -149,11 +146,6 @@ export async function testMailbox(): Promise<{
   message: string;
 }> {
   const { data } = await api.post("/tenant/mailbox/test");
-  return data;
-}
-
-export async function startGoogleOAuth(): Promise<{ auth_url: string; state: string }> {
-  const { data } = await api.post("/tenant/mailbox/oauth/google/start");
   return data;
 }
 

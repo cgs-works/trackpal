@@ -6,7 +6,6 @@ import { useAuthStore } from "@/store/auth";
 import { useSettingsStore } from "@/store/settings";
 import { MailboxSection } from "../mailbox-section";
 
-const mockStartGoogleOAuth = vi.fn();
 const mockConnectGmail = vi.fn();
 
 vi.mock("@/i18n", () => ({
@@ -25,27 +24,19 @@ vi.mock("@/features/admin/services/settings-api", async (importOriginal) => {
   >();
   return {
     ...actual,
-    startGoogleOAuth: (...args: unknown[]) => mockStartGoogleOAuth(...args),
     connectGmail: (...args: unknown[]) => mockConnectGmail(...args),
   };
 });
-
-class BroadcastChannelStub {
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  close() {}
-}
 
 describe("MailboxSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
-    Object.defineProperty(globalThis, "BroadcastChannel", {
-      configurable: true,
-      value: BroadcastChannelStub,
+    mockConnectGmail.mockResolvedValue({
+      id: "m1",
+      mailbox_email: "test@gmail.com",
+      status: "connected",
     });
-    vi.spyOn(window, "open").mockImplementation(() => null);
-    mockStartGoogleOAuth.mockResolvedValue({ auth_url: "https://accounts.google.com/oauth" });
-    mockConnectGmail.mockResolvedValue({ id: "m1", mailbox_email: "test@gmail.com", auth_method: "app_password", status: "connected" });
     useAuthStore.setState({
       dataSource: createDataSource({ tenantId: null, tenantPlan: null, demo: null }),
     });
@@ -56,26 +47,12 @@ describe("MailboxSection", () => {
     });
   });
 
-  it("hides OAuth disclosure when flag is false/missing", () => {
-    render(<MailboxSection />);
-    expect(screen.queryByText(/OAuth/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("frontend.mailbox.use_google_connection")).not.toBeInTheDocument();
-  });
-
-  it("shows Google Connection option inside assistant when flag is exact true", () => {
-    vi.stubEnv("VITE_GMAIL_OAUTH_CONNECT_ENABLED", "true");
-    render(<MailboxSection />);
-    // The "Use Google Connection" button is now inside GmailSetupAssistant
-    expect(screen.getByText("frontend.mailbox.use_google_connection")).toBeInTheDocument();
-  });
-
-  it("shows connected OAuth mailbox even when flag is false", () => {
+  it("shows connected mailbox with email and status", () => {
     useSettingsStore.setState({
       mailbox: {
         id: "m1",
         tenant_id: "t1",
         mailbox_email: "admin@gmail.com",
-        auth_method: "oauth",
         status: "connected",
         last_connection_test_at: null,
         last_connection_error: null,
@@ -87,46 +64,9 @@ describe("MailboxSection", () => {
     render(<MailboxSection />);
     expect(screen.getByText("admin@gmail.com")).toBeInTheDocument();
     expect(screen.getByText("frontend.mailbox.status_connected")).toBeInTheDocument();
-  });
-
-  it("displays correct method label for oauth mailbox", () => {
-    useSettingsStore.setState({
-      mailbox: {
-        id: "m1",
-        tenant_id: "t1",
-        mailbox_email: "admin@gmail.com",
-        auth_method: "oauth",
-        status: "connected",
-        last_connection_test_at: null,
-        last_connection_error: null,
-        created_at: "2025-01-01T00:00:00Z",
-        updated_at: "2025-01-01T00:00:00Z",
-      },
-      mailboxLoaded: true,
-    });
-    render(<MailboxSection />);
-    expect(screen.getByText("frontend.mailbox.method_google_connection")).toBeInTheDocument();
-    expect(screen.queryByText(/IMAP/i)).not.toBeInTheDocument();
-  });
-
-  it("displays correct method label for app_password mailbox", () => {
-    useSettingsStore.setState({
-      mailbox: {
-        id: "m1",
-        tenant_id: "t1",
-        mailbox_email: "admin@gmail.com",
-        auth_method: "app_password",
-        status: "connected",
-        last_connection_test_at: null,
-        last_connection_error: null,
-        created_at: "2025-01-01T00:00:00Z",
-        updated_at: "2025-01-01T00:00:00Z",
-      },
-      mailboxLoaded: true,
-    });
-    render(<MailboxSection />);
-    expect(screen.getByText("frontend.mailbox.method_app_password")).toBeInTheDocument();
-    expect(screen.queryByText(/IMAP/i)).not.toBeInTheDocument();
+    // No method label
+    expect(screen.queryByText("frontend.mailbox.method_google_connection")).not.toBeInTheDocument();
+    expect(screen.queryByText("frontend.mailbox.method_app_password")).not.toBeInTheDocument();
   });
 
   it("shows the Gmail setup assistant when no mailbox is configured", () => {
