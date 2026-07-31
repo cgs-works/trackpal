@@ -57,7 +57,7 @@ on-demand when n8n requests a code lookup.
 
 1. Status `pending -> processing`.
 2. Load mailbox config (scoped to tenant).
-3. Fetch recent emails (window: `now-5min..now`, configurable via `settings.mailbox_lookup_window_minutes`).
+3. Fetch recent emails (window: `now-5min..now`, configurable via `settings.mailbox_lookup_window_minutes`). Gmail app-password lookups use the Gmail IMAP `X-GM-RAW after:<unix_timestamp>` extension so the window is based on an exact UTC instant rather than IMAP calendar-date semantics.
 4. Run extractor against catalog of per-service regex patterns (`app/services/mail_code_extractor/catalog_v1.py`).
 5. Pick newest valid candidate.
 6. Compute fingerprint. Check dedupe log.

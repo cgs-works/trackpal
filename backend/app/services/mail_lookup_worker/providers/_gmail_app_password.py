@@ -34,7 +34,7 @@ async def fetch_gmail_app_password_emails(
     """Fetch recent emails via IMAP with Gmail app-password auth."""
     password = _get_app_password(mailbox)
 
-    since_str = _build_since_query(window_minutes)
+    after_query = _build_after_query(window_minutes)
 
     loop = asyncio.get_running_loop()
 
@@ -59,7 +59,7 @@ async def fetch_gmail_app_password_emails(
 
         try:
             conn.select("INBOX")
-            _, search_data = conn.search(None, f"SINCE {since_str}")
+            _, search_data = conn.search(None, "X-GM-RAW", f'"{after_query}"')
             msg_ids = search_data[0].split() if search_data[0] else []
 
             emails: list[EmailMessage] = []
@@ -105,10 +105,10 @@ def _get_app_password(mailbox: TenantMailbox) -> str:
     return password
 
 
-def _build_since_query(window_minutes: int) -> str:
-    """Build an RFC 3501 SINCE date string."""
+def _build_after_query(window_minutes: int) -> str:
+    """Build a Gmail IMAP query with an exact UTC timestamp."""
     since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
-    return since.strftime("%d-%b-%Y")
+    return f"after:{int(since.timestamp())}"
 
 
 def _extract_raw_bytes(raw_data: Any) -> bytes | None:
