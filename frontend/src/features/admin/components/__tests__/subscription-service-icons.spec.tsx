@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SubscriptionFormDialog } from "../subscription-form-dialog";
 import { SubscriptionTable } from "../subscription-table";
@@ -14,20 +15,38 @@ vi.mock("@/features/catalog/components/service-icon", () => ({
   ),
 }));
 
-const service = {
-  id: "service-1",
-  tenant_id: "tenant-1",
-  name: "Netflix",
-  icon: "simple-icons:netflix",
-  created_at: "2026-07-01T00:00:00.000Z",
-  updated_at: "2026-07-01T00:00:00.000Z",
-};
+const services = [
+  {
+    id: "service-1",
+    tenant_id: "tenant-1",
+    name: "Netflix",
+    icon: "simple-icons:netflix",
+    created_at: "2026-07-01T00:00:00.000Z",
+    updated_at: "2026-07-01T00:00:00.000Z",
+  },
+  {
+    id: "service-2",
+    tenant_id: "tenant-1",
+    name: "Disney+",
+    icon: "tabler:brand-disney",
+    created_at: "2026-07-01T00:00:00.000Z",
+    updated_at: "2026-07-01T00:00:00.000Z",
+  },
+  {
+    id: "service-3",
+    tenant_id: "tenant-1",
+    name: "HBO Max",
+    icon: "simple-icons:max",
+    created_at: "2026-07-01T00:00:00.000Z",
+    updated_at: "2026-07-01T00:00:00.000Z",
+  },
+];
 
 const subscription = {
   id: "sub-1",
   tenant_id: "tenant-1",
   client_id: "client-1",
-  service_id: service.id,
+  service_id: services[0].id,
   plan_id: "plan-1",
   streaming_email: "client@example.test",
   profile_name: null,
@@ -50,7 +69,7 @@ describe("Subscription service icons", () => {
         mode="edit"
         subscription={subscription}
         clients={[]}
-        services={[service]}
+        services={services}
         plans={[]}
         loadingPlans={false}
         onServiceChange={vi.fn()}
@@ -66,12 +85,43 @@ describe("Subscription service icons", () => {
     ).toHaveTextContent("Netflix");
   });
 
+  it("renders ServiceIcon for each option in the service selector dropdown", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SubscriptionFormDialog
+        open
+        mode="create"
+        clients={[]}
+        services={services}
+        plans={[]}
+        loadingPlans={false}
+        onServiceChange={vi.fn()}
+        onSubmit={vi.fn().mockResolvedValue(undefined)}
+        saving={false}
+        error=""
+        onOpenChange={vi.fn()}
+      />,
+    );
+
+    // Open the service selector dropdown
+    const serviceTrigger = screen.getByText("frontend.subscriptions.select_service");
+    await user.click(serviceTrigger);
+
+    // Each service option should render a ServiceIcon
+    const disneyOption = await screen.findByTestId("service-icon-tabler:brand-disney");
+    expect(disneyOption).toHaveTextContent("Disney+");
+
+    expect(screen.getByTestId("service-icon-simple-icons:netflix")).toHaveTextContent("Netflix");
+    expect(screen.getByTestId("service-icon-simple-icons:max")).toHaveTextContent("HBO Max");
+  });
+
   it("renders icons in Subscription table desktop and mobile views", () => {
     render(
       <SubscriptionTable
         subscriptions={[subscription]}
         clients={{ "client-1": "Client Demo" }}
-        services={{ [service.id]: service }}
+        services={{ [services[0].id]: services[0] }}
         plans={{ "plan-1": "Premium" }}
         onEdit={vi.fn()}
         onReveal={vi.fn()}
