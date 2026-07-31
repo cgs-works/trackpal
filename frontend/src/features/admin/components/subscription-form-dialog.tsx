@@ -24,6 +24,7 @@ import {
   type Plan,
   type SubscriptionCreate,
 } from "../services/subscription-api";
+import { ServiceIcon } from "@/features/catalog/components/service-icon";
 
 function getDefaultStartsAt(): string {
   const now = new Date();
@@ -162,6 +163,7 @@ export function SubscriptionFormDialog({
 
   const title = isEdit ? t("frontend.subscriptions.edit_title") : t("frontend.subscriptions.new_title");
   const hasProfile = profileName.trim().length > 0;
+  const selectedService = services.find((s) => s.id === serviceId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -206,14 +208,30 @@ export function SubscriptionFormDialog({
             <Label>{t("frontend.subscriptions.service")}</Label>
             <Select value={serviceId} onValueChange={(v) => { setServiceId(v ?? ""); setPlanId(""); onServiceChange(v ?? ""); }} disabled={isEdit}>
               <SelectTrigger>
-                {serviceId
-                  ? services.find((s) => s.id === serviceId)?.name
-                  : t("frontend.subscriptions.select_service")}
+                {serviceId && selectedService ? (
+                  <div className="flex items-center gap-2">
+                    <ServiceIcon
+                      icon={selectedService.icon}
+                      label={selectedService.name}
+                      className="size-5 shrink-0"
+                    />
+                    <span>{selectedService.name}</span>
+                  </div>
+                ) : (
+                  t("frontend.subscriptions.select_service")
+                )}
               </SelectTrigger>
               <SelectContent>
                 {services.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    {s.name}
+                    <div className="flex items-center gap-2">
+                      <ServiceIcon
+                        icon={s.icon}
+                        label={s.name}
+                        className="size-5 shrink-0"
+                      />
+                      <span>{s.name}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

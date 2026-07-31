@@ -19,6 +19,7 @@ import {
   type ClientDashboardData,
   type ClientActiveSubscription,
 } from "../services/client-dashboard-api";
+import { ServiceIcon } from "@/features/catalog/components/service-icon";
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -74,7 +75,16 @@ function SubscriptionTable({ subscriptions }: { subscriptions: ClientActiveSubsc
                   key={sub.id}
                   className="border-t hover:bg-muted/30 transition-colors"
                 >
-                  <td className="p-3 font-medium">{sub.service_name}</td>
+                  <td className="p-3 font-medium">
+                    <div className="flex items-center gap-2">
+                      <ServiceIcon
+                        icon={sub.service_icon}
+                        label={sub.service_name}
+                        className="size-5 shrink-0"
+                      />
+                      <span>{sub.service_name}</span>
+                    </div>
+                  </td>
                   <td className="p-3">{sub.plan_name}</td>
                   <td className="p-3">
                     <SubscriptionStatusBadge status={sub.status} />
@@ -112,7 +122,14 @@ function SubscriptionTable({ subscriptions }: { subscriptions: ClientActiveSubsc
             <div key={sub.id} className="p-4 space-y-2">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-medium">{sub.service_name}</p>
+                  <div className="flex items-center gap-2">
+                    <ServiceIcon
+                      icon={sub.service_icon}
+                      label={sub.service_name}
+                      className="size-6 shrink-0"
+                    />
+                    <p className="font-medium">{sub.service_name}</p>
+                  </div>
                   <p className="text-sm text-muted-foreground">{sub.plan_name}</p>
                 </div>
                 <SubscriptionStatusBadge status={sub.status} />

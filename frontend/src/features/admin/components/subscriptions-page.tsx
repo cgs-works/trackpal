@@ -165,7 +165,7 @@ export function SubscriptionsPage() {
     clients.map((c) => [c.id, c.full_name])
   );
   const serviceMap = Object.fromEntries(
-    services.map((s) => [s.id, s.name])
+    services.map((service) => [service.id, service])
   );
   // Load all plans for plan name lookup
   const [allPlans, setAllPlans] = useState<Plan[]>([]);
@@ -292,7 +292,7 @@ export function SubscriptionsPage() {
     const query = search.trim().toLocaleLowerCase();
     if (!query) return true;
     const clientName = clientMap[subscription.client_id] ?? "";
-    const serviceName = serviceMap[subscription.service_id] ?? "";
+    const serviceName = serviceMap[subscription.service_id]?.name ?? "";
     const planName = planMap[subscription.plan_id] ?? "";
     return [subscription.streaming_email, clientName, serviceName, planName]
       .some((value) => value.toLocaleLowerCase().includes(query));

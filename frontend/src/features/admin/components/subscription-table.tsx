@@ -9,12 +9,14 @@ import {
 import { Pencil, Eye, MoreHorizontal, Ban, RotateCcw, RefreshCw } from "lucide-react";
 import { t } from "@/i18n";
 import { type Subscription } from "../services/subscription-api";
+import { type Service } from "../services/catalog-api";
 import { SubscriptionStatusBadge } from "@/components/subscription-status-badge";
+import { ServiceIcon } from "@/features/catalog/components/service-icon";
 
 interface SubscriptionTableProps {
   subscriptions: Subscription[];
   clients: Record<string, string>;
-  services: Record<string, string>;
+  services: Record<string, Service>;
   plans: Record<string, string>;
   onEdit: (sub: Subscription) => void;
   onReveal: (sub: Subscription) => void;
@@ -60,181 +62,199 @@ export function SubscriptionTable({
             </tr>
           </thead>
           <tbody>
-            {subscriptions.map((sub) => (
-              <tr
-                key={sub.id}
-                className="border-t hover:bg-muted/30 transition-colors"
-              >
-                <td className="p-3 font-medium">
-                  {clients[sub.client_id] || "—"}
-                </td>
-                <td className="p-3">
-                  {services[sub.service_id] || "—"}
-                </td>
-                <td className="p-3">
-                  {plans[sub.plan_id] || "—"}
-                </td>
-                <td className="p-3 font-mono text-xs">
-                  {sub.streaming_email}
-                </td>
-                <td className="p-3">
-                  <SubscriptionStatusBadge status={sub.status} />
-                </td>
-                <td className="p-3 text-muted-foreground">
-                  {formatDate(sub.starts_at)}
-                </td>
-                <td className="p-3 text-muted-foreground">
-                  {formatDate(sub.expires_at)}
-                </td>
-                <td className="p-3 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      title={t("frontend.subscriptions.reveal")}
-                      onClick={() => onReveal(sub)}
-                    >
-                      <Eye className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      title={t("frontend.common.edit")}
-                      onClick={() => onEdit(sub)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            title={t("frontend.subscriptions.more_actions")}
-                          />
-                        }
+            {subscriptions.map((sub) => {
+              const svc = services[sub.service_id];
+              return (
+                <tr
+                  key={sub.id}
+                  className="border-t hover:bg-muted/30 transition-colors"
+                >
+                  <td className="p-3 font-medium">
+                    {clients[sub.client_id] || "—"}
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      <ServiceIcon
+                        icon={svc?.icon}
+                        label={svc?.name ?? t("frontend.subscriptions.service")}
+                        className="size-5 shrink-0"
+                      />
+                      <span>{svc?.name ?? "—"}</span>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    {plans[sub.plan_id] || "—"}
+                  </td>
+                  <td className="p-3 font-mono text-xs">
+                    {sub.streaming_email}
+                  </td>
+                  <td className="p-3">
+                    <SubscriptionStatusBadge status={sub.status} />
+                  </td>
+                  <td className="p-3 text-muted-foreground">
+                    {formatDate(sub.starts_at)}
+                  </td>
+                  <td className="p-3 text-muted-foreground">
+                    {formatDate(sub.expires_at)}
+                  </td>
+                  <td className="p-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        title={t("frontend.subscriptions.reveal")}
+                        onClick={() => onReveal(sub)}
                       >
-                        <MoreHorizontal className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {(sub.status === "active" || sub.status === "expired") && (
-                          <DropdownMenuItem onClick={() => onRenew(sub)}>
-                            <RefreshCw className="size-4" />
-                            {t("frontend.subscriptions.renew")}
-                          </DropdownMenuItem>
-                        )}
-                        {(sub.status === "cancelled" || sub.status === "expired") && (
-                          <DropdownMenuItem onClick={() => onReactivate(sub)}>
-                            <RotateCcw className="size-4" />
-                            {t("frontend.subscriptions.reactivate")}
-                          </DropdownMenuItem>
-                        )}
-                        {sub.status === "active" && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onClick={() => onCancel(sub)}
-                            >
-                              <Ban className="size-4" />
-                              {t("frontend.subscriptions.cancel_action")}
+                        <Eye className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        title={t("frontend.common.edit")}
+                        onClick={() => onEdit(sub)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              title={t("frontend.subscriptions.more_actions")}
+                            />
+                          }
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {(sub.status === "active" || sub.status === "expired") && (
+                            <DropdownMenuItem onClick={() => onRenew(sub)}>
+                              <RefreshCw className="size-4" />
+                              {t("frontend.subscriptions.renew")}
                             </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                          )}
+                          {(sub.status === "cancelled" || sub.status === "expired") && (
+                            <DropdownMenuItem onClick={() => onReactivate(sub)}>
+                              <RotateCcw className="size-4" />
+                              {t("frontend.subscriptions.reactivate")}
+                            </DropdownMenuItem>
+                          )}
+                          {sub.status === "active" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => onCancel(sub)}
+                              >
+                                <Ban className="size-4" />
+                                {t("frontend.subscriptions.cancel_action")}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
-        {subscriptions.map((sub) => (
-          <div key={sub.id} className="rounded-lg border bg-card p-4 space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-medium">{clients[sub.client_id] || "—"}</p>
-                <p className="text-sm text-muted-foreground">
-                  {services[sub.service_id] || "—"} · {plans[sub.plan_id] || "—"}
+        {subscriptions.map((sub) => {
+          const svc = services[sub.service_id];
+          return (
+            <div key={sub.id} className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-medium">{clients[sub.client_id] || "—"}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <ServiceIcon
+                      icon={svc?.icon}
+                      label={svc?.name ?? t("frontend.subscriptions.service")}
+                      className="size-4 shrink-0"
+                    />
+                    <span>{svc?.name ?? "—"} · {plans[sub.plan_id] || "—"}</span>
+                  </div>
+                </div>
+                <SubscriptionStatusBadge status={sub.status} />
+              </div>
+              <div className="text-sm space-y-1">
+                <p className="font-mono text-xs text-muted-foreground">
+                  {sub.streaming_email}
+                </p>
+                <p className="text-muted-foreground">
+                  {formatDate(sub.starts_at)} → {formatDate(sub.expires_at)}
                 </p>
               </div>
-              <SubscriptionStatusBadge status={sub.status} />
-            </div>
-            <div className="text-sm space-y-1">
-              <p className="font-mono text-xs text-muted-foreground">
-                {sub.streaming_email}
-              </p>
-              <p className="text-muted-foreground">
-                {formatDate(sub.starts_at)} → {formatDate(sub.expires_at)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => onReveal(sub)}
-              >
-                <Eye className="size-3.5 mr-1" />
-                {t("frontend.subscriptions.reveal")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => onEdit(sub)}
-              >
-                <Pencil className="size-3.5 mr-1" />
-                {t("frontend.common.edit")}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                    />
-                  }
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => onReveal(sub)}
                 >
-                  <MoreHorizontal className="size-3.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {(sub.status === "active" || sub.status === "expired") && (
-                    <DropdownMenuItem onClick={() => onRenew(sub)}>
-                      <RefreshCw className="size-4" />
-                      {t("frontend.subscriptions.renew")}
-                    </DropdownMenuItem>
-                  )}
-                  {(sub.status === "cancelled" || sub.status === "expired") && (
-                    <DropdownMenuItem onClick={() => onReactivate(sub)}>
-                      <RotateCcw className="size-4" />
-                      {t("frontend.subscriptions.reactivate")}
-                    </DropdownMenuItem>
-                  )}
-                  {sub.status === "active" && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => onCancel(sub)}
-                      >
-                        <Ban className="size-4" />
-                        {t("frontend.subscriptions.cancel_action")}
+                  <Eye className="size-3.5 mr-1" />
+                  {t("frontend.subscriptions.reveal")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => onEdit(sub)}
+                >
+                  <Pencil className="size-3.5 mr-1" />
+                  {t("frontend.common.edit")}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                      />
+                    }
+                  >
+                    <MoreHorizontal className="size-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {(sub.status === "active" || sub.status === "expired") && (
+                      <DropdownMenuItem onClick={() => onRenew(sub)}>
+                        <RefreshCw className="size-4" />
+                        {t("frontend.subscriptions.renew")}
                       </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    )}
+                    {(sub.status === "cancelled" || sub.status === "expired") && (
+                      <DropdownMenuItem onClick={() => onReactivate(sub)}>
+                        <RotateCcw className="size-4" />
+                        {t("frontend.subscriptions.reactivate")}
+                      </DropdownMenuItem>
+                    )}
+                    {sub.status === "active" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onCancel(sub)}
+                        >
+                          <Ban className="size-4" />
+                          {t("frontend.subscriptions.cancel_action")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
