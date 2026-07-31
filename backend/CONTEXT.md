@@ -29,7 +29,9 @@
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
 | **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant Admin y Client. |
 | **Client Context Shortcut** | A private WhatsApp session in which a Tenant Admin manages a remote contact from the admin's own chat. The remote contact cannot see or operate the administrative menu. |
-| **Catalog** | Servicios y planes que un tenant ofrece. Cada servicio tiene planes identificables por nombre; precios, disponibilidad y metadata no forman parte del catálogo v1. |
+| **Catalog** | Servicios y planes que un Tenant ofrece. Cada Service se identifica por nombre y puede tener un Service Icon opcional; precios y disponibilidad no forman parte del catálogo. |
+| **Service Icon** | Marca visual opcional elegida por el Tenant Admin para un Service del Catalog. Su ausencia o indisponibilidad usa una representación genérica y nunca cambia la identidad ni el comportamiento del Service. |
+| **Icon Reference** | Identidad externa y transferible de un Service Icon. Es distinta del recurso SVG y puede exponerse junto con el Catalog sin convertir a TrackPal en propietario del icono. |
 | **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados y no permite mutaciones. |
 | **Public API Key** | Credencial tenant-scoped que habilita el Public API Catalog. Es visible para el tenant, revocable y regenerable; una key activa representa una integración pública de catálogo. Implementation table: `tenant_api_keys`. One row per tenant, plain-text `api_key`, JSON `allowed_origins`. |
 | **Allowed Origin** | Origin web exacto registrado por el tenant para usar su Public API Key desde navegador. Incluye scheme, host y puerto opcional; no representa un dominio wildcard ni acceso server-to-server. |

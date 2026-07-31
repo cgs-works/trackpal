@@ -28,6 +28,8 @@
 | **Demo Integration** | In-product representation of an external integration that accepts no provider credentials and sends no traffic outside TrackPal. |
 | **Demo Workspace** | One browser's independent, evaluation-long copy of the Demo Baseline and subsequent business changes. It starts with the Master-provided business name, remains separate from backend and other browsers, and is removed when the demo ends. |
 | **Demo CRUD** | Pro Demo Account's browser-local Clients, Catalog, and Subscriptions behavior with production-equivalent UI, validation, lifecycle rules, and confirmations. |
+| **Service Icon** | Optional visual mark chosen by the Tenant Admin for a Catalog Service. A missing or unavailable icon falls back to the generic service representation without changing the Service itself. |
+| **Icon Reference** | External, portable identity of a Service Icon. It is not the SVG asset and can travel through production, Demo, subscription, export, and Public API Catalog views. |
 | **Demo Client** | Browser-local Client that participates in Demo CRUD, Subscriptions, and the simulated Client Console but has no backend identity or portal login. |
 | **Demo Console Simulator** | Plan-aware WhatsApp simulation page. Starter exposes only the landing-style access-code request triggered by `code`, `código`, or `codigo`; Pro uses the current Demo Workspace to reproduce the full production Client and Pro Tenant Admin Consoles, including `0`/`8`/`9` navigation. |
 | **Demo Reset** | Prospect-initiated restoration of one Demo Workspace to the Demo Baseline. It preserves credentials, evaluation time, and the selected plan's tour completion, and cannot be invoked remotely by the Master. |
