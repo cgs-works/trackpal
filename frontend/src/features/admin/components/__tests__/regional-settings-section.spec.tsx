@@ -1,11 +1,41 @@
+import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RegionalSettingsSection } from "../regional-settings-section";
+
+const loadCatalog = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
   getLocale: () => "en",
+  loadCatalog: (...args: unknown[]) => loadCatalog(...args),
+}));
+
+vi.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    onValueChange,
+    children,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+    children: ReactNode;
+  }) => (
+    <select
+      aria-label="locale"
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      {children}
+    </select>
+  ),
+  SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+  SelectItem: ({ value, children }: { value: string; children: ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
+  SelectTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+  SelectValue: () => null,
 }));
 
 const mockUseAuthStore = vi.fn();
@@ -48,6 +78,12 @@ const baseSettingsState = {
 };
 
 describe("RegionalSettingsSection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    baseSettingsState.updateTenantSettings.mockResolvedValue({ locale: "es" });
+    loadCatalog.mockResolvedValue(undefined);
+  });
+
   it("renders all four fields for Pro tenant", async () => {
     mockUseAuthStore.mockReturnValue({
       role: "tenant",
@@ -101,5 +137,37 @@ describe("RegionalSettingsSection", () => {
     expect(screen.getByText("frontend.profile.language")).toBeInTheDocument();
     expect(screen.getByText("frontend.subscriptions.timezone")).toBeInTheDocument();
     expect(screen.getByText("frontend.my_account.regional.currency")).toBeInTheDocument();
+  });
+
+  it("loads catalog in demo mode when locale changes", async () => {
+    const user = userEvent.setup();
+
+    mockUseAuthStore.mockReturnValue({
+      role: "tenant",
+      tenantPlan: "pro",
+      dataSource: { mode: "demo", settings: { mode: "demo-settings" } },
+    });
+    mockUseSettingsStore.mockReturnValue({
+      ...baseSettingsState,
+      tenantSettings: { ...baseSettingsState.tenantSettings, locale: "en" },
+    });
+
+    render(<RegionalSettingsSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText("frontend.profile.language")).toBeInTheDocument();
+    });
+
+    const localeSelect = screen.getByRole("combobox", { name: "locale" });
+    await user.selectOptions(localeSelect, "es");
+    await user.click(screen.getByRole("button", { name: "frontend.profile.save" }));
+
+    await waitFor(() => {
+      expect(baseSettingsState.updateTenantSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: "es" }),
+        expect.objectContaining({ mode: "demo-settings" }),
+      );
+      expect(loadCatalog).toHaveBeenCalledWith("es");
+    });
   });
 });
