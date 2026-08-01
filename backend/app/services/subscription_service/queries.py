@@ -16,7 +16,9 @@ async def get_subscription(
     db: AsyncSession, tenant_id: uuid.UUID, subscription_id: uuid.UUID
 ) -> Optional[Subscription]:
     res = await db.execute(
-        select(Subscription).where(
+        select(Subscription)
+        .options(selectinload(Subscription.plan))
+        .where(
             Subscription.tenant_id == tenant_id, Subscription.id == subscription_id
         )
     )

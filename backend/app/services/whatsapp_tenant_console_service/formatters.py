@@ -288,6 +288,10 @@ def _format_subscription_detail(
     # Build plan display line with optional price
     plan_display = plan_name
     plan_price = getattr(sub, "plan_price", None)
+    if plan_price is None:
+        plan_obj = getattr(sub, "plan", None)
+        if plan_obj is not None:
+            plan_price = getattr(plan_obj, "price", None)
     if symbol is not None:
         price_text = format_price(plan_price, symbol, loc)
         plan_display = f"{plan_name} — {price_text}"
