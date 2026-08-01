@@ -539,3 +539,22 @@ async def test_service_icon_rejects_boolean_input(client, active_tenant_user):
         headers=headers,
     )
     assert resp.status_code == 422
+
+
+async def test_plan_price_column_persists(db_session, active_tenant_user):
+    tenant_id = await _tenant_id(db_session, active_tenant_user)
+    service = Service(tenant_id=tenant_id, name="Price Test Service")
+    db_session.add(service)
+    await db_session.flush()
+
+    plan = Plan(
+        tenant_id=tenant_id,
+        service_id=service.id,
+        name="Basico",
+        price=12.50,
+    )
+    db_session.add(plan)
+    await db_session.commit()
+    await db_session.refresh(plan)
+
+    assert plan.price == 12.50

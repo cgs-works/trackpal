@@ -138,3 +138,38 @@ async def test_tenant_settings_repository_resolves_defaults_when_missing(
     resolved = await tenant_settings_repository.resolve_timezone(db_session, tenant.id)
 
     assert resolved == "UTC"
+
+
+async def test_tenant_settings_country_currency_default_null(
+    db_session, active_tenant_user
+):
+    tenant = await _tenant_for_user(db_session, active_tenant_user.id)
+    result = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    settings = result.scalar_one()
+    assert settings.country is None
+    assert settings.currency is None
+
+
+async def test_tenant_settings_can_store_country_and_currency(
+    db_session, active_tenant_user
+):
+    tenant = await _tenant_for_user(db_session, active_tenant_user.id)
+    result = await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )
+    settings = result.scalar_one()
+    settings.country = "VE"
+    settings.currency = "VES"
+    await db_session.commit()
+
+    # Verify the columns exist in the table schema (not just in-memory)
+    column_names = {c.name for c in TenantSettings.__table__.columns}
+    assert "country" in column_names
+    assert "currency" in column_names
+
+    # Verify values persisted through a refresh from DB
+    await db_session.refresh(settings)
+    assert settings.country == "VE"
+    assert settings.currency == "VES"
