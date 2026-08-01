@@ -93,6 +93,8 @@ export interface TenantSettings {
   tenant_id: string;
   locale: string;
   timezone: string | null;
+  country: string | null;
+  currency: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -100,6 +102,19 @@ export interface TenantSettings {
 export interface TenantSettingsUpdate {
   locale?: string;
   timezone?: string;
+  country?: string;
+  currency?: string;
+}
+
+export interface CountryOption {
+  code: string;
+  currency: string;
+}
+
+export interface CurrencyOption {
+  code: string;
+  symbol: string;
+  minor_units: number;
 }
 
 export interface TimezoneOption {
@@ -122,6 +137,14 @@ export async function updateTenantSettings(
 
 export async function getTimezones(): Promise<TimezoneOption[]> {
   const { data } = await api.get("/tenant-settings/timezones");
+  return data;
+}
+
+export async function getCurrencies(): Promise<{
+  countries: CountryOption[];
+  currencies: CurrencyOption[];
+}> {
+  const { data } = await api.get("/tenant-settings/currencies");
   return data;
 }
 

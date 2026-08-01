@@ -1,7 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 from uuid import UUID
+
+from app.schemas.tenant_settings import CurrencyMeta
 
 
 class ClientActiveSubscription(BaseModel):
@@ -11,6 +14,7 @@ class ClientActiveSubscription(BaseModel):
     service_name: str
     service_icon: str | None = None
     plan_name: str
+    plan_price: Decimal | None = None
     status: str
     starts_at: datetime
     expires_at: datetime
@@ -47,3 +51,4 @@ class ClientDashboardResponse(BaseModel):
     client_prefix: str
     is_active: bool
     subscriptions: list[ClientActiveSubscription] = Field(default_factory=list)
+    currency: CurrencyMeta | None = None

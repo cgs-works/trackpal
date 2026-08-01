@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
@@ -60,3 +61,52 @@ def _parse_iso_date(value: str) -> datetime | None:
     except ValueError:
         return None
     return parsed.replace(tzinfo=timezone.utc)
+
+
+def format_price(amount: Decimal | None, symbol: str | None, locale: str) -> str:
+    """Format a plan price for WhatsApp text; None → 'on request'."""
+    from app.core.i18n import t as _i18n_t
+
+    if amount is None:
+        return _i18n_t(locale, "wa.tenant.catalog.price_on_request")
+    if not symbol:
+        return f"{amount:.2f}"
+    # Spanish locale: comma as decimal separator (e.g. "Bs. 12,50")
+    if locale == "es":
+        formatted = f"{amount:.2f}".replace(".", ",", 1)
+        return f"{symbol} {formatted}"
+    return f"{symbol} {amount:.2f}"
+
+
+def _parse_price_input(value: str) -> Decimal | None:
+    """Parse '12.50' or '12,50' → Decimal; None on invalid."""
+    text = value.strip().replace(",", ".")
+    try:
+        parsed = Decimal(text)
+    except InvalidOperation:
+        return None
+    if parsed < 0 or parsed != parsed.quantize(Decimal("0.01")):
+        return None
+    return parsed
+
+
+async def _load_currency_symbol(db, tenant_id):
+    """Load currency symbol from tenant settings.
+
+    Returns the resolved symbol (e.g. "Bs.") or None if no currency is
+    configured for this tenant.
+    """
+    from app.core.currency_catalog.currency_catalog import symbol_of
+    from app.repositories import tenant_settings_repository
+
+    try:
+        settings = await tenant_settings_repository.get_by_tenant_id(db, tenant_id)
+    except Exception:
+        return None
+    if settings is None or not getattr(settings, "currency", None):
+        return None
+    return symbol_of(settings.currency) or None
+
+
+# Price skip words (used by catalog flow)
+PRICE_SKIP_WORDS = {"sin precio", "none", "omitir", "skip"}

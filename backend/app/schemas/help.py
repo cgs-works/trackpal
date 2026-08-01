@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 class HelpSafeNavigation(BaseModel):
     route: str
     settings_category: str | None = None
+    tab: str | None = None
 
 
 class HelpTopicSummary(BaseModel):

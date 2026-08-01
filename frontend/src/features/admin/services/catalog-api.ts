@@ -26,16 +26,46 @@ export interface Plan {
   tenant_id: string;
   service_id: string;
   name: string;
+  price: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface PlanCreate {
   name: string;
+  price?: string | null;
 }
 
 export interface PlanUpdate {
-  name: string;
+  name?: string;
+  price?: string | null;
+}
+
+// ── Price formatting ─────────────────────────────────────────
+export interface CurrencyMeta {
+  code: string;
+  symbol: string;
+  minor_units: number;
+}
+
+/**
+ * Format a price string with the tenant's currency symbol.
+ * Uses Intl.NumberFormat for locale-aware decimal formatting,
+ * then prepends the currency symbol (never uses Intl currency style).
+ */
+export function formatPrice(
+  price: string,
+  currency: CurrencyMeta,
+  locale: string,
+): string {
+  const numeric = parseFloat(price);
+  if (Number.isNaN(numeric)) return `${currency.symbol} ${price}`;
+  const formatted = new Intl.NumberFormat(locale, {
+    style: "decimal",
+    minimumFractionDigits: currency.minor_units,
+    maximumFractionDigits: currency.minor_units,
+  }).format(numeric);
+  return `${currency.symbol} ${formatted}`;
 }
 
 // ── Delete preview ───────────────────────────────────────────

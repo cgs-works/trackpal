@@ -29,10 +29,16 @@
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
 | **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant Admin y Client. |
 | **Client Context Shortcut** | A private WhatsApp session in which a Tenant Admin manages a remote contact from the admin's own chat. The remote contact cannot see or operate the administrative menu. |
-| **Catalog** | Servicios y planes que un Tenant ofrece. Cada Service se identifica por nombre y puede tener un Service Icon opcional; precios y disponibilidad no forman parte del catálogo. |
+| **Catalog** | Servicios y planes que un Tenant ofrece. Cada Service se identifica por nombre y puede tener un Service Icon opcional; cada Plan puede tener un Catalog Price opcional expresado en la Currency del Tenant. La disponibilidad no forma parte del catálogo. |
 | **Service Icon** | Marca visual opcional elegida por el Tenant Admin para un Service del Catalog. Su ausencia o indisponibilidad usa una representación genérica y nunca cambia la identidad ni el comportamiento del Service. |
 | **Icon Reference** | Identidad externa y transferible de un Service Icon. Es distinta del recurso SVG y puede exponerse junto con el Catalog sin convertir a TrackPal en propietario del icono. |
-| **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados y no permite mutaciones. |
+| **Catalog Price** | Precio opcional de un Plan, siempre interpretado en la Currency del Tenant. `NULL` significa "Precio a consultar" (sin precio publicado). No existe conversión ni precio por moneda. Se muestra en las superficies web y en las consolas WhatsApp (catálogo, selección de plan al crear suscripciones y suscripciones del cliente); crear/editar precio es posible también desde la consola WhatsApp del tenant. |
+| **Currency Catalog** | Fuente centralizada y versionada de países y monedas válidas (Unicode CLDR + overrides curados), generada en dev-time y commiteada. Única fuente de verdad para validar códigos de Country y Currency en el backend. |
+| **Country** | Territorio ISO 3166-1 alpha-2 donde opera el negocio del Tenant. Se persiste el código; los nombres se localizan en el frontend. Disponible para Starter y Pro. |
+| **Currency** | Moneda ISO 4217 en la que el Tenant expresa los precios de su catálogo. Pro-only. `NULL` = no configurada (la UI no muestra símbolo). |
+| **Official Currency** | Moneda nacional vigente de un Country según el Currency Catalog. Se muestra primero (grupo separado) en el selector de moneda cuando el Tenant ha elegido ese país, sin sobreescribir la Currency guardada. |
+| **Regional Settings** | Conjunto {Country, idioma, zona horaria, moneda} del Tenant con gating mixto: Country e idioma libres para Starter; zona horaria y Currency Pro-only. |
+| **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados (incluyendo Catalog Price) más la Currency del Tenant en el response top-level, y no permite mutaciones. |
 | **Public API Key** | Credencial tenant-scoped que habilita el Public API Catalog. Es visible para el tenant, revocable y regenerable; una key activa representa una integración pública de catálogo. Implementation table: `tenant_api_keys`. One row per tenant, plain-text `api_key`, JSON `allowed_origins`. |
 | **Allowed Origin** | Origin web exacto registrado por el tenant para usar su Public API Key desde navegador. Incluye scheme, host y puerto opcional; no representa un dominio wildcard ni acceso server-to-server. |
 | **Subscription** | Vincula un cliente, servicio y plan. Tiene credenciales encriptadas (Fernet), fechas de inicio/fin y estados (active/expired/cancelled). |
@@ -65,7 +71,7 @@
 | Public API Catalog | 403 pausado si existe configuración preservada | Accesible con Public API Key + Allowed Origin |
 | WhatsApp self-linking | Accesible si la instancia Evolution está configurada | Accesible si la instancia Evolution está configurada |
 | Public API Key (Settings) | Oculto y bloqueado para tenant admin | Visible y gestionable |
-| Timezone (Settings) | Oculto y bloqueado para tenant admin | Visible y editable |
+| Regional Settings (país, idioma, zona horaria, moneda) | País e idioma visibles y editables; zona horaria y moneda ocultas y bloqueadas | Los 4 visibles y editables |
 | Reminder settings | Oculto | Visible |
 | Subscription jobs/reminders/cleanup | Ignorados completamente | Procesados |
 | Search code flow | Requiere mailbox `connected` | Requiere mailbox `connected` |

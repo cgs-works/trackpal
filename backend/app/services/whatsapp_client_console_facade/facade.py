@@ -147,14 +147,18 @@ class WhatsAppClientConsoleFacade:
         if db is None:
             return _t(self._locale, "wa.client.internal_error")
         from app.core.database import set_internal_rls_context
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
 
         await set_internal_rls_context(db)
         subs = await list_subscriptions(
             db, tenant_id, status="active", client_id=client_id
         )
-        return self._format_subs(subs)
+        symbol = await _load_currency_symbol(db, tenant_id)
+        return self._format_subs(subs, symbol=symbol)
 
-    def _format_subs(self, subs: list[Any]) -> str:
+    def _format_subs(self, subs: list[Any], symbol: str | None = None) -> str:
         if not subs:
             return _t(self._locale, "wa.client.subscriptions.empty")
         lines = [_t(self._locale, "wa.client.subscriptions.header")]
@@ -190,6 +194,19 @@ class WhatsAppClientConsoleFacade:
                     status=s.status,
                 )
             )
+            # Format plan price
+            from app.services.whatsapp_tenant_console_service.format_helpers import (
+                format_price,
+            )
+
+            plan_obj: Any = getattr(s, "plan_name", None) or getattr(s, "plan", None)
+            plan_price = (
+                getattr(plan_obj, "price", None) if plan_obj is not None else None
+            )
+            formatted_price = format_price(plan_price, symbol, self._locale)
+            price_line = _t(
+                self._locale, "wa.client.subscriptions.price", price=formatted_price
+            )
             lines.append(
                 _t(
                     self._locale,
@@ -202,6 +219,7 @@ class WhatsAppClientConsoleFacade:
                     status=status_label,
                 )
             )
+            lines.append(price_line)
         return "\n".join(lines)
 
     # ------------------------------------------------------------------

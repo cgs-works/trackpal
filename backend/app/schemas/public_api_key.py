@@ -1,7 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.tenant_settings import CurrencyMeta
 
 
 class PublicApiKeyUpdate(BaseModel):
@@ -26,6 +29,7 @@ class PublicApiKeyResponse(BaseModel):
 class PublicCatalogPlan(BaseModel):
     id: UUID
     name: str
+    price: Decimal | None = None
 
 
 class PublicCatalogService(BaseModel):
@@ -37,3 +41,4 @@ class PublicCatalogService(BaseModel):
 
 class PublicCatalogResponse(BaseModel):
     services: list[PublicCatalogService]
+    currency: CurrencyMeta | None = None

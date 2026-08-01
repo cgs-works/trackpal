@@ -441,6 +441,10 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.catalog.deleting": "Eliminando...",
     "frontend.catalog.no_active_rows": "No hay suscripciones activas para mostrar.",
     "frontend.catalog.preview_page": "Página {page} de {total}",
+    "frontend.catalog.price": "Precio",
+    "frontend.catalog.price_on_request": "Precio a consultar",
+    "frontend.catalog.price_placeholder": "Precio opcional",
+    "frontend.catalog.invalid_price": "Ingresa un precio válido con hasta 2 decimales.",
     "frontend.profile.password_updated": "Contraseña actualizada correctamente.",
     "frontend.subscriptions.reveal": "Revelar",
     "frontend.subscriptions.hide": "Ocultar",
@@ -474,6 +478,7 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.dashboard.client.start": "Inicio",
     "frontend.dashboard.client.expiry": "Vencimiento",
     "frontend.dashboard.client.no_subscriptions": "Sin suscripciones activas.",
+    "frontend.dashboard.client.price_on_request": "Precio a consultar",
     "frontend.dashboard.client.role_label": "Cliente",
     # Mailbox
     "frontend.mailbox.section_title": "Correo central de búsqueda",
@@ -668,6 +673,12 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.my_account.tab_profile": "Perfil",
     "frontend.my_account.tab_security": "Seguridad",
     "frontend.my_account.tab_data": "Datos",
+    "frontend.my_account.tab_regional": "Configuración regional",
+    "frontend.my_account.regional.country": "País",
+    "frontend.my_account.regional.currency": "Moneda",
+    "frontend.my_account.regional.country_currency_group": "Moneda del país",
+    "frontend.my_account.regional.error_invalid_country": "País inválido.",
+    "frontend.my_account.regional.error_invalid_currency": "Moneda inválida.",
     "frontend.my_account.data_heading": "Exportación de tus datos",
     "frontend.my_account.data_description": "Descarga una copia completa de tu perfil de cuenta. Esta exportación nunca incluye contraseñas, tokens ni identificadores internos.",
     "frontend.my_account.data_status_pending": "Pendiente",
@@ -934,7 +945,6 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.storage_quota_exceeded": "El almacenamiento del navegador está lleno. Los cambios de esta demo no se guardarán.",
     "frontend.demo.banner.reset_error": "No se pudieron restablecer los datos porque el navegador no tiene espacio disponible.",
     "frontend.demo.overlay.description": "Verificando tu demo antes de continuar…",
-
     # Icon Picker
     "frontend.icon_picker.title": "Elegir icono del servicio",
     "frontend.icon_picker.description": "Busca en el catálogo de Iconify y revisa la licencia de la colección antes de seleccionar un icono.",
@@ -958,5 +968,5 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.icon_picker.cancel": "Cancelar",
     # Public API Icon Instruction
     "frontend.public_api.handoff_icon_prefix": "Referencia de icono",
-    "frontend.public_api.handoff_icon_suffix": "El navegador contacta Iconify para mostrar los iconos de servicio. Proporciona un respaldo genérico si Iconify no está disponible."
+    "frontend.public_api.handoff_icon_suffix": "El navegador contacta Iconify para mostrar los iconos de servicio. Proporciona un respaldo genérico si Iconify no está disponible.",
 }

@@ -102,6 +102,14 @@ async def _route_catalog_flow(
         return await self._handle_catalog_create_plan_name(
             phone, msg, session, session_service, tenant_id, db
         )
+    elif step == self.CATALOG_STEP_CREATE_PLAN_PRICE:
+        return await self._handle_catalog_create_plan_price(
+            phone, msg, session, session_service, tenant_id, db
+        )
+    elif step == self.CATALOG_STEP_EDIT_PLAN_PRICE:
+        return await self._handle_catalog_edit_plan_price(
+            phone, msg, session, session_service, tenant_id, db
+        )
     elif step == self.CATALOG_STEP_EMPTY_PLAN_MENU:
         return await self._handle_catalog_empty_plan_menu(
             phone, msg, session, session_service, tenant_id, db

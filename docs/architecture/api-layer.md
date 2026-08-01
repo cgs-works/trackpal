@@ -45,7 +45,7 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 
 Issue #73 added a Pro-only public catalog surface for tenant-owned browser frontends.
 
-- `GET /api/v1/public/catalog?api_key=<tenant_public_api_key>` returns services with nested plans, limited to `id` and `name`.
+- `GET /api/v1/public/catalog?api_key=<tenant_public_api_key>` returns services with nested plans (each plan includes `id`, `name`, and nullable `price`). The response also includes a top-level `currency` object (`{code, symbol, minor_units}`) derived from `tenant_settings.currency`, or `null` when unset.
 - The request must include an `Origin` header that exactly matches one origin registered in `tenant_api_keys.allowed_origins`.
 - Missing `Origin`, missing/invalid key, unregistered origin, inactive tenant, or Starter tenant returns 403.
 - Successful responses set `Access-Control-Allow-Origin` to the matched origin and `Vary: Origin`.

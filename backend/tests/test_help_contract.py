@@ -13,6 +13,104 @@ from app.help.compiler import HelpValidationError, compile_help
 SOURCE_DIR = Path(__file__).parents[1] / "help"
 
 
+def _make_topic(
+    topic_id: str = "tenant-admin.test",
+    settings_category: str | None = None,
+    tab: str | None = None,
+) -> str:
+    """Build a minimal topic markdown with the given safe_navigation fields."""
+    nav_lines = ["  route: /admin/settings"]
+    if settings_category is not None:
+        nav_lines.append(f"  settings_category: {settings_category}")
+    if tab is not None:
+        nav_lines.append(f"  tab: {tab}")
+    safe_navigation = "\n".join(nav_lines)
+    return f"""---
+id: {topic_id}
+audience: tenant_admin
+plans:
+  - starter
+channels:
+  - web
+module: settings
+capabilities:
+  - tenant_settings
+route: /admin/settings
+help_targets:
+  - admin.settings.reminders
+title: Test
+summary: Test topic.
+search_tags:
+  - test
+synonyms:
+  - test
+order: 999
+safe_navigation:
+{safe_navigation}
+related_topics: []
+---
+
+# Test
+
+Test body.
+"""
+
+
+def _compile_with_topics(tmp_path: Path, topics: dict[str, str]) -> dict:
+    """Write mirrored topics and compile from tmp_path."""
+    for locale in ("en", "es"):
+        locale_dir = tmp_path / locale / "tenant-admin"
+        locale_dir.mkdir(parents=True)
+        for filename, body in topics.items():
+            (locale_dir / filename).write_text(body)
+    return compile_help(tmp_path)
+
+
+def test_compiler_rejects_locale_settings_category(tmp_path: Path) -> None:
+    """settings_category 'locale' must be rejected — it is no longer allowed."""
+    topic = _make_topic(settings_category="locale")
+    topics = {"test.md": topic}
+    with pytest.raises(HelpValidationError, match="settings category"):
+        _compile_with_topics(tmp_path, topics)
+
+
+def test_compiler_rejects_timezone_settings_category(tmp_path: Path) -> None:
+    """settings_category 'timezone' must be rejected — it is no longer allowed."""
+    topic = _make_topic(settings_category="timezone")
+    topics = {"test.md": topic}
+    with pytest.raises(HelpValidationError, match="settings category"):
+        _compile_with_topics(tmp_path, topics)
+
+
+def test_compiler_accepts_my_account_with_regional_tab(tmp_path: Path) -> None:
+    """settings_category 'my-account' + tab 'regional' must compile."""
+    topic = _make_topic(settings_category="my-account", tab="regional")
+    topics = {"test.md": topic}
+    artifact = _compile_with_topics(tmp_path, topics)
+    compiled_topic = artifact["topics"]["en"][0]
+    assert compiled_topic["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "my-account",
+        "tab": "regional",
+    }
+
+
+def test_compiler_rejects_invalid_tab(tmp_path: Path) -> None:
+    """An invalid tab value must be rejected."""
+    topic = _make_topic(settings_category="my-account", tab="invalid")
+    topics = {"test.md": topic}
+    with pytest.raises(HelpValidationError, match="tab"):
+        _compile_with_topics(tmp_path, topics)
+
+
+def test_compiler_rejects_tab_without_my_account(tmp_path: Path) -> None:
+    """tab must only be allowed with settings_category 'my-account'."""
+    topic = _make_topic(settings_category="code-services", tab="regional")
+    topics = {"test.md": topic}
+    with pytest.raises(HelpValidationError, match="tab"):
+        _compile_with_topics(tmp_path, topics)
+
+
 def test_repository_help_compiles_with_bilingual_parity() -> None:
     artifact = compile_help(SOURCE_DIR)
 
@@ -24,6 +122,8 @@ def test_repository_help_compiles_with_bilingual_parity() -> None:
         "tenant-admin.access-control",
         "tenant-admin.activate-access-code-lookup",
         "tenant-admin.code-services",
+        "tenant-admin.country",
+        "tenant-admin.currency",
         "tenant-admin.dashboard",
         "tenant-admin.data-export",
         "tenant-admin.delete-account",
@@ -111,7 +211,7 @@ def test_pro_tours_declare_initial_and_upgrade_sequences() -> None:
         "admin.clients",
         "admin.catalog",
         "admin.subscriptions",
-        "admin.settings.timezone",
+        "admin.settings.regional",
         "admin.help",
     ]
     assert "tenant-admin.reminders" in initial["steps"][5]["related_topics"]
@@ -311,10 +411,11 @@ def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts(
         assert phrase in reminders_body
 
     timezone = topics["tenant-admin.timezone"]
-    assert timezone["help_targets"] == ["admin.settings.timezone"]
+    assert timezone["help_targets"] == ["admin.settings.regional"]
     assert timezone["safe_navigation"] == {
         "route": "/admin/settings",
-        "settings_category": "timezone",
+        "settings_category": "my-account",
+        "tab": "regional",
     }
     timezone_body = timezone["body"].lower()
     for phrase in (
@@ -333,7 +434,7 @@ def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts(
         "settings_category": None,
     }
     assert expiration["safe_links"] == [
-        {"route": "/admin/settings", "settings_category": "timezone"},
+        {"route": "/admin/settings", "settings_category": "my-account", "tab": "regional"},
         {"route": "/admin/settings", "settings_category": "reminders"},
     ]
     expiration_body = expiration["body"].lower()
@@ -560,3 +661,66 @@ def test_compiler_rejects_locale_metadata_drift(tmp_path: Path) -> None:
 
     with pytest.raises(HelpValidationError, match="metadata parity"):
         compile_help(tmp_path)
+
+
+def test_country_topic_metadata() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    country = topics["tenant-admin.country"]
+    assert country["plans"] == ["starter", "pro"]
+    assert country["help_targets"] == ["admin.settings.regional"]
+    assert country["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "my-account",
+        "tab": "regional",
+    }
+    assert "tenant-admin.currency" in country["related_topics"]
+    assert "tenant-admin.language" in country["related_topics"]
+
+    country_es = {topic["id"]: topic for topic in artifact["topics"]["es"]}["tenant-admin.country"]
+    assert country_es["safe_navigation"] == country["safe_navigation"]
+
+
+def test_currency_topic_metadata() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    currency = topics["tenant-admin.currency"]
+    assert currency["plans"] == ["pro"]
+    assert currency["help_targets"] == ["admin.settings.regional"]
+    assert currency["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "my-account",
+        "tab": "regional",
+    }
+
+
+def test_language_topic_uses_my_account_regional_tab() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    language = topics["tenant-admin.language"]
+    assert language["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "my-account",
+        "tab": "regional",
+    }
+    assert "admin.settings.regional" in language["help_targets"]
+    body = language["body"].lower()
+    assert "regional" in body
+
+
+def test_timezone_topic_uses_my_account_regional_tab() -> None:
+    artifact = compile_help(SOURCE_DIR)
+    topics = {topic["id"]: topic for topic in artifact["topics"]["en"]}
+
+    timezone = topics["tenant-admin.timezone"]
+    assert timezone["safe_navigation"] == {
+        "route": "/admin/settings",
+        "settings_category": "my-account",
+        "tab": "regional",
+    }
+    assert "admin.settings.regional" in timezone["help_targets"]
+    body = timezone["body"].lower()
+    assert "regional" in body

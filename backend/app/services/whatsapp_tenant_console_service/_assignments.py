@@ -40,6 +40,7 @@ _format_subscription_duration = staticmethod(fh._format_subscription_duration)
 _format_short_date = staticmethod(fh._format_short_date)
 _calculate_subscription_expiry = staticmethod(fh._calculate_subscription_expiry)
 _parse_iso_date = staticmethod(fh._parse_iso_date)
+_load_currency_symbol = fh._load_currency_symbol
 
 # -- Client flow handlers
 _start_clients_flow = cf._start_clients_flow
@@ -75,6 +76,8 @@ _handle_catalog_plan_action = caf._handle_catalog_plan_action
 _handle_catalog_edit_plan = caf._handle_catalog_edit_plan
 _handle_catalog_create_service_name = caf._handle_catalog_create_service_name
 _handle_catalog_create_plan_name = caf._handle_catalog_create_plan_name
+_handle_catalog_create_plan_price = caf._handle_catalog_create_plan_price
+_handle_catalog_edit_plan_price = caf._handle_catalog_edit_plan_price
 _handle_catalog_empty_plan_menu = caf._handle_catalog_empty_plan_menu
 _handle_catalog_post_action = caf._handle_catalog_post_action
 

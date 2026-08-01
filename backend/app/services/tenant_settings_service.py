@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import VALID_LOCALES
+from app.core.currency_catalog import validate_country, validate_currency
 from app.core.database import restore_rls_context
 from app.models import TenantSettings
 from app.repositories import tenant_settings_repository
@@ -40,6 +41,14 @@ class TenantSettingsService:
         timezone = update_data.get("timezone")
         if timezone is not None and not validate_timezone(str(timezone)):
             raise ValueError(f"'{timezone}' is not a valid IANA timezone identifier")
+
+        country = update_data.get("country")
+        if country is not None and not validate_country(country):
+            raise ValueError("invalid_country")
+
+        currency = update_data.get("currency")
+        if currency is not None and not validate_currency(currency):
+            raise ValueError("invalid_currency")
 
         settings = await tenant_settings_repository.update_settings(
             db, tenant_id, update_data

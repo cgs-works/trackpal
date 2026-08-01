@@ -184,7 +184,7 @@
         },
         "safe_links": [],
         "tour": null,
-        "body": "# Your subscriptions\n\nEach subscription shows its service, plan, status, start date, and expiration date.\n\n## Understand the status\n\n- **Active:** the service is available according to your agreement with your provider.\n- **Expired or cancelled:** ask your provider whether it should be renewed or reactivated.\n- **No results:** there is no active subscription assigned to your account yet.\n\nYou can view a summary on the Web or in WhatsApp. Only your provider can create, renew, cancel, or reactivate a subscription. For support, share the service name and visible status, never a password or access code."
+        "body": "# Your subscriptions\n\nEach subscription shows its service, plan, status, start date, and expiration date. When the provider has set a plan price, the subscription list also displays it with the business's currency symbol.\n\n## Understand the status\n\n- **Active:** the service is available according to your agreement with your provider.\n- **Expired or cancelled:** ask your provider whether it should be renewed or reactivated.\n- **No results:** there is no active subscription assigned to your account yet.\n\nYou can view a summary on the Web or in WhatsApp. Only your provider can create, renew, cancel, or reactivate a subscription. For support, share the service name and visible status, never a password or access code."
       },
       {
         "id": "client.whatsapp",
@@ -382,7 +382,8 @@
           "rename plan",
           "delete service",
           "delete plan",
-          "delete impact"
+          "delete impact",
+          "price"
         ],
         "synonyms": [
           "product catalog",
@@ -424,7 +425,7 @@
             "content": "# Meet the Catalog\n\nOrganize your services and plans so they are ready for subscriptions."
           }
         ],
-        "body": "# Catalog\n\nIn **TrackPal Pro**, the Catalog contains your services and the plans available for each one. Prepare it before creating subscriptions.\n\n## Create and organize\n\nCreate a service, open it, and add its plans. You can also rename them on the Web or from **Catalog** in the **TrackPal Pro** WhatsApp menu. An empty list simply means the first service or plan has not been created yet.\n\n## Service icons\n\nEach service can have an optional icon. Choose, replace, or remove an icon from the Web catalog editor — these are visual-only actions. WhatsApp continues to manage service names and plans as text. If Iconify is temporarily unavailable, save with the current or generic icon and retry later.\n\n## Before deleting\n\nTrackPal shows how many active subscriptions and historical subscriptions depend on the service or plan. Review them carefully: deletion is irreversible and also removes the related subscriptions.\n\nEnter `DELETE` on the Web to confirm. In WhatsApp use `CONFIRM` or `CONFIRMAR`; `0` cancels and `9` goes back.\n\nIf the preview does not load or a name already exists, correct the issue before continuing. Support does not need client credentials to help."
+        "body": "# Catalog\n\nIn **TrackPal Pro**, the Catalog contains your services and the plans available for each one. Prepare it before creating subscriptions.\n\n## Create and organize\n\nCreate a service, open it, and add its plans. You can also rename them on the Web or from **Catalog** in the **TrackPal Pro** WhatsApp menu. An empty list simply means the first service or plan has not been created yet.\n\n## Plan prices\n\nPlans may have an optional price displayed with your business's currency symbol (for example, \"Bs. 12,50\"). Plans without a price set show \"Price on request.\" You can set a plan price from the web catalog editor or from the WhatsApp console.\n\n## Service icons\n\nEach service can have an optional icon. Choose, replace, or remove an icon from the Web catalog editor — these are visual-only actions. WhatsApp continues to manage service names and plans as text. If Iconify is temporarily unavailable, save with the current or generic icon and retry later.\n\n## Before deleting\n\nTrackPal shows how many active subscriptions and historical subscriptions depend on the service or plan. Review them carefully: deletion is irreversible and also removes the related subscriptions.\n\nEnter `DELETE` on the Web to confirm. In WhatsApp use `CONFIRM` or `CONFIRMAR`; `0` cancels and `9` goes back.\n\nIf the preview does not load or a name already exists, correct the issue before continuing. Support does not need client credentials to help."
       },
       {
         "id": "tenant-admin.clients",
@@ -548,6 +549,91 @@
         "safe_links": [],
         "tour": null,
         "body": "# Platforms for access-code search\n\nSelect the services you want to offer in access-code search, such as Netflix, Disney+, or Spotify.\n\nOpen **Settings > Enabled platforms**, choose the services your business uses, and save. Only platforms supported by TrackPal are listed.\n\nSearch also needs a linked WhatsApp account and a connected central mailbox. In WhatsApp, open **Search for an access code** from the **TrackPal Starter** or **TrackPal Pro** menu.\n\nIf no service appears, return here, check your selection, and save again."
+      },
+      {
+        "id": "tenant-admin.country",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.regional"
+        ],
+        "title": "Country",
+        "summary": "Choose the country where your business operates.",
+        "search_tags": [
+          "country",
+          "country currency",
+          "business country"
+        ],
+        "synonyms": [
+          "location"
+        ],
+        "related_topics": [
+          "tenant-admin.currency",
+          "tenant-admin.language"
+        ],
+        "order": 21,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "my-account",
+          "tab": "regional"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Country\n\nTrackPal stores the country as an ISO code. Country names are displayed in the language you chose for the workspace.\n\nOpen **My Account > Regional settings**, select the country, and save. Choosing a country surfaces its official currency first in the currency picker without changing the saved currency.\n\nThis setting is available on TrackPal Starter and TrackPal Pro plans."
+      },
+      {
+        "id": "tenant-admin.currency",
+        "locale": "en",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.regional"
+        ],
+        "title": "Currency",
+        "summary": "Express your catalog prices in your business's currency.",
+        "search_tags": [
+          "currency",
+          "price display",
+          "plan price"
+        ],
+        "synonyms": [
+          "monetary unit"
+        ],
+        "related_topics": [
+          "tenant-admin.country",
+          "tenant-admin.catalog"
+        ],
+        "order": 22,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "my-account",
+          "tab": "regional"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Currency\n\nThis setting is available on TrackPal Pro.\n\nOpen **My Account > Regional settings** and choose the currency that best represents your business. The official currency of the selected country appears first above a separator in the currency picker.\n\nThe currency symbol comes from the bundled catalog (for example, \"Bs.\" for Venezuela). Plan prices throughout TrackPal are displayed with this symbol. If a plan has no price set, the catalog shows \"Price on request.\"\n\nYou can set a plan price from the web catalog editor or from the WhatsApp console."
       },
       {
         "id": "tenant-admin.dashboard",
@@ -892,7 +978,8 @@
         ],
         "route": "/admin/settings",
         "help_targets": [
-          "admin.settings.language"
+          "admin.settings.language",
+          "admin.settings.regional"
         ],
         "title": "Language",
         "summary": "Choose the language your business uses in TrackPal.",
@@ -914,11 +1001,12 @@
         "order": 20,
         "safe_navigation": {
           "route": "/admin/settings",
-          "settings_category": "locale"
+          "settings_category": "my-account",
+          "tab": "regional"
         },
         "safe_links": [],
         "tour": null,
-        "body": "# Language\n\nThe language you save applies to navigation, Settings, Help, and TrackPal messages across the business workspace.\n\nOpen **Settings > Language**, choose English or Español, and save. If the change fails, the previous language stays active so you can try again.\n\nThis setting does not translate messages from external providers or change your data, subscriptions, or connections."
+        "body": "# Language\n\nThe language you save applies to navigation, Settings, Help, and TrackPal messages across the business workspace.\n\nOpen **My Account > Regional settings**, choose English or Español, and save. If the change fails, the previous language stays active so you can try again.\n\nThis setting does not translate messages from external providers or change your data, subscriptions, or connections."
       },
       {
         "id": "tenant-admin.mailbox",
@@ -1246,7 +1334,8 @@
         "safe_links": [
           {
             "route": "/admin/settings",
-            "settings_category": "timezone"
+            "settings_category": "my-account",
+            "tab": "regional"
           },
           {
             "route": "/admin/settings",
@@ -1346,7 +1435,7 @@
         ],
         "route": "/admin/settings",
         "help_targets": [
-          "admin.settings.timezone"
+          "admin.settings.regional"
         ],
         "title": "Business timezone",
         "summary": "Keep expirations and reminders aligned with your business's local time.",
@@ -1371,14 +1460,15 @@
         "order": 150,
         "safe_navigation": {
           "route": "/admin/settings",
-          "settings_category": "timezone"
+          "settings_category": "my-account",
+          "tab": "regional"
         },
         "safe_links": [],
         "tour": [
           {
             "release_id": "tenant-admin-pro-1",
             "order": 6,
-            "target": "admin.settings.timezone",
+            "target": "admin.settings.regional",
             "conditional": false,
             "plans": [
               "pro"
@@ -1387,7 +1477,7 @@
             "content": "# Make TrackPal fit your business\n\nSet the timezone, reminders, WhatsApp, central mailbox, and the other tools that keep your operation connected."
           }
         ],
-        "body": "# Business timezone\n\nTrackPal uses this region for the local calendar, subscription dates, reminder time, and the end of each day.\n\nOpen **Settings > Timezone**, search for your region or city, select it, and save. TrackPal uses `UTC` as a reference until you choose one.\n\nThe setting applies to the whole business and automatically follows regional clock changes. A wrong timezone can make a reminder appear early or late without changing the stored expiration time.\n\nIf saving fails, the previous timezone stays active. Check the selected region and try again. Availability depends on the current plan."
+        "body": "# Business timezone\n\nTrackPal uses this region for the local calendar, subscription dates, reminder time, and the end of each day.\n\nOpen **My Account > Regional settings**, search for your region or city, select it, and save. TrackPal uses `UTC` as a reference until you choose one.\n\nThe setting applies to the whole business and automatically follows regional clock changes. A wrong timezone can make a reminder appear early or late without changing the stored expiration time.\n\nIf saving fails, the previous timezone stays active. Check the selected region and try again. Availability depends on the current plan."
       },
       {
         "id": "tenant-admin.whatsapp",
@@ -1627,7 +1717,7 @@
         },
         "safe_links": [],
         "tour": null,
-        "body": "# Tus suscripciones\n\nCada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento.\n\n## Qué significa cada estado\n\n- **Activa:** puedes usar el servicio según lo acordado con tu proveedor.\n- **Expirada o cancelada:** consulta con tu proveedor si necesitas renovarla o reactivarla.\n- **Sin resultados:** todavía no hay una suscripción disponible para tu cuenta.\n\nPuedes revisar un resumen desde Web o WhatsApp. Solo tu proveedor puede crear, renovar, cancelar o reactivar una suscripción. Si necesitas ayuda, comparte el nombre del servicio y el estado visible, nunca una contraseña o código de acceso."
+        "body": "# Tus suscripciones\n\nCada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento. Cuando el proveedor ha asignado un precio al plan, la lista de suscripciones también lo muestra con el símbolo de moneda del negocio.\n\n## Qué significa cada estado\n\n- **Activa:** puedes usar el servicio según lo acordado con tu proveedor.\n- **Expirada o cancelada:** consulta con tu proveedor si necesitas renovarla o reactivarla.\n- **Sin resultados:** todavía no hay una suscripción disponible para tu cuenta.\n\nPuedes revisar un resumen desde Web o WhatsApp. Solo tu proveedor puede crear, renovar, cancelar o reactivar una suscripción. Si necesitas ayuda, comparte el nombre del servicio y el estado visible, nunca una contraseña o código de acceso."
       },
       {
         "id": "client.whatsapp",
@@ -1825,7 +1915,8 @@
           "renombrar plan",
           "eliminar servicio",
           "eliminar plan",
-          "impacto de eliminación"
+          "impacto de eliminación",
+          "precio"
         ],
         "synonyms": [
           "catálogo de productos",
@@ -1867,7 +1958,7 @@
             "content": "# Conoce el Catálogo\n\nOrganiza tus servicios y planes para usarlos al preparar suscripciones."
           }
         ],
-        "body": "# Catálogo\n\nEn **TrackPal Pro**, el Catálogo reúne tus servicios y los planes disponibles para cada uno. Prepáralo antes de crear suscripciones.\n\n## Crear y organizar\n\nCrea un servicio, ábrelo y añade sus planes. También puedes cambiar sus nombres desde Web o desde **Catálogo** en el menú de WhatsApp de **TrackPal Pro**. Una lista vacía solo significa que todavía no has creado el primer servicio o plan.\n\n## Iconos de servicio\n\nCada servicio puede tener un icono opcional. Elige, cambia o quita un icono desde el editor de catálogo en Web — son acciones solo visuales. WhatsApp sigue gestionando nombres de servicio y planes como texto. Si Iconify no está disponible temporalmente, guarda con el icono actual o genérico e intenta más tarde.\n\n## Antes de eliminar\n\nTrackPal muestra cuántas suscripciones activas e históricas dependen del servicio o plan. Revísalas con calma: eliminar es irreversible y también elimina las suscripciones asociadas.\n\nEn Web escribe `DELETE` para confirmar. En WhatsApp usa `CONFIRM` o `CONFIRMAR`; `0` cancela y `9` regresa.\n\nSi una vista previa no carga o el nombre ya existe, corrige el problema antes de continuar. No necesitas compartir credenciales de clientes para recibir ayuda."
+        "body": "# Catálogo\n\nEn **TrackPal Pro**, el Catálogo reúne tus servicios y los planes disponibles para cada uno. Prepáralo antes de crear suscripciones.\n\n## Crear y organizar\n\nCrea un servicio, ábrelo y añade sus planes. También puedes cambiar sus nombres desde Web o desde **Catálogo** en el menú de WhatsApp de **TrackPal Pro**. Una lista vacía solo significa que todavía no has creado el primer servicio o plan.\n\n## Precios de los planes\n\nLos planes pueden tener un precio opcional que se muestra con el símbolo de moneda de tu negocio (por ejemplo, \"Bs. 12,50\"). Los planes sin precio asignado muestran \"Precio a consultar.\" Puedes asignar un precio al plan desde el editor de catálogo en Web o desde la consola de WhatsApp.\n\n## Iconos de servicio\n\nCada servicio puede tener un icono opcional. Elige, cambia o quita un icono desde el editor de catálogo en Web — son acciones solo visuales. WhatsApp sigue gestionando nombres de servicio y planes como texto. Si Iconify no está disponible temporalmente, guarda con el icono actual o genérico e intenta más tarde.\n\n## Antes de eliminar\n\nTrackPal muestra cuántas suscripciones activas e históricas dependen del servicio o plan. Revísalas con calma: eliminar es irreversible y también elimina las suscripciones asociadas.\n\nEn Web escribe `DELETE` para confirmar. En WhatsApp usa `CONFIRM` o `CONFIRMAR`; `0` cancela y `9` regresa.\n\nSi una vista previa no carga o el nombre ya existe, corrige el problema antes de continuar. No necesitas compartir credenciales de clientes para recibir ayuda."
       },
       {
         "id": "tenant-admin.clients",
@@ -1991,6 +2082,91 @@
         "safe_links": [],
         "tour": null,
         "body": "# Plataformas para buscar códigos\n\nSelecciona los servicios que quieres ofrecer en la búsqueda de códigos de acceso, como Netflix, Disney+ o Spotify.\n\nAbre **Configuración > Plataformas habilitadas**, marca los servicios que usa tu negocio y guarda. Solo aparecerán las plataformas compatibles con TrackPal.\n\nPara que la búsqueda funcione también necesitas WhatsApp vinculado y un buzón central conectado. En WhatsApp, abre **Buscar código de acceso** desde el menú de **TrackPal Starter** o **TrackPal Pro**.\n\nSi no aparece ningún servicio, vuelve a esta sección, comprueba tu selección y guarda otra vez."
+      },
+      {
+        "id": "tenant-admin.country",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "starter",
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.regional"
+        ],
+        "title": "País",
+        "summary": "Elige el país donde opera tu negocio.",
+        "search_tags": [
+          "país",
+          "moneda del país",
+          "país del negocio"
+        ],
+        "synonyms": [
+          "ubicación"
+        ],
+        "related_topics": [
+          "tenant-admin.currency",
+          "tenant-admin.language"
+        ],
+        "order": 21,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "my-account",
+          "tab": "regional"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# País\n\nTrackPal almacena el país como un código ISO. Los nombres de los países se muestran en el idioma que elegiste para el espacio de trabajo.\n\nAbre **Mi cuenta > Configuración regional**, selecciona el país y guarda. Elegir un país sitúa su moneda oficial primero en el selector de moneda sin cambiar la moneda guardada.\n\nEste ajuste está disponible en los planes TrackPal Starter y TrackPal Pro."
+      },
+      {
+        "id": "tenant-admin.currency",
+        "locale": "es",
+        "audience": "tenant_admin",
+        "plans": [
+          "pro"
+        ],
+        "channels": [
+          "web"
+        ],
+        "module": "settings",
+        "capabilities": [
+          "tenant_settings"
+        ],
+        "route": "/admin/settings",
+        "help_targets": [
+          "admin.settings.regional"
+        ],
+        "title": "Moneda",
+        "summary": "Expresa los precios de tu catálogo en la moneda de tu negocio.",
+        "search_tags": [
+          "moneda",
+          "visualización de precios",
+          "precio del plan"
+        ],
+        "synonyms": [
+          "unidad monetaria"
+        ],
+        "related_topics": [
+          "tenant-admin.country",
+          "tenant-admin.catalog"
+        ],
+        "order": 22,
+        "safe_navigation": {
+          "route": "/admin/settings",
+          "settings_category": "my-account",
+          "tab": "regional"
+        },
+        "safe_links": [],
+        "tour": null,
+        "body": "# Moneda\n\nEste ajuste está disponible en TrackPal Pro.\n\nAbre **Mi cuenta > Configuración regional** y elige la moneda que mejor represente a tu negocio. La moneda oficial del país seleccionado aparece primero encima de un separador en el selector de moneda.\n\nEl símbolo de moneda proviene del catálogo incluido (por ejemplo, \"Bs.\" para Venezuela). Los precios de los planes en TrackPal se muestran con este símbolo. Si un plan no tiene precio asignado, el catálogo muestra \"Precio a consultar.\"\n\nPuedes asignar un precio al plan desde el editor de catálogo en Web o desde la consola de WhatsApp."
       },
       {
         "id": "tenant-admin.dashboard",
@@ -2334,7 +2510,8 @@
         ],
         "route": "/admin/settings",
         "help_targets": [
-          "admin.settings.language"
+          "admin.settings.language",
+          "admin.settings.regional"
         ],
         "title": "Idioma",
         "summary": "Elige el idioma que usará tu negocio en TrackPal.",
@@ -2356,11 +2533,12 @@
         "order": 20,
         "safe_navigation": {
           "route": "/admin/settings",
-          "settings_category": "locale"
+          "settings_category": "my-account",
+          "tab": "regional"
         },
         "safe_links": [],
         "tour": null,
-        "body": "# Idioma\n\nEl idioma que guardes se aplicará a la navegación, Configuración, Ayuda y los mensajes de TrackPal para todo el negocio.\n\nAbre **Configuración > Idioma**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.\n\nEste ajuste no traduce mensajes de servicios externos ni cambia tus datos, suscripciones o conexiones."
+        "body": "# Idioma\n\nEl idioma que guardes se aplicará a la navegación, Configuración, Ayuda y los mensajes de TrackPal para todo el negocio.\n\nAbre **Mi cuenta > Configuración regional**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.\n\nEste ajuste no traduce mensajes de servicios externos ni cambia tus datos, suscripciones o conexiones."
       },
       {
         "id": "tenant-admin.mailbox",
@@ -2662,19 +2840,19 @@
         "route": "/admin/subscriptions",
         "help_targets": [],
         "title": "Gestionar vencimientos",
-        "summary": "Combina fechas, recordatorios y acciones para mantener tus suscripciones al día.",
+        "summary": "Combina fechas, recordatorios y acciones de ciclo para mantener las suscripciones al día.",
         "search_tags": [
-          "vencimientos de suscripciones",
-          "gestión de expiraciones",
+          "vencimiento de suscripciones",
+          "gestión de vencimientos",
           "suscripciones por vencer",
           "flujo de renovación",
-          "expiración automática",
+          "vencimiento automático",
           "días de aviso"
         ],
         "synonyms": [
-          "gestión de vencimientos",
-          "planificación de renovaciones",
-          "fechas finales de suscripción"
+          "administración de vencimientos",
+          "planificación de renovación",
+          "fechas de fin de suscripción"
         ],
         "related_topics": [
           "tenant-admin.subscriptions",
@@ -2689,7 +2867,8 @@
         "safe_links": [
           {
             "route": "/admin/settings",
-            "settings_category": "timezone"
+            "settings_category": "my-account",
+            "tab": "regional"
           },
           {
             "route": "/admin/settings",
@@ -2697,7 +2876,7 @@
           }
         ],
         "tour": null,
-        "body": "# Gestionar vencimientos\n\nEn **TrackPal Pro**, tres elementos trabajan juntos: la fecha de la suscripción, la zona horaria del negocio y los recordatorios de WhatsApp.\n\n## Antes del vencimiento\n\nConfirma la zona horaria, activa los recordatorios si quieres usarlos y revisa que cada suscripción tenga la fecha y el teléfono correctos.\n\nCuando una suscripción esté por vencer, usa **Renovar** para extenderla. Si ya expiró o fue cancelada, usa **Renovar** o **Reactivar** según la opción disponible. **Cancelar** termina el acceso antes de la fecha prevista.\n\nEn WhatsApp abre **Suscripciones** en el menú de **TrackPal Pro**. Las acciones visibles usan `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar; `8` avanza, `9` regresa y `0` cancela.\n\n## Cambios automáticos\n\nAl terminar el día local, una suscripción vencida pasa a **Expirada**. Después de 7 días puede pasar a **Cancelada** y, tras más de 30 días cancelada, se elimina. Los recordatorios son independientes de estos cambios.\n\nSi una fecha parece incorrecta, revisa primero la zona horaria. Si falta un aviso, comprueba la suscripción, los destinatarios y la conexión de WhatsApp."
+        "body": "# Gestionar vencimientos\n\nEn **TrackPal Pro**, tres cosas trabajan juntas: la fecha de la suscripción, la zona horaria del negocio y los recordatorios de WhatsApp.\n\n## Antes del vencimiento\n\nConfirma la zona horaria, activa los recordatorios si los deseas y verifica que cada suscripción tenga la fecha y el teléfono de destinatario correctos.\n\nCuando una suscripción esté por vencer, usa **Renovar** para extenderla. Si ya venció o fue cancelada, usa **Renovar** o **Reactivar** cuando estén disponibles. **Cancelar** termina el acceso antes de la fecha prevista.\n\nEn WhatsApp, abre **Suscripciones** desde el menú de **TrackPal Pro**. Las acciones visibles usan `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar; `8` avanza, `9` retrocede y `0` cancela.\n\n## Cambios automáticos\n\nAl final del día local, una suscripción vencida pasa a **Expirada**. Después de 7 días puede pasar a **Cancelada**, y después de más de 30 días cancelada se elimina. La automatización de recordatorios es independiente de estos cambios.\n\nSi una fecha parece incorrecta, revisa primero la zona horaria. Si falta un recordatorio, revisa la suscripción, los destinatarios y la conexión de WhatsApp."
       },
       {
         "id": "tenant-admin.subscriptions",
@@ -2789,7 +2968,7 @@
         ],
         "route": "/admin/settings",
         "help_targets": [
-          "admin.settings.timezone"
+          "admin.settings.regional"
         ],
         "title": "Zona horaria del negocio",
         "summary": "Alinea vencimientos y recordatorios con la hora local de tu negocio.",
@@ -2814,14 +2993,15 @@
         "order": 150,
         "safe_navigation": {
           "route": "/admin/settings",
-          "settings_category": "timezone"
+          "settings_category": "my-account",
+          "tab": "regional"
         },
         "safe_links": [],
         "tour": [
           {
             "release_id": "tenant-admin-pro-1",
             "order": 6,
-            "target": "admin.settings.timezone",
+            "target": "admin.settings.regional",
             "conditional": false,
             "plans": [
               "pro"
@@ -2830,7 +3010,7 @@
             "content": "# Ajusta TrackPal a tu negocio\n\nConfigura la zona horaria, los recordatorios, WhatsApp, el buzón central y las demás herramientas que mantienen tu operación conectada."
           }
         ],
-        "body": "# Zona horaria del negocio\n\nTrackPal usa esta zona para interpretar las fechas de suscripciones, la hora de los recordatorios y el cierre de cada día.\n\nAbre **Configuración > Zona horaria**, busca tu región o ciudad, selecciónala y guarda. Hasta que elijas una, TrackPal usa `UTC` como referencia.\n\nEl ajuste se aplica a todo el negocio y sigue automáticamente los cambios horarios de la región. Si eliges una zona incorrecta, un aviso puede parecer temprano o tarde aunque la fecha guardada no haya cambiado.\n\nSi no puedes guardar, la zona anterior seguirá activa. Comprueba la región seleccionada y vuelve a intentarlo."
+        "body": "# Zona horaria del negocio\n\nTrackPal usa esta zona para interpretar las fechas de suscripciones, la hora de los recordatorios y el cierre de cada día.\n\nAbre **Mi cuenta > Configuración regional**, busca tu región o ciudad, selecciónala y guarda. Hasta que elijas una, TrackPal usa `UTC` como referencia.\n\nEl ajuste se aplica a todo el negocio y sigue automáticamente los cambios horarios de la región. Si eliges una zona incorrecta, un aviso puede parecer temprano o tarde aunque la fecha guardada no haya cambiado.\n\nSi no puedes guardar, la zona anterior seguirá activa. Comprueba la región seleccionada y vuelve a intentarlo."
       },
       {
         "id": "tenant-admin.whatsapp",
@@ -2955,7 +3135,7 @@
           "status",
           "memberships",
           "access plans",
-          "# Your subscriptions\n\nEach subscription shows its service, plan, status, start date, and expiration date.\n\n## Understand the status\n\n- **Active:** the service is available according to your agreement with your provider.\n- **Expired or cancelled:** ask your provider whether it should be renewed or reactivated.\n- **No results:** there is no active subscription assigned to your account yet.\n\nYou can view a summary on the Web or in WhatsApp. Only your provider can create, renew, cancel, or reactivate a subscription. For support, share the service name and visible status, never a password or access code."
+          "# Your subscriptions\n\nEach subscription shows its service, plan, status, start date, and expiration date. When the provider has set a plan price, the subscription list also displays it with the business's currency symbol.\n\n## Understand the status\n\n- **Active:** the service is available according to your agreement with your provider.\n- **Expired or cancelled:** ask your provider whether it should be renewed or reactivated.\n- **No results:** there is no active subscription assigned to your account yet.\n\nYou can view a summary on the Web or in WhatsApp. Only your provider can create, renew, cancel, or reactivate a subscription. For support, share the service name and visible status, never a password or access code."
         ]
       },
       {
@@ -3024,10 +3204,11 @@
           "delete service",
           "delete plan",
           "delete impact",
+          "price",
           "product catalog",
           "offerings",
           "service list",
-          "# Catalog\n\nIn **TrackPal Pro**, the Catalog contains your services and the plans available for each one. Prepare it before creating subscriptions.\n\n## Create and organize\n\nCreate a service, open it, and add its plans. You can also rename them on the Web or from **Catalog** in the **TrackPal Pro** WhatsApp menu. An empty list simply means the first service or plan has not been created yet.\n\n## Service icons\n\nEach service can have an optional icon. Choose, replace, or remove an icon from the Web catalog editor — these are visual-only actions. WhatsApp continues to manage service names and plans as text. If Iconify is temporarily unavailable, save with the current or generic icon and retry later.\n\n## Before deleting\n\nTrackPal shows how many active subscriptions and historical subscriptions depend on the service or plan. Review them carefully: deletion is irreversible and also removes the related subscriptions.\n\nEnter `DELETE` on the Web to confirm. In WhatsApp use `CONFIRM` or `CONFIRMAR`; `0` cancels and `9` goes back.\n\nIf the preview does not load or a name already exists, correct the issue before continuing. Support does not need client credentials to help."
+          "# Catalog\n\nIn **TrackPal Pro**, the Catalog contains your services and the plans available for each one. Prepare it before creating subscriptions.\n\n## Create and organize\n\nCreate a service, open it, and add its plans. You can also rename them on the Web or from **Catalog** in the **TrackPal Pro** WhatsApp menu. An empty list simply means the first service or plan has not been created yet.\n\n## Plan prices\n\nPlans may have an optional price displayed with your business's currency symbol (for example, \"Bs. 12,50\"). Plans without a price set show \"Price on request.\" You can set a plan price from the web catalog editor or from the WhatsApp console.\n\n## Service icons\n\nEach service can have an optional icon. Choose, replace, or remove an icon from the Web catalog editor — these are visual-only actions. WhatsApp continues to manage service names and plans as text. If Iconify is temporarily unavailable, save with the current or generic icon and retry later.\n\n## Before deleting\n\nTrackPal shows how many active subscriptions and historical subscriptions depend on the service or plan. Review them carefully: deletion is irreversible and also removes the related subscriptions.\n\nEnter `DELETE` on the Web to confirm. In WhatsApp use `CONFIRM` or `CONFIRMAR`; `0` cancels and `9` goes back.\n\nIf the preview does not load or a name already exists, correct the issue before continuing. Support does not need client credentials to help."
         ]
       },
       {
@@ -3066,6 +3247,32 @@
           "services list",
           "code providers",
           "# Platforms for access-code search\n\nSelect the services you want to offer in access-code search, such as Netflix, Disney+, or Spotify.\n\nOpen **Settings > Enabled platforms**, choose the services your business uses, and save. Only platforms supported by TrackPal are listed.\n\nSearch also needs a linked WhatsApp account and a connected central mailbox. In WhatsApp, open **Search for an access code** from the **TrackPal Starter** or **TrackPal Pro** menu.\n\nIf no service appears, return here, check your selection, and save again."
+        ]
+      },
+      {
+        "id": "tenant-admin.country",
+        "title": "Country",
+        "terms": [
+          "Country",
+          "Choose the country where your business operates.",
+          "country",
+          "country currency",
+          "business country",
+          "location",
+          "# Country\n\nTrackPal stores the country as an ISO code. Country names are displayed in the language you chose for the workspace.\n\nOpen **My Account > Regional settings**, select the country, and save. Choosing a country surfaces its official currency first in the currency picker without changing the saved currency.\n\nThis setting is available on TrackPal Starter and TrackPal Pro plans."
+        ]
+      },
+      {
+        "id": "tenant-admin.currency",
+        "title": "Currency",
+        "terms": [
+          "Currency",
+          "Express your catalog prices in your business's currency.",
+          "currency",
+          "price display",
+          "plan price",
+          "monetary unit",
+          "# Currency\n\nThis setting is available on TrackPal Pro.\n\nOpen **My Account > Regional settings** and choose the currency that best represents your business. The official currency of the selected country appears first above a separator in the currency picker.\n\nThe currency symbol comes from the bundled catalog (for example, \"Bs.\" for Venezuela). Plan prices throughout TrackPal are displayed with this symbol. If a plan has no price set, the catalog shows \"Price on request.\"\n\nYou can set a plan price from the web catalog editor or from the WhatsApp console."
         ]
       },
       {
@@ -3167,7 +3374,7 @@
           "English",
           "idioma",
           "translation",
-          "# Language\n\nThe language you save applies to navigation, Settings, Help, and TrackPal messages across the business workspace.\n\nOpen **Settings > Language**, choose English or Español, and save. If the change fails, the previous language stays active so you can try again.\n\nThis setting does not translate messages from external providers or change your data, subscriptions, or connections."
+          "# Language\n\nThe language you save applies to navigation, Settings, Help, and TrackPal messages across the business workspace.\n\nOpen **My Account > Regional settings**, choose English or Español, and save. If the change fails, the previous language stays active so you can try again.\n\nThis setting does not translate messages from external providers or change your data, subscriptions, or connections."
         ]
       },
       {
@@ -3312,7 +3519,7 @@
           "business time zone",
           "regional time",
           "clock settings",
-          "# Business timezone\n\nTrackPal uses this region for the local calendar, subscription dates, reminder time, and the end of each day.\n\nOpen **Settings > Timezone**, search for your region or city, select it, and save. TrackPal uses `UTC` as a reference until you choose one.\n\nThe setting applies to the whole business and automatically follows regional clock changes. A wrong timezone can make a reminder appear early or late without changing the stored expiration time.\n\nIf saving fails, the previous timezone stays active. Check the selected region and try again. Availability depends on the current plan."
+          "# Business timezone\n\nTrackPal uses this region for the local calendar, subscription dates, reminder time, and the end of each day.\n\nOpen **My Account > Regional settings**, search for your region or city, select it, and save. TrackPal uses `UTC` as a reference until you choose one.\n\nThe setting applies to the whole business and automatically follows regional clock changes. A wrong timezone can make a reminder appear early or late without changing the stored expiration time.\n\nIf saving fails, the previous timezone stays active. Check the selected region and try again. Availability depends on the current plan."
         ]
       },
       {
@@ -3393,7 +3600,7 @@
           "estado",
           "membresías",
           "planes de acceso",
-          "# Tus suscripciones\n\nCada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento.\n\n## Qué significa cada estado\n\n- **Activa:** puedes usar el servicio según lo acordado con tu proveedor.\n- **Expirada o cancelada:** consulta con tu proveedor si necesitas renovarla o reactivarla.\n- **Sin resultados:** todavía no hay una suscripción disponible para tu cuenta.\n\nPuedes revisar un resumen desde Web o WhatsApp. Solo tu proveedor puede crear, renovar, cancelar o reactivar una suscripción. Si necesitas ayuda, comparte el nombre del servicio y el estado visible, nunca una contraseña o código de acceso."
+          "# Tus suscripciones\n\nCada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento. Cuando el proveedor ha asignado un precio al plan, la lista de suscripciones también lo muestra con el símbolo de moneda del negocio.\n\n## Qué significa cada estado\n\n- **Activa:** puedes usar el servicio según lo acordado con tu proveedor.\n- **Expirada o cancelada:** consulta con tu proveedor si necesitas renovarla o reactivarla.\n- **Sin resultados:** todavía no hay una suscripción disponible para tu cuenta.\n\nPuedes revisar un resumen desde Web o WhatsApp. Solo tu proveedor puede crear, renovar, cancelar o reactivar una suscripción. Si necesitas ayuda, comparte el nombre del servicio y el estado visible, nunca una contraseña o código de acceso."
         ]
       },
       {
@@ -3462,10 +3669,11 @@
           "eliminar servicio",
           "eliminar plan",
           "impacto de eliminación",
+          "precio",
           "catálogo de productos",
           "oferta",
           "lista de servicios",
-          "# Catálogo\n\nEn **TrackPal Pro**, el Catálogo reúne tus servicios y los planes disponibles para cada uno. Prepáralo antes de crear suscripciones.\n\n## Crear y organizar\n\nCrea un servicio, ábrelo y añade sus planes. También puedes cambiar sus nombres desde Web o desde **Catálogo** en el menú de WhatsApp de **TrackPal Pro**. Una lista vacía solo significa que todavía no has creado el primer servicio o plan.\n\n## Iconos de servicio\n\nCada servicio puede tener un icono opcional. Elige, cambia o quita un icono desde el editor de catálogo en Web — son acciones solo visuales. WhatsApp sigue gestionando nombres de servicio y planes como texto. Si Iconify no está disponible temporalmente, guarda con el icono actual o genérico e intenta más tarde.\n\n## Antes de eliminar\n\nTrackPal muestra cuántas suscripciones activas e históricas dependen del servicio o plan. Revísalas con calma: eliminar es irreversible y también elimina las suscripciones asociadas.\n\nEn Web escribe `DELETE` para confirmar. En WhatsApp usa `CONFIRM` o `CONFIRMAR`; `0` cancela y `9` regresa.\n\nSi una vista previa no carga o el nombre ya existe, corrige el problema antes de continuar. No necesitas compartir credenciales de clientes para recibir ayuda."
+          "# Catálogo\n\nEn **TrackPal Pro**, el Catálogo reúne tus servicios y los planes disponibles para cada uno. Prepáralo antes de crear suscripciones.\n\n## Crear y organizar\n\nCrea un servicio, ábrelo y añade sus planes. También puedes cambiar sus nombres desde Web o desde **Catálogo** en el menú de WhatsApp de **TrackPal Pro**. Una lista vacía solo significa que todavía no has creado el primer servicio o plan.\n\n## Precios de los planes\n\nLos planes pueden tener un precio opcional que se muestra con el símbolo de moneda de tu negocio (por ejemplo, \"Bs. 12,50\"). Los planes sin precio asignado muestran \"Precio a consultar.\" Puedes asignar un precio al plan desde el editor de catálogo en Web o desde la consola de WhatsApp.\n\n## Iconos de servicio\n\nCada servicio puede tener un icono opcional. Elige, cambia o quita un icono desde el editor de catálogo en Web — son acciones solo visuales. WhatsApp sigue gestionando nombres de servicio y planes como texto. Si Iconify no está disponible temporalmente, guarda con el icono actual o genérico e intenta más tarde.\n\n## Antes de eliminar\n\nTrackPal muestra cuántas suscripciones activas e históricas dependen del servicio o plan. Revísalas con calma: eliminar es irreversible y también elimina las suscripciones asociadas.\n\nEn Web escribe `DELETE` para confirmar. En WhatsApp usa `CONFIRM` o `CONFIRMAR`; `0` cancela y `9` regresa.\n\nSi una vista previa no carga o el nombre ya existe, corrige el problema antes de continuar. No necesitas compartir credenciales de clientes para recibir ayuda."
         ]
       },
       {
@@ -3504,6 +3712,32 @@
           "lista de servicios",
           "proveedores de códigos",
           "# Plataformas para buscar códigos\n\nSelecciona los servicios que quieres ofrecer en la búsqueda de códigos de acceso, como Netflix, Disney+ o Spotify.\n\nAbre **Configuración > Plataformas habilitadas**, marca los servicios que usa tu negocio y guarda. Solo aparecerán las plataformas compatibles con TrackPal.\n\nPara que la búsqueda funcione también necesitas WhatsApp vinculado y un buzón central conectado. En WhatsApp, abre **Buscar código de acceso** desde el menú de **TrackPal Starter** o **TrackPal Pro**.\n\nSi no aparece ningún servicio, vuelve a esta sección, comprueba tu selección y guarda otra vez."
+        ]
+      },
+      {
+        "id": "tenant-admin.country",
+        "title": "País",
+        "terms": [
+          "País",
+          "Elige el país donde opera tu negocio.",
+          "país",
+          "moneda del país",
+          "país del negocio",
+          "ubicación",
+          "# País\n\nTrackPal almacena el país como un código ISO. Los nombres de los países se muestran en el idioma que elegiste para el espacio de trabajo.\n\nAbre **Mi cuenta > Configuración regional**, selecciona el país y guarda. Elegir un país sitúa su moneda oficial primero en el selector de moneda sin cambiar la moneda guardada.\n\nEste ajuste está disponible en los planes TrackPal Starter y TrackPal Pro."
+        ]
+      },
+      {
+        "id": "tenant-admin.currency",
+        "title": "Moneda",
+        "terms": [
+          "Moneda",
+          "Expresa los precios de tu catálogo en la moneda de tu negocio.",
+          "moneda",
+          "visualización de precios",
+          "precio del plan",
+          "unidad monetaria",
+          "# Moneda\n\nEste ajuste está disponible en TrackPal Pro.\n\nAbre **Mi cuenta > Configuración regional** y elige la moneda que mejor represente a tu negocio. La moneda oficial del país seleccionado aparece primero encima de un separador en el selector de moneda.\n\nEl símbolo de moneda proviene del catálogo incluido (por ejemplo, \"Bs.\" para Venezuela). Los precios de los planes en TrackPal se muestran con este símbolo. Si un plan no tiene precio asignado, el catálogo muestra \"Precio a consultar.\"\n\nPuedes asignar un precio al plan desde el editor de catálogo en Web o desde la consola de WhatsApp."
         ]
       },
       {
@@ -3604,7 +3838,7 @@
           "inglés",
           "lenguaje",
           "traducción",
-          "# Idioma\n\nEl idioma que guardes se aplicará a la navegación, Configuración, Ayuda y los mensajes de TrackPal para todo el negocio.\n\nAbre **Configuración > Idioma**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.\n\nEste ajuste no traduce mensajes de servicios externos ni cambia tus datos, suscripciones o conexiones."
+          "# Idioma\n\nEl idioma que guardes se aplicará a la navegación, Configuración, Ayuda y los mensajes de TrackPal para todo el negocio.\n\nAbre **Mi cuenta > Configuración regional**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.\n\nEste ajuste no traduce mensajes de servicios externos ni cambia tus datos, suscripciones o conexiones."
         ]
       },
       {
@@ -3702,17 +3936,17 @@
         "title": "Gestionar vencimientos",
         "terms": [
           "Gestionar vencimientos",
-          "Combina fechas, recordatorios y acciones para mantener tus suscripciones al día.",
-          "vencimientos de suscripciones",
-          "gestión de expiraciones",
+          "Combina fechas, recordatorios y acciones de ciclo para mantener las suscripciones al día.",
+          "vencimiento de suscripciones",
+          "gestión de vencimientos",
           "suscripciones por vencer",
           "flujo de renovación",
-          "expiración automática",
+          "vencimiento automático",
           "días de aviso",
-          "gestión de vencimientos",
-          "planificación de renovaciones",
-          "fechas finales de suscripción",
-          "# Gestionar vencimientos\n\nEn **TrackPal Pro**, tres elementos trabajan juntos: la fecha de la suscripción, la zona horaria del negocio y los recordatorios de WhatsApp.\n\n## Antes del vencimiento\n\nConfirma la zona horaria, activa los recordatorios si quieres usarlos y revisa que cada suscripción tenga la fecha y el teléfono correctos.\n\nCuando una suscripción esté por vencer, usa **Renovar** para extenderla. Si ya expiró o fue cancelada, usa **Renovar** o **Reactivar** según la opción disponible. **Cancelar** termina el acceso antes de la fecha prevista.\n\nEn WhatsApp abre **Suscripciones** en el menú de **TrackPal Pro**. Las acciones visibles usan `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar; `8` avanza, `9` regresa y `0` cancela.\n\n## Cambios automáticos\n\nAl terminar el día local, una suscripción vencida pasa a **Expirada**. Después de 7 días puede pasar a **Cancelada** y, tras más de 30 días cancelada, se elimina. Los recordatorios son independientes de estos cambios.\n\nSi una fecha parece incorrecta, revisa primero la zona horaria. Si falta un aviso, comprueba la suscripción, los destinatarios y la conexión de WhatsApp."
+          "administración de vencimientos",
+          "planificación de renovación",
+          "fechas de fin de suscripción",
+          "# Gestionar vencimientos\n\nEn **TrackPal Pro**, tres cosas trabajan juntas: la fecha de la suscripción, la zona horaria del negocio y los recordatorios de WhatsApp.\n\n## Antes del vencimiento\n\nConfirma la zona horaria, activa los recordatorios si los deseas y verifica que cada suscripción tenga la fecha y el teléfono de destinatario correctos.\n\nCuando una suscripción esté por vencer, usa **Renovar** para extenderla. Si ya venció o fue cancelada, usa **Renovar** o **Reactivar** cuando estén disponibles. **Cancelar** termina el acceso antes de la fecha prevista.\n\nEn WhatsApp, abre **Suscripciones** desde el menú de **TrackPal Pro**. Las acciones visibles usan `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar; `8` avanza, `9` retrocede y `0` cancela.\n\n## Cambios automáticos\n\nAl final del día local, una suscripción vencida pasa a **Expirada**. Después de 7 días puede pasar a **Cancelada**, y después de más de 30 días cancelada se elimina. La automatización de recordatorios es independiente de estos cambios.\n\nSi una fecha parece incorrecta, revisa primero la zona horaria. Si falta un recordatorio, revisa la suscripción, los destinatarios y la conexión de WhatsApp."
         ]
       },
       {
@@ -3750,7 +3984,7 @@
           "zona horaria del negocio",
           "hora regional",
           "ajustes del reloj",
-          "# Zona horaria del negocio\n\nTrackPal usa esta zona para interpretar las fechas de suscripciones, la hora de los recordatorios y el cierre de cada día.\n\nAbre **Configuración > Zona horaria**, busca tu región o ciudad, selecciónala y guarda. Hasta que elijas una, TrackPal usa `UTC` como referencia.\n\nEl ajuste se aplica a todo el negocio y sigue automáticamente los cambios horarios de la región. Si eliges una zona incorrecta, un aviso puede parecer temprano o tarde aunque la fecha guardada no haya cambiado.\n\nSi no puedes guardar, la zona anterior seguirá activa. Comprueba la región seleccionada y vuelve a intentarlo."
+          "# Zona horaria del negocio\n\nTrackPal usa esta zona para interpretar las fechas de suscripciones, la hora de los recordatorios y el cierre de cada día.\n\nAbre **Mi cuenta > Configuración regional**, busca tu región o ciudad, selecciónala y guarda. Hasta que elijas una, TrackPal usa `UTC` como referencia.\n\nEl ajuste se aplica a todo el negocio y sigue automáticamente los cambios horarios de la región. Si eliges una zona incorrecta, un aviso puede parecer temprano o tarde aunque la fecha guardada no haya cambiado.\n\nSi no puedes guardar, la zona anterior seguirá activa. Comprueba la región seleccionada y vuelve a intentarlo."
         ]
       },
       {
@@ -3884,8 +4118,8 @@
             "content": "# Make TrackPal fit your business\n\nSet the timezone, reminders, WhatsApp, central mailbox, and the other tools that keep your operation connected.",
             "summary": "Keep expirations and reminders aligned with your business's local time.",
             "route": "/admin/settings",
-            "settings_category": "timezone",
-            "target": "admin.settings.timezone",
+            "settings_category": "my-account",
+            "target": "admin.settings.regional",
             "conditional": false,
             "order": 6,
             "plans": [
@@ -4267,8 +4501,8 @@
             "content": "# Ajusta TrackPal a tu negocio\n\nConfigura la zona horaria, los recordatorios, WhatsApp, el buzón central y las demás herramientas que mantienen tu operación conectada.",
             "summary": "Alinea vencimientos y recordatorios con la hora local de tu negocio.",
             "route": "/admin/settings",
-            "settings_category": "timezone",
-            "target": "admin.settings.timezone",
+            "settings_category": "my-account",
+            "target": "admin.settings.regional",
             "conditional": false,
             "order": 6,
             "plans": [

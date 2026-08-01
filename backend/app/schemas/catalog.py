@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -58,10 +59,12 @@ class ServiceResponse(BaseModel):
 
 class PlanCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
+    price: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
 
 
 class PlanUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    price: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
 
 
 class PlanResponse(BaseModel):
@@ -70,6 +73,7 @@ class PlanResponse(BaseModel):
     tenant_id: UUID
     service_id: UUID
     name: str
+    price: Decimal | None
     created_at: datetime
     updated_at: datetime
 

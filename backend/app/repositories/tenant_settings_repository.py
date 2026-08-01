@@ -45,7 +45,7 @@ async def update_settings(
     values: dict[str, object],
 ) -> TenantSettings:
     settings, _created = await get_or_create_by_tenant_id(db, tenant_id)
-    for field in ("locale", "timezone"):
+    for field in ("locale", "timezone", "country", "currency"):
         if field in values:
             setattr(settings, field, values[field])
     await db.flush()
@@ -90,6 +90,14 @@ async def resolve_timezone(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     )
     row = result.scalar_one_or_none()
     return row or "UTC"
+
+
+async def resolve_currency(db: AsyncSession, tenant_id: uuid.UUID) -> str | None:
+    result = await db.execute(
+        select(TenantSettings.currency).where(TenantSettings.tenant_id == tenant_id)
+    )
+    row = result.scalar_one_or_none()
+    return row or None
 
 
 async def get_settings_for_tenant_ids(

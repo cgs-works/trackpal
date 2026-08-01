@@ -128,4 +128,47 @@ describe("Pro Demo settings adapter", () => {
     expect(getSpy).not.toHaveBeenCalled();
     expect(putSpy).not.toHaveBeenCalled();
   });
+
+  it("loads currency options from the catalog without API calls", async () => {
+    const getSpy = vi.spyOn(api, "get");
+    const source = createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: metadata });
+
+    const result = await source.settings.loadCurrencyOptions();
+    expect(result.countries.length).toBeGreaterThan(0);
+    expect(result.currencies.length).toBeGreaterThan(0);
+    expect(result.currencies.some((c) => c.code === "USD")).toBe(true);
+    expect(result.countries.some((c) => c.code === "VE")).toBe(true);
+    expect(getSpy).not.toHaveBeenCalled();
+  });
+
+  it("validates country and currency codes against the catalog", async () => {
+    const source = createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: metadata });
+
+    await expect(source.settings.updateTenantSettings({ country: "ZZ" })).rejects.toThrow();
+    await expect(source.settings.updateTenantSettings({ currency: "ZZZ" })).rejects.toThrow();
+
+    await expect(
+      source.settings.updateTenantSettings({ country: "ve", currency: "VES" }),
+    ).resolves.toMatchObject({ country: "VE", currency: "VES" });
+  });
+
+  it("defaults country to US and currency to null in starter tenant settings", async () => {
+    const starterSource = createDataSource({
+      tenantId: "starter-settings",
+      tenantPlan: "starter",
+      demo: { ...metadata, tenantId: "starter-settings", plan: "starter" },
+    });
+
+    const settings = await starterSource.settings.loadTenantSettings();
+    expect(settings.country).toBe("US");
+    expect(settings.currency).toBeNull();
+  });
+
+  it("defaults country to US and currency to USD in pro tenant settings", async () => {
+    const source = createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: metadata });
+
+    const settings = await source.settings.loadTenantSettings();
+    expect(settings.country).toBe("US");
+    expect(settings.currency).toBe("USD");
+  });
 });

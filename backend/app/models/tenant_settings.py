@@ -21,5 +21,7 @@ class TenantSettings(Base, TimestampMixin):
     timezone: Mapped[str] = mapped_column(
         String(100), default="UTC", server_default="UTC", nullable=False
     )
+    country: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
     tenant = relationship("Tenant", back_populates="settings")

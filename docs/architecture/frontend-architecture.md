@@ -289,8 +289,16 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 | Tab | Tenant Admin | Master Support Context |
 |-----|-------------|------------------------|
 | Profile | Full profile (identity fields) | Target business profile (reads/updates selected Tenant, not Master identity) |
+| Regional | Country, Language (all plans) + Timezone, Currency (Pro only) | All four fields |
 | Security | Password change | Not rendered |
 | Data | Export status/actions + self-service deletion | Export status/actions only (no Security tab, no deletion action) |
+
+**Regional tab** (`RegionalSettingsSection`):
+- Country: `CountryPicker` with localized names via `Intl.DisplayNames` (all plans)
+- Language: locale selector (English/Español) preserving demo catalog-reload behavior (all plans)
+- Timezone: `TimezonePicker` (Pro only)
+- Currency: `CurrencyPicker` with official country currency grouped first above a separator (Pro only)
+- Route support: `?tab=regional` search param opens the Regional tab in My Account
 
 **Data tab** (`DataTabContent`):
 - Production displays current export job status (empty, pending, processing, ready, failed, cancelled)
@@ -333,7 +341,7 @@ Client management with cached data from `catalogStore` (Pro-only):
 
 Service + plan CRUD with cached data from `catalogStore` (Pro-only). Service create/edit uses a unified `ServiceFormDialog` that includes an Iconify icon picker.
 - Services sidebar with create/rename/delete
-- Plans panel with create/rename/delete
+- Plans panel with create/edit/delete; plan create/edit include an optional price (string with up to 2 decimals); plans display `{symbol} {amount}` with the tenant's currency or 'price on request' when null
 - Delete preview dialog with confirmation
 - Service dialog includes optional icon picker (Iconify CDN integration)
 

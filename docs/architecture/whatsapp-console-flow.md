@@ -112,6 +112,8 @@ Package: `backend/app/services/whatsapp_client_console_facade/`. Submodules: `fa
 | 2 | Mis Suscripciones | View active subscriptions |
 | 0 | Cancelar | Exit, returns `status="closed"` |
 
+Client console subscription items include the plan price when set (formatted with the tenant currency symbol, e.g. "Bs. 12,50"). When the plan has no price, "Price on request" / "Precio a consultar" is shown.
+
 ### i18n namespace
 
 ```
@@ -119,6 +121,8 @@ wa.client.main_menu
 wa.client.profile.body          # params: full_name, tenant_name, phone, status
 wa.client.subscriptions.header
 wa.client.subscriptions.item    # params: num, service, plan, start, exp, status
+wa.client.subscriptions.price   # params: price (formatted string)
+wa.client.subscriptions.price_on_request
 wa.client.subscriptions.empty
 wa.client.goodbye
 wa.client.access_denied
@@ -413,7 +417,7 @@ Plan-aware menus:
 
 Blocked identities receive `no_reply=true`; mailbox status must be `connected` for code lookup.
 
-Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
+Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. Catalog plan flows display the plan price with the tenant's currency symbol; create/edit plan support an optional price; subscription-create plan selection shows prices. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
 
 ### Subscription flows
 

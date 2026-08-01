@@ -9,6 +9,7 @@ import {
   getTenantSettings,
   updateTenantSettings as apiUpdateTenantSettings,
   getTimezones,
+  getCurrencies,
   getMailbox as apiGetMailbox,
   getPublicApiKey as apiGetPublicApiKey,
   savePublicApiKeyOrigins as apiSavePublicApiKeyOrigins,
@@ -17,10 +18,17 @@ import {
   type TenantSettings,
   type TenantSettingsUpdate,
   type TimezoneOption,
+  type CountryOption,
+  type CurrencyOption,
   type Mailbox,
   type PublicApiKeyConfig,
 } from "@/features/admin/services/settings-api";
 import type { SettingsDataSourceContract } from "@/lib/data-source";
+
+interface CurrencyOptions {
+  countries: CountryOption[];
+  currencies: CurrencyOption[];
+}
 
 interface ApiError {
   response?: { data?: { detail?: string | Array<{ msg?: string }> } };
@@ -30,16 +38,19 @@ interface SettingsState {
   reminderSettings: ReminderSettings | null;
   tenantSettings: TenantSettings | null;
   timezoneOptions: TimezoneOption[];
+  currencyOptions: CurrencyOptions | null;
   mailbox: Mailbox | null;
   publicApiKey: PublicApiKeyConfig | null;
   reminderSettingsLoaded: boolean;
   tenantSettingsLoaded: boolean;
   timezonesLoaded: boolean;
+  currencyOptionsLoaded: boolean;
   mailboxLoaded: boolean;
   publicApiKeyLoaded: boolean;
   reminderSettingsInFlight: Promise<ReminderSettings | null> | null;
   tenantSettingsInFlight: Promise<TenantSettings | null> | null;
   timezonesInFlight: Promise<TimezoneOption[]> | null;
+  currencyOptionsInFlight: Promise<CurrencyOptions | null> | null;
   mailboxInFlight: Promise<Mailbox | null> | null;
   publicApiKeyInFlight: Promise<PublicApiKeyConfig | null> | null;
   settingsLoadError: string | null;
@@ -48,6 +59,7 @@ interface SettingsState {
   loadReminderSettings: (source?: SettingsDataSourceContract) => Promise<ReminderSettings | null>;
   loadTenantSettings: (source?: SettingsDataSourceContract) => Promise<TenantSettings | null>;
   loadTimezoneOptions: (source?: SettingsDataSourceContract) => Promise<TimezoneOption[]>;
+  loadCurrencyOptions: (source?: SettingsDataSourceContract) => Promise<CurrencyOptions | null>;
   loadMailbox: (source?: SettingsDataSourceContract) => Promise<Mailbox | null>;
   loadPublicApiKey: (source?: SettingsDataSourceContract) => Promise<PublicApiKeyConfig | null>;
   updateReminderSettings: (
@@ -75,16 +87,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   reminderSettings: null,
   tenantSettings: null,
   timezoneOptions: [],
+  currencyOptions: null,
   mailbox: null,
   publicApiKey: null,
   reminderSettingsLoaded: false,
   tenantSettingsLoaded: false,
   timezonesLoaded: false,
+  currencyOptionsLoaded: false,
   mailboxLoaded: false,
   publicApiKeyLoaded: false,
   reminderSettingsInFlight: null,
   tenantSettingsInFlight: null,
   timezonesInFlight: null,
+  currencyOptionsInFlight: null,
   mailboxInFlight: null,
   publicApiKeyInFlight: null,
   settingsLoadError: null,
@@ -118,6 +133,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const promise = state.timezonesInFlight || loadTimezones(set, get, source);
     if (!state.timezonesInFlight) {
       set({ timezonesInFlight: promise });
+    }
+    return promise;
+  },
+
+  loadCurrencyOptions: async (source) => {
+    const state = get();
+    if (state.currencyOptionsLoaded) return state.currencyOptions;
+    const promise = state.currencyOptionsInFlight || loadCurrencyOptions(set, get, source);
+    if (!state.currencyOptionsInFlight) {
+      set({ currencyOptionsInFlight: promise });
     }
     return promise;
   },
@@ -201,16 +226,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       reminderSettings: null,
       tenantSettings: null,
       timezoneOptions: [],
+      currencyOptions: null,
       mailbox: null,
       publicApiKey: null,
       reminderSettingsLoaded: false,
       tenantSettingsLoaded: false,
       timezonesLoaded: false,
+      currencyOptionsLoaded: false,
       mailboxLoaded: false,
       publicApiKeyLoaded: false,
       reminderSettingsInFlight: null,
       tenantSettingsInFlight: null,
       timezonesInFlight: null,
+      currencyOptionsInFlight: null,
       mailboxInFlight: null,
       publicApiKeyInFlight: null,
       settingsLoadError: null,
@@ -307,6 +335,34 @@ async function loadTimezones(
       timezonesInFlight: null,
     });
     return [];
+  }
+}
+
+async function loadCurrencyOptions(
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
+  source?: SettingsDataSourceContract,
+): Promise<CurrencyOptions | null> {
+  const epoch = get()._settingsEpoch;
+  try {
+    const data = source
+      ? await source.loadCurrencyOptions()
+      : await getCurrencies();
+    if (get()._settingsEpoch !== epoch) return null;
+    set({
+      currencyOptions: data,
+      currencyOptionsLoaded: true,
+      currencyOptionsInFlight: null,
+    });
+    return data;
+  } catch (error) {
+    console.warn("[settings] Failed to load currency options:", error);
+    set({
+      currencyOptions: null,
+      currencyOptionsLoaded: false,
+      currencyOptionsInFlight: null,
+    });
+    return null;
   }
 }
 

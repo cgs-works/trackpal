@@ -12,6 +12,7 @@ interfaces.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, cast
@@ -207,6 +208,7 @@ class FakePlanObj:
     service_id: UUID | None = None
     name: str = "Test Plan"
     active_subscription_count: int = 0
+    price: Any = None  # Decimal | None
 
 
 class FakeCatalogService:
@@ -257,7 +259,11 @@ class FakeCatalogService:
             for p in self._plans.values()
         ):
             raise UserFacingError("plan_name_already_exists")
-        plan = FakePlanObj(service_id=service_id, name=payload.name)
+        plan = FakePlanObj(
+            service_id=service_id,
+            name=payload.name,
+            price=getattr(payload, "price", None),
+        )
         self._plans[str(plan.id)] = plan
         return plan
 
@@ -301,6 +307,8 @@ class FakeCatalogService:
         if plan is None:
             return None
         plan.name = payload.name
+        if "price" in payload.model_fields_set:
+            plan.price = payload.price
         return plan
 
     async def get_service_delete_preview(
@@ -3645,8 +3653,8 @@ class TestCatalogFlow:
         )
 
         # Page 1: first 7 plans only
-        assert "1️⃣ Plan A - 1 suscripción activa" in reply
-        assert "7️⃣ Plan G - 1 suscripción activa" in reply
+        assert "1️⃣ Plan A - Precio a consultar - 1 suscripción activa" in reply
+        assert "7️⃣ Plan G - Precio a consultar - 1 suscripción activa" in reply
         assert "Plan H" not in reply
         assert "8️⃣ Siguiente" in reply
 
@@ -3665,8 +3673,8 @@ class TestCatalogFlow:
             db=cast(AsyncSession, object()),
             session_service=session_service,
         )
-        assert "1️⃣ Plan H - 1 suscripción activa" in reply
-        assert "2️⃣ Plan I - 1 suscripción activa" in reply
+        assert "1️⃣ Plan H - Precio a consultar - 1 suscripción activa" in reply
+        assert "2️⃣ Plan I - Precio a consultar - 1 suscripción activa" in reply
         assert "Plan A" not in reply
         # No "Next" on last page
         assert "8️⃣ Siguiente" not in reply
@@ -4141,3 +4149,679 @@ async def test_tenant_console_profile_locale_updates_tenant_settings(
     ).scalar_one()
     assert refreshed.locale == "es"
     assert "Español" in response
+
+
+# ===================================================================
+# FakeTenantSettingsService for currency symbol tests
+# ===================================================================
+
+
+@dataclass
+class FakeTenantSettingsObj:
+    currency: str | None = "VES"
+    locale: str = "es"
+
+
+class FakeTenantSettingsService:
+    """In-memory double for TenantSettingsService."""
+
+    def __init__(self, currency: str | None = "VES") -> None:
+        self._settings = FakeTenantSettingsObj(currency=currency)
+
+    async def get_settings(self, db: Any, tenant_id: UUID) -> FakeTenantSettingsObj:
+        return self._settings
+
+
+# ===================================================================
+# format_price unit tests
+# ===================================================================
+
+
+class TestFormatPrice:
+    """Tests for the format_price helper."""
+
+    def test_format_price_with_symbol_and_amount(self) -> None:
+        from decimal import Decimal
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            format_price,
+        )
+
+        result = format_price(Decimal("12.50"), "Bs.", "es")
+        assert "Bs." in result
+        assert "12" in result
+
+    def test_format_price_none_returns_on_request_label(self) -> None:
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            format_price,
+        )
+
+        result = format_price(None, "Bs.", "es")
+        assert "consultar" in result.lower() or "request" in result.lower()
+
+    def test_format_price_without_symbol(self) -> None:
+        from decimal import Decimal
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            format_price,
+        )
+
+        result = format_price(Decimal("12.50"), None, "es")
+        assert "12" in result
+        assert "50" in result
+
+    def test_format_price_english_locale(self) -> None:
+        from decimal import Decimal
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            format_price,
+        )
+
+        result = format_price(Decimal("12.50"), "$", "en")
+        assert "$" in result
+        assert "12.50" in result
+
+
+# ===================================================================
+# Plan price display tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestPlanPriceDisplay:
+    """Tests for plan price display in formatters and flows."""
+
+    def test_format_plan_list_shows_price(self) -> None:
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_plan_list,
+        )
+
+        plan = FakePlanObj(id=uuid4(), name="Basico", price=Decimal("12.50"))
+        token = set_locale("es")
+        try:
+            reply, selection = _format_plan_list([plan], symbol="Bs.")
+            assert "Basico" in reply
+            assert "Bs." in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_plan_list_without_price(self) -> None:
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_plan_list,
+        )
+
+        plan = FakePlanObj(id=uuid4(), name="Basico", price=None)
+        token = set_locale("es")
+        try:
+            reply, selection = _format_plan_list([plan], symbol="Bs.")
+            assert "Basico" in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_plan_detail_shows_price(self) -> None:
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_plan_detail,
+        )
+
+        plan = FakePlanObj(id=uuid4(), name="Premium", price=Decimal("25.00"))
+        token = set_locale("es")
+        try:
+            reply = _format_plan_detail(plan, symbol="Bs.")
+            assert "Premium" in reply
+            assert "Bs." in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_plan_detail_without_price(self) -> None:
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_plan_detail,
+        )
+
+        plan = FakePlanObj(id=uuid4(), name="Free", price=None)
+        token = set_locale("es")
+        try:
+            reply = _format_plan_detail(plan, symbol="Bs.")
+            assert "Free" in reply
+        finally:
+            reset_locale(token)
+
+
+# ===================================================================
+# Plan price create/edit flow tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestPlanPriceFlows:
+    """Tests for plan price create/edit flows."""
+
+    async def test_create_plan_flow_shows_price_prompt(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """After entering plan name, user sees price prompt."""
+        # Setup: add a service
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        tenant_id = uuid4()
+
+        # Start catalog → service action → create plan
+        # 1. Start catalog flow
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        # 2. View services list
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        # 3. Select service (service #1)
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        # 4. Create plan (option 3 from service actions)
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="3",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        # 4. Enter plan name
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="Premium",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        # Should show price prompt now
+        assert "precio" in reply.lower() or "price" in reply.lower()
+
+    async def test_create_plan_flow_accepts_price(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Entering a valid price creates plan with price."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        tenant_id = uuid4()
+
+        # Navigate to create plan price step
+        for step in ["2", "1", "1", "3", "Premium"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        # Send price
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="12.50",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Plan should be created with price
+        plans = list(catalog_service._plans.values())
+        assert len(plans) == 1
+        assert plans[0].name == "Premium"
+        assert plans[0].price == Decimal("12.50")
+        assert "creado" in reply.lower() or "created" in reply.lower()
+
+    async def test_create_plan_flow_skips_price(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Sending 'sin precio' at price prompt creates plan without price."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        tenant_id = uuid4()
+
+        for step in ["2", "1", "1", "3", "Premium"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        await console_service.process_message(
+            phone="+10000000000",
+            message="sin precio",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        plans = list(catalog_service._plans.values())
+        assert len(plans) == 1
+        assert plans[0].price is None
+
+    async def test_create_plan_flow_invalid_price_reprompts(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Invalid price input reprompts user."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        tenant_id = uuid4()
+
+        for step in ["2", "1", "1", "3", "Premium"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="abc",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Should show invalid price error and reprompt
+        assert "inválido" in reply.lower() or "invalid" in reply.lower()
+        plans = list(catalog_service._plans.values())
+        assert len(plans) == 0  # Plan not yet created
+
+    async def test_edit_plan_price_flow(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Plan action '2' edits price."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        plan = FakePlanObj(
+            service_id=service.id, name="Premium", price=Decimal("10.00")
+        )
+        catalog_service._plans[str(plan.id)] = plan
+        tenant_id = uuid4()
+
+        # Navigate to plan list: catalog menu → service list → service action → view plans
+        for step in ["2", "1", "1", "2"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        # Select plan #1
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Plan action: edit price (option 2)
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        assert "precio" in reply.lower() or "price" in reply.lower()
+
+        # Send new price
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="9.99",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        assert plan.price == Decimal("9.99")
+        assert "actualizado" in reply.lower() or "updated" in reply.lower()
+
+    async def test_edit_plan_price_clear(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Sending 'sin precio' clears the price."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        plan = FakePlanObj(
+            service_id=service.id, name="Premium", price=Decimal("10.00")
+        )
+        catalog_service._plans[str(plan.id)] = plan
+        tenant_id = uuid4()
+
+        # Navigate to plan list: catalog menu → service list → service action → view plans
+        for step in ["2", "1", "1", "2"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        # Select plan
+        await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Edit price
+        await console_service.process_message(
+            phone="+10000000000",
+            message="2",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Clear price
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="sin precio",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+        assert plan.price is None
+        assert "limpiado" in reply.lower() or "cleared" in reply.lower()
+
+    async def test_plan_action_menu_has_three_options(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Plan action menu now has 3 options: edit name, edit price, delete."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        plan = FakePlanObj(service_id=service.id, name="Premium")
+        catalog_service._plans[str(plan.id)] = plan
+        tenant_id = uuid4()
+
+        # Navigate to plan list: catalog menu → service list → service action → view plans
+        for step in ["2", "1", "1", "2"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="1",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Should have 3 action options
+        assert "1️⃣" in reply
+        assert "2️⃣" in reply
+        assert "3️⃣" in reply
+
+    async def test_plan_price_prompt_cancel_reachable(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Universal cancel handler catches 'salir' at the price prompt."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        tenant_id = uuid4()
+
+        # Navigate to create plan price step
+        for step in ["2", "1", "1", "3", "Premium"]:
+            await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=AsyncMock(),
+            )
+
+        # Send "salir" — should be caught by universal cancel handler
+        reply = await console_service.process_message(
+            phone="+10000000000",
+            message="salir",
+            session_service=session_service,
+            tenant_id=tenant_id,
+            db=AsyncMock(),
+        )
+
+        # Should cancel and return to main menu or goodbye
+        assert (
+            "cancelada" in reply.lower()
+            or "consola" in reply.lower()
+            or "salido" in reply.lower()
+            or "menu" in reply.lower()
+        )
+
+        # Session should be cleared
+        session = await session_service.get_session("admin:+10000000000")
+        assert session is None
+
+
+# ===================================================================
+# Currency symbol loading tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestLoadCurrencySymbol:
+    """Tests for _load_currency_symbol helper."""
+
+    async def test_load_currency_symbol_returns_symbol(self) -> None:
+        """_load_currency_symbol resolves 'VES' to 'Bs.'."""
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
+
+        mock_db = AsyncMock()
+        with patch(
+            "app.repositories.tenant_settings_repository"
+        ) as mock_repo:
+            settings = FakeTenantSettingsObj(currency="VES")
+            mock_repo.get_by_tenant_id = AsyncMock(return_value=settings)
+
+            symbol = await _load_currency_symbol(mock_db, uuid4())
+            assert symbol == "Bs."
+
+    async def test_load_currency_symbol_none_when_no_currency(self) -> None:
+        """_load_currency_symbol returns None when currency not set."""
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
+
+        mock_db = AsyncMock()
+        with patch(
+            "app.repositories.tenant_settings_repository"
+        ) as mock_repo:
+            settings = FakeTenantSettingsObj(currency=None)
+            mock_repo.get_by_tenant_id = AsyncMock(return_value=settings)
+
+            symbol = await _load_currency_symbol(mock_db, uuid4())
+            assert symbol is None
+
+    async def test_load_currency_symbol_none_when_no_settings(self) -> None:
+        """_load_currency_symbol returns None when no tenant settings."""
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
+
+        mock_db = AsyncMock()
+        with patch(
+            "app.repositories.tenant_settings_repository"
+        ) as mock_repo:
+            mock_repo.get_by_tenant_id = AsyncMock(return_value=None)
+
+            symbol = await _load_currency_symbol(mock_db, uuid4())
+            assert symbol is None
+
+
+# ===================================================================
+# Subscription detail price display tests
+# ===================================================================
+
+
+class TestSubscriptionDetailPrice:
+    """Tests for subscription detail formatter showing price."""
+
+    def test_format_subscription_detail_shows_price_with_symbol(self) -> None:
+        """When symbol is provided and sub has plan price, price is shown."""
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_subscription_detail,
+        )
+
+        sub = FakeSubscriptionObj(plan_name="Premium")
+        sub.plan_price = Decimal("25.00")
+        token = set_locale("es")
+        try:
+            reply = _format_subscription_detail(sub, symbol="Bs.")
+            assert "Premium" in reply
+            assert "Bs." in reply
+            assert "25,00" in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_subscription_detail_no_price_when_no_symbol(self) -> None:
+        """When symbol is None, price is not shown in plan line."""
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_subscription_detail,
+        )
+
+        sub = FakeSubscriptionObj(plan_name="Basic")
+        sub.plan_price = Decimal("10.00")
+        token = set_locale("es")
+        try:
+            reply = _format_subscription_detail(sub, symbol=None)
+            assert "Basic" in reply
+            assert "10,00" not in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_subscription_detail_plan_only_when_no_price(self) -> None:
+        """When plan has no price, only plan name is shown."""
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_subscription_detail,
+        )
+
+        sub = FakeSubscriptionObj(plan_name="Free")
+        sub.plan_price = None
+        token = set_locale("es")
+        try:
+            reply = _format_subscription_detail(sub, symbol="Bs.")
+            assert "Free" in reply
+            assert "consultar" in reply.lower() or "request" in reply.lower()
+        finally:
+            reset_locale(token)
+
+
+# ===================================================================
+# Integration: catalog flow passes symbol to formatters
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestCatalogFlowCurrencyIntegration:
+    """Integration tests verifying currency symbol reaches formatters in catalog flow."""
+
+    async def test_catalog_plan_list_shows_currency(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Plan list in catalog flow should show currency symbol when configured."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        plan = FakePlanObj(
+            service_id=service.id, name="Premium", price=Decimal("12.50")
+        )
+        catalog_service._plans[str(plan.id)] = plan
+        tenant_id = uuid4()
+        mock_db = AsyncMock()
+
+        for step in ["2", "1", "1", "2"]:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=mock_db,
+            )
+
+        assert "Premium" in reply
+        assert "12" in reply

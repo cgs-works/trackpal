@@ -16,6 +16,7 @@ import {
   updateProfile,
   getMailbox,
   getTimezones,
+  getCurrencies,
   getPublicApiKey,
   savePublicApiKeyOrigins,
   regeneratePublicApiKey,
@@ -29,6 +30,8 @@ import {
   type TenantCodeServiceResponse,
   type TenantSettings,
   type TenantSettingsUpdate,
+  type CountryOption,
+  type CurrencyOption,
 } from "@/features/admin/services/settings-api";
 import {
   getReminderSettings,
@@ -173,6 +176,7 @@ export interface SettingsDataSourceContract
   loadTenantSettings(): Promise<TenantSettings>;
   updateTenantSettings(payload: TenantSettingsUpdate): Promise<TenantSettings>;
   loadTimezoneOptions(): Promise<{ value: string; label: string; group: string }[]>;
+  loadCurrencyOptions(): Promise<{ countries: CountryOption[]; currencies: CurrencyOption[] }>;
   loadMailbox(): Promise<Mailbox | null>;
   loadPublicApiKey(): Promise<PublicApiKeyConfig | null>;
   savePublicApiKeyOrigins(origins: string[]): Promise<PublicApiKeyConfig>;
@@ -264,6 +268,7 @@ const productionSettings: SettingsDataSourceContract = {
   loadTenantSettings: getTenantSettings,
   updateTenantSettings,
   loadTimezoneOptions: getTimezones,
+  loadCurrencyOptions: getCurrencies,
   loadMailbox: getMailbox,
   loadPublicApiKey: getPublicApiKey,
   savePublicApiKeyOrigins: savePublicApiKeyOrigins,

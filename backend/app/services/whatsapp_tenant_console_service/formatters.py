@@ -8,6 +8,7 @@ from typing import Any
 from app.core.i18n import t as _i18n_t
 
 from . import _context as ctx
+from .format_helpers import format_price
 
 
 def _t(key: str, /, **params: Any) -> str:
@@ -143,6 +144,7 @@ def _format_plan_list(
     plans: list[Any],
     page: int = 1,
     total_pages: int = 1,
+    symbol: str | None = None,
 ) -> tuple[str, dict[str, str]]:
     """Format plan list with subscription counts and pagination nav."""
     loc = ctx.get_locale()
@@ -151,8 +153,9 @@ def _format_plan_list(
     for i, p in enumerate(plans, start=1):
         num = str(i)
         active_count = int(getattr(p, "active_subscription_count", 0) or 0)
+        price_text = format_price(getattr(p, "price", None), symbol, loc)
         entries.append(
-            f"{num}️⃣ {p.name} - "
+            f"{num}️⃣ {p.name} - {price_text} - "
             f"{_catalog_count('wa.tenant.catalog.count.subscription_active', active_count)}"
         )
         selection_map[num] = str(p.id)
@@ -172,11 +175,13 @@ def _format_plan_list(
     return reply, selection_map
 
 
-def _format_plan_detail(plan: Any) -> str:
+def _format_plan_detail(plan: Any, symbol: str | None = None) -> str:
     loc = ctx.get_locale()
     header = _i18n_t(loc, "wa.tenant.catalog.plan_detail_header")
     name_label = _i18n_t(loc, "wa.tenant.catalog.name_label", name=plan.name)
-    return f"{header}\n\n{name_label}\n"
+    price_label = _i18n_t(loc, "wa.tenant.catalog.price_label")
+    price_text = format_price(getattr(plan, "price", None), symbol, loc)
+    return f"{header}\n\n{name_label}\n*{price_label}:* {price_text}\n"
 
 
 def _format_profile_detail(profile: Any, username: str) -> str:
@@ -257,7 +262,9 @@ def _format_subscription_list(
     return reply, selection_map
 
 
-def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> str:
+def _format_subscription_detail(
+    sub: Any, credentials: dict | None = None, symbol: str | None = None
+) -> str:
     loc = ctx.get_locale()
     status_emoji = _i18n_t(loc, f"wa.tenant.subscriptions.detail.status.{sub.status}")
 
@@ -277,6 +284,17 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
     service_name = getattr(sub, "service_name", None) or "—"
     plan_name = getattr(sub, "plan_name", None) or "—"
     profile_name = sub.profile_name or "—"
+
+    # Build plan display line with optional price
+    plan_display = plan_name
+    plan_price = getattr(sub, "plan_price", None)
+    if plan_price is None:
+        plan_obj = getattr(sub, "plan", None)
+        if plan_obj is not None:
+            plan_price = getattr(plan_obj, "price", None)
+    if symbol is not None:
+        price_text = format_price(plan_price, symbol, loc)
+        plan_display = f"{plan_name} — {price_text}"
 
     starts_at = ""
     if sub.starts_at:
@@ -307,7 +325,7 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
         f"*Estado:* {status_emoji}\n"
         f"*Cliente:* {client_name}\n"
         f"*Servicio:* {service_name}\n"
-        f"*Plan:* {plan_name}\n"
+        f"*Plan:* {plan_display}\n"
         f"*Email:* {sub.streaming_email}\n"
         f"*Contraseña:* {password_display}\n"
         f"*Perfil:* {profile_name}\n"

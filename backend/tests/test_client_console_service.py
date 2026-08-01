@@ -1379,3 +1379,50 @@ class TestLegacyFlowWithInstance:
         reply = response.json()["reply"].lower()
         # Must deny access — no fallback by phone for unknown instance
         assert "no tienes acceso" in reply or "no está registrado" in reply
+
+
+# ===================================================================
+# Subscription items include plan price
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestClientSubscriptionsPlanPrice:
+    """Client console subscription items include formatted plan price."""
+
+    async def test_subscriptions_show_plan_price_es(
+        self, client_facade: WhatsAppClientConsoleFacade
+    ) -> None:
+        """Subscription with plan.price=12.50 and VES currency shows 'Bs. 12,50'."""
+        from decimal import Decimal
+        from types import SimpleNamespace
+
+        fake_sub = SimpleNamespace(
+            service_name=None,
+            service=SimpleNamespace(name="Netflix"),
+            plan_name=None,
+            plan=SimpleNamespace(name="Premium", price=Decimal("12.50")),
+            starts_at=SimpleNamespace(strftime=lambda fmt: "01/01/2026"),
+            expires_at=SimpleNamespace(strftime=lambda fmt: "01/02/2026"),
+            status="active",
+        )
+        reply = client_facade._format_subs([fake_sub], symbol="Bs.")
+        assert "Bs. 12,50" in reply
+
+    async def test_subscriptions_show_price_on_request_when_no_price(
+        self, client_facade: WhatsAppClientConsoleFacade
+    ) -> None:
+        """Subscription with plan.price=None shows 'Precio a consultar'."""
+        from types import SimpleNamespace
+
+        fake_sub = SimpleNamespace(
+            service_name=None,
+            service=SimpleNamespace(name="Netflix"),
+            plan_name=None,
+            plan=SimpleNamespace(name="Basic", price=None),
+            starts_at=SimpleNamespace(strftime=lambda fmt: "01/01/2026"),
+            expires_at=SimpleNamespace(strftime=lambda fmt: "01/02/2026"),
+            status="active",
+        )
+        reply = client_facade._format_subs([fake_sub], symbol=None)
+        assert "Precio a consultar" in reply

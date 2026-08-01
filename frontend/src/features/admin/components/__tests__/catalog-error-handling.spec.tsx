@@ -140,6 +140,18 @@ describe("CatalogPage error message handling", () => {
     });
   });
 
+  it("maps plan_price_invalid from error.message to i18n key", async () => {
+    setupProductionDataSource();
+
+    vi.spyOn(api, "get").mockRejectedValueOnce(new Error("plan_price_invalid"));
+
+    render(<CatalogPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("frontend.catalog.invalid_price")).toBeInTheDocument();
+    });
+  });
+
   it("falls back to error.message for unmapped errors", async () => {
     setupProductionDataSource();
 

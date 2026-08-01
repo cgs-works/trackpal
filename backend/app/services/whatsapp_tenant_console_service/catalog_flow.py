@@ -9,6 +9,7 @@ from app.schemas.catalog import PlanCreate, PlanUpdate, ServiceCreate, ServiceUp
 from app.services.whatsapp_navigation import is_back, is_next
 
 from . import _context as ctx
+from .format_helpers import PRICE_SKIP_WORDS, _parse_price_input, _load_currency_symbol
 
 
 def _paginate(items, page, page_size):
@@ -207,8 +208,11 @@ async def _handle_catalog_service_action(
         total_pages = max(1, math.ceil(len(plans) / page_size))
         start = (page - 1) * page_size
         page_plans = plans[start : start + page_size]
+        symbol = (
+            await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
+        )
         reply, selection_map = self._format_plan_list(
-            page_plans, page=page, total_pages=total_pages
+            page_plans, page=page, total_pages=total_pages, symbol=symbol
         )
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT
@@ -298,8 +302,11 @@ async def _handle_catalog_plan_select(
         )
         if not page_plans:
             return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        symbol = (
+            await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
+        )
         reply, selection_map = self._format_plan_list(
-            page_plans, page=safe_page, total_pages=total_pages
+            page_plans, page=safe_page, total_pages=total_pages, symbol=symbol
         )
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT
@@ -364,8 +371,11 @@ async def _handle_catalog_plan_select(
     session.temp_data["service_id"] = service_id
     if session_service is not None:
         await session_service.save_session(session)
+    symbol = await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
     return (
-        self._format_plan_detail(plan) + "\n" + self._t(self.KEY_CATALOG_PLAN_ACTIONS)
+        self._format_plan_detail(plan, symbol=symbol)
+        + "\n"
+        + self._t(self.KEY_CATALOG_PLAN_ACTIONS)
     )
 
 
@@ -384,6 +394,13 @@ async def _handle_catalog_plan_action(
             await session_service.save_session(session)
         return self._t(self.KEY_CATALOG_PLAN_EDIT_PROMPT)
     elif msg == "2":
+        # Edit price
+        session.flow = self.CATALOG_FLOW
+        session.step = self.CATALOG_STEP_EDIT_PLAN_PRICE
+        if session_service is not None:
+            await session_service.save_session(session)
+        return self._t("wa.tenant.catalog.plan_price_prompt")
+    elif msg == "3":
         return await self._show_catalog_delete_plan_list(
             phone, session, session_service, tenant_id, db, page=1
         )
@@ -488,37 +505,20 @@ async def _handle_catalog_create_service_name(
 async def _handle_catalog_create_plan_name(
     self, phone, msg, session, session_service, tenant_id, db
 ):
-    """Handle create plan name input."""
+    """Handle create plan name input — save name and move to price step."""
     name = msg.strip()
     if not name:
         return self._t(self.KEY_CATALOG_NAME_REQUIRED)
     service_id = session.temp_data.get("service_id")
-    if (
-        not service_id
-        or tenant_id is None
-        or db is None
-        or self._catalog_service is None
-    ):
+    if not service_id:
         return self._t("wa.tenant.errors.catalog_load_failed")
-    parsed_service_id = self._safe_uuid(service_id)
-    if parsed_service_id is None:
-        return self._t("wa.tenant.errors.catalog_load_failed")
-    try:
-        plan = await self._catalog_service.create_plan(
-            db, tenant_id, parsed_service_id, PlanCreate(name=name)
-        )
-    except UserFacingError as exc:
-        return "❌ " + translate_error(ctx.get_locale(), exc)
-    except ValueError as exc:
-        return "❌ " + str(exc)
-    if plan is None:
-        return self._t("wa.tenant.errors.catalog_load_failed")
-    # Success → post-action prompt
-    return await self._set_post_action(
-        phone,
-        session_service,
-        self._t(self.KEY_CATALOG_CREATE_PLAN_SUCCESS, name=plan.name),
-    )
+    # Store name in temp_data and move to price prompt
+    session.temp_data["plan_name"] = name
+    session.flow = self.CATALOG_FLOW
+    session.step = self.CATALOG_STEP_CREATE_PLAN_PRICE
+    if session_service is not None:
+        await session_service.save_session(session)
+    return self._t("wa.tenant.catalog.create_plan_price_prompt")
 
 
 async def _handle_catalog_empty_plan_menu(
@@ -574,3 +574,102 @@ async def _handle_catalog_post_action(
             await session_service.clear_session(f"admin:{phone}")
         return self._t(self.KEY_MAIN_MENU)
     return self._t(self.KEY_CATALOG_POST_SUCCESS_INVALID)
+
+
+async def _handle_catalog_create_plan_price(
+    self, phone, msg, session, session_service, tenant_id, db
+):
+    """Handle create plan price input."""
+    name = session.temp_data.get("plan_name")
+    service_id = session.temp_data.get("service_id")
+    if not name or not service_id:
+        return self._t("wa.tenant.errors.catalog_load_failed")
+
+    msg_lower = msg.strip().lower()
+    price = None
+    if msg_lower not in PRICE_SKIP_WORDS:
+        price = _parse_price_input(msg)
+        if price is None:
+            return self._t("wa.tenant.catalog.plan_price_invalid")
+
+    parsed_service_id = self._safe_uuid(service_id)
+    if (
+        parsed_service_id is None
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
+        return self._t("wa.tenant.errors.catalog_load_failed")
+
+    try:
+        plan = await self._catalog_service.create_plan(
+            db, tenant_id, parsed_service_id, PlanCreate(name=name, price=price)
+        )
+    except UserFacingError as exc:
+        return "❌ " + translate_error(ctx.get_locale(), exc)
+    except ValueError as exc:
+        return "❌ " + str(exc)
+    if plan is None:
+        return self._t("wa.tenant.errors.catalog_load_failed")
+    return await self._set_post_action(
+        phone,
+        session_service,
+        self._t(self.KEY_CATALOG_CREATE_PLAN_SUCCESS, name=plan.name),
+    )
+
+
+async def _handle_catalog_edit_plan_price(
+    self, phone, msg, session, session_service, tenant_id, db
+):
+    """Handle edit plan price input."""
+    plan_id = session.temp_data.get("plan_id")
+    service_id = session.temp_data.get("service_id")
+    if not plan_id or not service_id:
+        return self._t("wa.tenant.errors.plan_update_failed")
+
+    msg_lower = msg.strip().lower()
+    price = None
+    if msg_lower in PRICE_SKIP_WORDS:
+        price = None
+    else:
+        price = _parse_price_input(msg)
+        if price is None:
+            return self._t("wa.tenant.catalog.plan_price_invalid")
+
+    parsed_service_id = self._safe_uuid(service_id)
+    parsed_plan_id = self._safe_uuid(plan_id)
+    if (
+        parsed_service_id is None
+        or parsed_plan_id is None
+        or tenant_id is None
+        or db is None
+        or self._catalog_service is None
+    ):
+        return self._t("wa.tenant.errors.plan_update_failed")
+
+    try:
+        plan = await self._catalog_service.update_plan(
+            db,
+            tenant_id,
+            parsed_service_id,
+            parsed_plan_id,
+            PlanUpdate(price=price),
+        )
+    except UserFacingError as exc:
+        return "❌ " + translate_error(ctx.get_locale(), exc)
+    except ValueError as exc:
+        return "❌ " + str(exc)
+    if plan is None:
+        return self._t("wa.tenant.errors.plan_not_found")
+
+    if price is None:
+        return await self._set_post_action(
+            phone,
+            session_service,
+            self._t("wa.tenant.catalog.plan_price_cleared_success"),
+        )
+    return await self._set_post_action(
+        phone,
+        session_service,
+        self._t("wa.tenant.catalog.plan_price_success", price=price),
+    )

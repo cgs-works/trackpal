@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Ban, Bell, Clock, Globe, KeyRound, Mail, MessageCircle, Shield, UserCircle } from "lucide-react";
+import { Ban, Bell, KeyRound, Mail, MessageCircle, Shield, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -9,12 +9,10 @@ import { useAuthStore } from "@/store/auth";
 import { HELP_TARGETS, type HelpTargetId } from "@/features/help/help-targets";
 import { AccessControlSection } from "../components/access-control-section";
 import { CodeServicesSection } from "../components/code-services-section";
-import { LocaleSection } from "../components/locale-section";
 import { MailboxSection } from "../components/mailbox-section";
 import { MyAccountSection } from "../components/my-account-section";
 import { PublicApiSection } from "../components/public-api-section";
 import { ReminderSettingsSection } from "../components/reminder-settings-section";
-import { TimezoneSection } from "../components/timezone-section";
 import { getProfile, getTenantProfile, type Profile } from "../services/settings-api";
 import { WhatsappLinkSection } from "../components/whatsapp-link-section";
 import type { SettingsCategoryId } from "../settings-categories";
@@ -32,8 +30,6 @@ type SettingsSection = {
 function buildSections(showProSettings: boolean): SettingsSection[] {
   return [
     ...(showProSettings ? [{ id: "reminders" as const, title: t("frontend.subscriptions.reminder_settings_title"), description: t("frontend.subscriptions.reminders_desc"), icon: Bell, helpTarget: HELP_TARGETS.reminders }] : []),
-    { id: "locale", title: t("frontend.profile.language"), description: t("frontend.profile.language"), icon: Globe, helpTarget: HELP_TARGETS.language },
-    ...(showProSettings ? [{ id: "timezone" as const, title: t("frontend.subscriptions.timezone"), description: t("frontend.subscriptions.timezone_description"), icon: Clock, helpTarget: HELP_TARGETS.timezone }] : []),
     ...(showProSettings ? [{ id: "public-api" as const, title: t("frontend.public_api.section_title"), description: t("frontend.public_api.description"), icon: KeyRound, helpTarget: HELP_TARGETS.publicApi }] : []),
     { id: "whatsapp-link", title: t("frontend.whatsapp_link.section_title"), description: t("frontend.whatsapp_link.section_description"), icon: MessageCircle, helpTarget: HELP_TARGETS.whatsapp },
     { id: "code-services", title: t("frontend.code_services.tenant_section_title"), description: t("frontend.code_services.product_description"), icon: Shield, helpTarget: HELP_TARGETS.codeServices },
@@ -73,7 +69,7 @@ function CategoryList({ sections, activeSection, onSelect }: { sections: Setting
   );
 }
 
-export function SettingsPage({ initialSection }: { initialSection?: SectionId } = {}) {
+export function SettingsPage({ initialSection, initialTab }: { initialSection?: SectionId; initialTab?: string } = {}) {
   const { role, tenantPlan, isMasterSupportContext, dataSource } = useAuthStore();
   const isStarterTenantAdmin = role === "tenant" && tenantPlan === "starter";
   const showProSettings = !isStarterTenantAdmin || isMasterSupportContext;
@@ -120,10 +116,6 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
     switch (sectionId) {
       case "reminders":
         return <ReminderSettingsSection />;
-      case "locale":
-        return <LocaleSection />;
-      case "timezone":
-        return <TimezoneSection />;
       case "my-account":
         if (profileError) {
           return (
@@ -135,7 +127,7 @@ export function SettingsPage({ initialSection }: { initialSection?: SectionId } 
             </div>
           );
         }
-        return profile ? <MyAccountSection profile={profile} onProfileUpdate={setProfile} /> : null;
+        return profile ? <MyAccountSection profile={profile} onProfileUpdate={setProfile} initialTab={initialTab} /> : null;
       case "mailbox":
         return <MailboxSection />;
       case "access-control":

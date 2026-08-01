@@ -31,8 +31,6 @@ vi.mock("../../services/settings-api", () => ({
 }));
 
 vi.mock("../reminder-settings-section", () => ({ ReminderSettingsSection: () => <div>reminders section</div> }));
-vi.mock("../locale-section", () => ({ LocaleSection: () => <div>locale section</div> }));
-vi.mock("../timezone-section", () => ({ TimezoneSection: () => <div>timezone section</div> }));
 vi.mock("../public-api-section", () => ({ PublicApiSection: () => <div>public api section</div> }));
 vi.mock("../code-services-section", () => ({ CodeServicesSection: () => <div>code services section</div> }));
 vi.mock("../mailbox-section", () => ({ MailboxSection: () => <div>mailbox section</div> }));
@@ -97,7 +95,7 @@ describe("SettingsPage", () => {
       await user.click(screen.getByRole("button", { name: "frontend.settings.select_category" }));
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getAllByText("frontend.profile.language").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("frontend.whatsapp_link.section_title").length).toBeGreaterThan(0);
     });
   });
 
@@ -126,7 +124,6 @@ describe("SettingsPage", () => {
 
       expect(screen.getByText("frontend.whatsapp_link.section_title")).toBeInTheDocument();
       expect(screen.queryByText("frontend.subscriptions.reminder_settings_title")).not.toBeInTheDocument();
-      expect(screen.queryByText("frontend.subscriptions.timezone")).not.toBeInTheDocument();
       expect(screen.queryByText("frontend.public_api.section_title")).not.toBeInTheDocument();
     });
 
@@ -157,7 +154,7 @@ describe("SettingsPage", () => {
       expect(screen.getByText("whatsapp link section")).toBeInTheDocument();
     });
 
-    it("exposes contextual targets for Pro reminder and timezone categories", async () => {
+    it("exposes contextual targets for Pro reminder and public-api categories", async () => {
       mockUseAuthStore.mockReturnValue({
         role: "tenant",
         tenantPlan: "pro",
@@ -174,10 +171,10 @@ describe("SettingsPage", () => {
       );
 
       await user.click(screen.getByRole("button", { name: "frontend.settings.cancel" }));
-      await user.click(screen.getByText("frontend.subscriptions.timezone"));
+      await user.click(screen.getByText("frontend.public_api.section_title"));
       expect(screen.getByLabelText("frontend.settings.active_panel")).toHaveAttribute(
         "data-help-id",
-        "admin.settings.timezone",
+        "admin.settings.public-api",
       );
     });
   });

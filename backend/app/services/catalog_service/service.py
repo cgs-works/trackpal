@@ -173,7 +173,9 @@ class CatalogService:
         name = _clean_name(payload.name)
         if await self._plan_name_exists(db, tenant_id, service_id, name):
             raise UserFacingError("plan_name_already_exists")
-        plan = Plan(tenant_id=tenant_id, service_id=service_id, name=name)
+        plan = Plan(
+            tenant_id=tenant_id, service_id=service_id, name=name, price=payload.price
+        )
         db.add(plan)
         await self._commit_catalog_change(db, "plan_name_already_exists")
         await restore_rls_context(db)
@@ -196,6 +198,8 @@ class CatalogService:
             if await self._plan_name_exists(db, tenant_id, service_id, name, plan_id):
                 raise UserFacingError("plan_name_already_exists")
             plan.name = name
+        if "price" in payload.model_fields_set:
+            plan.price = payload.price
         await self._commit_catalog_change(db, "plan_name_already_exists")
         await restore_rls_context(db)
         await db.refresh(plan)

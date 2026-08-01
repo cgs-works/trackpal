@@ -3,6 +3,7 @@ import { useAuthStore } from "@/store/auth";
 import { PasswordSection } from "../components/password-section";
 import { ProfileSection } from "../components/profile-section";
 import { DataTabContent } from "../components/data-tab-content";
+import { RegionalSettingsSection } from "../components/regional-settings-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type Profile,
@@ -13,11 +14,13 @@ import {
 interface MyAccountSectionProps {
   profile: Profile;
   onProfileUpdate: (profile: Profile) => void;
+  initialTab?: string;
 }
 
 export function MyAccountSection({
   profile,
   onProfileUpdate,
+  initialTab,
 }: MyAccountSectionProps) {
   const { isMasterSupportContext, dataSource } = useAuthStore();
 
@@ -28,15 +31,21 @@ export function MyAccountSection({
     return dataSource.settings.updateProfile(payload);
   }
 
+  const defaultTab =
+    initialTab === "regional" ? "regional" : "profile";
+
   return (
     <Tabs
-      defaultValue="profile"
+      defaultValue={defaultTab}
       orientation="horizontal"
       className="w-full"
     >
       <TabsList variant="line" aria-label={t("frontend.my_account.section_heading")}>
         <TabsTrigger value="profile">
           {t("frontend.my_account.tab_profile")}
+        </TabsTrigger>
+        <TabsTrigger value="regional">
+          {t("frontend.my_account.tab_regional")}
         </TabsTrigger>
         {!isMasterSupportContext && (
           <TabsTrigger value="security">
@@ -54,6 +63,10 @@ export function MyAccountSection({
           onProfileUpdate={onProfileUpdate}
           onSave={handleProfileSave}
         />
+      </TabsContent>
+
+      <TabsContent value="regional" className="pt-6">
+        <RegionalSettingsSection />
       </TabsContent>
 
       {!isMasterSupportContext && (

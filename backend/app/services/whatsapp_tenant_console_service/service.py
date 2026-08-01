@@ -55,6 +55,7 @@ class WhatsAppTenantConsoleService(
     _format_short_date = _._format_short_date
     _calculate_subscription_expiry = _._calculate_subscription_expiry
     _parse_iso_date = _._parse_iso_date
+    _load_currency_symbol = _._load_currency_symbol
     _start_clients_flow = _._start_clients_flow
     _handle_client_list_selection = _._handle_client_list_selection
     _handle_client_select = _._handle_client_select
@@ -86,6 +87,8 @@ class WhatsAppTenantConsoleService(
     _handle_catalog_edit_plan = _._handle_catalog_edit_plan
     _handle_catalog_create_service_name = _._handle_catalog_create_service_name
     _handle_catalog_create_plan_name = _._handle_catalog_create_plan_name
+    _handle_catalog_create_plan_price = _._handle_catalog_create_plan_price
+    _handle_catalog_edit_plan_price = _._handle_catalog_edit_plan_price
     _handle_catalog_empty_plan_menu = _._handle_catalog_empty_plan_menu
     _handle_catalog_post_action = _._handle_catalog_post_action
     _show_catalog_delete_service_list = _._show_catalog_delete_service_list

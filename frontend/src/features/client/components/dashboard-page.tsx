@@ -20,6 +20,7 @@ import {
   type ClientActiveSubscription,
 } from "../services/client-dashboard-api";
 import { ServiceIcon } from "@/features/catalog/components/service-icon";
+import { formatPrice } from "@/features/admin/services/catalog-api";
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -38,7 +39,13 @@ function daysUntil(iso: string): number {
 
 /* ── Subscription Table ─────────────────────────────────────── */
 
-function SubscriptionTable({ subscriptions }: { subscriptions: ClientActiveSubscription[] }) {
+function SubscriptionTable({
+  subscriptions,
+  currency,
+}: {
+  subscriptions: ClientActiveSubscription[];
+  currency: ClientDashboardData["currency"];
+}) {
   if (subscriptions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -85,7 +92,18 @@ function SubscriptionTable({ subscriptions }: { subscriptions: ClientActiveSubsc
                       <span>{sub.service_name}</span>
                     </div>
                   </td>
-                  <td className="p-3">{sub.plan_name}</td>
+                  <td className="p-3">
+                    <div>{sub.plan_name}</div>
+                    {sub.plan_price && currency ? (
+                      <div className="text-xs text-muted-foreground">
+                        {formatPrice(sub.plan_price, currency, "en-US")}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">
+                        {t("frontend.dashboard.client.price_on_request")}
+                      </div>
+                    )}
+                  </td>
                   <td className="p-3">
                     <SubscriptionStatusBadge status={sub.status} />
                   </td>
@@ -131,6 +149,15 @@ function SubscriptionTable({ subscriptions }: { subscriptions: ClientActiveSubsc
                     <p className="font-medium">{sub.service_name}</p>
                   </div>
                   <p className="text-sm text-muted-foreground">{sub.plan_name}</p>
+                  {sub.plan_price && currency ? (
+                    <p className="text-xs text-muted-foreground">
+                      {formatPrice(sub.plan_price, currency, "en-US")}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {t("frontend.dashboard.client.price_on_request")}
+                    </p>
+                  )}
                 </div>
                 <SubscriptionStatusBadge status={sub.status} />
               </div>
@@ -298,7 +325,10 @@ export function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <SubscriptionTable subscriptions={dashboard.subscriptions} />
+                <SubscriptionTable
+                  subscriptions={dashboard.subscriptions}
+                  currency={dashboard.currency}
+                />
               </CardContent>
             </Card>
 

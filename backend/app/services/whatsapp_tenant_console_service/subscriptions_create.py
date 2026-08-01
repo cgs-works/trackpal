@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import math
 
 from app.services.whatsapp_navigation import is_next
+from .format_helpers import _load_currency_symbol
 
 
 PAGE_SIZE = 7
@@ -150,8 +151,9 @@ async def _handle_subscriptions_create_service(
     if not plans:
         return self._t("wa.tenant.errors.no_plans")
     page_plans, _safe_page, total_pages = _paginate(plans, 1, PAGE_SIZE)
+    symbol = await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
     plan_list, selection_map = self._format_plan_list(
-        page_plans, page=1, total_pages=total_pages
+        page_plans, page=1, total_pages=total_pages, symbol=symbol
     )
 
     session.temp_data.update(
@@ -202,8 +204,11 @@ async def _handle_subscriptions_create_plan(
         if page >= total_pages:
             return self._t(self.KEY_SUBSCRIPTIONS_INVALID_SELECTION)
         page_plans, _safe_page, _total_pages = _paginate(plans, page + 1, PAGE_SIZE)
+        symbol = (
+            await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
+        )
         plan_list, selection_map = self._format_plan_list(
-            page_plans, page=page + 1, total_pages=total_pages
+            page_plans, page=page + 1, total_pages=total_pages, symbol=symbol
         )
         session.temp_data["plan_page"] = page + 1
         session.selection_map = selection_map

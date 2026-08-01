@@ -6,7 +6,7 @@ import type { ReminderSettings } from "@/features/admin/services/reminder-api";
 import type { TenantSettings } from "@/features/admin/services/settings-api";
 import type { PlanBaselineFactory } from "./demo-workspace";
 
-export const DEMO_BASELINE_VERSION = 3;
+export const DEMO_BASELINE_VERSION = 4;
 
 export interface DemoCodeService {
   id: string;
@@ -104,6 +104,8 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
       tenant_id: metadata.tenantId,
       locale: "en",
       timezone: "UTC",
+      country: "US",
+      currency: null,
       created_at: metadata.serverTime,
       updated_at: metadata.serverTime,
     },
@@ -225,25 +227,26 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
     created_at: now,
     updated_at: now,
   }));
-  const planDefinitions: Array<[string, string, string]> = [
-    ["service-disney", "disney-basic", "Básico"],
-    ["service-disney", "disney-premium", "Premium"],
-    ["service-hbo_max", "hbo-basic", "Básico"],
-    ["service-hbo_max", "hbo-premium", "Premium"],
-    ["service-netflix", "netflix-basic", "Básico"],
-    ["service-netflix", "netflix-premium", "Premium HD"],
-    ["service-prime_video", "prime-basic", "Básico"],
-    ["service-prime_video", "prime-premium", "Premium"],
-    ["service-spotify", "spotify-individual", "Individual"],
-    ["service-spotify", "spotify-family", "Familiar"],
-    ["service-universal_plus", "universal-basic", "Básico"],
-    ["service-universal_plus", "universal-premium", "Premium"],
+  const planDefinitions: Array<[string, string, string, string | null]> = [
+    ["service-disney", "disney-basic", "Básico", null],
+    ["service-disney", "disney-premium", "Premium", "25.00"],
+    ["service-hbo_max", "hbo-basic", "Básico", null],
+    ["service-hbo_max", "hbo-premium", "Premium", "22.00"],
+    ["service-netflix", "netflix-basic", "Básico", "8.50"],
+    ["service-netflix", "netflix-premium", "Premium HD", "18.00"],
+    ["service-prime_video", "prime-basic", "Básico", null],
+    ["service-prime_video", "prime-premium", "Premium", "15.00"],
+    ["service-spotify", "spotify-individual", "Individual", "9.99"],
+    ["service-spotify", "spotify-family", "Familiar", "16.99"],
+    ["service-universal_plus", "universal-basic", "Básico", null],
+    ["service-universal_plus", "universal-premium", "Premium", "12.00"],
   ];
-  const plans: Plan[] = planDefinitions.map(([serviceKey, planKey, name]) => ({
+  const plans: Plan[] = planDefinitions.map(([serviceKey, planKey, name, price]) => ({
     id: `${metadata.tenantId}-${planKey}`,
     tenant_id: metadata.tenantId,
     service_id: `${metadata.tenantId}-${serviceKey}`,
     name,
+    price,
     created_at: now,
     updated_at: now,
   }));
@@ -252,6 +255,10 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
   return {
     plan_specific: {
       ...starter,
+      tenant_settings: {
+        ...starter.tenant_settings,
+        currency: "USD",
+      },
       clients,
       services,
       plans,

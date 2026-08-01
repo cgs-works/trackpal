@@ -31,7 +31,8 @@ safe_navigation:
   settings_category: null
 safe_links:
   - route: /admin/settings
-    settings_category: timezone
+    settings_category: my-account
+    tab: regional
   - route: /admin/settings
     settings_category: reminders
 related_topics:

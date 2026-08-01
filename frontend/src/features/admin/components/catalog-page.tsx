@@ -28,9 +28,12 @@ import type {
   DeletePreview,
   ServiceCreate,
   ServiceUpdate,
+  CurrencyMeta,
 } from "../services/catalog-api";
+import { formatPrice } from "../services/catalog-api";
 import { useCatalogStore } from "@/store/catalog";
 import { useAuthStore } from "@/store/auth";
+import { useSettingsStore } from "@/store/settings";
 import { ServiceFormDialog } from "./service-form-dialog";
 
 const CATALOG_ERROR_KEYS: Record<string, string> = {
@@ -39,6 +42,7 @@ const CATALOG_ERROR_KEYS: Record<string, string> = {
   catalog_name_required: "frontend.catalog.invalid_name",
   catalog_name_too_long: "frontend.catalog.invalid_name",
   catalog_icon_invalid: "frontend.catalog.invalid_icon",
+  plan_price_invalid: "frontend.catalog.invalid_price",
   invalid_icon_reference: "frontend.catalog.invalid_icon",
   service_not_found: "frontend.catalog.target_not_found",
   plan_not_found: "frontend.catalog.target_not_found",
@@ -99,51 +103,106 @@ function catalogErrorMessage(error: unknown, fallbackKey: string): string {
   return t(fallbackKey);
 }
 
-// ── Rename Dialog ──────────────────────────────────────────────
-interface RenameDialogProps {
+// ── Price display helper ──────────────────────────────────────
+function useCurrencyMeta(): CurrencyMeta | null {
+  const tenantSettings = useSettingsStore((s) => s.tenantSettings);
+  const currencyOptions = useSettingsStore((s) => s.currencyOptions);
+  if (!tenantSettings?.currency || !currencyOptions) return null;
+  return (
+    currencyOptions.currencies.find(
+      (c) => c.code === tenantSettings.currency,
+    ) ?? null
+  );
+}
+
+function useLocale(): string {
+  const tenantSettings = useSettingsStore((s) => s.tenantSettings);
+  return tenantSettings?.locale ?? navigator.language;
+}
+
+function PlanPriceDisplay({ price }: { price: string | null }) {
+  const currencyMeta = useCurrencyMeta();
+  const locale = useLocale();
+
+  if (!price) {
+    return (
+      <span className="text-sm text-muted-foreground italic">
+        {t("frontend.catalog.price_on_request")}
+      </span>
+    );
+  }
+
+  if (!currencyMeta) {
+    return <span className="text-sm font-medium">{price}</span>;
+  }
+
+  return (
+    <span className="text-sm font-medium">
+      {formatPrice(price, currencyMeta, locale)}
+    </span>
+  );
+}
+
+// ── Edit Plan Dialog ──────────────────────────────────────────
+interface EditPlanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
   currentName: string;
-  onRename: (name: string) => Promise<void>;
+  currentPrice: string | null;
+  onSave: (name: string, price: string | null) => Promise<void>;
   saving: boolean;
 }
 
-function RenameDialog({
+function EditPlanDialog({
   open,
   onOpenChange,
-  title,
   currentName,
-  onRename,
+  currentPrice,
+  onSave,
   saving,
-}: RenameDialogProps) {
+}: EditPlanDialogProps) {
   const [name, setName] = useState(currentName);
+  const [price, setPrice] = useState(currentPrice ?? "");
 
   useEffect(() => {
-    if (open) setName(currentName);
-  }, [open, currentName]);
+    if (open) {
+      setName(currentName);
+      setPrice(currentPrice ?? "");
+    }
+  }, [open, currentName, currentPrice]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (name.trim() && name !== currentName) {
-      await onRename(name.trim());
-    }
+    if (!name.trim()) return;
+    const trimmedPrice = price.trim();
+    await onSave(name.trim(), trimmedPrice ? trimmedPrice : null);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{t("frontend.catalog.rename_plan_prompt")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="rename-input">{t("frontend.common.name")}</Label>
+            <Label htmlFor="edit-plan-name">{t("frontend.common.name")}</Label>
             <Input
-              id="rename-input"
+              id="edit-plan-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-plan-price">{t("frontend.catalog.price")}</Label>
+            <Input
+              id="edit-plan-price"
+              type="text"
+              inputMode="decimal"
+              placeholder={t("frontend.catalog.price_placeholder")}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
             />
           </div>
           <DialogFooter>
@@ -354,18 +413,15 @@ export function CatalogPage() {
   const [serviceSaving, setServiceSaving] = useState(false);
   const [serviceFormError, setServiceFormError] = useState("");
 
-  // Create forms
+  // Create plan form
   const [newPlanName, setNewPlanName] = useState("");
+  const [newPlanPrice, setNewPlanPrice] = useState("");
   const [creatingPlan, setCreatingPlan] = useState(false);
 
-  // Rename state
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameTitle, setRenameTitle] = useState("");
-  const [renameCurrentName, setRenameCurrentName] = useState("");
-  const [renameSaving, setRenameSaving] = useState(false);
-  const [renameCallback, setRenameCallback] = useState<
-    ((name: string) => Promise<void>) | null
-  >(null);
+  // Edit plan state
+  const [editPlanOpen, setEditPlanOpen] = useState(false);
+  const [editPlanTarget, setEditPlanTarget] = useState<Plan | null>(null);
+  const [editPlanSaving, setEditPlanSaving] = useState(false);
 
   // Delete state
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -474,8 +530,13 @@ export function CatalogPage() {
     if (!newPlanName.trim() || !selectedServiceId) return;
     setCreatingPlan(true);
     try {
-      await dataSource.catalog.createPlan(selectedServiceId, { name: newPlanName.trim() });
+      const trimmedPrice = newPlanPrice.trim();
+      await dataSource.catalog.createPlan(selectedServiceId, {
+        name: newPlanName.trim(),
+        price: trimmedPrice ? trimmedPrice : null,
+      });
       setNewPlanName("");
+      setNewPlanPrice("");
       invalidatePlans(selectedServiceId);
       await loadPlansData();
       toast.success(t("frontend.catalog.plan_created"));
@@ -488,29 +549,28 @@ export function CatalogPage() {
     }
   }
 
+  // ── Edit plan ──────────────────────────────────────────────
+  function openEditPlan(plan: Plan) {
+    setEditPlanTarget(plan);
+    setEditPlanOpen(true);
+  }
 
-
-  // ── Rename plan ────────────────────────────────────────────
-  function openRenamePlan(plan: Plan) {
-    setRenameTitle(t("frontend.catalog.rename_plan_prompt"));
-    setRenameCurrentName(plan.name);
-    setRenameCallback(() => async (name: string) => {
-      setRenameSaving(true);
-      try {
-        await dataSource.catalog.updatePlan(selectedServiceId, plan.id, { name });
-        invalidatePlans(selectedServiceId);
-        await loadPlansData();
-        toast.success(t("frontend.catalog.plan_renamed"));
-        setRenameOpen(false);
-      } catch (err) {
-        toast.error(
+  async function handleEditPlanSave(name: string, price: string | null) {
+    if (!editPlanTarget || !selectedServiceId) return;
+    setEditPlanSaving(true);
+    try {
+      await dataSource.catalog.updatePlan(selectedServiceId, editPlanTarget.id, { name, price });
+      invalidatePlans(selectedServiceId);
+      await loadPlansData();
+      toast.success(t("frontend.catalog.plan_renamed"));
+      setEditPlanOpen(false);
+    } catch (err) {
+      toast.error(
         catalogErrorMessage(err, "frontend.catalog.error_update_plan")
-        );
-      } finally {
-        setRenameSaving(false);
-      }
-    });
-    setRenameOpen(true);
+      );
+    } finally {
+      setEditPlanSaving(false);
+    }
   }
 
   // ── Delete service ─────────────────────────────────────────
@@ -690,20 +750,30 @@ export function CatalogPage() {
                   <h2 className="text-sm font-medium text-muted-foreground mb-2">
                     {t("frontend.catalog.plans")}
                   </h2>
-                  <form onSubmit={handleCreatePlan} className="flex gap-2">
+                  <form onSubmit={handleCreatePlan} className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder={t("frontend.catalog.new_plan_placeholder")}
+                        value={newPlanName}
+                        onChange={(e) => setNewPlanName(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="submit"
+                        size="icon"
+                        disabled={creatingPlan || !newPlanName.trim()}
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    </div>
                     <Input
-                      placeholder={t("frontend.catalog.new_plan_placeholder")}
-                      value={newPlanName}
-                      onChange={(e) => setNewPlanName(e.target.value)}
-                      className="flex-1"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder={t("frontend.catalog.price_placeholder")}
+                      value={newPlanPrice}
+                      onChange={(e) => setNewPlanPrice(e.target.value)}
+                      aria-label={t("frontend.catalog.price")}
                     />
-                    <Button
-                      type="submit"
-                      size="icon"
-                      disabled={creatingPlan || !newPlanName.trim()}
-                    >
-                      <Plus className="size-4" />
-                    </Button>
                   </form>
                 </div>
 
@@ -729,12 +799,13 @@ export function CatalogPage() {
                           <span className="text-sm font-medium">
                             {plan.name}
                           </span>
+                          <PlanPriceDisplay price={plan.price} />
                         </div>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openRenamePlan(plan)}
+                            onClick={() => openEditPlan(plan)}
                           >
                             <Pencil className="size-3.5 mr-1" />
                             {t("frontend.catalog.rename")}
@@ -775,16 +846,14 @@ export function CatalogPage() {
         onSubmit={handleServiceFormSubmit}
       />
 
-      {/* Rename dialog (Plans only) */}
-      <RenameDialog
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-        title={renameTitle}
-        currentName={renameCurrentName}
-        onRename={async (name) => {
-          if (renameCallback) await renameCallback(name);
-        }}
-        saving={renameSaving}
+      {/* Edit plan dialog (name + price) */}
+      <EditPlanDialog
+        open={editPlanOpen}
+        onOpenChange={setEditPlanOpen}
+        currentName={editPlanTarget?.name ?? ""}
+        currentPrice={editPlanTarget?.price ?? null}
+        onSave={handleEditPlanSave}
+        saving={editPlanSaving}
       />
 
       {/* Delete preview dialog */}

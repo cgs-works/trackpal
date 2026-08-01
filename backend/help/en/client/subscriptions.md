@@ -34,7 +34,7 @@ related_topics:
 
 # Your subscriptions
 
-Each subscription shows its service, plan, status, start date, and expiration date.
+Each subscription shows its service, plan, status, start date, and expiration date. When the provider has set a plan price, the subscription list also displays it with the business's currency symbol.
 
 ## Understand the status
 

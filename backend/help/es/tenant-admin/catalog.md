@@ -25,6 +25,7 @@ search_tags:
   - eliminar servicio
   - eliminar plan
   - impacto de eliminación
+  - precio
 synonyms:
   - catálogo de productos
   - oferta
@@ -69,6 +70,10 @@ En **TrackPal Pro**, el Catálogo reúne tus servicios y los planes disponibles 
 ## Crear y organizar
 
 Crea un servicio, ábrelo y añade sus planes. También puedes cambiar sus nombres desde Web o desde **Catálogo** en el menú de WhatsApp de **TrackPal Pro**. Una lista vacía solo significa que todavía no has creado el primer servicio o plan.
+
+## Precios de los planes
+
+Los planes pueden tener un precio opcional que se muestra con el símbolo de moneda de tu negocio (por ejemplo, "Bs. 12,50"). Los planes sin precio asignado muestran "Precio a consultar." Puedes asignar un precio al plan desde el editor de catálogo en Web o desde la consola de WhatsApp.
 
 ## Iconos de servicio
 

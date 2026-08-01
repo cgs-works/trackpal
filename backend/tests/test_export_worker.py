@@ -125,8 +125,9 @@ async def test_account_profile_csv_has_approved_fields(db_session, active_tenant
         "current_plan",
         "preferred_language",
         "time_zone",
+        "currency",
     ]
-    assert len(headers) == 7
+    assert len(headers) == 8
 
 
 # ── Client Data CSV tests ──────────────────────────────────────
@@ -1129,10 +1130,11 @@ async def test_service_catalog_csv_has_approved_fields(db_session, active_tenant
         "service_created_on",
         "service_updated_on",
         "plan_name",
+        "plan_price",
         "plan_created_on",
         "plan_updated_on",
     ]
-    assert len(headers) == 7
+    assert len(headers) == 8
 
 
 async def test_service_catalog_csv_data_rows(db_session, active_tenant_user):
@@ -1978,10 +1980,10 @@ async def test_worker_zip_contains_catalog_and_subscription_data(
         # Find the New Service line
         new_svc_line = [ln for ln in catalog_lines if "New Service" in ln]
         assert len(new_svc_line) == 1
-        # Check that plan column is empty for service without plans
+        # Check that plan columns are empty for service without plans
         assert (
-            new_svc_line[0].endswith(",,") or new_svc_line[0].count(",") == 6
-        )  # seven columns
+            new_svc_line[0].endswith(",,") or new_svc_line[0].count(",") == 7
+        )  # eight columns
 
         sub_csv = zf.read("subscription-snapshot.csv").decode("utf-8-sig")
         assert "sub@netflix.com" in sub_csv
