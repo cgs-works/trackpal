@@ -373,7 +373,9 @@ async def _handle_catalog_plan_select(
         await session_service.save_session(session)
     symbol = await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
     return (
-        self._format_plan_detail(plan, symbol=symbol) + "\n" + self._t(self.KEY_CATALOG_PLAN_ACTIONS)
+        self._format_plan_detail(plan, symbol=symbol)
+        + "\n"
+        + self._t(self.KEY_CATALOG_PLAN_ACTIONS)
     )
 
 

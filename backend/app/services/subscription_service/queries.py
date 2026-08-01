@@ -18,9 +18,7 @@ async def get_subscription(
     res = await db.execute(
         select(Subscription)
         .options(selectinload(Subscription.plan))
-        .where(
-            Subscription.tenant_id == tenant_id, Subscription.id == subscription_id
-        )
+        .where(Subscription.tenant_id == tenant_id, Subscription.id == subscription_id)
     )
     return res.scalar_one_or_none()
 
