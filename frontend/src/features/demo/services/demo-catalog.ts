@@ -235,11 +235,13 @@ export function createDemoCatalog(
         throw new DemoCatalogError("plan_name_already_exists");
       }
       const now = new Date().toISOString();
+      const price = payload.price !== undefined ? payload.price : null;
       const plan: Plan = {
         id: `plan-${metadata.tenantId}-${Date.now()}`,
         tenant_id: metadata.tenantId,
         service_id: serviceId,
         name,
+        price,
         created_at: now,
         updated_at: now,
       };
@@ -255,7 +257,8 @@ export function createDemoCatalog(
       if (current.plans.some((plan) => plan.id !== planId && plan.service_id === serviceId && plan.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
         throw new DemoCatalogError("plan_name_already_exists");
       }
-      const updated = { ...existing, name, updated_at: new Date().toISOString() };
+      const price = payload.price !== undefined ? payload.price : existing.price;
+      const updated = { ...existing, name, price, updated_at: new Date().toISOString() };
       updateState(workspace, (state) => ({
         ...state,
         plans: state.plans.map((plan) => plan.id === planId ? updated : plan),
