@@ -40,11 +40,14 @@ Deep module at `backend/app/core/currency_catalog/`:
 ```
 list_countries()          → [{"code": "VE", "currency": "VES"}, ...]   # ISO 3166-1 alpha-2 only
 list_currencies()         → [{"code": "VES", "symbol": "Bs.", "minor_units": 2}, ...]
+                            # currencies with ≥1 country assignment (excludes fund codes like XAU/XDR)
 official_currency_of(code) → "VES" | None
 symbol_of(code)           → "Bs." | None
-validate_currency(code)   → bool
-validate_country(code)    → bool
 ```
+
+Validation is **derived**, not separate methods: valid currency = `symbol_of(c) is not None`; valid country = `official_currency_of(c) is not None`. Smaller interface, same leverage.
+
+Error mode: the file is the single committed source with no fallback tier, so a missing/corrupt `data.json` is a deploy bug → the module fails fast on first access with a clear error (never a silent empty list).
 
 - No external-provider seam: exactly one real adapter (the bundled file). The timezone catalog's external-provider stub is not copied (`one adapter means a hypothetical seam`).
 - `backend/scripts/regenerate_currency_catalog.py` — dev-time only, run via `uv run --with babel`. Uses `babel.core.get_global("territory_currencies")` (territory → current currency), `babel.numbers.get_currency_symbol(code, "en")` (symbol), `babel.core.get_global("currency_fractions")` (minor units). Filters territories to `^[A-Z]{2}$` (excludes 001, EU, …). `babel` is NOT a runtime dependency.
@@ -64,11 +67,11 @@ Nullable without defaults (unlike `timezone`/`locale` which default): "not confi
 ## 5. Backend API
 
 - `GET /api/v1/tenant-settings/currencies` → `{countries: [...], currencies: [...]}`. Auth: `require_tenant_or_master` + `DemoGuardedUser` (precedent: `/tenant-settings/timezones`).
-- `TenantSettingsResponse` / `TenantSettingsUpdate`: add `country`, `currency`. Validators call `validate_country` / `validate_currency`; invalid → 409.
+- `TenantSettingsResponse` / `TenantSettingsUpdate`: add `country`, `currency`. Validators use the derived lookups (`symbol_of` / `official_currency_of` is not None); invalid → 409.
 - Gate identical to timezone: Starter tenant role → fields nulled in GET, non-null rejected (404) in PUT. Master support bypasses.
 - `PlanCreate` / `PlanUpdate` / `PlanResponse`: add `price: Decimal | None` (`condecimal(max_digits=12, decimal_places=2)`, min 0). Catalog service passes the field through.
 - Public API Catalog: nested plans expose `price` and `currency` (derived from tenant settings).
-- Tenant Data Export: `service-catalog.csv` adds `plan_price`; `account-profile.csv` adds `currency`. Documented as a stable-contract change.
+- Tenant Data Export: `service-catalog.csv` adds `plan_price`; `account-profile.csv` adds `currency`. Documented as a stable-contract change. Null price → empty CSV field, consistent with the existing empty-Plan-fields convention.
 
 ## 6. Frontend
 
@@ -82,8 +85,18 @@ Nullable without defaults (unlike `timezone`/`locale` which default): "not confi
 
 ## 7. Documentation & domain model
 
-- `backend/CONTEXT.md`: **Catalog** definition updated (prices are now part of the catalog — current text says otherwise). New terms: **Currency**, **Country**, **Regional Settings**, **Currency Catalog**, **Official Currency**. Starter/Pro table: country/currency Pro-only.
-- `frontend/CONTEXT.md`: "País y moneda" tab + pickers terms.
+- `backend/CONTEXT.md`: **Catalog** definition updated (prices are now part of the catalog — current text says otherwise). New glossary terms:
+
+  | Term | Definition |
+  |---|---|
+  | **Country** | ISO 3166-1 alpha-2 territory chosen by the Tenant as its business country. Selectable from the Currency Catalog. |
+  | **Currency** | ISO 4217 currency chosen by the Tenant. Plans have no currency of their own — price is always displayed in the Tenant's Currency. |
+  | **Official Currency** | The territory's preferred legal-tender currency per CLDR data — not necessarily locally issued (e.g. USD in Ecuador/Panama). It is suggested first in the Currency picker when a Country is selected, without auto-selecting. |
+  | **Currency Catalog** | The selectable set of Countries and Currencies with their symbols and minor units. Selectable Currencies are those with ≥1 Country assignment. |
+
+  Starter/Pro behavior table: country/currency Pro-only (hidden/blocked for Starter, like timezone).
+
+- `frontend/CONTEXT.md`: new term **Regional Tab** (UI label "País y moneda" / "Country & currency"): the Mi Cuenta tab with the Country and Currency pickers; the Currency picker surfaces the Official Currency of the selected Country first, separated from the rest.
 - New `docs/architecture/regional-settings.md`; update `subscriptions.md` (tenant-settings section) and `tenant-data-export.md` (contract change).
 - This design doc committed to git.
 
@@ -96,5 +109,5 @@ Nullable without defaults (unlike `timezone`/`locale` which default): "not confi
 
 ## 9. Testing
 
-- Backend (pytest + aiosqlite): catalog module unit tests (file load, validation, official currency, symbol); tenant-settings endpoint tests (get/put, gate nulling for Starter, 409 invalid codes); plan price in catalog CRUD; public catalog includes price+currency; export contract includes new fields.
+- Backend (pytest + aiosqlite): catalog module unit tests against the real data file (well-known entries: VE→VES→"Bs.", US→USD→"$"; data integrity: unique country codes, every country currency present in the currencies map, minor_units ≥ 0); derived-validation behavior; tenant-settings endpoint tests (get/put, gate nulling for Starter, 409 invalid codes); plan price in catalog CRUD; public catalog includes price+currency; export contract includes new fields.
 - Frontend (vitest): picker grouping/separator behavior, tab gating, price input/display, demo parity specs.
