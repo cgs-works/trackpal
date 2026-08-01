@@ -104,6 +104,8 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
       tenant_id: metadata.tenantId,
       locale: "en",
       timezone: "UTC",
+      country: null,
+      currency: null,
       created_at: metadata.serverTime,
       updated_at: metadata.serverTime,
     },

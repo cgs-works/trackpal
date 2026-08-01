@@ -7,12 +7,15 @@ import type {
   TenantCodeService,
   TenantSettings,
   TenantSettingsUpdate,
+  CountryOption,
+  CurrencyOption,
 } from "@/features/admin/services/settings-api";
 import type { ReminderSettings, ReminderSettingsUpdate } from "@/features/admin/services/reminder-api";
 import { t } from "@/i18n";
 import type { DemoAuthMetadata } from "@/store/auth";
 import { createDemoBaseline, readStarterDemoState, type StarterDemoWorkspaceState } from "./demo-baseline";
 import type { DemoWorkspaceRepository } from "./demo-workspace";
+import currencyCatalog from "@/lib/currency-catalog.json";
 
 function now(metadata: DemoAuthMetadata): string {
   return metadata.serverTime;
@@ -102,6 +105,18 @@ function demoTimezoneOptions(): { value: string; label: string; group: string }[
   }));
 }
 
+const catalogCountries = Object.values(
+  currencyCatalog.countries,
+) as unknown as CountryOption[];
+
+const catalogCurrencies = Object.entries(
+  currencyCatalog.currencies as Record<string, { symbol: string; minor_units: number }>,
+).map(([code, meta]) => ({ code, ...meta })) as CurrencyOption[];
+
+const VALID_COUNTRY_CODES = new Set(catalogCountries.map((c) => c.code));
+
+const VALID_CURRENCY_CODES = new Set(catalogCurrencies.map((c) => c.code));
+
 function validateTenantSettings(payload: TenantSettingsUpdate): TenantSettingsUpdate {
   const normalized: TenantSettingsUpdate = { ...payload };
   if (payload.locale !== undefined && payload.locale !== null) {
@@ -113,6 +128,20 @@ function validateTenantSettings(payload: TenantSettingsUpdate): TenantSettingsUp
   }
   if (payload.timezone !== undefined && payload.timezone !== null && !isValidTimezone(payload.timezone)) {
     throw new Error(t("frontend.subscriptions.error_invalid_timezone"));
+  }
+  if (payload.country !== undefined && payload.country !== null) {
+    const country = payload.country.trim().toUpperCase();
+    if (!VALID_COUNTRY_CODES.has(country)) {
+      throw new Error(t("frontend.profile.error_invalid_country"));
+    }
+    normalized.country = country;
+  }
+  if (payload.currency !== undefined && payload.currency !== null) {
+    const currency = payload.currency.trim().toUpperCase();
+    if (!VALID_CURRENCY_CODES.has(currency)) {
+      throw new Error(t("frontend.profile.error_invalid_currency"));
+    }
+    normalized.currency = currency;
   }
   return normalized;
 }
@@ -186,6 +215,8 @@ function defaultTenantSettings(metadata: DemoAuthMetadata): TenantSettings {
     tenant_id: metadata.tenantId,
     locale: "en",
     timezone: "UTC",
+    country: null,
+    currency: null,
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -288,6 +319,13 @@ export function createDemoSettings(
 
     async loadTimezoneOptions(): Promise<{ value: string; label: string; group: string }[]> {
       return demoTimezoneOptions();
+    },
+
+    async loadCurrencyOptions(): Promise<{ countries: CountryOption[]; currencies: CurrencyOption[] }> {
+      return {
+        countries: catalogCountries,
+        currencies: catalogCurrencies,
+      };
     },
 
     async loadPublicApiKey(): Promise<PublicApiKeyConfig | null> {
