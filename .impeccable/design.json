@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-10T00:00:00.000Z",
+  "generatedAt": "2026-08-01T00:55:47.823Z",
   "title": "Design System: TrackPal",
   "extensions": {
     "colorMeta": {
@@ -65,7 +65,7 @@
       "refersTo": "button-primary",
       "description": "Primary action using Console Cyan and a visible focus ring.",
       "html": "<button class=\"ds-button-primary\">Guardar cambios</button>",
-      "css": ".ds-button-primary { height: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius, 0.625rem); background: var(--primary); color: var(--primary-foreground); font: 500 0.875rem/1 'Geist Variable', sans-serif; transition: background-color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-primary:hover { background: color-mix(in oklch, var(--primary), var(--background) 15%); } .ds-button-primary:active { transform: translateY(1px); } .ds-button-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+      "css": ".ds-button-primary { height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius, 0.625rem); background: var(--primary); color: var(--primary-foreground); font: 500 0.875rem/1 'IBM Plex Sans Variable', sans-serif; transition: background-color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-primary:hover { background: color-mix(in oklch, var(--primary), var(--background) 15%); } .ds-button-primary:active { transform: translateY(1px); } .ds-button-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
     },
     {
       "name": "Outline Button",
@@ -73,7 +73,7 @@
       "refersTo": "button-outline",
       "description": "Secondary action for adjacent but lower-priority operations.",
       "html": "<button class=\"ds-button-outline\">Cancelar</button>",
-      "css": ".ds-button-outline { height: 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid var(--border); border-radius: var(--radius, 0.625rem); background: var(--background); color: var(--foreground); font: 500 0.875rem/1 'Geist Variable', sans-serif; transition: background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-outline:hover { background: var(--muted); } .ds-button-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+      "css": ".ds-button-outline { height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0 0.625rem; border: 1px solid var(--border); border-radius: var(--radius, 0.625rem); background: var(--background); color: var(--foreground); font: 500 0.875rem/1 'IBM Plex Sans Variable', sans-serif; transition: background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out; } .ds-button-outline:hover { background: var(--muted); } .ds-button-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
     },
     {
       "name": "Text Input",
@@ -81,7 +81,7 @@
       "refersTo": "input",
       "description": "Compact field with tokenized border, readable placeholder, and strong focus treatment.",
       "html": "<input class=\"ds-input\" placeholder=\"cliente@correo.com\" />",
-      "css": ".ds-input { width: 100%; height: 2rem; min-width: 0; border: 1px solid var(--input); border-radius: var(--radius, 0.625rem); background: transparent; color: var(--foreground); padding: 0.25rem 0.625rem; font: 400 0.875rem/1.4 'Geist Variable', sans-serif; transition: border-color 180ms ease-out, box-shadow 180ms ease-out; } .ds-input::placeholder { color: var(--muted-foreground); opacity: 1; } .ds-input:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); } .ds-input[aria-invalid='true'] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive), transparent 80%); }"
+      "css": ".ds-input { width: 100%; height: 2rem; min-width: 0; border: 1px solid var(--input); border-radius: var(--radius, 0.625rem); background: transparent; color: var(--foreground); padding: 0.25rem 0.625rem; font: 400 0.875rem/1.4 'IBM Plex Sans Variable', sans-serif; transition: border-color 180ms ease-out, box-shadow 180ms ease-out; } .ds-input::placeholder { color: var(--muted-foreground); opacity: 1; } .ds-input:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); } .ds-input[aria-invalid='true'] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive), transparent 80%); }"
     },
     {
       "name": "Operational Card",
@@ -89,7 +89,7 @@
       "refersTo": "card",
       "description": "Rounded container with tonal separation, not decorative shadow.",
       "html": "<section class=\"ds-card\"><div class=\"ds-card-header\"><h3>Mailbox status</h3><p>Última prueba correcta hace 4 minutos.</p></div><div class=\"ds-card-body\">Conexión activa</div></section>",
-      "css": ".ds-card { overflow: hidden; border-radius: calc(var(--radius, 0.625rem) * 1.4); background: var(--card); color: var(--card-foreground); box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 90%); font-family: 'Geist Variable', sans-serif; } .ds-card-header { display: grid; gap: 0.25rem; padding: 1rem; } .ds-card-header h3 { margin: 0; font-size: 1rem; line-height: 1.375; font-weight: 500; } .ds-card-header p { margin: 0; color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.4; } .ds-card-body { border-top: 1px solid var(--border); background: color-mix(in oklch, var(--muted), transparent 50%); padding: 1rem; font-size: 0.875rem; }"
+      "css": ".ds-card { overflow: hidden; border-radius: calc(var(--radius, 0.625rem) * 1.4); background: var(--card); color: var(--card-foreground); box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 90%); font-family: 'IBM Plex Sans Variable', sans-serif; } .ds-card-header { display: grid; gap: 0.25rem; padding: 1rem; } .ds-card-header h3 { margin: 0; font-size: 1rem; line-height: 1.375; font-weight: 500; } .ds-card-header p { margin: 0; color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.4; } .ds-card-body { border-top: 1px solid var(--border); background: color-mix(in oklch, var(--muted), transparent 50%); padding: 1rem; font-size: 0.875rem; }"
     },
     {
       "name": "Status Badge",
@@ -97,7 +97,7 @@
       "refersTo": "status-indicator",
       "description": "Small state label that pairs tone with readable text; color is never the only cue.",
       "html": "<span class=\"ds-status-badge\">Activo</span>",
-      "css": ".ds-status-badge { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 999px; border: 1px solid var(--border); background: var(--muted); color: var(--foreground); padding: 0.125rem 0.5rem; font: 500 0.75rem/1.2 'Geist Variable', sans-serif; } .ds-status-badge::before { content: ''; width: 0.375rem; height: 0.375rem; border-radius: 999px; background: var(--primary); }"
+      "css": ".ds-status-badge { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 999px; border: 1px solid var(--border); background: var(--muted); color: var(--foreground); padding: 0.125rem 0.5rem; font: 500 0.75rem/1.2 'IBM Plex Sans Variable', sans-serif; } .ds-status-badge::before { content: ''; width: 0.375rem; height: 0.375rem; border-radius: 999px; background: var(--primary); }"
     }
   ],
   "narrative": {

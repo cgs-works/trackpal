@@ -18,7 +18,7 @@ vi.mock("@/i18n", () => ({ t: (key: string) => key }));
 const searchPageWithNetflix = {
   icons: ["simple-icons:netflix"],
   total: 1,
-  limit: 64,
+  limit: 10,
   start: 0,
   hasMore: false,
   collections: {
@@ -208,7 +208,7 @@ it("re-searches when reopened with the same initialQuery", async () => {
 
 it("shows an empty state for a successful search with no matches", async () => {
   search.mockResolvedValue({
-    icons: [], total: 0, limit: 64, start: 0, hasMore: false, collections: {},
+    icons: [], total: 0, limit: 10, start: 0, hasMore: false, collections: {},
   });
   renderPicker({ initialQuery: "no-match" });
   expect(await screen.findByText("frontend.icon_picker.empty")).toBeInTheDocument();
@@ -230,15 +230,24 @@ it("keeps the current value when search fails and retries", async () => {
   expect(await screen.findByRole("option", { name: /simple-icons:netflix/ })).toBeInTheDocument();
 });
 
-it("loads and appends the next 64-result page", async () => {
+it("paginates search results in pages of ten icons", async () => {
+  const firstPageIcons = [
+    "simple-icons:netflix",
+    ...Array.from({ length: 9 }, (_, index) => `simple-icons:service-${index}`),
+  ];
   search
-    .mockResolvedValueOnce({ ...searchPageWithNetflix, total: 65, hasMore: true })
+    .mockResolvedValueOnce({
+      ...searchPageWithNetflix,
+      icons: firstPageIcons,
+      total: 21,
+      hasMore: true,
+    })
     .mockResolvedValueOnce({
       icons: ["mdi:cloud"],
-      total: 65,
-      limit: 64,
-      start: 64,
-      hasMore: false,
+      total: 21,
+      limit: 10,
+      start: 10,
+      hasMore: true,
       collections: {
         mdi: {
           prefix: "mdi",
@@ -248,14 +257,21 @@ it("loads and appends the next 64-result page", async () => {
           palette: false,
         },
       },
-    });
+    })
+    .mockResolvedValueOnce({ ...searchPageWithNetflix, total: 21, start: 0, hasMore: true });
   renderPicker({ initialQuery: "cloud" });
 
   await screen.findByRole("option", { name: /simple-icons:netflix/ });
-  await userEvent.click(screen.getByRole("button", { name: "frontend.icon_picker.load_more" }));
+  expect(screen.getAllByRole("option")).toHaveLength(10);
+  await userEvent.click(screen.getByRole("button", { name: "frontend.icon_picker.next_page" }));
 
   expect(await screen.findByRole("option", { name: /mdi:cloud/ })).toBeInTheDocument();
-  expect(search).toHaveBeenLastCalledWith("cloud", 64, expect.any(AbortSignal));
+  expect(screen.queryByRole("option", { name: /simple-icons:netflix/ })).not.toBeInTheDocument();
+  expect(search).toHaveBeenLastCalledWith("cloud", 10, expect.any(AbortSignal));
+
+  await userEvent.click(screen.getByRole("button", { name: "frontend.icon_picker.previous_page" }));
+  expect(await screen.findByRole("option", { name: /simple-icons:netflix/ })).toBeInTheDocument();
+  expect(search).toHaveBeenLastCalledWith("cloud", 0, expect.any(AbortSignal));
 });
 
 it("disables confirmation when license metadata is incomplete", async () => {

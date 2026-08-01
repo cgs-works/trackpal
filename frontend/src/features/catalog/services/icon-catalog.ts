@@ -1,6 +1,6 @@
 import { parseIconReference } from "./icon-reference";
 
-const SEARCH_LIMIT = 64;
+const SEARCH_LIMIT = 10;
 const API_BASE = "https://api.iconify.design";
 
 export interface IconAuthor {

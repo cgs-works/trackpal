@@ -18,7 +18,7 @@ describe("Iconify catalog adapter", () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       icons: ["simple-icons:netflix"],
       total: 1,
-      limit: 64,
+      limit: 10,
       start: 0,
       collections: {
         "simple-icons": {
@@ -37,12 +37,12 @@ describe("Iconify catalog adapter", () => {
     expect(result.hasMore).toBe(false);
     expect(result.collections["simple-icons"].license.spdx).toBe("CC0-1.0");
     const requested = new URL(String(fetcher.mock.calls[0][0]));
-    expect(requested.searchParams.get("limit")).toBe("64");
+    expect(requested.searchParams.get("limit")).toBe("10");
   });
 
   it("sends non-English search text unchanged", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      icons: [], total: 0, limit: 64, start: 0, collections: {},
+      icons: [], total: 0, limit: 10, start: 0, collections: {},
     }), { status: 200 }));
     const catalog = createIconifyCatalog(fetcher);
 
@@ -72,7 +72,7 @@ describe("Iconify catalog adapter", () => {
 
   it("reuses session cache for repeated searches", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      icons: [], total: 0, limit: 64, start: 0, collections: {},
+      icons: [], total: 0, limit: 10, start: 0, collections: {},
     }), { status: 200 }));
     const catalog = createIconifyCatalog(fetcher);
 

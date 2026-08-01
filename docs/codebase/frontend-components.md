@@ -276,7 +276,7 @@ Renders an optional Iconify icon for a catalog service. Uses `@iconify/react` `l
 
 ### IconPicker (`features/catalog/components/icon-picker.tsx`)
 
-Searchable dialog for browsing and selecting Iconify icons. Responsive split layout (desktop: two-column with results + details panel; mobile: stacked). Features 300 ms search debounce, minimum 2-character query, 64-result paginated results, license gate (confirm disabled without valid license), retry on error, and accessibility attributes (`role="listbox"`, `aria-selected`, `aria-live="polite"` status).
+Searchable dialog for browsing and selecting Iconify icons. Responsive split layout (desktop: two-column with results + details panel; mobile: stacked). Features 300 ms search debounce, minimum 2-character query, pages capped at 10 results, explicit previous/next pagination, license gate (confirm disabled without valid license), retry on error, and accessibility attributes (`role="listbox"`, `aria-selected`, `aria-live="polite"` status).
 
 ### ServiceFormDialog (`features/admin/components/service-form-dialog.tsx`)
 

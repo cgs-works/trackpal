@@ -209,7 +209,7 @@ The approved layout is a large dialog with a search grid and detail panel.
 - Start searching after at least two characters.
 - Debounce input by 300 milliseconds.
 - Cancel obsolete requests with `AbortController`.
-- Request 64 results per page and use Iconify's `start` pagination for more results.
+- Request a maximum of 10 results per page and use Iconify's `start` pagination with explicit previous/next controls.
 - Cache repeated searches in memory for the current browser session.
 - Do not translate Spanish terms; send the entered text directly.
 

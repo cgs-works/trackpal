@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Loader2, Search, AlertCircle } from "lucide-react";
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { t } from "@/i18n";
 import { iconifyCatalog, type IconCollectionInfo, type IconDetails } from "@/features/catalog/services/icon-catalog";
 import { parseIconReference } from "@/features/catalog/services/icon-reference";
@@ -17,6 +17,7 @@ import {
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
+const RESULTS_PER_PAGE = 10;
 
 export interface IconPickerProps {
   open: boolean;
@@ -38,9 +39,8 @@ export function IconPicker({
   const [collections, setCollections] = useState<Record<string, IconCollectionInfo>>({});
   const [selected, setSelected] = useState<string | null>(value);
   const [selectedDetails, setSelectedDetails] = useState<IconDetails | null>(null);
-  const [pageStart, setPageStart] = useState(0);
-  const [pageSize, setPageSize] = useState(64);
-  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
@@ -57,9 +57,8 @@ export function IconPicker({
     setCollections({});
     setSelected(value);
     setSelectedDetails(null);
-    setPageStart(0);
-    setPageSize(64);
-    setHasMore(false);
+    setCurrentPage(1);
+    setTotalResults(0);
     setLoading(false);
     setError(null);
     setSearched(false);
@@ -85,8 +84,9 @@ export function IconPicker({
   }, []);
 
   const performSearch = useCallback(
-    async (q: string, start: number) => {
+    async (q: string, pageNumber: number) => {
       if (abortRef.current) abortRef.current.abort();
+      const start = (pageNumber - 1) * RESULTS_PER_PAGE;
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -98,14 +98,10 @@ export function IconPicker({
         const page = await iconifyCatalog.search(q, start, controller.signal);
         if (controller.signal.aborted) return;
 
-        setResults((prev) => {
-          const merged = start === 0 ? page.icons : [...prev, ...page.icons];
-          return [...new Set(merged)];
-        });
-        setCollections((prev) => ({ ...prev, ...page.collections }));
-        setPageStart(start);
-        setPageSize(page.limit);
-        setHasMore(page.hasMore);
+        setResults(page.icons);
+        setCollections(page.collections);
+        setCurrentPage(pageNumber);
+        setTotalResults(page.total);
       } catch {
         if (controller.signal.aborted) return;
         setError(t("frontend.icon_picker.error"));
@@ -128,15 +124,15 @@ export function IconPicker({
       setLoading(false);
       setResults([]);
       setCollections({});
-      setPageStart(0);
-      setHasMore(false);
+      setCurrentPage(1);
+      setTotalResults(0);
       setSearched(false);
       setError(null);
       return;
     }
 
     timerRef.current = setTimeout(() => {
-      performSearch(query, 0);
+      performSearch(query, 1);
     }, DEBOUNCE_MS);
 
     return () => {
@@ -161,14 +157,16 @@ export function IconPicker({
     }
   };
 
-  const handleLoadMore = () => {
-    if (loading || !hasMore) return;
-    performSearch(query, pageStart + pageSize);
+  const totalPages = totalResults > 0 ? Math.ceil(totalResults / RESULTS_PER_PAGE) : 0;
+
+  const handlePageChange = (pageNumber: number) => {
+    if (loading || pageNumber < 1 || pageNumber > totalPages || pageNumber === currentPage) return;
+    performSearch(query, pageNumber);
   };
 
   const handleRetry = () => {
     if (query.length >= MIN_QUERY_LENGTH) {
-      performSearch(query, 0);
+      performSearch(query, currentPage);
     }
   };
 
@@ -214,7 +212,7 @@ export function IconPicker({
   const statusMessage = loading
     ? t("frontend.icon_picker.searching")
     : searched && results.length > 0
-      ? t("frontend.icon_picker.results", { count: results.length })
+      ? t("frontend.icon_picker.results", { count: totalResults })
       : "";
 
   return (
@@ -302,10 +300,38 @@ export function IconPicker({
               </div>
             )}
 
-            {hasMore && !loading && (
-              <Button type="button" variant="outline" onClick={handleLoadMore}>
-                {t("frontend.icon_picker.load_more")}
-              </Button>
+            {totalPages > 1 && (
+              <nav
+                aria-label={t("frontend.icon_picker.pagination")}
+                className="flex items-center justify-between gap-3"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={loading || currentPage === 1}
+                >
+                  <ChevronLeft data-icon="inline-start" />
+                  {t("frontend.icon_picker.previous_page")}
+                </Button>
+                <span className="text-xs text-muted-foreground" aria-live="polite">
+                  {t("frontend.icon_picker.page", {
+                    current: currentPage,
+                    total: totalPages,
+                  })}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={loading || currentPage === totalPages}
+                >
+                  {t("frontend.icon_picker.next_page")}
+                  <ChevronRight data-icon="inline-end" />
+                </Button>
+              </nav>
             )}
 
             {error && (

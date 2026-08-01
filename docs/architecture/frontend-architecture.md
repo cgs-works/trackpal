@@ -356,9 +356,9 @@ The service icon feature provides optional visual identification for catalog ser
 
 **IconPicker behavior:**
 - **Responsive layout**: Desktop uses a two-column split (results + details panel); mobile stacks vertically.
-- **Search**: 300 ms debounce, minimum 2-character query, 64-result pages.
+- **Search**: 300 ms debounce, minimum 2-character query, maximum 10 icons per page.
 - **License gate**: Confirm button disabled until a selection has a valid license title and URL.
-- **Retry/Load more**: Retry on search error; paginated "Load more" for additional results.
+- **Retry/Pagination**: Retry on search error; explicit previous/next controls request additional 10-icon pages.
 - **Theme support**: Uses shadcn/ui design tokens; works in light and dark themes.
 - **Accessibility**: `role="listbox"`, `aria-selected`, `aria-label` per option, screen-reader status announcements via `aria-live="polite"`.
 
