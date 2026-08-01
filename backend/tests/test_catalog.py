@@ -558,3 +558,131 @@ async def test_plan_price_column_persists(db_session, active_tenant_user):
     await db_session.refresh(plan)
 
     assert plan.price == 12.50
+
+
+# ── Plan Price CRUD Tests ───────────────────────────────────────────────────
+
+
+async def test_create_plan_with_price(db_session, active_tenant_user):
+    tenant_id = await _tenant_id(db_session, active_tenant_user)
+    service = Service(tenant_id=tenant_id, name="Price CRUD Service")
+    db_session.add(service)
+    await db_session.flush()
+    await db_session.commit()
+
+    from decimal import Decimal
+    from app.schemas.catalog import PlanCreate
+
+    plan = await CatalogService().create_plan(
+        db_session,
+        tenant_id,
+        service.id,
+        PlanCreate(name="Basico", price=Decimal("12.50")),
+    )
+    assert plan is not None
+    assert plan.price == Decimal("12.50")
+
+
+async def test_create_plan_without_price(db_session, active_tenant_user):
+    tenant_id = await _tenant_id(db_session, active_tenant_user)
+    service = Service(tenant_id=tenant_id, name="Price CRUD NoPrice")
+    db_session.add(service)
+    await db_session.flush()
+    await db_session.commit()
+
+    from app.schemas.catalog import PlanCreate
+
+    plan = await CatalogService().create_plan(
+        db_session,
+        tenant_id,
+        service.id,
+        PlanCreate(name="Gratis"),
+    )
+    assert plan is not None
+    assert plan.price is None
+
+
+async def test_update_plan_price_and_clear(db_session, active_tenant_user):
+    tenant_id = await _tenant_id(db_session, active_tenant_user)
+    service = Service(tenant_id=tenant_id, name="Price Update Service")
+    db_session.add(service)
+    await db_session.flush()
+    await db_session.commit()
+
+    from decimal import Decimal
+    from app.schemas.catalog import PlanCreate, PlanUpdate
+
+    svc = CatalogService()
+    plan = await svc.create_plan(
+        db_session, tenant_id, service.id, PlanCreate(name="P1")
+    )
+    assert plan is not None
+
+    # Set price
+    updated = await svc.update_plan(
+        db_session, tenant_id, service.id, plan.id, PlanUpdate(price=Decimal("9.99"))
+    )
+    assert updated is not None
+    assert updated.price == Decimal("9.99")
+
+    # Rename must NOT clobber price
+    renamed = await svc.update_plan(
+        db_session, tenant_id, service.id, plan.id, PlanUpdate(name="P1 renombrado")
+    )
+    assert renamed is not None
+    assert renamed.price == Decimal("9.99")
+
+    # Clear price
+    cleared = await svc.update_plan(
+        db_session, tenant_id, service.id, plan.id, PlanUpdate(price=None)
+    )
+    assert cleared is not None
+    assert cleared.price is None
+
+
+async def test_plan_price_endpoint_create_and_update(client, active_tenant_user):
+    headers = await _login(client)
+    # Create service
+    svc_resp = await client.post(
+        "/api/v1/catalog/services",
+        json={"name": "Price Endpoint Service"},
+        headers=headers,
+    )
+    assert svc_resp.status_code == 201
+    sid = svc_resp.json()["id"]
+
+    # Create plan with price
+    plan_resp = await client.post(
+        f"/api/v1/catalog/services/{sid}/plans",
+        json={"name": "Premium", "price": "12.50"},
+        headers=headers,
+    )
+    assert plan_resp.status_code == 201
+    pid = plan_resp.json()["id"]
+    assert plan_resp.json()["price"] == "12.50"
+
+    # Update plan: set new price
+    update_resp = await client.put(
+        f"/api/v1/catalog/services/{sid}/plans/{pid}",
+        json={"price": "19.99"},
+        headers=headers,
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["price"] == "19.99"
+
+    # Update plan: clear price
+    clear_resp = await client.put(
+        f"/api/v1/catalog/services/{sid}/plans/{pid}",
+        json={"price": None},
+        headers=headers,
+    )
+    assert clear_resp.status_code == 200
+    assert clear_resp.json()["price"] is None
+
+    # Update plan: negative price → 422
+    neg_resp = await client.put(
+        f"/api/v1/catalog/services/{sid}/plans/{pid}",
+        json={"price": "-1"},
+        headers=headers,
+    )
+    assert neg_resp.status_code == 422
