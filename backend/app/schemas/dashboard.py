@@ -9,6 +9,7 @@ class ClientActiveSubscription(BaseModel):
 
     id: UUID
     service_name: str
+    service_icon: str | None = None
     plan_name: str
     status: str
     starts_at: datetime

@@ -4,6 +4,7 @@ import api from "@/lib/api";
 export interface ClientActiveSubscription {
   id: string;
   service_name: string;
+  service_icon: string | null;
   plan_name: string;
   status: string;
   starts_at: string;

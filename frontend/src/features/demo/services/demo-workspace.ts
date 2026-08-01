@@ -1,8 +1,9 @@
 import type { DemoAuthMetadata } from "@/store/auth";
 import type { TenantPlan } from "@/features/auth/services/auth-api";
 import { getBrowserStorage, type BrowserStorageLike } from "@/lib/browser-storage";
+import { parseIconReference } from "@/features/catalog/services/icon-reference";
 
-export const DEMO_WORKSPACE_SCHEMA_VERSION = 2;
+export const DEMO_WORKSPACE_SCHEMA_VERSION = 3;
 export const DEMO_WORKSPACE_KEY_PREFIX = "trackpal:demo-workspace:";
 
 export type DemoWorkspaceStorageState = "available" | "unavailable" | "quota_exceeded";
@@ -124,6 +125,29 @@ function isRecordArray(value: unknown, requiredKeys: string[] = []): boolean {
   });
 }
 
+function isValidIcon(value: unknown): boolean {
+  if (value === null) return true;
+  if (typeof value !== "string") return false;
+  return parseIconReference(value) !== null;
+}
+
+function isServiceIconValid(service: unknown): boolean {
+  if (!isRecord(service)) return false;
+  return isValidIcon(service.icon);
+}
+
+function migrateServiceIcons(planSpecific: unknown): unknown {
+  if (!isRecord(planSpecific) || !Array.isArray(planSpecific.services)) return planSpecific;
+  return {
+    ...planSpecific,
+    services: planSpecific.services.map((service) =>
+      isRecord(service) && !("icon" in service)
+        ? { ...service, icon: null }
+        : service,
+    ),
+  };
+}
+
 function isPlanSpecificState(value: unknown, plan: TenantPlan): value is Record<string, unknown> {
   if (!isRecord(value) || hasForbiddenKey(value)) return false;
 
@@ -148,6 +172,8 @@ function isPlanSpecificState(value: unknown, plan: TenantPlan): value is Record<
   return (
     isRecordArray(value.clients, ["id", "tenant_id", "full_name"]) &&
     isRecordArray(value.services, ["id", "tenant_id", "name"]) &&
+    Array.isArray(value.services) &&
+    value.services.every(isServiceIconValid) &&
     isRecordArray(value.plans, ["id", "tenant_id", "service_id", "name"]) &&
     isRecordArray(value.subscriptions, ["id", "tenant_id", "client_id", "service_id", "plan_id"])
   );
@@ -176,10 +202,13 @@ function migrateKnownEnvelope(value: unknown, tenantId: string): DemoWorkspaceEn
   if (value.schema_version === DEMO_WORKSPACE_SCHEMA_VERSION) {
     return isWorkspaceEnvelope(value, tenantId) ? value : null;
   }
-  if (value.schema_version !== 1) return null;
+  if (value.schema_version !== 1 && value.schema_version !== 2) return null;
+
+  const migratedPlanSpecific = migrateServiceIcons(value.plan_specific);
 
   const migrated = {
     ...value,
+    plan_specific: migratedPlanSpecific,
     schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
     baseline_version:
       typeof value.baseline_version === "number" &&

@@ -46,7 +46,11 @@ async def _create_public_key(client, headers, origins: list[str]) -> str:
 
 
 async def _seed_catalog(db_session, tenant_id):
-    service = Service(tenant_id=tenant_id, name="Netflix")
+    service = Service(
+        tenant_id=tenant_id,
+        name="Netflix",
+        icon="simple-icons:netflix",
+    )
     db_session.add(service)
     await db_session.flush()
     basic = Plan(tenant_id=tenant_id, service_id=service.id, name="Basic")
@@ -191,6 +195,7 @@ async def test_public_catalog_success_returns_nested_services_and_cors(
             {
                 "id": str(service.id),
                 "name": "Netflix",
+                "icon": "simple-icons:netflix",
                 "plans": [
                     {"id": str(basic.id), "name": "Basic"},
                     {"id": str(premium.id), "name": "Premium"},

@@ -133,6 +133,7 @@ class PublicApiKeyService:
                 PublicCatalogService(
                     id=svc.id,
                     name=svc.name,
+                    icon=svc.icon,
                     plans=[PublicCatalogPlan(id=p.id, name=p.name) for p in plans],
                 )
             )

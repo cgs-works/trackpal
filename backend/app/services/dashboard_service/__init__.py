@@ -140,6 +140,7 @@ class DashboardService:
             ClientActiveSubscription(
                 id=sub.id,
                 service_name=sub.service.name if sub.service else "—",
+                service_icon=sub.service.icon if sub.service else None,
                 plan_name=sub.plan.name if sub.plan else "—",
                 status=sub.status,
                 starts_at=sub.starts_at,

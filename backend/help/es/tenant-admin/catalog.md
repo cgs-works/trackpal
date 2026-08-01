@@ -70,6 +70,10 @@ En **TrackPal Pro**, el Catálogo reúne tus servicios y los planes disponibles 
 
 Crea un servicio, ábrelo y añade sus planes. También puedes cambiar sus nombres desde Web o desde **Catálogo** en el menú de WhatsApp de **TrackPal Pro**. Una lista vacía solo significa que todavía no has creado el primer servicio o plan.
 
+## Iconos de servicio
+
+Cada servicio puede tener un icono opcional. Elige, cambia o quita un icono desde el editor de catálogo en Web — son acciones solo visuales. WhatsApp sigue gestionando nombres de servicio y planes como texto. Si Iconify no está disponible temporalmente, guarda con el icono actual o genérico e intenta más tarde.
+
 ## Antes de eliminar
 
 TrackPal muestra cuántas suscripciones activas e históricas dependen del servicio o plan. Revísalas con calma: eliminar es irreversible y también elimina las suscripciones asociadas.

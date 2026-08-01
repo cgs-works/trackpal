@@ -100,9 +100,12 @@ Tenant-owned catalog service.
 | id | UUID | PK |
 | tenant_id | UUID | FK → tenants.id CASCADE |
 | name | VARCHAR(200) | Required; case-insensitive unique per tenant |
+| icon | VARCHAR(255) | Nullable; Iconify `prefix:name` reference (e.g. `simple-icons:netflix`). Backend validates format locally; no Iconify network calls. |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
 Constraints: `UNIQUE (tenant_id, id)` for composite plan FK; unique index on `(tenant_id, lower(name))`.
+
+**Icon semantics**: The `icon` field stores an optional Iconify icon reference in `prefix:name` format. Backend performs local syntax validation via regex (`^[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$`). Omitted fields on create leave `icon` as `null`; explicit `null` on update clears the icon. Empty strings are normalized to `null`. The backend never calls the Iconify API — all icon resolution and rendering is frontend-only.
 
 ### `Plan` — `plans` table
 
@@ -359,6 +362,7 @@ Alembic migrations:
 26. `e016fe74cab6` — Add export job lifecycle columns for failure, cooldown, and actor role
 27. `e017fe74cab7` — Add Demo Tenant flag, lifecycle timestamps, credential/session version, constraints, and lifecycle index
 28. `e019fe74cab9` — Make mailbox Gmail-only: rename `imap_password_encrypted` to `app_password_encrypted`, drop `imap_host`/`imap_port`/`imap_ssl`, add auth-method check constraint
+29. `e021fe74cac1` — Add optional `icon` column to `services` table for Iconify `prefix:name` reference
 
 ## Key Constraints
 

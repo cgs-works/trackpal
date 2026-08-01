@@ -6,7 +6,7 @@ import type { ReminderSettings } from "@/features/admin/services/reminder-api";
 import type { TenantSettings } from "@/features/admin/services/settings-api";
 import type { PlanBaselineFactory } from "./demo-workspace";
 
-export const DEMO_BASELINE_VERSION = 2;
+export const DEMO_BASELINE_VERSION = 3;
 
 export interface DemoCodeService {
   id: string;
@@ -197,6 +197,15 @@ function createProSubscriptions(metadata: DemoAuthMetadata, clients: Client[], s
   ];
 }
 
+const serviceDefinitions: Array<[string, string, string]> = [
+  ["service-disney", "Disney+", "tabler:brand-disney"],
+  ["service-hbo_max", "HBO Max", "simple-icons:max"],
+  ["service-netflix", "Netflix", "simple-icons:netflix"],
+  ["service-prime_video", "Prime Video", "simple-icons:primevideo"],
+  ["service-spotify", "Spotify", "simple-icons:spotify"],
+  ["service-universal_plus", "Universal+", "mdi:television-play"],
+];
+
 export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
   const starter = createStarterState(metadata);
   if (plan === "starter") {
@@ -208,17 +217,11 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
   }
 
   const now = metadata.serverTime;
-  const services: Service[] = [
-    ["service-disney", "Disney+"],
-    ["service-hbo_max", "HBO Max"],
-    ["service-netflix", "Netflix"],
-    ["service-prime_video", "Prime Video"],
-    ["service-spotify", "Spotify"],
-    ["service-universal_plus", "Universal+"],
-  ].map(([id, name]) => ({
+  const services: Service[] = serviceDefinitions.map(([id, name, icon]) => ({
     id: `${metadata.tenantId}-${id}`,
     tenant_id: metadata.tenantId,
     name,
+    icon,
     created_at: now,
     updated_at: now,
   }));

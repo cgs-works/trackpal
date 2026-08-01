@@ -16,6 +16,12 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("@/features/catalog/components/service-icon", () => ({
+  ServiceIcon: ({ icon, label }: { icon: string | null; label: string }) => (
+    <span data-testid={`service-icon-${icon ?? "none"}`}>{label}</span>
+  ),
+}));
+
 const metadata = {
   tenantId: "render-subscriptions-demo",
   name: "Rendered Subscriptions Demo",
@@ -64,5 +70,25 @@ describe("SubscriptionsPage Demo rendering", () => {
     await user.click(screen.getAllByTitle("frontend.subscriptions.reveal")[0]);
     await waitFor(() => expect(screen.getByText("demo-expiring-7-secret")).toBeInTheDocument());
     expect(postSpy).not.toHaveBeenCalled();
+  });
+
+  it("renders ServiceIcon for each subscription service without live Iconify requests", async () => {
+    render(<SubscriptionsPage />);
+
+    // Wait for subscriptions to load — demo baseline has 8 subscriptions
+    await waitFor(() => {
+      expect(screen.getAllByText("demo.expiring.7@example.test")).toHaveLength(2);
+    });
+
+    // Each subscription renders ServiceIcon in desktop + mobile views
+    // Netflix appears in 2 subscriptions (active + cancelled) → 4 instances
+    expect(screen.getAllByTestId("service-icon-simple-icons:netflix").length).toBeGreaterThanOrEqual(2);
+    // Disney+ appears in 2 subscriptions → at least 2 instances
+    expect(screen.getAllByTestId("service-icon-tabler:brand-disney").length).toBeGreaterThanOrEqual(2);
+    // Other services appear at least once
+    expect(screen.getAllByTestId("service-icon-simple-icons:max").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId("service-icon-simple-icons:primevideo").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId("service-icon-simple-icons:spotify").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId("service-icon-mdi:television-play").length).toBeGreaterThanOrEqual(1);
   });
 });

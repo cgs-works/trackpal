@@ -21,30 +21,81 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "@/i18n";
+import { ServiceIcon } from "@/features/catalog/components/service-icon";
 import type {
   Service,
   Plan,
   DeletePreview,
+  ServiceCreate,
+  ServiceUpdate,
 } from "../services/catalog-api";
 import { useCatalogStore } from "@/store/catalog";
 import { useAuthStore } from "@/store/auth";
+import { ServiceFormDialog } from "./service-form-dialog";
 
 const CATALOG_ERROR_KEYS: Record<string, string> = {
   service_name_already_exists: "frontend.catalog.service_name_exists",
   plan_name_already_exists: "frontend.catalog.plan_name_exists",
   catalog_name_required: "frontend.catalog.invalid_name",
   catalog_name_too_long: "frontend.catalog.invalid_name",
+  catalog_icon_invalid: "frontend.catalog.invalid_icon",
+  invalid_icon_reference: "frontend.catalog.invalid_icon",
   service_not_found: "frontend.catalog.target_not_found",
   plan_not_found: "frontend.catalog.target_not_found",
   invalid_demo_workspace: "frontend.catalog.target_not_found",
 };
 
 function catalogErrorMessage(error: unknown, fallbackKey: string): string {
-  if (error instanceof Error) {
-    const key = CATALOG_ERROR_KEYS[error.message];
-    if (key) return t(key);
-    if (error.message) return error.message;
+  // Try to find a known error code from various sources
+  if (error && typeof error === "object") {
+    // 1. Check error.code first
+    if ("code" in error && typeof error.code === "string") {
+      const key = CATALOG_ERROR_KEYS[error.code];
+      if (key) return t(key);
+    }
+
+    // 2. Check error.message for known keys
+    if ("message" in error && typeof error.message === "string") {
+      const key = CATALOG_ERROR_KEYS[error.message];
+      if (key) return t(key);
+    }
+
+    // 3. Check Axios response.data.detail for known keys
+    if (
+      "response" in error &&
+      error.response &&
+      typeof error.response === "object" &&
+      "data" in error.response
+    ) {
+      const data = error.response.data;
+      if (data && typeof data === "object" && "detail" in data) {
+        const detail = data.detail;
+        // Bare string detail: "invalid_icon_reference"
+        if (typeof detail === "string") {
+          const key = CATALOG_ERROR_KEYS[detail];
+          if (key) return t(key);
+        }
+        // Pydantic validation error array:
+        // [{ type: "value_error", loc: [...], msg: "Value error, invalid_icon_reference" }]
+        if (Array.isArray(detail)) {
+          for (const item of detail) {
+            if (item && typeof item === "object" && "msg" in item && typeof item.msg === "string") {
+              // Check if any known error key appears in the msg
+              for (const [errorCode, i18nKey] of Object.entries(CATALOG_ERROR_KEYS)) {
+                if (item.msg.includes(errorCode)) return t(i18nKey);
+              }
+            }
+          }
+        }
+      }
+    }
   }
+
+  // Fallback to error.message if available (unmapped error)
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
   return t(fallbackKey);
 }
 
@@ -296,10 +347,15 @@ export function CatalogPage() {
   const [isLoading, setIsLoading] = useState(!useCatalogStore.getState().servicesLoaded);
   const [error, setError] = useState("");
 
+  // Service form state
+  const [serviceFormOpen, setServiceFormOpen] = useState(false);
+  const [serviceFormMode, setServiceFormMode] = useState<"create" | "edit">("create");
+  const [serviceFormTarget, setServiceFormTarget] = useState<Service | null>(null);
+  const [serviceSaving, setServiceSaving] = useState(false);
+  const [serviceFormError, setServiceFormError] = useState("");
+
   // Create forms
-  const [newServiceName, setNewServiceName] = useState("");
   const [newPlanName, setNewPlanName] = useState("");
-  const [creatingService, setCreatingService] = useState(false);
   const [creatingPlan, setCreatingPlan] = useState(false);
 
   // Rename state
@@ -365,25 +421,51 @@ export function CatalogPage() {
     loadPlansData();
   }, [loadPlansData]);
 
-  // ── Create service ─────────────────────────────────────────
-  async function handleCreateService(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newServiceName.trim()) return;
-    setCreatingService(true);
+  // ── Service form submit ────────────────────────────────────
+  async function handleServiceFormSubmit(payload: ServiceCreate | ServiceUpdate) {
+    setServiceSaving(true);
+    setServiceFormError("");
     try {
-      const service = await dataSource.catalog.createService({ name: newServiceName.trim() });
-      setNewServiceName("");
-      setSelectedServiceId(service.id);
-      invalidateServices();
-      await loadServicesData();
-      toast.success(t("frontend.catalog.service_created"));
+      if (serviceFormMode === "create") {
+        const service = await dataSource.catalog.createService(payload as ServiceCreate);
+        setSelectedServiceId(service.id);
+        invalidateServices();
+        await loadServicesData();
+        toast.success(t("frontend.catalog.service_created"));
+      } else if (serviceFormTarget) {
+        await dataSource.catalog.updateService(serviceFormTarget.id, payload as ServiceUpdate);
+        invalidateServices();
+        await loadServicesData();
+        toast.success(t("frontend.catalog.service_updated"));
+      }
+      setServiceFormOpen(false);
     } catch (err) {
-      toast.error(
-        catalogErrorMessage(err, "frontend.catalog.error_create_service")
-      );
+      const msg = catalogErrorMessage(err, "frontend.catalog.error_update_service");
+      if (
+        err instanceof Error ||
+        (err && typeof err === "object" && "response" in err)
+      ) {
+        setServiceFormError(msg);
+      } else {
+        toast.error(msg);
+      }
     } finally {
-      setCreatingService(false);
+      setServiceSaving(false);
     }
+  }
+
+  function openCreateServiceForm() {
+    setServiceFormMode("create");
+    setServiceFormTarget(null);
+    setServiceFormError("");
+    setServiceFormOpen(true);
+  }
+
+  function openEditServiceForm(service: Service) {
+    setServiceFormMode("edit");
+    setServiceFormTarget(service);
+    setServiceFormError("");
+    setServiceFormOpen(true);
   }
 
   // ── Create plan ────────────────────────────────────────────
@@ -406,28 +488,7 @@ export function CatalogPage() {
     }
   }
 
-  // ── Rename service ─────────────────────────────────────────
-  function openRenameService(service: Service) {
-    setRenameTitle(t("frontend.catalog.rename_service_prompt"));
-    setRenameCurrentName(service.name);
-    setRenameCallback(() => async (name: string) => {
-      setRenameSaving(true);
-      try {
-        await dataSource.catalog.updateService(service.id, { name });
-        invalidateServices();
-        await loadServicesData();
-        toast.success(t("frontend.catalog.service_renamed"));
-        setRenameOpen(false);
-      } catch (err) {
-        toast.error(
-        catalogErrorMessage(err, "frontend.catalog.error_update_service")
-        );
-      } finally {
-        setRenameSaving(false);
-      }
-    });
-    setRenameOpen(true);
-  }
+
 
   // ── Rename plan ────────────────────────────────────────────
   function openRenamePlan(plan: Plan) {
@@ -549,21 +610,15 @@ export function CatalogPage() {
               <h2 className="text-sm font-medium text-muted-foreground mb-2">
                 {t("frontend.catalog.services")}
               </h2>
-              <form onSubmit={handleCreateService} className="flex gap-2">
-                <Input
-                  placeholder={t("frontend.catalog.new_service_placeholder")}
-                  value={newServiceName}
-                  onChange={(e) => setNewServiceName(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={creatingService || !newServiceName.trim()}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </form>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                data-testid="new-service-btn"
+                onClick={openCreateServiceForm}
+              >
+                <Plus className="size-4" />
+                {t("frontend.catalog.new_service")}
+              </Button>
             </div>
 
             {isLoading ? (
@@ -590,6 +645,11 @@ export function CatalogPage() {
                     }`}
                     onClick={() => setSelectedServiceId(service.id)}
                   >
+                    <ServiceIcon
+                      icon={service.icon}
+                      label={service.name}
+                      className="size-4 shrink-0"
+                    />
                     <span className="flex-1 truncate text-sm font-medium">
                       {service.name}
                     </span>
@@ -597,9 +657,10 @@ export function CatalogPage() {
                       variant="ghost"
                       size="icon"
                       className="size-6 shrink-0"
+                      aria-label={t("frontend.catalog.edit")}
                       onClick={(e) => {
                         e.stopPropagation();
-                        openRenameService(service);
+                        openEditServiceForm(service);
                       }}
                     >
                       <Pencil className="size-3" />
@@ -703,7 +764,18 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Rename dialog */}
+      {/* Service form dialog */}
+      <ServiceFormDialog
+        open={serviceFormOpen}
+        mode={serviceFormMode}
+        service={serviceFormTarget}
+        saving={serviceSaving}
+        error={serviceFormError}
+        onOpenChange={setServiceFormOpen}
+        onSubmit={handleServiceFormSubmit}
+      />
+
+      {/* Rename dialog (Plans only) */}
       <RenameDialog
         open={renameOpen}
         onOpenChange={setRenameOpen}

@@ -65,7 +65,7 @@ One ZIP named `<slugged-account-name>-data-<account-local-timestamp>.zip` contai
 |------|--------|----------|
 | `account-profile.csv` | CSV | account_name, contact_email, whatsapp_phone, login_username, current_plan, preferred_language, time_zone |
 | `client-data.csv` | CSV | client_name, login_username, whatsapp_phone, account_status, registered_on, last_updated_on |
-| `service-catalog.csv` | CSV | service_name, service_created_on, service_updated_on, plan_name, plan_created_on, plan_updated_on |
+| `service-catalog.csv` | CSV | service_name, service_icon, service_created_on, service_updated_on, plan_name, plan_created_on, plan_updated_on |
 | `subscription-snapshot.csv` | CSV | client_name, client_login_username, service_name, plan_name, service_account_email, service_profile_name, subscription_duration, started_on, expires_on, cancelled_on, subscription_status, recorded_on, last_updated_on |
 | `blocked-phones.csv` | CSV | phone, blocked_at |
 | `trackpal-data.json` | JSON | export_metadata, account_profile, client_accounts, service_catalog, subscription_snapshot, blocked_phone_list |
@@ -78,9 +78,10 @@ One ZIP named `<slugged-account-name>-data-<account-local-timestamp>.zip` contai
 3. JSON is UTF-8 with `null` for missing optional values.
 4. Timestamps are ISO 8601 with explicit offset in the account timezone.
 5. Record ordering: Clients by `login_username`; Catalog by `service_name`, `plan_name`; Subscriptions by `started_on` descending; blocked phones by `phone`.
-6. Services without Plans emit one CSV row with empty Plan fields and a JSON object with an empty `plans` list.
-7. Access Control rows with only a WhatsApp LID are deliberately omitted.
-8. README is localized; filenames, JSON keys, CSV headers, and machine values remain English.
+6. `service_icon` is the optional Iconify `prefix:name` reference (e.g. `simple-icons:netflix`). TrackPal does not include the SVG asset. External consumers must resolve icons via the Iconify CDN or provide their own fallback. Export format version is `2`.
+7. Services without Plans emit one CSV row with empty Plan fields and a JSON object with an empty `plans` list.
+8. Access Control rows with only a WhatsApp LID are deliberately omitted.
+9. README is localized; filenames, JSON keys, CSV headers, and machine values remain English.
 
 ### Deliberate exclusions
 

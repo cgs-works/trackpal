@@ -409,6 +409,76 @@ describe("DemoWorkspaceRepository", () => {
       );
     });
 
+    it("migrates schema version 2 pro workspace adding icon: null to Services", () => {
+      const proServices = [
+        { id: "svc-1", tenant_id: TENANT_ID, name: "Netflix", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+        { id: "svc-2", tenant_id: TENANT_ID, name: "Disney+", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+      ];
+      storage.setItem(repo.key, JSON.stringify({
+        schema_version: 2,
+        tenant_id: TENANT_ID,
+        source_name: "Pro Demo",
+        plan: "pro",
+        activated_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-08-01T00:00:00.000Z",
+        baseline_version: 2,
+        plan_specific: {
+          clients: [
+            { id: "c-1", tenant_id: TENANT_ID, full_name: "Test Client", username: "test_client", phone: "1234567890", is_active: true, owner_user_id: "owner-1", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+          ],
+          services: proServices,
+          plans: [
+            { id: "p-1", tenant_id: TENANT_ID, service_id: "svc-1", name: "Básico", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+          ],
+          subscriptions: [],
+          profile: { business_name: "Test", locale: "en", email: null, phone: null },
+          integrations: { mailbox: { status: "connected", simulated: true }, whatsapp: { status: "connected", simulated: true } },
+          code_services: [{ id: "disney", name: "Disney+", enabled: true }],
+          blocked_identities: [{ id: "b-1", phone: "12025550101" }],
+        },
+        tour_state: { completed: true },
+        saved_at: "2026-07-25T12:00:00.000Z",
+      }));
+
+      const migrated = repo.read();
+
+      expect(migrated?.schema_version).toBe(3);
+      expect((migrated?.plan_specific.services as Array<Record<string, unknown>>)[0].icon).toBeNull();
+      expect(migrated?.tour_state).toEqual({ completed: true });
+    });
+
+    it("rejects a current-version pro workspace with services missing icon", () => {
+      storage.setItem(repo.key, JSON.stringify({
+        schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,
+        tenant_id: TENANT_ID,
+        source_name: "Missing Icon",
+        plan: "pro",
+        activated_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-08-01T00:00:00.000Z",
+        baseline_version: 2,
+        plan_specific: {
+          clients: [
+            { id: "c-1", tenant_id: TENANT_ID, full_name: "Test Client", username: "test_client", phone: "1234567890", is_active: true, owner_user_id: "owner-1", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+          ],
+          services: [
+            { id: "svc-1", tenant_id: TENANT_ID, name: "Netflix", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+          ],
+          plans: [
+            { id: "p-1", tenant_id: TENANT_ID, service_id: "svc-1", name: "Basic", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" },
+          ],
+          subscriptions: [],
+          profile: { business_name: "Test", locale: "en", email: null, phone: null },
+          integrations: { mailbox: { status: "connected", simulated: true }, whatsapp: { status: "connected", simulated: true } },
+          code_services: [{ id: "disney", name: "Disney+", enabled: true }],
+          blocked_identities: [{ id: "b-1", phone: "12025550101" }],
+        },
+        tour_state: {},
+        saved_at: "2026-07-25T12:00:00.000Z",
+      }));
+
+      expect(repo.read()).toBeNull();
+    });
+
     it("recovers incompatible data to the authenticated plan without merging plans", () => {
       storage.setItem(repo.key, JSON.stringify({
         schema_version: DEMO_WORKSPACE_SCHEMA_VERSION,

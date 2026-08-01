@@ -146,16 +146,16 @@ Tenant prefix edits update client technical usernames transactionally.
 
 ### Dashboard Endpoints
 
-- `GET /api/v1/dashboard` — Role-aware dashboard data (master sees tenant counts, tenant sees own profile, client sees readonly profile)
+- `GET /api/v1/dashboard` — Role-aware dashboard data (master sees tenant counts, tenant sees own profile, client sees readonly profile). Client dashboard subscriptions include `service_icon` (nullable Iconify `prefix:name` reference) from the linked service.
 
 ### Catalog Endpoints (tenant-scoped)
 
 All catalog endpoints require tenant context. Tenant users derive it from their owned tenant. Master users must call switch-tenant first.
 
-- `GET /api/v1/catalog/services`
-- `POST /api/v1/catalog/services`
-- `GET /api/v1/catalog/services/{service_id}`
-- `PUT /api/v1/catalog/services/{service_id}`
+- `GET /api/v1/catalog/services` — Returns services with `icon` field (nullable Iconify `prefix:name` reference).
+- `POST /api/v1/catalog/services` — Create service. Optional `icon` field validated locally against Iconify `prefix:name` pattern. Omitted or empty string → `null`.
+- `GET /api/v1/catalog/services/{service_id}` — Get service detail including `icon`.
+- `PUT /api/v1/catalog/services/{service_id}` — Update service. Explicit `null` clears the icon. Omitted `icon` field preserves existing value.
 - `DELETE /api/v1/catalog/services/{service_id}?confirm=true` — Confirmed cascade delete for a service, its plans, and all related subscriptions. Without `confirm=true`, returns 400.
 - `GET /api/v1/catalog/services/{service_id}/plans`
 - `POST /api/v1/catalog/services/{service_id}/plans`
@@ -167,6 +167,8 @@ All catalog endpoints require tenant context. Tenant users derive it from their 
 Active subscription counts use `status == "active"` only. Services and plans have no active/inactive lifecycle; existing rows count as active catalog items.
 
 Duplicate service/plan names return 409. Cross-tenant resources return 404.
+
+**Icon validation**: Backend validates `icon` with local regex (`^[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$`). Invalid references return `invalid_icon_reference` (409). Backend never calls the Iconify API.
 
 ### Subscription Reminder Settings Endpoints
 

@@ -31,6 +31,7 @@ class PublicCatalogPlan(BaseModel):
 class PublicCatalogService(BaseModel):
     id: UUID
     name: str
+    icon: str | None = None
     plans: list[PublicCatalogPlan]
 
 

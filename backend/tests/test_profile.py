@@ -1,4 +1,11 @@
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+from uuid import uuid4
+
 import pytest
+
+from app.services.dashboard_service import DashboardService
 
 pytestmark = pytest.mark.asyncio
 
@@ -529,3 +536,36 @@ async def test_get_profile_tenant_projects_tenant_settings(client, active_tenant
     data = response.json()
     assert data["locale"] == "es"
     assert data["timezone"] == "America/Santo_Domingo"
+
+
+# ===========================================================================
+# Service icon propagation tests
+# ===========================================================================
+
+
+async def test_client_dashboard_subscription_includes_service_icon(monkeypatch):
+    subscription = SimpleNamespace(
+        id=uuid4(),
+        service=SimpleNamespace(name="Netflix", icon="simple-icons:netflix"),
+        plan=SimpleNamespace(name="Premium"),
+        status="active",
+        starts_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        expires_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+    monkeypatch.setattr(
+        "app.services.dashboard_service.get_active_subscriptions_for_client",
+        AsyncMock(return_value=[subscription]),
+    )
+    profile = SimpleNamespace(
+        id=uuid4(),
+        full_name="Client Demo",
+        username="client_demo",
+        phone="12025550123",
+        tenant_id=uuid4(),
+        tenant=SimpleNamespace(name="Demo Provider", client_prefix="demo"),
+        is_active=True,
+    )
+
+    result = await DashboardService()._client_dashboard(AsyncMock(), profile)
+
+    assert result.subscriptions[0].service_icon == "simple-icons:netflix"

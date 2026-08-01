@@ -20,6 +20,7 @@ class Service(Base, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     tenant = relationship("Tenant", back_populates="services")
     plans = relationship(

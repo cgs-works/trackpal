@@ -43,6 +43,16 @@ describe("Pro Demo Catalog", () => {
     expect(first).toEqual(second);
   });
 
+  it("assigns a non-null Icon Reference to each baseline Service", () => {
+    const baseline = createDemoBaseline("pro", metadata);
+    const state = readProDemoState(baseline.plan_specific)!;
+
+    for (const service of state.services) {
+      expect(service.icon).not.toBeNull();
+      expect(typeof service.icon).toBe("string");
+    }
+  });
+
   it("keeps catalog CRUD local, normalized, unique, and persistent", async () => {
     const source = createDataSource({
       tenantId: metadata.tenantId,
@@ -78,6 +88,84 @@ describe("Pro Demo Catalog", () => {
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();
+  });
+
+  it("persists icon on create, preserves on rename, and clears with null", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    const created = await catalog.createService({
+      name: "New Service",
+      icon: "simple-icons:netflix",
+    });
+    expect(created.icon).toBe("simple-icons:netflix");
+
+    const renamed = await catalog.updateService(created.id, { name: "Renamed" });
+    expect(renamed.icon).toBe("simple-icons:netflix");
+
+    const cleared = await catalog.updateService(created.id, { icon: null });
+    expect(cleared.icon).toBeNull();
+  });
+
+  it("rejects invalid icon references on create", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    await expect(
+      catalog.createService({ name: "Bad Icon", icon: "INVALID ICON!!!" }),
+    ).rejects.toMatchObject({ code: "catalog_icon_invalid" });
+  });
+
+  it("rejects invalid icon references on update", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    const created = await catalog.createService({ name: "Good Service" });
+    await expect(
+      catalog.updateService(created.id, { icon: "not a valid icon" }),
+    ).rejects.toMatchObject({ code: "catalog_icon_invalid" });
+  });
+
+  it("stores null (not undefined) when icon is omitted on create", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    const created = await catalog.createService({ name: "No Icon Service" });
+    expect(created.icon).toBeNull();
+    expect("icon" in created).toBe(true);
+
+    const raw = source.workspace!.read()!;
+    const pro = readProDemoState(raw.plan_specific)!;
+    const stored = pro.services.find((s) => s.id === created.id)!;
+    expect(stored.icon).toBeNull();
+  });
+
+  it("normalizes empty string icon to null on create", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+
+    const created = await catalog.createService({ name: "Empty Icon Service", icon: "" });
+    expect(created.icon).toBeNull();
   });
 
   it("previews and cascades service deletion without orphan plans or relations", async () => {

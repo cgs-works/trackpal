@@ -368,16 +368,18 @@ export function buildDeveloperHandoffPackage(baseUrl: string, origins: string[])
     `${t("frontend.public_api.handoff_origins")}: ${originList}`,
     `${t("frontend.public_api.handoff_key")}: ${API_KEY_PLACEHOLDER}`,
     "",
+    `${t("frontend.public_api.handoff_icon_prefix")}: service.icon (prefix:name) — ${t("frontend.public_api.handoff_icon_suffix")}`,
+    "",
     ...examples,
   ].join("\n");
 }
 
 function buildExample(language: Language, baseUrl: string): string {
   const url = `${baseUrl}/public/catalog?api_key=${API_KEY_PLACEHOLDER}`;
-  if (language === "react") return `useEffect(() => {\n  fetch("${url}")\n    .then((res) => res.json())\n    .then(setCatalog);\n}, []);`;
-  if (language === "vue") return `<script setup>\nimport { onMounted, ref } from "vue";\n\nconst catalog = ref(null);\n\nonMounted(async () => {\n  catalog.value = await fetch("${url}").then((res) => res.json());\n});\n</script>`;
-  if (language === "svelte") return `<script>\n  import { onMount } from "svelte";\n\n  let catalog;\n\n  onMount(async () => {\n    catalog = await fetch("${url}").then((res) => res.json());\n  });\n</script>`;
-  if (language === "angular") return `import { HttpClient } from "@angular/common/http";\n\nconstructor(private http: HttpClient) {}\n\ncatalog$ = this.http.get("${url}");`;
+  if (language === "react") return `function iconUrl(icon) {\n  if (!icon || !icon.includes(":")) return null;\n  const [prefix, name] = icon.split(":", 2);\n  return \`https://api.iconify.design/\${prefix}/\${name}.svg\`;\n}\n\nuseEffect(() => {\n  fetch("${url}")\n    .then((res) => res.json())\n    .then((catalog) => {\n      setCatalog(catalog);\n      catalog.services.forEach((s) => {\n        const url = iconUrl(s.icon);\n        if (url) fetch(url);\n      });\n    });\n}, []);`;
+  if (language === "vue") return `<script setup>\nimport { onMounted, ref } from "vue";\n\nconst catalog = ref(null);\n\nfunction iconUrl(icon) {\n  if (!icon || !icon.includes(":")) return null;\n  const [prefix, name] = icon.split(":", 2);\n  return \`https://api.iconify.design/\${prefix}/\${name}.svg\`;\n}\n\nonMounted(async () => {\n  catalog.value = await fetch("${url}").then((res) => res.json());\n  catalog.value.services.forEach((s) => {\n    const url = iconUrl(s.icon);\n    if (url) fetch(url);\n  });\n});\n</script>`;
+  if (language === "svelte") return `<script>\n  import { onMount } from "svelte";\n\n  let catalog;\n\n  function iconUrl(icon) {\n    if (!icon || !icon.includes(":")) return null;\n    const [prefix, name] = icon.split(":", 2);\n    return \`https://api.iconify.design/\${prefix}/\${name}.svg\`;\n  }\n\n  onMount(async () => {\n    catalog = await fetch("${url}").then((res) => res.json());\n    catalog.services.forEach((s) => {\n      const url = iconUrl(s.icon);\n      if (url) fetch(url);\n    });\n  });\n</script>`;
+  if (language === "angular") return `function iconUrl(icon: string): string | null {\n  if (!icon || !icon.includes(":")) return null;\n  const [prefix, name] = icon.split(":", 2);\n  return \`https://api.iconify.design/\${prefix}/\${name}.svg\`;\n}\n\nimport { HttpClient } from "@angular/common/http";\n\nconstructor(private http: HttpClient) {}\n\ncatalog$ = this.http.get("${url}");`;
   if (language === "alpine") return `<div x-data="{ catalog: null }"\n  x-init="catalog = await fetch('${url}').then((res) => res.json())">\n</div>`;
-  return `<script>\nfetch("${url}")\n  .then((res) => res.json())\n  .then((catalog) => console.log(catalog));\n</script>`;
+  return `<script>\nfunction iconUrl(icon) {\n  if (!icon || !icon.includes(":")) return null;\n  const [prefix, name] = icon.split(":", 2);\n  return \`https://api.iconify.design/\${prefix}/\${name}.svg\`;\n}\n\nfetch("${url}")\n  .then((res) => res.json())\n  .then((catalog) => console.log(catalog));\n</script>`;
 }
