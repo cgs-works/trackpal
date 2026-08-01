@@ -173,3 +173,83 @@ async def test_tenant_settings_can_store_country_and_currency(
     await db_session.refresh(settings)
     assert settings.country == "VE"
     assert settings.currency == "VES"
+
+
+# --- Task 3: country/currency API tests ---
+
+
+async def test_currencies_endpoint_returns_catalog(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+    response = await client.get("/api/v1/tenant-settings/currencies", headers=headers)
+    assert response.status_code == 200
+    payload = response.json()
+    ve = next(c for c in payload["countries"] if c["code"] == "VE")
+    assert ve["currency"] == "VES"
+    ves = next(c for c in payload["currencies"] if c["code"] == "VES")
+    assert ves["symbol"] == "Bs."
+
+
+async def test_update_tenant_settings_country_currency(client, active_tenant_user):
+    headers = await _login(client, "tenant", "tenant-password")
+    response = await client.put(
+        "/api/v1/tenant-settings",
+        json={"country": "ve", "currency": "ves", "timezone": "America/Caracas"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["country"] == "VE"
+    assert body["currency"] == "VES"
+
+
+async def test_update_tenant_settings_invalid_country_conflict(
+    client, active_tenant_user
+):
+    headers = await _login(client, "tenant", "tenant-password")
+    response = await client.put(
+        "/api/v1/tenant-settings", json={"country": "XX"}, headers=headers
+    )
+    assert response.status_code == 409
+
+
+async def test_update_tenant_settings_invalid_currency_conflict(
+    client, active_tenant_user
+):
+    headers = await _login(client, "tenant", "tenant-password")
+    response = await client.put(
+        "/api/v1/tenant-settings", json={"currency": "ZZZ"}, headers=headers
+    )
+    assert response.status_code == 409
+
+
+async def test_starter_get_nulled_currency_and_timezone(
+    client, auth_headers, active_tenant_user
+):
+    downgrade = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert downgrade.status_code == 200, downgrade.text
+    headers = await _login(client, "tenant", "tenant-password")
+    response = await client.get("/api/v1/tenant-settings", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["timezone"] is None
+    assert body["currency"] is None
+
+
+async def test_starter_put_currency_rejected_404(
+    client, auth_headers, active_tenant_user
+):
+    downgrade = await client.put(
+        f"/api/v1/tenants/{active_tenant_user.id}",
+        json={"plan": "starter"},
+        headers=auth_headers,
+    )
+    assert downgrade.status_code == 200, downgrade.text
+    headers = await _login(client, "tenant", "tenant-password")
+    response = await client.put(
+        "/api/v1/tenant-settings", json={"currency": "VES"}, headers=headers
+    )
+    assert response.status_code == 404

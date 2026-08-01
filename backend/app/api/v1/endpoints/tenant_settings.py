@@ -1,4 +1,4 @@
-"""Tenant Settings API — get and update tenant locale/timezone settings."""
+"""Tenant Settings API — get and update tenant locale/timezone/country/currency settings."""
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -10,7 +10,12 @@ from app.api.dependencies import (
     TenantPlanDep,
 )
 from app.api.v1.endpoints.subscriptions._common import require_tenant_or_master
-from app.schemas.tenant_settings import TenantSettingsResponse, TenantSettingsUpdate
+from app.core.currency_catalog import list_countries, list_currencies
+from app.schemas.tenant_settings import (
+    CurrencyCatalogResponse,
+    TenantSettingsResponse,
+    TenantSettingsUpdate,
+)
 from app.services.subscription_service.timezone_catalog import list_timezones
 from app.services.tenant_settings_service import TenantSettingsService
 
@@ -29,6 +34,7 @@ async def get_tenant_settings(
     settings = await service.get_settings(db, tenant_id)
     if current_user.role == "tenant" and tenant_plan == "starter":
         settings.timezone = None
+        settings.currency = None
     return settings
 
 
@@ -44,7 +50,7 @@ async def update_tenant_settings(
     if (
         current_user.role == "tenant"
         and tenant_plan == "starter"
-        and payload.timezone is not None
+        and (payload.timezone is not None or payload.currency is not None)
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     try:
@@ -55,7 +61,19 @@ async def update_tenant_settings(
         ) from exc
     if current_user.role == "tenant" and tenant_plan == "starter":
         settings.timezone = None
+        settings.currency = None
     return settings
+
+
+@router.get("/currencies", response_model=CurrencyCatalogResponse)
+async def get_currency_catalog(
+    db: DbDep,
+    tenant_id: ActiveTenantId,
+    current_user: CurrentUser,
+    tenant_plan: TenantPlanDep,
+):
+    require_tenant_or_master(current_user)
+    return {"countries": list_countries(), "currencies": list_currencies()}
 
 
 @router.get("/timezones")

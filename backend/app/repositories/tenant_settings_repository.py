@@ -45,7 +45,7 @@ async def update_settings(
     values: dict[str, object],
 ) -> TenantSettings:
     settings, _created = await get_or_create_by_tenant_id(db, tenant_id)
-    for field in ("locale", "timezone"):
+    for field in ("locale", "timezone", "country", "currency"):
         if field in values:
             setattr(settings, field, values[field])
     await db.flush()
