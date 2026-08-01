@@ -212,6 +212,8 @@ _CATALOG_EN_WA: Final[dict[str, str]] = {
     "wa.client.subscriptions.item": "{num}. *{service}* — {plan}\n   📅 {start} → {exp}\n   Status: {status}\n",
     "wa.client.subscriptions.status_active": "✅ Active",
     "wa.client.subscriptions.status_other": "⏸️ {status}",
+    "wa.client.subscriptions.price": "   💰 {price}",
+    "wa.client.subscriptions.price_on_request": "   💰 Price on request",
     "wa.client.codigo.redirect": "🔑 To find an access code, type *code*, *codigo*, or *código*.\n\nI'll route you to the lookup flow.",
     # ── WhatsApp codigo lookup flow ────────────────────────────────
     "wa.tenant.codigo.menu": "🔑 *Find Access Code*",

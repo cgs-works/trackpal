@@ -136,12 +136,29 @@ class DashboardService:
         subs = await get_active_subscriptions_for_client(
             db, profile.tenant_id, profile.id
         )
+
+        # Build currency metadata from tenant settings
+        from app.core.currency_catalog import minor_units_of, symbol_of
+        from app.schemas.tenant_settings import CurrencyMeta
+
+        settings_row = await db.execute(
+            select(TenantSettings.currency).where(
+                TenantSettings.tenant_id == profile.tenant_id
+            )
+        )
+        currency_code = settings_row.scalar_one_or_none()
+        currency = None
+        if currency_code:
+            sym = symbol_of(currency_code) or currency_code
+            mu = minor_units_of(currency_code) or 0
+            currency = CurrencyMeta(code=currency_code, symbol=sym, minor_units=mu)
         subscriptions = [
             ClientActiveSubscription(
                 id=sub.id,
                 service_name=sub.service.name if sub.service else "—",
                 service_icon=sub.service.icon if sub.service else None,
                 plan_name=sub.plan.name if sub.plan else "—",
+                plan_price=sub.plan.price if sub.plan else None,
                 status=sub.status,
                 starts_at=sub.starts_at,
                 expires_at=sub.expires_at,
@@ -158,4 +175,5 @@ class DashboardService:
             client_prefix=getattr(tenant, "client_prefix", ""),
             is_active=profile.is_active,
             subscriptions=subscriptions,
+            currency=currency,
         )
