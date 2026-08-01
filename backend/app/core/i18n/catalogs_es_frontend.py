@@ -934,7 +934,6 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.demo.banner.storage_quota_exceeded": "El almacenamiento del navegador está lleno. Los cambios de esta demo no se guardarán.",
     "frontend.demo.banner.reset_error": "No se pudieron restablecer los datos porque el navegador no tiene espacio disponible.",
     "frontend.demo.overlay.description": "Verificando tu demo antes de continuar…",
-
     # Icon Picker
     "frontend.icon_picker.title": "Elegir icono del servicio",
     "frontend.icon_picker.description": "Busca en el catálogo de Iconify y revisa la licencia de la colección antes de seleccionar un icono.",
@@ -958,5 +957,5 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     "frontend.icon_picker.cancel": "Cancelar",
     # Public API Icon Instruction
     "frontend.public_api.handoff_icon_prefix": "Referencia de icono",
-    "frontend.public_api.handoff_icon_suffix": "El navegador contacta Iconify para mostrar los iconos de servicio. Proporciona un respaldo genérico si Iconify no está disponible."
+    "frontend.public_api.handoff_icon_suffix": "El navegador contacta Iconify para mostrar los iconos de servicio. Proporciona un respaldo genérico si Iconify no está disponible.",
 }
