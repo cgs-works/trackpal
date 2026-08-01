@@ -25,7 +25,8 @@ export type DemoCatalogErrorCode =
   | "catalog_icon_invalid"
   | "service_not_found"
   | "plan_not_found"
-  | "invalid_demo_workspace";
+  | "invalid_demo_workspace"
+  | "plan_price_invalid";
 
 export class DemoCatalogError extends Error {
   readonly code: DemoCatalogErrorCode;
@@ -49,6 +50,21 @@ function validateIcon(value: string | null | undefined): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (parseIconReference(trimmed) === null) throw new DemoCatalogError("catalog_icon_invalid");
+  return trimmed;
+}
+
+function validatePrice(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const numeric = Number(trimmed);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    throw new DemoCatalogError("plan_price_invalid");
+  }
+  const parts = trimmed.split(".");
+  if (parts.length === 2 && parts[1].length > 2) {
+    throw new DemoCatalogError("plan_price_invalid");
+  }
   return trimmed;
 }
 
@@ -227,6 +243,7 @@ export function createDemoCatalog(
 
     async createPlan(serviceId: string, payload: PlanCreate): Promise<Plan> {
       const name = cleanName(payload.name);
+      const price = validatePrice(payload.price);
       const current = requireState(workspace, metadata);
       if (!current.services.some((service) => service.id === serviceId)) {
         throw new DemoCatalogError("service_not_found");
@@ -235,7 +252,6 @@ export function createDemoCatalog(
         throw new DemoCatalogError("plan_name_already_exists");
       }
       const now = new Date().toISOString();
-      const price = payload.price !== undefined ? payload.price : null;
       const plan: Plan = {
         id: `plan-${metadata.tenantId}-${Date.now()}`,
         tenant_id: metadata.tenantId,
@@ -257,7 +273,7 @@ export function createDemoCatalog(
       if (current.plans.some((plan) => plan.id !== planId && plan.service_id === serviceId && plan.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
         throw new DemoCatalogError("plan_name_already_exists");
       }
-      const price = payload.price !== undefined ? payload.price : existing.price;
+      const price = "price" in payload ? validatePrice(payload.price) : existing.price;
       const updated = { ...existing, name, price, updated_at: new Date().toISOString() };
       updateState(workspace, (state) => ({
         ...state,

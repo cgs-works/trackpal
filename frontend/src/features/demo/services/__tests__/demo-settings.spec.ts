@@ -152,11 +152,23 @@ describe("Pro Demo settings adapter", () => {
     ).resolves.toMatchObject({ country: "VE", currency: "VES" });
   });
 
-  it("defaults country and currency to null in tenant settings", async () => {
+  it("defaults country to US and currency to null in starter tenant settings", async () => {
+    const starterSource = createDataSource({
+      tenantId: "starter-settings",
+      tenantPlan: "starter",
+      demo: { ...metadata, tenantId: "starter-settings", plan: "starter" },
+    });
+
+    const settings = await starterSource.settings.loadTenantSettings();
+    expect(settings.country).toBe("US");
+    expect(settings.currency).toBeNull();
+  });
+
+  it("defaults country to US and currency to USD in pro tenant settings", async () => {
     const source = createDataSource({ tenantId: metadata.tenantId, tenantPlan: "pro", demo: metadata });
 
     const settings = await source.settings.loadTenantSettings();
-    expect(settings.country).toBeNull();
-    expect(settings.currency).toBeNull();
+    expect(settings.country).toBe("US");
+    expect(settings.currency).toBe("USD");
   });
 });

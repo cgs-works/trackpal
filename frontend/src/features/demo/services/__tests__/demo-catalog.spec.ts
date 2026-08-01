@@ -236,4 +236,41 @@ describe("Pro Demo Catalog", () => {
     expect(starter.catalog.storage).toBe("workspace");
     expect(starter.workspace!.read()!.plan_specific).not.toHaveProperty("services");
   });
+
+  it("baseline workspace includes country and currency settings", () => {
+    const baseline = createDemoBaseline("pro", metadata);
+    expect(baseline.plan_specific.tenant_settings.country).toBe("US");
+    expect(baseline.plan_specific.tenant_settings.currency).toBe("USD");
+  });
+
+  it("starter baseline includes country but no currency", () => {
+    const baseline = createDemoBaseline("starter", metadata);
+    expect(baseline.plan_specific.tenant_settings.country).toBe("US");
+    expect(baseline.plan_specific.tenant_settings.currency).toBeNull();
+  });
+
+  it("demo createPlan stores the price", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+    const services = await catalog.listServices();
+    const plan = await catalog.createPlan(services[0].id, { name: "Paid Plan", price: "12.50" });
+    expect(plan.price).toBe("12.50");
+  });
+
+  it("demo createPlan rejects invalid price", async () => {
+    const source = createDataSource({
+      tenantId: metadata.tenantId,
+      tenantPlan: metadata.plan,
+      demo: metadata,
+    });
+    const catalog = source.catalog;
+    const services = await catalog.listServices();
+    await expect(
+      catalog.createPlan(services[0].id, { name: "Bad Price", price: "-1" }),
+    ).rejects.toThrow();
+  });
 });

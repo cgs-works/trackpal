@@ -6,7 +6,7 @@ import type { ReminderSettings } from "@/features/admin/services/reminder-api";
 import type { TenantSettings } from "@/features/admin/services/settings-api";
 import type { PlanBaselineFactory } from "./demo-workspace";
 
-export const DEMO_BASELINE_VERSION = 3;
+export const DEMO_BASELINE_VERSION = 4;
 
 export interface DemoCodeService {
   id: string;
@@ -104,7 +104,7 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
       tenant_id: metadata.tenantId,
       locale: "en",
       timezone: "UTC",
-      country: null,
+      country: "US",
       currency: null,
       created_at: metadata.serverTime,
       updated_at: metadata.serverTime,
@@ -255,6 +255,10 @@ export const createDemoBaseline: PlanBaselineFactory = (plan, metadata) => {
   return {
     plan_specific: {
       ...starter,
+      tenant_settings: {
+        ...starter.tenant_settings,
+        currency: "USD",
+      },
       clients,
       services,
       plans,
