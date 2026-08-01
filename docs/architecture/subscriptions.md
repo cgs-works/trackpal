@@ -78,6 +78,8 @@ Subscription automation is Pro-only. Cleanup, reminder generation, and pending-r
 
 **Timezone ownership**: The `timezone` field was removed from this table in migration `d011fe74cab0`. Timezone is now managed centrally in `TenantSettings.timezone` at `GET/PUT /api/v1/tenant-settings`. The timezone catalog is served at `GET /api/v1/tenant-settings/timezones`.
 
+Tenant settings include country (Starter+Pro) and currency (Pro-only), validated against the bundled Currency Catalog; GET /tenant-settings/currencies serves the pickers.
+
 ## Encryption
 
 File: `backend/app/core/encryption.py`
