@@ -71,10 +71,15 @@ export function RegionalSettingsSection() {
     setSaving(true);
     try {
       const prev = tenantSettings?.locale || "en";
-      await updateTenantSettings(
-        { country: country ?? undefined, locale, timezone, currency: currency ?? undefined },
-        dataSource.settings
-      );
+      const payload: { country?: string; locale: string; timezone?: string; currency?: string } = {
+        country: country ?? undefined,
+        locale,
+      };
+      if (showProFields) {
+        payload.timezone = timezone;
+        payload.currency = currency ?? undefined;
+      }
+      await updateTenantSettings(payload, dataSource.settings);
       if (locale !== prev) {
         await loadCatalog(dataSource.mode === "demo" ? locale : undefined);
       }

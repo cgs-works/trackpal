@@ -139,6 +139,62 @@ describe("RegionalSettingsSection", () => {
     expect(screen.getByText("frontend.my_account.regional.currency")).toBeInTheDocument();
   });
 
+  it("omits timezone and currency from payload for Starter tenant", async () => {
+    const user = userEvent.setup();
+
+    mockUseAuthStore.mockReturnValue({
+      role: "tenant",
+      tenantPlan: "starter",
+      dataSource: { settings: {} },
+    });
+    mockUseSettingsStore.mockReturnValue(baseSettingsState);
+
+    render(<RegionalSettingsSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText("frontend.my_account.regional.country")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "frontend.profile.save" }));
+
+    await waitFor(() => {
+      expect(baseSettingsState.updateTenantSettings).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = baseSettingsState.updateTenantSettings.mock.calls[0][0];
+    expect(payload).not.toHaveProperty("timezone");
+    expect(payload).not.toHaveProperty("currency");
+    expect(payload).toHaveProperty("locale");
+    expect(payload).toHaveProperty("country");
+  });
+
+  it("includes timezone and currency in payload for Pro tenant", async () => {
+    const user = userEvent.setup();
+
+    mockUseAuthStore.mockReturnValue({
+      role: "tenant",
+      tenantPlan: "pro",
+      dataSource: { settings: {} },
+    });
+    mockUseSettingsStore.mockReturnValue(baseSettingsState);
+
+    render(<RegionalSettingsSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText("frontend.profile.language")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "frontend.profile.save" }));
+
+    await waitFor(() => {
+      expect(baseSettingsState.updateTenantSettings).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = baseSettingsState.updateTenantSettings.mock.calls[0][0];
+    expect(payload).toHaveProperty("timezone");
+    expect(payload).toHaveProperty("currency");
+  });
+
   it("loads catalog in demo mode when locale changes", async () => {
     const user = userEvent.setup();
 
