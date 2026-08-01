@@ -9,7 +9,7 @@ export type SafeHelpDestination =
   | { to: "/admin/clients" }
   | { to: "/admin/catalog" }
   | { to: "/admin/subscriptions" }
-  | { to: "/admin/settings"; search?: { category?: SettingsCategoryId; tab?: string } }
+  | { to: "/admin/settings"; search?: { category?: SettingsCategoryId; tab?: "regional" } }
   | { to: "/admin/help"; search?: { topic?: string } }
   | { to: "/client/dashboard" }
   | { to: "/client/profile" }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Ban, Bell, Globe, KeyRound, Mail, MessageCircle, Shield, UserCircle } from "lucide-react";
+import { Ban, Bell, KeyRound, Mail, MessageCircle, Shield, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";

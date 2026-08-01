@@ -269,7 +269,7 @@ export function createDemoCatalog(
       const current = requireState(workspace, metadata);
       const existing = current.plans.find((plan) => plan.id === planId && plan.service_id === serviceId);
       if (!existing) throw new DemoCatalogError("plan_not_found");
-      const name = cleanName(payload.name);
+      const name = cleanName(payload.name ?? existing.name);
       if (current.plans.some((plan) => plan.id !== planId && plan.service_id === serviceId && plan.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
         throw new DemoCatalogError("plan_name_already_exists");
       }

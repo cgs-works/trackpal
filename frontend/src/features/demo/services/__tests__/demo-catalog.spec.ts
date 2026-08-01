@@ -239,14 +239,16 @@ describe("Pro Demo Catalog", () => {
 
   it("baseline workspace includes country and currency settings", () => {
     const baseline = createDemoBaseline("pro", metadata);
-    expect(baseline.plan_specific.tenant_settings.country).toBe("US");
-    expect(baseline.plan_specific.tenant_settings.currency).toBe("USD");
+    const settings = baseline.plan_specific.tenant_settings as Record<string, unknown>;
+    expect(settings.country).toBe("US");
+    expect(settings.currency).toBe("USD");
   });
 
   it("starter baseline includes country but no currency", () => {
     const baseline = createDemoBaseline("starter", metadata);
-    expect(baseline.plan_specific.tenant_settings.country).toBe("US");
-    expect(baseline.plan_specific.tenant_settings.currency).toBeNull();
+    const settings = baseline.plan_specific.tenant_settings as Record<string, unknown>;
+    expect(settings.country).toBe("US");
+    expect(settings.currency).toBeNull();
   });
 
   it("demo createPlan stores the price", async () => {
