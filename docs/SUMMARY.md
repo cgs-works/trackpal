@@ -29,6 +29,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
 | [User Help System](architecture/user-help-system.md) | Private Markdown compiler, authenticated Help API, plan-aware manuals, contextual help, and Tenant Admin orientation tours |
+| [Regional Settings](architecture/regional-settings.md) | Currency Catalog, locale/timezone/country/currency settings, plan gating, pickers, price semantics, and cross-module integration |
 | [Tenant Data Export](architecture/tenant-data-export.md) | Export contract, job lifecycle, CSV/JSON formats, exclusions, storage boundary, and presigned download |
 | [Tenant Deletion](architecture/tenant-deletion.md) | Self-service deletion, Master deletion, external cleanup, fail-closed guarantees, and session teardown |
 
