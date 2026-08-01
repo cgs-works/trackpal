@@ -75,6 +75,8 @@ _handle_catalog_plan_action = caf._handle_catalog_plan_action
 _handle_catalog_edit_plan = caf._handle_catalog_edit_plan
 _handle_catalog_create_service_name = caf._handle_catalog_create_service_name
 _handle_catalog_create_plan_name = caf._handle_catalog_create_plan_name
+_handle_catalog_create_plan_price = caf._handle_catalog_create_plan_price
+_handle_catalog_edit_plan_price = caf._handle_catalog_edit_plan_price
 _handle_catalog_empty_plan_menu = caf._handle_catalog_empty_plan_menu
 _handle_catalog_post_action = caf._handle_catalog_post_action
 

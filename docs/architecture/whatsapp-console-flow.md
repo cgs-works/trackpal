@@ -413,7 +413,7 @@ Plan-aware menus:
 
 Blocked identities receive `no_reply=true`; mailbox status must be `connected` for code lookup.
 
-Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
+Catalog delete warnings list active subscriptions ordered by expiration date and state that historical/non-active subscriptions are also deleted. Catalog plan flows display the plan price with the tenant's currency symbol; create/edit plan support an optional price; subscription-create plan selection shows prices. `0` in Catalog closes the WhatsApp session and relies on the endpoint response contract (`status="closed"`, `close_jid`) for Evolution/n8n session closure.
 
 ### Subscription flows
 

@@ -8,6 +8,7 @@ from typing import Any
 from app.core.i18n import t as _i18n_t
 
 from . import _context as ctx
+from .format_helpers import format_price
 
 
 def _t(key: str, /, **params: Any) -> str:
@@ -143,6 +144,7 @@ def _format_plan_list(
     plans: list[Any],
     page: int = 1,
     total_pages: int = 1,
+    symbol: str | None = None,
 ) -> tuple[str, dict[str, str]]:
     """Format plan list with subscription counts and pagination nav."""
     loc = ctx.get_locale()
@@ -151,8 +153,9 @@ def _format_plan_list(
     for i, p in enumerate(plans, start=1):
         num = str(i)
         active_count = int(getattr(p, "active_subscription_count", 0) or 0)
+        price_text = format_price(getattr(p, "price", None), symbol, loc)
         entries.append(
-            f"{num}️⃣ {p.name} - "
+            f"{num}️⃣ {p.name} - {price_text} - "
             f"{_catalog_count('wa.tenant.catalog.count.subscription_active', active_count)}"
         )
         selection_map[num] = str(p.id)
@@ -172,11 +175,13 @@ def _format_plan_list(
     return reply, selection_map
 
 
-def _format_plan_detail(plan: Any) -> str:
+def _format_plan_detail(plan: Any, symbol: str | None = None) -> str:
     loc = ctx.get_locale()
     header = _i18n_t(loc, "wa.tenant.catalog.plan_detail_header")
     name_label = _i18n_t(loc, "wa.tenant.catalog.name_label", name=plan.name)
-    return f"{header}\n\n{name_label}\n"
+    price_label = _i18n_t(loc, "wa.tenant.catalog.price_label")
+    price_text = format_price(getattr(plan, "price", None), symbol, loc)
+    return f"{header}\n\n{name_label}\n*{price_label}:* {price_text}\n"
 
 
 def _format_profile_detail(profile: Any, username: str) -> str:

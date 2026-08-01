@@ -86,6 +86,8 @@ class WhatsAppTenantConsoleService(
     _handle_catalog_edit_plan = _._handle_catalog_edit_plan
     _handle_catalog_create_service_name = _._handle_catalog_create_service_name
     _handle_catalog_create_plan_name = _._handle_catalog_create_plan_name
+    _handle_catalog_create_plan_price = _._handle_catalog_create_plan_price
+    _handle_catalog_edit_plan_price = _._handle_catalog_edit_plan_price
     _handle_catalog_empty_plan_menu = _._handle_catalog_empty_plan_menu
     _handle_catalog_post_action = _._handle_catalog_post_action
     _show_catalog_delete_service_list = _._show_catalog_delete_service_list
