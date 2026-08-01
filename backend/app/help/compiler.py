@@ -68,7 +68,7 @@ ALLOWED_HELP_TARGETS = {
     "admin.settings",
     "admin.settings.language",
     "admin.settings.reminders",
-    "admin.settings.timezone",
+    "admin.settings.regional",
     "admin.settings.public-api",
     "admin.settings.whatsapp",
     "admin.settings.code-services",
@@ -89,15 +89,15 @@ ALLOWED_SETTINGS_CATEGORIES = {
     "access-control",
     "code-services",
     "data",
-    "locale",
+    "my-account",
     "mailbox",
     "password",
     "profile",
     "public-api",
     "reminders",
-    "timezone",
     "whatsapp-link",
 }
+ALLOWED_TABS = {"regional"}
 ALLOWED_EXTERNAL_HELP_URLS = {
     "https://myaccount.google.com/apppasswords",
     "https://support.google.com/accounts/answer/185833",
@@ -648,7 +648,7 @@ def _safe_navigation_list(value: Any, path: Path) -> list[dict[str, str | None]]
 def _validate_safe_navigation(
     value: Any, path: Path, *, declared_route: str | None = None
 ) -> dict[str, str | None]:
-    if not isinstance(value, dict) or set(value) - {"route", "settings_category"}:
+    if not isinstance(value, dict) or set(value) - {"route", "settings_category", "tab"}:
         raise HelpValidationError(f"Invalid safe navigation in {path.name}")
 
     route = value.get("route")
@@ -666,7 +666,20 @@ def _validate_safe_navigation(
         or settings_category not in ALLOWED_SETTINGS_CATEGORIES
     ):
         raise HelpValidationError(f"Unknown settings category in {path.name}")
-    return {"route": route, "settings_category": settings_category}
+
+    tab = value.get("tab")
+    if tab is not None:
+        if not isinstance(tab, str) or tab not in ALLOWED_TABS:
+            raise HelpValidationError(f"Unknown tab in {path.name}")
+        if settings_category != "my-account":
+            raise HelpValidationError(
+                f"tab is only allowed with settings_category 'my-account' in {path.name}"
+            )
+
+    result: dict[str, str | None] = {"route": route, "settings_category": settings_category}
+    if tab is not None:
+        result["tab"] = tab
+    return result
 
 
 def _iter_strings(value: Any) -> Iterator[str]:

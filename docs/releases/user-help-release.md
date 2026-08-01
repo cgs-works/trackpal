@@ -62,6 +62,17 @@ The manual scenarios must also cover:
 - missing required and explicitly conditional targets;
 - route transitions, safe Settings panels, keyboard-only operation, focus restoration, reduced motion, translated long copy, and all seven approved tour steps.
 
+## Topic inventory
+
+| Topic ID | Plans | Tab | Notes |
+|---|---|---|---|
+| `tenant-admin.country` | Starter, Pro | Regional (My Account) | Country selection (ISO code) |
+| `tenant-admin.currency` | Pro | Regional (My Account) | Currency display for plan prices |
+| `tenant-admin.language` | Starter, Pro | Regional (My Account) | Language picker relocated from old locale tab |
+| `tenant-admin.timezone` | Pro | Regional (My Account) | Timezone relocated from old timezone tab |
+| `tenant-admin.catalog` | Pro | — | Added plan prices paragraph |
+| `client.subscriptions` | Pro | — | Added plan price display note |
+
 ## Release evidence
 
 The first implementation deliberately does not add automated browser E2E. Vitest, pytest, the compiler contract, and the production build cover deterministic behavior; the matrix above is the required human verification for browser layout, focus, responsive presentation, and real route transitions.
@@ -73,6 +84,6 @@ A local browser smoke run on 2026-07-21 verified the following against an epheme
 - Starter Tenant Admin in Spanish: the mobile navigation exposes Dashboard, Settings, and Help but not Pro modules; Starter Help loads without Pro topics.
 - Unauthenticated direct navigation to `/admin/help` redirects to login.
 
-This smoke run is evidence for the listed paths, not a substitute for the complete matrix. The remaining desktop/mobile, locale, tour lifecycle, failure, accessibility, and version-mismatch rows still require human sign-off before production enablement.
+This smoke run is evidence for the listed paths, not a substitute for the complete matrix. The remaining desktop/mobile, locale, tour lifecycle, failure, accessibility, version-mismatch, and regional-settings rows still require human sign-off before production enablement.
 
 Attach the completed QA notes to the issue or release record. Until every row is signed off, leave `VITE_PRIVATE_HELP_ENABLED=false` in the deployed frontend environment.

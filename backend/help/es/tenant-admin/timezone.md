@@ -11,7 +11,7 @@ capabilities:
   - tenant_subscriptions
 route: /admin/settings
 help_targets:
-  - admin.settings.timezone
+  - admin.settings.regional
 title: Zona horaria del negocio
 summary: Alinea vencimientos y recordatorios con la hora local de tu negocio.
 search_tags:
@@ -28,7 +28,8 @@ synonyms:
 order: 150
 safe_navigation:
   route: /admin/settings
-  settings_category: timezone
+  settings_category: my-account
+  tab: regional
 related_topics:
   - tenant-admin.reminders
   - tenant-admin.subscriptions
@@ -36,7 +37,7 @@ related_topics:
 tour:
   - release_id: tenant-admin-pro-1
     order: 6
-    target: admin.settings.timezone
+    target: admin.settings.regional
     conditional: false
     plans:
       - pro
@@ -51,7 +52,7 @@ tour:
 
 TrackPal usa esta zona para interpretar las fechas de suscripciones, la hora de los recordatorios y el cierre de cada día.
 
-Abre **Configuración > Zona horaria**, busca tu región o ciudad, selecciónala y guarda. Hasta que elijas una, TrackPal usa `UTC` como referencia.
+Abre **Mi cuenta > Configuración regional**, busca tu región o ciudad, selecciónala y guarda. Hasta que elijas una, TrackPal usa `UTC` como referencia.
 
 El ajuste se aplica a todo el negocio y sigue automáticamente los cambios horarios de la región. Si eliges una zona incorrecta, un aviso puede parecer temprano o tarde aunque la fecha guardada no haya cambiado.
 

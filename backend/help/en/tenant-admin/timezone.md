@@ -11,7 +11,7 @@ capabilities:
   - tenant_subscriptions
 route: /admin/settings
 help_targets:
-  - admin.settings.timezone
+  - admin.settings.regional
 title: Business timezone
 summary: Keep expirations and reminders aligned with your business's local time.
 search_tags:
@@ -28,7 +28,8 @@ synonyms:
 order: 150
 safe_navigation:
   route: /admin/settings
-  settings_category: timezone
+  settings_category: my-account
+  tab: regional
 related_topics:
   - tenant-admin.reminders
   - tenant-admin.subscriptions
@@ -36,7 +37,7 @@ related_topics:
 tour:
   - release_id: tenant-admin-pro-1
     order: 6
-    target: admin.settings.timezone
+    target: admin.settings.regional
     conditional: false
     plans:
       - pro
@@ -51,7 +52,7 @@ tour:
 
 TrackPal uses this region for the local calendar, subscription dates, reminder time, and the end of each day.
 
-Open **Settings > Timezone**, search for your region or city, select it, and save. TrackPal uses `UTC` as a reference until you choose one.
+Open **My Account > Regional settings**, search for your region or city, select it, and save. TrackPal uses `UTC` as a reference until you choose one.
 
 The setting applies to the whole business and automatically follows regional clock changes. A wrong timezone can make a reminder appear early or late without changing the stored expiration time.
 

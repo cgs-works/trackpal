@@ -9,7 +9,7 @@ export type SafeHelpDestination =
   | { to: "/admin/clients" }
   | { to: "/admin/catalog" }
   | { to: "/admin/subscriptions" }
-  | { to: "/admin/settings"; search?: { category?: SettingsCategoryId } }
+  | { to: "/admin/settings"; search?: { category?: SettingsCategoryId; tab?: string } }
   | { to: "/admin/help"; search?: { topic?: string } }
   | { to: "/client/dashboard" }
   | { to: "/client/profile" }
@@ -52,17 +52,24 @@ export function resolveSafeHelpNavigation(
     }
   }
 
-  if (
-    navigation.route === "/admin/settings" &&
-    (navigation.settings_category === null ||
-      isSettingsCategoryId(navigation.settings_category))
-  ) {
-    return navigation.settings_category === null
-      ? { to: "/admin/settings" }
-      : {
-          to: "/admin/settings",
-          search: { category: navigation.settings_category },
+  if (navigation.route === "/admin/settings") {
+    if (navigation.settings_category === "my-account" && navigation.tab === "regional") {
+      return {
+        to: "/admin/settings",
+        search: { category: "my-account", tab: "regional" },
       };
+    }
+    if (
+      navigation.settings_category === null ||
+      isSettingsCategoryId(navigation.settings_category)
+    ) {
+      return navigation.settings_category === null
+        ? { to: "/admin/settings" }
+        : {
+            to: "/admin/settings",
+            search: { category: navigation.settings_category },
+          };
+    }
   }
 
   if (navigation.route === "/admin/help" && navigation.settings_category === null) {

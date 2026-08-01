@@ -12,6 +12,7 @@ capabilities:
 route: /admin/settings
 help_targets:
   - admin.settings.language
+  - admin.settings.regional
 title: Idioma
 summary: Elige el idioma que usará tu negocio en TrackPal.
 search_tags:
@@ -25,7 +26,8 @@ synonyms:
 order: 20
 safe_navigation:
   route: /admin/settings
-  settings_category: locale
+  settings_category: my-account
+  tab: regional
 related_topics:
   - tenant-admin.dashboard
   - tenant-admin.profile
@@ -36,6 +38,6 @@ related_topics:
 
 El idioma que guardes se aplicará a la navegación, Configuración, Ayuda y los mensajes de TrackPal para todo el negocio.
 
-Abre **Configuración > Idioma**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.
+Abre **Mi cuenta > Configuración regional**, elige Español o English y guarda. Si el cambio falla, seguirá activo el idioma anterior para que puedas intentarlo otra vez.
 
 Este ajuste no traduce mensajes de servicios externos ni cambia tus datos, suscripciones o conexiones.

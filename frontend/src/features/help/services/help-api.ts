@@ -3,6 +3,7 @@ import api from "@/lib/api";
 export interface HelpSafeNavigation {
   route: string;
   settings_category: string | null;
+  tab?: string | null;
 }
 
 export interface HelpTopicSummary {

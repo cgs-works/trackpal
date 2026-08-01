@@ -34,7 +34,7 @@ related_topics:
 
 # Tus suscripciones
 
-Cada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento.
+Cada suscripción muestra el servicio, el plan, su estado y las fechas de inicio y vencimiento. Cuando el proveedor ha asignado un precio al plan, la lista de suscripciones también lo muestra con el símbolo de moneda del negocio.
 
 ## Qué significa cada estado
 

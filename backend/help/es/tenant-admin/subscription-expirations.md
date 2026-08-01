@@ -13,25 +13,26 @@ capabilities:
 route: /admin/subscriptions
 help_targets: []
 title: Gestionar vencimientos
-summary: Combina fechas, recordatorios y acciones para mantener tus suscripciones al día.
+summary: Combina fechas, recordatorios y acciones de ciclo para mantener las suscripciones al día.
 search_tags:
-  - vencimientos de suscripciones
-  - gestión de expiraciones
+  - vencimiento de suscripciones
+  - gestión de vencimientos
   - suscripciones por vencer
   - flujo de renovación
-  - expiración automática
+  - vencimiento automático
   - días de aviso
 synonyms:
-  - gestión de vencimientos
-  - planificación de renovaciones
-  - fechas finales de suscripción
+  - administración de vencimientos
+  - planificación de renovación
+  - fechas de fin de suscripción
 order: 160
 safe_navigation:
   route: /admin/subscriptions
   settings_category: null
 safe_links:
   - route: /admin/settings
-    settings_category: timezone
+    settings_category: my-account
+    tab: regional
   - route: /admin/settings
     settings_category: reminders
 related_topics:
@@ -42,18 +43,18 @@ related_topics:
 
 # Gestionar vencimientos
 
-En **TrackPal Pro**, tres elementos trabajan juntos: la fecha de la suscripción, la zona horaria del negocio y los recordatorios de WhatsApp.
+En **TrackPal Pro**, tres cosas trabajan juntas: la fecha de la suscripción, la zona horaria del negocio y los recordatorios de WhatsApp.
 
 ## Antes del vencimiento
 
-Confirma la zona horaria, activa los recordatorios si quieres usarlos y revisa que cada suscripción tenga la fecha y el teléfono correctos.
+Confirma la zona horaria, activa los recordatorios si los deseas y verifica que cada suscripción tenga la fecha y el teléfono de destinatario correctos.
 
-Cuando una suscripción esté por vencer, usa **Renovar** para extenderla. Si ya expiró o fue cancelada, usa **Renovar** o **Reactivar** según la opción disponible. **Cancelar** termina el acceso antes de la fecha prevista.
+Cuando una suscripción esté por vencer, usa **Renovar** para extenderla. Si ya venció o fue cancelada, usa **Renovar** o **Reactivar** cuando estén disponibles. **Cancelar** termina el acceso antes de la fecha prevista.
 
-En WhatsApp abre **Suscripciones** en el menú de **TrackPal Pro**. Las acciones visibles usan `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar; `8` avanza, `9` regresa y `0` cancela.
+En WhatsApp, abre **Suscripciones** desde el menú de **TrackPal Pro**. Las acciones visibles usan `1` Editar, `2` Cancelar, `3` Renovar y `4` Reactivar; `8` avanza, `9` retrocede y `0` cancela.
 
 ## Cambios automáticos
 
-Al terminar el día local, una suscripción vencida pasa a **Expirada**. Después de 7 días puede pasar a **Cancelada** y, tras más de 30 días cancelada, se elimina. Los recordatorios son independientes de estos cambios.
+Al final del día local, una suscripción vencida pasa a **Expirada**. Después de 7 días puede pasar a **Cancelada**, y después de más de 30 días cancelada se elimina. La automatización de recordatorios es independiente de estos cambios.
 
-Si una fecha parece incorrecta, revisa primero la zona horaria. Si falta un aviso, comprueba la suscripción, los destinatarios y la conexión de WhatsApp.
+Si una fecha parece incorrecta, revisa primero la zona horaria. Si falta un recordatorio, revisa la suscripción, los destinatarios y la conexión de WhatsApp.

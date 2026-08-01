@@ -92,4 +92,35 @@ describe("resolveSafeHelpNavigation", () => {
       }),
     ).toBeNull();
   });
+
+  it("navigates to the regional tab within My Account", () => {
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/settings",
+        settings_category: "my-account",
+        tab: "regional",
+      }),
+    ).toEqual({
+      to: "/admin/settings",
+      search: { category: "my-account", tab: "regional" },
+    });
+  });
+
+  it("rejects locale category as it no longer exists", () => {
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/settings",
+        settings_category: "locale",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects timezone category as it no longer exists", () => {
+    expect(
+      resolveSafeHelpNavigation({
+        route: "/admin/settings",
+        settings_category: "timezone",
+      }),
+    ).toBeNull();
+  });
 });
