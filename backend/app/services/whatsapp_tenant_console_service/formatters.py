@@ -262,7 +262,9 @@ def _format_subscription_list(
     return reply, selection_map
 
 
-def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> str:
+def _format_subscription_detail(
+    sub: Any, credentials: dict | None = None, symbol: str | None = None
+) -> str:
     loc = ctx.get_locale()
     status_emoji = _i18n_t(loc, f"wa.tenant.subscriptions.detail.status.{sub.status}")
 
@@ -282,6 +284,13 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
     service_name = getattr(sub, "service_name", None) or "—"
     plan_name = getattr(sub, "plan_name", None) or "—"
     profile_name = sub.profile_name or "—"
+
+    # Build plan display line with optional price
+    plan_display = plan_name
+    plan_price = getattr(sub, "plan_price", None)
+    if symbol is not None:
+        price_text = format_price(plan_price, symbol, loc)
+        plan_display = f"{plan_name} — {price_text}"
 
     starts_at = ""
     if sub.starts_at:
@@ -312,7 +321,7 @@ def _format_subscription_detail(sub: Any, credentials: dict | None = None) -> st
         f"*Estado:* {status_emoji}\n"
         f"*Cliente:* {client_name}\n"
         f"*Servicio:* {service_name}\n"
-        f"*Plan:* {plan_name}\n"
+        f"*Plan:* {plan_display}\n"
         f"*Email:* {sub.streaming_email}\n"
         f"*Contraseña:* {password_display}\n"
         f"*Perfil:* {profile_name}\n"

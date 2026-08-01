@@ -6,6 +6,7 @@ from app.core.errors import UserFacingError, translate_error
 from app.services.whatsapp_navigation import is_cancel, is_back, is_next
 
 from . import _context as ctx
+from .format_helpers import _load_currency_symbol
 
 
 async def _start_subscriptions_flow(self, phone, session_service, tenant_id, db):
@@ -206,7 +207,8 @@ async def _handle_subscriptions_select(
     credentials = await self._subscription_service.reveal_credentials(
         db, tenant_id, parsed_id
     )
-    reply = self._format_subscription_detail(subscription, credentials)
+    symbol = await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
+    reply = self._format_subscription_detail(subscription, credentials, symbol=symbol)
     actions = (
         self._t(self.KEY_SUBSCRIPTION_DETAIL_ACTIONS)
         if subscription.status == "cancelled"

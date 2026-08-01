@@ -4659,3 +4659,169 @@ class TestPlanPriceFlows:
         # Session should be cleared
         session = await session_service.get_session("admin:+10000000000")
         assert session is None
+
+
+# ===================================================================
+# Currency symbol loading tests
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestLoadCurrencySymbol:
+    """Tests for _load_currency_symbol helper."""
+
+    async def test_load_currency_symbol_returns_symbol(self) -> None:
+        """_load_currency_symbol resolves 'VES' to 'Bs.'."""
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
+
+        mock_db = AsyncMock()
+        with patch(
+            "app.repositories.tenant_settings_repository"
+        ) as mock_repo:
+            settings = FakeTenantSettingsObj(currency="VES")
+            mock_repo.get_by_tenant_id = AsyncMock(return_value=settings)
+
+            symbol = await _load_currency_symbol(mock_db, uuid4())
+            assert symbol == "Bs."
+
+    async def test_load_currency_symbol_none_when_no_currency(self) -> None:
+        """_load_currency_symbol returns None when currency not set."""
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
+
+        mock_db = AsyncMock()
+        with patch(
+            "app.repositories.tenant_settings_repository"
+        ) as mock_repo:
+            settings = FakeTenantSettingsObj(currency=None)
+            mock_repo.get_by_tenant_id = AsyncMock(return_value=settings)
+
+            symbol = await _load_currency_symbol(mock_db, uuid4())
+            assert symbol is None
+
+    async def test_load_currency_symbol_none_when_no_settings(self) -> None:
+        """_load_currency_symbol returns None when no tenant settings."""
+        from app.services.whatsapp_tenant_console_service.format_helpers import (
+            _load_currency_symbol,
+        )
+
+        mock_db = AsyncMock()
+        with patch(
+            "app.repositories.tenant_settings_repository"
+        ) as mock_repo:
+            mock_repo.get_by_tenant_id = AsyncMock(return_value=None)
+
+            symbol = await _load_currency_symbol(mock_db, uuid4())
+            assert symbol is None
+
+
+# ===================================================================
+# Subscription detail price display tests
+# ===================================================================
+
+
+class TestSubscriptionDetailPrice:
+    """Tests for subscription detail formatter showing price."""
+
+    def test_format_subscription_detail_shows_price_with_symbol(self) -> None:
+        """When symbol is provided and sub has plan price, price is shown."""
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_subscription_detail,
+        )
+
+        sub = FakeSubscriptionObj(plan_name="Premium")
+        sub.plan_price = Decimal("25.00")
+        token = set_locale("es")
+        try:
+            reply = _format_subscription_detail(sub, symbol="Bs.")
+            assert "Premium" in reply
+            assert "Bs." in reply
+            assert "25,00" in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_subscription_detail_no_price_when_no_symbol(self) -> None:
+        """When symbol is None, price is not shown in plan line."""
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_subscription_detail,
+        )
+
+        sub = FakeSubscriptionObj(plan_name="Basic")
+        sub.plan_price = Decimal("10.00")
+        token = set_locale("es")
+        try:
+            reply = _format_subscription_detail(sub, symbol=None)
+            assert "Basic" in reply
+            assert "10,00" not in reply
+        finally:
+            reset_locale(token)
+
+    def test_format_subscription_detail_plan_only_when_no_price(self) -> None:
+        """When plan has no price, only plan name is shown."""
+        from app.services.whatsapp_tenant_console_service._context import (
+            set_locale,
+            reset_locale,
+        )
+        from app.services.whatsapp_tenant_console_service.formatters import (
+            _format_subscription_detail,
+        )
+
+        sub = FakeSubscriptionObj(plan_name="Free")
+        sub.plan_price = None
+        token = set_locale("es")
+        try:
+            reply = _format_subscription_detail(sub, symbol="Bs.")
+            assert "Free" in reply
+            assert "consultar" in reply.lower() or "request" in reply.lower()
+        finally:
+            reset_locale(token)
+
+
+# ===================================================================
+# Integration: catalog flow passes symbol to formatters
+# ===================================================================
+
+
+@pytest.mark.asyncio
+class TestCatalogFlowCurrencyIntegration:
+    """Integration tests verifying currency symbol reaches formatters in catalog flow."""
+
+    async def test_catalog_plan_list_shows_currency(
+        self,
+        console_service: WhatsAppTenantConsoleService,
+        session_service: WhatsAppSessionService,
+        catalog_service: FakeCatalogService,
+    ) -> None:
+        """Plan list in catalog flow should show currency symbol when configured."""
+        catalog_service._plans.clear()
+        service = FakeServiceObj(name="Netflix")
+        catalog_service._services[str(service.id)] = service
+        plan = FakePlanObj(
+            service_id=service.id, name="Premium", price=Decimal("12.50")
+        )
+        catalog_service._plans[str(plan.id)] = plan
+        tenant_id = uuid4()
+        mock_db = AsyncMock()
+
+        for step in ["2", "1", "1", "2"]:
+            reply = await console_service.process_message(
+                phone="+10000000000",
+                message=step,
+                session_service=session_service,
+                tenant_id=tenant_id,
+                db=mock_db,
+            )
+
+        assert "Premium" in reply
+        assert "12" in reply

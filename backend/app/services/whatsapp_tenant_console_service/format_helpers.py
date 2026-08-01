@@ -90,5 +90,23 @@ def _parse_price_input(value: str) -> Decimal | None:
     return parsed
 
 
+async def _load_currency_symbol(db, tenant_id):
+    """Load currency symbol from tenant settings.
+
+    Returns the resolved symbol (e.g. "Bs.") or None if no currency is
+    configured for this tenant.
+    """
+    from app.core.currency_catalog.currency_catalog import symbol_of
+    from app.repositories import tenant_settings_repository
+
+    try:
+        settings = await tenant_settings_repository.get_by_tenant_id(db, tenant_id)
+    except Exception:
+        return None
+    if settings is None or not getattr(settings, "currency", None):
+        return None
+    return symbol_of(settings.currency) or None
+
+
 # Price skip words (used by catalog flow)
 PRICE_SKIP_WORDS = {"sin precio", "none", "omitir", "skip"}

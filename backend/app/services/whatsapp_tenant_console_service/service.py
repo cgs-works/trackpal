@@ -55,6 +55,7 @@ class WhatsAppTenantConsoleService(
     _format_short_date = _._format_short_date
     _calculate_subscription_expiry = _._calculate_subscription_expiry
     _parse_iso_date = _._parse_iso_date
+    _load_currency_symbol = _._load_currency_symbol
     _start_clients_flow = _._start_clients_flow
     _handle_client_list_selection = _._handle_client_list_selection
     _handle_client_select = _._handle_client_select

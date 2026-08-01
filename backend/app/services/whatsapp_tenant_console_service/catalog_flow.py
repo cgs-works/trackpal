@@ -9,7 +9,7 @@ from app.schemas.catalog import PlanCreate, PlanUpdate, ServiceCreate, ServiceUp
 from app.services.whatsapp_navigation import is_back, is_next
 
 from . import _context as ctx
-from .format_helpers import PRICE_SKIP_WORDS, _parse_price_input
+from .format_helpers import PRICE_SKIP_WORDS, _parse_price_input, _load_currency_symbol
 
 
 def _paginate(items, page, page_size):
@@ -208,8 +208,11 @@ async def _handle_catalog_service_action(
         total_pages = max(1, math.ceil(len(plans) / page_size))
         start = (page - 1) * page_size
         page_plans = plans[start : start + page_size]
+        symbol = (
+            await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
+        )
         reply, selection_map = self._format_plan_list(
-            page_plans, page=page, total_pages=total_pages
+            page_plans, page=page, total_pages=total_pages, symbol=symbol
         )
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT
@@ -299,8 +302,11 @@ async def _handle_catalog_plan_select(
         )
         if not page_plans:
             return self._t(self.KEY_CATALOG_INVALID_SELECTION)
+        symbol = (
+            await _load_currency_symbol(db, tenant_id) if db and tenant_id else None
+        )
         reply, selection_map = self._format_plan_list(
-            page_plans, page=safe_page, total_pages=total_pages
+            page_plans, page=safe_page, total_pages=total_pages, symbol=symbol
         )
         session.flow = self.CATALOG_FLOW
         session.step = self.CATALOG_STEP_PLAN_SELECT

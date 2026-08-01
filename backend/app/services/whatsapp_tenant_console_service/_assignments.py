@@ -40,6 +40,7 @@ _format_subscription_duration = staticmethod(fh._format_subscription_duration)
 _format_short_date = staticmethod(fh._format_short_date)
 _calculate_subscription_expiry = staticmethod(fh._calculate_subscription_expiry)
 _parse_iso_date = staticmethod(fh._parse_iso_date)
+_load_currency_symbol = fh._load_currency_symbol
 
 # -- Client flow handlers
 _start_clients_flow = cf._start_clients_flow
