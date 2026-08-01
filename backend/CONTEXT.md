@@ -29,7 +29,11 @@
 | **Evolution Instance** | Instancia de WhatsApp Business API (Evolution API/Go). Cada tenant tiene una, identificada por `evolution_instance_name`. |
 | **WhatsApp Console** | Interfaz conversacional basada en menús numéricos (0=cancelar, 8=siguiente, 9=regresar). Existe para Master, Tenant Admin y Client. |
 | **Client Context Shortcut** | A private WhatsApp session in which a Tenant Admin manages a remote contact from the admin's own chat. The remote contact cannot see or operate the administrative menu. |
-| **Catalog** | Servicios y planes que un Tenant ofrece. Cada Service se identifica por nombre y puede tener un Service Icon opcional; precios y disponibilidad no forman parte del catálogo. |
+| **Catalog** | Servicios y planes que un Tenant ofrece. Cada Service se identifica por nombre y puede tener un Service Icon opcional. Cada Plan puede tener un **precio** opcional, siempre expresado en la moneda del Tenant; un Plan sin precio se presenta como “Precio a consultar”. |
+| **Country** | Territorio ISO 3166-1 alpha-2 elegido por el Tenant como su país de negocio. Seleccionable desde el Currency Catalog. |
+| **Currency** | Moneda ISO 4217 elegida por el Tenant. Los planes no tienen moneda propia: el precio se muestra siempre en la Currency del Tenant. |
+| **Currency Catalog** | Conjunto seleccionable de Countries y Currencies con sus símbolos y decimales (minor units). Las Currencies seleccionables son aquellas con al menos un Country asignado. |
+| **Official Currency** | La moneda de curso legal preferente del territorio según los datos CLDR; no necesariamente emitida localmente (p. ej. USD en Ecuador y Panamá). Se sugiere primero en el selector de Currency cuando hay un Country seleccionado, sin auto-seleccionarse. |
 | **Service Icon** | Marca visual opcional elegida por el Tenant Admin para un Service del Catalog. Su ausencia o indisponibilidad usa una representación genérica y nunca cambia la identidad ni el comportamiento del Service. |
 | **Icon Reference** | Identidad externa y transferible de un Service Icon. Es distinta del recurso SVG y puede exponerse junto con el Catalog sin convertir a TrackPal en propietario del icono. |
 | **Public API Catalog** | Exposición pública read-only del Catalog de un tenant Pro para frontends externos. Publica servicios con planes anidados y no permite mutaciones. |
@@ -66,6 +70,7 @@
 | WhatsApp self-linking | Accesible si la instancia Evolution está configurada | Accesible si la instancia Evolution está configurada |
 | Public API Key (Settings) | Oculto y bloqueado para tenant admin | Visible y gestionable |
 | Timezone (Settings) | Oculto y bloqueado para tenant admin | Visible y editable |
+| País y moneda (Mi Cuenta) | Oculto y bloqueado para tenant admin | Visible y editable |
 | Reminder settings | Oculto | Visible |
 | Subscription jobs/reminders/cleanup | Ignorados completamente | Procesados |
 | Search code flow | Requiere mailbox `connected` | Requiere mailbox `connected` |
