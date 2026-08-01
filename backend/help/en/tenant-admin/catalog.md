@@ -25,6 +25,7 @@ search_tags:
   - delete service
   - delete plan
   - delete impact
+  - price
 synonyms:
   - product catalog
   - offerings

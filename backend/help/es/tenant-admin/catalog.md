@@ -25,6 +25,7 @@ search_tags:
   - eliminar servicio
   - eliminar plan
   - impacto de eliminación
+  - precio
 synonyms:
   - catálogo de productos
   - oferta

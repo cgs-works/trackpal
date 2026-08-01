@@ -143,7 +143,7 @@ async def test_new_pro_tenant_receives_the_approved_initial_sequence(
         "admin.clients",
         "admin.catalog",
         "admin.subscriptions",
-        "admin.settings.timezone",
+        "admin.settings.regional",
         "admin.help",
     ]
 

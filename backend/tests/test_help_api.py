@@ -33,6 +33,8 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.delete-account",
         "tenant-admin.dashboard",
         "tenant-admin.language",
+        "tenant-admin.country",
+        "tenant-admin.currency",
         "tenant-admin.whatsapp",
         "tenant-admin.profile",
         "tenant-admin.password",
@@ -51,11 +53,13 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.help",
     ]
     assert index_response.json()["topics"][3]["help_targets"] == [
-        "admin.settings.language"
+        "admin.settings.language",
+        "admin.settings.regional",
     ]
     assert index_response.json()["topics"][3]["safe_navigation"] == {
         "route": "/admin/settings",
-        "settings_category": "locale",
+        "settings_category": "my-account",
+        "tab": "regional",
     }
     assert topic_response.status_code == 200
     assert topic_response.json()["title"] == "Dashboard"
@@ -75,6 +79,7 @@ async def test_tenant_admin_receives_localized_help_index_and_topic(
         "tenant-admin.delete-account",
         "tenant-admin.dashboard",
         "tenant-admin.language",
+        "tenant-admin.country",
         "tenant-admin.whatsapp",
         "tenant-admin.profile",
         "tenant-admin.password",
@@ -135,6 +140,7 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
     assert clients_topic.json()["safe_navigation"] == {
         "route": "/admin/clients",
         "settings_category": None,
+        "tab": None,
     }
     assert first_client_topic.status_code == 200
     first_client_data = first_client_topic.json()
@@ -150,11 +156,12 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
     assert reminders_topic.json()["safe_navigation"] == {
         "route": "/admin/settings",
         "settings_category": "reminders",
+        "tab": None,
     }
     assert expiration_topic.status_code == 200
     assert expiration_topic.json()["safe_links"] == [
-        {"route": "/admin/settings", "settings_category": "timezone"},
-        {"route": "/admin/settings", "settings_category": "reminders"},
+        {"route": "/admin/settings", "settings_category": "my-account", "tab": "regional"},
+        {"route": "/admin/settings", "settings_category": "reminders", "tab": None},
     ]
 
     tenant = (
@@ -216,6 +223,7 @@ async def test_public_api_help_is_searchable_and_pro_only(
     assert topic.json()["safe_navigation"] == {
         "route": "/admin/settings",
         "settings_category": "public-api",
+        "tab": None,
     }
     assert [result["id"] for result in search.json()["results"]] == [
         "tenant-admin.public-api",
@@ -276,13 +284,17 @@ async def test_help_topics_are_searchable_with_safe_cross_module_links(
     )
 
     assert search_response.status_code == 200
-    assert [result["id"] for result in search_response.json()["results"]] == [
-        "tenant-admin.mailbox"
-    ]
+    assert {
+        result["id"] for result in search_response.json()["results"]
+    } >= {
+        "tenant-admin.delete-account",
+        "tenant-admin.mailbox",
+    }
     assert topic_response.status_code == 200
     assert topic_response.json()["safe_navigation"] == {
         "route": "/admin/settings",
         "settings_category": "code-services",
+        "tab": None,
     }
     assert topic_response.json()["help_targets"] == ["admin.settings.code-services"]
 

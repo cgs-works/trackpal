@@ -382,7 +382,8 @@
           "rename plan",
           "delete service",
           "delete plan",
-          "delete impact"
+          "delete impact",
+          "price"
         ],
         "synonyms": [
           "product catalog",
@@ -1914,7 +1915,8 @@
           "renombrar plan",
           "eliminar servicio",
           "eliminar plan",
-          "impacto de eliminación"
+          "impacto de eliminación",
+          "precio"
         ],
         "synonyms": [
           "catálogo de productos",
@@ -3202,6 +3204,7 @@
           "delete service",
           "delete plan",
           "delete impact",
+          "price",
           "product catalog",
           "offerings",
           "service list",
@@ -3666,6 +3669,7 @@
           "eliminar servicio",
           "eliminar plan",
           "impacto de eliminación",
+          "precio",
           "catálogo de productos",
           "oferta",
           "lista de servicios",
