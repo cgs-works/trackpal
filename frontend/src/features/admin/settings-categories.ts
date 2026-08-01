@@ -1,7 +1,5 @@
 export const SETTINGS_CATEGORY_IDS = [
   "reminders",
-  "locale",
-  "timezone",
   "public-api",
   "code-services",
   "mailbox",

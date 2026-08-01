@@ -28,6 +28,10 @@ vi.mock("../password-section", () => ({
   PasswordSection: () => <div data-testid="password-section">password section</div>,
 }));
 
+vi.mock("../regional-settings-section", () => ({
+  RegionalSettingsSection: () => <div data-testid="regional-settings-section">regional settings</div>,
+}));
+
 const mockProfile = {
   id: "tenant-1",
   full_name: "Demo Tenant",
@@ -47,7 +51,7 @@ const mockProfile = {
 };
 
 describe("MyAccountSection", () => {
-  it("renders Profile, Security, and Data tabs for Tenant Admin", () => {
+  it("renders Profile, Regional, Security, and Data tabs for Tenant Admin", () => {
     mockUseAuthStore.mockReturnValue({
       isMasterSupportContext: false,
     });
@@ -57,11 +61,12 @@ describe("MyAccountSection", () => {
     );
 
     expect(screen.getByText("frontend.my_account.tab_profile")).toBeInTheDocument();
+    expect(screen.getByText("frontend.my_account.tab_regional")).toBeInTheDocument();
     expect(screen.getByText("frontend.my_account.tab_security")).toBeInTheDocument();
     expect(screen.getByText("frontend.my_account.tab_data")).toBeInTheDocument();
   });
 
-  it("renders only Profile and Data tabs for Master Support Context", () => {
+  it("renders only Profile, Regional, and Data tabs for Master Support Context", () => {
     mockUseAuthStore.mockReturnValue({
       isMasterSupportContext: true,
     });
@@ -71,6 +76,7 @@ describe("MyAccountSection", () => {
     );
 
     expect(screen.getByText("frontend.my_account.tab_profile")).toBeInTheDocument();
+    expect(screen.getByText("frontend.my_account.tab_regional")).toBeInTheDocument();
     expect(screen.getByText("frontend.my_account.tab_data")).toBeInTheDocument();
     expect(screen.queryByText("frontend.my_account.tab_security")).not.toBeInTheDocument();
   });
@@ -85,6 +91,36 @@ describe("MyAccountSection", () => {
     );
 
     expect(screen.getByTestId("profile-section")).toBeInTheDocument();
+  });
+
+  it("shows RegionalSettingsSection when the Regional tab is clicked", async () => {
+    mockUseAuthStore.mockReturnValue({
+      isMasterSupportContext: false,
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MyAccountSection profile={mockProfile} onProfileUpdate={vi.fn()} />,
+    );
+
+    await user.click(screen.getByText("frontend.my_account.tab_regional"));
+    expect(screen.getByTestId("regional-settings-section")).toBeInTheDocument();
+  });
+
+  it("opens the Regional tab when initialTab is regional", () => {
+    mockUseAuthStore.mockReturnValue({
+      isMasterSupportContext: false,
+    });
+
+    render(
+      <MyAccountSection
+        profile={mockProfile}
+        onProfileUpdate={vi.fn()}
+        initialTab="regional"
+      />,
+    );
+
+    expect(screen.getByTestId("regional-settings-section")).toBeInTheDocument();
   });
 
   it("shows Data empty state with icon and description after clicking the tab", async () => {

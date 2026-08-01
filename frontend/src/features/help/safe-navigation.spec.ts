@@ -15,9 +15,9 @@ describe("resolveSafeHelpNavigation", () => {
     expect(
       resolveSafeHelpNavigation({
         route: "/admin/settings",
-        settings_category: "locale",
+        settings_category: "reminders",
       }),
-    ).toEqual({ to: "/admin/settings", search: { category: "locale" } });
+    ).toEqual({ to: "/admin/settings", search: { category: "reminders" } });
 
     expect(
       resolveSafeHelpNavigation({
