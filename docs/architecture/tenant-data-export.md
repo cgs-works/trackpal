@@ -63,9 +63,9 @@ One ZIP named `<slugged-account-name>-data-<account-local-timestamp>.zip` contai
 
 | File | Format | Contents |
 |------|--------|----------|
-| `account-profile.csv` | CSV | account_name, contact_email, whatsapp_phone, login_username, current_plan, preferred_language, time_zone |
+| `account-profile.csv` | CSV | account_name, contact_email, whatsapp_phone, login_username, current_plan, preferred_language, time_zone, currency |
 | `client-data.csv` | CSV | client_name, login_username, whatsapp_phone, account_status, registered_on, last_updated_on |
-| `service-catalog.csv` | CSV | service_name, service_icon, service_created_on, service_updated_on, plan_name, plan_created_on, plan_updated_on |
+| `service-catalog.csv` | CSV | service_name, service_icon, service_created_on, service_updated_on, plan_name, plan_price, plan_created_on, plan_updated_on |
 | `subscription-snapshot.csv` | CSV | client_name, client_login_username, service_name, plan_name, service_account_email, service_profile_name, subscription_duration, started_on, expires_on, cancelled_on, subscription_status, recorded_on, last_updated_on |
 | `blocked-phones.csv` | CSV | phone, blocked_at |
 | `trackpal-data.json` | JSON | export_metadata, account_profile, client_accounts, service_catalog, subscription_snapshot, blocked_phone_list |
@@ -82,6 +82,17 @@ One ZIP named `<slugged-account-name>-data-<account-local-timestamp>.zip` contai
 7. Services without Plans emit one CSV row with empty Plan fields and a JSON object with an empty `plans` list.
 8. Access Control rows with only a WhatsApp LID are deliberately omitted.
 9. README is localized; filenames, JSON keys, CSV headers, and machine values remain English.
+
+### Stable-contract changes (ADR 0003 revision)
+
+The following columns were added to the export stable contract:
+
+| File | New column | Type | Source | Notes |
+|------|-----------|------|--------|-------|
+| `account-profile.csv` | `currency` | string | `TenantSettings.currency` | ISO 4217 code; empty when unset |
+| `service-catalog.csv` | `plan_price` | string | `Plan.price` | Formatted as `"{price:.2f}"` when set; empty when `None` |
+
+These columns are appended after their respective logical groupings and are reflected in both CSV headers and JSON keys. Export format version remains `2`.
 
 ### Deliberate exclusions
 
