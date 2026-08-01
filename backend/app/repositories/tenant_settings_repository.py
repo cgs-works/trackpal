@@ -92,6 +92,14 @@ async def resolve_timezone(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     return row or "UTC"
 
 
+async def resolve_currency(db: AsyncSession, tenant_id: uuid.UUID) -> str | None:
+    result = await db.execute(
+        select(TenantSettings.currency).where(TenantSettings.tenant_id == tenant_id)
+    )
+    row = result.scalar_one_or_none()
+    return row or None
+
+
 async def get_settings_for_tenant_ids(
     db: AsyncSession, tenant_ids: Iterable[uuid.UUID]
 ) -> dict[uuid.UUID, TenantSettings | None]:

@@ -97,6 +97,7 @@ def _build_service_catalog_csv(
             "service_created_on",
             "service_updated_on",
             "plan_name",
+            "plan_price",
             "plan_created_on",
             "plan_updated_on",
         ]
@@ -112,6 +113,7 @@ def _build_service_catalog_csv(
                         _format_timestamp(svc.created_at, tz),
                         _format_timestamp(svc.updated_at, tz),
                         _neutralize_csv_value(p.name),
+                        "" if p.price is None else f"{p.price:.2f}",
                         _format_timestamp(p.created_at, tz),
                         _format_timestamp(p.updated_at, tz),
                     ]
@@ -123,6 +125,7 @@ def _build_service_catalog_csv(
                     svc.icon or "",
                     _format_timestamp(svc.created_at, tz),
                     _format_timestamp(svc.updated_at, tz),
+                    "",
                     "",
                     "",
                     "",
@@ -179,7 +182,9 @@ def _build_subscription_snapshot_csv(
 # ── ZIP builders ───────────────────────────────────────────────
 
 
-def _build_account_profile_csv(tenant: Tenant, locale: str, tz: str) -> str:
+def _build_account_profile_csv(
+    tenant: Tenant, locale: str, tz: str, currency: str | None = None
+) -> str:
     """Build account-profile.csv content."""
     output = io.StringIO()
     writer = csv.writer(output)
@@ -192,6 +197,7 @@ def _build_account_profile_csv(tenant: Tenant, locale: str, tz: str) -> str:
             "current_plan",
             "preferred_language",
             "time_zone",
+            "currency",
         ]
     )
     writer.writerow(
@@ -203,6 +209,7 @@ def _build_account_profile_csv(tenant: Tenant, locale: str, tz: str) -> str:
             tenant.plan or "",
             locale,
             tz,
+            currency or "",
         ]
     )
     return output.getvalue()
@@ -270,6 +277,7 @@ def _build_json(
     services: Sequence[Service] | None = None,
     plans_by_service: dict | None = None,
     subscription_rows: list[tuple[Subscription, Client, Service, Plan]] | None = None,
+    currency: str | None = None,
 ) -> str:
     """Build trackpal-data.json content."""
     client_records = []
@@ -305,6 +313,7 @@ def _build_json(
             plan_records = [
                 {
                     "plan_name": p.name,
+                    "plan_price": None if p.price is None else f"{p.price:.2f}",
                     "plan_created_on": _format_timestamp(p.created_at, tz) or None,
                     "plan_updated_on": _format_timestamp(p.updated_at, tz) or None,
                 }
@@ -367,6 +376,7 @@ def _build_json(
             "current_plan": tenant.plan or "",
             "preferred_language": locale,
             "time_zone": tz,
+            "currency": currency,
         },
         "client_accounts": client_records,
         "service_catalog": catalog_records,
@@ -405,6 +415,7 @@ Fields in account-profile.csv / account_profile in trackpal-data.json:
   current_plan         — Your current plan (starter or pro)
   preferred_language   — Your preferred language (en or es)
   time_zone             — Your configured time zone
+  currency             — Your configured currency (ISO 4217 code, empty when unset)
 
 Fields in client-data.csv / client_accounts in trackpal-data.json:
   client_name          — The full name of the client
@@ -420,6 +431,7 @@ Fields in service-catalog.csv / service_catalog in trackpal-data.json:
   service_created_on   — When the service was added (timezone of your account)
   service_updated_on   — When the service was last updated (timezone of your account)
   plan_name            — The name of the plan (empty when a service has no plans)
+  plan_price           — The plan price (empty when not set)
   plan_created_on      — When the plan was added (empty when a service has no plans)
   plan_updated_on      — When the plan was last updated (empty when a service has no plans)
 
@@ -485,6 +497,7 @@ Campos en account-profile.csv / account_profile en trackpal-data.json:
   current_plan         — Tu plan actual (starter o pro)
   preferred_language   — Tu idioma preferido (en o es)
   time_zone             — Tu zona horaria configurada
+  currency             — Tu moneda configurada (código ISO 4217, vacío si no está establecida)
 
 Campos en client-data.csv / client_accounts en trackpal-data.json:
   client_name          — El nombre completo del cliente
@@ -500,6 +513,7 @@ Campos en service-catalog.csv / service_catalog en trackpal-data.json:
   service_created_on   — Cuándo se agregó el servicio (zona horaria de tu cuenta)
   service_updated_on   — Cuándo se actualizó el servicio por última vez
   plan_name            — El nombre del plan (vacío si el servicio no tiene planes)
+  plan_price           — El precio del plan (vacío si no está establecido)
   plan_created_on      — Cuándo se agregó el plan (vacío si el servicio no tiene planes)
   plan_updated_on      — Cuándo se actualizó el plan por última vez
 
@@ -556,11 +570,12 @@ async def _build_zip(
     services: Sequence[Service] | None = None,
     plans_by_service: dict | None = None,
     subscription_rows: list[tuple[Subscription, Client, Service, Plan]] | None = None,
+    currency: str | None = None,
 ) -> bytes:
     """Build the export ZIP for the given tenant."""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        csv_content = _build_account_profile_csv(tenant, locale, tz)
+        csv_content = _build_account_profile_csv(tenant, locale, tz, currency=currency)
         csv_bytes = b"\xef\xbb\xbf" + csv_content.encode("utf-8")
         zf.writestr("account-profile.csv", csv_bytes)
 
@@ -591,6 +606,7 @@ async def _build_zip(
             services=services or [],
             plans_by_service=plans_by_service or {},
             subscription_rows=subscription_rows or [],
+            currency=currency,
         )
         zf.writestr("trackpal-data.json", json_content.encode("utf-8"))
 
@@ -648,6 +664,9 @@ async def _process_job_with_session(
 
             locale = await tenant_settings_repository.resolve_locale(db, job.tenant_id)
             tz = await tenant_settings_repository.resolve_timezone(db, job.tenant_id)
+            currency = await tenant_settings_repository.resolve_currency(
+                db, job.tenant_id
+            )
 
             # ── Cancellation checkpoint ──
             if await _is_cancelled(db, job.id):
@@ -692,6 +711,7 @@ async def _process_job_with_session(
                 services=services,
                 plans_by_service=plans_by_service,
                 subscription_rows=subscription_rows,
+                currency=currency,
             )
 
             # ── Cancellation checkpoint ──
