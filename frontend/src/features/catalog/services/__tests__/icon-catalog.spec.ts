@@ -40,6 +40,23 @@ describe("Iconify catalog adapter", () => {
     expect(requested.searchParams.get("limit")).toBe("10");
   });
 
+  it("caps oversized provider responses at ten icons per page", async () => {
+    const icons = Array.from({ length: 27 }, (_, index) => `mdi:service-${index}`);
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      icons,
+      total: 27,
+      limit: 27,
+      start: 0,
+      collections: {},
+    }), { status: 200 }));
+    const catalog = createIconifyCatalog(fetcher);
+
+    const result = await catalog.search("service");
+
+    expect(result.icons).toEqual(icons.slice(0, 10));
+    expect(result.hasMore).toBe(true);
+  });
+
   it("sends non-English search text unchanged", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       icons: [], total: 0, limit: 10, start: 0, collections: {},

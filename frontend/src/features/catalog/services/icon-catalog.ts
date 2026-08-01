@@ -95,7 +95,7 @@ export function createIconifyCatalog(fetcher: Fetcher = fetch): IconCatalog {
     if (!res.ok) throw new Error("iconify_search_failed");
 
     const body = (await res.json()) as Record<string, unknown>;
-    const icons = (body.icons ?? []) as string[];
+    const icons = ((body.icons ?? []) as string[]).slice(0, SEARCH_LIMIT);
     const total = Number(body.total ?? 0);
     const rawCollections = (body.collections ?? {}) as Record<
       string,
