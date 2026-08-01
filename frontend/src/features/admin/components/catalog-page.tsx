@@ -42,6 +42,7 @@ const CATALOG_ERROR_KEYS: Record<string, string> = {
   catalog_name_required: "frontend.catalog.invalid_name",
   catalog_name_too_long: "frontend.catalog.invalid_name",
   catalog_icon_invalid: "frontend.catalog.invalid_icon",
+  plan_price_invalid: "frontend.catalog.invalid_price",
   invalid_icon_reference: "frontend.catalog.invalid_icon",
   service_not_found: "frontend.catalog.target_not_found",
   plan_not_found: "frontend.catalog.target_not_found",
