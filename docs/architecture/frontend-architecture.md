@@ -331,11 +331,40 @@ Client management with cached data from `catalogStore` (Pro-only):
 
 ### CatalogPage (`features/admin/components/catalog-page.tsx`)
 
-Service + plan CRUD with cached data from `catalogStore` (Pro-only):
+Service + plan CRUD with cached data from `catalogStore` (Pro-only). Service create/edit uses a unified `ServiceFormDialog` that includes an Iconify icon picker.
 - Services sidebar with create/rename/delete
 - Plans panel with create/rename/delete
 - Delete preview dialog with confirmation
+- Service dialog includes optional icon picker (Iconify CDN integration)
 
-- Pro Demo Accounts use the browser-local catalog adapter: the baseline has exactly three deterministic generic services with six representative plans; service/plan names are trimmed, case-insensitively unique within their scope, and capped at 200 characters.
+- Pro Demo Accounts use the browser-local catalog adapter: the baseline has exactly three deterministic generic services with six representative plans; service/plan names are trimmed, case-insensitively unique within their scope, and capped at 200 characters. Each baseline service includes a valid Iconify `prefix:name` icon reference.
 - Catalog delete previews expose affected plans and active/historical subscription impact. Confirmed service deletion cascades plans and related local references, while plan deletion removes its local references; Starter workspaces have no catalog baseline.
 - CatalogPage and dependent subscription selectors use the selected data-source adapter, so Demo catalog reads and mutations never call catalog API endpoints and persist across reload or logout/login.
+
+### Service Icon System
+
+The service icon feature provides optional visual identification for catalog services via Iconify icon references.
+
+**Deep modules:**
+
+| Module | Responsibility |
+|--------|---------------|
+| `features/catalog/services/icon-catalog.ts` | `IconCatalog` adapter: `search(query, start, signal)` and `describe(icon, signal)` against the Iconify API with in-memory caching |
+| `features/catalog/services/icon-reference.ts` | `parseIconReference(value)` — parses and validates Iconify `prefix:name` format locally |
+| `features/catalog/components/icon-picker.tsx` | `IconPicker` dialog — searchable icon browser with responsive split layout (desktop) / stacked layout (mobile) |
+| `features/catalog/components/service-icon.tsx` | `ServiceIcon({ icon, label, className })` — renders an Iconify icon via `@iconify/react` with generic `Package` fallback |
+
+**IconPicker behavior:**
+- **Responsive layout**: Desktop uses a two-column split (results + details panel); mobile stacks vertically.
+- **Search**: 300 ms debounce, minimum 2-character query, 64-result pages.
+- **License gate**: Confirm button disabled until a selection has a valid license title and URL.
+- **Retry/Load more**: Retry on search error; paginated "Load more" for additional results.
+- **Theme support**: Uses shadcn/ui design tokens; works in light and dark themes.
+- **Accessibility**: `role="listbox"`, `aria-selected`, `aria-label` per option, screen-reader status announcements via `aria-live="polite"`.
+
+**ServiceIcon behavior:**
+- Uses `@iconify/react` `loadIcon()` for lazy SVG loading.
+- Shows a generic `Package` (Lucide) fallback on load failure or missing icon.
+- State resets on icon prop change to prevent stale data display.
+
+**Icon resolution**: All icon rendering is frontend-only via the Iconify CDN. Backend stores and validates the `prefix:name` reference string but never calls the Iconify API.

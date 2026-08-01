@@ -15,7 +15,7 @@ Public API Catalog is an implemented Pro-only feature tracked by GitHub Issue #7
 9. Wildcard origins are out of scope for v1.
 10. Public catalog requests require both a valid Public API Key and a matching `Origin` header.
 11. Requests without `Origin` are out of scope for v1 and return 403.
-12. The public payload returns services with nested plans, each limited to `id` and `name`.
+12. The public payload returns services with nested plans, each limited to `id`, `name`, and `icon` (nullable Iconify `prefix:name` reference). External consumers must resolve icons via the Iconify CDN or provide their own fallback.
 13. Pricing, availability, descriptions, and metadata are out of scope for v1.
 14. Server-to-server usage is out of scope for v1 because non-browser clients can spoof `Origin`.
 15. Production must protect the public catalog route with Cloudflare rate limiting/WAF; app-level rate limiting is explicitly deferred.
@@ -54,6 +54,7 @@ Example response:
     {
       "id": "00000000-0000-0000-0000-000000000001",
       "name": "Netflix",
+      "icon": "simple-icons:netflix",
       "plans": [
         {
           "id": "00000000-0000-0000-0000-000000000002",

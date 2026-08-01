@@ -153,13 +153,14 @@ Client management with search, CRUD, and status toggle.
 
 ### CatalogPage (`features/admin/components/catalog-page.tsx`)
 
-Service + plan CRUD with sidebar/panel layout.
+Service + plan CRUD with sidebar/panel layout. Service create/edit uses a unified `ServiceFormDialog` with optional Iconify icon picker.
 
 - Cached in `catalogStore.services` + `catalogStore.plans`
 - Services sidebar: create, rename, delete with preview
 - Plans panel: create, rename, delete with preview
 - After mutations: `invalidateServices()` or `invalidatePlans(id)` + reload
 - Delete preview shows affected subscriptions count
+- Service dialog includes icon picker with Iconify CDN integration
 
 ### SubscriptionsPage (`features/admin/components/subscriptions-page.tsx`)
 
@@ -266,6 +267,20 @@ Radix-based primitives generated via shadcn CLI:
 |-----------|---------|
 | `app-sidebar.tsx` | Reusable sidebar with collapse, mobile sheet variant |
 | `sidebar-nav.tsx` | Individual nav item with icon + label |
+
+## Catalog Feature Components
+
+### ServiceIcon (`features/catalog/components/service-icon.tsx`)
+
+Renders an optional Iconify icon for a catalog service. Uses `@iconify/react` `loadIcon()` for lazy SVG loading. Falls back to a generic Lucide `Package` icon on load failure or when no icon is provided. Resets internal state when the `icon` prop changes to prevent stale data display.
+
+### IconPicker (`features/catalog/components/icon-picker.tsx`)
+
+Searchable dialog for browsing and selecting Iconify icons. Responsive split layout (desktop: two-column with results + details panel; mobile: stacked). Features 300 ms search debounce, minimum 2-character query, 64-result paginated results, license gate (confirm disabled without valid license), retry on error, and accessibility attributes (`role="listbox"`, `aria-selected`, `aria-live="polite"` status).
+
+### ServiceFormDialog (`features/admin/components/service-form-dialog.tsx`)
+
+Unified create/edit dialog for services. Includes an optional icon picker integration. On create, an omitted icon results in `null`. On edit, the existing icon is preserved unless explicitly replaced or removed.
 
 ## Patterns
 
