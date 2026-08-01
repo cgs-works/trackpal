@@ -22,6 +22,8 @@ Tenants need to configure their business **Country** and **Currency**, and catal
 | Demo parity | Full: Demo Pro workspace gets functional regional tab and demo catalog plans with sample prices; Demo Baseline includes country/currency and plan prices. |
 | Formatting | `{symbol} {amount}` using catalog symbol + `Intl.NumberFormat` decimal with active locale and the currency's minor units. Never browser CLDR symbols (would risk "Bs.S"). |
 | Tab order | My Account tabs become Profile, Security, Regional, Data. |
+| WhatsApp consoles | Plans display their price everywhere they are rendered in the tenant and client WhatsApp consoles; tenant console create/edit plan flows support an optional price (full parity with web). |
+| Help module | New regional help topics (País, Moneda), relocated Idioma/Zona horaria topics, updated Catálogo/Client-subscriptions topics, new help target + safe navigation into the regional tab. |
 
 ## 3. Currency Catalog module (backend)
 
@@ -90,8 +92,9 @@ Nullable without defaults (unlike `locale`/`timezone`): "not configured" is dist
 ## 6. Frontend
 
 **Navigation changes:**
-- `my-account-section.tsx`: new tab `regional` (Profile, Security, Regional, Data). `Tabs defaultValue` stays `"profile"`.
+- `my-account-section.tsx`: new tab `regional` (Profile, Security, Regional, Data). `Tabs defaultValue` becomes controllable via an optional `initialTab` prop (URL `?tab=regional`); default stays `"profile"`.
 - `settings-categories.ts` + `settings-page.tsx`: remove `locale` and `timezone` categories and their entries in `buildSections`; delete `LocaleSection`/`TimezoneSection` usage from Settings (components move into the regional tab).
+- Settings route (`routes/admin/settings.tsx`): search param `tab?: "regional"` (validated) → passed to `SettingsPage` → `MyAccountSection initialTab`.
 
 **RegionalSettingsSection** (new, in `features/admin/components/`):
 - Loads `tenantSettings` + `timezoneOptions` + `currencyOptions` in parallel (pattern: `TimezoneSection`).
@@ -117,12 +120,41 @@ Nullable without defaults (unlike `locale`/`timezone`): "not configured" is dist
 
 **i18n (es/en):** new keys — tab name, País/Country, Moneda/Currency, "Moneda del país"/"Country currency", "Precio a consultar"/"Price on request", group labels, errors.
 
+## 10. WhatsApp consoles
+
+**Shared price formatting** — `whatsapp_tenant_console_service/format_helpers.py`: `format_price(amount: Decimal | None, symbol: str | None, locale: str) -> str` → i18n "Precio a consultar" when None, else `{symbol} {amount}` with locale decimal separator (es comma, en dot). New i18n wa keys (`catalogs_{es,en}_wa.py`): `wa.tenant.catalog.price_label`, `wa.tenant.catalog.price_on_request`, `wa.tenant.catalog.price_prompt`, `wa.tenant.catalog.price_skipped`.
+
+**Currency context:** flows already have `db` + `tenant_id`; they load `tenant_settings.currency` once and resolve the symbol via the catalog (`symbol_of`) before formatting. Client console facade does the same in `_show_subscriptions`.
+
+**Tenant console — catalog flow:**
+- `_format_plan_list`: entry becomes `1️⃣ {name} - {price} - {active count}` when a price exists (propagates automatically to the subscription-create plan selection, which reuses this formatter).
+- `_format_plan_detail`: adds a `*Precio:* {price}` line (or "Precio a consultar" when None).
+- **Create plan flow:** name step → new optional price step (`CATALOG_STEP_CREATE_PLAN_PRICE`; "omitir"/"sin precio" skips → `PlanCreate(name, price=None)`) → create. Must stay reachable with the universal cancel handler (AGENTS.md gotcha #4).
+- **Plan action menu:** 1=Edit name, 2=Edit price, 3=Delete. Edit price: prompt shows current price, accepts a number (`.` or `,` separator) or "sin precio" to clear → `PlanUpdate(price=...)`. Invalid input reprompts.
+- Subscription rows rendered elsewhere (list/edit flows) that already show `plan_name` also render the plan price when present.
+
+**Client console (`whatsapp_client_console_facade/facade.py`):** subscription item gains the plan price line (`wa.client.subscriptions.item` + price param).
+
+**Web client dashboard (`GET /dashboard`):** `ClientActiveSubscription` gains `plan_price`; response top-level gains `currency` (catalog object or null) derived from tenant settings. `dashboard-page.tsx` shows the price (or "Precio a consultar").
+
+**Out of scope:** Master console (no plan surfaces), n8n reminder workflows (no plan references).
+
+## 11. Help module
+
+- **New help target** `regional: "admin.settings.regional"` in `help-targets.ts`; `RegionalSettingsSection` root sets `data-help-id="admin.settings.regional"` so contextual help resolves the regional topics.
+- **New topics** `country.md` (plans: starter+pro) and `currency.md` (plans: pro), es + en, with frontmatter (País / Moneda, module settings, capabilities tenant_settings).
+- **Relocated topics** `language.md` and `timezone.md`: content updated to reference "Configuración regional"; `safe_navigation` becomes `route: /admin/settings, settings_category: my-account, tab: regional`; help_targets gain `admin.settings.regional`. `timezone.md` keeps `plans: pro`.
+- **`catalog.md`**: mention optional plan prices and "Precio a consultar" (channels web + whatsapp). **`client/subscriptions.md`**: mention price display in the subscription list.
+- **Compiler contract**: add `my-account` to backend `ALLOWED_SETTINGS_CATEGORIES`; remove `locale` and `timezone`; extend `_validate_safe_navigation` with an optional `tab` field (`ALLOWED_TABS = {"regional"}`). Frontend `safe-navigation.ts` resolves `tab` into `?category=my-account&tab=regional`.
+- **Tour**: `tenant-admin-pro-1` step targeting `admin.settings.timezone` retargets to `admin.settings.regional`.
+- **Release gate**: recompile `artifact.json` (`uv run python -m scripts.compile_help`), `verify_help_release.py` green, `docs/releases/user-help-release.md` QA matrix updated (new regional topic, relocated language/timezone).
+
 ## 7. Documentation & domain model
 
 - `docs/adr/0005-currency-catalog-clrd-overrides.md` — written and committed (CLDR + overrides; rejected alternatives).
 - `backend/CONTEXT.md` — updated: **Catalog** definition (prices are now part of the catalog); new terms **Catalog Price**, **Currency Catalog**, **Country**, **Currency**, **Official Currency**, **Regional Settings**; **Public API Catalog** exposes price + currency; plan-behavior table row for Regional Settings.
 - `frontend/CONTEXT.md` — updated: **My Account** tabs include Regional; new terms **Regional Tab**, **CountryPicker**, **CurrencyPicker**; **Settings Store** includes currency options; Product Labels add "Configuración regional" and "Moneda del país".
-- New `docs/architecture/regional-settings.md`; update `subscriptions.md` (tenant-settings section) and `tenant-data-export.md` (contract change).
+- New `docs/architecture/regional-settings.md`; update `subscriptions.md` (tenant-settings section) and `tenant-data-export.md` (contract change). Update help release doc `docs/releases/user-help-release.md` and the help compiler contract (allowed categories/tabs).
 
 ## 8. Out of scope
 
@@ -140,11 +172,15 @@ Nullable without defaults (unlike `locale`/`timezone`): "not configured" is dist
 - Catalog CRUD: price create/update/response, validation (≥ 0, 2 decimals).
 - Public API: plans expose `price`; top-level `currency` derived from tenant settings.
 - Export: `service-catalog.csv` includes `plan_price`; `account-profile.csv` includes `currency`.
+- WhatsApp tenant console: plan list/detail include price; create flow accepts optional price; edit-price action parses/validates; cancel handler still reachable mid-flow; client console subscription rows include price.
+- Help: compiler rejects removed categories (locale/timezone) and accepts `my-account` + `tab: regional`; artifact parity (`verify_help_release.py`).
 
 **Frontend (vitest):**
 - CurrencyPicker: grouped + separator behavior (official first, deduped), plain list without country.
-- RegionalSettingsSection: Starter hides tz/currency; Pro/Master show all; demo locale-change catalog reload preserved.
+- RegionalSettingsSection: Starter hides tz/currency; Pro/Master show all; demo locale-change catalog reload preserved; `data-help-id` regional anchor.
 - Settings store: `loadCurrencyOptions` dedup + epoch.
 - Catalog page: price input, symbol display, "Precio a consultar".
+- Settings route: `tab` search param validation and `initialTab` wiring.
 - Demo: baseline country/currency/prices; adapter price validation.
-- Update existing specs broken by the move (`settings-page.spec`, `my-account-section.spec`, `locale-section-demo.spec`, `timezone-*`).
+- Client dashboard: price + currency display.
+- Update existing specs broken by the move (`settings-page.spec`, `my-account-section.spec`, `locale-section-demo.spec`, `timezone-*`, help safe-navigation specs).
