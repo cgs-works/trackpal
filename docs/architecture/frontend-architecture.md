@@ -289,8 +289,16 @@ Sidebar layout for master pages. The Master dashboard keeps lifecycle work separ
 | Tab | Tenant Admin | Master Support Context |
 |-----|-------------|------------------------|
 | Profile | Full profile (identity fields) | Target business profile (reads/updates selected Tenant, not Master identity) |
+| Regional | Country, Language (all plans) + Timezone, Currency (Pro only) | All four fields |
 | Security | Password change | Not rendered |
 | Data | Export status/actions + self-service deletion | Export status/actions only (no Security tab, no deletion action) |
+
+**Regional tab** (`RegionalSettingsSection`):
+- Country: `CountryPicker` with localized names via `Intl.DisplayNames` (all plans)
+- Language: locale selector (English/Español) preserving demo catalog-reload behavior (all plans)
+- Timezone: `TimezonePicker` (Pro only)
+- Currency: `CurrencyPicker` with official country currency grouped first above a separator (Pro only)
+- Route support: `?tab=regional` search param opens the Regional tab in My Account
 
 **Data tab** (`DataTabContent`):
 - Production displays current export job status (empty, pending, processing, ready, failed, cancelled)
