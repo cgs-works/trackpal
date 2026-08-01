@@ -478,6 +478,7 @@ _CATALOG_EN_FRONTEND: Final[dict[str, str]] = {
     "frontend.dashboard.client.start": "Start",
     "frontend.dashboard.client.expiry": "Expiry",
     "frontend.dashboard.client.no_subscriptions": "No active subscriptions.",
+    "frontend.dashboard.client.price_on_request": "Price on request",
     "frontend.dashboard.client.role_label": "Client",
     # Mailbox
     "frontend.mailbox.section_title": "Search central mailbox",

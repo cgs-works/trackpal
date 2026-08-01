@@ -6,6 +6,7 @@ export interface ClientActiveSubscription {
   service_name: string;
   service_icon: string | null;
   plan_name: string;
+  plan_price: string | null;
   status: string;
   starts_at: string;
   expires_at: string;
@@ -22,6 +23,7 @@ export interface ClientDashboardData {
   client_prefix: string;
   is_active: boolean;
   subscriptions: ClientActiveSubscription[];
+  currency: { code: string; symbol: string; minor_units: number } | null;
 }
 
 // ── Profile types (from /me) ────────────────────────────────
