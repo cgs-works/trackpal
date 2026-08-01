@@ -190,19 +190,18 @@ async def test_public_catalog_success_returns_nested_services_and_cors(
     assert response.status_code == 200, response.text
     assert response.headers["access-control-allow-origin"] == "https://example.com"
     assert response.headers["vary"] == "Origin"
-    assert response.json() == {
-        "services": [
-            {
-                "id": str(service.id),
-                "name": "Netflix",
-                "icon": "simple-icons:netflix",
-                "plans": [
-                    {"id": str(basic.id), "name": "Basic"},
-                    {"id": str(premium.id), "name": "Premium"},
-                ],
-            }
-        ]
-    }
+    body = response.json()
+    assert len(body["services"]) == 1
+    svc = body["services"][0]
+    assert svc["id"] == str(service.id)
+    assert svc["name"] == "Netflix"
+    assert svc["icon"] == "simple-icons:netflix"
+    assert len(svc["plans"]) == 2
+    plan_names = [p["name"] for p in svc["plans"]]
+    assert "Basic" in plan_names
+    assert "Premium" in plan_names
+    # currency is null when tenant_settings.currency is not set
+    assert body["currency"] is None
 
 
 @pytest.mark.parametrize(
@@ -247,3 +246,109 @@ async def test_public_catalog_starter_downgrade_preserves_config_but_returns_403
     row = await db_session.get(TenantApiKey, tenant.id)
     assert row is not None
     assert row.api_key == api_key
+
+
+# --- New tests for Task 5: price + currency ---
+
+
+async def test_public_catalog_plan_price_exposed(client, active_tenant_user, db_session):
+    """Plans with a price value expose it in the public catalog."""
+    from decimal import Decimal
+
+    headers = await _login(client)
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+
+    service = Service(
+        tenant_id=tenant.id,
+        name="Spotify",
+        icon="simple-icons:spotify",
+    )
+    db_session.add(service)
+    await db_session.flush()
+    plan = Plan(
+        tenant_id=tenant.id,
+        service_id=service.id,
+        name="Family",
+        price=Decimal("12.50"),
+    )
+    db_session.add(plan)
+    await db_session.commit()
+
+    api_key = await _create_public_key(client, headers, ["https://example.com"])
+
+    response = await client.get(
+        f"/api/v1/public/catalog?api_key={api_key}",
+        headers={"Origin": "https://example.com"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    catalog_plan = body["services"][0]["plans"][0]
+    assert catalog_plan["price"] == "12.50"
+
+
+async def test_public_catalog_plan_price_null_when_unset(
+    client, active_tenant_user, db_session
+):
+    """Plans without a price expose null."""
+    headers = await _login(client)
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    service, basic, premium = await _seed_catalog(db_session, tenant.id)
+    api_key = await _create_public_key(client, headers, ["https://example.com"])
+
+    response = await client.get(
+        f"/api/v1/public/catalog?api_key={api_key}",
+        headers={"Origin": "https://example.com"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    for plan in body["services"][0]["plans"]:
+        assert plan["price"] is None
+
+
+async def test_public_catalog_currency_from_tenant_settings(
+    client, active_tenant_user, db_session
+):
+    """When tenant_settings.currency is set, response includes currency metadata."""
+    headers = await _login(client)
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+
+    # Set currency on tenant_settings
+    from app.repositories import tenant_settings_repository
+
+    await tenant_settings_repository.update_settings(
+        db_session, tenant.id, {"currency": "VES"}
+    )
+    await db_session.commit()
+
+    await _seed_catalog(db_session, tenant.id)
+    api_key = await _create_public_key(client, headers, ["https://example.com"])
+
+    response = await client.get(
+        f"/api/v1/public/catalog?api_key={api_key}",
+        headers={"Origin": "https://example.com"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["currency"] == {"code": "VES", "symbol": "Bs.", "minor_units": 2}
+
+
+async def test_public_catalog_currency_null_when_unset(
+    client, active_tenant_user, db_session
+):
+    """When tenant_settings.currency is not set, response.currency is null."""
+    headers = await _login(client)
+    tenant = await _tenant_for_user(db_session, active_tenant_user)
+    await _seed_catalog(db_session, tenant.id)
+    api_key = await _create_public_key(client, headers, ["https://example.com"])
+
+    response = await client.get(
+        f"/api/v1/public/catalog?api_key={api_key}",
+        headers={"Origin": "https://example.com"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["currency"] is None

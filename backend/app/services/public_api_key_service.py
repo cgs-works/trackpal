@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency_catalog import minor_units_of, symbol_of
 from app.core.database import restore_rls_context
 from app.core.demo_guardrail import assert_demo_operation_allowed
 from app.core.tenant_plan import TENANT_PLAN_PRO
@@ -14,6 +15,7 @@ from app.models import TenantApiKey
 from app.repositories import (
     catalog_repository,
     tenant_api_keys_repository,
+    tenant_settings_repository,
     tenants_repository,
 )
 from app.schemas.public_api_key import (
@@ -21,6 +23,7 @@ from app.schemas.public_api_key import (
     PublicCatalogResponse,
     PublicCatalogService,
 )
+from app.schemas.tenant_settings import CurrencyMeta
 
 _ALLOWED_SCHEMES = {"http", "https"}
 
@@ -125,6 +128,18 @@ class PublicApiKeyService:
             return None
         assert_demo_operation_allowed(tenant, operation="public_catalog")
 
+        # Resolve currency from tenant settings
+        tenant_settings = await tenant_settings_repository.get_by_tenant_id(
+            db, key.tenant_id
+        )
+        currency_meta = None
+        if tenant_settings and tenant_settings.currency:
+            symbol = symbol_of(tenant_settings.currency) or ""
+            minor = minor_units_of(tenant_settings.currency) or 2
+            currency_meta = CurrencyMeta(
+                code=tenant_settings.currency, symbol=symbol, minor_units=minor
+            )
+
         services = await catalog_repository.list_services(db, key.tenant_id)
         service_list: list[PublicCatalogService] = []
         for svc in services:
@@ -134,8 +149,13 @@ class PublicApiKeyService:
                     id=svc.id,
                     name=svc.name,
                     icon=svc.icon,
-                    plans=[PublicCatalogPlan(id=p.id, name=p.name) for p in plans],
+                    plans=[
+                        PublicCatalogPlan(id=p.id, name=p.name, price=p.price)
+                        for p in plans
+                    ],
                 )
             )
 
-        return PublicCatalogResponse(services=service_list), origin
+        return PublicCatalogResponse(
+            services=service_list, currency=currency_meta
+        ), origin
