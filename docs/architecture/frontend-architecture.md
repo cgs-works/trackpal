@@ -341,7 +341,7 @@ Client management with cached data from `catalogStore` (Pro-only):
 
 Service + plan CRUD with cached data from `catalogStore` (Pro-only). Service create/edit uses a unified `ServiceFormDialog` that includes an Iconify icon picker.
 - Services sidebar with create/rename/delete
-- Plans panel with create/rename/delete
+- Plans panel with create/edit/delete; plan create/edit include an optional price (string with up to 2 decimals); plans display `{symbol} {amount}` with the tenant's currency or 'price on request' when null
 - Delete preview dialog with confirmation
 - Service dialog includes optional icon picker (Iconify CDN integration)
 
