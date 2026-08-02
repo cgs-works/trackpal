@@ -139,16 +139,14 @@ function HealthBadge({ status }: { status: LookupExecutorHealthStatus }) {
 function TransportBadge({ mode }: { mode: LookupExecutor["transport_mode"] }) {
   if (mode === "http_encrypted") {
     const key = "frontend.master.executors.transport_http_encrypted";
-    const translated = t(key);
     return (
       <Badge variant="destructive" title={t("frontend.master.executors.transport_warning")}>
-        {translated === key ? "HTTP encrypted" : translated}
+        {t(key)}
       </Badge>
     );
   }
   const key = "frontend.master.executors.transport_https";
-  const translated = t(key);
-  return <Badge variant="secondary">{translated === key ? "HTTPS" : translated}</Badge>;
+  return <Badge variant="secondary">{t(key)}</Badge>;
 }
 
 function ReverificationBadge() {

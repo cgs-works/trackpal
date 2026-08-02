@@ -12,6 +12,15 @@ vi.mock("../../services/executor-api", () => ({
   mapExecutorError: vi.fn((_error: unknown, fallbackKey: string) => fallbackKey),
 }));
 
+vi.mock("@/i18n", () => ({
+  getLocale: () => "en-US",
+  t: (key: string) =>
+    ({
+      "frontend.master.executors.transport_https": "HTTPS",
+      "frontend.master.executors.transport_http_encrypted": "HTTP encrypted",
+    })[key] ?? key,
+}));
+
 const executors: LookupExecutor[] = [
   {
     id: "draft-id",

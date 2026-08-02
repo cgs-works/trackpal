@@ -173,6 +173,11 @@ const executorErrorKeys: Record<string, string> = {
   executor_has_active_jobs: "frontend.master.executors.error_active_jobs",
   executor_has_active_leases: "frontend.master.executors.error_active_leases",
   step_up_unavailable: "frontend.master.executors.error_step_up_unavailable",
+  insecure_http_confirmation_required:
+    "frontend.master.executors.error_insecure_http_confirmation_required",
+  executor_requires_verification:
+    "frontend.master.executors.error_requires_verification",
+  step_up_rate_limited: "frontend.master.executors.error_step_up_rate_limited",
   hosting_password_not_configured:
     "frontend.master.executors.error_hosting_password_missing",
 };
