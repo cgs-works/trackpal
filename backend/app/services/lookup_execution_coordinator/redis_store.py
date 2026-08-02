@@ -140,6 +140,15 @@ class RedisLookupCoordinationStore:
 
         return await self._manager.execute("lookup_pop", _pop)
 
+    async def has_queued_jobs(self) -> bool:
+        """Return whether the dispatch queue still contains work."""
+
+        return bool(
+            await self._manager.execute(
+                "lookup_has_queued_jobs", lambda redis: redis.llen(QUEUE_KEY)
+            )
+        )
+
     async def acquire_dispatch_lock(self, job_id: UUID) -> bool:
         """Acquire a short-lived lock using Redis SET NX EX."""
         key = f"{DISPATCH_LOCK_PREFIX}{job_id}"

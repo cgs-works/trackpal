@@ -47,7 +47,9 @@ fallback fingerprint otherwise. Entries are retained for
 ## External Execution
 
 After a job is committed, `LookupExecutionCoordinator.schedule(job_id)` adds
-it to the Redis queue and starts at most one short-lived pump. The pump:
+it to the Redis queue and starts at most one short-lived pump. Each bounded
+pump starts a follow-on pump when its queue still contains work, so a full batch
+cannot strand jobs. The pump:
 
 1. Acquires the per-job dispatch lock.
 2. Selects an active, verified executor with capacity and no failure cooldown,

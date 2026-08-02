@@ -48,6 +48,10 @@ class FakeLookupCoordinationStore:
         self._queued.discard(job_id)
         return job_id
 
+    async def has_queued_jobs(self) -> bool:
+        """Return whether the in-memory queue still contains work."""
+        return bool(self._queue)
+
     async def acquire_dispatch_lock(self, job_id: UUID) -> bool:
         """Acquire a short-lived dispatch lock if it is not already held."""
         now = time.monotonic()

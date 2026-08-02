@@ -26,6 +26,14 @@ def test_select_executor_uses_least_loaded_ratio_and_stable_ties() -> None:
     assert select_executor([newer, older]) == older
 
 
+def test_select_executor_uses_executor_id_for_final_tie_breaking() -> None:
+    timestamp = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    lower_id = ExecutorCapacity(UUID(int=1), 0, 1, timestamp)
+    higher_id = ExecutorCapacity(UUID(int=2), 0, 1, timestamp)
+
+    assert select_executor([higher_id, lower_id]) == lower_id
+
+
 def test_select_executor_excludes_full_capacity() -> None:
     assert select_executor([ExecutorCapacity(uuid4(), 1, 1)]) is None
 
@@ -59,6 +67,42 @@ async def test_schedule_spawns_only_one_pump_for_duplicate_calls() -> None:
     assert len(spawned) == 1
     spawned[0].cancel()
     await asyncio.gather(spawned[0], return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_pump_restarts_after_processing_a_full_batch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.services.lookup_execution_coordinator.coordinator import (
+        LookupExecutionCoordinator,
+    )
+
+    store = _BatchStore()
+    processed: list[UUID] = []
+    coordinator = LookupExecutionCoordinator(
+        session_factory=lambda: None,
+        coordination_store=store,
+        transport=object(),
+        task_spawner=store.spawn,
+    )
+
+    async def dispatch(job_id: UUID) -> bool:
+        processed.append(job_id)
+        return True
+
+    coordinator._dispatch = dispatch  # type: ignore[method-assign]
+    monkeypatch.setattr(settings, "lookup_dispatch_batch_size", 1)
+    first, second = uuid4(), uuid4()
+
+    await coordinator.schedule(first)
+    await coordinator.schedule(second)
+    await store.spawned[0]
+
+    assert len(store.spawned) >= 2
+    await store.spawned[1]
+    assert processed == [first, second]
+    assert store.queue == []
 
 
 @pytest.mark.asyncio
@@ -110,7 +154,7 @@ async def test_handoff_outcomes_keep_job_pending_and_release_lease(
     job, executor = _job_and_executor()
     store = _Store()
     store.outcome = status
-    await _run_dispatch(monkeypatch, job, executor, store)
+    coordinator, _ = await _run_dispatch(monkeypatch, job, executor, store)
 
     assert job.status == "pending"
     assert store.released == [job.id]
@@ -118,6 +162,7 @@ async def test_handoff_outcomes_keep_job_pending_and_release_lease(
     assert executor.health_status == expected_health
     assert executor.requires_reverification is quarantined
     assert store.cooldown is False
+    assert executor.id in coordinator._last_selected_at
 
 
 @pytest.mark.asyncio
@@ -127,7 +172,7 @@ async def test_accepted_handoff_transitions_processing_and_counts_attempt(
     job, executor = _job_and_executor()
     store = _Store()
     store.outcome = HandoffStatus.ACCEPTED
-    session = await _run_dispatch(monkeypatch, job, executor, store)
+    _, session = await _run_dispatch(monkeypatch, job, executor, store)
 
     assert job.status == "processing"
     assert job.executor_id == executor.id
@@ -136,6 +181,44 @@ async def test_accepted_handoff_transitions_processing_and_counts_attempt(
     assert store.released == []
     assert store.queue == []
     assert session.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_duplicate_same_lease_handoff_transitions_processing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    job, executor = _job_and_executor()
+    store = _Store()
+    store.outcome = HandoffStatus.DUPLICATE_SAME_LEASE
+    await _run_dispatch(monkeypatch, job, executor, store)
+
+    assert job.status == "processing"
+    assert job.executor_id == executor.id
+    assert job.execution_attempts == 1
+    assert store.released == []
+
+
+@pytest.mark.asyncio
+async def test_integrated_selection_excludes_disabled_reverification_and_cooldown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    job, available = _job_and_executor()
+    disabled = _executor(lifecycle_status="disabled")
+    quarantined = _executor(requires_reverification=True)
+    cooled = _executor()
+    store = _Store()
+    store.cooldown_ids.add(cooled.id)
+    coordinator, _ = _configured_coordinator(
+        monkeypatch,
+        job,
+        available,
+        store,
+        executors=[disabled, quarantined, cooled, available],
+    )
+
+    selected = await coordinator._select_executor(_Session())
+
+    assert selected is available
 
 
 @pytest.mark.asyncio
@@ -162,10 +245,17 @@ async def _run_dispatch(monkeypatch, job, executor, store):
     coordinator, session = _configured_coordinator(monkeypatch, job, executor, store)
     await coordinator.schedule(job.id)
     await store.pump_task
-    return session
+    return coordinator, session
 
 
-def _configured_coordinator(monkeypatch, job, executor, store):
+def _configured_coordinator(
+    monkeypatch,
+    job,
+    executor,
+    store,
+    *,
+    executors=None,
+):
     from app.repositories import mailbox_config_repository, mailbox_lookup_repository
     from app.repositories import lookup_executors_repository
     from app.services.lookup_execution_coordinator.coordinator import (
@@ -189,7 +279,7 @@ def _configured_coordinator(monkeypatch, job, executor, store):
     monkeypatch.setattr(
         lookup_executors_repository,
         "list_dispatchable",
-        lambda db: _values([executor]),
+        lambda db: _values(executors or [executor]),
     )
     monkeypatch.setattr(
         lookup_executors_repository,
@@ -227,13 +317,19 @@ def _job_and_executor():
         execution_attempts=0,
         last_dispatch_error_safe=None,
     )
-    executor = SimpleNamespace(
-        id=uuid4(),
-        max_concurrency=1,
-        requires_reverification=False,
-        health_status="unknown",
-    )
-    return job, executor
+    return job, _executor()
+
+
+def _executor(**overrides):
+    values = {
+        "id": uuid4(),
+        "max_concurrency": 1,
+        "requires_reverification": False,
+        "health_status": "unknown",
+        "lifecycle_status": "active",
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
 
 
 async def _return(value, requested_id):
@@ -285,6 +381,7 @@ class _Store:
         self.queue: list[UUID] = []
         self.released: list[UUID] = []
         self.cooldown = False
+        self.cooldown_ids: set[UUID] = set()
         self.outcome = HandoffStatus.ACCEPTED
         self.raise_transport = False
         self.pump_task: asyncio.Task[None] | None = None
@@ -300,6 +397,9 @@ class _Store:
 
     async def pop(self):
         return self.queue.pop(0) if self.queue else None
+
+    async def has_queued_jobs(self):
+        return bool(self.queue)
 
     async def acquire_dispatch_lock(self, job_id):
         return True
@@ -317,13 +417,24 @@ class _Store:
         return 0
 
     async def is_failure_cooldown_active(self, executor_id):
-        return self.cooldown
+        return self.cooldown or executor_id in self.cooldown_ids
 
     async def clear_failure_cooldown(self, executor_id):
         self.cooldown = False
 
     async def set_failure_cooldown(self, executor_id, ttl_seconds):
         self.cooldown = True
+
+
+class _BatchStore(_Store):
+    def __init__(self):
+        super().__init__()
+        self.spawned: list[asyncio.Task[None]] = []
+
+    def spawn(self, coro):
+        task = asyncio.create_task(coro)
+        self.spawned.append(task)
+        return task
 
 
 class _Transport:

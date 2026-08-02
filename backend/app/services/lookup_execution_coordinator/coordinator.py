@@ -28,6 +28,7 @@ class CoordinationStore(Protocol):
 
     async def enqueue(self, job_id: UUID) -> bool: ...
     async def pop(self) -> UUID | None: ...
+    async def has_queued_jobs(self) -> bool: ...
     async def acquire_dispatch_lock(self, job_id: UUID) -> bool: ...
     async def release_dispatch_lock(self, job_id: UUID) -> None: ...
 
@@ -82,13 +83,17 @@ class LookupExecutionCoordinator:
         async with self._pump_guard:
             if self._pump_is_active():
                 return
-            coroutine = self._pump()
-            try:
-                self._pump_task = self._task_spawner(coroutine)
-            except BaseException:
-                coroutine.close()
-                self._pump_task = None
-                raise
+            self._start_pump_locked()
+
+    def _start_pump_locked(self) -> None:
+        """Spawn a pump while the pump guard is held."""
+        coroutine = self._pump()
+        try:
+            self._pump_task = self._task_spawner(coroutine)
+        except BaseException:
+            coroutine.close()
+            self._pump_task = None
+            raise
 
     def _pump_is_active(self) -> bool:
         """Return whether a previously spawned pump is still running."""
@@ -97,18 +102,35 @@ class LookupExecutionCoordinator:
         done = getattr(self._pump_task, "done", None)
         return not callable(done) or not done()
 
+    async def _has_queued_jobs(self) -> bool:
+        """Return whether the coordination store still contains queued work."""
+        checker = getattr(self._store, "has_queued_jobs", None)
+        if checker is None:
+            return False
+        return bool(await checker())
+
     async def _pump(self) -> None:
-        """Dispatch a bounded batch and stop after a job needs requeueing."""
+        """Dispatch a bounded batch and continue if its queue still has work."""
+        restart = True
         try:
             for _ in range(max(1, settings.lookup_dispatch_batch_size)):
                 job_id = await self._store.pop()
                 if job_id is None:
                     return
                 if not await self._dispatch(job_id):
+                    restart = False
                     return
+        except asyncio.CancelledError:
+            restart = False
+            raise
+        except BaseException:
+            restart = False
+            raise
         finally:
             async with self._pump_guard:
                 self._pump_task = None
+                if restart and await self._has_queued_jobs():
+                    self._start_pump_locked()
 
     async def _dispatch(self, job_id: UUID) -> bool:
         """Attempt one job and return whether the pump may process another."""
@@ -124,6 +146,7 @@ class LookupExecutionCoordinator:
                 if executor is None:
                     await self._requeue(db, job_id)
                     return False
+                self._last_selected_at[executor.id] = datetime.now(timezone.utc)
 
                 lease_id = uuid4()
                 expires_at = datetime.now(timezone.utc) + timedelta(
@@ -171,6 +194,10 @@ class LookupExecutionCoordinator:
         candidates: list[ExecutorCapacity] = []
         by_id: dict[UUID, LookupExecutor] = {}
         for executor in executors:
+            if getattr(executor, "lifecycle_status", "active") != "active":
+                continue
+            if getattr(executor, "requires_reverification", False):
+                continue
             if await self._store.is_failure_cooldown_active(executor.id):
                 continue
             active_leases = await self._store.active_count(executor.id)
@@ -237,7 +264,6 @@ class LookupExecutionCoordinator:
             job.executor_id = executor.id
             job.execution_attempts += 1
             await mailbox_lookup_repository.transition_status(db, job, "processing")
-            self._last_selected_at[executor.id] = datetime.now(timezone.utc)
             self._consecutive_failures.pop(executor.id, None)
             await self._store.clear_failure_cooldown(executor.id)
             await lookup_executors_repository.update_health(db, executor, "healthy")
