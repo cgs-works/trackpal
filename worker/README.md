@@ -24,9 +24,7 @@ uv sync
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-The service listens on port `8000`. It exposes the protocol challenge and job
-handoff routes; it does not expose a public unauthenticated health endpoint.
-Use the Master **Test** action to perform a signed challenge.
+The service listens on port `8000`. It exposes an unauthenticated `GET /healthz` liveness probe, plus the signed protocol challenge and job handoff routes. Use the Master **Test** action to perform a signed challenge.
 
 ## Enrollment and activation
 
