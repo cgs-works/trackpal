@@ -1,8 +1,11 @@
+"""Protocol encryption and request/response authentication primitives."""
+
 import base64
 import hashlib
 import hmac
 import json
 import os
+from collections.abc import Callable
 from typing import cast
 from uuid import UUID
 
@@ -18,6 +21,7 @@ _SIGNING_INFO = b"trackpal-lookup-executor-signing-v1"
 _ENCRYPTION_INFO = b"trackpal-lookup-executor-encryption-v1"
 _KEY_LENGTH = 32
 _NONCE_LENGTH = 12
+SignatureFunction = Callable[[str, str, UUID, int, int, str, bytes, bytes], str]
 
 
 def derive_protocol_keys(secret: str) -> ProtocolKeys:
@@ -82,9 +86,27 @@ def sign_request(
     body_bytes: bytes,
     signing_key: bytes,
 ) -> str:
-    """Sign the canonical request representation with HMAC-SHA256."""
+    """Sign a request or response canonical representation with HMAC-SHA256."""
 
     canonical = _canonical_request(
+        method, path, executor_id, key_version, timestamp, nonce, body_bytes
+    )
+    return hmac.new(signing_key, canonical, hashlib.sha256).hexdigest()
+
+
+def sign_response(
+    method: str,
+    path: str,
+    executor_id: UUID,
+    key_version: int,
+    timestamp: int,
+    nonce: str,
+    body_bytes: bytes,
+    signing_key: bytes,
+) -> str:
+    """Sign an executor response using the protocol canonical representation."""
+
+    return sign_request(
         method,
         path,
         executor_id,
@@ -92,8 +114,8 @@ def sign_request(
         timestamp,
         nonce,
         body_bytes,
+        signing_key,
     )
-    return hmac.new(signing_key, canonical, hashlib.sha256).hexdigest()
 
 
 def verify_request_signature(
@@ -109,12 +131,75 @@ def verify_request_signature(
     now: int,
     max_skew_seconds: int,
 ) -> None:
-    """Validate request freshness and its HMAC-SHA256 signature."""
+    """Validate freshness and an HMAC-SHA256 request signature."""
 
+    _verify_signature(
+        sign_request,
+        "request",
+        method,
+        path,
+        executor_id,
+        key_version,
+        timestamp,
+        nonce,
+        body_bytes,
+        signature,
+        signing_key,
+        now,
+        max_skew_seconds,
+    )
+
+
+def verify_response_signature(
+    method: str,
+    path: str,
+    executor_id: UUID,
+    key_version: int,
+    timestamp: int,
+    nonce: str,
+    body_bytes: bytes,
+    signature: str,
+    signing_key: bytes,
+    now: int,
+    max_skew_seconds: int,
+) -> None:
+    """Validate freshness and an HMAC-SHA256 response signature."""
+
+    _verify_signature(
+        sign_response,
+        "response",
+        method,
+        path,
+        executor_id,
+        key_version,
+        timestamp,
+        nonce,
+        body_bytes,
+        signature,
+        signing_key,
+        now,
+        max_skew_seconds,
+    )
+
+
+def _verify_signature(
+    signer: SignatureFunction,
+    kind: str,
+    method: str,
+    path: str,
+    executor_id: UUID,
+    key_version: int,
+    timestamp: int,
+    nonce: str,
+    body_bytes: bytes,
+    signature: str,
+    signing_key: bytes,
+    now: int,
+    max_skew_seconds: int,
+) -> None:
     if abs(now - timestamp) > max_skew_seconds:
-        raise ValueError("request timestamp outside allowed skew")
-
-    expected = sign_request(
+        raise ValueError(f"{kind} timestamp outside allowed skew")
+    expected = signer(
         method,
         path,
         executor_id,
@@ -125,7 +210,7 @@ def verify_request_signature(
         signing_key,
     )
     if not hmac.compare_digest(signature, expected):
-        raise ValueError("invalid request signature")
+        raise ValueError(f"invalid {kind} signature")
 
 
 def _canonical_request(

@@ -1,15 +1,18 @@
 """URL safety and HTTP transport tests for external lookup executors."""
 
+import json
+import time
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import httpx
 import pytest
-import respx
 
 from app.core.encryption import encrypt_value
+from app.core.lookup_executor_protocol import derive_protocol_keys, sign_response
 from app.schemas.lookup_executor_protocol import HandoffStatus
 from app.services.lookup_executor_transport.http import HttpLookupExecutorTransport
+from app.services.lookup_executor_transport.protocol import TransportError
 from app.services.lookup_executor_transport.url_safety import (
     ExecutorUrlError,
     validate_executor_url,
@@ -17,6 +20,7 @@ from app.services.lookup_executor_transport.url_safety import (
 
 
 PUBLIC_IP = "93.184.216.34"
+EXECUTOR_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 
 def resolver_for(*addresses: str):
@@ -30,11 +34,44 @@ def executor(
     base_url: str = f"https://{PUBLIC_IP}", transport_mode: str = "https"
 ) -> SimpleNamespace:
     return SimpleNamespace(
-        id=UUID("00000000-0000-0000-0000-000000000001"),
+        id=EXECUTOR_ID,
         base_url=base_url,
         transport_mode=transport_mode,
         secret_encrypted=encrypt_value("executor-secret"),
         secret_version=1,
+    )
+
+
+def signed_response(
+    item: SimpleNamespace,
+    path: str,
+    payload: dict[str, object],
+    status_code: int = 200,
+) -> httpx.Response:
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+    timestamp = int(time.time())
+    nonce = "response-nonce"
+    signature = sign_response(
+        "POST",
+        path,
+        item.id,
+        item.secret_version,
+        timestamp,
+        nonce,
+        body,
+        derive_protocol_keys("executor-secret").signing,
+    )
+    return httpx.Response(
+        status_code,
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-TrackPal-Executor-Id": str(item.id),
+            "X-TrackPal-Key-Version": str(item.secret_version),
+            "X-TrackPal-Timestamp": str(timestamp),
+            "X-TrackPal-Nonce": nonce,
+            "X-TrackPal-Signature": signature,
+        },
     )
 
 
@@ -53,6 +90,14 @@ def test_validate_executor_url_accepts_allowed_destinations(
 
     assert validated.base_url == url
     assert validated.addresses == tuple(addresses)
+
+
+@pytest.mark.parametrize(
+    "url", [f"https://{PUBLIC_IP}/prefix", f"https://{PUBLIC_IP}?token=1"]
+)
+def test_validate_executor_url_rejects_path_or_query_prefixes(url: str) -> None:
+    with pytest.raises(ExecutorUrlError):
+        validate_executor_url(url, "https", resolver_for(PUBLIC_IP))
 
 
 def test_validate_executor_url_rejects_http_hostname_and_url_credentials() -> None:
@@ -92,60 +137,147 @@ def test_validate_executor_url_rejects_non_public_addresses(address: str) -> Non
 
 @pytest.mark.asyncio
 async def test_http_transport_does_not_follow_redirects() -> None:
-    transport = HttpLookupExecutorTransport(resolver=resolver_for(PUBLIC_IP))
-    target = f"https://{PUBLIC_IP}"
-    with respx.mock(assert_all_called=True) as router:
-        route = router.post(f"{target}/v1/health/challenge").respond(
-            307, headers={"location": "https://internal.example.test"}
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            307,
+            headers={"location": "https://internal.example.test"},
+            request=request,
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
-            await transport.challenge(executor(target), "probe")
-
-        assert route.called
+    transport = HttpLookupExecutorTransport(
+        resolver=resolver_for(PUBLIC_IP), transport=httpx.MockTransport(handler)
+    )
+    with pytest.raises(httpx.HTTPStatusError):
+        await transport.challenge(executor(), "probe")
 
 
 @pytest.mark.asyncio
-async def test_http_transport_maps_handoff_statuses() -> None:
-    transport = HttpLookupExecutorTransport(resolver=resolver_for(PUBLIC_IP))
+async def test_http_transport_verifies_signed_challenge_response() -> None:
+    item = executor()
+    payload = {
+        "challenge": "probe",
+        "protocol_version": 1,
+        "runtime_version": "0.1.0",
+        "max_concurrency": 1,
+    }
+    transport = HttpLookupExecutorTransport(
+        resolver=resolver_for(PUBLIC_IP),
+        transport=httpx.MockTransport(
+            lambda request: signed_response(item, request.url.path, payload)
+        ),
+    )
+
+    result = await transport.challenge(item, "probe")
+
+    assert result.executor_id == EXECUTOR_ID
+    assert result.max_concurrency == 1
+
+
+@pytest.mark.asyncio
+async def test_http_transport_rejects_unsigned_challenge_response() -> None:
+    transport = HttpLookupExecutorTransport(
+        resolver=resolver_for(PUBLIC_IP),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                json={
+                    "challenge": "probe",
+                    "protocol_version": 1,
+                    "runtime_version": "0.1.0",
+                    "max_concurrency": 1,
+                },
+                request=request,
+            )
+        ),
+    )
+
+    with pytest.raises(TransportError, match="invalid challenge"):
+        await transport.challenge(executor(), "probe")
+
+
+@pytest.mark.asyncio
+async def test_http_transport_maps_signed_handoff_statuses() -> None:
     item = executor()
     lease_id = uuid4()
     envelope = {"job_id": str(uuid4()), "lease_id": str(lease_id)}
+    cases = [
+        (202, {"accepted": True, "lease_id": str(lease_id)}, HandoffStatus.ACCEPTED),
+        (
+            409,
+            {"detail": "duplicate execution", "lease_id": str(lease_id)},
+            HandoffStatus.DUPLICATE_SAME_LEASE,
+        ),
+        (429, {"detail": "busy"}, HandoffStatus.BUSY),
+        (401, {"detail": "unauthorized"}, HandoffStatus.SECURITY_ERROR),
+        (422, {"detail": "invalid envelope"}, HandoffStatus.PROTOCOL_ERROR),
+        (500, {"detail": "server error"}, HandoffStatus.TRANSPORT_ERROR),
+    ]
 
-    with respx.mock(assert_all_called=True) as router:
-        router.post(f"https://{PUBLIC_IP}/v1/jobs/execute").respond(
-            202, json={"accepted": True, "lease_id": str(lease_id)}
+    for status_code, payload, expected in cases:
+        result = HttpLookupExecutorTransport._map_handoff_response(
+            signed_response(item, "/v1/jobs/execute", payload, status_code), envelope
         )
-        result = await transport.handoff(item, envelope)
+        assert result.status is expected
 
-    assert result.status is HandoffStatus.ACCEPTED
-    assert result.lease_id == lease_id
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"detail": "duplicate execution"},
+        {"detail": "duplicate execution", "lease_id": str(uuid4())},
+    ],
+)
+def test_http_transport_rejects_ambiguous_duplicate_response(
+    payload: dict[str, object],
+) -> None:
+    envelope = {"lease_id": str(uuid4())}
+    response = httpx.Response(409, json=payload)
+
+    result = HttpLookupExecutorTransport._map_handoff_response(response, envelope)
+
+    assert result.status is HandoffStatus.PROTOCOL_ERROR
+
+
+def test_http_transport_rejects_inconsistent_acceptance_lease() -> None:
+    lease_id = uuid4()
+    response = httpx.Response(202, json={"lease_id": str(uuid4())})
+
+    result = HttpLookupExecutorTransport._map_handoff_response(
+        response, {"lease_id": str(lease_id)}
+    )
+
+    assert result.status is HandoffStatus.PROTOCOL_ERROR
 
 
 @pytest.mark.asyncio
 async def test_http_transport_rejects_dns_rebinding_before_second_request() -> None:
     calls = 0
     target = "https://executor.example.test"
+    item = executor(target)
 
     def rebinding_resolver(_host: str, _port: int) -> list[str]:
         nonlocal calls
         calls += 1
         return [PUBLIC_IP] if calls == 1 else ["127.0.0.1"]
 
-    transport = HttpLookupExecutorTransport(resolver=rebinding_resolver)
-    item = executor(target)
-    with respx.mock(assert_all_called=False) as router:
-        router.post(f"{target}/v1/health/challenge").respond(
-            200,
-            json={
-                "challenge": "probe",
-                "protocol_version": 1,
-                "runtime_version": "0.1.0",
-                "max_concurrency": 1,
-            },
-        )
-        await transport.challenge(item, "probe")
-        result = await transport.handoff(item, {"lease_id": str(uuid4())})
+    transport = HttpLookupExecutorTransport(
+        resolver=rebinding_resolver,
+        transport=httpx.MockTransport(
+            lambda request: signed_response(
+                item,
+                request.url.path,
+                {
+                    "challenge": "probe",
+                    "protocol_version": 1,
+                    "runtime_version": "0.1.0",
+                    "max_concurrency": 1,
+                },
+            )
+        ),
+    )
+    await transport.challenge(item, "probe")
+    result = await transport.handoff(item, {"lease_id": str(uuid4())})
 
     assert result.status is HandoffStatus.SECURITY_ERROR
     assert calls == 2

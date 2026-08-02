@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 import time
 from uuid import UUID
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from pydantic import ValidationError
 
 from app.config import ExecutorSettings
@@ -14,6 +15,7 @@ from app.pipeline.models import LookupCommand
 from app.protocol.crypto import (
     decrypt_payload,
     derive_protocol_keys,
+    sign_response,
     verify_request_signature,
 )
 from app.protocol.models import EncryptedBody, ProtocolKeys
@@ -26,7 +28,6 @@ KEY_VERSION = 1
 NONCE_TTL_SECONDS = 60
 NONCE_MAX_ENTRIES = 10_000
 _REQUIRED_SETTING_NAMES = {"executor_id", "executor_secret"}
-
 _HEADER_ALIASES: dict[str, tuple[str, ...]] = {
     "executor_id": ("X-TrackPal-Executor-Id", "X-Executor-Id"),
     "key_version": ("X-TrackPal-Key-Version", "X-Key-Version"),
@@ -45,25 +46,45 @@ def create_app(settings: ExecutorSettings, runtime: ExecutorRuntime) -> FastAPI:
         max_entries=NONCE_MAX_ENTRIES,
     )
 
+    @app.exception_handler(HTTPException)
+    async def signed_http_error(request: Request, exc: HTTPException) -> Response:
+        """Authenticate protocol error responses so clients can trust them."""
+        response = _signed_response(
+            request,
+            {"detail": exc.detail},
+            exc.status_code,
+            settings,
+            keys,
+        )
+        if exc.headers:
+            response.headers.update(exc.headers)
+        return response
+
     @app.post("/v1/health/challenge")
-    async def challenge(request: Request) -> dict[str, object]:
+    async def challenge(request: Request) -> Response:
         """Authenticate and answer a backend protocol challenge."""
         payload = await _verify_and_decrypt(request, settings, keys, nonce_cache)
         challenge_value = payload.get("challenge")
         if not isinstance(challenge_value, str) or not challenge_value:
             raise HTTPException(status_code=422, detail="invalid challenge payload")
-        return {
-            "challenge": challenge_value,
-            "protocol_version": PROTOCOL_VERSION,
-            "runtime_version": RUNTIME_VERSION,
-            "max_concurrency": settings.max_concurrency,
-        }
+        return _signed_response(
+            request,
+            {
+                "challenge": challenge_value,
+                "protocol_version": PROTOCOL_VERSION,
+                "runtime_version": RUNTIME_VERSION,
+                "max_concurrency": settings.max_concurrency,
+            },
+            200,
+            settings,
+            keys,
+        )
 
     @app.post("/v1/jobs/execute", status_code=202)
     async def execute(
         request: Request,
         background_tasks: BackgroundTasks,
-    ) -> dict[str, object]:
+    ) -> Response:
         """Authenticate, decrypt, reserve, and asynchronously execute a command."""
         payload = await _verify_and_decrypt(request, settings, keys, nonce_cache)
         try:
@@ -93,20 +114,75 @@ def create_app(settings: ExecutorSettings, runtime: ExecutorRuntime) -> FastAPI:
 
         if acceptance.status == "busy":
             raise HTTPException(status_code=429, detail="executor capacity reached")
-        if acceptance.status in {"duplicate", "conflict"}:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "duplicate execution"
-                    if acceptance.status == "duplicate"
-                    else "execution lease conflict"
-                ),
+        if acceptance.status == "duplicate":
+            return _signed_response(
+                request,
+                {
+                    "detail": "duplicate execution",
+                    "duplicate": True,
+                    "lease_id": str(acceptance.lease_id),
+                },
+                409,
+                settings,
+                keys,
+            )
+        if acceptance.status == "conflict":
+            return _signed_response(
+                request,
+                {
+                    "detail": "execution lease conflict",
+                    "lease_id": str(acceptance.lease_id),
+                },
+                409,
+                settings,
+                keys,
             )
 
         background_tasks.add_task(runtime.execute, command, context)
-        return {"accepted": True, "lease_id": str(acceptance.lease_id)}
+        return _signed_response(
+            request,
+            {"accepted": True, "lease_id": str(acceptance.lease_id)},
+            202,
+            settings,
+            keys,
+        )
 
     return app
+
+
+def _signed_response(
+    request: Request,
+    payload: dict[str, object],
+    status_code: int,
+    settings: ExecutorSettings,
+    keys: ProtocolKeys,
+) -> Response:
+    """Serialize and authenticate one executor response."""
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    timestamp = int(time.time())
+    nonce = secrets.token_urlsafe(24)
+    signature = sign_response(
+        request.method,
+        request.url.path,
+        settings.executor_id,
+        KEY_VERSION,
+        timestamp,
+        nonce,
+        body,
+        keys.signing,
+    )
+    return Response(
+        content=body,
+        status_code=status_code,
+        media_type="application/json",
+        headers={
+            "X-TrackPal-Executor-Id": str(settings.executor_id),
+            "X-TrackPal-Key-Version": str(KEY_VERSION),
+            "X-TrackPal-Timestamp": str(timestamp),
+            "X-TrackPal-Nonce": nonce,
+            "X-TrackPal-Signature": signature,
+        },
+    )
 
 
 async def _verify_and_decrypt(

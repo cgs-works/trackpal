@@ -21,7 +21,7 @@ class AddressResolver(Protocol):
 
 @dataclass(frozen=True)
 class ValidatedExecutorUrl:
-    """A URL whose scheme, authority, and current DNS answers are safe."""
+    """A URL whose authority and resolved connection address are safe."""
 
     base_url: str
     scheme: str
@@ -92,6 +92,8 @@ def _parse_url(base_url: str) -> SplitResult:
         raise ExecutorUrlError("executor URL must not contain credentials")
     if parsed.fragment:
         raise ExecutorUrlError("executor URL must not contain a fragment")
+    if parsed.path not in {"", "/"} or parsed.query:
+        raise ExecutorUrlError("executor URL must not contain a path or query")
     if parsed.scheme not in {"https", "http"}:
         raise ExecutorUrlError("executor URL scheme is not allowed")
     try:
@@ -106,7 +108,7 @@ def validate_executor_url(
     transport_mode: str,
     resolver: AddressResolver | object | None = None,
 ) -> ValidatedExecutorUrl:
-    """Validate an executor endpoint and all currently resolved addresses.
+    """Validate an executor URL and return the addresses to which to pin it.
 
     HTTPS accepts hostnames and public IPs. The explicitly opt-in
     ``http_encrypted`` mode accepts only a literal public IP address.
