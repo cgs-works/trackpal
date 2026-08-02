@@ -25,6 +25,7 @@ PROTOCOL_VERSION = 1
 KEY_VERSION = 1
 NONCE_TTL_SECONDS = 60
 NONCE_MAX_ENTRIES = 10_000
+_REQUIRED_SETTING_NAMES = {"executor_id", "executor_secret"}
 
 _HEADER_ALIASES: dict[str, tuple[str, ...]] = {
     "executor_id": ("X-TrackPal-Executor-Id", "X-Executor-Id"),
@@ -169,13 +170,21 @@ def _load_production_settings() -> ExecutorSettings:
     try:
         return ExecutorSettings()
     except ValidationError as exc:
-        if not all(error.get("type") == "missing" for error in exc.errors()):
-            raise
-        return ExecutorSettings(
-            executor_id=UUID(int=0),
-            executor_secret=secrets.token_urlsafe(32),
-            max_concurrency=1,
+        errors = exc.errors()
+        missing_fields = {
+            error["loc"][0] for error in errors if error["type"] == "missing"
+        }
+        only_required_fields_missing = all(
+            error["type"] == "missing" and error["loc"][0] in _REQUIRED_SETTING_NAMES
+            for error in errors
         )
+        if missing_fields == _REQUIRED_SETTING_NAMES and only_required_fields_missing:
+            return ExecutorSettings(
+                executor_id=UUID(int=0),
+                executor_secret=secrets.token_urlsafe(32),
+                max_concurrency=1,
+            )
+        raise
 
 
 _production_settings = _load_production_settings()

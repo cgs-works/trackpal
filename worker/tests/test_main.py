@@ -16,6 +16,17 @@ def test_production_settings_fail_fast_when_present_configuration_is_invalid(
         _load_production_settings()
 
 
+def test_production_settings_fail_fast_when_configuration_is_partial(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TRACKPAL_EXECUTOR_ID", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.delenv("TRACKPAL_EXECUTOR_SECRET", raising=False)
+    monkeypatch.delenv("TRACKPAL_MAX_CONCURRENCY", raising=False)
+
+    with pytest.raises(ValidationError, match="executor_secret"):
+        _load_production_settings()
+
+
 def test_production_settings_use_inert_configuration_when_environment_is_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
