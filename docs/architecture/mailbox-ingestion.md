@@ -4,8 +4,8 @@
 
 Tenant mailbox ingestion lets each tenant configure a Gmail account for
 extracting streaming-service access codes without deploying Python bots
-per tenant.  Execution is centralised in the TrackPal backend and runs
-on-demand when n8n requests a code lookup.
+per tenant.  Execution is coordinated by the TrackPal backend and runs in a trusted
+external Lookup Executor when n8n requests a code lookup.
 
 ## Components
 
@@ -13,7 +13,7 @@ on-demand when n8n requests a code lookup.
 |-----------|---------------|
 | **Tenant Dashboard (frontend)** | Mailbox config, Gmail Setup Assistant, connection tests |
 | **Backend API (FastAPI)** | Mailbox config CRUD, app-password validation, lookup job create/poll |
-| **Mailbox Lookup Worker** | Background asyncio task — processes pending jobs, fetches emails, extracts codes, dedupes |
+| **Lookup Executor** | External runtime — fetches emails, extracts codes, and sends signed results back to TrackPal |
 | **Mailbox Cleanup** | Periodic background task — expires stale jobs, hard-deletes expired data |
 | **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log` |
 | **Redis** | Queue (`mailbox:lookup:queue`) for job dispatch + ephemeral result cache |
@@ -31,8 +31,9 @@ on-demand when n8n requests a code lookup.
 ### `mail_lookup_jobs`
 
 - Created by n8n API endpoint `POST /api/v1/integrations/n8n/mail/lookups`.
-- Status machine: `pending -> processing -> completed/failed | pending -> timeout`.
-- `result_value` is **not persisted** in DB (ephemeral in-memory cache, 60s TTL).
+- Status machine: `pending -> processing -> completed/failed | pending -> timeout`; external lease failures may recover `processing -> pending`.
+- Extracted result values are **not persisted** in DB.
+- `executor_id`, `execution_attempts`, and `last_dispatch_error_safe` retain safe assignment metadata.
 - Stores required `target_email` for content-bound filtering.
 - TTL default 5 minutes via `settings.mailbox_lookup_job_ttl_minutes`.
 
@@ -49,8 +50,8 @@ on-demand when n8n requests a code lookup.
 ### Trigger
 
 1. n8n calls `POST /api/v1/integrations/n8n/mail/lookups` with `{service_key, target_email, tenant_instance}`.
-2. API resolves tenant, validates mailbox, creates `pending` job, pushes job ID to Redis list.
-3. Background `worker_loop` polls Redis via `BRPOP`, pops job ID, loads and processes job.
+2. API resolves tenant, validates mailbox, creates and commits a `pending` job.
+3. The external execution coordinator selects a dispatchable executor and hands off the job; durable pending rows remain recoverable if Redis or an executor is unavailable.
 
 ### Processing
 
@@ -101,6 +102,7 @@ The primary connection method uses a Google-generated app password:
 ### Lookup Job States
 
 `pending` → `processing` → `completed` | `failed`
+`processing` → `pending` (recoverable lease or dispatch failure)
 `pending` → `timeout` (when job TTL expires)
 
 Result types: `code`, `url`, `not_found`, `duplicate_suppressed`.
@@ -144,7 +146,7 @@ Configurable via:
 ## Security
 
 - All secrets encrypted at rest via `cryptography.fernet.Fernet`.
-- No `result_value` persisted in database (ephemeral in-memory only).
+- No `result_value` persisted in the database; result delivery remains ephemeral.
 - Tenant isolation at repository layer: all queries scoped by `tenant_id`.
 - Rate-limit sensitive endpoints at proxy/reverse-proxy level.
 

@@ -229,13 +229,46 @@ Asynchronous mailbox lookup jobs created by n8n.
 | id | UUID | PK |
 | tenant_id | UUID | FK -> tenants.id CASCADE |
 | mailbox_id | UUID | FK -> tenant_mailboxes.id CASCADE |
+| executor_id | UUID | Nullable FK -> lookup_executors.id SET NULL |
 | service_key | VARCHAR(64) | Streaming service key |
 | target_email | VARCHAR(255) | Required content filter |
 | status | VARCHAR(50) | `pending`, `processing`, `completed`, `failed`, `timeout` |
 | result_type | VARCHAR(50) | Nullable: `code`, `url`, `not_found`, `duplicate_suppressed` |
-| result_value_encrypted | VARCHAR(500) | Nullable; kept null in v1 (ephemeral response) |
+| execution_attempts | INTEGER | Number of accepted external execution attempts |
+| last_dispatch_error_safe | VARCHAR(1000) | Latest safe executor coordination error |
 | error_code / error_detail_safe | VARCHAR/TEXT | Safe failure payload for polling |
 | expires_at | TIMESTAMPTZ | TTL boundary |
+
+Extracted values are not persisted in `mail_lookup_jobs`; successful results are delivered through the external execution result path.
+
+### `LookupExecutor` -- `lookup_executors`
+
+Master-managed registry for trusted external mail lookup runtimes. Protocol and
+hosting-account credentials are Fernet-encrypted at rest and are omitted from
+ordinary response schemas. The table is RLS-enabled and forced with a
+Master-only policy.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | PK |
+| name / provider_label | VARCHAR | Master display metadata |
+| base_url | VARCHAR(500) | Executor endpoint base URL |
+| transport_mode | VARCHAR(30) | `https` or `http_encrypted` |
+| lifecycle_status | VARCHAR(20) | `draft`, `active`, or `disabled` |
+| health_status | VARCHAR(20) | `unknown`, `healthy`, `degraded`, or `unreachable` |
+| requires_reverification | BOOLEAN | Blocks dispatch when true |
+| max_concurrency | INTEGER | TrackPal-side capacity limit |
+| secret_encrypted | VARCHAR(500) | Fernet-encrypted protocol secret |
+| pending_secret_encrypted | VARCHAR(500) | Nullable candidate during rotation |
+| hosting_account_email | VARCHAR(255) | Optional hosting account reference |
+| hosting_account_password_encrypted | VARCHAR(500) | Optional Fernet-encrypted password |
+| dashboard_url | VARCHAR(500) | Optional provider dashboard URL |
+| last_health_check_at / last_success_at | TIMESTAMPTZ | Operational timing evidence |
+| last_error_safe | VARCHAR(1000) | Safe operational error |
+
+`mail_lookup_jobs.executor_id` uses `SET NULL`, so deleting an executor does not
+remove historical jobs. Dispatchable rows must be active and not marked for
+reverification.
 
 ### `MailCodeDeliveryLog` -- `mail_code_delivery_log`
 
@@ -363,6 +396,7 @@ Alembic migrations:
 27. `e017fe74cab7` — Add Demo Tenant flag, lifecycle timestamps, credential/session version, constraints, and lifecycle index
 28. `e019fe74cab9` — Make mailbox Gmail-only: rename `imap_password_encrypted` to `app_password_encrypted`, drop `imap_host`/`imap_port`/`imap_ssl`, add auth-method check constraint
 29. `e021fe74cac1` — Add optional `icon` column to `services` table for Iconify `prefix:name` reference
+30. `e023fe74cac3` — Add the Master-only external `lookup_executors` registry, executor assignment metadata, and remove persisted lookup result values
 
 ## Key Constraints
 

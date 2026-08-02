@@ -621,7 +621,7 @@ class TestStateTransitions:
         assert job.status == "completed"
 
     async def test_result_value_not_persisted(self, db_session):
-        """result_value_encrypted remains None in DB."""
+        """Lookup result values have no persistence column."""
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)
         job = await mailbox_lookup_repository.create_job(
@@ -643,8 +643,7 @@ class TestStateTransitions:
             pmod.active_provider = old_active
 
         assert job.status == "completed"
-        # result_value_encrypted should NOT have been set
-        assert job.result_value_encrypted is None
+        assert "result_value_encrypted" not in MailLookupJob.__table__.c
 
 
 # ─── Target email filtering tests ────────────────────────────────────────

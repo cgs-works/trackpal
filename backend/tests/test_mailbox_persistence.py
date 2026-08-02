@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.core.encryption import encrypt_value
 from app.models import (
     Tenant,
     TenantMailbox,
@@ -250,7 +249,6 @@ class TestMailboxLookupRepository:
             job,
             "completed",
             result_type="code",
-            result_value_encrypted=encrypt_value("227597"),
         )
         original_completed_at = job.completed_at
 
@@ -296,7 +294,6 @@ class TestMailboxLookupRepository:
             job,
             "completed",
             result_type="code",
-            result_value_encrypted=encrypt_value("ABC123"),
         )
         assert job.status == "completed"
         assert job.result_type == "code"

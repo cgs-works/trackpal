@@ -21,6 +21,7 @@ def test_rls_policy_sql_uses_required_context_settings():
     ).read_text()
     text += Path("alembic/versions/cd7efe74caa0_add_subscriptions.py").read_text()
     text += Path("alembic/versions/d011fe74cab0_create_tenant_settings.py").read_text()
+    text += Path("alembic/versions/e023fe74cac3_add_lookup_executors.py").read_text()
     assert "ENABLE ROW LEVEL SECURITY" in text
     assert "FORCE ROW LEVEL SECURITY" in text
     assert "WITH CHECK" in text
@@ -38,6 +39,9 @@ def test_rls_policy_sql_uses_required_context_settings():
     assert "current_setting('app.current_role', true) = 'master'" in text
     assert "tenant_settings_select" in text
     assert "tenant_settings_update" in text
+    assert "lookup_executors_master_only" in text
+    assert "ALTER TABLE lookup_executors ENABLE ROW LEVEL SECURITY" in text
+    assert "ALTER TABLE lookup_executors FORCE ROW LEVEL SECURITY" in text
 
 
 def test_tenant_settings_migration_moves_locale_and_timezone_with_rls():
