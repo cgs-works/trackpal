@@ -434,7 +434,11 @@ def test_subscription_topics_cover_lifecycle_reminders_and_expiration_contracts(
         "settings_category": None,
     }
     assert expiration["safe_links"] == [
-        {"route": "/admin/settings", "settings_category": "my-account", "tab": "regional"},
+        {
+            "route": "/admin/settings",
+            "settings_category": "my-account",
+            "tab": "regional",
+        },
         {"route": "/admin/settings", "settings_category": "reminders"},
     ]
     expiration_body = expiration["body"].lower()
@@ -678,7 +682,9 @@ def test_country_topic_metadata() -> None:
     assert "tenant-admin.currency" in country["related_topics"]
     assert "tenant-admin.language" in country["related_topics"]
 
-    country_es = {topic["id"]: topic for topic in artifact["topics"]["es"]}["tenant-admin.country"]
+    country_es = {topic["id"]: topic for topic in artifact["topics"]["es"]}[
+        "tenant-admin.country"
+    ]
     assert country_es["safe_navigation"] == country["safe_navigation"]
 
 

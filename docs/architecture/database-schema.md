@@ -270,6 +270,17 @@ Master-only policy.
 remove historical jobs. Dispatchable rows must be active and not marked for
 reverification.
 
+### Lookup durability and reconciliation
+
+`mail_lookup_jobs` and the Master `lookup_executors` registry are durable in
+PostgreSQL. Redis stores only queue acceleration, dispatch locks, Execution
+Leases, capacity markers, replay nonces, cooldowns, and encrypted short-lived
+result values. A Redis loss therefore does not erase the job contract: pending
+rows can be discovered and requeued after Redis recovery, while expired or
+invalid leases are reconciled before another dispatch. Extracted values are not
+stored in PostgreSQL, and the backend never falls back to its former local
+mail pipeline.
+
 ### `MailCodeDeliveryLog` -- `mail_code_delivery_log`
 
 Dedupe tracking per tenant mailbox/service.

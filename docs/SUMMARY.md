@@ -24,7 +24,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | React 19 routing, state, API integration, and views |
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract), contextual payload routing, reply_to / no_reply handling, and subscription reminders workflows |
-| [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Gmail app-password mailbox ingestion, lookup worker, metrics, cleanup |
+| [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Gmail app-password ingestion, external Lookup Executor dispatch, leases, callbacks, metrics, cleanup |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
@@ -32,6 +32,8 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Regional Settings](architecture/regional-settings.md) | Currency Catalog, locale/timezone/country/currency settings, plan gating, pickers, price semantics, and cross-module integration |
 | [Tenant Data Export](architecture/tenant-data-export.md) | Export contract, job lifecycle, CSV/JSON formats, exclusions, storage boundary, and presigned download |
 | [Tenant Deletion](architecture/tenant-deletion.md) | Self-service deletion, Master deletion, external cleanup, fail-closed guarantees, and session teardown |
+| [Render Lookup Executor](how-to/deploy-lookup-executor-render.md) | Render Free Web Service deployment and operational runbook |
+| [Docker/VPS Lookup Executor](how-to/deploy-lookup-executor-vps.md) | Docker, firewall, Caddy, HTTP-encrypted exception, and rollback runbook |
 
 ## Architecture Decisions
 

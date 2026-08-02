@@ -4659,9 +4659,7 @@ class TestLoadCurrencySymbol:
         )
 
         mock_db = AsyncMock()
-        with patch(
-            "app.repositories.tenant_settings_repository"
-        ) as mock_repo:
+        with patch("app.repositories.tenant_settings_repository") as mock_repo:
             settings = FakeTenantSettingsObj(currency="VES")
             mock_repo.get_by_tenant_id = AsyncMock(return_value=settings)
 
@@ -4675,9 +4673,7 @@ class TestLoadCurrencySymbol:
         )
 
         mock_db = AsyncMock()
-        with patch(
-            "app.repositories.tenant_settings_repository"
-        ) as mock_repo:
+        with patch("app.repositories.tenant_settings_repository") as mock_repo:
             settings = FakeTenantSettingsObj(currency=None)
             mock_repo.get_by_tenant_id = AsyncMock(return_value=settings)
 
@@ -4691,9 +4687,7 @@ class TestLoadCurrencySymbol:
         )
 
         mock_db = AsyncMock()
-        with patch(
-            "app.repositories.tenant_settings_repository"
-        ) as mock_repo:
+        with patch("app.repositories.tenant_settings_repository") as mock_repo:
             mock_repo.get_by_tenant_id = AsyncMock(return_value=None)
 
             symbol = await _load_currency_symbol(mock_db, uuid4())

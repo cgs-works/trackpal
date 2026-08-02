@@ -160,7 +160,11 @@ async def test_pro_help_topics_are_authorized_and_safe_to_navigate(
     }
     assert expiration_topic.status_code == 200
     assert expiration_topic.json()["safe_links"] == [
-        {"route": "/admin/settings", "settings_category": "my-account", "tab": "regional"},
+        {
+            "route": "/admin/settings",
+            "settings_category": "my-account",
+            "tab": "regional",
+        },
         {"route": "/admin/settings", "settings_category": "reminders", "tab": None},
     ]
 
@@ -284,9 +288,7 @@ async def test_help_topics_are_searchable_with_safe_cross_module_links(
     )
 
     assert search_response.status_code == 200
-    assert {
-        result["id"] for result in search_response.json()["results"]
-    } >= {
+    assert {result["id"] for result in search_response.json()["results"]} >= {
         "tenant-admin.delete-account",
         "tenant-admin.mailbox",
     }

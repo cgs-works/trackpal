@@ -90,7 +90,11 @@ The coordinator uses these keys:
 
 PostgreSQL remains the durable source of truth. Duplicate scheduling is safe,
 and polling or another job creation can re-schedule a pending durable row after
-Redis recovery.
+Redis recovery. A reconciliation pass treats PostgreSQL `pending` rows as the
+recovery input, removes stale assignment metadata when an Execution Lease has
+expired, and never invokes a local Gmail or extraction pipeline. Redis result
+entries are encrypted and short-lived; the database stores only safe result
+metadata, not extracted values.
 
 ## Gmail App-Password Connection
 

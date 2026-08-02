@@ -9,6 +9,7 @@ TrackPal es un multi-context project. Cada contexto tiene su propio `CONTEXT.md`
 | **Backend** | `backend/CONTEXT.md` | Python 3.12, FastAPI, SQLAlchemy async, PostgreSQL, Redis HA | API REST, WhatsApp consoles, mailbox ingestion, subscription jobs |
 | **Frontend** | `frontend/CONTEXT.md` | React 19, TypeScript, Zustand, TanStack Router, Tailwind v4, shadcn/ui | SPA multi-role (Master, Tenant, Client) |
 | **n8n** | `n8n/CONTEXT.md` | n8n workflows (JSON exports) | WhatsApp bot bridge + subscription reminder scheduler |
+| **Worker** | `worker/CONTEXT.md` | Python 3.12, FastAPI, Gmail pipeline, signed HTTP protocol | External Lookup Executor for Mail Lookup Jobs; no backend, PostgreSQL, or Redis dependency |
 
 ## Reglas de consumo
 

@@ -127,9 +127,10 @@ backend/
 │       ├── contingency_reply_policy/
 │       ├── dashboard_service/     # Dashboard response assembly (package)
 │       ├── evolution_client/
-│       ├── imap_service.py        # Internal Gmail IMAP connection-test adapter (used by app_password flow)
-│       ├── mail_code_extractor/   # Regex catalog v1 + pure extractor + per-service catalogs
-│       ├── mail_lookup_worker/    # Queue, provider (gmail_app_password), worker pipeline
+│       ├── imap_service.py        # Internal Gmail connection-test adapter (used by app_password flow)
+│       ├── lookup_execution_coordinator/ # Queue acceleration, leases, dispatch, and reconciliation
+│       ├── lookup_executor_transport/    # Signed/encrypted executor HTTP transport
+│       ├── lookup_executor_registry.py   # Master registry lifecycle and hosting-password controls
 │       ├── mailbox_cleanup.py     # Retention/cleanup loop
 │       ├── mailbox_app_password.py  # Gmail app-password validation and connection
 │       ├── profile_service/
@@ -227,8 +228,6 @@ backend/
 │   ├── test_tenant_plan.py       # Tenant plan create/update/auth/gate tests
 │   ├── test_mailbox_persistence.py
 │   ├── test_mailbox_oauth_imap.py
-│   ├── test_mail_code_extractor.py
-│   ├── test_mailbox_lookup_worker.py
 │   ├── test_mailbox_lookup_api.py
 │   ├── test_mailbox_cleanup.py
 │   └── test_mailbox_metrics.py
@@ -236,7 +235,15 @@ backend/
 ├── uv.lock
 ├── .env.example
 ├── render.yaml
-└── .python-version
+├── .python-version
+
+worker/
+├── app/                          # Independently deployable Lookup Executor
+├── tests/                        # Worker protocol and pipeline tests
+├── Dockerfile                    # Python 3.12 non-root image
+├── render.yaml                   # Render Free Web Service Blueprint
+├── README.md                     # Local operation and enrollment guide
+└── CONTEXT.md                   # Worker domain boundary and secret rules
 ```
 
 ## Entry Points
@@ -269,9 +276,10 @@ backend/
 | `app/services/subscription_service/` | Subscription CRUD and lifecycle operations (package) |
 | `app/services/access_control_service.py` | Block/unblock identities + codigo session cleanup |
 | `app/services/subscription_job_service/` | Cleanup job and reminder payloads (package) |
-| `app/services/mail_lookup_worker/` | Async mailbox lookup worker, Gmail app-password fetcher, retries, dedupe pipeline, Redis queue |
-| `app/services/mailbox_app_password.py` | Gmail app-password validation and IMAP connection testing |
-| `app/services/mail_code_extractor/` | Regex-based code extraction: catalog_v1 (multi-service) + per-service catalog files (netflix, disney, spotify, etc.) + pure extractor |
+| `app/services/lookup_execution_coordinator/` | External executor selection, leases, dispatch, callback reconciliation, and Redis recovery |
+| `app/services/lookup_executor_transport/` | Signed/encrypted challenge, handoff, and callback transport |
+| `app/services/lookup_executor_registry.py` | Master-only enrollment, verification, activation, rotation, and deletion |
+| `app/services/mailbox_app_password.py` | Gmail app-password validation and connection testing |
 | `app/services/tenant_console_protocols/` | Protocols for tenant console DI (package) |
 | `app/services/imap_service.py` | Internal Gmail IMAP connection-test adapter (used by app_password flow) |
 | `app/services/mailbox_cleanup.py` | Periodic retention/cleanup loop for stale jobs and delivery logs |

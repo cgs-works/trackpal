@@ -271,6 +271,19 @@ Collapsible sidebar layout for tenant admin pages:
 Client navigation uses the same role-navigation and sidebar primitives. When private Help is enabled it exposes only Dashboard, Profile, and Help, with Help last before account/logout. Desktop active states are exact route matches; mobile exposes the same authorized destinations through the focus-managed `Sheet`. Contextual Help is available on the Dashboard and Profile screens and never starts an Orientation Tour.
 
 
+### Lookup Executor Management
+
+The Master layout includes a Lookup Executors destination. Its management
+surface calls the registry API to enroll, verify, test, activate, disable,
+rotate, and delete provider-agnostic executors. It displays health, active
+capacity, verification state, and safe error text.
+
+The enrollment dialog reveals the protocol secret once and never stores it in
+ordinary executor state. `http_encrypted` destinations require an explicit
+Master step-up confirmation with `ALLOW HTTP`; HTTPS remains the default. An
+optional hosting-account password is revealed only through a temporary,
+step-up-protected action and is not present in ordinary API responses.
+
 ### MasterLayout (`features/master/layout/master-layout.tsx`)
 
 Sidebar layout for master pages. The Master dashboard keeps lifecycle work separated into accessible `Production` and `Demos` tabs:

@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import Any
-from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
-
-from app.core.config import settings
 
 
 pytestmark = pytest.mark.asyncio

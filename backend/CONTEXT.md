@@ -100,8 +100,10 @@ schemas  core       models
 | `app/services/whatsapp_tenant_console_service/` | Menús y flujos del tenant (18 módulos) |
 | `app/services/whatsapp_master_console_facade/` | Consola Master de WhatsApp |
 | `app/services/whatsapp_client_console_facade/` | Consola Client (read-only) |
-| `app/services/mail_lookup_worker/` | Worker asíncrono de extracción de códigos |
-| `app/services/mail_code_extractor/` | Extracción regex por servicio (netflix, disney, spotify, etc.) |
+| `app/services/lookup_execution_coordinator/` | Queue acceleration, executor selection, Execution Leases, dispatch, and PostgreSQL reconciliation |
+| `app/services/lookup_executor_transport/` | Signed/encrypted challenge, handoff, and callback transport |
+| `app/services/lookup_executor_registry.py` | Master registry lifecycle, verification, rotation, and hosting-password controls |
+| `worker/` (separate context) | External Gmail retrieval, MIME normalization, extraction, Netflix resolution, and callback delivery |
 | `app/services/subscription_job_service/` | Limpieza y recordatorios de suscripciones |
 | `app/core/i18n/` | Motor de localización (en/es) con catálogos en memoria |
 | `app/core/input_validation/` | Validación centralizada de campos |
@@ -118,3 +120,13 @@ schemas  core       models
 - Suscripciones con secretos encriptados via Fernet
 - i18n: backend es source-of-truth, frontend consume via `/i18n/catalog`
 - Tests: pytest + aiosqlite (in-memory), Redis fake, Evolution deshabilitado
+
+
+## External lookup boundary
+
+FastAPI creates durable Mail Lookup Jobs and coordinates them through Redis and
+PostgreSQL. It does not execute Gmail retrieval, MIME parsing, Code Service
+extraction, Netflix resolution, or a local result-cache fallback. The separate
+`worker/` context receives a signed, AES-GCM encrypted handoff and returns a
+signed encrypted callback. Redis result entries are ephemeral and encrypted;
+PostgreSQL reconciliation makes pending jobs recoverable after Redis loss.

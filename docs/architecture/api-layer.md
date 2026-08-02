@@ -32,6 +32,8 @@ The backend exposes a FastAPI application at `app/main.py` with routes under `/a
 | `/api/v1/tenant/mailbox/*` | `app.api.v1.endpoints.mailbox` | tenant-mailbox | JWT + active tenant context |
 | `/api/v1/tenant/whatsapp-link/*` | `app.api.v1.endpoints.whatsapp_link` | tenant-whatsapp-link | JWT + active tenant context (Starter + Pro) |
 | `/api/v1/integrations/n8n/mail/lookups/*` | `app.api.v1.endpoints.integrations.mail_lookups` | integrations-mail | X-API-Key header |
+| `/api/v1/lookup-executors/*` | `app.api.v1.endpoints.lookup_executors` | lookup-executors | JWT + Master role |
+| `/api/v1/integrations/executors/*/jobs/*/complete` | executor callback endpoint | integrations-executor | Signed encrypted protocol |
 | `/api/v1/code-services/*` | `app.api.v1.endpoints.code_services` | code-services | JWT + master or tenant context |
 | `/api/v1/access-control/*` | `app.api.v1.endpoints.access_control` | access-control | JWT + active tenant context |
 | `/api/v1/public/catalog` | Public API Catalog endpoint | public-catalog | Public API Key + exact `Origin` |
@@ -230,6 +232,28 @@ Tenant package is stored on `tenants.plan` with allowed values `starter` and `pr
 - Public API Catalog is Pro-only; downgraded Starter tenants receive 403 on public catalog calls while key configuration is preserved.
 - Master users switched into a Starter tenant bypass Pro gates for support.
 - Starter can access profile, locale, `/tenant/mailbox/*`, `/tenant/whatsapp-link/*`, `/code-services/tenants/current`, `/access-control/blocks`, dashboard, and WhatsApp code lookup.
+
+### Lookup Executor Registry and Callback
+
+Master-only registry routes under `/api/v1/lookup-executors/` enroll and manage
+multiple external Lookup Executors without backend environment changes. Create
+returns the protocol secret once; `/verify` challenges the configured
+destination, `/test` performs a non-activating challenge, `/enable` and
+`/disable` control dispatch eligibility, `/rotate-secret` creates a pending key,
+and deletion fails closed while PostgreSQL jobs or Redis Execution Leases are
+active. Optional hosting-account passwords are encrypted, absent from ordinary
+responses, and revealed only after Master step-up.
+
+The worker sends results to:
+
+`POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete`
+
+The callback route verifies the executor identity, timestamp, signature,
+AES-GCM envelope, and one-use Redis nonce before a row-locked coordinator
+reconciles the Execution Lease. Same-lease duplicates are acknowledged without
+mutating a terminal or reassigned job. Found values are deduplicated in
+PostgreSQL and placed only in an encrypted, short-lived Redis result cache.
+There is no backend execution fallback.
 
 ## Dependency Injection
 

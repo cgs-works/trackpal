@@ -139,7 +139,9 @@ def test_nonce_cache_rejects_second_use() -> None:
     assert cache.consume("nonce-1", now=1001) is False
 
 
-def test_nonce_cache_rejects_new_nonce_when_full_without_evicting_valid_entries() -> None:
+def test_nonce_cache_rejects_new_nonce_when_full_without_evicting_valid_entries() -> (
+    None
+):
     cache = NonceCache(ttl_seconds=10, max_entries=2)
 
     assert cache.consume("nonce-1", now=1000) is True
