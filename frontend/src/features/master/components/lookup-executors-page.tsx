@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { mapExecutorError, fetchLookupExecutors, type LookupExecutor } from "../services/executor-api";
+import { ExecutorActionDialogs, type ExecutorAction } from "./executor-action-dialogs";
 import { ExecutorEnrollmentDialog } from "./executor-enrollment-dialog";
 import { ExecutorTable } from "./executor-table";
 
@@ -12,6 +13,8 @@ export function LookupExecutorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
+  const [selectedExecutor, setSelectedExecutor] = useState<LookupExecutor | null>(null);
+  const [selectedAction, setSelectedAction] = useState<ExecutorAction | null>(null);
 
   const loadExecutors = useCallback(async () => {
     setLoading(true);
@@ -30,6 +33,16 @@ export function LookupExecutorsPage() {
   useEffect(() => {
     void loadExecutors();
   }, [loadExecutors]);
+
+  function openAction(action: ExecutorAction, executor: LookupExecutor) {
+    setSelectedExecutor(executor);
+    setSelectedAction(action);
+  }
+
+  function closeAction() {
+    setSelectedExecutor(null);
+    setSelectedAction(null);
+  }
 
   function renderContent() {
     if (loading) {
@@ -69,7 +82,7 @@ export function LookupExecutorsPage() {
       );
     }
 
-    return <ExecutorTable executors={executors} />;
+    return <ExecutorTable executors={executors} onAction={openAction} />;
   }
 
   return (
@@ -110,6 +123,12 @@ export function LookupExecutorsPage() {
       <ExecutorEnrollmentDialog
         open={enrollmentOpen}
         onOpenChange={setEnrollmentOpen}
+        onCompleted={() => void loadExecutors()}
+      />
+      <ExecutorActionDialogs
+        action={selectedAction}
+        executor={selectedExecutor}
+        onClose={closeAction}
         onCompleted={() => void loadExecutors()}
       />
     </div>

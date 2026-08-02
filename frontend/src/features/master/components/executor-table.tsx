@@ -1,4 +1,14 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Check,
+  Eye,
+  FlaskConical,
+  Play,
+  RotateCw,
+  ShieldOff,
+  Trash2,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,12 +25,14 @@ import type {
   LookupExecutorHealthStatus,
   LookupExecutorLifecycleStatus,
 } from "../services/executor-api";
+import type { ExecutorAction } from "./executor-action-dialogs";
 
 interface ExecutorTableProps {
   executors: LookupExecutor[];
+  onAction: (action: ExecutorAction, executor: LookupExecutor) => void;
 }
 
-export function ExecutorTable({ executors }: ExecutorTableProps) {
+export function ExecutorTable({ executors, onAction }: ExecutorTableProps) {
   return (
     <>
       <div className="hidden overflow-x-auto md:block" data-testid="executor-desktop-table">
@@ -35,11 +47,12 @@ export function ExecutorTable({ executors }: ExecutorTableProps) {
               <TableHead>{t("frontend.master.executors.capacity")}</TableHead>
               <TableHead>{t("frontend.master.executors.transport_mode")}</TableHead>
               <TableHead>{t("frontend.master.executors.last_error")}</TableHead>
+              <TableHead>{t("frontend.master.executors.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {executors.map((executor) => (
-              <ExecutorRow key={executor.id} executor={executor} />
+              <ExecutorRow key={executor.id} executor={executor} onAction={onAction} />
             ))}
           </TableBody>
         </Table>
@@ -64,6 +77,7 @@ export function ExecutorTable({ executors }: ExecutorTableProps) {
             <OperationalDetails executor={executor} />
             <Separator />
             <ErrorDetails executor={executor} />
+            <ExecutorActions executor={executor} onAction={onAction} />
           </div>
         ))}
       </div>
@@ -71,7 +85,13 @@ export function ExecutorTable({ executors }: ExecutorTableProps) {
   );
 }
 
-function ExecutorRow({ executor }: { executor: LookupExecutor }) {
+function ExecutorRow({
+  executor,
+  onAction,
+}: {
+  executor: LookupExecutor;
+  onAction: (action: ExecutorAction, executor: LookupExecutor) => void;
+}) {
   return (
     <TableRow>
       <TableCell className="max-w-56 whitespace-normal break-words font-medium">
@@ -88,7 +108,69 @@ function ExecutorRow({ executor }: { executor: LookupExecutor }) {
         <ErrorDetails executor={executor} />
         {executor.requires_reverification && <ReverificationBadge />}
       </TableCell>
+      <TableCell>
+        <ExecutorActions executor={executor} onAction={onAction} />
+      </TableCell>
     </TableRow>
+  );
+}
+
+function ExecutorActions({
+  executor,
+  onAction,
+}: {
+  executor: LookupExecutor;
+  onAction: (action: ExecutorAction, executor: LookupExecutor) => void;
+}) {
+  const lifecycleAction: ExecutorAction = executor.lifecycle_status === "active" ? "disable" : "enable";
+  return (
+    <div className="flex flex-wrap gap-1">
+      <ActionButton action="verify" icon={Check} executor={executor} onAction={onAction} />
+      <ActionButton action="test" icon={FlaskConical} executor={executor} onAction={onAction} />
+      <ActionButton action={lifecycleAction} icon={lifecycleAction === "enable" ? Play : ShieldOff} executor={executor} onAction={onAction} />
+      <ActionButton action="rotate" icon={RotateCw} executor={executor} onAction={onAction} />
+      {executor.has_hosting_password && (
+        <ActionButton action="reveal" icon={Eye} executor={executor} onAction={onAction} />
+      )}
+      <ActionButton
+        action="delete"
+        icon={Trash2}
+        executor={executor}
+        onAction={onAction}
+        disabled={executor.active_jobs > 0}
+        variant="destructive"
+      />
+    </div>
+  );
+}
+
+function ActionButton({
+  action,
+  icon: Icon,
+  executor,
+  onAction,
+  disabled = false,
+  variant = "outline",
+}: {
+  action: ExecutorAction;
+  icon: typeof Check;
+  executor: LookupExecutor;
+  onAction: (action: ExecutorAction, executor: LookupExecutor) => void;
+  disabled?: boolean;
+  variant?: "outline" | "destructive";
+}) {
+  return (
+    <Button
+      type="button"
+      variant={variant}
+      size="icon-sm"
+      aria-label={t(`frontend.master.executors.${action === "rotate" ? "rotate_secret" : action === "reveal" ? "reveal_hosting_password" : action}`)}
+      title={t(`frontend.master.executors.${action === "rotate" ? "rotate_secret" : action === "reveal" ? "reveal_hosting_password" : action}`)}
+      disabled={disabled}
+      onClick={() => onAction(action, executor)}
+    >
+      <Icon data-icon="inline-start" aria-hidden="true" />
+    </Button>
   );
 }
 
