@@ -70,3 +70,20 @@ Two deterministic replies for degraded states:
 ## Exception Handling
 
 `RedisUnavailableError` wraps all infrastructure failures (ConnectionError, TimeoutError, OSError, redis-py errors). The integrations endpoint catches these and returns HTTP 200 with `TEMPORARY_UNAVAILABLE` text, so n8n never receives HTTP 5xx.
+
+
+## Lookup coordination
+
+Redis is also the ephemeral coordination layer for external Mail Lookup Jobs:
+
+- `mailbox:lookup:queue` accelerates dispatch of durable PostgreSQL jobs.
+- Per-job dispatch locks prevent duplicate handoff work.
+- Execution Lease keys and per-executor sorted sets enforce capacity and expiry.
+- Callback nonces provide one-use replay protection.
+- Cooldown keys prevent repeated transport failures from receiving work.
+- `lookup:result:{job_id}` contains only a Fernet-encrypted, short-lived result.
+
+PostgreSQL remains authoritative for job status, executor assignment, and the
+registry. After Redis loss or failover, reconciliation and later scheduling
+requeue durable pending work. Redis loss never triggers a local Gmail lookup
+fallback, and the backend does not run the worker pipeline.

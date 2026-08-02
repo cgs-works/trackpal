@@ -1,0 +1,9 @@
+# Mail Lookup Jobs run on external Lookup Executors
+
+TrackPal keeps Mail Lookup Job creation, durable state, dedupe, and result delivery in the backend, but moves Gmail IMAP, MIME parsing, code extraction, Netflix resolution, and fingerprint generation to trusted provider-agnostic Lookup Executors deployed independently from `worker/`. FastAPI pushes signed and application-encrypted commands over HTTP, Redis coordinates capacity and recoverable Execution Leases, and executors return signed callbacks without direct PostgreSQL or Redis access.
+
+This was chosen over direct Redis consumers and executor polling because it keeps infrastructure credentials and HA behavior local to TrackPal, works with sleeping request-driven hosts such as Render Free, and leaves one small transport seam that can support Render, VPS, or future providers. The tradeoff is a lease-based distributed protocol with explicit callback idempotency and reconciliation from PostgreSQL after Redis state loss. The backend never falls back to local lookup execution.
+
+The executor callback signature canonicalizes only the URL path; query parameters are transported but are not signed. Production startup fails fast when configured values are invalid, while an import without deployment environment variables uses an inert configuration for diagnostics only. Executor challenge and handoff responses are HMAC-signed with the same protocol key and canonical path, and the backend rejects unsigned or inconsistent responses.
+
+Before each request, the backend validates DNS answers and pins the connection to the validated public address while preserving the configured hostname for HTTPS certificate and SNI handling. Executor base URLs may not contain a path or query prefix, and duplicate responses must explicitly identify the matching lease before they can be treated as idempotent success.

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,13 +12,26 @@ class MailCodeDeliveryLog(Base):
     __tablename__ = "mail_code_delivery_log"
 
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_mail_code_delivery_log_w_msgid",
             "tenant_id",
             "mailbox_id",
             "service_key",
             "message_id",
             "fingerprint",
-            name="uq_mail_code_delivery_log",
+            unique=True,
+            postgresql_where=text("message_id IS NOT NULL"),
+            sqlite_where=text("message_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_mail_code_delivery_log_no_msgid",
+            "tenant_id",
+            "mailbox_id",
+            "service_key",
+            "fingerprint",
+            unique=True,
+            postgresql_where=text("message_id IS NULL"),
+            sqlite_where=text("message_id IS NULL"),
         ),
     )
 

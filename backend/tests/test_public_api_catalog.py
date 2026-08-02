@@ -251,7 +251,9 @@ async def test_public_catalog_starter_downgrade_preserves_config_but_returns_403
 # --- New tests for Task 5: price + currency ---
 
 
-async def test_public_catalog_plan_price_exposed(client, active_tenant_user, db_session):
+async def test_public_catalog_plan_price_exposed(
+    client, active_tenant_user, db_session
+):
     """Plans with a price value expose it in the public catalog."""
     from decimal import Decimal
 

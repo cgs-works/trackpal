@@ -17,6 +17,8 @@
 |---------|------------|
 | **Tenant Admin** | The person who operates a Tenant through the plan-aware administrative Web and WhatsApp interfaces. Use **Tenant** for the business entity, not the person. |
 | **Master Layout** | Sidebar layout for the Master operator, with summary cards and separate production-business and Demo Tenant management tabs. |
+| **Lookup Executor Management** | Master-only surface for enrolling, verifying, enabling, disabling, and monitoring external Lookup Executors without tying the UI to a hosting provider. It may retain an optional Executor Hosting Account reference whose password requires Master step-up before reveal. _Avoid_: Cloudflare Workers panel, Render Workers panel. |
+| **Lookup Executor Protocol** | Signed and AES-GCM encrypted HTTP contract between the backend and the independently deployed `worker/` runtime. The frontend never handles mailbox credentials, callbacks, or extracted values. |
 | **Demo Management Tab** | Master-only lifecycle view for creating Starter or Pro Demo Tenants, credentialing, monitoring, and deleting them without entering their Demo Workspaces. It excludes prospect activity, workspace telemetry, summary cards, and Demo Tenants from production metrics. |
 | **Admin Layout** | Layout colapsable con sidebar para tenant admin. Navegación: Dashboard, Clients, Catalog, Subscriptions, Settings, and the gated Help Center. Starter oculta links Pro-only. Master en contexto de soporte ve navegación completa + banner, pero no Tenant Admin Help. Contextual Help uses stable targets `admin.clients`, `admin.catalog`, and `admin.subscriptions` on the Pro screens without submitting their forms. |
 
@@ -156,3 +158,13 @@ Axios singleton en `src/lib/api.ts`:
 - **API pública de catálogo**: publicación read-only del catálogo para sitios externos
 - **Configuración regional**: país, idioma, zona horaria y moneda del negocio
 - **Moneda del país**: agrupación que muestra la moneda oficial del país elegido primero en el selector de moneda
+
+
+## External Lookup Executor boundary
+
+The Master UI manages the backend registry only. Enrollment reveals an executor
+protocol secret once; ordinary list/detail responses contain no secret or
+hosting password. HTTPS is the default, while `http_encrypted` requires Master
+step-up and explicit `ALLOW HTTP` confirmation. The independently deployed
+`worker/` runtime is documented in `worker/CONTEXT.md`; it is not a frontend
+bundle or browser integration.

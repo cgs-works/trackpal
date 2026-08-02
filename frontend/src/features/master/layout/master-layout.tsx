@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, Navigate, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Settings } from "lucide-react";
+import { LayoutDashboard, ServerCog, Settings } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import {
   AppSidebar,
@@ -9,6 +9,7 @@ import {
 } from "@/components/layout/app-sidebar";
 import { CodeServicesDialog } from "../components/code-services-dialog";
 import { LegalFooter } from "@/components/layout/legal-footer";
+import { t } from "@/i18n";
 
 export function MasterLayout() {
   const navigate = useNavigate();
@@ -28,8 +29,12 @@ export function MasterLayout() {
     {
       label: "Dashboard",
       icon: <LayoutDashboard className="size-4 shrink-0" />,
-      active: true,
-      onSelect: () => navigate({ to: "/master/dashboard" }),
+      to: "/master/dashboard",
+    },
+    {
+      label: t("frontend.master.executors.navigation"),
+      icon: <ServerCog className="size-4 shrink-0" />,
+      to: "/master/executors",
     },
     {
       label: "Code Services",

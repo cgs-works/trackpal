@@ -140,9 +140,9 @@ async def test_demo_external_boundaries_are_rejected_before_side_effects(
             new=AsyncMock(),
         ) as get_mailbox,
         patch(
-            "app.api.v1.endpoints.integrations.mail_lookups.enqueue_job",
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
             new=AsyncMock(),
-        ) as enqueue_job,
+        ) as get_coordinator,
         patch(
             "app.services.export_service.get_current_export",
             new=AsyncMock(),
@@ -167,5 +167,5 @@ async def test_demo_external_boundaries_are_rejected_before_side_effects(
     assert export.status_code == 403
     assert export.json()["detail"] == "demo_operation_blocked"
     get_mailbox.assert_not_awaited()
-    enqueue_job.assert_not_awaited()
+    get_coordinator.assert_not_called()
     get_export.assert_not_awaited()

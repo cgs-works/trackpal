@@ -1135,6 +1135,51 @@ async def test_unregistered_identity_codigo_multistep(
         assert body4["tenant_id"] is not None
 
 
+async def test_unregistered_identity_codigo_confirm_returns_job_when_schedule_fails(
+    client, db_session, active_tenant_user
+):
+    """A committed confirmation job ID survives an immediate schedule failure."""
+    from types import SimpleNamespace
+
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    confirmed_job = SimpleNamespace(id=uuid4())
+    coordinator = AsyncMock()
+    coordinator.schedule.side_effect = RuntimeError("Redis unavailable")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await _reach_unauth_codigo_confirm_step(client, TEST_INSTANCE)
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=confirmed_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=coordinator,
+            ),
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015559999",
+                    "message": "1",
+                    "instance": TEST_INSTANCE,
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["lookup_job_id"] == str(confirmed_job.id)
+    assert body["tenant_id"] == str(tenant.id)
+    coordinator.schedule.assert_awaited_once_with(confirmed_job.id)
+
+
 async def test_unregistered_identity_codigo_confirm_option_2_returns_email_prompt(
     client, db_session, active_tenant_user
 ):
@@ -1644,8 +1689,8 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
                 AsyncMock(return_value=retry_job),
             ),
             patch(
-                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
-                AsyncMock(return_value=True),
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=AsyncMock(),
             ),
         ):
             response = await client.post(
@@ -1663,6 +1708,83 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
     assert body.get("lookup_job_id") == str(retry_job.id)
     assert body.get("tenant_id") == str(tenant.id)
     assert "buscando" in body["reply"].lower() or "searching" in body["reply"].lower()
+
+
+async def test_unregistered_codigo_result_retry_returns_job_when_schedule_fails(
+    client, db_session, active_tenant_user
+):
+    """A committed retry job ID survives an immediate reschedule failure."""
+    from types import SimpleNamespace
+
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    initial_job = SimpleNamespace(id=uuid4())
+    retry_job = SimpleNamespace(id=uuid4())
+    initial_coordinator = AsyncMock()
+    coordinator = AsyncMock()
+    coordinator.schedule.side_effect = RuntimeError("Redis unavailable")
+
+    with patch(
+        "app.api.v1.endpoints.integrations.console.get_redis_manager",
+        return_value=fake_mgr,
+    ):
+        await _reach_unauth_codigo_confirm_step(client, TEST_INSTANCE)
+
+        # Confirm the first job so the next request reaches the retry branch.
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=initial_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=initial_coordinator,
+            ),
+        ):
+            initial_response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015559999",
+                    "message": "1",
+                    "instance": TEST_INSTANCE,
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+        assert initial_response.status_code == 200
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.get_job",
+                AsyncMock(return_value=SimpleNamespace(status="completed")),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+                AsyncMock(return_value=SimpleNamespace(id=uuid4(), status="connected")),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=retry_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=coordinator,
+            ),
+        ):
+            response = await client.post(
+                ENDPOINT,
+                json={
+                    "phone": "+12015559999",
+                    "message": "1",
+                    "instance": TEST_INSTANCE,
+                },
+                headers={"X-API-Key": settings.n8n_api_key},
+            )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["lookup_job_id"] == str(retry_job.id)
+    assert body["tenant_id"] == str(tenant.id)
+    coordinator.schedule.assert_awaited_once_with(retry_job.id)
 
 
 async def test_unregistered_codigo_service_cancel_with_alias_returns_cancelled(

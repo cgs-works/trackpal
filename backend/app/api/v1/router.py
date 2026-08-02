@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     help,
     i18n,
     integrations,
+    lookup_executors,
     mailbox,
     me,
     public_api_key,
@@ -30,6 +31,7 @@ api_router.include_router(integrations.router)
 api_router.include_router(mailbox.router)
 api_router.include_router(tenants.router)
 api_router.include_router(tenant_export.router)
+api_router.include_router(lookup_executors.router)
 api_router.include_router(tenant_settings.router)
 api_router.include_router(access_control.router)
 api_router.include_router(clients.router)

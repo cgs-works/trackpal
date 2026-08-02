@@ -155,17 +155,17 @@ All field validation goes through centralized `app/core/input_validation/`:
 
 ## Mail Lookup Jobs Lifecycle
 
-1. Created by n8n via `POST /api/v1/integrations/n8n/mail/lookups` with `service_key`, `target_email`, and tenant identification
-2. Status transitions: `pending` → `processing` → `completed` or `failed` or `timeout`
-3. `pending`: initial state, not yet picked up by worker
-4. `processing`: worker is fetching emails and extracting codes
-5. `completed`: code found (`result_type=code`), URL to resolve (`result_type=url`), or not found (`result_type=not_found`). Duplicate extractions suppressed (`result_type=duplicate_suppressed`).
-6. `failed`: fetch failure after retries, mailbox not found, or unrecoverable error
-7. `timeout`: job exceeded TTL (`expires_at`); n8n poll returns `status=timeout`
-8. Jobs have TTL (`expires_at`) after which worker skips them; cleanup loop removes expired jobs
-9. `result_value_encrypted`: code or resolved URL, encrypted via Fernet. Kept null in v1 for ephemeral responses delivered via WhatsApp instead of polling.
-10. For Netflix `result_type=url`: worker fetches the travel-verify URL, parses HTML for OTP code (4-6 digits), replaces result_value with extracted code. If OTP not found in HTML, marks as `not_found`.
-11. Status polling by n8n via `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
+1. Created by n8n via `POST /api/v1/integrations/n8n/mail/lookups` with `service_key`, `target_email`, and tenant identification.
+2. Status transitions: `pending` → `processing` → `completed` or `failed` or `timeout`; recoverable lease or dispatch failures can return `processing` to `pending`.
+3. `pending`: durable PostgreSQL state waiting for an eligible external Lookup Executor.
+4. `processing`: an Execution Lease has been accepted by an executor; FastAPI does not fetch or parse mail.
+5. `completed`: code found (`result_type=code`), URL resolved (`result_type=url`), or not found (`result_type=not_found`). Duplicate extractions are suppressed (`result_type=duplicate_suppressed`).
+6. `failed`: executor reports a terminal failure, mailbox is unavailable, or another unrecoverable error occurs.
+7. `timeout`: job exceeded TTL (`expires_at`); n8n poll returns `status=timeout`.
+8. Jobs have TTL (`expires_at`); cleanup removes expired rows. Redis accelerates dispatch but PostgreSQL remains durable and can reconcile pending jobs after Redis loss.
+9. Extracted values are not persisted in the job row. Found values are delivered through the signed encrypted callback and held only in an encrypted short-lived Redis result entry.
+10. The independently deployed `worker/` executor performs Gmail retrieval, extraction, Netflix URL resolution, and fingerprinting. No job falls back to backend execution.
+11. Status polling by n8n via `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`.
 
 ## Mail Code Delivery Log
 

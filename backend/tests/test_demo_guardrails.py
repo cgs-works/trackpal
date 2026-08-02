@@ -201,9 +201,9 @@ async def test_demo_n8n_lookup_is_rejected_before_mailbox_or_queue(
             new=AsyncMock(),
         ) as get_mailbox,
         patch(
-            "app.api.v1.endpoints.integrations.mail_lookups.enqueue_job",
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
             new=AsyncMock(),
-        ) as enqueue_job,
+        ) as get_coordinator,
     ):
         response = await client.post(
             "/api/v1/integrations/n8n/mail/lookups",
@@ -218,7 +218,7 @@ async def test_demo_n8n_lookup_is_rejected_before_mailbox_or_queue(
     assert response.status_code == 403
     assert response.json()["detail"] == "demo_operation_blocked"
     get_mailbox.assert_not_awaited()
-    enqueue_job.assert_not_awaited()
+    get_coordinator.assert_not_called()
 
 
 async def test_demo_self_deletion_is_blocked_before_cleanup(client, active_demo_user):

@@ -24,7 +24,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Evolution Integration](architecture/evolution-integration.md) | Evolution client, webhook registration, senderPn/senderLid payload contract, token encryption, and n8n relay |
 | [Frontend Architecture](architecture/frontend-architecture.md) | React 19 routing, state, API integration, and views |
 | [n8n Workflow](architecture/n8n-workflow.md) | WhatsApp bot bridge (LID-aware parse contract), contextual payload routing, reply_to / no_reply handling, and subscription reminders workflows |
-| [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Gmail app-password mailbox ingestion, lookup worker, metrics, cleanup |
+| [Mailbox Ingestion](architecture/mailbox-ingestion.md) | Gmail app-password ingestion, external Lookup Executor dispatch, leases, callbacks, metrics, cleanup |
 | [Subscriptions](architecture/subscriptions.md) | Subscription data model, API, jobs, reminders, and frontend |
 | [Code-Services](architecture/code-services.md) | Global activation + tenant selection governance for code-extraction services |
 | [I18n System](architecture/i18n-system.md) | Backend i18n engine, catalogs, locale resolution, frontend store, WhatsApp ContextVar |
@@ -32,6 +32,8 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Regional Settings](architecture/regional-settings.md) | Currency Catalog, locale/timezone/country/currency settings, plan gating, pickers, price semantics, and cross-module integration |
 | [Tenant Data Export](architecture/tenant-data-export.md) | Export contract, job lifecycle, CSV/JSON formats, exclusions, storage boundary, and presigned download |
 | [Tenant Deletion](architecture/tenant-deletion.md) | Self-service deletion, Master deletion, external cleanup, fail-closed guarantees, and session teardown |
+| [Render Lookup Executor](how-to/deploy-lookup-executor-render.md) | Render Free Web Service deployment and operational runbook |
+| [Docker/VPS Lookup Executor](how-to/deploy-lookup-executor-vps.md) | Docker, firewall, Caddy, HTTP-encrypted exception, and rollback runbook |
 
 ## Architecture Decisions
 
@@ -41,6 +43,9 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Immediate Confirmed Tenant Deletion](adr/0002-immediate-confirmed-tenant-deletion.md) | Tenant Admin irreversible self-deletion without grace period or Master approval |
 | [Tenant Data Export Domain Contract](adr/0003-tenant-export-domain-contract.md) | Stable business-facing export contract with semantic field names, independent of persistence model |
 | [Browser-local Demo Tenant Workspaces](adr/0004-browser-local-demo-tenant-workspaces.md) | Server-enforced demo identity and lifecycle with plan-aware business state isolated to each browser |
+| [External Mail Lookup Executors](adr/0006-external-mail-lookup-executors.md) | Provider-agnostic external execution with signed HTTP callbacks and Redis-backed leases |
+| [Master-stored Executor Hosting Passwords](adr/0007-master-stored-executor-hosting-passwords.md) | Explicit risk acceptance and controls for optional third-party hosting credentials |
+| [Executor activation requires verified destination state](adr/0008-executor-activation-reverification.md) | Prevents unverified activation and quarantines active executors after destination changes |
 
 ## Release Operations
 

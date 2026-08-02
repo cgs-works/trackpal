@@ -132,6 +132,7 @@ frontend/
 │       │   │   └── master-layout.tsx
 │       │   ├── components/
 │       │   │   ├── dashboard-page.tsx
+│       │   │   ├── lookup-executors-page.tsx # Master executor registry and operations
 │       │   │   ├── business-table.tsx         # Plan badge per tenant
 │       │   │   ├── business-form-dialog.tsx   # Plan selector (Starter/Pro)
 │       │   │   ├── code-services-dialog.tsx
@@ -211,3 +212,13 @@ frontend/
 | `eslint` ^10.3.0 | Linting |
 | `eslint-plugin-react-hooks` ^7.1.1 | React hooks lint rules |
 | `eslint-plugin-react-refresh` ^0.5.2 | Fast refresh lint rules |
+
+
+## Lookup Executor Management
+
+`features/master/` contains the Master-only executor enrollment and lifecycle
+surface. It calls the registry API for challenge verification, activation,
+disable, secret rotation, hosting-password reveal, and deletion guards. The
+frontend does not run the worker pipeline and never receives mailbox secrets or
+ordinary hosting-password fields. The independently deployable runtime lives
+in `worker/`.

@@ -1,0 +1,5 @@
+# TrackPal may store optional Lookup Executor hosting passwords
+
+The Master may optionally store the email and password of the external account hosting a Lookup Executor so the account can be recovered later. This deliberately makes TrackPal a custodian of a high-impact third-party administrative credential, despite the safer alternative of retaining only an account reference or password-manager locator.
+
+The accepted controls are encryption with `DATA_ENCRYPTION_KEY`, Master-only access, password step-up with the existing fail-closed Redis limiter before reveal, no inclusion in ordinary serializers or exports, no logging, no delivery to executors, and temporary UI reveal that clears on close. This decision records the user's explicit acceptance of the increased blast radius: compromise of TrackPal's Master identity and encryption material could expose the external hosting account.

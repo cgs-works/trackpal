@@ -3,82 +3,109 @@
 ## Overview
 
 Tenant mailbox ingestion lets each tenant configure a Gmail account for
-extracting streaming-service access codes without deploying Python bots
-per tenant.  Execution is centralised in the TrackPal backend and runs
-on-demand when n8n requests a code lookup.
+extracting streaming-service access codes. Lookup jobs are durable in
+PostgreSQL and are dispatched to a trusted external Lookup Executor. The
+backend never runs Gmail IMAP or extraction work locally.
 
 ## Components
 
 | Component | Responsibility |
 |-----------|---------------|
 | **Tenant Dashboard (frontend)** | Mailbox config, Gmail Setup Assistant, connection tests |
-| **Backend API (FastAPI)** | Mailbox config CRUD, app-password validation, lookup job create/poll |
-| **Mailbox Lookup Worker** | Background asyncio task — processes pending jobs, fetches emails, extracts codes, dedupes |
-| **Mailbox Cleanup** | Periodic background task — expires stale jobs, hard-deletes expired data |
-| **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log` |
-| **Redis** | Queue (`mailbox:lookup:queue`) for job dispatch + ephemeral result cache |
+| **Backend API (FastAPI)** | Mailbox config CRUD, job creation, dispatch coordination, callback completion, and status polling |
+| **Lookup Executor** | External runtime that fetches emails, extracts codes, and sends signed results back |
+| **Mailbox Cleanup** | Periodic task that expires stale jobs and removes expired data |
+| **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log`, and executor registry |
+| **Redis** | Durable-work queue coordination, dispatch locks, leases, capacity, cooldowns, and encrypted ephemeral results |
 
 ## Data Model
 
 ### `tenant_mailboxes`
 
 - One mailbox per tenant (`tenant_id` unique).
-- Stores credentials **encrypted** at rest via `app.core.encryption` (Fernet).
-- Gmail is the only supported mailbox provider; `provider` is a legacy column retained for backward compatibility.
+- Stores credentials encrypted at rest via `app.core.encryption` (Fernet).
+- Gmail is the only supported mailbox provider.
 - Status: `disconnected` | `connected` | `error`.
-- Server details (host, port, SSL) are fixed Gmail IMAP values; they are not configurable by the user.
 
 ### `mail_lookup_jobs`
 
 - Created by n8n API endpoint `POST /api/v1/integrations/n8n/mail/lookups`.
-- Status machine: `pending -> processing -> completed/failed | pending -> timeout`.
-- `result_value` is **not persisted** in DB (ephemeral in-memory cache, 60s TTL).
-- Stores required `target_email` for content-bound filtering.
-- TTL default 5 minutes via `settings.mailbox_lookup_job_ttl_minutes`.
+- Status machine: `pending -> processing -> completed/failed`; dispatch and
+  lease failures can recover `processing -> pending`; expired jobs become
+  `timeout`.
+- Extracted result values are not persisted in PostgreSQL.
+- `executor_id`, `execution_attempts`, and `last_dispatch_error_safe` retain
+  safe assignment metadata.
+- Default TTL is five minutes via `settings.mailbox_lookup_job_ttl_minutes`.
 
 ### `mail_code_delivery_log`
 
-- Dedupe tracking with partial uniqueness:
-  - `message_id IS NOT NULL`: unique `(tenant_id, mailbox_id, service_key, message_id, fingerprint)`
-  - `message_id IS NULL`: unique `(tenant_id, mailbox_id, service_key, fingerprint)`
-- Fingerprint: SHA-256 of `service_key + message_id + payload` (primary) or fallback `service_key + sender + received_at + subject + payload`.
-- Retention default 7 days via `settings.mailbox_delivery_log_retention_days`.
+Dedupe tracking uses partial uniqueness for message IDs when available and a
+fallback fingerprint otherwise. Entries are retained for
+`settings.mailbox_delivery_log_retention_days`.
 
-## Worker Design
+## External Execution
 
-### Trigger
+After a job is committed, `LookupExecutionCoordinator.schedule(job_id)` adds
+it to the Redis queue and starts at most one short-lived pump. Each bounded
+pump starts a follow-on pump when its queue still contains work, including work
+remaining after a requeued dispatch; a pump does not immediately retry a sole
+requeued job. The pump:
 
-1. n8n calls `POST /api/v1/integrations/n8n/mail/lookups` with `{service_key, target_email, tenant_instance}`.
-2. API resolves tenant, validates mailbox, creates `pending` job, pushes job ID to Redis list.
-3. Background `worker_loop` polls Redis via `BRPOP`, pops job ID, loads and processes job.
+1. Acquires the per-job dispatch lock.
+2. Selects an active, verified executor with capacity and no failure cooldown,
+   using the smallest `active_leases / max_concurrency` ratio.
+3. Creates a Redis execution lease and capacity marker.
+4. Decrypts the mailbox app password only while constructing the encrypted
+   execution envelope.
+5. Sends the signed handoff and returns immediately; the executor performs the
+   lookup and calls the backend asynchronously.
 
-### Processing
+No permanent lookup worker loop runs inside FastAPI. If Redis, capacity, or an
+executor is unavailable, the durable job remains `pending` and is requeued for
+later scheduling. If other queued jobs remain, the coordinator starts a
+follow-on pump; a sole requeued job waits for a later scheduling trigger. A
+`429` requeues without changing executor health. Transport failures mark the
+executor `degraded`, then `unreachable` after three consecutive failures and
+open the configured five-minute cooldown. Security or protocol failures set
+`requires_reverification=true` immediately. There is no local pipeline fallback.
 
-1. Status `pending -> processing`.
-2. Load mailbox config (scoped to tenant).
-3. Fetch recent emails (window: `now-5min..now`, configurable via `settings.mailbox_lookup_window_minutes`). Gmail app-password lookups use the Gmail IMAP `X-GM-RAW after:<unix_timestamp>` extension so the window is based on an exact UTC instant rather than IMAP calendar-date semantics.
-4. Run extractor against catalog of per-service regex patterns (`app/services/mail_code_extractor/catalog_v1.py`).
-5. Pick newest valid candidate.
-6. Compute fingerprint. Check dedupe log.
-   - New → record delivery, store ephemeral result, complete `code`/`url`.
-   - Duplicate → complete `duplicate_suppressed`.
-   - No extraction → complete `not_found`.
+Accepted `202` handoffs and same-lease `409` duplicates move a job to
+`processing`, assign its executor, increment `execution_attempts`, and mark the
+executor healthy. The lease remains until callback completion or expiry.
 
-### Retries
+Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope, and consumes a one-use Redis nonce retained for three times the signature-skew window so future-dated signatures cannot outlive replay protection. It then delegates to a row-locked coordinator transaction. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry. Retryable outcomes clear the assignment, release the lease, and requeue only before the job deadline.
 
-Transient errors (network, rate-limit) retry up to 3 times with
-exponential backoff (1s, 2s, 4s).  Non-transient errors (revoked,
-permissions) fail immediately.
+## Redis Coordination
+
+The coordinator uses these keys:
+
+- `mailbox:lookup:queue` and `mailbox:lookup:queue:seen` — queued job IDs and dedupe.
+- `lookup:dispatch-lock:{job_id}` — short-lived per-job pump lock.
+- `lookup:lease:{job_id}` — execution lease metadata.
+- `lookup:executor-leases:{executor_id}` — expiring capacity markers.
+- `lookup:callback-nonce:{executor_id}:{nonce}` — callback replay protection.
+- `lookup:result:{job_id}` — Fernet-encrypted result cache.
+- `lookup:executor-cooldown:{executor_id}` — failure cooldown marker.
+
+PostgreSQL remains the durable source of truth. Duplicate scheduling is safe,
+and polling or another job creation can re-schedule a pending durable row after
+Redis recovery. A reconciliation pass treats PostgreSQL `pending` rows as the
+recovery input, removes stale assignment metadata when an Execution Lease has
+expired, and never invokes a local Gmail or extraction pipeline. Redis result
+entries are encrypted and short-lived; the database stores only safe result
+metadata, not extracted values.
 
 ## Gmail App-Password Connection
 
-The primary connection method uses a Google-generated app password:
+1. The Tenant Admin creates a Google app password.
+2. The Gmail Setup Assistant collects the address and app password.
+3. The backend validates the credential against Gmail IMAP over TLS.
+4. The normalized credential is encrypted and stored as
+   `app_password_encrypted`.
 
-1. The Tenant Admin creates an app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
-2. The Gmail Setup Assistant collects the Gmail address and app password.
-3. Backend validates the credential by testing an IMAP connection to `imap.gmail.com:993` with SSL before persisting.
-4. The normalized credential is encrypted and stored as `app_password_encrypted`.
-5. Gmail server details (`imap.gmail.com`, port 993, SSL=true) are fixed implementation details; the user never sees or configures them.
+Gmail server details are fixed implementation details and are not user
+configurable.
 
 ## API Contracts
 
@@ -89,86 +116,75 @@ The primary connection method uses a Google-generated app password:
 | GET | `/tenant/mailbox/` | Get config |
 | PUT | `/tenant/mailbox/` | Validate app password and connect |
 | POST | `/tenant/mailbox/test` | Test connection |
-| POST | `/tenant/mailbox/disconnect` | Disconnect + clear secrets |
+| POST | `/tenant/mailbox/disconnect` | Disconnect and clear secrets |
 
 ### n8n Integration (auth: X-API-Key)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/v1/integrations/n8n/mail/lookups` | Create lookup job (`target_email` required) → `{job_id, status=pending}` |
-| GET | `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` | Poll status scoped by tenant → `{status, result_type?, result_value?}` |
+| POST | `/api/v1/integrations/n8n/mail/lookups` | Create a lookup job |
+| GET | `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` | Poll a tenant-scoped job |
+
+### Master Lookup Executor Registry
+
+Master users manage external executors through `/api/v1/lookup-executors/`.
+Creation returns a generated protocol secret once. `/verify` establishes trust;
+`/test` checks connectivity without establishing activation trust. Rotation
+keeps the current secret active until a pending secret passes its challenge.
+
+Changing `base_url` or `transport_mode` clears verification and requires a new
+challenge. Deletion fails closed while PostgreSQL jobs or Redis leases are
+active, or when lease coordination is unavailable. Optional hosting passwords
+are encrypted and require Master step-up authentication for reveal; they are
+never sent to executors.
 
 ### Lookup Job States
 
 `pending` → `processing` → `completed` | `failed`
-`pending` → `timeout` (when job TTL expires)
 
-Result types: `code`, `url`, `not_found`, `duplicate_suppressed`.
+`processing` → `pending` (recoverable lease or dispatch failure)
 
-Polling scope contract: n8n must send both `lookup_job_id` and `tenant_id`.
+`pending` → `timeout` (when the job TTL expires)
 
-Durability contract for WhatsApp `codigo` handoff:
-- `lookup_job_id` must be emitted only after `mail_lookup_jobs` row is committed.
-- If enqueue fails after commit, backend compensates (delete job; fallback mark `failed` with `queue_unavailable`).
-- On compensation/failure branch, `lookup_job_id` is omitted from console response.
+Result types are `code`, `url`, `not_found`, and `duplicate_suppressed`.
 
 ## Observability
 
-### Metrics (`GET /metrics`)
-
-- `lookup_job_total{status,service}` — job results by outcome.
-- `lookup_job_latency{quantile}` — p50/avg/count of job processing time.
-- `lookup_api_create{status}` — job creation outcomes.
-- `lookup_api_poll{status}` — poll status distribution.
-- `mailbox_test_total{status}` — connection test outcomes.
-- `mailbox_cleanup_total{step,status}` — cleanup runs.
-
-### Logging
-
-- No secrets/tokens in logs (IDs only).
-- Safe error codes returned to n8n via `error_code` / `error_detail_safe`.
-- `last_connection_error` stored safely in DB (no tokens).
+`GET /metrics` exposes lookup creation/poll outcomes, job latency, mailbox
+connection tests, and cleanup status. Logs contain IDs and safe operational
+errors only; credentials, tokens, raw email, and extracted values are not
+logged.
 
 ## Retention and Cleanup
 
-A periodic background task (`mailbox_cleanup.cleanup_loop`) runs hourly:
-
-1. **Expire stale jobs** → moves `pending`/`processing` jobs past TTL to `timeout`.
-2. **Hard-delete expired jobs** → removes completed/failed/timeout jobs past TTL.
-3. **Hard-delete delivery log** → removes entries older than retention window.
-
-Configurable via:
-- `settings.mailbox_lookup_job_ttl_minutes` (default 5m)
-- `settings.mailbox_delivery_log_retention_days` (default 7d)
+`mailbox_cleanup.cleanup_loop` runs periodically to expire pending or
+processing jobs past their TTL, hard-delete expired jobs, and remove old
+ dedupe records. Configure retention with
+`settings.mailbox_lookup_job_ttl_minutes` and
+`settings.mailbox_delivery_log_retention_days`.
 
 ## Security
 
-- All secrets encrypted at rest via `cryptography.fernet.Fernet`.
-- No `result_value` persisted in database (ephemeral in-memory only).
-- Tenant isolation at repository layer: all queries scoped by `tenant_id`.
-- Rate-limit sensitive endpoints at proxy/reverse-proxy level.
+- Credentials are encrypted at rest with Fernet.
+- Sensitive executor bodies use application encryption and signed transport.
+- Executor URL validation rejects unsafe destinations and redirects.
+- Result values are ephemeral and encrypted in Redis.
+- Tenant ownership is enforced at the repository/API boundary.
 
 ## Runbook
 
-### Mailbox shows `error`
-
-1. Tenant must reconnect via the Gmail Setup Assistant (app password).
-2. If the app password was revoked (e.g. main Google password changed), generate a new app password and reconnect.
-
 ### Lookup jobs stuck in `pending`
 
-1. Check Redis availability: `GET /health` shows status.
-2. Check background worker running: logs show `Worker picked up job <id>`.
-3. If Redis unavailable, jobs remain `pending` indefinitely until Redis resumes.
-4. Manual intervention: run `expire_stale_jobs()` via admin hook to transition
-   stale jobs to `timeout`.
+1. Check Redis availability and failover logs.
+2. Check active executor lifecycle, verification, health, capacity, and cooldown.
+3. Confirm the job has not reached its five-minute TTL.
+4. Do not start a local lookup worker; the external executor boundary is
+   intentional. Pending jobs can be re-scheduled after Redis recovery.
 
 ### Cleanup not running
 
-1. Check app startup logs for `Mailbox cleanup loop starting`.
-2. Verify `cleanup_loop` task is running: look for `Mailbox cleanup complete`
-   log entries.
-3. If missing, restart the application.
+Check startup logs for `Mailbox cleanup loop starting` and verify periodic
+`Mailbox cleanup complete` entries, then restart the application if needed.
 
 ## Related Documentation
 

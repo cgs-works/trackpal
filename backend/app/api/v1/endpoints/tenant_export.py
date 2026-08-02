@@ -11,7 +11,6 @@ receives localized role labels in the export metadata.
 
 from __future__ import annotations
 
-import logging
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -20,12 +19,10 @@ from pydantic import BaseModel
 from app.api.dependencies import CurrentUser, DbDep, MasterUser
 from app.core.database import set_internal_rls_context
 from app.core.demo_guardrail import DemoGuardrailError, assert_demo_operation_allowed
-from app.core.security import verify_password
-from app.repositories import tenants_repository, users_repository
+from app.repositories import tenants_repository
 from app.services import export_service
-from app.services.step_up_limiter import StepUpError
+from app.services.master_step_up import MasterStepUpError, verify_master_step_up
 
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tenants/{tenant_id}/export", tags=["tenant-export"])
 
@@ -69,44 +66,13 @@ async def _verify_master_password(
     current_user: CurrentUser,
     password: str,
 ) -> None:
-    """Verify the Master's password with step-up rate limiting.
-
-    Raises HTTPException on failure or too many attempts.
-    Uses the same three-attempt/fifteen-minute fail-closed limiter
-    as Tenant Admin export.
-    """
-    limiter = export_service.get_limiter()
-
-    # Check rate limit first (fail-closed when Redis is unavailable)
-    if limiter is not None:
-        try:
-            await limiter.check(str(current_user.id))
-        except StepUpError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=str(exc),
-            ) from exc
-
-    # Verify password
-    master_user = await users_repository.get(db, current_user.id)
-    if master_user is None or not verify_password(password, master_user.password_hash):
-        # Record failure
-        if limiter is not None:
-            try:
-                await limiter.record_failure(str(current_user.id))
-            except StepUpError:
-                pass  # Fail closed on the check path; record is best-effort
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Master password",
+    """Verify the Master's password through the shared step-up service."""
+    try:
+        await verify_master_step_up(
+            db, current_user, password, export_service.get_limiter()
         )
-
-    # Success — reset counter
-    if limiter is not None:
-        try:
-            await limiter.record_success(str(current_user.id))
-        except StepUpError:
-            pass  # Success should succeed even if Redis is down
+    except MasterStepUpError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

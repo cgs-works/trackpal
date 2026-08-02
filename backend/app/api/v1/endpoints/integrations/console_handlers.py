@@ -19,7 +19,6 @@ from app.core.phone import normalize_phone
 from app.core.redis_client import (
     RedisConnectionManager,
     RedisUnavailableError,
-    get_redis_manager,
 )
 from app.schemas.whatsapp import WhatsAppConsoleResponse, WhatsAppOutboundMessage
 from app.repositories import (
@@ -30,7 +29,7 @@ from app.repositories import (
     mailbox_lookup_repository,
     tenants_repository,
 )
-from app.services.mail_lookup_worker import enqueue_job
+from app.services.lookup_execution_coordinator import get_lookup_execution_coordinator
 from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService
 from app.services.client_service import ClientService
@@ -397,64 +396,21 @@ async def _handle_tenant_console(
                         await db.flush()
                         await db.commit()
 
-                        redis_manager = get_redis_manager()
                         try:
-                            enqueued = (
-                                await enqueue_job(redis_manager, job.id)
-                                if redis_manager is not None
-                                else False
-                            )
+                            await get_lookup_execution_coordinator().schedule(job.id)
                         except Exception:
                             logger.exception(
-                                "Failed to enqueue lookup job %s for tenant %s",
+                                "Could not schedule lookup job %s for tenant %s",
                                 job.id,
                                 tenant.id,
                             )
-                            enqueued = False
 
-                        if enqueued:
-                            lookup_job_id = str(job.id)
-                            tenant_id_out = str(tenant.id)
-                            session.temp_data.pop("pending_lookup_intent", None)
-                            # Keep service_key & target_email for awaiting_result retry
-                            session.temp_data["lookup_job_id"] = lookup_job_id
-                            await session_service.save_session(session, touch_ttl=False)
-                        else:
-                            reply = tenant_console_service._t(
-                                tenant_console_service.KEY_CODIGO_ERROR
-                            )
-                            logger.warning(
-                                "Compensating: deleting job %s after enqueue "
-                                "failure for tenant %s",
-                                job.id,
-                                tenant.id,
-                            )
-                            try:
-                                await db.delete(job)
-                                await db.commit()
-                            except Exception:
-                                logger.critical(
-                                    "Job %s created but enqueue failed AND "
-                                    "compensating delete failed. Marking failed.",
-                                    job.id,
-                                )
-                                try:
-                                    await db.rollback()
-                                    await mailbox_lookup_repository.transition_status(
-                                        db,
-                                        job,
-                                        "failed",
-                                        error_code="queue_unavailable",
-                                        error_detail_safe=(
-                                            "Queue processing unavailable"
-                                        ),
-                                    )
-                                    await db.commit()
-                                except Exception:
-                                    logger.exception(
-                                        "Failed to mark job %s as failed",
-                                        job.id,
-                                    )
+                        lookup_job_id = str(job.id)
+                        tenant_id_out = str(tenant.id)
+                        session.temp_data.pop("pending_lookup_intent", None)
+                        # Keep service_key & target_email for awaiting_result retry
+                        session.temp_data["lookup_job_id"] = lookup_job_id
+                        await session_service.save_session(session, touch_ttl=False)
                     else:
                         reply = tenant_console_service._t(
                             tenant_console_service.KEY_CODIGO_ERROR
@@ -820,7 +776,7 @@ async def _handle_unauth_codigo_email_confirm(
     """Handle email confirm step.
 
     Options:
-        1 = confirm → create + enqueue job
+        1 = confirm → create + schedule job
         2 = correct email → back to email prompt
         9 = back to services
         0 = cancel
@@ -878,7 +834,7 @@ async def _handle_unauth_codigo_email_confirm(
             reply=_i18n_t(locale, "wa.tenant.codigo.invalid_email_confirm_option")
         )
 
-    # raw == "1" — confirm: create and enqueue the job
+    # raw == "1" — confirm: create and schedule the job
     service_key = session.temp_data.get("service_key")
     target_email = session.temp_data.get("target_email")
     if not service_key or not target_email:
@@ -906,20 +862,11 @@ async def _handle_unauth_codigo_email_confirm(
         return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
 
     try:
-        enqueued = await enqueue_job(manager, job.id) if manager is not None else False
+        await get_lookup_execution_coordinator().schedule(job.id)
     except Exception:
         logger.exception(
-            "Failed to enqueue lookup job %s for tenant %s", job.id, tenant.id
+            "Could not schedule lookup job %s for tenant %s", job.id, tenant.id
         )
-        enqueued = False
-
-    if not enqueued:
-        try:
-            await db.delete(job)
-            await db.commit()
-        except Exception:
-            logger.critical("Failed to delete job %s after enqueue failure", job.id)
-        return WhatsAppConsoleResponse(reply=_i18n_t(locale, "wa.tenant.codigo.error"))
 
     session.step = _UNAUTH_CODIGO_STEP_AWAITING_RESULT
     session.temp_data["lookup_job_id"] = str(job.id)
@@ -1098,32 +1045,17 @@ async def _handle_unauth_codigo_result(
                 )
                 await db.flush()
                 await db.commit()
-                enqueued = False
                 try:
-                    enqueued = (
-                        await enqueue_job(manager, job2.id)
-                        if manager is not None
-                        else False
-                    )
+                    await get_lookup_execution_coordinator().schedule(job2.id)
                 except Exception:
-                    logger.exception("Failed to re-enqueue lookup job %s", job2.id)
-                if enqueued:
-                    session.temp_data["lookup_job_id"] = str(job2.id)
-                    await session_service.save_session(session)
-                    return WhatsAppConsoleResponse(
-                        reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
-                        lookup_job_id=str(job2.id),
-                        tenant_id=str(tenant.id),
-                    )
-                else:
-                    try:
-                        await db.delete(job2)
-                        await db.commit()
-                    except Exception:
-                        logger.critical(
-                            "Failed to delete job %s after re-enqueue failure",
-                            job2.id,
-                        )
+                    logger.exception("Could not reschedule lookup job %s", job2.id)
+                session.temp_data["lookup_job_id"] = str(job2.id)
+                await session_service.save_session(session)
+                return WhatsAppConsoleResponse(
+                    reply=_i18n_t(locale, "wa.tenant.codigo.buscando"),
+                    lookup_job_id=str(job2.id),
+                    tenant_id=str(tenant.id),
+                )
             except Exception:
                 logger.exception("Failed to create retry lookup job")
 

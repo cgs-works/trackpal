@@ -44,7 +44,10 @@
 | **Subscription** | Vincula un cliente, servicio y plan. Tiene credenciales encriptadas (Fernet), fechas de inicio/fin y estados (active/expired/cancelled). |
 | **Mailbox** | The Tenant's single connected Gmail account used to retrieve access-code messages. It is connected exclusively through an App Password Connection. |
 | **App Password Connection** | The sole Mailbox connection method. It uses a Google-generated, revocable app password instead of the account's primary password. Avoid the user-facing term **IMAP**. |
-| **Mail Lookup Job** | Trabajo asíncrono de extracción de código: pending → processing → completed/failed/timeout. |
+| **Mail Lookup Job** | Trabajo asíncrono de extracción de código: pending ↔ processing → completed/failed/timeout. Puede volver a pending cuando un Execution Lease recuperable vence antes del TTL global. |
+| **Lookup Executor** | Runtime externo confiable, registrado por el Master, que ejecuta Mail Lookup Jobs fuera del backend web. Es independiente del proveedor de hosting. _Avoid_: Cloudflare Worker, Render Worker. |
+| **Executor Hosting Account** | Referencia opcional, visible solo para el Master, a la cuenta externa donde está alojado un Lookup Executor. No es una credencial del propio executor ni de un Mailbox. _Avoid_: Worker account, Mailbox account. |
+| **Execution Lease** | Asignación exclusiva y temporal de un Mail Lookup Job a un Lookup Executor. Al vencer sin resultado, el job vuelve a estar disponible para otro executor. _Avoid_: lock, reservation. |
 | **Code Service** | Servicio de extracción de código (netflix, hbo, spotify, etc.). Tiene activación global (Master) y selección por tenant. |
 | **Codigo** | Flujo de búsqueda de código de acceso via WhatsApp. El cliente selecciona servicio → ingresa email → el sistema busca en el mailbox. |
 | **RLS** | Row-Level Security en PostgreSQL. Contexto de transacción: `app.current_user_id`, `app.current_role`, `app.active_tenant_id`. |
@@ -97,8 +100,10 @@ schemas  core       models
 | `app/services/whatsapp_tenant_console_service/` | Menús y flujos del tenant (18 módulos) |
 | `app/services/whatsapp_master_console_facade/` | Consola Master de WhatsApp |
 | `app/services/whatsapp_client_console_facade/` | Consola Client (read-only) |
-| `app/services/mail_lookup_worker/` | Worker asíncrono de extracción de códigos |
-| `app/services/mail_code_extractor/` | Extracción regex por servicio (netflix, disney, spotify, etc.) |
+| `app/services/lookup_execution_coordinator/` | Queue acceleration, executor selection, Execution Leases, dispatch, and PostgreSQL reconciliation |
+| `app/services/lookup_executor_transport/` | Signed/encrypted challenge, handoff, and callback transport |
+| `app/services/lookup_executor_registry.py` | Master registry lifecycle, verification, rotation, and hosting-password controls |
+| `worker/` (separate context) | External Gmail retrieval, MIME normalization, extraction, Netflix resolution, and callback delivery |
 | `app/services/subscription_job_service/` | Limpieza y recordatorios de suscripciones |
 | `app/core/i18n/` | Motor de localización (en/es) con catálogos en memoria |
 | `app/core/input_validation/` | Validación centralizada de campos |
@@ -115,3 +120,13 @@ schemas  core       models
 - Suscripciones con secretos encriptados via Fernet
 - i18n: backend es source-of-truth, frontend consume via `/i18n/catalog`
 - Tests: pytest + aiosqlite (in-memory), Redis fake, Evolution deshabilitado
+
+
+## External lookup boundary
+
+FastAPI creates durable Mail Lookup Jobs and coordinates them through Redis and
+PostgreSQL. It does not execute Gmail retrieval, MIME parsing, Code Service
+extraction, Netflix resolution, or a local result-cache fallback. The separate
+`worker/` context receives a signed, AES-GCM encrypted handoff and returns a
+signed encrypted callback. Redis result entries are ephemeral and encrypted;
+PostgreSQL reconciliation makes pending jobs recoverable after Redis loss.

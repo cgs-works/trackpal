@@ -13,3 +13,11 @@ skills-lock.json
 # Local Pi runtime state
 .atl/
 .superpowers/
+/worker/app/extractors/__pycache__
+/worker/app/extractors/catalog/__pycache__
+/worker/app/netflix/__pycache__
+/worker/app/pipeline/__pycache__
+/worker/app/providers/__pycache__
+/worker/app/__pycache__
+/worker/app/protocol/__pycache__
+/worker/tests/__pycache__

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -547,7 +547,7 @@ async def test_client_dashboard_subscription_includes_service_icon(monkeypatch):
     subscription = SimpleNamespace(
         id=uuid4(),
         service=SimpleNamespace(name="Netflix", icon="simple-icons:netflix"),
-        plan=SimpleNamespace(name="Premium"),
+        plan=SimpleNamespace(name="Premium", price=None),
         status="active",
         starts_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
         expires_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
@@ -566,6 +566,8 @@ async def test_client_dashboard_subscription_includes_service_icon(monkeypatch):
         is_active=True,
     )
 
-    result = await DashboardService()._client_dashboard(AsyncMock(), profile)
+    db = AsyncMock()
+    db.execute.return_value = MagicMock(scalar_one_or_none=lambda: None)
+    result = await DashboardService()._client_dashboard(db, profile)
 
     assert result.subscriptions[0].service_icon == "simple-icons:netflix"

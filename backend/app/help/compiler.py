@@ -648,7 +648,11 @@ def _safe_navigation_list(value: Any, path: Path) -> list[dict[str, str | None]]
 def _validate_safe_navigation(
     value: Any, path: Path, *, declared_route: str | None = None
 ) -> dict[str, str | None]:
-    if not isinstance(value, dict) or set(value) - {"route", "settings_category", "tab"}:
+    if not isinstance(value, dict) or set(value) - {
+        "route",
+        "settings_category",
+        "tab",
+    }:
         raise HelpValidationError(f"Invalid safe navigation in {path.name}")
 
     route = value.get("route")
@@ -676,7 +680,10 @@ def _validate_safe_navigation(
                 f"tab is only allowed with settings_category 'my-account' in {path.name}"
             )
 
-    result: dict[str, str | None] = {"route": route, "settings_category": settings_category}
+    result: dict[str, str | None] = {
+        "route": route,
+        "settings_category": settings_category,
+    }
     if tab is not None:
         result["tab"] = tab
     return result

@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     mailbox_lookup_job_ttl_minutes: int = 5
     mailbox_delivery_log_retention_days: int = 7
 
+    # External lookup executor coordination
+    lookup_executor_handoff_timeout_seconds: int = 90
+    lookup_execution_lease_seconds: int = 180
+    lookup_signature_skew_seconds: int = 60
+    lookup_result_ttl_seconds: int = 120
+    lookup_executor_failure_cooldown_seconds: int = 300
+    lookup_dispatch_batch_size: int = 10
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
