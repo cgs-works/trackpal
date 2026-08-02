@@ -138,20 +138,19 @@ def _fetch_sync(
 
 
 def _is_authentication_rejection(error: imaplib.IMAP4.error) -> bool:
-    """Recognize explicit credential failures without exposing their text."""
-    message = str(error).lower()
+    """Recognize only explicit credential failures as terminal errors.
+
+    Gmail's response code and credential-specific phrases are reliable login
+    signals. Other IMAP errors default to retryable, including messages that
+    mention authentication alongside a server or service failure.
+    """
+    message = str(error).casefold()
     if "temporary" in message or "service" in message:
         return False
-    return any(
-        marker in message
-        for marker in (
-            "authenticationfailed",
-            "authentication failed",
-            "invalid credential",
-            "invalid password",
-            "invalid user",
-            "login failed",
-        )
+    return (
+        "[authenticationfailed]" in message
+        or "invalid credentials" in message
+        or "login failed" in message
     )
 
 

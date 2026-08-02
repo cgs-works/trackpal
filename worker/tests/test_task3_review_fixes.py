@@ -134,6 +134,50 @@ async def test_transient_authentication_service_error_is_retryable(
 
 
 @pytest.mark.asyncio
+async def test_authentication_failed_server_unavailable_is_retryable() -> None:
+    class ServerUnavailable:
+        def __init__(self, host: str, port: int) -> None:
+            pass
+
+        def login(self, username: str, password: str) -> tuple[str, list[bytes]]:
+            raise imaplib.IMAP4.error("authentication failed: server unavailable")
+
+        def logout(self) -> tuple[str, list[bytes]]:
+            return "BYE", []
+
+    with pytest.raises(TransientProviderError):
+        await fetch_gmail_messages(
+            "codes@example.com",
+            "app-password",
+            5,
+            imap_factory=ServerUnavailable,
+            now=NOW,
+        )
+
+
+@pytest.mark.asyncio
+async def test_login_timeout_is_retryable() -> None:
+    class TimedOutLogin:
+        def __init__(self, host: str, port: int) -> None:
+            pass
+
+        def login(self, username: str, password: str) -> tuple[str, list[bytes]]:
+            raise TimeoutError("IMAP login timed out")
+
+        def logout(self) -> tuple[str, list[bytes]]:
+            return "BYE", []
+
+    with pytest.raises(TransientProviderError):
+        await fetch_gmail_messages(
+            "codes@example.com",
+            "app-password",
+            5,
+            imap_factory=TimedOutLogin,
+            now=NOW,
+        )
+
+
+@pytest.mark.asyncio
 async def test_newest_extracted_message_identity_is_preserved() -> None:
     older = _email("older", NOW - timedelta(minutes=2))
     newest = _email("newest", NOW - timedelta(minutes=1))
