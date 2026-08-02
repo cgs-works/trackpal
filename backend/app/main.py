@@ -17,6 +17,13 @@ from app.services.export_cleanup_worker import export_cleanup_loop
 from app.services.export_service import configure_export_service
 from app.services.export_storage import ExportStorageConfig, R2ExportStorageAdapter
 from app.services.export_worker import export_worker_loop
+from app.services.lookup_execution_coordinator.redis_store import (
+    RedisLookupCoordinationStore,
+)
+from app.services.lookup_executor_registry import (
+    UnavailableActiveLeaseReader,
+    configure_active_lease_reader,
+)
 from app.services.mailbox_cleanup import cleanup_loop
 from app.services.mail_lookup_worker import worker_loop
 from app.services.step_up_limiter import StepUpRateLimiter
@@ -62,10 +69,14 @@ async def lifespan(app: FastAPI):
     # Startup
     validate_encryption_key()
     await init_redis()
+    manager = get_redis_manager()
+    if manager is None:
+        configure_active_lease_reader(UnavailableActiveLeaseReader())
+    else:
+        configure_active_lease_reader(RedisLookupCoordinationStore(manager))
     _configure_export_runtime()
 
     # Start background tasks
-    manager = get_redis_manager()
     _worker_task = asyncio.create_task(worker_loop(manager))
     _cleanup_task = asyncio.create_task(cleanup_loop())
     _export_worker_task = asyncio.create_task(export_worker_loop())

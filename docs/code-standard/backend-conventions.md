@@ -122,6 +122,14 @@ Contract tests in `test_whatsapp_console_navigation_contract.py` scan all source
 | `session:unreg:{phone}` or `session:unreg:{lid}` | Unauthenticated code lookup session state (unregistered identity) | 15 min (configurable) |
 | `stepup:fail:{user_id}` | Consecutive step-up failure counter (export/deletion) | 15 min window |
 | `stepup:lock:{user_id}` | Step-up lockout marker after threshold | 15 min |
+| `mailbox:lookup:queue` | Pending external lookup job queue | Until popped |
+| `mailbox:lookup:queue:seen` | Queue deduplication members | Until popped |
+| `lookup:dispatch-lock:{job_id}` | Short-lived per-job dispatch lock | 90 sec (configurable) |
+| `lookup:lease:{job_id}` | Execution lease metadata | Lease lifetime |
+| `lookup:executor-leases:{executor_id}` | Sorted set of leases used for capacity counting | Lease lifetime |
+| `lookup:callback-nonce:{executor_id}:{nonce}` | Single-use callback replay protection | Signature skew window |
+| `lookup:result:{job_id}` | Fernet-encrypted lookup result | 120 sec (configurable) |
+| `lookup:executor-cooldown:{executor_id}` | Executor failure cooldown marker | 300 sec (configurable) |
 
 ## n8n Integration Conventions
 

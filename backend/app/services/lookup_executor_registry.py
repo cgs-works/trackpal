@@ -35,7 +35,7 @@ class ActiveLeaseReader(Protocol):
 
 
 class UnavailableActiveLeaseReader:
-    """Production placeholder until the Redis coordination store is wired."""
+    """Fail-closed reader used when Redis coordination is not configured."""
 
     async def active_count(self, executor_id: UUID) -> int:
         """Fail closed instead of allowing an unsafe deletion."""
@@ -55,6 +55,12 @@ class ExecutorVerificationError(Exception):
 
 _transport: LookupExecutorTransport = HttpLookupExecutorTransport()
 _active_lease_reader: ActiveLeaseReader = UnavailableActiveLeaseReader()
+
+
+def configure_active_lease_reader(reader: ActiveLeaseReader) -> None:
+    """Install the runtime Redis lease reader after application startup."""
+    global _active_lease_reader
+    _active_lease_reader = reader
 
 
 def _candidate_with_secret(executor: Any, encrypted: str, version: int) -> Any:
@@ -208,6 +214,7 @@ __all__ = [
     "ExecutorCoordinationUnavailable",
     "ExecutorVerificationError",
     "UnavailableActiveLeaseReader",
+    "configure_active_lease_reader",
     "create_executor",
     "delete_executor",
     "reveal_hosting_password",
