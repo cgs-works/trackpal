@@ -165,10 +165,12 @@ def _required_header(request: Request, name: str) -> str:
 
 
 def _load_production_settings() -> ExecutorSettings:
-    """Load settings without making a dependency on the backend package."""
+    """Load settings while allowing imports without deployment environment variables."""
     try:
         return ExecutorSettings()
-    except ValidationError:
+    except ValidationError as exc:
+        if not all(error.get("type") == "missing" for error in exc.errors()):
+            raise
         return ExecutorSettings(
             executor_id=UUID(int=0),
             executor_secret=secrets.token_urlsafe(32),

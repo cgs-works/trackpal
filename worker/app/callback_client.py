@@ -73,10 +73,7 @@ class CallbackClient:
         outcome: LookupOutcome,
     ) -> bool:
         """Send one callback, retrying only connection and server failures."""
-        parsed = urlsplit(callback_url)
-        path = parsed.path or "/"
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
+        path = urlsplit(callback_url).path or "/"
         body = EncryptedBody.model_validate(
             encrypt_payload(
                 CallbackEnvelope(
