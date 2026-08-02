@@ -11,6 +11,7 @@ import pytest
 from app.core.encryption import encrypt_value
 from app.core.lookup_executor_protocol import derive_protocol_keys, sign_response
 from app.schemas.lookup_executor_protocol import HandoffStatus
+from app.services.lookup_executor_transport import http as http_transport_module
 from app.services.lookup_executor_transport.http import HttpLookupExecutorTransport
 from app.services.lookup_executor_transport.protocol import TransportError
 from app.services.lookup_executor_transport.url_safety import (
@@ -137,17 +138,28 @@ def test_validate_executor_url_rejects_non_public_addresses(address: str) -> Non
 
 @pytest.mark.asyncio
 async def test_http_transport_does_not_follow_redirects() -> None:
+    item = executor()
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            307,
-            headers={"location": "https://internal.example.test"},
-            request=request,
-        )
+        return signed_response(item, request.url.path, {}, status_code=307)
 
     transport = HttpLookupExecutorTransport(
         resolver=resolver_for(PUBLIC_IP), transport=httpx.MockTransport(handler)
     )
     with pytest.raises(httpx.HTTPStatusError):
+        await transport.challenge(item, "probe")
+
+
+@pytest.mark.asyncio
+async def test_http_transport_authenticates_challenge_error_before_status() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"detail": "unauthorized"}, request=request)
+
+    transport = HttpLookupExecutorTransport(
+        resolver=resolver_for(PUBLIC_IP), transport=httpx.MockTransport(handler)
+    )
+
+    with pytest.raises(TransportError, match="invalid challenge"):
         await transport.challenge(executor(), "probe")
 
 
@@ -204,7 +216,11 @@ async def test_http_transport_maps_signed_handoff_statuses() -> None:
         (202, {"accepted": True, "lease_id": str(lease_id)}, HandoffStatus.ACCEPTED),
         (
             409,
-            {"detail": "duplicate execution", "lease_id": str(lease_id)},
+            {
+                "duplicate": True,
+                "detail": "duplicate execution",
+                "lease_id": str(lease_id),
+            },
             HandoffStatus.DUPLICATE_SAME_LEASE,
         ),
         (429, {"detail": "busy"}, HandoffStatus.BUSY),
@@ -239,6 +255,20 @@ def test_http_transport_rejects_ambiguous_duplicate_response(
     assert result.status is HandoffStatus.PROTOCOL_ERROR
 
 
+def test_http_transport_rejects_duplicate_text_without_explicit_evidence() -> None:
+    lease_id = uuid4()
+    response = httpx.Response(
+        409,
+        json={"detail": "duplicate execution", "lease_id": str(lease_id)},
+    )
+
+    result = HttpLookupExecutorTransport._map_handoff_response(
+        response, {"lease_id": str(lease_id)}
+    )
+
+    assert result.status is HandoffStatus.PROTOCOL_ERROR
+
+
 def test_http_transport_rejects_inconsistent_acceptance_lease() -> None:
     lease_id = uuid4()
     response = httpx.Response(202, json={"lease_id": str(uuid4())})
@@ -251,7 +281,52 @@ def test_http_transport_rejects_inconsistent_acceptance_lease() -> None:
 
 
 @pytest.mark.asyncio
-async def test_http_transport_rejects_dns_rebinding_before_second_request() -> None:
+async def test_http_transport_uses_pinned_transport_for_each_validated_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    item = executor("https://executor.example.test")
+    lease_id = uuid4()
+    created_addresses: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/health/challenge":
+            return signed_response(
+                item,
+                request.url.path,
+                {
+                    "challenge": "probe",
+                    "protocol_version": 1,
+                    "runtime_version": "0.1.0",
+                    "max_concurrency": 1,
+                },
+            )
+        return signed_response(
+            item,
+            request.url.path,
+            {"accepted": True, "lease_id": str(lease_id)},
+            status_code=202,
+        )
+
+    def pinned_transport(address: str) -> httpx.MockTransport:
+        created_addresses.append(address)
+        return httpx.MockTransport(handler)
+
+    monkeypatch.setattr(
+        http_transport_module, "_PinnedAsyncHTTPTransport", pinned_transport
+    )
+    transport = HttpLookupExecutorTransport(resolver=resolver_for(PUBLIC_IP))
+
+    await transport.challenge(item, "probe")
+    result = await transport.handoff(item, {"lease_id": str(lease_id)})
+
+    assert result.status is HandoffStatus.ACCEPTED
+    assert created_addresses == [PUBLIC_IP, PUBLIC_IP]
+
+
+@pytest.mark.asyncio
+async def test_http_transport_rejects_dns_rebinding_before_second_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls = 0
     target = "https://executor.example.test"
     item = executor(target)
@@ -261,9 +336,9 @@ async def test_http_transport_rejects_dns_rebinding_before_second_request() -> N
         calls += 1
         return [PUBLIC_IP] if calls == 1 else ["127.0.0.1"]
 
-    transport = HttpLookupExecutorTransport(
-        resolver=rebinding_resolver,
-        transport=httpx.MockTransport(
+    def pinned_transport(address: str) -> httpx.MockTransport:
+        assert address == PUBLIC_IP
+        return httpx.MockTransport(
             lambda request: signed_response(
                 item,
                 request.url.path,
@@ -274,8 +349,12 @@ async def test_http_transport_rejects_dns_rebinding_before_second_request() -> N
                     "max_concurrency": 1,
                 },
             )
-        ),
+        )
+
+    monkeypatch.setattr(
+        http_transport_module, "_PinnedAsyncHTTPTransport", pinned_transport
     )
+    transport = HttpLookupExecutorTransport(resolver=rebinding_resolver)
     await transport.challenge(item, "probe")
     result = await transport.handoff(item, {"lease_id": str(uuid4())})
 

@@ -65,3 +65,37 @@
 ## Prior Commit
 
 - `ef59469 feat(backend): add executor protocol transport`
+
+## Review Round 2 Fix Report
+
+### Implemented
+
+- Moved challenge response signature verification before `raise_for_status()`. Unsigned or malformed error responses now fail as invalid authenticated challenges instead of being trusted as HTTP errors.
+- Changed `409` duplicate handling to require `duplicate: true` explicitly and retain matching lease-ID validation. Text in `detail` is no longer accepted as duplicate evidence.
+- Updated transport tests so the DNS-rebinding test uses the default pinned transport path, and added coverage proving each validated request constructs the pinned transport with the validated address. The redirect fixture is signed so the test reaches the no-follow status assertion without bypassing response authentication.
+
+### Tests
+
+- RED verification after adding the review tests:
+  - `cd backend && uv run pytest tests/test_lookup_executor_transport.py -q`
+  - Expected failures: challenge error authentication ordering and ambiguous duplicate text acceptance.
+- Focused suite:
+  - `cd backend && uv run pytest tests/test_lookup_executor_protocol.py tests/test_lookup_executor_transport.py -v`
+  - Result: **32 passed**.
+- Static validation:
+  - `cd backend && uv run ruff check app/services/lookup_executor_transport/http.py tests/test_lookup_executor_transport.py` — passed.
+  - `cd backend && uv run ruff format --check app/services/lookup_executor_transport/http.py tests/test_lookup_executor_transport.py` — passed.
+- Full backend suite:
+  - `cd backend && uv run pytest`
+  - Result: **1836 passed, 2 skipped, 1 failed**. The sole failure is the unrelated existing `tests/test_profile.py::test_client_dashboard_subscription_includes_service_icon` AsyncMock currency-query setup failure.
+
+### Files changed in this round
+
+- `backend/app/services/lookup_executor_transport/http.py`
+- `backend/tests/test_lookup_executor_transport.py`
+- This report
+
+### Self-review and concerns
+
+- All three re-review findings are addressed: error responses are authenticated before status handling, duplicate text is insufficient without `duplicate: true`, and the DNS test no longer injects a transport into the code path under test.
+- The existing unrelated full-suite profile failure remains the only concern.

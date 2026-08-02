@@ -194,14 +194,16 @@ class HttpLookupExecutorTransport:
         )
         try:
             response = await self._post(validated, _CHALLENGE_PATH, body, headers)
+            self._verify_response(executor, _CHALLENGE_PATH, response)
             response.raise_for_status()
         except httpx.RequestError as exc:
             raise TransportError("executor challenge transport failed") from exc
         except httpx.HTTPStatusError:
             raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise TransportError("executor returned an invalid challenge") from exc
 
         try:
-            self._verify_response(executor, _CHALLENGE_PATH, response)
             payload = response.json()
             if not isinstance(payload, dict):
                 raise TypeError("challenge response must be an object")
@@ -389,8 +391,7 @@ class HttpLookupExecutorTransport:
                 lease_id=response_lease_id,
             )
         if response.status_code == 409:
-            detail = str(payload.get("detail", "")).lower()
-            duplicate = payload.get("duplicate") is True or "duplicate" in detail
+            duplicate = payload.get("duplicate") is True
             if (
                 not duplicate
                 or lease_id is None
