@@ -108,6 +108,7 @@ async def test_explicit_credential_rejection_is_terminal(error_message: str) -> 
         "temporary authentication service failure",
         "authentication service unavailable",
         "temporary IMAP service failure",
+        "Login failed: timeout",
     ],
 )
 async def test_transient_authentication_service_error_is_retryable(

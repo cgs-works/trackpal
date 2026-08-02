@@ -81,15 +81,21 @@ def _fetch_sync(
     try:
         try:
             status, _ = connection.login(mailbox_email, app_password)
-        except (imaplib.IMAP4.abort, TimeoutError, OSError, ConnectionError) as exc:
-            raise TransientProviderError(
-                "Gmail authentication service unavailable"
-            ) from exc
         except imaplib.IMAP4.error as exc:
-            if _is_authentication_rejection(exc):
+            if _is_credential_rejection(exc):
                 raise NonTransientProviderError("Gmail authentication failed") from exc
             raise TransientProviderError(
                 "Gmail authentication failed temporarily"
+            ) from exc
+        except (
+            imaplib.IMAP4.abort,
+            ConnectionResetError,
+            ConnectionRefusedError,
+            TimeoutError,
+            OSError,
+        ) as exc:
+            raise TransientProviderError(
+                "Gmail authentication service unavailable"
             ) from exc
         except Exception as exc:
             raise TransientProviderError(
@@ -137,21 +143,22 @@ def _fetch_sync(
             connection.logout()
 
 
-def _is_authentication_rejection(error: imaplib.IMAP4.error) -> bool:
-    """Recognize only explicit credential failures as terminal errors.
-
-    Gmail's response code and credential-specific phrases are reliable login
-    signals. Other IMAP errors default to retryable, including messages that
-    mention authentication alongside a server or service failure.
-    """
-    message = str(error).casefold()
-    if "temporary" in message or "service" in message:
+def _is_credential_rejection(exc: Exception) -> bool:
+    """Only clear credential rejections are terminal."""
+    if not isinstance(exc, imaplib.IMAP4.error):
         return False
-    return (
-        "[authenticationfailed]" in message
-        or "invalid credentials" in message
-        or "login failed" in message
-    )
+    msg = str(exc).lower()
+    if "[authenticationfailed]" in msg:
+        return True
+    if "invalid credentials" in msg:
+        return True
+    if "login failed" in msg:
+        has_transient = any(
+            word in msg
+            for word in ("temporary", "service", "timeout", "unavailable", "try again")
+        )
+        return not has_transient
+    return False
 
 
 def _extract_raw_bytes(raw_data: Any) -> bytes | None:
