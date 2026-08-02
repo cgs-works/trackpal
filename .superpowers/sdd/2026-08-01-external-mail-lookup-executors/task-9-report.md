@@ -181,4 +181,4 @@
 
 ### Commit
 
-`d40f23e fix(backend): close lookup pump restart race`
+`bac4c9d fix(backend): close lookup pump restart race`
