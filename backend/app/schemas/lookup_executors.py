@@ -52,6 +52,7 @@ class LookupExecutorResponse(BaseModel):
     secret_version: int
     pending_secret_version: int | None = None
     has_hosting_password: bool = False
+    last_verified_at: datetime | None = None
     last_health_check_at: datetime | None = None
     last_success_at: datetime | None = None
     last_error_safe: str | None = None
@@ -78,6 +79,7 @@ class LookupExecutorResponse(BaseModel):
                     "max_concurrency",
                     "secret_version",
                     "pending_secret_version",
+                    "last_verified_at",
                     "last_health_check_at",
                     "last_success_at",
                     "last_error_safe",

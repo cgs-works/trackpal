@@ -103,12 +103,16 @@ The primary connection method uses a Google-generated app password:
 
 Master users manage external executors through `/api/v1/lookup-executors/`.
 Creation returns a generated protocol secret once; ordinary list, detail, and
-update responses expose only credential presence. Verification challenges the
-executor before activation, and secret rotation stores a pending encrypted key
-until a matching challenge promotes it.
+update responses expose only credential presence. `/verify` performs the
+trust-establishing protocol challenge and records `last_verified_at` before
+activation; `/test` is a connectivity check and does not establish that state.
+Secret rotation stores a pending encrypted key until a matching challenge
+promotes it.
 
 The registry also provides enable/disable, connection test, and deletion
-controls. Deletion is fail-closed while PostgreSQL lookup jobs or Redis
+controls. Changing an executor `base_url` or `transport_mode` clears its
+verification state and requires reverification whether the executor is active
+or disabled. Deletion is fail-closed while PostgreSQL lookup jobs or Redis
 execution leases are active, or when lease coordination is unavailable.
 Optional hosting-account passwords are encrypted at rest and require Master
 step-up authentication for explicit reveal; they are never returned by ordinary

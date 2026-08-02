@@ -29,6 +29,66 @@ async def _master_headers(client) -> dict[str, str]:
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
+async def test_test_connection_does_not_authorize_enable(
+    client, master_user, executor_transport
+):
+    headers = await _master_headers(client)
+    create = await client.post(
+        "/api/v1/lookup-executors/",
+        headers=headers,
+        json={"name": "Connectivity only", "provider_label": "custom"},
+    )
+    executor_id = create.json()["executor"]["id"]
+
+    tested = await client.post(
+        f"/api/v1/lookup-executors/{executor_id}/test", headers=headers
+    )
+    assert tested.status_code == 200, tested.text
+
+    enabled = await client.post(
+        f"/api/v1/lookup-executors/{executor_id}/enable", headers=headers
+    )
+
+    assert enabled.status_code == 409
+    assert enabled.json()["detail"] == "executor_requires_verification"
+
+
+async def test_transport_change_on_disabled_executor_forces_reverification(
+    client, master_user, executor_transport
+):
+    headers = await _master_headers(client)
+    create = await client.post(
+        "/api/v1/lookup-executors/",
+        headers=headers,
+        json={"name": "Disabled destination", "provider_label": "custom"},
+    )
+    executor_id = create.json()["executor"]["id"]
+    verified = await client.post(
+        f"/api/v1/lookup-executors/{executor_id}/verify", headers=headers
+    )
+    assert verified.status_code == 200
+
+    disabled = await client.post(
+        f"/api/v1/lookup-executors/{executor_id}/disable", headers=headers
+    )
+    assert disabled.status_code == 200
+
+    updated = await client.put(
+        f"/api/v1/lookup-executors/{executor_id}",
+        headers=headers,
+        json={"base_url": "https://new-disabled-executor.example.test"},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["requires_reverification"] is True
+
+    enabled = await client.post(
+        f"/api/v1/lookup-executors/{executor_id}/enable", headers=headers
+    )
+
+    assert enabled.status_code == 409
+    assert enabled.json()["detail"] == "executor_requires_verification"
+
+
 async def test_transport_mode_change_quarantines_active_executor(
     client, master_user, executor_transport
 ):

@@ -111,18 +111,20 @@ async def update_lookup_executor(
     db: DbDep,
     current_user: MasterUser,
 ) -> LookupExecutorResponse:
-    """Update executor metadata and quarantine active destination changes."""
+    """Update executor metadata and quarantine destination changes."""
     del current_user
     executor = await _get_executor(db, executor_id)
     fields = body.model_dump(exclude_unset=True)
-    destination_changed = executor.lifecycle_status == "active" and any(
+    destination_changed = any(
         field in fields and fields[field] != getattr(executor, field)
         for field in ("base_url", "transport_mode")
     )
     await lookup_executors_repository.update(db, executor, **fields)
     if destination_changed:
         executor.requires_reverification = True
-        executor.lifecycle_status = "disabled"
+        executor.last_verified_at = None
+        if executor.lifecycle_status == "active":
+            executor.lifecycle_status = "disabled"
         await lookup_executors_repository.update_health(
             db, executor, "unknown", "executor configuration changed"
         )
@@ -172,7 +174,7 @@ async def verify_lookup_executor(
 async def test_lookup_executor(
     executor_id: UUID, db: DbDep, current_user: MasterUser
 ) -> dict[str, object]:
-    """Challenge an executor and report a safe normalized result."""
+    """Check executor connectivity without establishing verification state."""
     del current_user
     executor = await _get_executor(db, executor_id)
     try:
@@ -197,7 +199,9 @@ async def _set_lifecycle(
     del current_user
     executor = await _get_executor(db, executor_id)
     if lifecycle == "active" and (
-        executor.requires_reverification or executor.health_status != "healthy"
+        executor.requires_reverification
+        or executor.health_status != "healthy"
+        or executor.last_verified_at is None
     ):
         raise HTTPException(status_code=409, detail="executor_requires_verification")
     await lookup_executors_repository.update_lifecycle_status(db, executor, lifecycle)

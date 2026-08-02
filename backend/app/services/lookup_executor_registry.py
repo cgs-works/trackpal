@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import secrets
-from types import SimpleNamespace
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -135,6 +136,7 @@ async def verify_executor(
             db, executor, "unhealthy", "executor verification failed"
         )
         executor.requires_reverification = True
+        executor.last_verified_at = None
         await db.flush()
         raise
 
@@ -142,6 +144,7 @@ async def verify_executor(
         await lookup_executors_repository.promote_pending_secret(db, executor)
     else:
         executor.requires_reverification = False
+    executor.last_verified_at = datetime.now(timezone.utc)
     executor.lifecycle_status = "active"
     await lookup_executors_repository.update_health(db, executor, "healthy")
     await db.flush()
@@ -149,7 +152,7 @@ async def verify_executor(
 
 
 async def test_executor(db: AsyncSession, executor: LookupExecutor) -> ChallengeResult:
-    """Challenge the active key without changing lifecycle state."""
+    """Check executor connectivity without establishing verification state."""
     try:
         result = await _challenge(executor)
     except ExecutorVerificationError:
@@ -157,6 +160,7 @@ async def test_executor(db: AsyncSession, executor: LookupExecutor) -> Challenge
             db, executor, "unhealthy", "executor verification failed"
         )
         executor.requires_reverification = True
+        executor.last_verified_at = None
         await db.flush()
         raise
     await lookup_executors_repository.update_health(db, executor, "healthy")
