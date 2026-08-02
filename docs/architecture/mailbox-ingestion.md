@@ -99,6 +99,21 @@ The primary connection method uses a Google-generated app password:
 | POST | `/api/v1/integrations/n8n/mail/lookups` | Create lookup job (`target_email` required) → `{job_id, status=pending}` |
 | GET | `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` | Poll status scoped by tenant → `{status, result_type?, result_value?}` |
 
+### Master Lookup Executor Registry
+
+Master users manage external executors through `/api/v1/lookup-executors/`.
+Creation returns a generated protocol secret once; ordinary list, detail, and
+update responses expose only credential presence. Verification challenges the
+executor before activation, and secret rotation stores a pending encrypted key
+until a matching challenge promotes it.
+
+The registry also provides enable/disable, connection test, and deletion
+controls. Deletion is fail-closed while PostgreSQL lookup jobs or Redis
+execution leases are active, or when lease coordination is unavailable.
+Optional hosting-account passwords are encrypted at rest and require Master
+step-up authentication for explicit reveal; they are never returned by ordinary
+serializers or sent to executors.
+
 ### Lookup Job States
 
 `pending` → `processing` → `completed` | `failed`
