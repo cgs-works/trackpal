@@ -142,3 +142,43 @@
 
 - The full backend suite still has the unrelated profile dashboard failure described above.
 - The Redis exclusion-aware queue check reads the queue list to distinguish the requeued job from other work; this is appropriate for the bounded dispatch queue but is less constant-time than the normal queue-length check.
+
+
+## Task 9 Review Fix Report (Round 3)
+
+### Implemented
+
+- Kept the pump task registered while checking for queued work under `_pump_guard`.
+- Only clears `_pump_task` when no continuation is required; queued work discovered during completion starts a follow-on pump before the guard is released.
+- Added a deterministic regression test that enqueues work from the completion check and verifies the pump remains active and processes the new job.
+
+### TDD Evidence
+
+- RED: `cd backend && uv run pytest tests/test_lookup_execution_coordinator.py::test_pump_restarts_when_work_is_enqueued_during_completion -q` failed with `assert [False] == [True]`, proving the pre-fix completion check observed a cleared pump task.
+- GREEN: The same focused test passed after moving pump-task clearing after the guarded continuation check.
+
+### Tests and Results
+
+- Focused coordinator and related suites: `cd backend && uv run pytest tests/test_lookup_execution_coordinator.py tests/test_lookup_coordination_store.py tests/test_lookup_queue_atomicity.py tests/test_main.py -q`: **35 passed**.
+- Full backend suite: `cd backend && uv run pytest`: **1891 passed, 2 skipped, 1 failed, 39 warnings**. The failure is the pre-existing unrelated `tests/test_profile.py::test_client_dashboard_subscription_includes_service_icon`, caused by an unconfigured `AsyncMock` currency query passed to `CurrencyMeta`.
+- Ruff check and format check passed for the affected coordinator and test files.
+- `git diff --check` passed.
+
+### Files Changed
+
+- `backend/app/services/lookup_execution_coordinator/coordinator.py`
+- `backend/tests/test_lookup_execution_coordinator.py`
+
+### Self-Review Findings
+
+- The continuation decision and pump ownership transition now occur atomically with respect to `schedule()`, so a job enqueued during completion cannot observe a prematurely cleared pump and become stranded.
+- Existing behavior for cancellation, dispatch failures, and an empty queue remains unchanged: those paths clear the pump task without spawning a continuation.
+- The existing architecture documentation already describes follow-on pump behavior, so no documentation update was needed.
+
+### Concerns
+
+- The full backend suite retains the unrelated profile dashboard failure described above; it is outside this change.
+
+### Commit
+
+`d40f23e fix(backend): close lookup pump restart race`

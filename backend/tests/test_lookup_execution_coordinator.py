@@ -106,6 +106,43 @@ async def test_pump_restarts_after_processing_a_full_batch(
 
 
 @pytest.mark.asyncio
+async def test_pump_restarts_when_work_is_enqueued_during_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.services.lookup_execution_coordinator.coordinator import (
+        LookupExecutionCoordinator,
+    )
+
+    store = _CompletionRaceStore()
+    processed: list[UUID] = []
+    coordinator = LookupExecutionCoordinator(
+        session_factory=lambda: None,
+        coordination_store=store,
+        transport=object(),
+        task_spawner=store.spawn,
+    )
+    store.coordinator = coordinator
+
+    async def dispatch(job_id: UUID) -> bool:
+        processed.append(job_id)
+        return True
+
+    coordinator._dispatch = dispatch  # type: ignore[method-assign]
+    monkeypatch.setattr(settings, "lookup_dispatch_batch_size", 1)
+    first, second = uuid4(), uuid4()
+    store.completion_job = second
+
+    await coordinator.schedule(first)
+    await store.spawned[0]
+    await store.spawned[1]
+
+    assert processed == [first, second]
+    assert store.observed_active_during_completion == [True]
+    assert store.queue == []
+
+
+@pytest.mark.asyncio
 async def test_pump_restarts_after_dispatch_requeues_with_remaining_work(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -475,6 +512,24 @@ class _BatchStore(_Store):
         task = asyncio.create_task(coro)
         self.spawned.append(task)
         return task
+
+
+class _CompletionRaceStore(_BatchStore):
+    def __init__(self):
+        super().__init__()
+        self.completion_job = None
+        self.coordinator = None
+        self.observed_active_during_completion = []
+
+    async def has_queued_jobs(self, excluding_job_id=None):
+        if self.completion_job is not None:
+            job_id = self.completion_job
+            self.completion_job = None
+            await self.enqueue(job_id)
+            self.observed_active_during_completion.append(
+                self.coordinator._pump_task is not None
+            )
+        return await super().has_queued_jobs(excluding_job_id)
 
 
 class _Transport:

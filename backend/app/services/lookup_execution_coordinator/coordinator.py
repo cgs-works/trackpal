@@ -128,9 +128,11 @@ class LookupExecutionCoordinator:
             raise
         finally:
             async with self._pump_guard:
-                self._pump_task = None
-                if restart and await self._has_queued_jobs():
+                remaining = restart and await self._has_queued_jobs()
+                if remaining:
                     self._start_pump_locked()
+                else:
+                    self._pump_task = None
 
     async def _dispatch(self, job_id: UUID) -> bool:
         """Attempt one job and return whether the pump may process another."""
