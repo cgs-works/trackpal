@@ -48,6 +48,19 @@ def _settings(capacity: int = 1) -> ExecutorSettings:
     )
 
 
+@pytest.mark.anyio
+async def test_healthz_returns_ok_without_authentication() -> None:
+    settings = _settings()
+    runtime, _ = _runtime(settings)
+    app = create_app(settings, runtime)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://worker"
+    ) as client:
+        response = await client.get("/healthz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def _runtime(
     settings: ExecutorSettings,
     *,

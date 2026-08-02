@@ -60,6 +60,15 @@ def create_app(settings: ExecutorSettings, runtime: ExecutorRuntime) -> FastAPI:
             response.headers.update(exc.headers)
         return response
 
+    @app.get("/healthz")
+    async def healthz() -> Response:
+        """Unauthenticated liveness probe for Render, Docker, etc."""
+        return Response(
+            content=json.dumps({"status": "ok"}),
+            status_code=200,
+            media_type="application/json",
+        )
+
     @app.post("/v1/health/challenge")
     async def challenge(request: Request) -> Response:
         """Authenticate and answer a backend protocol challenge."""
