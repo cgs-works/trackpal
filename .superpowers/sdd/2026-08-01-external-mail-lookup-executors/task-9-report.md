@@ -99,3 +99,46 @@
 
 - Finding 3 remains a known design limitation: `_consecutive_failures` is process-local, so failures distributed across multiple application processes do not share the three-failure cooldown threshold. Redis-backed failure counting is out of scope for this fix.
 - The unrelated full-suite profile failure remains as described above.
+
+
+## Task 9 Review Fix Report (Round 2)
+
+### Implemented
+
+- Changed the coordinator pump to inspect queued work after a dispatch returns `False`, excluding the just-requeued job from the check. It starts a follow-on pump when other jobs remain, while avoiding a hot retry loop when the sole remaining item is the failed/busy job.
+- Extended the Redis and in-memory coordination stores with exclusion-aware queue-presence checks.
+- Added a regression test proving a requeued dispatch cannot strand another queued job.
+- Replaced random executor IDs in the integrated exclusion test with deterministic IDs (`1`, `2`, `3`, and `4`), ensuring an excluded executor would win the selector tie-break if filtering were broken.
+- Updated mailbox-ingestion documentation to describe continuation after requeued dispatches and the sole-requeue behavior.
+
+### TDD Evidence
+
+- RED: `cd backend && uv run pytest tests/test_lookup_execution_coordinator.py -q` produced **1 failure, 13 passed** in the new requeue-with-remaining-work regression test; the failure showed only one pump was spawned.
+- GREEN: `cd backend && uv run pytest tests/test_lookup_execution_coordinator.py -q`: **14 passed**.
+
+### Tests and Results
+
+- Related suites: `cd backend && uv run pytest tests/test_lookup_execution_coordinator.py tests/test_lookup_coordination_store.py tests/test_lookup_queue_atomicity.py tests/test_main.py -q`: **34 passed**.
+- Full backend suite: **1890 passed, 2 skipped, 1 failed, 39 warnings**. The failure remains the unrelated `tests/test_profile.py::test_client_dashboard_subscription_includes_service_icon`, caused by an unconfigured `AsyncMock` currency query passed to `CurrencyMeta`.
+- `cd backend && uv run ruff check app/services/lookup_execution_coordinator tests/test_lookup_execution_coordinator.py`: passed.
+- `cd backend && uv run ruff format --check app/services/lookup_execution_coordinator tests/test_lookup_execution_coordinator.py`: passed.
+- `git diff --check`: passed.
+
+### Files Changed
+
+- `backend/app/services/lookup_execution_coordinator/coordinator.py`
+- `backend/app/services/lookup_execution_coordinator/fake_store.py`
+- `backend/app/services/lookup_execution_coordinator/redis_store.py`
+- `backend/tests/test_lookup_execution_coordinator.py`
+- `docs/architecture/mailbox-ingestion.md`
+
+### Self-Review Findings
+
+- A requeued job is excluded only for the failure-triggered continuation decision, preserving the prior no-hot-loop behavior for a sole pending job.
+- Redis and fake-store queue checks use the same exclusion semantics, keeping production and test coordination behavior aligned.
+- Deterministic IDs make the exclusion regression test fail reliably if lifecycle, reverification, or cooldown filtering is removed.
+
+### Concerns
+
+- The full backend suite still has the unrelated profile dashboard failure described above.
+- The Redis exclusion-aware queue check reads the queue list to distinguish the requeued job from other work; this is appropriate for the bounded dispatch queue but is less constant-time than the normal queue-length check.

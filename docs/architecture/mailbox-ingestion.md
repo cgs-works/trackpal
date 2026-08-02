@@ -48,8 +48,9 @@ fallback fingerprint otherwise. Entries are retained for
 
 After a job is committed, `LookupExecutionCoordinator.schedule(job_id)` adds
 it to the Redis queue and starts at most one short-lived pump. Each bounded
-pump starts a follow-on pump when its queue still contains work, so a full batch
-cannot strand jobs. The pump:
+pump starts a follow-on pump when its queue still contains work, including work
+remaining after a requeued dispatch; a pump does not immediately retry a sole
+requeued job. The pump:
 
 1. Acquires the per-job dispatch lock.
 2. Selects an active, verified executor with capacity and no failure cooldown,
@@ -62,11 +63,12 @@ cannot strand jobs. The pump:
 
 No permanent lookup worker loop runs inside FastAPI. If Redis, capacity, or an
 executor is unavailable, the durable job remains `pending` and is requeued for
-later scheduling. A `429` requeues without changing executor health. Transport
-failures mark the executor `degraded`, then `unreachable` after three
-consecutive failures and open the configured five-minute cooldown. Security or
-protocol failures set `requires_reverification=true` immediately. There is no
-local pipeline fallback.
+later scheduling. If other queued jobs remain, the coordinator starts a
+follow-on pump; a sole requeued job waits for a later scheduling trigger. A
+`429` requeues without changing executor health. Transport failures mark the
+executor `degraded`, then `unreachable` after three consecutive failures and
+open the configured five-minute cooldown. Security or protocol failures set
+`requires_reverification=true` immediately. There is no local pipeline fallback.
 
 Accepted `202` handoffs and same-lease `409` duplicates move a job to
 `processing`, assign its executor, increment `execution_attempts`, and mark the

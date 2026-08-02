@@ -106,6 +106,45 @@ async def test_pump_restarts_after_processing_a_full_batch(
 
 
 @pytest.mark.asyncio
+async def test_pump_restarts_after_dispatch_requeues_with_remaining_work(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.services.lookup_execution_coordinator.coordinator import (
+        LookupExecutionCoordinator,
+    )
+
+    store = _BatchStore()
+    processed: list[UUID] = []
+    coordinator = LookupExecutionCoordinator(
+        session_factory=lambda: None,
+        coordination_store=store,
+        transport=object(),
+        task_spawner=store.spawn,
+    )
+
+    async def dispatch(job_id: UUID) -> bool:
+        processed.append(job_id)
+        if len(processed) == 1:
+            await store.enqueue(job_id)
+            return False
+        return True
+
+    coordinator._dispatch = dispatch  # type: ignore[method-assign]
+    monkeypatch.setattr(settings, "lookup_dispatch_batch_size", 10)
+    first, second = uuid4(), uuid4()
+
+    await coordinator.schedule(first)
+    await coordinator.schedule(second)
+    await store.spawned[0]
+
+    assert len(store.spawned) >= 2
+    await store.spawned[1]
+    assert processed == [first, second, first]
+    assert store.queue == []
+
+
+@pytest.mark.asyncio
 async def test_schedule_requeues_when_no_executor_is_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -203,9 +242,10 @@ async def test_integrated_selection_excludes_disabled_reverification_and_cooldow
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     job, available = _job_and_executor()
-    disabled = _executor(lifecycle_status="disabled")
-    quarantined = _executor(requires_reverification=True)
-    cooled = _executor()
+    disabled = _executor(id=UUID(int=1), lifecycle_status="disabled")
+    quarantined = _executor(id=UUID(int=2), requires_reverification=True)
+    cooled = _executor(id=UUID(int=3))
+    available.id = UUID(int=4)
     store = _Store()
     store.cooldown_ids.add(cooled.id)
     coordinator, _ = _configured_coordinator(
@@ -398,8 +438,8 @@ class _Store:
     async def pop(self):
         return self.queue.pop(0) if self.queue else None
 
-    async def has_queued_jobs(self):
-        return bool(self.queue)
+    async def has_queued_jobs(self, excluding_job_id=None):
+        return any(job_id != excluding_job_id for job_id in self.queue)
 
     async def acquire_dispatch_lock(self, job_id):
         return True

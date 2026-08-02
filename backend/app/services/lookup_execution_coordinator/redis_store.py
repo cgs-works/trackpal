@@ -140,13 +140,27 @@ class RedisLookupCoordinationStore:
 
         return await self._manager.execute("lookup_pop", _pop)
 
-    async def has_queued_jobs(self) -> bool:
-        """Return whether the dispatch queue still contains work."""
+    async def has_queued_jobs(self, excluding_job_id: UUID | None = None) -> bool:
+        """Return whether queued work remains, optionally excluding one job."""
+        if excluding_job_id is None:
+            return bool(
+                await self._manager.execute(
+                    "lookup_has_queued_jobs", lambda redis: redis.llen(QUEUE_KEY)
+                )
+            )
+
+        excluded = str(excluding_job_id)
+
+        async def _has_other_jobs(redis: Any) -> bool:
+            members = await redis.lrange(QUEUE_KEY, 0, -1)
+            return any(
+                (member.decode() if isinstance(member, bytes) else str(member))
+                != excluded
+                for member in members
+            )
 
         return bool(
-            await self._manager.execute(
-                "lookup_has_queued_jobs", lambda redis: redis.llen(QUEUE_KEY)
-            )
+            await self._manager.execute("lookup_has_other_queued_jobs", _has_other_jobs)
         )
 
     async def acquire_dispatch_lock(self, job_id: UUID) -> bool:

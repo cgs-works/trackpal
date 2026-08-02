@@ -28,7 +28,7 @@ class CoordinationStore(Protocol):
 
     async def enqueue(self, job_id: UUID) -> bool: ...
     async def pop(self) -> UUID | None: ...
-    async def has_queued_jobs(self) -> bool: ...
+    async def has_queued_jobs(self, excluding_job_id: UUID | None = None) -> bool: ...
     async def acquire_dispatch_lock(self, job_id: UUID) -> bool: ...
     async def release_dispatch_lock(self, job_id: UUID) -> None: ...
 
@@ -102,12 +102,12 @@ class LookupExecutionCoordinator:
         done = getattr(self._pump_task, "done", None)
         return not callable(done) or not done()
 
-    async def _has_queued_jobs(self) -> bool:
+    async def _has_queued_jobs(self, excluding_job_id: UUID | None = None) -> bool:
         """Return whether the coordination store still contains queued work."""
         checker = getattr(self._store, "has_queued_jobs", None)
         if checker is None:
             return False
-        return bool(await checker())
+        return bool(await checker(excluding_job_id))
 
     async def _pump(self) -> None:
         """Dispatch a bounded batch and continue if its queue still has work."""
@@ -118,7 +118,7 @@ class LookupExecutionCoordinator:
                 if job_id is None:
                     return
                 if not await self._dispatch(job_id):
-                    restart = False
+                    restart = await self._has_queued_jobs(excluding_job_id=job_id)
                     return
         except asyncio.CancelledError:
             restart = False
