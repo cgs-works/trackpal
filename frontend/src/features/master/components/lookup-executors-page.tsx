@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ServerCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { mapExecutorError, fetchLookupExecutors, type LookupExecutor } from "../services/executor-api";
+import { ExecutorEnrollmentDialog } from "./executor-enrollment-dialog";
 import { ExecutorTable } from "./executor-table";
 
 export function LookupExecutorsPage() {
   const [executors, setExecutors] = useState<LookupExecutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [enrollmentOpen, setEnrollmentOpen] = useState(false);
 
   const loadExecutors = useCallback(async () => {
     setLoading(true);
@@ -80,21 +82,36 @@ export function LookupExecutorsPage() {
               {t("frontend.master.executors.description")}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void loadExecutors()}
-            disabled={loading}
-            aria-label={t("frontend.master.executors.refresh")}
-          >
-            <RefreshCw data-icon="inline-start" aria-hidden="true" />
-            <span className="hidden sm:inline">{t("frontend.master.executors.refresh")}</span>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => setEnrollmentOpen(true)}
+              aria-label={t("frontend.master.executors.create")}
+            >
+              <ServerCog data-icon="inline-start" aria-hidden="true" />
+              {t("frontend.master.executors.create")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void loadExecutors()}
+              disabled={loading}
+              aria-label={t("frontend.master.executors.refresh")}
+            >
+              <RefreshCw data-icon="inline-start" aria-hidden="true" />
+              <span className="hidden sm:inline">{t("frontend.master.executors.refresh")}</span>
+            </Button>
+          </div>
         </div>
 
         <div className="min-h-40 rounded-lg border">{renderContent()}</div>
       </div>
+      <ExecutorEnrollmentDialog
+        open={enrollmentOpen}
+        onOpenChange={setEnrollmentOpen}
+        onCompleted={() => void loadExecutors()}
+      />
     </div>
   );
 }
