@@ -43,6 +43,7 @@ TrackPal is a multi-tenant platform for WhatsApp-based service delivery. Master 
 | [Browser-local Demo Tenant Workspaces](adr/0004-browser-local-demo-tenant-workspaces.md) | Server-enforced demo identity and lifecycle with plan-aware business state isolated to each browser |
 | [External Mail Lookup Executors](adr/0006-external-mail-lookup-executors.md) | Provider-agnostic external execution with signed HTTP callbacks and Redis-backed leases |
 | [Master-stored Executor Hosting Passwords](adr/0007-master-stored-executor-hosting-passwords.md) | Explicit risk acceptance and controls for optional third-party hosting credentials |
+| [Executor activation requires verified destination state](adr/0008-executor-activation-reverification.md) | Prevents unverified activation and quarantines active executors after destination changes |
 
 ## Release Operations
 
