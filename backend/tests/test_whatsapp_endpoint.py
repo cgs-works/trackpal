@@ -1644,8 +1644,8 @@ async def test_unregistered_codigo_result_retry_requeues_even_if_old_job_pending
                 AsyncMock(return_value=retry_job),
             ),
             patch(
-                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
-                AsyncMock(return_value=True),
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=AsyncMock(),
             ),
         ):
             response = await client.post(

@@ -204,7 +204,7 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 4. Session stored under ``session:unreg:{tenant-prefix}:{phone}`` or ``session:unreg:{tenant-prefix}:{lid}`` for the multi-step dialog.
 5. Registered clients with an active unauthenticated codigo session resume that session before the read-only Client Console, so ``0`` cancels codigo rather than exiting the Client Console.
 6. Service list uses ``[N]`` bracket format (``[1] Service``, ``[2] Service``...) with emoji pagination (``8️⃣`` next, ``9️⃣`` previous, ``0️⃣`` cancel). Up to 7 services per page.
-7. Steps: service selection → email input → email confirmation → create ``MailLookupJob`` → enqueue → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
+7. Steps: service selection → email input → email confirmation → create ``MailLookupJob`` → schedule through the execution coordinator → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
 8. n8n polls the job and sends the final result. On ``not_found``, the message includes options: ``1 Retry / 2 Back to services / 0 Cancel`` (localised in ES/EN).
 9. When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
 10. Post-result options handled by ``_handle_unauth_codigo_result``: ``1`` creates new job, ``2`` shows service list, ``0`` closes session.
@@ -330,9 +330,9 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 4. Backend validates and normalises the email via centralised ``validate_email()``, stores it as ``target_email`` in session, and advances to an **email confirmation step** (``email_confirm``).
 5. User confirms the email (``1``) → backend stores ``pending_lookup_intent`` with ``service_key`` and ``target_email``. Selecting ``2`` (correct email) returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session. **Session is kept alive** (``flow=codigo``, ``step=awaiting_result``) instead of clearing flow state.
 
-> **Strict confirmation mode:** When ``session.step == "email_confirm"``, only the numeric inputs ``1``, ``2``, ``9``, and ``0`` are accepted. Textual cancel aliases such as ``cancelar``, ``salir``, or ``menu`` are treated as **invalid options** — they do not trigger the global cancel/reset/help handlers. This is deliberate: the ``email_confirm`` step bypasses global interception so that text aliases cannot accidentally cancel the flow. Session keys used in this step: ``target_email`` (stored after validation), ``pending_lookup_intent`` (set on confirm ``1``), ``flow=codigo``, and later ``lookup_job_id`` (set after the integration handler enqueues the job).
+> **Strict confirmation mode:** When ``session.step == "email_confirm"``, only the numeric inputs ``1``, ``2``, ``9``, and ``0`` are accepted. Textual cancel aliases such as ``cancelar``, ``salir``, or ``menu`` are treated as **invalid options** — they do not trigger the global cancel/reset/help handlers. This is deliberate: the ``email_confirm`` step bypasses global interception so that text aliases cannot accidentally cancel the flow. Session keys used in this step: ``target_email`` (stored after validation), ``pending_lookup_intent`` (set on confirm ``1``), ``flow=codigo``, and later ``lookup_job_id`` (set after the integration handler commits and schedules the job).
 
-6. Integration handler (``_handle_tenant_console``) creates the job, commits it, enqueues to Redis, then: pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data.
+6. Integration handler (``_handle_tenant_console``) creates the job and commits it durably before calling the execution coordinator. It then pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data. A scheduling failure does not remove the committed job; polling can recover dispatch.
 7. Session remains in ``awaiting_result`` step. When n8n delivers the result notification (e.g. "Code not found"), the user's reply routes back to the awaiting_result handler.
 
 #### Post-result response (``awaiting_result`` step)
@@ -353,7 +353,7 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 2. Backend shows the same **paginated service list** with ``[N]`` bracket format and emoji navigation (``8️⃣``/``9️⃣``/``0️⃣``), built by ``_build_unauth_service_page`` in ``console_handlers.py``.
 3. Service selection and email input follow the same pattern as the tenant self-target flow.
 4. Email is validated and normalised via centralised ``validate_email()``, stored as ``target_email`` in session, and the step advances to **email confirmation** (``email_confirm``).
-5. In the ``email_confirm`` step, only ``1``, ``2``, ``9``, and ``0`` are accepted; all other inputs (including textual cancel/reset aliases) are rejected as invalid options. ``1`` confirms and the backend creates the ``MailLookupJob``, enqueues it, and transitions to ``awaiting_result``. ``2`` returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session.
+5. In the ``email_confirm`` step, only ``1``, ``2``, ``9``, and ``0`` are accepted; all other inputs (including textual cancel/reset aliases) are rejected as invalid options. ``1`` confirms and the backend creates the ``MailLookupJob``, schedules it through the execution coordinator, and transitions to ``awaiting_result``. ``2`` returns to the email prompt, ``9`` returns to the service list, ``0`` cancels the session.
 6. When the user replies to the result notification, ``_handle_unauth_codigo_result`` handles: ``1`` Retry, ``2`` Back to services, ``0`` Cancel, and ``code|codigo|código`` Restart (best-effort cancelling only the session-linked ``lookup_job_id`` before rebuilding the service list).
 
 #### n8n behavior for this path
@@ -367,9 +367,9 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 
 #### Failure contract for orchestration
 
-- If enqueue fails after commit, backend runs compensating delete of created job.
-- If compensating delete fails, backend marks job ``failed`` with ``error_code=queue_unavailable`` and logs critical.
-- In both failure branches, response must not include ``lookup_job_id``.
+- Durable job creation is authoritative. After the PostgreSQL commit, the backend calls the execution coordinator but does not delete the job when immediate scheduling is unavailable.
+- n8n polling opportunistically calls ``schedule`` for non-expired pending jobs, so a later poll can recover a missed dispatch.
+- Result polling reads ephemeral found values through the coordinator's Redis-backed ``get_result`` contract.
 
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`

@@ -208,6 +208,118 @@ class TestCreateLookupEndpoint:
         assert "target_email" in response.text.lower()
 
 
+class TestLookupCoordinatorContract:
+    """Endpoint callers use durable coordination rather than the legacy queue."""
+
+    pytestmark = pytest.mark.asyncio
+
+    async def test_create_returns_committed_job_when_schedule_unavailable(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        await _seed_mailbox(db_session, tenant.id)
+        coordinator = AsyncMock()
+        coordinator.schedule.side_effect = RuntimeError("Redis unavailable")
+
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.post(
+                "/api/v1/integrations/n8n/mail/lookups",
+                json={
+                    "service_key": "spotify",
+                    "tenant_instance": "test-mailbox-instance",
+                    "target_email": "user@example.com",
+                },
+                headers=_n8n_headers(),
+            )
+
+        assert response.status_code == 201
+        job = await mailbox_lookup_repository.get_job(
+            db_session, uuid.UUID(response.json()["job_id"]), tenant_id=tenant.id
+        )
+        assert job is not None
+        coordinator.schedule.assert_awaited_once_with(job.id)
+
+    async def test_pending_poll_reschedules_job(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "spotify"
+        )
+        await db_session.commit()
+        coordinator = AsyncMock()
+
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.get(
+                f"/api/v1/integrations/n8n/mail/lookups/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
+
+        assert response.status_code == 200
+        coordinator.schedule.assert_awaited_once_with(job.id)
+
+    async def test_expired_pending_poll_does_not_reschedule(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "spotify"
+        )
+        job.expires_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        await db_session.commit()
+        coordinator = AsyncMock()
+
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.get(
+                f"/api/v1/integrations/n8n/mail/lookups/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
+
+        assert response.status_code == 200
+        coordinator.schedule.assert_not_awaited()
+
+    async def test_completed_poll_reads_result_from_coordinator(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "spotify"
+        )
+        job.status = "completed"
+        job.result_type = "code"
+        await db_session.commit()
+        coordinator = AsyncMock()
+        coordinator.get_result.return_value = ("code", "987654")
+
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.get(
+                f"/api/v1/integrations/n8n/mail/lookups/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["result_value"] == "987654"
+        coordinator.get_result.assert_awaited_once_with(job.id)
+
+
 class TestGetLookupStatusEndpoint:
     """GET /api/v1/integrations/n8n/mail/lookups/{job_id}"""
 
@@ -264,12 +376,18 @@ class TestGetLookupStatusEndpoint:
         finally:
             pmod.active_provider = old_active
 
-        # Poll endpoint
-        response = await client.get(
-            f"{self.BASE_URL}/{job.id}",
-            headers=_n8n_headers(),
-            params={"tenant_id": str(tenant.id)},
-        )
+        # Poll endpoint through the coordinator result store
+        coordinator = AsyncMock()
+        coordinator.get_result.return_value = ("code", "654321")
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.get(
+                f"{self.BASE_URL}/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "completed"
@@ -498,12 +616,18 @@ class TestCreateThenPoll:
         finally:
             pmod.active_provider = old_active
 
-        # Poll completed result
-        poll_resp2 = await client.get(
-            f"{self.CREATE_URL}/{job_id}",
-            headers=_n8n_headers(),
-            params={"tenant_id": str(tenant.id)},
-        )
+        # Poll completed result through the coordinator result store
+        coordinator = AsyncMock()
+        coordinator.get_result.return_value = ("code", "654321")
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            poll_resp2 = await client.get(
+                f"{self.CREATE_URL}/{job_id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
         assert poll_resp2.status_code == 200
         data = poll_resp2.json()
         assert data["status"] == "completed"
@@ -542,12 +666,8 @@ class TestCreateThenPoll:
 
         with (
             patch(
-                "app.api.v1.endpoints.integrations.console_handlers.get_redis_manager",
-                return_value=object(),
-            ),
-            patch(
-                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
-                AsyncMock(return_value=True),
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=AsyncMock(),
             ),
         ):
             response = await _handle_tenant_console(

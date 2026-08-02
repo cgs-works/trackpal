@@ -2165,12 +2165,8 @@ class TestConsoleHandlersCodigoScope:
                 AsyncMock(return_value=fake_job),
             ),
             patch(
-                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
-                AsyncMock(return_value=True),
-            ),
-            patch(
-                "app.api.v1.endpoints.integrations.console_handlers.get_redis_manager",
-                return_value=object(),
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=AsyncMock(),
             ),
             patch.object(
                 WhatsAppTenantConsoleFacade,
@@ -2252,10 +2248,10 @@ class TestConsoleHandlersCodigoScope:
         assert "lookup_job_id" not in serialized
         assert "tenant_id" not in serialized
 
-    async def test_tenant_handler_no_scope_when_enqueue_fails(
+    async def test_tenant_handler_returns_scope_when_schedule_fails(
         self,
     ) -> None:
-        """When Redis enqueue fails, handler does NOT return lookup_job_id."""
+        """A committed job remains pollable when immediate scheduling fails."""
         from app.api.v1.endpoints.integrations.console_handlers import (
             _handle_tenant_console,
         )
@@ -2263,13 +2259,13 @@ class TestConsoleHandlersCodigoScope:
         mock_db = AsyncMock()
         fake_redis = FakeRedis()
         tenant_uuid = uuid4()
-
         await self._seed_codigo_intent_session(fake_redis, tenant_uuid)
         manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
-
         fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
         fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
         fake_job = SimpleNamespace(id=uuid4())
+        coordinator = AsyncMock()
+        coordinator.schedule.side_effect = RuntimeError("Redis unavailable")
 
         with (
             patch(
@@ -2295,17 +2291,13 @@ class TestConsoleHandlersCodigoScope:
                 AsyncMock(return_value=fake_job),
             ),
             patch(
-                "app.api.v1.endpoints.integrations.console_handlers.enqueue_job",
-                AsyncMock(return_value=False),
-            ),
-            patch(
-                "app.api.v1.endpoints.integrations.console_handlers.get_redis_manager",
-                return_value=object(),
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=coordinator,
             ),
             patch.object(
                 WhatsAppTenantConsoleFacade,
                 "process_message",
-                AsyncMock(return_value="\U0001f50d Buscando c\u00f3digo\u2026"),
+                AsyncMock(return_value="🔍 Buscando código…"),
             ),
         ):
             result = await _handle_tenant_console(
@@ -2316,20 +2308,10 @@ class TestConsoleHandlersCodigoScope:
                 db=mock_db,
             )
 
-        assert isinstance(result, WhatsAppConsoleResponse)
-        assert "Error" in result.reply or "error" in result.reply.lower()
-        # Enqueue failure = no lookup_job_id and lookup intent remains for retry
-        assert result.lookup_job_id is None
-        assert result.tenant_id is None
-
-        saved = await fake_redis.get("session:admin:+12015550002")
-        assert saved is not None
-        saved_session = ConversationSession.model_validate_json(saved)
-        assert saved_session.temp_data.get("pending_lookup_intent") == "true"
-
-        # db.commit() called for job creation + compensating delete
-        assert mock_db.commit.await_count >= 2
-        mock_db.delete.assert_awaited_once()
+        assert result.lookup_job_id == str(fake_job.id)
+        assert result.tenant_id == str(tenant_uuid)
+        coordinator.schedule.assert_awaited_once_with(fake_job.id)
+        mock_db.delete.assert_not_awaited()
 
     async def test_tenant_handler_no_scope_when_mailbox_not_connected(
         self,

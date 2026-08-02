@@ -17,6 +17,7 @@ for a short window after job completion.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -24,7 +25,6 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.api.dependencies import ApiKeyDbDep
 from app.core.demo_guardrail import DemoGuardrailError, assert_demo_operation_allowed
 from app.core.metrics import metrics
-from app.core.redis_client import get_redis_manager
 from app.repositories import mailbox_config_repository, mailbox_lookup_repository
 from app.repositories import tenants_repository
 from app.schemas.mailbox import (
@@ -32,7 +32,7 @@ from app.schemas.mailbox import (
     LookupCreateResponse,
     LookupStatusResponse,
 )
-from app.services.mail_lookup_worker import enqueue_job, get_ephemeral_result
+from app.services.lookup_execution_coordinator import get_lookup_execution_coordinator
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +51,9 @@ async def create_lookup(
     """Create a new mail lookup job.
 
     Identifies the tenant via ``tenant_instance`` (Evolution instance
-    name) or ``tenant_id``.  Creates a ``pending`` job, enqueues it
-    on Redis, and returns the ``job_id`` for polling.
+    name) or ``tenant_id``. Creates and commits a ``pending`` job,
+    schedules it through the execution coordinator, and returns the
+    ``job_id`` for polling.
     """
     # 1. Resolve tenant
     tenant = None
@@ -129,11 +130,15 @@ async def create_lookup(
     await db.flush()
     await db.commit()
 
-    # 5. Enqueue to Redis (best-effort)
-    manager = get_redis_manager()
-    enqueued = await enqueue_job(manager, job.id)
-    if not enqueued:
-        logger.warning("Job %s created but not enqueued (Redis unavailable)", job.id)
+    # 5. Schedule through the durable execution coordinator (best-effort).
+    # PostgreSQL is authoritative once the job commit succeeds; polling can
+    # recover a dispatch that was unavailable at creation time.
+    try:
+        await get_lookup_execution_coordinator().schedule(job.id)
+    except Exception:
+        logger.exception(
+            "Job %s created but could not be scheduled immediately", job.id
+        )
     metrics.inc("lookup_api_create", status="ok", service=payload.service_key)
     return LookupCreateResponse(
         job_id=job.id,
@@ -157,8 +162,8 @@ async def get_lookup_status(
 
     Tenant ownership is enforced — ``tenant_id`` is required and must
     match the job's tenant, preventing cross-tenant ``job_id``
-    guessing.  ``result_value`` is returned from the ephemeral cache
-    (not persisted in DB).
+    guessing. ``result_value`` is read from the coordinator's ephemeral
+    Redis result store (not persisted in DB).
     """
     tenant = await tenants_repository.get(db, tenant_id)
     if tenant is not None:
@@ -177,6 +182,17 @@ async def get_lookup_status(
             detail="Job not found",
         )
 
+    # Reconcile pending jobs opportunistically. Never schedule an expired job.
+    if job.status == "pending" and job.expires_at is not None:
+        expires_at = job.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at > datetime.now(timezone.utc):
+            try:
+                await get_lookup_execution_coordinator().schedule(job.id)
+            except Exception:
+                logger.exception("Could not reschedule pending lookup job %s", job.id)
+
     # Build response
     resp = LookupStatusResponse(
         job_id=job.id,
@@ -190,7 +206,11 @@ async def get_lookup_status(
 
     # Add ephemeral result_value if job is completed with a find
     if job.status == "completed" and job.result_type in ("code", "url"):
-        cached = get_ephemeral_result(job.id)
+        try:
+            cached = await get_lookup_execution_coordinator().get_result(job.id)
+        except Exception:
+            logger.exception("Could not read lookup result for job %s", job.id)
+            cached = None
         if cached is not None:
             resp.result_type = cached[0]
             resp.result_value = cached[1]
