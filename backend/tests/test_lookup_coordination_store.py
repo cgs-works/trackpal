@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import copy
 import json
 import time
 from datetime import datetime, timedelta, timezone
@@ -73,6 +72,10 @@ class FakeRedis:
         self.lists.setdefault(key, []).append(value)
         return len(self.lists[key])
 
+    async def lpush(self, key: str, value: str) -> int:
+        self.lists.setdefault(key, []).insert(0, value)
+        return len(self.lists[key])
+
     async def lpop(self, key: str) -> str | None:
         values = self.lists.get(key, [])
         return values.pop(0) if values else None
@@ -84,6 +87,8 @@ class FakeRedis:
         return int(len(values) != before)
 
     async def srem(self, key: str, value: str) -> int:
+        if self.fail_zrem:
+            raise RuntimeError("srem failed")
         values = self.sets.get(key, set())
         existed = value in values
         values.discard(value)
@@ -121,50 +126,57 @@ class FakeRedis:
         return len(self.sorted_sets.get(key, {}))
 
     async def eval(self, script: str, numkeys: int, *args: str) -> int | str | None:
-        """Execute the coordination scripts as one in-memory operation."""
+        """Execute the coordination script logic without transactional snapshots."""
         self.eval_calls.append(script)
-        snapshot = {
-            "values": copy.deepcopy(self.values),
-            "expiry": copy.deepcopy(self.expiry),
-            "lists": copy.deepcopy(self.lists),
-            "sets": copy.deepcopy(self.sets),
-            "sorted_sets": copy.deepcopy(self.sorted_sets),
-        }
         keys = args[:numkeys]
         values = args[numkeys:]
-        try:
-            if "SADD" in script:
-                added = await self.sadd(keys[0], values[0])
-                if added:
-                    await self.rpush(keys[1], values[0])
-                return added
-            if "LPOP" in script:
-                member = await self.lpop(keys[0])
-                if member is not None:
-                    await self.srem(keys[1], member)
-                return member
-            if "cjson.decode" in script:
-                raw = await self.get(keys[0])
-                if raw is None:
-                    return 0
-                payload = json.loads(raw)
+        if "SADD" in script:
+            added = await self.sadd(keys[0], values[0])
+            if added:
+                try:
+                    queued = await self.rpush(keys[1], values[0])
+                except Exception:
+                    await self.srem(keys[0], values[0])
+                    raise
+                if not queued:
+                    await self.srem(keys[0], values[0])
+                    raise RuntimeError("queue enqueue failed")
+            return added
+        if "LPOP" in script:
+            member = await self.lpop(keys[0])
+            if member is None:
+                return None
+            try:
+                removed = await self.srem(keys[1], member)
+            except Exception:
+                await self.lpush(keys[0], member)
+                raise
+            if removed is None:
+                await self.lpush(keys[0], member)
+                raise RuntimeError("queue deduplication update failed")
+            return member
+        if "cjson.decode" in script:
+            raw = await self.get(keys[0])
+            if raw is None:
+                return 0
+            payload = json.loads(raw)
+            await self.zrem(f"{values[0]}{payload['executor_id']}", values[1])
+            await self.delete(keys[0])
+            return 1
+        if "ZADD" in script:
+            created = await self.set(keys[0], values[0], ex=int(values[1]), nx=True)
+            if not created:
+                return 0
+            try:
+                added = await self.zadd(keys[1], {values[3]: float(values[2])})
+            except Exception:
                 await self.delete(keys[0])
-                await self.zrem(f"{values[0]}{payload['executor_id']}", values[1])
-                return 1
-            if "ZADD" in script:
-                created = await self.set(keys[0], values[0], ex=int(values[1]), nx=True)
-                if not created:
-                    return 0
-                await self.zadd(keys[1], {values[3]: float(values[2])})
-                return 1
-            raise AssertionError("Unknown Redis script")
-        except Exception:
-            self.values = snapshot["values"]
-            self.expiry = snapshot["expiry"]
-            self.lists = snapshot["lists"]
-            self.sets = snapshot["sets"]
-            self.sorted_sets = snapshot["sorted_sets"]
-            raise
+                raise
+            if added is None:
+                await self.delete(keys[0])
+                raise RuntimeError("lease capacity update failed")
+            return 1
+        raise AssertionError("Unknown Redis script")
 
 
 class FakeManager:

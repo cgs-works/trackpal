@@ -26,14 +26,31 @@ EXECUTOR_COOLDOWN_PREFIX = "lookup:executor-cooldown:"
 _ENQUEUE_SCRIPT = """
 local added = redis.call('SADD', KEYS[1], ARGV[1])
 if added == 1 then
-    redis.call('RPUSH', KEYS[2], ARGV[1])
+    local queued = redis.pcall('RPUSH', KEYS[2], ARGV[1])
+    if type(queued) == 'table' and queued['err'] then
+        redis.call('SREM', KEYS[1], ARGV[1])
+        return redis.error_reply(queued['err'])
+    end
+    if not queued then
+        redis.call('SREM', KEYS[1], ARGV[1])
+        return redis.error_reply('queue enqueue failed')
+    end
 end
 return added
 """
 _POP_SCRIPT = """
 local member = redis.call('LPOP', KEYS[1])
-if member then
-    redis.call('SREM', KEYS[2], member)
+if not member then
+    return nil
+end
+local removed = redis.pcall('SREM', KEYS[2], member)
+if type(removed) == 'table' and removed['err'] then
+    redis.call('LPUSH', KEYS[1], member)
+    return redis.error_reply(removed['err'])
+end
+if not removed then
+    redis.call('LPUSH', KEYS[1], member)
+    return redis.error_reply('queue deduplication update failed')
 end
 return member
 """
@@ -42,7 +59,15 @@ local created = redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2], 'NX')
 if not created then
     return 0
 end
-redis.call('ZADD', KEYS[2], ARGV[3], ARGV[4])
+local added = redis.pcall('ZADD', KEYS[2], ARGV[3], ARGV[4])
+if type(added) == 'table' and added['err'] then
+    redis.call('DEL', KEYS[1])
+    return redis.error_reply(added['err'])
+end
+if not added then
+    redis.call('DEL', KEYS[1])
+    return redis.error_reply('lease capacity update failed')
+end
 return 1
 """
 _RELEASE_LEASE_SCRIPT = """
@@ -52,8 +77,14 @@ if not payload then
 end
 local lease = cjson.decode(payload)
 local executor_key = ARGV[1] .. lease.executor_id
+local removed = redis.pcall('ZREM', executor_key, ARGV[2])
+if type(removed) == 'table' and removed['err'] then
+    return redis.error_reply(removed['err'])
+end
+if not removed then
+    return redis.error_reply('lease capacity update failed')
+end
 redis.call('DEL', KEYS[1])
-redis.call('ZREM', executor_key, ARGV[2])
 return 1
 """
 
