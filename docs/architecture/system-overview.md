@@ -7,19 +7,17 @@ Tenant) for tenant lifecycle management and daily operations.
 ## High-Level Architecture
 
 ```text
-[Cloudflare Pages] ---> [TrackPal API (Render)] ---> [PostgreSQL]
-      |                      |                        |
-      |                 [Redis HA]             [Alembic Migrations]
-      |                      |
-      |                 [Evolution] ---> [n8n Webhook]
-      |                      |            |
-      |                 [Cloudflare R2]  [WhatsApp]
-      |                 (diagnostic +
-      |                  export private)
-      |
-      +------------------> [Lookup Executor (worker/)]
-                              |
-                         Gmail + signed callback
+[Cloudflare Pages] ---> [TrackPal API (Render)] <----> [Lookup Executor (worker/)]
+                              |          |                    |
+                         [PostgreSQL] [Redis HA]          Gmail
+                              |          |                    |
+                      [Alembic Migrations]              signed callback
+                                         |
+                              [Evolution] ---> [n8n Webhook]
+                                  |                 |
+                           [Cloudflare R2]       [WhatsApp]
+                           (diagnostic +
+                            export private)
 ```
 
 - **Frontend**: React 19 + TypeScript SPA with Zustand, TanStack Router,

@@ -62,14 +62,19 @@ encrypted callbacks.
   capacity in TrackPal. Free sleeping is expected, not an application failure.
 - To rotate the secret, choose **Rotate**, copy the pending one-time secret,
   replace `TRACKPAL_EXECUTOR_SECRET` in Render, redeploy, run **Verify**, and
-  confirm promotion before removing the old deployment value.
+  confirm promotion. After promotion, the pending value is the current active
+  secret; do not restore the old value unless TrackPal explicitly confirms it
+  is still accepted.
 - To disable an executor, disable it in TrackPal first. Existing leases are
   allowed to reconcile; pending jobs can be assigned to another active
   executor.
-- For rollback, redeploy the last known-good Render deployment and restore the
-  previously verified secret. If the URL or transport changed, run **Test** and
-  **Verify** again before activating. Do not claim a deployment rollback was
-  tested locally.
+- For a code rollback, redeploy the last known-good Render deployment while
+  keeping the current active secret in Render. Do not restore the previously
+  verified or old secret merely because the code deployment was rolled back.
+  If the old secret must be used, first explicitly confirm that TrackPal still
+  accepts it. If the URL or transport changed, run **Test** and **Verify**
+  again before activating. Do not claim a deployment rollback was tested
+  locally.
 
 ## Local checks before release
 

@@ -41,7 +41,10 @@ Use the Master **Test** action to perform a signed challenge.
 
 The same executor can be disabled, tested, rotated, and deleted from the
 Master registry. Rotation creates a pending key; deploy the new value, verify
-it, and only then promote it. Keep the old value until promotion succeeds.
+it, and only then promote it. Keep the old value until promotion succeeds. If
+rolling back the code after promotion, keep the current active secret; restore
+the old secret only after explicitly confirming that TrackPal still accepts
+it.
 
 ## Protocol and operational boundaries
 

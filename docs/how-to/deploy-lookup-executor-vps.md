@@ -48,6 +48,22 @@ services:
 Use a secrets manager or a root-readable environment file outside the Git
 checkout. Do not put real values in `docker-compose.yml`, the image, or logs.
 
+For a direct public-IP `http_encrypted` deployment (the exception in section
+4), replace the loopback binding with an all-interface binding:
+
+```bash
+docker run -d \
+  --name trackpal-lookup-executor \
+  --restart unless-stopped \
+  -p 0.0.0.0:8000:8000 \
+  -e TRACKPAL_EXECUTOR_ID='00000000-0000-0000-0000-000000000000' \
+  -e TRACKPAL_EXECUTOR_SECRET='replace-with-enrollment-secret' \
+  -e TRACKPAL_MAX_CONCURRENCY='1' \
+  trackpal-lookup-executor
+```
+
+This direct-public command is not needed when Caddy is the public endpoint.
+
 ## 3. Firewall and HTTPS
 
 Allow only the ports required by the deployment. For a Caddy setup, expose
@@ -61,6 +77,17 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw enable
 ```
+
+For the direct public-IP command above, allow the published executor port as
+well:
+
+```bash
+sudo ufw allow 8000/tcp
+```
+
+The `8000/tcp` rule is required for direct public access; a firewall rule alone
+cannot expose a service that Docker bound to `127.0.0.1`. Do not add this rule
+for the Caddy/HTTPS loopback deployment.
 
 Point a DNS name at the VPS and use Caddy:
 
@@ -98,9 +125,10 @@ application encryption, HMAC signing, timestamp checks, and nonce replay
 protection remain mandatory. Never use ordinary `http` transport for mailbox
 credentials or results.
 
-The `http_encrypted` exception still requires a reachable public IP and a
-firewall rule for the chosen port. If the endpoint changes, disable it, update
-the destination, run a new challenge, and re-verify before activation.
+The `http_encrypted` exception still requires a reachable public IP and the
+`sudo ufw allow 8000/tcp` rule when using the direct port-8000 command above.
+If the endpoint changes, disable it, update the destination, run a new
+challenge, and re-verify before activation.
 
 ## 5. Health, rotation, upgrade, and rollback
 
@@ -113,15 +141,15 @@ the destination, run a new challenge, and re-verify before activation.
 - Upgrade by building a versioned image, stopping the old container only after
   the new one has started, and running the Master challenge. Preserve the
   current executor ID and secret unless performing a planned rotation.
-- Roll back by restarting the previous image, then run **Test** and **Verify**.
-  If the base URL or transport changed, activation must remain disabled until
-  re-verification succeeds.
+- Roll back by restarting the previous image with the current active protocol
+  secret, then run **Test** and **Verify**. If the base URL or transport
+  changed, activation must remain disabled until re-verification succeeds.
 
 ```bash
 docker pull trackpal-lookup-executor:previous
 docker stop trackpal-lookup-executor
 docker rm trackpal-lookup-executor
-# Re-run the docker run command with the previous image and the same secrets.
+# Re-run the docker run command with the previous image and current active secret.
 ```
 
 ## Local checks before release
