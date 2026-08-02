@@ -81,10 +81,25 @@ def _fetch_sync(
     try:
         try:
             status, _ = connection.login(mailbox_email, app_password)
+        except (imaplib.IMAP4.abort, TimeoutError, OSError, ConnectionError) as exc:
+            raise TransientProviderError(
+                "Gmail authentication service unavailable"
+            ) from exc
+        except imaplib.IMAP4.error as exc:
+            if _is_authentication_rejection(exc):
+                raise NonTransientProviderError("Gmail authentication failed") from exc
+            raise TransientProviderError(
+                "Gmail authentication failed temporarily"
+            ) from exc
         except Exception as exc:
-            raise NonTransientProviderError("Gmail authentication failed") from exc
-        if status != "OK":
+            raise TransientProviderError(
+                "Gmail authentication service unavailable"
+            ) from exc
+
+        if status == "NO":
             raise NonTransientProviderError("Gmail authentication failed")
+        if status != "OK":
+            raise TransientProviderError("Gmail authentication failed temporarily")
 
         try:
             select_status, _ = connection.select("INBOX")
@@ -120,6 +135,21 @@ def _fetch_sync(
     finally:
         with suppress(Exception):
             connection.logout()
+
+
+def _is_authentication_rejection(error: imaplib.IMAP4.error) -> bool:
+    """Recognize explicit credential failures without exposing their text."""
+    message = str(error).lower()
+    return any(
+        marker in message
+        for marker in (
+            "auth",
+            "credential",
+            "password",
+            "invalid user",
+            "authentication",
+        )
+    )
 
 
 def _extract_raw_bytes(raw_data: Any) -> bytes | None:

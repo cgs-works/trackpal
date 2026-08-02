@@ -40,8 +40,8 @@ class R2Diagnostics:
                 html_content.encode("utf-8"),
                 "text/html; charset=utf-8",
             )
-        except Exception:
-            logger.exception("Failed to upload Netflix diagnostic HTML")
+        except Exception:  # noqa: BLE001 - diagnostics are best effort
+            logger.warning("Failed to upload Netflix diagnostic HTML")
             return None
 
 

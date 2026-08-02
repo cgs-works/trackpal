@@ -6,7 +6,7 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Protocol
 
-from app.extractors import extract_newest_from_emails
+from app.extractors import extract_newest_with_source
 from app.pipeline.email_message import EmailMessage
 from app.pipeline.fingerprint import compute_fingerprint
 from app.providers.errors import NonTransientProviderError, ProviderFetchError
@@ -28,7 +28,7 @@ class NetflixResolverPort(Protocol):
     """Netflix URL resolution port required by the runner."""
 
     async def resolve(self, full_url: str) -> str | None:
-        """Resolve a travel verification URL."""
+        """Resolve a travel verification URL to an OTP."""
 
 
 def safe_provider_detail(error_code: str) -> str:
@@ -64,7 +64,7 @@ async def execute_lookup(
 
     filtered = _filter_target_emails(emails, command.target_email)
     extraction_now = now or datetime.now(UTC)
-    extracted = extract_newest_from_emails(
+    extracted = extract_newest_with_source(
         [
             {
                 "subject": message.subject,
@@ -80,20 +80,15 @@ async def execute_lookup(
     if extracted is None:
         return LookupOutcome.not_found()
 
-    result_value = extracted.value
-    result_type = extracted.result_type
+    result_value = extracted.result.value
+    result_type = extracted.result.result_type
     if command.service_key == "netflix" and result_type == "url":
         result_value = await netflix.resolve(result_value) or ""
         if not result_value:
             return LookupOutcome.not_found()
         result_type = "code"
 
-    match = _find_matching_message(filtered, extracted.value)
-    if match is None:
-        match = filtered[0] if filtered else None
-    if match is None:
-        return LookupOutcome.not_found()
-
+    match = filtered[extracted.source_index]
     fingerprint = compute_fingerprint(
         service_key=command.service_key,
         message_id=match.message_id,
@@ -141,16 +136,6 @@ def _filter_target_emails(
         or target in email.body.lower()
         or target in {recipient.lower() for recipient in email.to_recipients}
     ]
-
-
-def _find_matching_message(
-    emails: list[EmailMessage],
-    extracted_value: str,
-) -> EmailMessage | None:
-    for email in emails:
-        if extracted_value in email.body:
-            return email
-    return None
 
 
 __all__ = [

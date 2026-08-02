@@ -35,6 +35,13 @@ class ExtractedCode(NamedTuple):
     service_key: str
 
 
+class ExtractedEmail(NamedTuple):
+    """Extraction result paired with its source email index."""
+
+    result: ExtractedCode
+    source_index: int
+
+
 # ── Body normalisers ───────────────────────────────────────────────────────
 
 
@@ -134,27 +141,47 @@ def extract_newest_from_emails(
     max_age_minutes: int = MAX_CANDIDATE_AGE_MINUTES,
     now: datetime | None = None,
 ) -> ExtractedCode | None:
-    """Extract the newest valid code from a sorted list of emails.
+    """Extract the newest valid code from a sorted list of emails."""
+    extracted = extract_newest_with_source(
+        emails,
+        service_key,
+        max_age_minutes=max_age_minutes,
+        now=now,
+    )
+    return extracted.result if extracted is not None else None
 
-    Filters candidates within ``max_age_minutes`` of now, sorts newest
-    first, and returns the first successful extraction.
 
-    Expects ``emails`` to be pre-filtered by provider (Gmail API, Graph,
-    IMAP) before calling this function.
-    """
+def extract_newest_with_source(
+    emails: list[ParsedEmail],
+    service_key: str,
+    *,
+    max_age_minutes: int = MAX_CANDIDATE_AGE_MINUTES,
+    now: datetime | None = None,
+) -> ExtractedEmail | None:
+    """Extract the newest valid result and preserve its source index."""
     now = now or datetime.now(UTC)
     cutoff = now - __import__("datetime").timedelta(minutes=max_age_minutes)
 
-    # Filter by age window
-    candidates = [e for e in emails if _ensure_utc_aware(e["received_at"]) >= cutoff]
+    candidates = [
+        (index, email)
+        for index, email in enumerate(emails)
+        if _ensure_utc_aware(email["received_at"]) >= cutoff
+    ]
+    candidates.sort(
+        key=lambda item: _ensure_utc_aware(item[1]["received_at"]),
+        reverse=True,
+    )
 
-    # Sort newest first
-    candidates.sort(key=lambda e: _ensure_utc_aware(e["received_at"]), reverse=True)
-
-    for email in candidates:
+    for index, email in candidates:
         result = extract_from_body(email["body"], service_key, subject=email["subject"])
+        if result is None:
+            result = extract_from_body(
+                email["subject"],
+                service_key,
+                subject=email["subject"],
+            )
         if result is not None:
-            return result
+            return ExtractedEmail(result=result, source_index=index)
 
     return None
 
