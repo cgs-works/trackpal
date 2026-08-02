@@ -22,8 +22,7 @@ class NonceCache:
         if nonce in self._entries:
             return False
         if len(self._entries) >= self.max_entries:
-            oldest_nonce = min(self._entries, key=self._entries.__getitem__)
-            del self._entries[oldest_nonce]
+            return False
         self._entries[nonce] = now + self.ttl_seconds
         return True
 

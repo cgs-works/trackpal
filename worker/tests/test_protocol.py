@@ -139,13 +139,14 @@ def test_nonce_cache_rejects_second_use() -> None:
     assert cache.consume("nonce-1", now=1001) is False
 
 
-def test_nonce_cache_allows_expired_nonce_and_enforces_capacity() -> None:
+def test_nonce_cache_rejects_new_nonce_when_full_without_evicting_valid_entries() -> None:
     cache = NonceCache(ttl_seconds=10, max_entries=2)
 
     assert cache.consume("nonce-1", now=1000) is True
     assert cache.consume("nonce-2", now=1001) is True
-    assert cache.consume("nonce-3", now=1002) is True
-    assert cache.consume("nonce-2", now=1003) is False
+    assert cache.consume("nonce-3", now=1002) is False
+    assert cache.consume("nonce-1", now=1002) is False
+    assert cache.consume("nonce-2", now=1002) is False
     assert cache.consume("nonce-1", now=1010) is True
 
 
