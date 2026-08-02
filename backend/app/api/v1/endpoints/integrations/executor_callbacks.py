@@ -202,7 +202,7 @@ def settings_signature_skew_seconds() -> int:
 def settings_callback_nonce_ttl_seconds() -> int:
     """Keep a nonce through the full lifetime of a future-dated signature."""
     skew_seconds = settings_signature_skew_seconds()
-    return max(1, skew_seconds * 2)
+    return max(1, skew_seconds * 3)
 
 
 __all__ = ["router"]

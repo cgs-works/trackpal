@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
@@ -657,7 +657,7 @@ async def test_callback_endpoint_verifies_signature_nonce_and_decrypts_payload(
     assert response.json() == {"accepted": True}
     assert coordinator.received is not None
     assert coordinator.received.outcome.kind == "not_found"
-    assert coordinator.nonce_calls[0][2] == 120
+    assert coordinator.nonce_calls[0][2] == 180
 
     app.dependency_overrides[get_db] = override_db
     try:
@@ -667,6 +667,98 @@ async def test_callback_endpoint_verifies_signature_nonce_and_decrypts_payload(
             replay = await client.post(path, content=body, headers=headers)
     finally:
         app.dependency_overrides.clear()
+    assert replay.status_code == 401
+    assert replay.json() == {"detail": "replayed protocol nonce"}
+
+
+@pytest.mark.asyncio
+async def test_callback_nonce_survives_inclusive_signature_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.v1.endpoints.integrations import executor_callbacks
+    from app.core.database import get_db
+    from app.repositories import lookup_executors_repository
+
+    executor_id, job_id, lease_id = uuid4(), uuid4(), uuid4()
+    secret = "callback-secret"
+    keys = derive_protocol_keys(secret)
+    payload = {
+        "job_id": str(job_id),
+        "lease_id": str(lease_id),
+        "outcome": {"kind": "not_found"},
+    }
+    body = encrypt_payload(payload, keys.encryption).model_dump_json().encode()
+    path = f"/api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete"
+    skew = 60
+    timestamp = 1_900_000_000
+    nonce = "boundary-nonce"
+    signature = sign_request(
+        "POST", path, executor_id, 1, timestamp, nonce, body, keys.signing
+    )
+    clock = iter((timestamp - skew, timestamp + skew))
+    current_time = [timestamp - skew]
+
+    def fake_time() -> int:
+        current_time[0] = next(clock)
+        return current_time[0]
+
+    monkeypatch.setattr(executor_callbacks, "time", SimpleNamespace(time=fake_time))
+    monkeypatch.setattr(executor_callbacks, "set_internal_rls_context", _noop)
+    monkeypatch.setattr(
+        lookup_executors_repository,
+        "get",
+        lambda db, requested_id: _async_value(
+            SimpleNamespace(
+                id=executor_id, secret_encrypted="encrypted", secret_version=1
+            )
+        ),
+    )
+    monkeypatch.setattr(executor_callbacks, "decrypt_value", lambda value: secret)
+
+    class FakeCoordinator:
+        def __init__(self) -> None:
+            self._store = self
+            self.nonce_expires_at: int | None = None
+
+        async def consume_callback_nonce(
+            self, executor_id: object, nonce: str, ttl_seconds: int
+        ) -> bool:
+            if self.nonce_expires_at is None:
+                self.nonce_expires_at = current_time[0] + ttl_seconds
+                return True
+            return current_time[0] >= self.nonce_expires_at
+
+        async def complete(
+            self, requested_job_id: object, callback: VerifiedCallback
+        ) -> CompletionAck:
+            return CompletionAck(accepted=True)
+
+    coordinator = FakeCoordinator()
+    monkeypatch.setattr(
+        executor_callbacks, "get_lookup_execution_coordinator", lambda: coordinator
+    )
+
+    async def override_db() -> AsyncIterator[object]:
+        yield object()
+
+    app.dependency_overrides[get_db] = override_db
+    headers = {
+        "X-TrackPal-Executor-Id": str(executor_id),
+        "X-TrackPal-Key-Version": "1",
+        "X-TrackPal-Timestamp": str(timestamp),
+        "X-TrackPal-Nonce": nonce,
+        "X-TrackPal-Signature": signature,
+    }
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            first = await client.post(path, content=body, headers=headers)
+            replay = await client.post(path, content=body, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert first.status_code == 200
     assert replay.status_code == 401
     assert replay.json() == {"detail": "replayed protocol nonce"}
 
