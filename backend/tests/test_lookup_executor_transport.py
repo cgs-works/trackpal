@@ -5,6 +5,7 @@ import time
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
+import httpcore
 import httpx
 import pytest
 
@@ -324,39 +325,75 @@ async def test_http_transport_uses_pinned_transport_for_each_validated_request(
 
 
 @pytest.mark.asyncio
-async def test_http_transport_rejects_dns_rebinding_before_second_request(
+async def test_pinned_transport_connects_to_validated_ip_and_keeps_hostname(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls = 0
-    target = "https://executor.example.test"
-    item = executor(target)
+    """Exercise the pinned transport rather than replacing it with MockTransport."""
 
-    def rebinding_resolver(_host: str, _port: int) -> list[str]:
-        nonlocal calls
-        calls += 1
-        return [PUBLIC_IP] if calls == 1 else ["127.0.0.1"]
+    class RecordingBackend:
+        def __init__(self, allowed_address: str) -> None:
+            self.allowed_address = allowed_address
+            self.connections: list[tuple[str, int]] = []
 
-    def pinned_transport(address: str) -> httpx.MockTransport:
-        assert address == PUBLIC_IP
-        return httpx.MockTransport(
-            lambda request: signed_response(
-                item,
-                request.url.path,
-                {
-                    "challenge": "probe",
-                    "protocol_version": 1,
-                    "runtime_version": "0.1.0",
-                    "max_concurrency": 1,
-                },
+        async def connect_tcp(
+            self, host: str, port: int, **_kwargs: object
+        ) -> httpcore.AsyncNetworkStream:
+            self.connections.append((host, port))
+            if host != self.allowed_address:
+                raise httpcore.ConnectError("unexpected connection address")
+            return httpcore.AsyncMockStream([])
+
+    class CapturingPool:
+        def __init__(self, **kwargs: object) -> None:
+            self.network_backend = kwargs["network_backend"]
+            self.requests: list[httpcore.Request] = []
+
+        async def __aenter__(self) -> "CapturingPool":
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+        async def handle_async_request(
+            self, request: httpcore.Request
+        ) -> httpcore.Response:
+            self.requests.append(request)
+            await self.network_backend.connect_tcp(
+                request.url.host.decode(), request.url.port
             )
-        )
+            return httpcore.Response(200, content=b"ok")
+
+        async def aclose(self) -> None:
+            return None
+
+    pools: list[CapturingPool] = []
+
+    def create_pool(**kwargs: object) -> CapturingPool:
+        pool = CapturingPool(**kwargs)
+        pools.append(pool)
+        return pool
 
     monkeypatch.setattr(
-        http_transport_module, "_PinnedAsyncHTTPTransport", pinned_transport
+        http_transport_module.httpcore, "AsyncConnectionPool", create_pool
     )
-    transport = HttpLookupExecutorTransport(resolver=rebinding_resolver)
-    await transport.challenge(item, "probe")
-    result = await transport.handoff(item, {"lease_id": str(uuid4())})
+    request = httpx.Request("GET", "https://executor.example.test:8443/health")
 
-    assert result.status is HandoffStatus.SECURITY_ERROR
-    assert calls == 2
+    pinned = http_transport_module._PinnedAsyncHTTPTransport(PUBLIC_IP)
+    backend = RecordingBackend(PUBLIC_IP)
+    pools[0].network_backend._backend = backend
+    response = await pinned.handle_async_request(request)
+
+    assert response.status_code == 200
+    assert backend.connections == [(PUBLIC_IP, 8443)]
+    assert pools[0].requests[0].url.host == b"executor.example.test"
+    assert response.request is request
+
+    different_address = "93.184.216.35"
+    different_pinned = http_transport_module._PinnedAsyncHTTPTransport(
+        different_address
+    )
+    different_backend = RecordingBackend(PUBLIC_IP)
+    pools[1].network_backend._backend = different_backend
+
+    with pytest.raises(httpx.ConnectError, match="unexpected connection address"):
+        await different_pinned.handle_async_request(request)

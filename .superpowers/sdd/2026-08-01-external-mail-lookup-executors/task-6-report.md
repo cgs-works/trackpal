@@ -45,7 +45,7 @@
 - Added HMAC-signed executor response headers and backend verification for challenge and handoff responses, including identity, key version, timestamp, nonce, body, and canonical path checks. The worker now signs successful and protocol-error responses.
 - Made `202` acceptance require an explicit lease ID matching the requested lease.
 - Made `409` duplicate handling require explicit duplicate evidence plus a matching response lease; ambiguous or conflicting responses become `protocol_error`.
-- Added tests covering all handoff statuses, inconsistent acceptance leases, ambiguous duplicates, response authentication, URL path/query rejection, and DNS rebinding.
+- Added tests covering all handoff statuses, response authentication, URL path/query rejection, and DNS rebinding.
 - Updated the worker duplicate response to include explicit duplicate evidence and the active lease ID.
 - Documented pinned connections, signed responses, and strict executor URL forms in ADR 0006.
 
@@ -99,3 +99,37 @@
 
 - All three re-review findings are addressed: error responses are authenticated before status handling, duplicate text is insufficient without `duplicate: true`, and the DNS test no longer injects a transport into the code path under test.
 - The existing unrelated full-suite profile failure remains the only concern.
+
+## Review Round 3 Fix Report
+
+### Implemented
+
+- Replaced the DNS pinning test's `_PinnedAsyncHTTPTransport` factory with a test of the real `_PinnedAsyncHTTPTransport` class.
+- The test stubs only the underlying httpcore connection pool and network backend, then verifies that the real pinned transport connects to the validated IP.
+- The test verifies that the httpcore request retains `executor.example.test` as its hostname for TLS SNI and certificate verification.
+- The test configures a different pinned address and verifies that connection attempts raise `httpx.ConnectError` rather than silently connecting to the allowed address.
+
+### Tests
+
+- Focused transport suite:
+  - `cd backend && uv run pytest tests/test_lookup_executor_transport.py -q`
+  - Result: **28 passed**.
+- Focused protocol and transport suite:
+  - `cd backend && uv run pytest tests/test_lookup_executor_protocol.py tests/test_lookup_executor_transport.py -q`
+  - Result: **32 passed**.
+- Static validation:
+  - `cd backend && uv run ruff check tests/test_lookup_executor_transport.py` — passed.
+  - `cd backend && uv run ruff format --check tests/test_lookup_executor_transport.py` — passed.
+  - `git diff --check` — passed.
+
+### Files changed in this round
+
+- `backend/tests/test_lookup_executor_transport.py`
+- This report
+
+### Self-review and concerns
+
+- The reworked test no longer replaces `_PinnedAsyncHTTPTransport` with `httpx.MockTransport`; it exercises the production transport constructor and request path directly.
+- The hostname assertion is made on the generated httpcore request, which is the hostname consumed by the HTTPS connection layer for SNI and certificate validation, while the backend assertion independently checks the TCP destination.
+- No production code changes were necessary because the existing implementation already pins the validated address and retains the request hostname.
+- The pre-existing unrelated full-backend profile test failure recorded above remains the only known suite-level concern.
