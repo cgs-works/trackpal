@@ -325,6 +325,45 @@ async def test_http_transport_uses_pinned_transport_for_each_validated_request(
 
 
 @pytest.mark.asyncio
+async def test_http_transport_rejects_dns_rebinding_before_second_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+    target = "https://executor.example.test"
+    item = executor(target)
+
+    def rebinding_resolver(_host: str, _port: int) -> list[str]:
+        nonlocal calls
+        calls += 1
+        return [PUBLIC_IP] if calls == 1 else ["127.0.0.1"]
+
+    def pinned_transport(address: str) -> httpx.MockTransport:
+        assert address == PUBLIC_IP
+        return httpx.MockTransport(
+            lambda request: signed_response(
+                item,
+                request.url.path,
+                {
+                    "challenge": "probe",
+                    "protocol_version": 1,
+                    "runtime_version": "0.1.0",
+                    "max_concurrency": 1,
+                },
+            )
+        )
+
+    monkeypatch.setattr(
+        http_transport_module, "_PinnedAsyncHTTPTransport", pinned_transport
+    )
+    transport = HttpLookupExecutorTransport(resolver=rebinding_resolver)
+    await transport.challenge(item, "probe")
+    result = await transport.handoff(item, {"lease_id": str(uuid4())})
+
+    assert result.status is HandoffStatus.SECURITY_ERROR
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_pinned_transport_connects_to_validated_ip_and_keeps_hostname(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

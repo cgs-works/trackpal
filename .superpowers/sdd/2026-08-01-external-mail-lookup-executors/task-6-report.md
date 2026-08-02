@@ -133,3 +133,32 @@
 - The hostname assertion is made on the generated httpcore request, which is the hostname consumed by the HTTPS connection layer for SNI and certificate validation, while the backend assertion independently checks the TCP destination.
 - No production code changes were necessary because the existing implementation already pins the validated address and retains the request hostname.
 - The pre-existing unrelated full-backend profile test failure recorded above remains the only known suite-level concern.
+
+
+## Review Round 4 Fix Report
+
+### Implemented
+
+- Restored `test_http_transport_rejects_dns_rebinding_before_second_request` alongside the direct `_PinnedAsyncHTTPTransport` test.
+- Added a successive-call fake resolver that returns the public address for the challenge request and `127.0.0.1` for the handoff request.
+- The test verifies the first request succeeds, the second request is rejected with `HandoffStatus.SECURITY_ERROR`, and the resolver is called twice.
+
+### Tests
+
+- Focused DNS-rebinding and direct pinned-transport tests: `2 passed`.
+- Protocol and transport suite: `cd backend && uv run pytest tests/test_lookup_executor_protocol.py tests/test_lookup_executor_transport.py -q` — **33 passed**.
+- Static validation: `uv run ruff check tests/test_lookup_executor_transport.py`, `uv run ruff format --check tests/test_lookup_executor_transport.py`, and `git diff --check` — passed.
+
+### Files Changed
+
+- `backend/tests/test_lookup_executor_transport.py`
+- This report
+
+### Self-Review
+
+- The restored test keeps the production pinned transport factory stubbed only to isolate DNS-rebinding behavior; the adjacent direct test still exercises the real `_PinnedAsyncHTTPTransport`.
+- The resolver state makes the public-to-loopback transition explicit and asserts that no second request is accepted after rebinding.
+
+### Concerns
+
+- No new concerns. The previously recorded unrelated full-backend profile test failure remains unchanged.
