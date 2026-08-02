@@ -1071,6 +1071,8 @@ _CATALOG_ES_FRONTEND: Final[dict[str, str]] = {
     'frontend.master.executors.error_active_leases': 'Este ejecutor tiene leases de ejecución activos y no se puede eliminar.',
     'frontend.master.executors.error_step_up_unavailable': 'La verificación del Master no está disponible temporalmente.',
     'frontend.master.executors.error_hosting_password_missing': 'No hay una contraseña de hosting guardada para este ejecutor.',
+    'frontend.master.executors.error_verify': 'No se pudo verificar el ejecutor.',
+    'frontend.master.executors.error_reveal': 'No se pudo revelar la contraseña de hosting.',
     'frontend.master.executors.error_test': 'No se pudo probar el ejecutor.',
     'frontend.master.executors.error_disable': 'No se pudo desactivar el ejecutor.',
     'frontend.master.executors.error_rotate': 'No se pudo rotar el secreto del ejecutor.',

@@ -68,7 +68,7 @@ export function ExecutorPasswordDialog({
       setError(
         mapExecutorError(
           revealError,
-          "frontend.master.executors.error_invalid_master_password",
+          "frontend.master.executors.error_reveal",
         ),
       );
     } finally {

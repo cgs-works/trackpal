@@ -5,6 +5,7 @@ import { LookupExecutorsPage } from "../lookup-executors-page";
 import {
   deleteLookupExecutor,
   disableLookupExecutor,
+  enableLookupExecutor,
   fetchLookupExecutors,
   revealLookupExecutorHostingPassword,
   rotateLookupExecutorSecret,
@@ -71,6 +72,7 @@ const mockedFetch = vi.mocked(fetchLookupExecutors);
 const mockedVerify = vi.mocked(verifyLookupExecutor);
 const mockedReveal = vi.mocked(revealLookupExecutorHostingPassword);
 const mockedRotate = vi.mocked(rotateLookupExecutorSecret);
+const mockedEnable = vi.mocked(enableLookupExecutor);
 const mockedDisable = vi.mocked(disableLookupExecutor);
 const mockedTest = vi.mocked(testLookupExecutor);
 const mockedDelete = vi.mocked(deleteLookupExecutor);
@@ -84,6 +86,7 @@ beforeEach(() => {
     executor: { ...activeExecutor, secret_version: 2 },
     plain_secret: "rotated-secret",
   });
+  mockedEnable.mockResolvedValue({ ...httpExecutor, lifecycle_status: "active" });
   mockedDisable.mockResolvedValue({ ...activeExecutor, lifecycle_status: "disabled" });
   mockedTest.mockResolvedValue({
     status: "healthy",
@@ -123,6 +126,21 @@ describe("executor security actions", () => {
     );
   });
 
+  it("shows a verification error when the HTTPS verification request fails", async () => {
+    const user = userEvent.setup();
+    mockedFetch.mockResolvedValue([activeExecutor]);
+    mockedVerify.mockRejectedValueOnce(new Error("network unavailable"));
+    render(<LookupExecutorsPage />);
+    await screen.findAllByText("Active executor");
+
+    await user.click(screen.getAllByRole("button", { name: "frontend.master.executors.verify" })[0]);
+    await user.click(screen.getByRole("button", { name: "frontend.master.executors.verify" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "frontend.master.executors.error_verify",
+    );
+  });
+
   it("keeps the hosting password hidden until reveal and clears it on close", async () => {
     const user = userEvent.setup();
     render(<LookupExecutorsPage />);
@@ -145,7 +163,22 @@ describe("executor security actions", () => {
     expect(screen.queryByDisplayValue("hosting-password")).not.toBeInTheDocument();
   });
 
-  it("shows a rotated secret once and refreshes lifecycle actions", async () => {
+  it("shows a network error instead of an authentication error when revealing the hosting password fails", async () => {
+    const user = userEvent.setup();
+    mockedReveal.mockRejectedValueOnce(new Error("network unavailable"));
+    render(<LookupExecutorsPage />);
+    await screen.findAllByText("Active executor");
+
+    await user.click(screen.getAllByRole("button", { name: "frontend.master.executors.reveal_hosting_password" })[0]);
+    await user.type(screen.getByLabelText("frontend.master.executors.reveal_password"), "master-password");
+    await user.click(screen.getByRole("button", { name: "frontend.master.executors.reveal_hosting_password" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "frontend.master.executors.error_reveal",
+    );
+  });
+
+  it("shows a rotated secret once, closes confirmation, and refreshes lifecycle actions", async () => {
     const user = userEvent.setup();
     render(<LookupExecutorsPage />);
     await screen.findAllByText("Active executor");
@@ -153,8 +186,33 @@ describe("executor security actions", () => {
     await user.click(screen.getAllByRole("button", { name: "frontend.master.executors.rotate_secret" })[0]);
     await user.click(screen.getByRole("button", { name: "frontend.master.executors.confirm" }));
     expect(await screen.findByText("rotated-secret")).toBeInTheDocument();
+    expect(screen.queryByText("frontend.master.executors.rotate_description")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "frontend.master.executors.credentials_continue" }));
     expect(screen.queryByText("rotated-secret")).not.toBeInTheDocument();
+  });
+
+  it("enables an executor after confirmation and refreshes the list", async () => {
+    const user = userEvent.setup();
+    render(<LookupExecutorsPage />);
+    await screen.findAllByText("HTTP executor");
+
+    await user.click(screen.getAllByRole("button", { name: "frontend.master.executors.enable" })[0]);
+    await user.click(screen.getByRole("button", { name: "frontend.master.executors.confirm" }));
+
+    await waitFor(() => expect(mockedEnable).toHaveBeenCalledWith("http-executor"));
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(2));
+  });
+
+  it("deletes an executor after confirmation and refreshes the list", async () => {
+    const user = userEvent.setup();
+    render(<LookupExecutorsPage />);
+    await screen.findAllByText("HTTP executor");
+
+    await user.click(screen.getAllByRole("button", { name: "frontend.master.executors.delete" })[0]);
+    await user.click(screen.getByRole("button", { name: "frontend.master.executors.confirm" }));
+
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith("http-executor"));
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(2));
   });
 
   it("warns before a manual test, preserves active-job data after disable, and blocks busy deletion", async () => {

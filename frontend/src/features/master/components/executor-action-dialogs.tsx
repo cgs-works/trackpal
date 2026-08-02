@@ -241,7 +241,7 @@ export function ExecutorActionDialogs({
 
   return (
     <>
-      <AlertDialog open={open} onOpenChange={(nextOpen) => !nextOpen && close()}>
+      <AlertDialog open={open && !credentials} onOpenChange={(nextOpen) => !nextOpen && close()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t(`frontend.master.executors.${actionTitleKey[action]}`)}</AlertDialogTitle>
