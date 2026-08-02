@@ -23,6 +23,7 @@ export interface LookupExecutor {
   last_success_at: string | null;
   last_error_safe: string | null;
   active_jobs: number;
+  active_leases: number | null;
   created_at: string;
   updated_at: string;
 }

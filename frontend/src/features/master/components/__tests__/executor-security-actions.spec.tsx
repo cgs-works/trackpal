@@ -49,6 +49,7 @@ const httpExecutor: LookupExecutor = {
   last_success_at: null,
   last_error_safe: null,
   active_jobs: 0,
+  active_leases: 0,
   created_at: "2026-08-01T12:00:00Z",
   updated_at: "2026-08-01T12:00:00Z",
 };
@@ -66,6 +67,7 @@ const activeExecutor: LookupExecutor = {
   has_hosting_password: true,
   last_verified_at: "2026-08-01T12:00:00Z",
   active_jobs: 2,
+  active_leases: 1,
 };
 
 const mockedFetch = vi.mocked(fetchLookupExecutors);
@@ -233,7 +235,7 @@ describe("executor security actions", () => {
     await user.click(screen.getByRole("button", { name: "frontend.master.executors.confirm" }));
     await waitFor(() => expect(mockedDisable).toHaveBeenCalledWith("active-executor"));
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(3));
-    expect(screen.getAllByText("2/2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1/2").length).toBeGreaterThan(0);
     expect(mockedDelete).not.toHaveBeenCalled();
   });
 });

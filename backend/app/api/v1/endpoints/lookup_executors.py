@@ -23,6 +23,7 @@ from app.services.lookup_executor_registry import (
     ExecutorVerificationError,
     create_executor,
     delete_executor,
+    get_active_lease_count,
     reveal_hosting_password,
     rotate_secret,
     test_executor,
@@ -61,11 +62,17 @@ def _step_up_error(exc: MasterStepUpError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=exc.code)
 
 
+async def _with_active_leases(executor: LookupExecutor) -> LookupExecutor:
+    """Attach current Redis-backed capacity usage for response serialization."""
+    executor.active_leases = await get_active_lease_count(executor.id)
+    return executor
+
+
 async def _get_executor(db: DbDep, executor_id: UUID) -> LookupExecutor:
     executor = await lookup_executors_repository.get(db, executor_id)
     if executor is None:
         raise _not_found()
-    return executor
+    return await _with_active_leases(executor)
 
 
 @router.post(
@@ -83,6 +90,7 @@ async def create_lookup_executor(
     executor, plain_secret = await create_executor(db, **body.model_dump())
     await db.commit()
     await db.refresh(executor)
+    executor.active_leases = 0
     return LookupExecutorCreateResponse(executor=executor, plain_secret=plain_secret)
 
 
@@ -92,7 +100,10 @@ async def list_lookup_executors(
 ) -> list[LookupExecutorResponse]:
     """List executor metadata without credential values."""
     del current_user
-    return await lookup_executors_repository.list_all(db)
+    executors = await lookup_executors_repository.list_all(db)
+    for executor in executors:
+        await _with_active_leases(executor)
+    return executors
 
 
 @router.get("/{executor_id}", response_model=LookupExecutorResponse)

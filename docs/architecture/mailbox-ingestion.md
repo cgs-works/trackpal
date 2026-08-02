@@ -133,8 +133,11 @@ Creation returns a generated protocol secret once. `/verify` establishes trust;
 keeps the current secret active until a pending secret passes its challenge.
 
 Changing `base_url` or `transport_mode` clears verification and requires a new
-challenge. Deletion fails closed while PostgreSQL jobs or Redis leases are
-active, or when lease coordination is unavailable. Optional hosting passwords
+challenge. The Master capacity indicator reports current unexpired Redis leases,
+not the number of PostgreSQL jobs still marked `processing`; the separate active
+job count remains the deletion safety check. Deletion fails closed while
+PostgreSQL jobs or Redis leases are active, or when lease coordination is
+unavailable. Optional hosting passwords
 are encrypted and require Master step-up authentication for reveal; they are
 never sent to executors.
 

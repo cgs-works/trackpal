@@ -57,6 +57,7 @@ class LookupExecutorResponse(BaseModel):
     last_success_at: datetime | None = None
     last_error_safe: str | None = None
     active_jobs: int = 0
+    active_leases: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -91,6 +92,7 @@ class LookupExecutorResponse(BaseModel):
                     getattr(data, "hosting_account_password_encrypted", None)
                 ),
                 "active_jobs": int(getattr(data, "active_jobs", 0)),
+                "active_leases": getattr(data, "active_leases", None),
             }
         values = dict(data)
         values["has_hosting_password"] = bool(

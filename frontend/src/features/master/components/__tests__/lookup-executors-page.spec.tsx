@@ -40,6 +40,7 @@ const executors: LookupExecutor[] = [
     last_success_at: null,
     last_error_safe: null,
     active_jobs: 0,
+    active_leases: 0,
     created_at: "2026-07-31T12:00:00Z",
     updated_at: "2026-07-31T12:00:00Z",
   },
@@ -60,7 +61,8 @@ const executors: LookupExecutor[] = [
     last_health_check_at: "2026-07-31T12:30:00Z",
     last_success_at: "2026-07-31T12:31:00Z",
     last_error_safe: null,
-    active_jobs: 2,
+    active_jobs: 3,
+    active_leases: 2,
     created_at: "2026-07-30T12:00:00Z",
     updated_at: "2026-07-31T12:00:00Z",
   },
@@ -82,6 +84,7 @@ const executors: LookupExecutor[] = [
     last_success_at: null,
     last_error_safe: "Connection refused by upstream",
     active_jobs: 1,
+    active_leases: null,
     created_at: "2026-07-29T12:00:00Z",
     updated_at: "2026-07-31T12:00:00Z",
   },
@@ -149,6 +152,8 @@ describe("LookupExecutorsPage", () => {
     expect(screen.getAllByText("HTTP encrypted").length).toBeGreaterThan(0);
     expect(screen.getAllByText("frontend.master.executors.reverification_required").length).toBeGreaterThan(0);
     expect(screen.getAllByText("2/4").length).toBeGreaterThan(0);
+    expect(screen.queryByText("3/4")).not.toBeInTheDocument();
+    expect(screen.getAllByText("—/1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Connection refused by upstream").length).toBeGreaterThan(0);
   });
 

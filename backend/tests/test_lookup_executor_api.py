@@ -73,6 +73,54 @@ async def test_master_can_create_draft_with_one_time_secret(
     assert "secret_encrypted" not in body["executor"]
 
 
+async def test_capacity_uses_active_leases_instead_of_processing_job_count(
+    client, db_session, master_user, active_tenant_user, lease_reader
+):
+    headers = await _master_headers(client)
+    create = await client.post(
+        "/api/v1/lookup-executors/",
+        headers=headers,
+        json={"name": "Capacity", "provider_label": "custom", "max_concurrency": 2},
+    )
+    executor_id = UUID(create.json()["executor"]["id"])
+    tenant_result = await db_session.execute(
+        select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+    )
+    tenant = tenant_result.scalar_one()
+    mailbox = TenantMailbox(tenant_id=tenant.id, mailbox_email="capacity@example.com")
+    db_session.add(mailbox)
+    await db_session.flush()
+    for _ in range(3):
+        db_session.add(
+            MailLookupJob(
+                tenant_id=tenant.id,
+                mailbox_id=mailbox.id,
+                executor_id=executor_id,
+                service_key="netflix",
+                target_email="capacity@example.com",
+                status="processing",
+            )
+        )
+    await db_session.commit()
+    lease_reader.count = 1
+
+    response = await client.get(
+        f"/api/v1/lookup-executors/{executor_id}", headers=headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["active_jobs"] == 3
+    assert response.json()["active_leases"] == 1
+    assert response.json()["max_concurrency"] == 2
+
+    listed = await client.get("/api/v1/lookup-executors/", headers=headers)
+    listed_executor = next(
+        item for item in listed.json() if item["id"] == str(executor_id)
+    )
+    assert listed_executor["active_jobs"] == 3
+    assert listed_executor["active_leases"] == 1
+
+
 async def test_non_master_cannot_manage_executors(client, active_tenant_user):
     response = await client.get(
         "/api/v1/lookup-executors/", headers=await _tenant_headers(client)

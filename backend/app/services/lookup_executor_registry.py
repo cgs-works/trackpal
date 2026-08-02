@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -18,6 +19,8 @@ from app.services.lookup_executor_transport import (
     HttpLookupExecutorTransport,
     LookupExecutorTransport,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutorCoordinationUnavailable(RuntimeError):
@@ -59,6 +62,18 @@ def configure_active_lease_reader(reader: ActiveLeaseReader) -> None:
     """Install the runtime Redis lease reader after application startup."""
     global _active_lease_reader
     _active_lease_reader = reader
+
+
+async def get_active_lease_count(executor_id: UUID) -> int | None:
+    """Return current Redis-backed capacity usage when coordination is available."""
+    try:
+        return max(0, int(await _active_lease_reader.active_count(executor_id)))
+    except Exception:
+        logger.warning(
+            "lookup executor capacity unavailable",
+            extra={"executor_id": str(executor_id)},
+        )
+        return None
 
 
 def _candidate_with_secret(executor: Any, encrypted: str, version: int) -> Any:
@@ -212,6 +227,7 @@ __all__ = [
     "UnavailableActiveLeaseReader",
     "configure_active_lease_reader",
     "create_executor",
+    "get_active_lease_count",
     "delete_executor",
     "reveal_hosting_password",
     "rotate_secret",

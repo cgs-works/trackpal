@@ -185,12 +185,13 @@ function OperationalDetails({ executor }: { executor: LookupExecutor }) {
 
 function CapacityBadge({ executor }: { executor: LookupExecutor }) {
   const key = "frontend.master.executors.capacity_value";
+  const activeLeases = executor.active_leases ?? "—";
   const translated = t(key, {
-    active: executor.active_jobs,
+    active: activeLeases,
     maximum: executor.max_concurrency,
   });
   const value = translated.startsWith(key)
-    ? `${executor.active_jobs}/${executor.max_concurrency}`
+    ? `${activeLeases}/${executor.max_concurrency}`
     : translated;
   return <Badge variant="outline">{value}</Badge>;
 }
