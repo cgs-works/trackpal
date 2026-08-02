@@ -140,14 +140,17 @@ def _fetch_sync(
 def _is_authentication_rejection(error: imaplib.IMAP4.error) -> bool:
     """Recognize explicit credential failures without exposing their text."""
     message = str(error).lower()
+    if "temporary" in message or "service" in message:
+        return False
     return any(
         marker in message
         for marker in (
-            "auth",
-            "credential",
-            "password",
+            "authenticationfailed",
+            "authentication failed",
+            "invalid credential",
+            "invalid password",
             "invalid user",
-            "authentication",
+            "login failed",
         )
     )
 

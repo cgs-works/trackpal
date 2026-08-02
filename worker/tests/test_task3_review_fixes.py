@@ -11,7 +11,7 @@ from app.netflix.resolver import NetflixResolver, extract_netflix_verify_code
 from app.pipeline.email_message import EmailMessage
 from app.pipeline.models import LookupCommand
 from app.pipeline.runner import execute_lookup
-from app.providers.errors import TransientProviderError
+from app.providers.errors import NonTransientProviderError, TransientProviderError
 from app.providers.gmail_imap import fetch_gmail_messages
 
 NOW = datetime(2026, 8, 1, tzinfo=UTC)
@@ -63,6 +63,72 @@ async def test_login_abort_is_retryable() -> None:
             "app-password",
             5,
             imap_factory=AbortedLogin,
+            now=NOW,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error_message",
+    [
+        "[AUTHENTICATIONFAILED] Invalid credentials",
+        "[ALERT] Invalid credentials",
+        "Login failed",
+    ],
+)
+async def test_explicit_credential_rejection_is_terminal(error_message: str) -> None:
+    class RejectedLogin:
+        def __init__(self, host: str, port: int) -> None:
+            pass
+
+        def login(self, username: str, password: str) -> tuple[str, list[bytes]]:
+            raise imaplib.IMAP4.error(error_message)
+
+        def logout(self) -> tuple[str, list[bytes]]:
+            return "BYE", []
+
+    with pytest.raises(NonTransientProviderError) as error:
+        await fetch_gmail_messages(
+            "codes@example.com",
+            "app-password",
+            5,
+            imap_factory=RejectedLogin,
+            now=NOW,
+        )
+
+    assert error.value.error_code == "auth_failed"
+    assert error_message not in str(error.value)
+    assert "app-password" not in str(error.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error_message",
+    [
+        "temporary authentication service failure",
+        "authentication service unavailable",
+        "temporary IMAP service failure",
+    ],
+)
+async def test_transient_authentication_service_error_is_retryable(
+    error_message: str,
+) -> None:
+    class TemporaryLoginFailure:
+        def __init__(self, host: str, port: int) -> None:
+            pass
+
+        def login(self, username: str, password: str) -> tuple[str, list[bytes]]:
+            raise imaplib.IMAP4.error(error_message)
+
+        def logout(self) -> tuple[str, list[bytes]]:
+            return "BYE", []
+
+    with pytest.raises(TransientProviderError):
+        await fetch_gmail_messages(
+            "codes@example.com",
+            "app-password",
+            5,
+            imap_factory=TemporaryLoginFailure,
             now=NOW,
         )
 
