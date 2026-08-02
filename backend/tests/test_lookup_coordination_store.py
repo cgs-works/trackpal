@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import json
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -29,6 +31,10 @@ class FakeRedis:
         self.lists: dict[str, list[str]] = {}
         self.sets: dict[str, set[str]] = {}
         self.sorted_sets: dict[str, dict[str, float]] = {}
+        self.eval_calls: list[str] = []
+        self.fail_rpush = False
+        self.fail_zadd = False
+        self.fail_zrem = False
 
     def _expire(self, key: str) -> None:
         if self.expiry.get(key, float("inf")) <= time.monotonic():
@@ -62,6 +68,8 @@ class FakeRedis:
         return int(existed)
 
     async def rpush(self, key: str, value: str) -> int:
+        if self.fail_rpush:
+            raise RuntimeError("rpush failed")
         self.lists.setdefault(key, []).append(value)
         return len(self.lists[key])
 
@@ -82,6 +90,8 @@ class FakeRedis:
         return int(existed)
 
     async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        if self.fail_zadd:
+            raise RuntimeError("zadd failed")
         values = self.sorted_sets.setdefault(key, {})
         added = 0
         for member, score in mapping.items():
@@ -91,6 +101,8 @@ class FakeRedis:
         return added
 
     async def zrem(self, key: str, member: str) -> int:
+        if self.fail_zrem:
+            raise RuntimeError("zrem failed")
         values = self.sorted_sets.get(key, {})
         existed = member in values
         values.pop(member, None)
@@ -107,6 +119,52 @@ class FakeRedis:
 
     async def zcard(self, key: str) -> int:
         return len(self.sorted_sets.get(key, {}))
+
+    async def eval(self, script: str, numkeys: int, *args: str) -> int | str | None:
+        """Execute the coordination scripts as one in-memory operation."""
+        self.eval_calls.append(script)
+        snapshot = {
+            "values": copy.deepcopy(self.values),
+            "expiry": copy.deepcopy(self.expiry),
+            "lists": copy.deepcopy(self.lists),
+            "sets": copy.deepcopy(self.sets),
+            "sorted_sets": copy.deepcopy(self.sorted_sets),
+        }
+        keys = args[:numkeys]
+        values = args[numkeys:]
+        try:
+            if "SADD" in script:
+                added = await self.sadd(keys[0], values[0])
+                if added:
+                    await self.rpush(keys[1], values[0])
+                return added
+            if "LPOP" in script:
+                member = await self.lpop(keys[0])
+                if member is not None:
+                    await self.srem(keys[1], member)
+                return member
+            if "cjson.decode" in script:
+                raw = await self.get(keys[0])
+                if raw is None:
+                    return 0
+                payload = json.loads(raw)
+                await self.delete(keys[0])
+                await self.zrem(f"{values[0]}{payload['executor_id']}", values[1])
+                return 1
+            if "ZADD" in script:
+                created = await self.set(keys[0], values[0], ex=int(values[1]), nx=True)
+                if not created:
+                    return 0
+                await self.zadd(keys[1], {values[3]: float(values[2])})
+                return 1
+            raise AssertionError("Unknown Redis script")
+        except Exception:
+            self.values = snapshot["values"]
+            self.expiry = snapshot["expiry"]
+            self.lists = snapshot["lists"]
+            self.sets = snapshot["sets"]
+            self.sorted_sets = snapshot["sorted_sets"]
+            raise
 
 
 class FakeManager:
@@ -143,6 +201,88 @@ async def test_duplicate_enqueue_is_harmless(store: Any) -> None:
 
 
 @pytest.mark.asyncio
+async def test_redis_queue_and_lease_updates_use_atomic_scripts() -> None:
+    manager = FakeManager()
+    store = RedisLookupCoordinationStore(manager)
+    job_id = uuid4()
+    executor_id = uuid4()
+
+    assert await store.enqueue(job_id) is True
+    assert await store.pop() == job_id
+    assert (
+        await store.reserve_lease(
+            job_id,
+            executor_id,
+            uuid4(),
+            datetime.now(timezone.utc) + timedelta(seconds=60),
+        )
+        is True
+    )
+    await store.release_lease(job_id)
+
+    assert len(manager.redis.eval_calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_update_rolls_back_when_push_fails() -> None:
+    manager = FakeManager()
+    manager.redis.fail_rpush = True
+    store = RedisLookupCoordinationStore(manager)
+    job_id = uuid4()
+
+    with pytest.raises(RuntimeError, match="rpush failed"):
+        await store.enqueue(job_id)
+
+    assert str(job_id) not in manager.redis.sets.get("mailbox:lookup:queue:seen", set())
+    assert manager.redis.lists.get("mailbox:lookup:queue", []) == []
+
+
+@pytest.mark.asyncio
+async def test_redis_lease_reservation_rolls_back_when_capacity_update_fails() -> None:
+    manager = FakeManager()
+    manager.redis.fail_zadd = True
+    store = RedisLookupCoordinationStore(manager)
+    job_id = uuid4()
+    executor_id = uuid4()
+
+    with pytest.raises(RuntimeError, match="zadd failed"):
+        await store.reserve_lease(
+            job_id,
+            executor_id,
+            uuid4(),
+            datetime.now(timezone.utc) + timedelta(seconds=60),
+        )
+
+    assert await store.get_lease(job_id) is None
+    assert await store.active_count(executor_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_redis_lease_release_rolls_back_when_capacity_update_fails() -> None:
+    manager = FakeManager()
+    store = RedisLookupCoordinationStore(manager)
+    job_id = uuid4()
+    executor_id = uuid4()
+
+    assert (
+        await store.reserve_lease(
+            job_id,
+            executor_id,
+            uuid4(),
+            datetime.now(timezone.utc) + timedelta(seconds=60),
+        )
+        is True
+    )
+    manager.redis.fail_zrem = True
+
+    with pytest.raises(RuntimeError, match="zrem failed"):
+        await store.release_lease(job_id)
+
+    assert await store.get_lease(job_id) is not None
+    assert await store.active_count(executor_id) == 1
+
+
+@pytest.mark.asyncio
 async def test_only_one_dispatch_lock_wins(store: Any) -> None:
     job_id = uuid4()
 
@@ -165,6 +305,7 @@ async def test_expired_leases_stop_counting(store: Any) -> None:
 
     await asyncio.sleep(1.05)
     assert await store.active_count(executor_id) == 0
+    assert await store.get_lease(job_id) is None
 
     releasable_job = uuid4()
     assert (
@@ -190,6 +331,32 @@ async def test_expired_leases_stop_counting(store: Any) -> None:
         is False
     )
     assert await store.active_count(executor_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_redis_get_lease_rejects_expired_payload() -> None:
+    manager = FakeManager()
+    store = RedisLookupCoordinationStore(manager)
+    job_id = uuid4()
+    executor_id = uuid4()
+
+    assert (
+        await store.reserve_lease(
+            job_id,
+            executor_id,
+            uuid4(),
+            datetime.now(timezone.utc) + timedelta(seconds=60),
+        )
+        is True
+    )
+    key = f"lookup:lease:{job_id}"
+    payload = json.loads(manager.redis.values[key])
+    payload["expires_at"] = (
+        datetime.now(timezone.utc) - timedelta(seconds=1)
+    ).isoformat()
+    manager.redis.values[key] = json.dumps(payload)
+
+    assert await store.get_lease(job_id) is None
 
 
 @pytest.mark.asyncio

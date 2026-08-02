@@ -23,6 +23,40 @@ CALLBACK_NONCE_PREFIX = "lookup:callback-nonce:"
 RESULT_PREFIX = "lookup:result:"
 EXECUTOR_COOLDOWN_PREFIX = "lookup:executor-cooldown:"
 
+_ENQUEUE_SCRIPT = """
+local added = redis.call('SADD', KEYS[1], ARGV[1])
+if added == 1 then
+    redis.call('RPUSH', KEYS[2], ARGV[1])
+end
+return added
+"""
+_POP_SCRIPT = """
+local member = redis.call('LPOP', KEYS[1])
+if member then
+    redis.call('SREM', KEYS[2], member)
+end
+return member
+"""
+_RESERVE_LEASE_SCRIPT = """
+local created = redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2], 'NX')
+if not created then
+    return 0
+end
+redis.call('ZADD', KEYS[2], ARGV[3], ARGV[4])
+return 1
+"""
+_RELEASE_LEASE_SCRIPT = """
+local payload = redis.call('GET', KEYS[1])
+if not payload then
+    return 0
+end
+local lease = cjson.decode(payload)
+local executor_key = ARGV[1] .. lease.executor_id
+redis.call('DEL', KEYS[1])
+redis.call('ZREM', executor_key, ARGV[2])
+return 1
+"""
+
 
 def _utc(value: datetime) -> datetime:
     """Normalize a timestamp to an aware UTC datetime."""
@@ -48,11 +82,14 @@ class RedisLookupCoordinationStore:
         member = str(job_id)
 
         async def _enqueue(redis: Any) -> bool:
-            added = await redis.sadd(QUEUE_SEEN_KEY, member)
-            if not added:
-                return False
-            await redis.rpush(QUEUE_KEY, member)
-            return True
+            result = await redis.eval(
+                _ENQUEUE_SCRIPT,
+                2,
+                QUEUE_SEEN_KEY,
+                QUEUE_KEY,
+                member,
+            )
+            return bool(result)
 
         return bool(await self._manager.execute("lookup_enqueue", _enqueue))
 
@@ -60,10 +97,14 @@ class RedisLookupCoordinationStore:
         """Remove and return the oldest queued job."""
 
         async def _pop(redis: Any) -> UUID | None:
-            member = await redis.lpop(QUEUE_KEY)
+            member = await redis.eval(
+                _POP_SCRIPT,
+                2,
+                QUEUE_KEY,
+                QUEUE_SEEN_KEY,
+            )
             if member is None:
                 return None
-            await redis.srem(QUEUE_SEEN_KEY, member)
             return UUID(str(member))
 
         return await self._manager.execute("lookup_pop", _pop)
@@ -97,7 +138,7 @@ class RedisLookupCoordinationStore:
         lease_id: UUID,
         expires_at: datetime,
     ) -> bool:
-        """Reserve a job lease and add it to the executor capacity set."""
+        """Reserve a job lease and add it to the executor capacity set atomically."""
         expires_at = _utc(expires_at)
         if expires_at <= datetime.now(timezone.utc):
             return False
@@ -114,16 +155,17 @@ class RedisLookupCoordinationStore:
         executor_key = f"{EXECUTOR_LEASES_PREFIX}{executor_id}"
 
         async def _reserve(redis: Any) -> bool:
-            created = await redis.set(
+            result = await redis.eval(
+                _RESERVE_LEASE_SCRIPT,
+                2,
                 lease_key,
+                executor_key,
                 payload,
-                ex=_ttl_until(expires_at),
-                nx=True,
+                str(_ttl_until(expires_at)),
+                str(expires_at.timestamp()),
+                str(job_id),
             )
-            if not created:
-                return False
-            await redis.zadd(executor_key, {str(job_id): expires_at.timestamp()})
-            return True
+            return bool(result)
 
         return bool(await self._manager.execute("lookup_reserve_lease", _reserve))
 
@@ -136,26 +178,30 @@ class RedisLookupCoordinationStore:
             if raw is None:
                 return None
             value = json.loads(raw)
+            expires_at = _utc(datetime.fromisoformat(value["expires_at"]))
+            if expires_at <= datetime.now(timezone.utc):
+                return None
             return LookupLease(
                 job_id=UUID(str(value["job_id"])),
                 executor_id=UUID(str(value["executor_id"])),
                 lease_id=UUID(str(value["lease_id"])),
-                expires_at=_utc(datetime.fromisoformat(value["expires_at"])),
+                expires_at=expires_at,
             )
 
         return await self._manager.execute("lookup_get_lease", _get)
 
     async def release_lease(self, job_id: UUID) -> None:
-        """Delete a lease and remove its capacity marker."""
-        lease = await self.get_lease(job_id)
-        if lease is None:
-            return
+        """Delete a lease and remove its capacity marker atomically."""
         lease_key = f"{LEASE_PREFIX}{job_id}"
-        executor_key = f"{EXECUTOR_LEASES_PREFIX}{lease.executor_id}"
 
         async def _release(redis: Any) -> None:
-            await redis.delete(lease_key)
-            await redis.zrem(executor_key, str(job_id))
+            await redis.eval(
+                _RELEASE_LEASE_SCRIPT,
+                1,
+                lease_key,
+                EXECUTOR_LEASES_PREFIX,
+                str(job_id),
+            )
 
         await self._manager.execute("lookup_release_lease", _release)
 
