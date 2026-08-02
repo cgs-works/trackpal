@@ -84,6 +84,15 @@ def _is_public_address(address: str) -> bool:
     return bool(ip.is_global) and not ip.is_multicast and not ip.is_reserved
 
 
+def _is_allowed_address(address: str, resolver: object | None) -> bool:
+    """Allow loopback only for an explicitly marked test resolver."""
+    if getattr(resolver, "allow_loopback", False):
+        ip = ipaddress.ip_address(address)
+        if ip.is_loopback:
+            return True
+    return _is_public_address(address)
+
+
 def _parse_url(base_url: str) -> SplitResult:
     parsed = urlsplit(base_url)
     if not parsed.scheme or not parsed.netloc or not parsed.hostname:
@@ -108,10 +117,11 @@ def validate_executor_url(
     transport_mode: str,
     resolver: AddressResolver | object | None = None,
 ) -> ValidatedExecutorUrl:
-    """Validate an executor URL and return the addresses to which to pin it.
+    """Validate an executor URL and return its pinned connection addresses.
 
     HTTPS accepts hostnames and public IPs. The explicitly opt-in
-    ``http_encrypted`` mode accepts only a literal public IP address.
+    ``http_encrypted`` mode accepts only a literal public IP address. A
+    resolver marked ``allow_loopback`` is reserved for local contract tests.
     """
 
     parsed = _parse_url(base_url)
@@ -136,14 +146,15 @@ def validate_executor_url(
     if not 1 <= port <= 65535:
         raise ExecutorUrlError("executor URL port is out of range")
 
-    if literal_ip is not None:
-        candidates = [str(literal_ip)]
-    else:
-        candidates = _resolve(resolver or _system_resolver, hostname, port)
+    candidates = (
+        [str(literal_ip)]
+        if literal_ip is not None
+        else _resolve(resolver or _system_resolver, hostname, port)
+    )
     if not candidates:
         raise ExecutorUrlError("executor hostname did not resolve")
-    if any(not _is_public_address(address) for address in candidates):
-        raise ExecutorUrlError("executor hostname resolves to a non-public address")
+    if any(not _is_allowed_address(address, resolver) for address in candidates):
+        raise ExecutorUrlError("executor DNS resolved to a non-public address")
 
     return ValidatedExecutorUrl(
         base_url=base_url.rstrip("/"),
