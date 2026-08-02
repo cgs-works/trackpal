@@ -74,7 +74,7 @@ Accepted `202` handoffs and same-lease `409` duplicates move a job to
 `processing`, assign its executor, increment `execution_attempts`, and mark the
 executor healthy. The lease remains until callback completion or expiry.
 
-Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope and one-use Redis nonce, then delegates to a row-locked coordinator transaction. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry. Retryable outcomes clear the assignment, release the lease, and requeue only before the job deadline.
+Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope, and consumes a one-use Redis nonce retained for twice the signature-skew window so future-dated signatures cannot outlive replay protection. It then delegates to a row-locked coordinator transaction. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry. Retryable outcomes clear the assignment, release the lease, and requeue only before the job deadline.
 
 ## Redis Coordination
 

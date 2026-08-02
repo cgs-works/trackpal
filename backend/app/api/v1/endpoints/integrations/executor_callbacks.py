@@ -140,7 +140,7 @@ async def _process_callback(
         consumed = await coordinator.consume_callback_nonce(
             header_executor_id,
             nonce,
-            settings_signature_skew_seconds(),
+            settings_callback_nonce_ttl_seconds(),
         )
     except Exception as exc:
         raise HTTPException(
@@ -197,6 +197,12 @@ def settings_signature_skew_seconds() -> int:
     from app.core.config import settings
 
     return settings.lookup_signature_skew_seconds
+
+
+def settings_callback_nonce_ttl_seconds() -> int:
+    """Keep a nonce through the full lifetime of a future-dated signature."""
+    skew_seconds = settings_signature_skew_seconds()
+    return max(1, skew_seconds * 2)
 
 
 __all__ = ["router"]

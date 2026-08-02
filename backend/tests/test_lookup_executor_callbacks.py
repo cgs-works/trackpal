@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -20,6 +22,9 @@ from app.services.lookup_execution_coordinator.coordinator import (
     CompletionAck,
     LookupExecutionCoordinator,
     VerifiedCallback,
+)
+from app.services.lookup_execution_coordinator.redis_store import (
+    RedisLookupCoordinationStore,
 )
 
 
@@ -421,6 +426,147 @@ async def test_terminal_job_and_expired_lease_are_rejected(
 
 
 @pytest.mark.asyncio
+async def test_expired_lease_is_rejected_even_when_job_is_processing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.repositories import mailbox_lookup_repository
+
+    job = _job()
+    executor_id, lease_id = uuid4(), uuid4()
+    store = FakeStore(
+        SimpleNamespace(
+            job_id=job.id,
+            executor_id=executor_id,
+            lease_id=lease_id,
+            expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+        )
+    )
+    monkeypatch.setattr(
+        mailbox_lookup_repository, "get_job", lambda *args, **kwargs: _async_value(job)
+    )
+    coordinator = LookupExecutionCoordinator(lambda: FakeSession(), store, object())
+
+    ack = await coordinator.complete(
+        job.id, _callback(job, executor_id, lease_id, Outcome(kind="not_found"))
+    )
+
+    assert ack == CompletionAck(accepted=False)
+    assert job.status == "processing"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_callback_is_rejected_after_lease_release(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.repositories import mailbox_lookup_repository
+    from app.services.lookup_execution_coordinator.fake_store import (
+        FakeLookupCoordinationStore,
+    )
+
+    job = _job()
+    executor_id, lease_id = uuid4(), uuid4()
+    store = FakeLookupCoordinationStore()
+    assert (
+        await store.reserve_lease(
+            job.id,
+            executor_id,
+            lease_id,
+            datetime.now(timezone.utc) + timedelta(minutes=1),
+        )
+        is True
+    )
+    monkeypatch.setattr(
+        mailbox_lookup_repository, "get_job", lambda *args, **kwargs: _async_value(job)
+    )
+    monkeypatch.setattr(
+        mailbox_lookup_repository,
+        "transition_status",
+        lambda db, item, status, **kwargs: _transition(item, status, **kwargs),
+    )
+    coordinator = LookupExecutionCoordinator(lambda: FakeSession(), store, object())
+    callback = _callback(job, executor_id, lease_id, Outcome(kind="not_found"))
+
+    assert await coordinator.complete(job.id, callback) == CompletionAck(accepted=True)
+    job.status = "processing"
+    assert await coordinator.complete(job.id, callback) == CompletionAck(accepted=False)
+
+
+@pytest.mark.asyncio
+async def test_null_message_id_dedupe_rejects_duplicate_without_precheck(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.repositories import mailbox_dedupe_repository
+
+    monkeypatch.setattr(
+        mailbox_dedupe_repository,
+        "is_duplicate",
+        lambda *args, **kwargs: _async_value(False),
+    )
+    values = {
+        "tenant_id": uuid4(),
+        "mailbox_id": uuid4(),
+        "service_key": "netflix",
+        "message_id": None,
+        "fingerprint": "same-fingerprint",
+    }
+
+    assert (
+        await mailbox_dedupe_repository.record_delivery_atomic(db_session, **values)
+        is True
+    )
+    assert (
+        await mailbox_dedupe_repository.record_delivery_atomic(db_session, **values)
+        is False
+    )
+
+
+class _CiphertextRedis:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+
+    async def set(
+        self,
+        key: str,
+        value: str,
+        *,
+        ex: int | None = None,
+        nx: bool = False,
+    ) -> bool:
+        del ex, nx
+        self.values[key] = value
+        return True
+
+    async def get(self, key: str) -> str | None:
+        return self.values.get(key)
+
+
+class _CiphertextRedisManager:
+    def __init__(self) -> None:
+        self.redis = _CiphertextRedis()
+
+    async def execute(
+        self,
+        operation_name: str,
+        operation: Callable[[_CiphertextRedis], Awaitable[Any]],
+    ) -> Any:
+        del operation_name
+        return await operation(self.redis)
+
+
+@pytest.mark.asyncio
+async def test_redis_result_is_encrypted_and_round_trips() -> None:
+    job_id = uuid4()
+    manager = _CiphertextRedisManager()
+    store = RedisLookupCoordinationStore(manager)
+
+    await store.put_result(job_id, "code", "654321", 120)
+
+    raw = manager.redis.values[f"lookup:result:{job_id}"]
+    assert "654321" not in raw
+    assert await store.get_result(job_id) == ("code", "654321")
+
+
+@pytest.mark.asyncio
 async def test_coordinator_get_result_delegates_to_coordination_store() -> None:
     job_id = uuid4()
     store = FakeStore(None)
@@ -459,9 +605,11 @@ async def test_callback_endpoint_verifies_signature_nonce_and_decrypts_payload(
         def __init__(self) -> None:
             self._store = self
             self.received: VerifiedCallback | None = None
+            self.nonce_calls: list[tuple[object, ...]] = []
 
         async def consume_callback_nonce(self, *args: object) -> bool:
-            return True
+            self.nonce_calls.append(args)
+            return len(self.nonce_calls) == 1
 
         async def complete(
             self, requested_job_id: object, callback: VerifiedCallback
@@ -509,6 +657,18 @@ async def test_callback_endpoint_verifies_signature_nonce_and_decrypts_payload(
     assert response.json() == {"accepted": True}
     assert coordinator.received is not None
     assert coordinator.received.outcome.kind == "not_found"
+    assert coordinator.nonce_calls[0][2] == 120
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            replay = await client.post(path, content=body, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+    assert replay.status_code == 401
+    assert replay.json() == {"detail": "replayed protocol nonce"}
 
 
 async def _async_value(value: object) -> object:

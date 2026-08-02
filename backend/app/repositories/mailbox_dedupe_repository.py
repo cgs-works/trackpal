@@ -3,8 +3,9 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import MailCodeDeliveryLog
@@ -88,35 +89,54 @@ async def record_delivery_atomic(
     message_id: str | None,
     fingerprint: str,
 ) -> bool:
-    """Insert dedupe row atomically.
+    """Insert a dedupe row with one database-level conflict decision.
 
-    Returns ``True`` when inserted, ``False`` when unique conflict indicates duplicate.
+    PostgreSQL and SQLite both use partial unique indexes so the fallback key
+    without a message ID is unique as well.  ``ON CONFLICT DO NOTHING`` makes
+    the insert safe when concurrent transactions race before either can see
+    the other's row.
     """
+    values = {
+        "tenant_id": tenant_id,
+        "mailbox_id": mailbox_id,
+        "service_key": service_key,
+        "message_id": message_id,
+        "fingerprint": fingerprint,
+        "delivered_at": datetime.now(timezone.utc),
+    }
     if message_id is None:
-        exists = await is_duplicate(
-            db,
-            tenant_id=tenant_id,
-            mailbox_id=mailbox_id,
-            service_key=service_key,
-            message_id=None,
-            fingerprint=fingerprint,
-        )
-        if exists:
-            return False
+        index_elements = [
+            MailCodeDeliveryLog.tenant_id,
+            MailCodeDeliveryLog.mailbox_id,
+            MailCodeDeliveryLog.service_key,
+            MailCodeDeliveryLog.fingerprint,
+        ]
+        index_where = text("message_id IS NULL")
+    else:
+        index_elements = [
+            MailCodeDeliveryLog.tenant_id,
+            MailCodeDeliveryLog.mailbox_id,
+            MailCodeDeliveryLog.service_key,
+            MailCodeDeliveryLog.message_id,
+            MailCodeDeliveryLog.fingerprint,
+        ]
+        index_where = text("message_id IS NOT NULL")
 
-    try:
-        async with db.begin_nested():
-            await record_delivery(
-                db,
-                tenant_id=tenant_id,
-                mailbox_id=mailbox_id,
-                service_key=service_key,
-                message_id=message_id,
-                fingerprint=fingerprint,
-            )
-        return True
-    except IntegrityError:
-        return False
+    dialect_name = db.get_bind().dialect.name
+    if dialect_name == "postgresql":
+        statement = postgres_insert(MailCodeDeliveryLog)
+    elif dialect_name == "sqlite":
+        statement = sqlite_insert(MailCodeDeliveryLog)
+    else:
+        raise RuntimeError(
+            f"Atomic delivery deduplication is unsupported for {dialect_name}"
+        )
+    statement = statement.values(**values).on_conflict_do_nothing(
+        index_elements=index_elements,
+        index_where=index_where,
+    )
+    result = await db.execute(statement)
+    return result.rowcount == 1
 
 
 __all__ = [
