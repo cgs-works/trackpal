@@ -15,6 +15,7 @@ import { Route as DemoEndedRouteImport } from './routes/demo-ended'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MasterExecutorsRouteImport } from './routes/master/executors'
 import { Route as MasterDashboardRouteImport } from './routes/master/dashboard'
 import { Route as ClientProfileRouteImport } from './routes/client/profile'
 import { Route as ClientHelpRouteImport } from './routes/client/help'
@@ -56,6 +57,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MasterExecutorsRoute = MasterExecutorsRouteImport.update({
+  id: '/executors',
+  path: '/executors',
+  getParentRoute: () => MasterRoute,
 } as any)
 const MasterDashboardRoute = MasterDashboardRouteImport.update({
   id: '/dashboard',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/master/executors': typeof MasterExecutorsRoute
   '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRoutesByTo {
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/master/executors': typeof MasterExecutorsRoute
   '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRoutesById {
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/client/help': typeof ClientHelpRoute
   '/client/profile': typeof ClientProfileRoute
   '/master/dashboard': typeof MasterDashboardRoute
+  '/master/executors': typeof MasterExecutorsRoute
   '/admin/demo/simulator': typeof AdminDemoSimulatorRoute
 }
 export interface FileRouteTypes {
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/master/executors'
     | '/admin/demo/simulator'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/master/executors'
     | '/admin/demo/simulator'
   id:
     | '__root__'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/client/help'
     | '/client/profile'
     | '/master/dashboard'
+    | '/master/executors'
     | '/admin/demo/simulator'
   fileRoutesById: FileRoutesById
 }
@@ -283,6 +295,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/master/executors': {
+      id: '/master/executors'
+      path: '/executors'
+      fullPath: '/master/executors'
+      preLoaderRoute: typeof MasterExecutorsRouteImport
+      parentRoute: typeof MasterRoute
     }
     '/master/dashboard': {
       id: '/master/dashboard'
@@ -403,10 +422,12 @@ const ClientRouteWithChildren =
 
 interface MasterRouteChildren {
   MasterDashboardRoute: typeof MasterDashboardRoute
+  MasterExecutorsRoute: typeof MasterExecutorsRoute
 }
 
 const MasterRouteChildren: MasterRouteChildren = {
   MasterDashboardRoute: MasterDashboardRoute,
+  MasterExecutorsRoute: MasterExecutorsRoute,
 }
 
 const MasterRouteWithChildren =
