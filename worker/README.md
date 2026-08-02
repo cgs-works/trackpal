@@ -14,7 +14,7 @@ it does not provide durable job storage.
 |---|---:|---|
 | `TRACKPAL_EXECUTOR_ID` | yes | UUID issued by the Master enrollment flow |
 | `TRACKPAL_EXECUTOR_SECRET` | yes | One-time protocol secret issued by enrollment or rotation |
-| `TRACKPAL_MAX_CONCURRENCY` | no | Local execution limit; Render Free uses `1` |
+| `TRACKPAL_MAX_CONCURRENCY` | no | Max concurrent jobs (default `1`). Render Free has 512 MB RAM — keep at `1`. VPS with 2 GB+ RAM may use `2-3`. |
 
 Start locally with Python 3.12 and uv:
 

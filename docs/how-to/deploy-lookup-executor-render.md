@@ -34,7 +34,7 @@ Redis access.
    |---|---|
    | `TRACKPAL_EXECUTOR_ID` | The copied draft UUID |
    | `TRACKPAL_EXECUTOR_SECRET` | The copied one-time secret |
-   | `TRACKPAL_MAX_CONCURRENCY` | `1` |
+   | `TRACKPAL_MAX_CONCURRENCY` | `1` (Render Free has 512 MB RAM — do not increase) |
 
    Render's `worker/render.yaml` contains the same Blueprint configuration;
    `sync: false` keeps the ID and secret as manually supplied values.
