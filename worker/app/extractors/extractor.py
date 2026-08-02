@@ -132,6 +132,7 @@ def extract_newest_from_emails(
     service_key: str,
     *,
     max_age_minutes: int = MAX_CANDIDATE_AGE_MINUTES,
+    now: datetime | None = None,
 ) -> ExtractedCode | None:
     """Extract the newest valid code from a sorted list of emails.
 
@@ -141,7 +142,7 @@ def extract_newest_from_emails(
     Expects ``emails`` to be pre-filtered by provider (Gmail API, Graph,
     IMAP) before calling this function.
     """
-    now = datetime.now(UTC)
+    now = now or datetime.now(UTC)
     cutoff = now - __import__("datetime").timedelta(minutes=max_age_minutes)
 
     # Filter by age window
