@@ -159,13 +159,14 @@ function ActionButton({
   disabled?: boolean;
   variant?: "outline" | "destructive";
 }) {
+  const label = t(`frontend.master.executors.${actionLabelKey[action]}`);
   return (
     <Button
       type="button"
       variant={variant}
       size="icon-sm"
-      aria-label={t(`frontend.master.executors.${action === "rotate" ? "rotate_secret" : action === "reveal" ? "reveal_hosting_password" : action}`)}
-      title={t(`frontend.master.executors.${action === "rotate" ? "rotate_secret" : action === "reveal" ? "reveal_hosting_password" : action}`)}
+      aria-label={label}
+      title={label}
       disabled={disabled}
       onClick={() => onAction(action, executor)}
     >
@@ -204,7 +205,7 @@ function ErrorDetails({ executor }: { executor: LookupExecutor }) {
 
 function LifecycleBadge({ status }: { status: LookupExecutorLifecycleStatus }) {
   return (
-    <Badge variant={status === "active" ? "default" : status === "disabled" ? "destructive" : "secondary"}>
+    <Badge variant={lifecycleBadgeVariant[status]}>
       {t(`frontend.master.executors.status_${status}`)}
     </Badge>
   );
@@ -212,7 +213,7 @@ function LifecycleBadge({ status }: { status: LookupExecutorLifecycleStatus }) {
 
 function HealthBadge({ status }: { status: LookupExecutorHealthStatus }) {
   return (
-    <Badge variant={status === "healthy" ? "default" : status === "unhealthy" ? "destructive" : "secondary"}>
+    <Badge variant={healthBadgeVariant[status]}>
       {t(`frontend.master.executors.status_${status}`)}
     </Badge>
   );
@@ -238,6 +239,34 @@ function ReverificationBadge() {
     </Badge>
   );
 }
+
+const actionLabelKey: Record<ExecutorAction, string> = {
+  verify: "verify",
+  test: "test",
+  enable: "enable",
+  disable: "disable",
+  rotate: "rotate_secret",
+  reveal: "reveal_hosting_password",
+  delete: "delete",
+};
+
+const lifecycleBadgeVariant: Record<
+  LookupExecutorLifecycleStatus,
+  "default" | "destructive" | "secondary"
+> = {
+  active: "default",
+  disabled: "destructive",
+  draft: "secondary",
+};
+
+const healthBadgeVariant: Record<
+  LookupExecutorHealthStatus,
+  "default" | "destructive" | "secondary"
+> = {
+  healthy: "default",
+  unhealthy: "destructive",
+  unknown: "secondary",
+};
 
 function formatDate(value: string): string {
   const date = new Date(value);

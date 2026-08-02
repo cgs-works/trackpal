@@ -9,7 +9,7 @@ from typing import Protocol
 from app.extractors import extract_newest_with_source
 from app.pipeline.email_message import EmailMessage
 from app.pipeline.fingerprint import compute_fingerprint
-from app.providers.errors import NonTransientProviderError, ProviderFetchError
+from app.providers.errors import NonTransientProviderError
 
 from .models import LookupCommand, LookupOutcome
 
@@ -110,16 +110,13 @@ async def _fetch_with_retry(
     provider: MailProviderPort,
 ) -> list[EmailMessage] | None:
     for attempt in range(MAX_FETCH_ATTEMPTS):
-        failed = False
         try:
             return await provider.fetch(command)
         except NonTransientProviderError:
             raise
-        except ProviderFetchError:
-            failed = True
         except Exception:  # noqa: BLE001 - external provider boundary is fail-safe
-            failed = True
-        if failed and attempt < MAX_FETCH_ATTEMPTS - 1:
+            if attempt == MAX_FETCH_ATTEMPTS - 1:
+                return None
             await asyncio.sleep(BASE_RETRY_DELAY_SECONDS * (2**attempt))
     return None
 

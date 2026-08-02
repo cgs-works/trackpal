@@ -17,9 +17,7 @@ from app.schemas.lookup_executor_protocol import ChallengeResult
 from app.services.lookup_executor_transport import (
     HttpLookupExecutorTransport,
     LookupExecutorTransport,
-    TransportError,
 )
-from app.services.lookup_executor_transport.url_safety import ExecutorUrlError
 
 
 class ExecutorCoordinationUnavailable(RuntimeError):
@@ -96,8 +94,6 @@ async def _challenge(
 
     try:
         result = await _transport.challenge(candidate, secrets.token_urlsafe(24))
-    except (ExecutorUrlError, TransportError, ValueError, TypeError, OSError) as exc:
-        raise ExecutorVerificationError from exc
     except Exception as exc:
         # Adapter implementations must not leak raw network or protocol errors.
         raise ExecutorVerificationError from exc

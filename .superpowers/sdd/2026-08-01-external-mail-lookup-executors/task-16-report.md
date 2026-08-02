@@ -124,3 +124,30 @@ Python 3.12, uv, non-root, port 8000, and uvicorn requirements.
 - No new concerns. External Docker, Render, firewall, DNS, certificate, and
   Master challenge verification remains a manual release responsibility as
   documented above.
+
+## Re-review round 2 verification
+
+Re-ran the required verification commands after the documentation changes:
+
+```text
+$ cd backend && uv run pytest tests/test_executor_i18n_catalog.py tests/test_lookup_executor_contract.py -q
+..                                                                       [100%]
+2 passed in 2.99s
+
+$ cd worker && uv run pytest -q
+........................................................................ [ 49%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+145 passed in 3.64s
+
+$ cd frontend && npm test -- --reporter=dot 2>&1 | tail -5
+ Test Files  65 passed (65)
+      Tests  408 passed (408)
+   Start at  17:34:13
+   Duration  17.97s (transform 4.43s, setup 7.88s, import 31.81s, tests 59.12s, environment 76.49s)
+
+$ git diff --check
+(no output; exit code 0)
+```
+
+All required verification commands completed successfully with exit code `0`.

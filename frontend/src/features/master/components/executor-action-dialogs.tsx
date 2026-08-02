@@ -101,37 +101,48 @@ export function ExecutorActionDialogs({
     setError("");
     setLoading(true);
     try {
-      if (action === "verify") {
-        const result = isHttp
-          ? await verifyLookupExecutor(executor.id, {
-              confirmation: "ALLOW HTTP",
-              password: masterPassword,
-            })
-          : await verifyLookupExecutor(executor.id);
-        onCompleted(result);
-        close();
-      } else if (action === "test") {
-        const result = await testLookupExecutor(executor.id);
-        onCompleted(result.executor);
-        close();
-      } else if (action === "enable") {
-        const result = await enableLookupExecutor(executor.id);
-        onCompleted(result);
-        close();
-      } else if (action === "disable") {
-        const result = await disableLookupExecutor(executor.id);
-        onCompleted(result);
-        close();
-      } else if (action === "rotate") {
-        const result = await rotateLookupExecutorSecret(executor.id);
-        setCredentials(result);
-        onCompleted(result.executor);
-        setLoading(false);
-      } else if (action === "delete") {
-        if (executor.active_jobs > 0) return;
-        await deleteLookupExecutor(executor.id);
-        onCompleted();
-        close();
+      switch (action) {
+        case "verify": {
+          const result = isHttp
+            ? await verifyLookupExecutor(executor.id, {
+                confirmation: "ALLOW HTTP",
+                password: masterPassword,
+              })
+            : await verifyLookupExecutor(executor.id);
+          onCompleted(result);
+          close();
+          break;
+        }
+        case "test": {
+          const result = await testLookupExecutor(executor.id);
+          onCompleted(result.executor);
+          close();
+          break;
+        }
+        case "enable": {
+          const result = await enableLookupExecutor(executor.id);
+          onCompleted(result);
+          close();
+          break;
+        }
+        case "disable": {
+          const result = await disableLookupExecutor(executor.id);
+          onCompleted(result);
+          close();
+          break;
+        }
+        case "rotate": {
+          const result = await rotateLookupExecutorSecret(executor.id);
+          setCredentials(result);
+          onCompleted(result.executor);
+          setLoading(false);
+          break;
+        }
+        case "delete":
+          await deleteLookupExecutor(executor.id);
+          onCompleted();
+          close();
+          break;
       }
     } catch (actionError) {
       setError(
@@ -242,40 +253,40 @@ export function ExecutorActionDialogs({
   return (
     <>
       <AlertDialog open={open && !credentials} onOpenChange={(nextOpen) => !nextOpen && close()}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t(`frontend.master.executors.${actionTitleKey[action]}`)}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t(`frontend.master.executors.${actionDescriptionKey[action]}`)}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <ActionError error={error} />
-        {action === "test" && (
-          <p className="rounded-lg border p-3 text-sm text-muted-foreground">
-            {t("frontend.master.executors.test_warning")}
-          </p>
-        )}
-        {blocked && (
-          <p role="alert" className="text-sm text-destructive">
-            {t("frontend.master.executors.error_active_jobs")}
-          </p>
-        )}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>
-            {t("frontend.master.executors.cancel")}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            disabled={loading || blocked}
-            className={destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              void performAction();
-            }}
-          >
-            {t("frontend.master.executors.confirm")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t(`frontend.master.executors.${actionTitleKey[action]}`)}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(`frontend.master.executors.${actionDescriptionKey[action]}`)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ActionError error={error} />
+          {action === "test" && (
+            <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+              {t("frontend.master.executors.test_warning")}
+            </p>
+          )}
+          {blocked && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("frontend.master.executors.error_active_jobs")}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>
+              {t("frontend.master.executors.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={loading || blocked}
+              className={destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                void performAction();
+              }}
+            >
+              {t("frontend.master.executors.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
       <ExecutorCredentialsDialog
         credentials={credentials}
@@ -308,4 +319,3 @@ const actionDescriptionKey: Record<Exclude<ExecutorAction, "reveal" | "verify">,
   rotate: "rotate_description",
   delete: "delete_description",
 };
-

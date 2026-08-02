@@ -87,16 +87,6 @@ def _fetch_sync(
             raise TransientProviderError(
                 "Gmail authentication failed temporarily"
             ) from exc
-        except (
-            imaplib.IMAP4.abort,
-            ConnectionResetError,
-            ConnectionRefusedError,
-            TimeoutError,
-            OSError,
-        ) as exc:
-            raise TransientProviderError(
-                "Gmail authentication service unavailable"
-            ) from exc
         except Exception as exc:
             raise TransientProviderError(
                 "Gmail authentication service unavailable"

@@ -187,5 +187,6 @@ export function mapExecutorError(error: unknown, fallbackKey: string): string {
     error as { response?: { data?: { detail?: unknown } } }
   ).response?.data?.detail;
   const code = typeof detail === "string" ? detail : undefined;
-  return t(code ? executorErrorKeys[code] ?? fallbackKey : fallbackKey);
+  const errorKey = code ? executorErrorKeys[code] : undefined;
+  return t(errorKey ?? fallbackKey);
 }

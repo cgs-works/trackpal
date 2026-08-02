@@ -34,7 +34,7 @@ export function ExecutorCredentialsDialog({
   if (!credentials) return null;
 
   const copiedAnnouncement = copied
-    ? t(`frontend.master.executors.${copied === "secret" ? "secret" : "executor_id"}_copied`)
+    ? t(`frontend.master.executors.${copied}_copied`)
     : "";
 
   async function copyValue(kind: "executor_id" | "secret", value: string) {
