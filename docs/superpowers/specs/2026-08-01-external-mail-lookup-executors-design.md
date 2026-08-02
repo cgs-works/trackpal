@@ -206,6 +206,7 @@ Create `lookup_executors` with:
 | `transport_mode` | `https` or `http_encrypted` |
 | `lifecycle_status` | `draft`, `active`, or `disabled` |
 | `health_status` | `unknown`, `healthy`, `degraded`, or `unreachable` |
+| `requires_reverification` | Security quarantine flag that blocks dispatch until a successful challenge |
 | `max_concurrency` | TrackPal-side capacity limit |
 | `secret_encrypted` | Current executor protocol secret |
 | `secret_version` | Current signing/encryption key version |
@@ -287,12 +288,14 @@ PostgreSQL remains the durable source of truth. The current Redis active-passive
 
 The encrypted result cache replaces the current process-local dictionary. Polling can retrieve a result regardless of which FastAPI process receives the request.
 
+Default timing values for v1 are explicit and configurable: 90 seconds for cold-start handoff, 180 seconds for an accepted Execution Lease, 60 seconds of signature clock skew, and 120 seconds for an encrypted result capped by the remaining job TTL. The existing five-minute Mail Lookup Job TTL remains the final deadline.
+
 ## Executor Selection and Capacity
 
 Eligible executors are:
 
 - lifecycle `active`;
-- not in security quarantine;
+- `requires_reverification=false`;
 - not inside a failure cooldown;
 - below `max_concurrency` according to unexpired Redis leases.
 
@@ -386,7 +389,7 @@ The executor validates the envelope before accepting it. On acceptance it return
 The executor returns:
 
 - `202` — accepted;
-- `409` — duplicate active execution already known locally;
+- `409` — duplicate execution already known locally; a matching `lease_id` is treated as accepted-equivalent, while a different lease is a conflict and is requeued;
 - `429` — local capacity reached;
 - `401/403` — invalid identity, signature, or key version;
 - `422` — unsupported protocol or malformed encrypted command.
@@ -497,7 +500,7 @@ Behavior by failure:
 | Executor dies after `202` | Lease expires; requeue if TTL remains |
 | Retryable Gmail failure | Executor retries locally, then callback requests requeue |
 | Revoked App Password | Terminal job failure; do not try another executor |
-| Signature/protocol failure | Security quarantine; require verification |
+| Signature/protocol failure | Set `requires_reverification=true`; require a successful challenge before dispatch resumes |
 | Duplicate/late callback | Acknowledge with `accepted=false`; no mutation |
 | Redis unavailable | Durable job remains; reconciliation retries later |
 | All external execution unavailable | Never run locally; job eventually times out |

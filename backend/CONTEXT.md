@@ -44,7 +44,7 @@
 | **Subscription** | Vincula un cliente, servicio y plan. Tiene credenciales encriptadas (Fernet), fechas de inicio/fin y estados (active/expired/cancelled). |
 | **Mailbox** | The Tenant's single connected Gmail account used to retrieve access-code messages. It is connected exclusively through an App Password Connection. |
 | **App Password Connection** | The sole Mailbox connection method. It uses a Google-generated, revocable app password instead of the account's primary password. Avoid the user-facing term **IMAP**. |
-| **Mail Lookup Job** | Trabajo asíncrono de extracción de código: pending → processing → completed/failed/timeout. |
+| **Mail Lookup Job** | Trabajo asíncrono de extracción de código: pending ↔ processing → completed/failed/timeout. Puede volver a pending cuando un Execution Lease recuperable vence antes del TTL global. |
 | **Lookup Executor** | Runtime externo confiable, registrado por el Master, que ejecuta Mail Lookup Jobs fuera del backend web. Es independiente del proveedor de hosting. _Avoid_: Cloudflare Worker, Render Worker. |
 | **Executor Hosting Account** | Referencia opcional, visible solo para el Master, a la cuenta externa donde está alojado un Lookup Executor. No es una credencial del propio executor ni de un Mailbox. _Avoid_: Worker account, Mailbox account. |
 | **Execution Lease** | Asignación exclusiva y temporal de un Mail Lookup Job a un Lookup Executor. Al vencer sin resultado, el job vuelve a estar disponible para otro executor. _Avoid_: lock, reservation. |
