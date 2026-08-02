@@ -52,9 +52,7 @@ def upgrade() -> None:
         sa.Column("pending_secret_encrypted", sa.String(length=500), nullable=True),
         sa.Column("pending_secret_version", sa.Integer(), nullable=True),
         sa.Column("hosting_account_email", sa.String(length=255), nullable=True),
-        sa.Column(
-            "hosting_account_password_encrypted", sa.String(length=500), nullable=True
-        ),
+        sa.Column("hosting_account_password_encrypted", sa.Text(), nullable=True),
         sa.Column("dashboard_url", sa.String(length=500), nullable=True),
         sa.Column("last_health_check_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_success_at", sa.DateTime(timezone=True), nullable=True),

@@ -32,6 +32,7 @@ def test_upgrade_creates_master_only_rls_executor_registry_and_job_metadata():
     sql = _render_migration(migration.upgrade)
 
     assert "CREATE TABLE lookup_executors" in sql
+    assert "hosting_account_password_encrypted TEXT" in sql
     assert "ALTER TABLE mail_lookup_jobs ADD COLUMN executor_id" in sql
     assert (
         "FOREIGN KEY(executor_id) REFERENCES lookup_executors (id) ON DELETE SET NULL"

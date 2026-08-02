@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,7 +56,7 @@ class LookupExecutor(Base, TimestampMixin):
         String(255), nullable=True
     )
     hosting_account_password_encrypted: Mapped[str | None] = mapped_column(
-        String(500), nullable=True
+        Text, nullable=True
     )
     dashboard_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 

@@ -6,11 +6,33 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.encryption import encrypt_value
-from app.models import LookupExecutor
+from app.models import LookupExecutor, MailLookupJob
+
+
+_ACTIVE_JOB_STATUSES = ("pending", "processing")
+
+
+def _active_jobs_count() -> Any:
+    """Build a correlated count of non-terminal jobs for each executor."""
+    return (
+        select(func.count(MailLookupJob.id))
+        .where(
+            MailLookupJob.executor_id == LookupExecutor.id,
+            MailLookupJob.status.in_(_ACTIVE_JOB_STATUSES),
+        )
+        .correlate(LookupExecutor)
+        .scalar_subquery()
+    )
+
+
+def _set_active_jobs(executor: LookupExecutor, active_jobs: int) -> LookupExecutor:
+    """Attach the query-derived active job count for response serialization."""
+    executor.active_jobs = int(active_jobs)
+    return executor
 
 
 async def create(
@@ -75,32 +97,46 @@ async def create(
 
 
 async def get(db: AsyncSession, executor_id: UUID) -> LookupExecutor | None:
-    """Return an executor by stable identifier."""
+    """Return an executor by stable identifier with its active job count."""
     result = await db.execute(
-        select(LookupExecutor).where(LookupExecutor.id == executor_id)
+        select(LookupExecutor, _active_jobs_count().label("active_jobs")).where(
+            LookupExecutor.id == executor_id
+        )
     )
-    return result.scalar_one_or_none()
+    row = result.one_or_none()
+    if row is None:
+        return None
+    executor, active_jobs = row
+    return _set_active_jobs(executor, active_jobs)
 
 
 async def list_all(db: AsyncSession) -> list[LookupExecutor]:
-    """List all executors in stable creation order."""
+    """List all executors in stable creation order with active job counts."""
     result = await db.execute(
-        select(LookupExecutor).order_by(LookupExecutor.created_at.asc())
+        select(LookupExecutor, _active_jobs_count().label("active_jobs")).order_by(
+            LookupExecutor.created_at.asc()
+        )
     )
-    return list(result.scalars().all())
+    return [
+        _set_active_jobs(executor, active_jobs)
+        for executor, active_jobs in result.all()
+    ]
 
 
 async def list_dispatchable(db: AsyncSession) -> list[LookupExecutor]:
     """List active executors that are not quarantined for reverification."""
     result = await db.execute(
-        select(LookupExecutor)
+        select(LookupExecutor, _active_jobs_count().label("active_jobs"))
         .where(
             LookupExecutor.lifecycle_status == "active",
             LookupExecutor.requires_reverification.is_(False),
         )
         .order_by(LookupExecutor.created_at.asc())
     )
-    return list(result.scalars().all())
+    return [
+        _set_active_jobs(executor, active_jobs)
+        for executor, active_jobs in result.all()
+    ]
 
 
 async def update(

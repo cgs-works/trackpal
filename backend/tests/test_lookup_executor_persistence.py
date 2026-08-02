@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from app.models import MailLookupJob, Tenant, TenantMailbox, User
+from sqlalchemy import Text
+
+from app.models import LookupExecutor, MailLookupJob, Tenant, TenantMailbox, User
 from app.repositories import lookup_executors_repository, mailbox_lookup_repository
 from app.schemas.lookup_executors import LookupExecutorResponse
 
@@ -54,6 +56,24 @@ async def test_create_encrypts_protocol_and_hosting_passwords(db_session):
 
 
 @pytest.mark.asyncio
+async def test_hosting_password_column_supports_500_character_plaintext(db_session):
+    password = "p" * 500
+    executor = await lookup_executors_repository.create(
+        db_session,
+        name="Long Password Executor",
+        provider_label="custom",
+        base_url="https://executor.example.com",
+        secret="protocol-secret",
+        hosting_account_password=password,
+    )
+    await db_session.commit()
+
+    assert len(executor.hosting_account_password_encrypted) > 500
+    column = LookupExecutor.__table__.c.hosting_account_password_encrypted
+    assert isinstance(column.type, Text)
+
+
+@pytest.mark.asyncio
 async def test_response_serialization_exposes_only_hosting_password_presence(
     db_session,
 ):
@@ -75,6 +95,56 @@ async def test_response_serialization_exposes_only_hosting_password_presence(
     assert "secret_encrypted" not in serialized
     assert "hosting_account_password_encrypted" not in serialized
     assert "hosting_password" not in serialized
+
+
+@pytest.mark.asyncio
+async def test_list_and_get_include_active_job_count(db_session):
+    tenant, mailbox = await _tenant_and_mailbox(db_session)
+    executor = await lookup_executors_repository.create(
+        db_session,
+        name="Busy Executor",
+        provider_label="custom",
+        base_url="https://executor.example.com",
+        secret="protocol-secret",
+    )
+    db_session.add(
+        MailLookupJob(
+            tenant_id=tenant.id,
+            mailbox_id=mailbox.id,
+            executor_id=executor.id,
+            service_key="netflix",
+            target_email="active@example.com",
+            status="pending",
+        )
+    )
+    db_session.add(
+        MailLookupJob(
+            tenant_id=tenant.id,
+            mailbox_id=mailbox.id,
+            executor_id=executor.id,
+            service_key="disney",
+            target_email="processing@example.com",
+            status="processing",
+        )
+    )
+    db_session.add(
+        MailLookupJob(
+            tenant_id=tenant.id,
+            mailbox_id=mailbox.id,
+            executor_id=executor.id,
+            service_key="hbo",
+            target_email="completed@example.com",
+            status="completed",
+        )
+    )
+    await db_session.commit()
+
+    listed = await lookup_executors_repository.list_all(db_session)
+    fetched = await lookup_executors_repository.get(db_session, executor.id)
+
+    assert listed[0].active_jobs == 2
+    assert fetched is not None
+    assert fetched.active_jobs == 2
 
 
 @pytest.mark.asyncio
