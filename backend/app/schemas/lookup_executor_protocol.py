@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -60,3 +61,43 @@ class ChallengePayload(BaseModel):
     """Encrypted challenge request payload."""
 
     challenge: str = Field(min_length=1)
+
+
+OutcomeKind = Literal["found", "not_found", "retryable_failure", "terminal_failure"]
+ResultType = Literal["code", "url"]
+
+
+class LookupCallbackOutcome(BaseModel):
+    """Safe executor outcome accepted by the callback boundary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: OutcomeKind
+    result_type: ResultType | None = None
+    result_value: str | None = None
+    message_id: str | None = None
+    fingerprint: str | None = None
+    error_code: str | None = None
+    error_detail: str | None = None
+
+
+class LookupCallbackEnvelope(BaseModel):
+    """Decrypted callback body carrying job and lease identity."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: UUID
+    lease_id: UUID
+    outcome: LookupCallbackOutcome
+
+
+__all__ = [
+    "ChallengePayload",
+    "ChallengeResult",
+    "EncryptedBody",
+    "HandoffResult",
+    "HandoffStatus",
+    "LookupCallbackEnvelope",
+    "LookupCallbackOutcome",
+    "ProtocolKeys",
+]

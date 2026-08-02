@@ -1,4 +1,4 @@
-"""Scheduling and handoff orchestration for external lookup executors."""
+"""Scheduling and completion orchestration for external lookup executors."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import asyncio
 import os
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 from uuid import UUID, uuid4
@@ -13,18 +14,38 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import set_internal_rls_context
 from app.core.encryption import decrypt_value
 from app.models import LookupExecutor
-from app.repositories import mailbox_config_repository, mailbox_lookup_repository
+from app.repositories import mailbox_config_repository, mailbox_dedupe_repository
+from app.repositories import mailbox_lookup_repository
 from app.repositories import lookup_executors_repository
-from app.schemas.lookup_executor_protocol import HandoffStatus
+from app.schemas.lookup_executor_protocol import HandoffStatus, LookupCallbackOutcome
 from app.services.lookup_executor_transport import LookupExecutorTransport
 
 from .selector import ExecutorCapacity, select_executor
 
 
+@dataclass(frozen=True)
+class VerifiedCallback:
+    """Authentication metadata and safe outcome for one callback."""
+
+    executor_id: UUID
+    lease_id: UUID
+    key_version: int
+    nonce: str
+    outcome: LookupCallbackOutcome
+
+
+@dataclass(frozen=True)
+class CompletionAck:
+    """Whether a callback was valid for the current execution lease."""
+
+    accepted: bool
+
+
 class CoordinationStore(Protocol):
-    """Subset of Redis coordination used by the dispatch pump."""
+    """Subset of Redis coordination used by dispatch and callbacks."""
 
     async def enqueue(self, job_id: UUID) -> bool: ...
     async def pop(self) -> UUID | None: ...
@@ -40,7 +61,15 @@ class CoordinationStore(Protocol):
         expires_at: datetime,
     ) -> bool: ...
 
+    async def get_lease(self, job_id: UUID) -> Any | None: ...
     async def release_lease(self, job_id: UUID) -> None: ...
+    async def consume_callback_nonce(
+        self, executor_id: UUID, nonce: str, ttl_seconds: int
+    ) -> bool: ...
+    async def put_result(
+        self, job_id: UUID, result_type: str, result_value: str, ttl_seconds: int
+    ) -> None: ...
+    async def get_result(self, job_id: UUID) -> tuple[str, str] | None: ...
     async def active_count(self, executor_id: UUID) -> int: ...
     async def is_failure_cooldown_active(self, executor_id: UUID) -> bool: ...
     async def clear_failure_cooldown(self, executor_id: UUID) -> None: ...
@@ -53,7 +82,7 @@ TaskSpawner = Callable[[Awaitable[None]], Any]
 
 
 class LookupExecutionCoordinator:
-    """Pump pending jobs into trusted external lookup executors."""
+    """Pump pending jobs and complete them from trusted executor callbacks."""
 
     def __init__(
         self,
@@ -84,6 +113,110 @@ class LookupExecutionCoordinator:
             if self._pump_is_active():
                 return
             self._start_pump_locked()
+
+    async def consume_callback_nonce(
+        self, executor_id: UUID, nonce: str, ttl_seconds: int
+    ) -> bool:
+        """Atomically consume a callback replay nonce in the coordination store."""
+        return await self._store.consume_callback_nonce(executor_id, nonce, ttl_seconds)
+
+    async def complete(self, job_id: UUID, callback: VerifiedCallback) -> CompletionAck:
+        """Apply one authenticated callback under a locked job transaction."""
+        async with self._session_factory() as db:
+            if hasattr(db, "get_bind"):
+                await set_internal_rls_context(db)
+            job = await mailbox_lookup_repository.get_job(
+                db, job_id, with_for_update=True
+            )
+            if job is None or job.status not in {"pending", "processing"}:
+                await db.rollback()
+                return CompletionAck(accepted=False)
+
+            lease = await self._store.get_lease(job_id)
+            if lease is None or _lease_expired(lease.expires_at):
+                await db.rollback()
+                return CompletionAck(accepted=False)
+            if (
+                lease.executor_id != callback.executor_id
+                or lease.lease_id != callback.lease_id
+                or (
+                    job.executor_id is not None
+                    and job.executor_id != callback.executor_id
+                )
+            ):
+                await db.rollback()
+                return CompletionAck(accepted=False)
+
+            if job.status == "pending":
+                job.executor_id = callback.executor_id
+                await mailbox_lookup_repository.transition_status(db, job, "processing")
+
+            outcome = callback.outcome
+            if outcome.kind == "found":
+                if (
+                    outcome.result_type is None
+                    or outcome.result_value is None
+                    or outcome.fingerprint is None
+                ):
+                    await db.rollback()
+                    return CompletionAck(accepted=False)
+                inserted = await mailbox_dedupe_repository.record_delivery_atomic(
+                    db,
+                    tenant_id=job.tenant_id,
+                    mailbox_id=job.mailbox_id,
+                    service_key=job.service_key,
+                    message_id=outcome.message_id,
+                    fingerprint=outcome.fingerprint,
+                )
+                if not inserted:
+                    await mailbox_lookup_repository.transition_status(
+                        db, job, "completed", result_type="duplicate_suppressed"
+                    )
+                else:
+                    ttl_seconds = _result_ttl(job.expires_at)
+                    if ttl_seconds <= 0:
+                        await db.rollback()
+                        return CompletionAck(accepted=False)
+                    await self._store.put_result(
+                        job.id,
+                        outcome.result_type,
+                        outcome.result_value,
+                        ttl_seconds,
+                    )
+                    await mailbox_lookup_repository.transition_status(
+                        db, job, "completed", result_type=outcome.result_type
+                    )
+            elif outcome.kind == "not_found":
+                await mailbox_lookup_repository.transition_status(
+                    db, job, "completed", result_type="not_found"
+                )
+            elif outcome.kind == "retryable_failure":
+                await mailbox_lookup_repository.transition_status(
+                    db,
+                    job,
+                    "pending",
+                    error_code=outcome.error_code,
+                    error_detail_safe=outcome.error_detail,
+                )
+            else:
+                await mailbox_lookup_repository.transition_status(
+                    db,
+                    job,
+                    "failed",
+                    error_code=outcome.error_code,
+                    error_detail_safe=outcome.error_detail,
+                )
+
+            await db.commit()
+
+        await self._store.release_lease(job_id)
+        if outcome.kind == "retryable_failure" and _job_unexpired(job.expires_at):
+            await self._store.enqueue(job_id)
+        return CompletionAck(accepted=True)
+
+    async def get_result(self, job_id: UUID) -> tuple[str, str] | None:
+        """Return the decrypted ephemeral result from the coordination store."""
+        return await self._store.get_result(job_id)
 
     def _start_pump_locked(self) -> None:
         """Spawn a pump while the pump guard is held."""
@@ -329,4 +462,29 @@ class LookupExecutionCoordinator:
         await self._store.enqueue(job_id)
 
 
-__all__ = ["LookupExecutionCoordinator"]
+def _utc(value: datetime) -> datetime:
+    """Normalize a database or Redis timestamp to aware UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _lease_expired(expires_at: datetime) -> bool:
+    """Return whether a callback lease is no longer usable."""
+    return _utc(expires_at) <= datetime.now(timezone.utc)
+
+
+def _job_unexpired(expires_at: datetime | None) -> bool:
+    """Return whether a job can be requeued."""
+    return expires_at is not None and _utc(expires_at) > datetime.now(timezone.utc)
+
+
+def _result_ttl(expires_at: datetime | None) -> int:
+    """Cap result retention by both configured TTL and the job deadline."""
+    if expires_at is None:
+        return max(1, settings.lookup_result_ttl_seconds)
+    remaining = int((_utc(expires_at) - datetime.now(timezone.utc)).total_seconds())
+    return min(settings.lookup_result_ttl_seconds, remaining)
+
+
+__all__ = ["CompletionAck", "LookupExecutionCoordinator", "VerifiedCallback"]
