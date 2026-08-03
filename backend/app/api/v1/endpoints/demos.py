@@ -46,6 +46,7 @@ def _demo_response(
         "id": tenant.id,
         "name": tenant.name,
         "plan": tenant.plan,
+        "locale": tenant.demo_locale or "en",
         "status": tenant.get_demo_status(now),
         "username": tenant.owner.username,
         "created_at": _as_utc(tenant.created_at),
@@ -68,7 +69,7 @@ async def create_demo(payload: DemoTenantCreate, db: DbDep, current_user: Master
     locale = "en"
     try:
         tenant, plain_password = await create_demo_tenant(
-            db, payload.name, payload.plan
+            db, payload.name, payload.plan, payload.locale
         )
     except UserFacingError as exc:
         raise HTTPException(

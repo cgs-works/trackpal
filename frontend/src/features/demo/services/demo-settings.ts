@@ -213,7 +213,7 @@ function defaultTenantSettings(metadata: DemoAuthMetadata): TenantSettings {
   const timestamp = now(metadata);
   return {
     tenant_id: metadata.tenantId,
-    locale: "en",
+    locale: metadata.locale ?? "en",
     timezone: "UTC",
     country: null,
     currency: null,

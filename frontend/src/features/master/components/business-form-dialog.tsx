@@ -28,6 +28,7 @@ export interface BusinessForm {
   password: string
   evolution_instance_name: string
   plan: TenantPlan
+  locale: "en" | "es"
 }
 
 export function getEmptyForm(): BusinessForm {
@@ -41,6 +42,7 @@ export function getEmptyForm(): BusinessForm {
     password: "",
     evolution_instance_name: "",
     plan: "starter",
+    locale: "en",
   }
 }
 
@@ -99,6 +101,21 @@ export function BusinessFormDialog({
               onChange={(e) => onFormChange("full_name", e.target.value)}
             />
           </div>
+
+          {!isEdit && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tenant_locale">Language</Label>
+              <Select value={form.locale} onValueChange={(value) => { if (value === "en" || value === "es") onFormChange("locale", value); }}>
+                <SelectTrigger id="tenant_locale">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="tenant_plan">Plan</Label>

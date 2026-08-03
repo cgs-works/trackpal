@@ -119,6 +119,7 @@ def lifecycle_metadata(
             "demo_activated_at": None,
             "demo_expires_at": None,
             "demo_credentials_version": None,
+            "demo_locale": None,
             "server_time": current_time,
         }
     return {
@@ -130,6 +131,7 @@ def lifecycle_metadata(
         "demo_activated_at": _utc(tenant.demo_activated_at),
         "demo_expires_at": _utc(tenant.demo_expires_at),
         "demo_credentials_version": tenant.demo_credentials_version,
+        "demo_locale": tenant.demo_locale or "en",
         "server_time": current_time,
     }
 

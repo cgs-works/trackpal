@@ -7,6 +7,7 @@ export interface DemoTenant {
   id: string;
   name: string;
   plan: TenantPlan;
+  locale: "en" | "es";
   status: DemoTenantStatus;
   username: string;
   created_at: string;
@@ -28,6 +29,7 @@ export async function fetchDemos(): Promise<DemoTenant[]> {
 export async function createDemo(payload: {
   name: string;
   plan: TenantPlan;
+  locale: "en" | "es";
 }): Promise<DemoTenantCredentials> {
   const { data } = await api.post<DemoTenantCredentials>("/demos/", payload);
   return data;

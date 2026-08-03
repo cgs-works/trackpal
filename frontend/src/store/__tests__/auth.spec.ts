@@ -44,6 +44,7 @@ const demoResponse: TokenResponse = {
   demo_activated_at: "2026-07-25T10:00:00.000Z",
   demo_expires_at: "2026-07-27T10:00:00.000Z",
   demo_credentials_version: 4,
+  demo_locale: "en",
   server_time: "2026-07-25T10:00:00.000Z",
 };
 
@@ -97,6 +98,7 @@ describe("auth context persistence", () => {
       activatedAt: demoResponse.demo_activated_at,
       expiresAt: demoResponse.demo_expires_at,
       credentialVersion: 4,
+      locale: "en",
       serverTime: demoResponse.server_time,
     });
     expect(JSON.parse(localStorage.getItem("demoMetadata")!)).toMatchObject({

@@ -63,6 +63,14 @@ class Tenant(Base, TimestampMixin):
             "demo_credentials_version >= 1",
             name="ck_tenants_demo_credentials_version",
         ),
+        CheckConstraint(
+            "demo_locale IS NULL OR demo_locale IN ('en', 'es')",
+            name="ck_tenants_demo_locale_values",
+        ),
+        CheckConstraint(
+            "is_demo OR demo_locale IS NULL",
+            name="ck_tenants_production_demo_locale",
+        ),
         Index("ix_tenants_demo_lifecycle", "is_demo", "demo_expires_at"),
     )
 
@@ -106,6 +114,7 @@ class Tenant(Base, TimestampMixin):
     demo_credentials_version: Mapped[int] = mapped_column(
         Integer, default=1, server_default="1", nullable=False
     )
+    demo_locale: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     owner = relationship("User", back_populates="owned_tenant")
     clients = relationship(

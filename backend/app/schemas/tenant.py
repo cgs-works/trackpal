@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core import VALID_LOCALES
 from app.core.input_validation import (
     validate_client_prefix,
     validate_email,
@@ -24,6 +25,15 @@ class TenantCreate(BaseModel):
     evolution_instance_name: str = Field(min_length=1)
     client_prefix: str | None = None
     plan: TenantPlan
+    locale: str = "en"
+
+    @field_validator("locale")
+    @classmethod
+    def validate_locale_field(cls, v: str) -> str:
+        normalized = v.strip().lower()
+        if normalized not in VALID_LOCALES:
+            raise ValueError(f"Locale must be one of: {', '.join(VALID_LOCALES)}")
+        return normalized
 
     @field_validator("plan")
     @classmethod

@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import VALID_LOCALES
 from app.core.database import restore_rls_context, set_internal_rls_context
 from app.core.errors import UserFacingError
 from app.core.input_validation import validate_full_name
@@ -46,11 +47,14 @@ async def _generate_unique_username(db: AsyncSession) -> str:
 
 
 async def create_demo_tenant(
-    db: AsyncSession, name: str, plan: TenantPlan
+    db: AsyncSession, name: str, plan: TenantPlan, locale: str = "en"
 ) -> tuple[Tenant, str]:
     """Create a server-only Demo Tenant identity without provisioning services."""
     validated_name = validate_full_name(name)
     normalized_plan = normalize_tenant_plan(plan)
+    normalized_locale = locale.strip().lower()
+    if normalized_locale not in VALID_LOCALES:
+        raise ValueError(f"Locale must be one of: {', '.join(VALID_LOCALES)}")
     username = await _generate_unique_username(db)
     client_prefix = await generate_unique_client_prefix(db)
     plain_password = secrets.token_urlsafe(_PASSWORD_LENGTH)
@@ -70,6 +74,7 @@ async def create_demo_tenant(
         plan=normalized_plan,
         is_active=True,
         is_demo=True,
+        demo_locale=normalized_locale,
     )
     db.add(tenant)
     await db.flush()

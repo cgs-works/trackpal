@@ -65,10 +65,11 @@ function dateAtOffset(metadata: DemoAuthMetadata, days: number): string {
 }
 
 function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceState {
+  const locale = metadata.locale ?? "en";
   return {
     profile: {
       business_name: metadata.name,
-      locale: "en",
+      locale,
       email: null,
       phone: null,
     },
@@ -102,7 +103,7 @@ function createStarterState(metadata: DemoAuthMetadata): StarterDemoWorkspaceSta
     },
     tenant_settings: {
       tenant_id: metadata.tenantId,
-      locale: "en",
+      locale,
       timezone: "UTC",
       country: "US",
       currency: null,

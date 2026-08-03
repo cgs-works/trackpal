@@ -66,6 +66,8 @@ async def test_demo_login_activates_once_and_exposes_only_lifecycle_metadata(
             select(Tenant).where(Tenant.owner_user_id == pending_demo_user.id)
         )
     ).scalar_one()
+    tenant.demo_locale = "es"
+    await db_session.commit()
     activated_at = tenant.demo_activated_at
     expires_at = tenant.demo_expires_at
 
@@ -80,6 +82,7 @@ async def test_demo_login_activates_once_and_exposes_only_lifecycle_metadata(
     assert (expires_at - activated_at).total_seconds() == 48 * 60 * 60
     assert second.json()["is_demo"] is True
     assert second.json()["tenant_plan"] == "starter"
+    assert second.json()["demo_locale"] == "es"
     assert second.json()["demo_credentials_version"] == 1
     assert second.json()["demo_activated_at"] == first.json()["demo_activated_at"]
     assert second.json()["demo_expires_at"] == first.json()["demo_expires_at"]
@@ -132,6 +135,7 @@ async def test_demo_heartbeat_returns_lifecycle_only_data(client, active_demo_us
     assert response.json()["demo_tenant_id"]
     assert response.json()["demo_name"] == "Active Demo"
     assert response.json()["demo_status"] == "active"
+    assert response.json()["demo_locale"] == "en"
     assert response.json()["demo_credentials_version"] == 1
     assert set(response.json()) == {
         "is_demo",
@@ -142,6 +146,7 @@ async def test_demo_heartbeat_returns_lifecycle_only_data(client, active_demo_us
         "demo_activated_at",
         "demo_expires_at",
         "demo_credentials_version",
+        "demo_locale",
         "server_time",
     }
 

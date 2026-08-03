@@ -22,10 +22,12 @@ async def _master_headers(client, master_user) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-async def _create_demo(client, headers, *, name="Acme Demo", plan="starter"):
+async def _create_demo(
+    client, headers, *, name="Acme Demo", plan="starter", locale="en"
+):
     return await client.post(
         "/api/v1/demos/",
-        json={"name": name, "plan": plan},
+        json={"name": name, "plan": plan, "locale": locale},
         headers=headers,
     )
 
@@ -45,12 +47,13 @@ async def test_master_can_create_demo_with_one_time_credentials_and_no_business_
 ):
     headers = await _master_headers(client, master_user)
 
-    response = await _create_demo(client, headers, plan="pro")
+    response = await _create_demo(client, headers, plan="pro", locale="es")
 
     assert response.status_code == 201, response.text
     data = response.json()
     assert data["name"] == "Acme Demo"
     assert data["plan"] == "pro"
+    assert data["locale"] == "es"
     assert data["status"] == "pending"
     assert re.fullmatch(r"[a-z][a-z0-9_]{0,19}", data["username"])
     assert len(data["plain_password"]) >= 24
@@ -61,6 +64,7 @@ async def test_master_can_create_demo_with_one_time_credentials_and_no_business_
         "id",
         "name",
         "plan",
+        "locale",
         "status",
         "username",
         "plain_password",
@@ -73,6 +77,7 @@ async def test_master_can_create_demo_with_one_time_credentials_and_no_business_
 
     user, tenant = await _demo_by_name(db_session, "Acme Demo")
     assert tenant.is_demo is True
+    assert tenant.demo_locale == "es"
     assert tenant.is_active is True
     assert tenant.email is None
     assert tenant.whatsapp_phone is None
@@ -82,6 +87,15 @@ async def test_master_can_create_demo_with_one_time_credentials_and_no_business_
     assert data["plain_password"] not in user.password_hash
     settings = await db_session.get(TenantSettings, tenant.id)
     assert settings is None
+
+
+async def test_demo_creation_rejects_invalid_locale(client, master_user):
+    headers = await _master_headers(client, master_user)
+
+    response = await _create_demo(client, headers, locale="fr")
+
+    assert response.status_code == 422
+    assert "locale" in response.text.lower()
 
 
 async def test_demo_usernames_are_unique_and_validator_compatible(client, master_user):
@@ -149,6 +163,7 @@ async def test_demo_list_is_lifecycle_only_and_excludes_production(
         "id",
         "name",
         "plan",
+        "locale",
         "status",
         "username",
         "created_at",

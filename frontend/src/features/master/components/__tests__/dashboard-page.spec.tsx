@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardPage } from "../dashboard-page";
 import type { Tenant } from "../../services/tenant-api";
-import { fetchTenants } from "../../services/tenant-api";
+import { createTenant, fetchTenants } from "../../services/tenant-api";
 
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
@@ -56,6 +56,7 @@ const demoTenant: Tenant = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(createTenant).mockResolvedValue({ data: productionTenant });
   vi.mocked(fetchTenants).mockResolvedValue({
     data: [productionTenant, demoTenant],
     meta: { total: 2, active: 2, inactive: 0 },
@@ -63,6 +64,29 @@ beforeEach(() => {
 });
 
 describe("DashboardPage production tab", () => {
+  it("sends the selected locale when creating a production tenant", async () => {
+    render(<DashboardPage />);
+
+    await waitFor(() => expect(screen.getAllByText("Production Tenant").length).toBeGreaterThan(0));
+    await userEvent.click(screen.getByRole("button", { name: "Create Business" }));
+    await userEvent.type(screen.getByLabelText("Full Name"), "Spanish Business");
+    await userEvent.type(screen.getByLabelText("Email"), "spanish@example.com");
+    await userEvent.type(screen.getByLabelText("Phone"), "+12015550009");
+    await userEvent.type(screen.getByLabelText("Username"), "spanish_business");
+    await userEvent.type(screen.getByLabelText("Evolution Instance"), "spanish-instance");
+
+    const locale = screen.getByRole("combobox", { name: "Language" });
+    await userEvent.click(locale);
+    await userEvent.click(screen.getByRole("option", { name: "Spanish" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(createTenant).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: "es" }),
+      ),
+    );
+  });
+
   it("keeps demo tenants out of production rows, counts, search, and actions", async () => {
     render(<DashboardPage />);
 

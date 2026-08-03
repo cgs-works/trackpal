@@ -47,7 +47,9 @@ VALID_LOCALES: tuple[str, ...] = ("en", "es")
 
 ## Tenant Locale Persistence
 
-Locale is stored in the `tenant_settings` table. Each tenant has a single row in this table, with `tenant_id` as primary key and foreign key to `tenants.id`. Migration `d011fe74cab0` created the table, backfilled locale values from the previous `tenants.locale` column and legacy `subscription_reminder_settings.timezone`, then dropped both obsolete columns.
+Production Tenant locale is stored in the `tenant_settings` table. Each production tenant has a single row in this table, with `tenant_id` as primary key and foreign key to `tenants.id`. Migration `d011fe74cab0` created the table, backfilled locale values from the previous `tenants.locale` column and legacy `subscription_reminder_settings.timezone`, then dropped both obsolete columns.
+
+Demo identities keep their creation locale in the nullable `tenants.demo_locale` field. This is only the initial seed for the browser-local Demo Workspace; Demo locale changes continue to use the local workspace settings and never create or update `tenant_settings`.
 
 Exposed via:
 - `GET /api/v1/tenant-settings` — Read-only endpoint for locale (and timezone)
@@ -208,7 +210,7 @@ Convenience helper `_t(key, **params)` reads `_current_locale.get()` automatical
 Role resolution:
 
 - Production `tenant` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_owner()`
-- Demo `tenant` role: may request `?locale=en|es`; the endpoint returns that catalog without persisting locale server-side, allowing the browser-local Demo Workspace to remain the locale source of truth
+- Demo `tenant` role: may request `?locale=en|es`; the endpoint returns that catalog without persisting the current workspace locale server-side. The initial locale comes from `demo_locale`, while later changes come from the browser-local Demo Workspace.
 - `client` role: reads `TenantSettings.locale` via `tenant_settings_repository.resolve_locale_by_client()` (joins `Client → TenantSettings` through `client.tenant_id`)
 - Master/unknown: returns English catalog; locale query overrides are ignored outside Demo Tenants
 

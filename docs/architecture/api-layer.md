@@ -84,10 +84,10 @@ Invalid `service_key` returns HTTP 400 (manual validation via `validate_keys()`)
 
 ### Auth Endpoints
 
-- `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens. Demo responses include only immutable lifecycle metadata (`is_demo`, plan, status, activation/expiry, credential version, and `server_time`); successful first login atomically starts the 48-hour evaluation.
+- `POST /api/v1/auth/login` — Authenticate with username/password, returns access + refresh tokens. Demo responses include only immutable lifecycle metadata (`is_demo`, plan, status, activation/expiry, credential version, initial `demo_locale`, and `server_time`); successful first login atomically starts the 48-hour evaluation.
 - `POST /api/v1/auth/refresh` — Exchange refresh token for new token pair while preserving Demo lifecycle timestamps and checking credential version and current status
 - `POST /api/v1/auth/logout` — Revoke refresh token; expired Demo Tenants are removed on this first relevant request
-- `GET|POST /api/v1/auth/heartbeat` — Authenticated lifecycle-only check returning Demo status, credential version, timestamps, plan, and authoritative server time
+- `GET|POST /api/v1/auth/heartbeat` — Authenticated lifecycle-only check returning Demo status, credential version, timestamps, plan, initial locale, and authoritative server time
 - `POST /api/v1/auth/switch-tenant` — Master switches into an active production tenant context (set `tenant_id`) or exits context (set `tenant_id: null`) and receives new token with/without `active_tenant_id`; Demo Tenants cannot enter Master Support Context
 
 ### Me Endpoints (self-profile)
@@ -103,8 +103,8 @@ Client role receives readonly profile data from `GET /api/v1/me`; profile edits 
 
 ### Demo Tenant Endpoints (master-only)
 
-- `POST /api/v1/demos/` — Create a Pending Demo Tenant from only an immutable name and explicit Starter/Pro plan. Generates a validator-compatible username and cryptographically strong password; the plaintext password is returned once.
-- `GET /api/v1/demos/` — List Demo Tenants with lifecycle-only identity, plan, username, derived status, timestamps, authoritative server time, and remaining seconds. Production Tenants and prospect/workspace telemetry are excluded.
+- `POST /api/v1/demos/` — Create a Pending Demo Tenant from an immutable name, explicit Starter/Pro plan, and `locale` (`en` or `es`). Generates a validator-compatible username and cryptographically strong password; the plaintext password is returned once.
+- `GET /api/v1/demos/` — List Demo Tenants with lifecycle-only identity, plan, initial locale, username, derived status, timestamps, authoritative server time, and remaining seconds. Production Tenants and prospect/workspace telemetry are excluded.
 - `POST /api/v1/demos/{demo_id}/credentials` — Replace credentials for Pending or Active demos, revoke all refresh sessions, increment the credential version, and preserve the original evaluation window. Expired demos return `demo_ended`.
 - `DELETE /api/v1/demos/{demo_id}` — Idempotently delete a Pending, Active, or Expired Demo Tenant identity and its sessions without invoking production external cleanup.
 

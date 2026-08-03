@@ -1,6 +1,10 @@
 import re
+from uuid import UUID
 
 import pytest
+from sqlalchemy import select
+
+from app.models import TenantSettings
 
 pytestmark = pytest.mark.asyncio
 
@@ -19,8 +23,8 @@ async def _create_tenant(client, auth_headers, **overrides):
     return await client.post("/api/v1/tenants/", json=payload, headers=auth_headers)
 
 
-async def test_create_tenant(client, auth_headers):
-    response = await _create_tenant(client, auth_headers)
+async def test_create_tenant(client, auth_headers, db_session):
+    response = await _create_tenant(client, auth_headers, locale="es")
 
     assert response.status_code == 201
     data = response.json()
@@ -33,6 +37,19 @@ async def test_create_tenant(client, auth_headers):
     assert data["plain_password"] is None
     assert data["id"]
     assert data["created_at"]
+    tenant_settings = (
+        await db_session.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id == UUID(data["id"]))
+        )
+    ).scalar_one()
+    assert tenant_settings.locale == "es"
+
+
+async def test_create_tenant_rejects_invalid_locale(client, auth_headers):
+    response = await _create_tenant(client, auth_headers, locale="fr")
+
+    assert response.status_code == 422
+    assert "locale" in response.text.lower()
 
 
 async def test_create_tenant_auto_password(client, auth_headers):

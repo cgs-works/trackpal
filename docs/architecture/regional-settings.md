@@ -265,6 +265,10 @@ import currencyCatalog from "@/lib/currency-catalog.json";
 
 **Validation:** Demo mode validates country/currency codes against the catalog before storing in browser-local state.
 
+**Initial locale:** The Master selects `en` or `es` when creating the Demo Tenant. The backend returns that creation locale during Demo authentication so the first browser-local baseline starts in the selected language.
+
+**Locale changes:** Demo Settings can change the locale later. The updated locale is stored only in the browser-local workspace and reloads the authenticated catalog immediately; Demo Reset restores the selected creation locale.
+
 **Timezone options:** Demo uses `Intl.supportedValuesOf("timeZone")` with fallback to curated list.
 
 ## Help Integration

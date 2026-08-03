@@ -164,6 +164,7 @@ export function DashboardPage() {
           username: form.username,
           evolution_instance_name: form.evolution_instance_name,
           plan: form.plan,
+          locale: form.locale,
         };
         if (form.client_prefix.trim()) payload.client_prefix = form.client_prefix;
         if (form.password) payload.password = form.password;

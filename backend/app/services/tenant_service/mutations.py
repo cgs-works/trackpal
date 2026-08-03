@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import VALID_LOCALES
 from app.core.database import (
     get_rls_context,
     restore_rls_context,
@@ -47,6 +48,9 @@ async def create_tenant(
     full_name = validate_full_name(payload.full_name)
     email = validate_email(payload.email)
     phone = validate_phone(payload.phone)
+    locale = payload.locale.strip().lower()
+    if locale not in VALID_LOCALES:
+        raise ValueError(f"Locale must be one of: {', '.join(VALID_LOCALES)}")
     client_prefix = payload.client_prefix or await generate_unique_client_prefix(db)
 
     if payload.client_prefix and await tenants_repository.client_prefix_exists(
@@ -89,7 +93,7 @@ async def create_tenant(
     db.add(profile)
     await db.flush()
 
-    db.add(TenantSettings(tenant_id=profile.id, locale="en", timezone="UTC"))
+    db.add(TenantSettings(tenant_id=profile.id, locale=locale, timezone="UTC"))
     await db.flush()
 
     try:

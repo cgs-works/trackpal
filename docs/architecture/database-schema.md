@@ -52,13 +52,15 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 | demo_activated_at | TIMESTAMPTZ | Nullable; first successful Demo Credentials login timestamp |
 | demo_expires_at | TIMESTAMPTZ | Nullable; non-extendable evaluation boundary |
 | demo_credentials_version | INTEGER | Default 1; increments when Demo Credentials are replaced |
+| demo_locale | VARCHAR(10) | Nullable initial locale for a Demo Workspace; valid values are `en` and `es`; production tenants must leave it null |
 | created_at/updated_at | TIMESTAMPTZ | From TimestampMixin |
 
 ### Demo Tenant lifecycle constraints
 
 - `demo_activated_at` and `demo_expires_at` are both null or both present.
 - When present, `demo_expires_at` is later than `demo_activated_at`.
-- Production Tenants (`is_demo = false`) cannot carry Demo lifecycle timestamps or a Demo credentials version other than `1`.
+- Production Tenants (`is_demo = false`) cannot carry Demo lifecycle timestamps, a Demo credentials version other than `1`, or `demo_locale`.
+- `demo_locale` is lifecycle metadata only; subsequent Demo locale changes remain browser-local.
 - Demo lifecycle status is derived as Pending (no timestamps), Active (before expiration), or Expired (at/after expiration) from persisted timestamps and authoritative server time; no status enum is stored.
 - Index `ix_tenants_demo_lifecycle` supports Demo listing and expiration lookups.
 
@@ -408,6 +410,8 @@ Alembic migrations:
 28. `e019fe74cab9` — Make mailbox Gmail-only: rename `imap_password_encrypted` to `app_password_encrypted`, drop `imap_host`/`imap_port`/`imap_ssl`, add auth-method check constraint
 29. `e021fe74cac1` — Add optional `icon` column to `services` table for Iconify `prefix:name` reference
 30. `e023fe74cac3` — Add the Master-only external `lookup_executors` registry, executor assignment metadata, and remove persisted lookup result values
+31. `e024fe74cac4` — Add executor verification timestamp
+32. `e025fe74cac5` — Add validated initial locale metadata for Demo Workspaces
 
 ## Key Constraints
 

@@ -38,6 +38,7 @@ class TokenResponse(BaseModel):
     demo_activated_at: datetime | None = None
     demo_expires_at: datetime | None = None
     demo_credentials_version: int | None = None
+    demo_locale: str | None = None
     server_time: datetime
 
 
@@ -50,6 +51,7 @@ class DemoHeartbeatResponse(BaseModel):
     demo_activated_at: datetime | None = None
     demo_expires_at: datetime | None = None
     demo_credentials_version: int | None = None
+    demo_locale: str | None = None
     server_time: datetime
 
 

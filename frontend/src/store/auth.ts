@@ -46,6 +46,7 @@ export interface DemoAuthMetadata {
   activatedAt: string | null;
   expiresAt: string | null;
   credentialVersion: number;
+  locale?: "en" | "es";
   serverTime: string;
 }
 
@@ -106,7 +107,10 @@ function loadDemoMetadata(): DemoAuthMetadata | null {
     ) {
       return null;
     }
-    return value as DemoAuthMetadata;
+    return {
+      ...(value as DemoAuthMetadata),
+      locale: "locale" in value && value.locale === "es" ? "es" : "en",
+    };
   } catch {
     return null;
   }
@@ -132,6 +136,7 @@ function metadataFromToken(data: TokenResponse): DemoAuthMetadata | null {
     activatedAt: data.demo_activated_at,
     expiresAt: data.demo_expires_at,
     credentialVersion: data.demo_credentials_version,
+    locale: data.demo_locale === "es" ? "es" : "en",
     serverTime: data.server_time,
   };
 }
@@ -159,6 +164,7 @@ function metadataFromHeartbeat(
     activatedAt: data.demo_activated_at,
     expiresAt: data.demo_expires_at,
     credentialVersion: data.demo_credentials_version,
+    locale: data.demo_locale === "es" ? "es" : "en",
     serverTime: data.server_time,
   };
 }

@@ -29,7 +29,7 @@ import { DemoCredentialsDialog } from "./demo-credentials-dialog";
 import { DemoFormDialog, type DemoForm } from "./demo-form-dialog";
 import { DemoTable } from "./demo-table";
 
-const EMPTY_FORM: DemoForm = { name: "", plan: "starter" };
+const EMPTY_FORM: DemoForm = { name: "", plan: "starter", locale: "en" };
 
 export function DemosTab() {
   const [demos, setDemos] = useState<DemoTenant[]>([]);
@@ -93,6 +93,7 @@ export function DemosTab() {
       const result = await createDemo({
         name: form.name.trim(),
         plan: form.plan as TenantPlan,
+        locale: form.locale,
       });
       setFormOpen(false);
       setCredentials(result);

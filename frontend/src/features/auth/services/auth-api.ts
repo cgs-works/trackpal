@@ -23,6 +23,7 @@ export interface TokenResponse {
   demo_activated_at: string | null;
   demo_expires_at: string | null;
   demo_credentials_version: number | null;
+  demo_locale?: "en" | "es" | null;
   server_time: string;
 }
 
@@ -35,6 +36,7 @@ export interface DemoHeartbeatResponse {
   demo_activated_at: string | null;
   demo_expires_at: string | null;
   demo_credentials_version: number | null;
+  demo_locale?: "en" | "es" | null;
   server_time: string;
 }
 

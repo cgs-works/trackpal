@@ -23,6 +23,7 @@ const demos: DemoTenant[] = [
     id: "pending-id",
     name: "Pending Demo",
     plan: "starter",
+    locale: "en",
     status: "pending",
     username: "pending_demo",
     created_at: "2026-07-24T12:00:00Z",
@@ -35,6 +36,7 @@ const demos: DemoTenant[] = [
     id: "active-id",
     name: "Active Demo",
     plan: "pro",
+    locale: "es",
     status: "active",
     username: "active_demo",
     created_at: "2026-07-24T12:00:00Z",
@@ -47,6 +49,7 @@ const demos: DemoTenant[] = [
     id: "expired-id",
     name: "Expired Demo",
     plan: "starter",
+    locale: "en",
     status: "expired",
     username: "expired_demo",
     created_at: "2026-07-20T12:00:00Z",
@@ -121,12 +124,27 @@ describe("DemosTab", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByLabelText("frontend.master.demos.name_label")).toBeInTheDocument();
     expect(screen.getByLabelText("frontend.master.demos.plan_label")).toBeInTheDocument();
+    const locale = screen.getByRole("combobox", {
+      name: "frontend.master.demos.locale_label",
+    });
+    expect(locale).toBeInTheDocument();
+    await userEvent.click(locale);
+    await userEvent.click(
+      await screen.findByRole("option", {
+        name: "frontend.master.demos.locale_es",
+      }),
+    );
     expect(screen.queryByLabelText("frontend.master.demos.username_label")).not.toBeInTheDocument();
     expect(screen.getAllByText("frontend.master.demos.starter").length).toBeGreaterThan(0);
 
     await userEvent.type(screen.getByLabelText("frontend.master.demos.name_label"), "New Demo");
     await userEvent.click(screen.getByRole("button", { name: "frontend.master.demos.submit_create" }));
 
+    expect(mockedCreateDemo).toHaveBeenCalledWith({
+      name: "New Demo",
+      plan: "starter",
+      locale: "es",
+    });
     expect(await screen.findByText("once-password")).toBeInTheDocument();
     expect(screen.queryByLabelText("frontend.master.demos.name_label")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "frontend.master.demos.copy_username" })).toBeInTheDocument();

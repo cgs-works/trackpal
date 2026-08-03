@@ -30,11 +30,11 @@
 9. Replacing Demo credentials revokes refresh sessions and increments the credential version while preserving lifecycle timestamps; older access and refresh sessions return `demo_credentials_replaced`.
 10. The first request at or after Demo expiry deletes the Demo Tenant and returns `demo_ended`; no background scheduler is required. Demo Tenants cannot enter Master Support Context.
 
-11. Master Demo management accepts only a validated immutable name and explicit Starter/Pro plan, generates unique credentials, and never creates Tenant Settings, business, or external-integration rows.
+11. Master Demo management accepts a validated immutable name, explicit Starter/Pro plan, and validated `en`/`es` locale, generates unique credentials, and never creates Tenant Settings, business, or external-integration rows. The selected locale is stored only as Demo identity metadata and seeds the browser-local workspace.
 12. Master Demo listing exposes only identity, plan, username, derived lifecycle, and approved time fields; it never exposes workspace state, feature activity, or prospect telemetry.
 13. Master credential replacement is available before expiry, returns one new plaintext password, revokes refresh sessions, increments the credential version, and never changes the original evaluation window.
 14. Master Demo deletion is idempotent across Pending, Active, and Expired states and performs no unprovisioned Evolution, mailbox, n8n, Public API, export, or storage cleanup.
-15. Production Tenant update, activation, deactivation, and deletion routes reject Demo Tenants; Demo name and plan are immutable.
+15. Production Tenant update, activation, deactivation, and deletion routes reject Demo Tenants; Demo name, plan, and creation locale are immutable in the backend. Demo users can change their working locale later in browser-local Settings.
 
 ## Demo Guardrails
 

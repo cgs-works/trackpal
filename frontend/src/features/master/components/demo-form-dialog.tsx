@@ -23,6 +23,7 @@ import type { TenantPlan } from "@/features/auth/services/auth-api";
 export interface DemoForm {
   name: string;
   plan: TenantPlan;
+  locale: "en" | "es";
 }
 
 interface DemoFormDialogProps {
@@ -79,6 +80,26 @@ export function DemoFormDialog({
               aria-invalid={Boolean(error)}
               aria-describedby={error ? "demo-form-error" : undefined}
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="demo-locale">{t("frontend.master.demos.locale_label")}</Label>
+            <Select
+              value={form.locale}
+              onValueChange={(value) => {
+                if (value === "en" || value === "es") {
+                  onFormChange("locale", value);
+                }
+              }}
+            >
+              <SelectTrigger id="demo-locale" disabled={saving}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t("frontend.master.demos.locale_en")}</SelectItem>
+                <SelectItem value="es">{t("frontend.master.demos.locale_es")}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-2">

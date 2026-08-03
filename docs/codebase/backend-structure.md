@@ -184,7 +184,9 @@ backend/
 │       ├── ce10fe74caa10_add_client_messaging_blocks_table.py  # Client Messaging Blocks table (renamed to blocked_clients in ce10fe74caa11)
 │       ├── ce10fe74caa11_rename_client_messaging_blocks_to_blocked_clients.py  # Rename to blocked_clients
 │       ├── e011fe74cab1_add_tenant_plan.py  # Add plan column to tenants
-│       └── e017fe74cab7_add_demo_tenant_lifecycle.py # Demo identity/lifecycle columns, constraints, and index
+│       ├── e017fe74cab7_add_demo_tenant_lifecycle.py # Demo identity/lifecycle columns, constraints, and index
+│       ├── e024fe74cac4_add_executor_verification_timestamp.py # Executor verification timestamp
+│       └── e025fe74cac5_add_demo_locale.py # Initial locale metadata for Demo Workspaces
 ├── scripts/
 │   └── seed.py
 ├── tests/
