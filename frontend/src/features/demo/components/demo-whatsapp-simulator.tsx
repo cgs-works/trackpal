@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
-import { ArrowLeft, Check, Loader2, MessageCircle, RotateCcw, Send } from "lucide-react";
+import type { FormEvent, ReactNode } from "react";
+import {
+  ArrowLeft,
+  CheckCheck,
+  MessageCircle,
+  MoreVertical,
+  Phone,
+  RotateCcw,
+  Send,
+  Signal,
+  Video,
+  Wifi,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotFoundPage } from "@/features/admin/components/not-found-page";
 import { t } from "@/i18n";
@@ -72,29 +82,95 @@ function simulatorInputText(step: SimulatorState["step"]): {
   };
 }
 
+function PhoneShell({ children, onReset }: { children: ReactNode; onReset: () => void }) {
+  return (
+    <div className="phone-stage" data-testid="whatsapp-phone-shell">
+      <span className="phone-side-button phone-side-button-volume" aria-hidden="true" />
+      <span className="phone-side-button phone-side-button-power" aria-hidden="true" />
+      <div className="phone-frame">
+        <div className="phone-screen">
+          <div className="phone-status-bar" aria-hidden="true">
+            <span className="phone-time">9:41</span>
+            <span className="phone-island" />
+            <span className="phone-status-icons">
+              <Signal aria-hidden="true" />
+              <Wifi aria-hidden="true" />
+              <span className="phone-battery"><i /></span>
+            </span>
+          </div>
+          <div className="wa-container">
+            <div className="wa-header">
+              <div className="wa-avatar">TP</div>
+              <div className="wa-info">
+                <div className="wa-name">TrackPal</div>
+                <div className="wa-status">{t("frontend.demo_simulator.connected")}</div>
+              </div>
+              <div className="wa-header-actions">
+                <Video className="wa-header-icon" aria-hidden="true" />
+                <Phone className="wa-header-icon" aria-hidden="true" />
+                <MoreVertical className="wa-header-icon" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="wa-reset"
+                  onClick={onReset}
+                  aria-label={`${t("frontend.demo_simulator.reset")} ${t("frontend.demo_simulator.connected")}`}
+                >
+                  <RotateCcw className="wa-reset-icon" />
+                </button>
+              </div>
+            </div>
+            {children}
+          </div>
+          <span className="phone-home-indicator" aria-hidden="true" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function messageBubbleClass(role: "bot" | "user"): string {
-  return role === "user"
-    ? "ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3 py-2 text-primary-foreground"
-    : "max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-foreground";
+  return role === "user" ? "wa-msg wa-msg-out" : "wa-msg wa-msg-in";
+}
+
+function MessageBubble({
+  text,
+  role,
+  index,
+}: {
+  text: string;
+  role: "bot" | "user";
+  index: number;
+}) {
+  return (
+    <div className={messageBubbleClass(role)}>
+      <span className="wa-msg-copy">
+        {text.split("\n").map((line, lineIndex) => (
+          <span key={lineIndex}>{lineIndex > 0 && <br />}{line}</span>
+        ))}
+      </span>
+      <span className="wa-msg-meta" aria-hidden="true">
+        9:{String(41 + Math.min(index, 18)).padStart(2, "0")}
+        {role === "user" && <CheckCheck />}
+      </span>
+    </div>
+  );
 }
 
 function SimulatorMessages({ state }: { state: SimulatorState }) {
   return (
     <div
-      className="flex min-h-[22rem] flex-col gap-3 overflow-y-auto rounded-t-xl bg-background p-4 sm:min-h-[25rem]"
+      className="wa-chat"
       role="log"
       aria-label={t("frontend.demo_simulator.conversation")}
       aria-live="polite"
     >
-      {state.messages.map((message) => (
-        <div key={message.id} className={messageBubbleClass(message.role)}>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.text}</p>
-        </div>
+      {state.messages.map((message, index) => (
+        <MessageBubble key={message.id} text={message.text} role={message.role} index={index} />
       ))}
       {state.step === "processing" && (
-        <div className="flex max-w-[85%] items-center gap-2 rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground" role="status">
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-          {t("frontend.demo_simulator.searching")}
+        <div className="wa-typing" role="status">
+          <span /><span /><span />
+          <span className="sr-only">{t("frontend.demo_simulator.searching")}</span>
         </div>
       )}
     </div>
@@ -104,15 +180,13 @@ function SimulatorMessages({ state }: { state: SimulatorState }) {
 function ProSimulatorMessages({ state }: { state: ProSimulatorState }) {
   return (
     <div
-      className="flex min-h-[22rem] flex-col gap-3 overflow-y-auto rounded-t-xl bg-background p-4"
+      className="wa-chat"
       role="log"
       aria-label={t("frontend.demo_simulator.conversation")}
       aria-live="polite"
     >
-      {state.messages.map((message) => (
-        <div key={message.id} className={messageBubbleClass(message.role)}>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.text}</p>
-        </div>
+      {state.messages.map((message, index) => (
+        <MessageBubble key={message.id} text={message.text} role={message.role} index={index} />
       ))}
     </div>
   );
@@ -214,20 +288,29 @@ function ProRequestExperience() {
     setInput("");
   }
 
+  function handleReset() {
+    setState(createSimulatorState(state.services, copy));
+    setInput("");
+    setInputError(null);
+  }
+
   if (loading) {
-    return <div className="flex min-h-[22rem] items-center justify-center text-sm text-muted-foreground" role="status">{t("frontend.demo_simulator.loading")}</div>;
+    return (
+      <PhoneShell onReset={handleReset}>
+        <div className="wa-phone-state" role="status">{t("frontend.demo_simulator.loading")}</div>
+      </PhoneShell>
+    );
   }
   if (loadError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>{t("frontend.demo_simulator.operation_error")}</AlertTitle>
-        <AlertDescription className="flex flex-col gap-3">
-          <span>{t("frontend.demo_simulator.load_error")}</span>
-          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+      <PhoneShell onReset={handleReset}>
+        <div className="wa-phone-state">
+          <p>{t("frontend.demo_simulator.load_error")}</p>
+          <button type="button" className="wa-btn wa-btn-primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
             {t("frontend.demo_simulator.retry")}
-          </Button>
-        </AlertDescription>
-      </Alert>
+          </button>
+        </div>
+      </PhoneShell>
     );
   }
 
@@ -236,35 +319,29 @@ function ProRequestExperience() {
   );
 
   return (
-    <Card className="mx-auto w-full max-w-md overflow-hidden">
-      <CardHeader className="border-b bg-muted/30">
-        <CardTitle>{t("frontend.demo_simulator.request_title")}</CardTitle>
-        <CardDescription>{t("frontend.demo_simulator.request_description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <SimulatorMessages state={state} />
-        <form className="flex flex-col gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="pro-simulator-input">{inputLabel}</label>
-          <div className="flex gap-2">
-            <Input
-              id="pro-simulator-input"
-              value={input}
-              onChange={(event) => { setInput(event.target.value); setInputError(null); }}
-              placeholder={inputPlaceholder}
-              aria-invalid={Boolean(inputError)}
-              aria-describedby={inputError ? "pro-simulator-input-error" : undefined}
-              disabled={state.step === "processing"}
-              autoComplete="off"
-              autoFocus
-            />
-            <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
-              <Send className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-          {inputError && <p id="pro-simulator-input-error" role="alert" className="text-xs text-destructive">{inputError}</p>}
-        </form>
-      </CardContent>
-    </Card>
+    <PhoneShell onReset={handleReset}>
+      <SimulatorMessages state={state} />
+      <form className="wa-actions" onSubmit={handleSubmit}>
+        <label className="wa-input-label" htmlFor="pro-simulator-input">{inputLabel}</label>
+        <div className="wa-input-row">
+          <input
+            id="pro-simulator-input"
+            value={input}
+            onChange={(event) => { setInput(event.target.value); setInputError(null); }}
+            placeholder={inputPlaceholder}
+            aria-invalid={Boolean(inputError)}
+            aria-describedby={inputError ? "pro-simulator-input-error" : undefined}
+            disabled={state.step === "processing"}
+            autoComplete="off"
+            autoFocus
+          />
+          <button type="submit" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
+            <Send aria-hidden="true" />
+          </button>
+        </div>
+        {inputError && <p id="pro-simulator-input-error" role="alert" className="wa-input-error">{inputError}</p>}
+      </form>
+    </PhoneShell>
   );
 }
 
@@ -348,6 +425,17 @@ function ProOperationExperience() {
     setInput("");
   }
 
+  function handleReset() {
+    setState(
+      transitionProSimulator(
+        createProSimulatorState(menus.tenantAdmin, menus.client, copy, 7),
+        { type: "select-mode", mode: "operation" },
+        copy,
+      ),
+    );
+    setInput("");
+  }
+
   if (clientConsole) {
     return (
       <ClientConsoleExperience
@@ -406,20 +494,24 @@ function ProOperationExperience() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:items-start">
-      <Card className="mx-auto w-full max-w-md overflow-hidden">
-        <CardHeader className="border-b bg-muted/30">
-          <CardTitle>{t("frontend.demo_simulator.operation_title")}</CardTitle>
-          <CardDescription>{t("frontend.demo_simulator.operation_description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ProSimulatorMessages state={state} />
-          <form className="flex gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
-            <label className="sr-only" htmlFor="pro-operation-input">{t("frontend.demo_simulator.message_input_label")}</label>
-            <Input id="pro-operation-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t("frontend.demo_simulator.operation_placeholder")} autoComplete="off" />
-            <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim()}><Send className="size-4" aria-hidden="true" /></Button>
-          </form>
-        </CardContent>
-      </Card>
+      <PhoneShell onReset={handleReset}>
+        <ProSimulatorMessages state={state} />
+        <form className="wa-actions" onSubmit={handleSubmit}>
+          <label className="wa-input-label" htmlFor="pro-operation-input">{t("frontend.demo_simulator.message_input_label")}</label>
+          <div className="wa-input-row">
+            <input
+              id="pro-operation-input"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder={t("frontend.demo_simulator.operation_placeholder")}
+              autoComplete="off"
+            />
+            <button type="submit" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim()}>
+              <Send aria-hidden="true" />
+            </button>
+          </div>
+        </form>
+      </PhoneShell>
       <Card>
         <CardHeader>
           <CardTitle>{t("frontend.demo_simulator.workspace_title")}</CardTitle>
@@ -580,30 +672,30 @@ export function DemoWhatsappSimulator() {
   function renderConversation() {
     if (loading) {
       return (
-        <div className="flex min-h-[22rem] items-center justify-center p-6 text-sm text-muted-foreground" role="status">
+        <div className="wa-phone-state" role="status">
           {t("frontend.demo_simulator.loading")}
         </div>
       );
     }
     if (loadError) {
       return (
-        <div className="flex min-h-[22rem] flex-col items-center justify-center gap-3 p-6 text-center">
-          <p className="text-sm text-destructive">{t("frontend.demo_simulator.load_error")}</p>
-          <Button type="button" variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+        <div className="wa-phone-state">
+          <p>{t("frontend.demo_simulator.load_error")}</p>
+          <button type="button" className="wa-btn wa-btn-primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
             {t("frontend.demo_simulator.retry")}
-          </Button>
+          </button>
         </div>
       );
     }
     return (
       <>
         <SimulatorMessages state={state} />
-        <form className="flex flex-col gap-2 border-t bg-muted/30 p-3" onSubmit={handleSubmit}>
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="demo-simulator-input">
+        <form className="wa-actions" onSubmit={handleSubmit}>
+          <label className="wa-input-label" htmlFor="demo-simulator-input">
             {inputLabel}
           </label>
-          <div className="flex gap-2">
-            <Input
+          <div className="wa-input-row">
+            <input
               id="demo-simulator-input"
               value={input}
               onChange={(event) => {
@@ -617,12 +709,12 @@ export function DemoWhatsappSimulator() {
               autoComplete="off"
               autoFocus
             />
-            <Button type="submit" size="icon" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
-              <Send className="size-4" aria-hidden="true" />
-            </Button>
+            <button type="submit" aria-label={t("frontend.demo_simulator.send")} disabled={!input.trim() || state.step === "processing"}>
+              <Send aria-hidden="true" />
+            </button>
           </div>
           {inputError && (
-            <p id="demo-simulator-input-error" role="alert" className="text-xs text-destructive">
+            <p id="demo-simulator-input-error" role="alert" className="wa-input-error">
               {inputError}
             </p>
           )}
@@ -667,24 +759,7 @@ export function DemoWhatsappSimulator() {
         </Alert>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:items-start">
-          <Card className="mx-auto w-full max-w-md overflow-hidden">
-            <CardHeader className="border-b bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <MessageCircle className="size-5" aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                  <CardTitle className="truncate">TrackPal</CardTitle>
-                  <CardDescription className="flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
-                    {t("frontend.demo_simulator.connected")}
-                  </CardDescription>
-                </div>
-                <Check className="ml-auto size-5 text-emerald-600" aria-label={t("frontend.demo_simulator.simulated_status")} />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">{renderConversation()}</CardContent>
-          </Card>
+          <PhoneShell onReset={handleReset}>{renderConversation()}</PhoneShell>
 
           <Card>
             <CardHeader>

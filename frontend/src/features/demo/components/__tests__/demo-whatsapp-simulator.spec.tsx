@@ -421,12 +421,16 @@ describe("DemoWhatsappSimulator", () => {
   });
 
   it("renders only the Starter Request experience from local services", async () => {
-    render(<DemoWhatsappSimulator />);
+    const { container } = render(<DemoWhatsappSimulator />);
 
     expect(await screen.findByText("frontend.demo_simulator.welcome")).toBeInTheDocument();
     expect(screen.getByText("frontend.demo_simulator.no_operation_notice")).toBeInTheDocument();
     expect(screen.getByText("Netflix")).toBeInTheDocument();
     expect(screen.getByText("Disney+")).toBeInTheDocument();
+    expect(container.querySelector(".phone-frame")).toBeInTheDocument();
+    expect(container.querySelector(".phone-status-bar")).toBeInTheDocument();
+    expect(container.querySelector(".phone-home-indicator")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "frontend.demo_simulator.mode_operation" })).not.toBeInTheDocument();
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
