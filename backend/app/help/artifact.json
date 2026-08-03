@@ -1142,7 +1142,7 @@
         "order": 40,
         "safe_navigation": {
           "route": "/admin/settings",
-          "settings_category": "profile"
+          "settings_category": "my-account"
         },
         "safe_links": [],
         "tour": [
@@ -1158,7 +1158,7 @@
             "content": "# Set up your business\n\nKeep the business name and phone current in Profile. Settings is also where you change the language and your password."
           }
         ],
-        "body": "# Business profile\n\nThis is where you save the name, email, and phone TrackPal uses to identify your business.\n\nOpen **Settings > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.\n\nIf you see an error, correct the highlighted field and save again. Reloading before you save can discard your changes."
+        "body": "# Business profile\n\nThis is where you save the name, email, and phone TrackPal uses to identify your business.\n\nOpen **Settings > My Account > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.\n\nIf you see an error, correct the highlighted field and save again. Reloading before you save can discard your changes."
       },
       {
         "id": "tenant-admin.public-api",
@@ -2674,7 +2674,7 @@
         "order": 40,
         "safe_navigation": {
           "route": "/admin/settings",
-          "settings_category": "profile"
+          "settings_category": "my-account"
         },
         "safe_links": [],
         "tour": [
@@ -2690,7 +2690,7 @@
             "content": "# Configura tu negocio\n\nEn Perfil mantienes actualizados el nombre y teléfono del negocio. Desde Configuración también puedes cambiar el idioma y tu contraseña."
           }
         ],
-        "body": "# Perfil del negocio\n\nAquí guardas el nombre, el correo y el teléfono que TrackPal usa para identificar tu negocio.\n\nAbre **Configuración > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.\n\nSi aparece un error, corrige el campo señalado y vuelve a guardar. Recargar la página antes de guardar puede descartar tus cambios."
+        "body": "# Perfil del negocio\n\nAquí guardas el nombre, el correo y el teléfono que TrackPal usa para identificar tu negocio.\n\nAbre **Configuración > Mi cuenta > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.\n\nSi aparece un error, corrige el campo señalado y vuelve a guardar. Recargar la página antes de guardar puede descartar tus cambios."
       },
       {
         "id": "tenant-admin.public-api",
@@ -3424,7 +3424,7 @@
           "WhatsApp phone",
           "account details",
           "business information",
-          "# Business profile\n\nThis is where you save the name, email, and phone TrackPal uses to identify your business.\n\nOpen **Settings > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.\n\nIf you see an error, correct the highlighted field and save again. Reloading before you save can discard your changes."
+          "# Business profile\n\nThis is where you save the name, email, and phone TrackPal uses to identify your business.\n\nOpen **Settings > My Account > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.\n\nIf you see an error, correct the highlighted field and save again. Reloading before you save can discard your changes."
         ]
       },
       {
@@ -3888,7 +3888,7 @@
           "teléfono de WhatsApp",
           "datos de cuenta",
           "información del negocio",
-          "# Perfil del negocio\n\nAquí guardas el nombre, el correo y el teléfono que TrackPal usa para identificar tu negocio.\n\nAbre **Configuración > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.\n\nSi aparece un error, corrige el campo señalado y vuelve a guardar. Recargar la página antes de guardar puede descartar tus cambios."
+          "# Perfil del negocio\n\nAquí guardas el nombre, el correo y el teléfono que TrackPal usa para identificar tu negocio.\n\nAbre **Configuración > Mi cuenta > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.\n\nSi aparece un error, corrige el campo señalado y vuelve a guardar. Recargar la página antes de guardar puede descartar tus cambios."
         ]
       },
       {
@@ -4302,7 +4302,7 @@
             "content": "# Set up your business\n\nKeep the business name and phone current in Profile. Settings is also where you change the language and your password.",
             "summary": "Keep your business name, email, and phone up to date.",
             "route": "/admin/settings",
-            "settings_category": "profile",
+            "settings_category": "my-account",
             "target": "admin.settings.profile",
             "conditional": false,
             "order": 3,
@@ -4685,7 +4685,7 @@
             "content": "# Configura tu negocio\n\nEn Perfil mantienes actualizados el nombre y teléfono del negocio. Desde Configuración también puedes cambiar el idioma y tu contraseña.",
             "summary": "Mantén actualizados el nombre, el correo y el teléfono de tu negocio.",
             "route": "/admin/settings",
-            "settings_category": "profile",
+            "settings_category": "my-account",
             "target": "admin.settings.profile",
             "conditional": false,
             "order": 3,

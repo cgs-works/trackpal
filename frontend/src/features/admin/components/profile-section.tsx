@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { t } from "@/i18n";
+import { HELP_TARGETS } from "@/features/help/help-targets";
 import {
   type Profile,
   type ProfileUpdate,
@@ -50,7 +51,11 @@ export function ProfileSection({ profile, onProfileUpdate, onSave }: ProfileSect
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4"
+      data-help-id={HELP_TARGETS.profile}
+    >
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="full_name">{t("frontend.profile.full_name")}</Label>

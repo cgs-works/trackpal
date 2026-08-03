@@ -53,6 +53,9 @@ export function resolveSafeHelpNavigation(
   }
 
   if (navigation.route === "/admin/settings") {
+    if (navigation.settings_category === "profile") {
+      return { to: "/admin/settings", search: { category: "my-account" } };
+    }
     if (navigation.settings_category === "my-account" && navigation.tab === "regional") {
       return {
         to: "/admin/settings",

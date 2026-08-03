@@ -82,6 +82,14 @@ def test_compiler_rejects_timezone_settings_category(tmp_path: Path) -> None:
         _compile_with_topics(tmp_path, topics)
 
 
+def test_compiler_rejects_profile_settings_category(tmp_path: Path) -> None:
+    """Profile now belongs to the My Account settings category."""
+    topic = _make_topic(settings_category="profile")
+    topics = {"test.md": topic}
+    with pytest.raises(HelpValidationError, match="settings category"):
+        _compile_with_topics(tmp_path, topics)
+
+
 def test_compiler_accepts_my_account_with_regional_tab(tmp_path: Path) -> None:
     """settings_category 'my-account' + tab 'regional' must compile."""
     topic = _make_topic(settings_category="my-account", tab="regional")

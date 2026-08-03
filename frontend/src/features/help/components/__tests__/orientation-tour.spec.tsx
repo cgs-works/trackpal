@@ -29,7 +29,6 @@ const helpApiState = vi.hoisted(() => {
     dataSource: { orientation: { acknowledge, getUnseen, replay } },
   };
 });
-
 vi.mock("react-joyride", () => ({
   ACTIONS: { PREV: "prev" },
   EVENTS: { STEP_AFTER: "step:after", ERROR: "error" },
@@ -325,6 +324,62 @@ describe("OrientationTour", () => {
         value: originalMatchMedia,
       });
     }
+  });
+
+  it("navigates a profile tour step into the current My Account category", async () => {
+    const multiRouteRelease: HelpTourRelease = {
+      ...release,
+      steps: [
+        release.steps[0],
+        {
+          topic_id: "tenant-admin.profile",
+          related_topics: [],
+          title: "Profile",
+          content: "Profile guidance",
+          summary: "Profile summary",
+          route: "/admin/settings",
+          settings_category: "profile",
+          target: "admin.settings.profile",
+          conditional: false,
+          order: 2,
+        },
+      ],
+    };
+    vi.mocked(getUnseenHelpTour).mockResolvedValue(multiRouteRelease);
+
+    render(
+      <>
+        <div data-help-id="admin.dashboard" />
+        <div data-help-id="admin.settings.profile" />
+        <OrientationTour />
+      </>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("help-tour-popover")).toBeInTheDocument(),
+    );
+
+    act(() => {
+      const onEvent = joyrideState.props?.onEvent as
+        | ((data: Record<string, unknown>) => void)
+        | undefined;
+      onEvent?.({
+        action: "next",
+        index: 0,
+        status: "running",
+        type: "step:after",
+      });
+    });
+
+    await waitFor(() => expect(joyrideState.props?.stepIndex).toBe(1));
+    await waitFor(() =>
+      expect(joyrideState.navigate).toHaveBeenLastCalledWith({
+        to: "/admin/settings",
+        search: { category: "my-account" },
+      }),
+    );
+    expect(joyrideState.props?.stepIndex).toBe(1);
+    expect(getUnseenHelpTour).toHaveBeenCalledOnce();
   });
 
   it("opens the matching manual topic without performing a product action", async () => {

@@ -26,7 +26,7 @@ synonyms:
 order: 40
 safe_navigation:
   route: /admin/settings
-  settings_category: profile
+  settings_category: my-account
 related_topics:
   - tenant-admin.dashboard
   - tenant-admin.language
@@ -49,6 +49,6 @@ tour:
 
 This is where you save the name, email, and phone TrackPal uses to identify your business.
 
-Open **Settings > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.
+Open **Settings > My Account > Profile**, update the fields you need, and select **Save profile**. The phone should belong to the business and follow the format shown because it can also be used when preparing WhatsApp.
 
 If you see an error, correct the highlighted field and save again. Reloading before you save can discard your changes.

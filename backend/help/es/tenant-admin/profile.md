@@ -26,7 +26,7 @@ synonyms:
 order: 40
 safe_navigation:
   route: /admin/settings
-  settings_category: profile
+  settings_category: my-account
 related_topics:
   - tenant-admin.dashboard
   - tenant-admin.language
@@ -49,6 +49,6 @@ tour:
 
 Aquí guardas el nombre, el correo y el teléfono que TrackPal usa para identificar tu negocio.
 
-Abre **Configuración > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.
+Abre **Configuración > Mi cuenta > Perfil**, corrige los datos necesarios y pulsa **Guardar perfil**. El teléfono debe pertenecer al negocio y seguir el formato indicado, porque también puede usarse al preparar WhatsApp.
 
 Si aparece un error, corrige el campo señalado y vuelve a guardar. Recargar la página antes de guardar puede descartar tus cambios.

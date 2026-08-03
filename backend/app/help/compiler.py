@@ -92,7 +92,6 @@ ALLOWED_SETTINGS_CATEGORIES = {
     "my-account",
     "mailbox",
     "password",
-    "profile",
     "public-api",
     "reminders",
     "whatsapp-link",
