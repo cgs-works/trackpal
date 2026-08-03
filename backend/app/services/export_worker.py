@@ -191,7 +191,6 @@ def _build_account_profile_csv(
     writer.writerow(
         [
             "account_name",
-            "contact_email",
             "whatsapp_phone",
             "login_username",
             "current_plan",
@@ -203,7 +202,6 @@ def _build_account_profile_csv(
     writer.writerow(
         [
             tenant.name or "",
-            tenant.email or "",
             tenant.whatsapp_phone or "",
             tenant.owner.username if tenant.owner else "",
             tenant.plan or "",
@@ -370,7 +368,6 @@ def _build_json(
         },
         "account_profile": {
             "account_name": tenant.name or "",
-            "contact_email": tenant.email or "",
             "whatsapp_phone": tenant.whatsapp_phone or "",
             "login_username": tenant.owner.username if tenant.owner else "",
             "current_plan": tenant.plan or "",
@@ -409,7 +406,6 @@ Files in this bundle:
 
 Fields in account-profile.csv / account_profile in trackpal-data.json:
   account_name         — The name of your business
-  contact_email        — The contact email for your business
   whatsapp_phone       — The WhatsApp phone number linked to your account
   login_username       — Your login username
   current_plan         — Your current plan (starter or pro)
@@ -491,7 +487,6 @@ Archivos incluidos:
 
 Campos en account-profile.csv / account_profile en trackpal-data.json:
   account_name         — El nombre de tu negocio
-  contact_email        — El correo de contacto de tu negocio
   whatsapp_phone       — El número de WhatsApp vinculado a tu cuenta
   login_username       — Tu nombre de usuario de inicio de sesión
   current_plan         — Tu plan actual (starter o pro)

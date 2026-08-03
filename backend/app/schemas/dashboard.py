@@ -29,7 +29,6 @@ class MasterDashboardResponse(BaseModel):
 class TenantDashboardResponse(BaseModel):
     message: str = "Dashboard en construccion"
     full_name: str
-    email: str | None
     tenant_plan: str
     mailbox_status: str
     enabled_code_services: list[str] = Field(default_factory=list)

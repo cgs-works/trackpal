@@ -93,10 +93,6 @@ async def _handle_create_step(
         return await self._handle_create_full_name(
             phone, msg_text, session, session_service
         )
-    elif session.step == self.CREATE_STEP_EMAIL:
-        return await self._handle_create_email(
-            phone, msg_text, session, session_service
-        )
     elif session.step == self.CREATE_STEP_PHONE:
         return await self._handle_create_phone(
             phone, msg_text, session, session_service

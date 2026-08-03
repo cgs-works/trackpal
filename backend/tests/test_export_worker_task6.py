@@ -135,7 +135,6 @@ async def test_account_profile_csv_includes_currency(db_session, active_tenant_u
     assert "currency" in headers
     assert headers == [
         "account_name",
-        "contact_email",
         "whatsapp_phone",
         "login_username",
         "current_plan",

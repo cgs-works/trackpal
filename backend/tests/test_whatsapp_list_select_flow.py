@@ -338,7 +338,7 @@ class TestSelectTenantFlow:
         assert "Detalle de la empresa" in reply
         assert "Alpha Corp" in reply
         assert "alpha" in reply  # username
-        assert "alpha@example.com" in reply
+        assert "alpha@example.com" not in reply
         assert "+1111111111" in reply
         assert "inst-alpha" in reply
         assert "✅ Activo" in reply

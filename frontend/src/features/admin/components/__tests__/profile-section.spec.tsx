@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ProfileSection } from "../profile-section";
 
@@ -33,5 +33,6 @@ describe("ProfileSection", () => {
     expect(
       container.querySelector('[data-help-id="admin.settings.profile"]'),
     ).toBeInTheDocument();
+    expect(screen.queryByLabelText("frontend.profile.email")).not.toBeInTheDocument();
   });
 });

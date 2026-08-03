@@ -137,7 +137,6 @@ async def _tenant_profile_response(
         client_prefix=tenant.client_prefix,
         locale=locale,
         timezone=timezone,
-        email=tenant.email,
         phone=tenant.phone,
         is_active=tenant.is_active,
         created_at=tenant.created_at,

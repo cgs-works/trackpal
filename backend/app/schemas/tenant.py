@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.core import VALID_LOCALES
 from app.core.input_validation import (
     validate_client_prefix,
-    validate_email,
     validate_full_name,
     validate_phone,
     validate_username,
@@ -15,10 +14,9 @@ from app.core.tenant_plan import TenantPlan, normalize_tenant_plan
 
 
 class TenantCreate(BaseModel):
-    model_config = ConfigDict()
+    model_config = ConfigDict(extra="forbid")
 
     full_name: str
-    email: str | None = None
     phone: str | None = None
     username: str
     password: str | None = None
@@ -57,11 +55,6 @@ class TenantCreate(BaseModel):
     def validate_full_name_field(cls, v: str) -> str:
         return validate_full_name(v)
 
-    @field_validator("email")
-    @classmethod
-    def validate_email_field(cls, v: str | None) -> str | None:
-        return validate_email(v)
-
     @field_validator("phone")
     @classmethod
     def validate_phone_field(cls, v: str | None) -> str | None:
@@ -76,10 +69,9 @@ class TenantCreate(BaseModel):
 
 
 class TenantUpdate(BaseModel):
-    model_config = ConfigDict()
+    model_config = ConfigDict(extra="forbid")
 
     full_name: str | None = None
-    email: str | None = None
     phone: str | None = None
     evolution_instance_name: str | None = None
     client_prefix: str | None = None
@@ -98,11 +90,6 @@ class TenantUpdate(BaseModel):
         if v is None:
             return None
         return validate_full_name(v)
-
-    @field_validator("email")
-    @classmethod
-    def validate_email_field(cls, v: str | None) -> str | None:
-        return validate_email(v)
 
     @field_validator("phone")
     @classmethod
@@ -123,7 +110,6 @@ class TenantResponse(BaseModel):
     id: UUID
     full_name: str
     client_prefix: str
-    email: str | None
     phone: str | None
     evolution_instance_name: str | None
     plan: TenantPlan

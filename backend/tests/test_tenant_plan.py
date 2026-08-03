@@ -16,7 +16,6 @@ pytestmark = pytest.mark.asyncio
 async def _create_tenant(client, auth_headers, **overrides):
     payload = {
         "full_name": "Plan Tenant",
-        "email": "plan@example.com",
         "phone": "+12015550100",
         "username": "plan_tenant",
         "password": "tenant-password",

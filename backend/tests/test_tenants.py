@@ -12,7 +12,6 @@ pytestmark = pytest.mark.asyncio
 async def _create_tenant(client, auth_headers, **overrides):
     payload = {
         "full_name": "Tenant One",
-        "email": "tenant@example.com",
         "phone": "+12015550004",
         "username": "tenant_one",
         "password": "tenant-password",
@@ -29,7 +28,7 @@ async def test_create_tenant(client, auth_headers, db_session):
     assert response.status_code == 201
     data = response.json()
     assert data["full_name"] == "Tenant One"
-    assert data["email"] == "tenant@example.com"
+    assert "email" not in data
     assert data["phone"] == "12015550004"  # canonical: no + prefix
     assert re.fullmatch(r"[a-z][a-z0-9]{0,4}", data["client_prefix"])
     assert data["username"] == "tenant_one"
@@ -171,7 +170,6 @@ async def test_update_tenant(client, auth_headers, active_tenant_user):
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={
             "full_name": "Updated Tenant",
-            "email": "updated@example.com",
             "phone": "+12015550010",
             "evolution_instance_name": "updated-instance",
             "client_prefix": "z9",
@@ -182,7 +180,7 @@ async def test_update_tenant(client, auth_headers, active_tenant_user):
     assert response.status_code == 200
     data = response.json()
     assert data["full_name"] == "Updated Tenant"
-    assert data["email"] == "updated@example.com"
+    assert "email" not in data
     assert data["phone"] == "12015550010"  # canonical: no + prefix
     assert data["evolution_instance_name"] == "updated-instance"
     assert data["client_prefix"] == "z9"
@@ -390,8 +388,8 @@ async def test_create_tenant_invalid_username_too_long(client, auth_headers):
     assert response.status_code == 422
 
 
-async def test_create_tenant_invalid_email(client, auth_headers):
-    """Invalid email returns 422."""
+async def test_create_tenant_rejects_removed_email_field(client, auth_headers):
+    """The removed tenant email field is rejected."""
     response = await _create_tenant(
         client, auth_headers, email="not-an-email", username="invalid_email_test"
     )
@@ -456,19 +454,16 @@ async def test_create_tenant_invalid_full_name_slash(client, auth_headers):
     assert response.status_code == 422
 
 
-async def test_create_tenant_email_normalized(client, auth_headers, db_session):
-    """Email domain is lowercased on create."""
+async def test_create_tenant_response_does_not_expose_email(client, auth_headers):
     response = await _create_tenant(
         client,
         auth_headers,
-        username="email_norm_test",
-        email="User@Example.COM",
+        username="no_email_test",
         phone="+12015550030",
     )
 
     assert response.status_code == 201
-    data = response.json()
-    assert data["email"] == "User@example.com"
+    assert "email" not in response.json()
 
 
 async def test_create_tenant_full_name_collapsed(client, auth_headers):
@@ -508,25 +503,21 @@ async def test_create_tenant_same_logical_payload_normalized(
     from app.models import Tenant
     from sqlalchemy import select
 
-    # Create with mixed-case email, phone with +
     resp1 = await _create_tenant(
         client,
         auth_headers,
         username="logical_test_a",
         full_name="Alice   Smith",  # multiple internal spaces
-        email="Alice@Example.COM",  # mixed case
         phone="+12015551001",
     )
     assert resp1.status_code == 201
     d1 = resp1.json()
 
-    # Create with lower-case email, phone without +, distinct phone
     resp2 = await _create_tenant(
         client,
         auth_headers,
         username="logical_test_b",
         full_name="Alice Smith",  # single space
-        email="alice@example.com",  # already lowercase
         phone="+12015551002",  # distinct phone
     )
     assert resp2.status_code == 201
@@ -534,12 +525,10 @@ async def test_create_tenant_same_logical_payload_normalized(
 
     # Assert canonical forms for first tenant
     assert d1["full_name"] == "Alice Smith"  # collapsed
-    assert d1["email"] == "Alice@example.com"  # domain lowercased
     assert d1["phone"] == "12015551001"  # digits-only
 
     # Assert canonical forms for second tenant
     assert d2["full_name"] == "Alice Smith"  # single space stays
-    assert d2["email"] == "alice@example.com"  # already lowercase
     assert d2["phone"] == "12015551002"  # digits-only (no + added)
 
     # Verify persistence in DB
@@ -554,20 +543,16 @@ async def test_create_tenant_same_logical_payload_normalized(
         assert profile.whatsapp_phone == expected_phone
 
 
-async def test_create_tenant_optional_email_phone_allowed(client, auth_headers):
-    """Optional email and phone can be omitted."""
+async def test_create_tenant_optional_phone_allowed(client, auth_headers):
     response = await _create_tenant(
         client,
         auth_headers,
         username="optional_fields",
-        email=None,
         phone=None,
     )
 
     assert response.status_code == 201
-    data = response.json()
-    assert data["email"] is None
-    assert data["phone"] is None
+    assert response.json()["phone"] is None
 
 
 async def test_tenant_endpoints_require_master(client, active_tenant_user):
@@ -582,8 +567,10 @@ async def test_tenant_endpoints_require_master(client, active_tenant_user):
     assert response.status_code == 403
 
 
-async def test_update_tenant_invalid_email(client, auth_headers, active_tenant_user):
-    """Invalid email in update returns 422."""
+async def test_update_tenant_rejects_removed_email_field(
+    client, auth_headers, active_tenant_user
+):
+    """The removed tenant email field is rejected on update."""
     response = await client.put(
         f"/api/v1/tenants/{active_tenant_user.id}",
         json={"email": "not-an-email"},
@@ -632,14 +619,13 @@ async def test_update_tenant_invalid_full_name_leading_space(
 
 
 async def test_create_tenant_service_normalizes_values(db_session):
-    """Direct service call persists normalized phone/email/full_name."""
+    """Direct service call persists normalized phone and full_name."""
     from app.schemas.tenant import TenantCreate
     from app.services.tenant_service import TenantService
 
     payload = TenantCreate(
         username="service_test",
         full_name="John   Smith",  # multiple spaces
-        email="User@Example.COM",  # mixed case
         phone="+12015550040",  # with +
         password="test-password",
         evolution_instance_name="service-test-instance",
@@ -650,7 +636,6 @@ async def test_create_tenant_service_normalizes_values(db_session):
     profile, _ = await service.create_tenant(db_session, payload)
 
     assert profile.full_name == "John Smith"  # collapsed
-    assert profile.email == "User@example.com"  # domain lowercased
     assert profile.phone == "12015550040"  # canonical digits only
 
 
@@ -662,7 +647,6 @@ async def test_create_tenant_service_normalizes_phone_jid(db_session):
     payload = TenantCreate(
         username="service_jid_test",
         full_name="Test User",
-        email="test@example.com",
         phone="+12015550041@s.whatsapp.net",
         password="test-password",
         evolution_instance_name="service-jid-instance",
@@ -683,7 +667,6 @@ async def test_create_tenant_service_rejects_invalid_username_direct(db_session)
     payload = TenantCreate(
         username="valid_user",
         full_name="Test User",
-        email="test@example.com",
         phone="+12015550042",
         password="test-password",
         evolution_instance_name="test-instance",
@@ -705,7 +688,6 @@ async def test_create_tenant_service_rejects_invalid_phone_direct(db_session):
     payload = TenantCreate(
         username="phone_invalid_test",
         full_name="Test User",
-        email="test@example.com",
         phone="+12015550043",
         password="test-password",
         evolution_instance_name="test-instance",
@@ -726,7 +708,6 @@ async def test_create_tenant_service_rejects_invalid_full_name_direct(db_session
     payload = TenantCreate(
         username="fn_invalid_test",
         full_name="Test User",
-        email="test@example.com",
         phone="+12015550044",
         password="test-password",
         evolution_instance_name="test-instance",
@@ -742,35 +723,13 @@ async def test_create_tenant_service_rejects_invalid_full_name_direct(db_session
         await service.create_tenant(db_session, payload)
 
 
-async def test_create_tenant_service_rejects_invalid_email_direct(db_session):
-    """Service layer rejects invalid email bypassing Pydantic."""
-    from app.schemas.tenant import TenantCreate
-    from app.services.tenant_service import TenantService
-
-    payload = TenantCreate(
-        username="email_invalid_test",
-        full_name="Test User",
-        email="test@example.com",
-        phone="+12015550045",
-        password="test-password",
-        evolution_instance_name="test-instance",
-        plan="pro",
-    )
-    payload.email = "not-an-email"  # bypass Pydantic
-
-    service = TenantService()
-    with pytest.raises(ValueError):
-        await service.create_tenant(db_session, payload)
-
-
 async def test_update_tenant_service_normalizes_values(db_session, active_tenant_user):
-    """Service layer normalizes full_name, email, phone on update."""
+    """Service layer normalizes full_name and phone on update."""
     from app.schemas.tenant import TenantUpdate
     from app.services.tenant_service import TenantService
 
     payload = TenantUpdate(
         full_name="Updated   Name",  # multiple spaces
-        email="Updated@Example.COM",  # mixed case
         phone="+12015550050",  # with +
     )
 
@@ -779,7 +738,6 @@ async def test_update_tenant_service_normalizes_values(db_session, active_tenant
 
     assert profile is not None
     assert profile.full_name == "Updated Name"  # collapsed
-    assert profile.email == "Updated@example.com"  # domain lowercased
     assert profile.phone == "12015550050"  # canonical digits only
 
 
@@ -791,7 +749,6 @@ async def test_duplicate_username_service_layer(db_session):
     payload1 = TenantCreate(
         username="dup_test",
         full_name="First",
-        email="first@example.com",
         phone="+12015550060",
         password="test-password",
         evolution_instance_name="dup-test-1",
@@ -803,7 +760,6 @@ async def test_duplicate_username_service_layer(db_session):
     payload2 = TenantCreate(
         username="dup_test",  # same normalized username
         full_name="Second",
-        email="second@example.com",
         phone="+12015550061",
         password="test-password",
         evolution_instance_name="dup-test-2",
@@ -821,7 +777,6 @@ async def test_duplicate_phone_service_layer(db_session):
     payload1 = TenantCreate(
         username="phone_dup_test_1",
         full_name="First",
-        email="first@example.com",
         phone="+12015550070",
         password="test-password",
         evolution_instance_name="phone-dup-1",
@@ -833,7 +788,6 @@ async def test_duplicate_phone_service_layer(db_session):
     payload2 = TenantCreate(
         username="phone_dup_test_2",
         full_name="Second",
-        email="second@example.com",
         phone="12015550070",  # same digits, no +
         password="test-password",
         evolution_instance_name="phone-dup-2",

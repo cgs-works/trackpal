@@ -79,7 +79,6 @@ async def test_master_can_create_demo_with_one_time_credentials_and_no_business_
     assert tenant.is_demo is True
     assert tenant.demo_locale == "es"
     assert tenant.is_active is True
-    assert tenant.email is None
     assert tenant.whatsapp_phone is None
     assert tenant.evolution_instance_name is None
     assert tenant.evolution_instance_token is None

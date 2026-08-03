@@ -17,7 +17,6 @@ from app.core.database import (
 from app.core.demo_guardrail import assert_demo_operation_allowed
 from app.core.input_validation import (
     validate_client_prefix,
-    validate_email,
     validate_full_name,
     validate_phone,
     validate_username,
@@ -46,7 +45,6 @@ async def create_tenant(
 ) -> tuple[Tenant, str | None]:
     username = validate_username(payload.username)
     full_name = validate_full_name(payload.full_name)
-    email = validate_email(payload.email)
     phone = validate_phone(payload.phone)
     locale = payload.locale.strip().lower()
     if locale not in VALID_LOCALES:
@@ -85,7 +83,6 @@ async def create_tenant(
         client_prefix=client_prefix,
         plan=payload.plan,
         name=full_name,
-        email=email,
         whatsapp_phone=phone,
         evolution_instance_name=payload.evolution_instance_name,
         is_active=True,
@@ -170,8 +167,6 @@ async def update_tenant(
 
     if "full_name" in update_data and update_data["full_name"] is not None:
         update_data["full_name"] = validate_full_name(update_data["full_name"])
-    if "email" in update_data:
-        update_data["email"] = validate_email(update_data["email"])
     if "phone" in update_data:
         if update_data["phone"] is not None:
             update_data["phone"] = validate_phone(update_data["phone"])

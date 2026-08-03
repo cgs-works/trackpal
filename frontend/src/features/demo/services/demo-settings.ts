@@ -237,7 +237,7 @@ function demoProfile(
     client_prefix: null,
     locale: state.profile.locale,
     timezone: state.tenant_settings?.timezone ?? "UTC",
-    email: state.profile.email ?? null,
+    email: null,
     phone: state.profile.phone ?? null,
     is_active: true,
     created_at: timestamp,
@@ -274,7 +274,6 @@ export function createDemoSettings(
         profile: {
           ...existing.profile,
           business_name: payload.full_name?.trim() || existing.profile.business_name,
-          email: payload.email?.trim() || existing.profile.email || null,
           phone: payload.phone?.trim() || existing.profile.phone || null,
         },
       }));

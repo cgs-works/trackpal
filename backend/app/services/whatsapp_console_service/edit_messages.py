@@ -10,22 +10,19 @@ EDIT_PROMPT_SELECT_FIELD = (
     "¿Qué campo deseas editar?",
     "",
     "1️⃣ Nombre completo",
-    "2️⃣ Email",
-    "3️⃣ Teléfono",
-    "4️⃣ Instancia Evolution",
+    "2️⃣ Teléfono",
+    "3️⃣ Instancia Evolution",
     "9️⃣ Volver al menú",
 )
 
 EDIT_FIELD_MAP = {
     "1": "full_name",
-    "2": "email",
-    "3": "phone",
-    "4": "evolution_instance_name",
+    "2": "phone",
+    "3": "evolution_instance_name",
 }
 
 EDIT_FIELD_PROMPTS = {
     "full_name": ("✏️ *Editar empresa*\n\n¿Cuál es el *nuevo nombre completo*?"),
-    "email": ("✏️ *Editar empresa*\n\n¿Cuál es el *nuevo email*?"),
     "phone": ("✏️ *Editar empresa*\n\n¿Cuál es el *nuevo teléfono*?"),
     "evolution_instance_name": (
         "✏️ *Editar empresa*\n\n¿Cuál es el *nuevo nombre de instancia Evolution*?"
@@ -33,7 +30,7 @@ EDIT_FIELD_PROMPTS = {
 }
 
 EDIT_ERROR_INVALID_FIELD = (
-    "❌ Opción inválida. Responde con un número del *1* al *4* "
+    "❌ Opción inválida. Responde con un número del *1* al *3* "
     "para elegir el campo a editar, o *9* para volver al menú."
 )
 

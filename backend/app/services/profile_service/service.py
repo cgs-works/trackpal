@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import UserFacingError
 from app.core.input_validation import (
-    validate_email,
     validate_full_name,
     validate_phone,
     validate_password_policy,
@@ -52,17 +51,17 @@ class ProfileService:
             update_data["full_name"] = validate_full_name(update_data["full_name"])
         if "name" in update_data and update_data["name"] is not None:
             update_data["name"] = validate_full_name(update_data["name"])
-        if "email" in update_data:
-            update_data["email"] = validate_email(update_data["email"])
+        if user.role == "tenant" and "email" in update_data:
+            raise ValueError(
+                "Tenant email is not supported; configure the mailbox instead"
+            )
         if "phone" in update_data:
             if update_data["phone"] is not None:
                 update_data["phone"] = validate_phone(update_data["phone"])
             # phone=None is allowed (clearing optional field)
 
         allowed_fields: set[str] = (
-            {"name", "phone"}
-            if user.role == "master"
-            else {"full_name", "email", "phone"}
+            {"name", "phone"} if user.role == "master" else {"full_name", "phone"}
         )
 
         # Duplicate check using normalized phone
@@ -99,7 +98,9 @@ class ProfileService:
         if "full_name" in update_data and update_data["full_name"] is not None:
             update_data["full_name"] = validate_full_name(update_data["full_name"])
         if "email" in update_data:
-            update_data["email"] = validate_email(update_data["email"])
+            raise ValueError(
+                "Tenant email is not supported; configure the mailbox instead"
+            )
         if "phone" in update_data:
             if update_data["phone"] is not None:
                 update_data["phone"] = validate_phone(update_data["phone"])
@@ -114,7 +115,6 @@ class ProfileService:
         # Map frontend field names to Tenant model fields
         field_mapping = {
             "full_name": "name",
-            "email": "email",
             "phone": "whatsapp_phone",
         }
         for frontend_field, model_field in field_mapping.items():

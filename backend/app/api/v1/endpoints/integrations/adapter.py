@@ -24,7 +24,6 @@ class _TenantConsoleItem:
         self.id = profile.id
         self.full_name = profile.full_name
         self.is_active = profile.is_active
-        self.email = profile.email
         self.phone = profile.phone
         owner = getattr(profile, "owner", None) or getattr(profile, "user", None)
         self.username = owner.username if owner else ""

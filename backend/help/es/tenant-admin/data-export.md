@@ -48,7 +48,7 @@ Puedes descargar una copia puntual de los datos de tu cuenta de TrackPal. La exp
 
 | Archivo | Contenido |
 |---------|-----------|
-| `account-profile.csv` | Nombre de tu cuenta, correo de contacto, teléfono WhatsApp, nombre de usuario, plan actual, idioma y zona horaria |
+| `account-profile.csv` | Nombre de tu cuenta, teléfono WhatsApp, nombre de usuario, plan actual, idioma y zona horaria |
 | `client-data.csv` | Nombre del cliente, nombre de usuario, teléfono, estado de la cuenta, fechas de registro y última actualización |
 | `service-catalog.csv` | Nombre del servicio, fechas de creación y actualización, nombre del plan y fechas del plan. Los servicios sin planes aparecen con campos de plan vacíos |
 | `subscription-snapshot.csv` | Nombre y usuario del cliente, servicio, plan, correo y perfil de la cuenta de streaming, duración, fechas de inicio, vencimiento y cancelación, estado, marcas de tiempo |

@@ -28,7 +28,7 @@ interface TenantUtilityConsoleExperienceProps {
 }
 
 type Message = { id: number; role: "bot" | "user"; text: string };
-type ProfileField = "full_name" | "email" | "phone";
+type ProfileField = "full_name" | "phone";
 type ProfileScreen = "menu" | "edit-fields" | "edit-value";
 type AccessControlScreen = "menu" | "list" | "block";
 
@@ -175,13 +175,12 @@ function ProfileConsole({
     return t("frontend.demo_simulator.profile_detail", {
       username: nextProfile.username,
       name: profileValue(nextProfile.full_name ?? nextProfile.name),
-      email: profileValue(nextProfile.email),
       phone: profileValue(nextProfile.phone),
     });
   }
 
   function editFields(): string {
-    return `${t("frontend.demo_simulator.profile_edit_fields")}\n\n1. ${t("frontend.profile.full_name")}\n2. ${t("frontend.profile.email")}\n3. ${t("frontend.profile.phone")}\n\n9. ${t("frontend.demo_simulator.back")}\n0. ${t("frontend.demo_simulator.cancel")}`;
+    return `${t("frontend.demo_simulator.profile_edit_fields")}\n\n1. ${t("frontend.profile.full_name")}\n2. ${t("frontend.profile.phone")}\n\n9. ${t("frontend.demo_simulator.back")}\n0. ${t("frontend.demo_simulator.cancel")}`;
   }
 
   function fieldPrompt(nextField: ProfileField): string {
@@ -229,9 +228,6 @@ function ProfileConsole({
           selectedField = "full_name";
           break;
         case "2":
-          selectedField = "email";
-          break;
-        case "3":
           selectedField = "phone";
           break;
       }

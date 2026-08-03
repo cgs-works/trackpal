@@ -90,7 +90,6 @@ export function DashboardPage() {
     const q = searchQuery.toLowerCase();
     return (
       t.full_name.toLowerCase().includes(q) ||
-      t.email?.toLowerCase().includes(q) ||
       t.client_prefix?.toLowerCase().includes(q)
     );
   });
@@ -109,7 +108,6 @@ export function DashboardPage() {
       ...getEmptyForm(),
       id: tenant.id,
       full_name: tenant.full_name || "",
-      email: tenant.email || "",
       phone: tenant.phone || "",
       client_prefix: tenant.client_prefix || "",
       evolution_instance_name: tenant.evolution_instance_name || "",
@@ -130,8 +128,8 @@ export function DashboardPage() {
       setFormError("Plan is required.");
       return;
     }
-    if (!form.full_name || !form.email || !form.phone) {
-      setFormError("Full name, email, and phone are required.");
+    if (!form.full_name || !form.phone) {
+      setFormError("Full name and phone are required.");
       return;
     }
     if (formMode === "create" && !form.username) {
@@ -148,7 +146,6 @@ export function DashboardPage() {
       if (formMode === "edit") {
         const payload: Record<string, unknown> = {
           full_name: form.full_name,
-          email: form.email,
           phone: form.phone,
           evolution_instance_name: form.evolution_instance_name,
           plan: form.plan,
@@ -159,7 +156,6 @@ export function DashboardPage() {
       } else {
         const payload: Record<string, unknown> = {
           full_name: form.full_name,
-          email: form.email,
           phone: form.phone,
           username: form.username,
           evolution_instance_name: form.evolution_instance_name,

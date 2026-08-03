@@ -1,9 +1,9 @@
 """Tests for the WhatsApp Master Console create Tenant flow.
 
-Verifies guided Tenant creation: full name, optional email, optional phone,
+Verifies guided Tenant creation: full name, optional phone,
 username, Evolution Instance, password mode, confirmation, and the original
 regression where the full-name step returned to main menu instead of
-continuing to the email step.
+continuing to the phone step.
 """
 
 from __future__ import annotations
@@ -74,7 +74,6 @@ class FakeTenant:
         id: str = "new-tenant-id",
         full_name: str = "",
         is_active: bool = True,
-        email: str | None = None,
         phone: str | None = None,
         username: str = "",
         evolution_instance_name: str = "",
@@ -83,7 +82,6 @@ class FakeTenant:
         self.id = id
         self.full_name = full_name
         self.is_active = is_active
-        self.email = email
         self.phone = phone
         self.username = username
         self.evolution_instance_name = evolution_instance_name
@@ -163,7 +161,6 @@ class FakeTenantService:
             id=tenant_id,
             full_name=full_name,
             is_active=True,
-            email=payload.get("email"),
             phone=phone,
             username=username,
             evolution_instance_name=evolution_instance_name,
@@ -271,16 +268,16 @@ class TestCreateFlowStart:
 
 
 # ===========================================================================
-# REGRESSION TEST: Full name → email continuation (the original bug)
+# REGRESSION TEST: Full name → phone continuation (the original bug)
 # ===========================================================================
 
 
 @pytest.mark.asyncio
 class TestFullNameStepRegression:
-    """Critical regression: full-name input must continue to email step.
+    """Critical regression: full-name input must continue to phone step.
 
     This covers the original bug where after sending the full name,
-    the reply returned the main menu instead of asking for the email.
+    the reply returned the main menu instead of asking for the phone.
     """
 
     async def _start_create_flow(
@@ -295,12 +292,12 @@ class TestFullNameStepRegression:
             session_service=session_service,
         )
 
-    async def test_full_name_continues_to_email(
+    async def test_full_name_continues_to_phone(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """REGRESSION: After sending full name, response must ask for email,
+        """REGRESSION: After sending full name, response must ask for phone,
         NOT return to main menu."""
         await self._start_create_flow(console_service, session_service)
 
@@ -314,13 +311,13 @@ class TestFullNameStepRegression:
         # MUST NOT contain main menu
         assert "TrackPal Master Console" not in reply
 
-        # MUST ask for email
-        assert "email" in reply.lower() or "correo" in reply.lower()
+        # MUST ask for phone
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
 
         # Session must be updated
         session = await session_service.get_session("+10000000000")
         assert session is not None
-        assert session.step == "email"
+        assert session.step == "phone"
         assert session.temp_data.get("full_name") == "Juan Pérez"
 
     async def test_full_name_empty_reprompts(
@@ -444,7 +441,7 @@ class TestFullNameStepRegression:
         session_service: WhatsAppSessionService,
     ) -> None:
         """Full name with leading space is stripped by message layer;
-        validation accepts stripped value and advances to email step."""
+        validation accepts stripped value and advances to phone step."""
         await self._start_create_flow(console_service, session_service)
 
         reply = await console_service.process_message(
@@ -453,11 +450,11 @@ class TestFullNameStepRegression:
             is_master=True,
             session_service=session_service,
         )
-        # Stripped value is valid, advances to email
-        assert "email" in reply.lower() or "correo" in reply.lower()
+        # Stripped value is valid, advances to phone
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
         session = await session_service.get_session("+10000000000")
         assert session is not None
-        assert session.step == "email"
+        assert session.step == "phone"
         assert session.temp_data["full_name"] == "Juan Pérez"
 
     async def test_full_name_trailing_space_normalized(
@@ -475,10 +472,10 @@ class TestFullNameStepRegression:
             is_master=True,
             session_service=session_service,
         )
-        assert "email" in reply.lower() or "correo" in reply.lower()
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
         session = await session_service.get_session("+10000000000")
         assert session is not None
-        assert session.step == "email"
+        assert session.step == "phone"
         assert session.temp_data["full_name"] == "Juan Pérez"
 
     async def test_full_name_multiple_internal_spaces_collapsed(
@@ -495,214 +492,10 @@ class TestFullNameStepRegression:
             is_master=True,
             session_service=session_service,
         )
-        assert "email" in reply.lower()
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
         session = await session_service.get_session("+10000000000")
         assert session is not None
         assert session.temp_data["full_name"] == "Juan Pérez"
-
-
-# ===========================================================================
-# Email step
-# ===========================================================================
-
-
-@pytest.mark.asyncio
-class TestEmailStep:
-    """Optional email collection with skip semantics."""
-
-    async def _start_and_set_name(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-        name: str = "Juan Pérez",
-    ) -> None:
-        await console_service.process_message(
-            phone="+10000000000",
-            message="2",
-            is_master=True,
-            session_service=session_service,
-        )
-        await console_service.process_message(
-            phone="+10000000000",
-            message=name,
-            is_master=True,
-            session_service=session_service,
-        )
-
-    async def test_email_transitions_to_phone(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="juan@example.com",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "phone"
-        assert session.temp_data["email"] == "juan@example.com"
-
-    async def test_email_skip_with_dash(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="—",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.temp_data["email"] is None
-
-    async def test_email_skip_with_skip_word(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="skip",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.temp_data["email"] is None
-
-    async def test_email_empty_skips(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.temp_data["email"] is None
-
-    async def test_email_invalid_rejected(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        """Invalid email must be rejected, stay on email step,
-        preserve previously collected full_name."""
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="not-an-email",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "email" in reply.lower() or "correo" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "email"
-        assert "email" not in session.temp_data
-        # Previously collected full_name must be preserved
-        assert session.temp_data.get("full_name") == "Juan Pérez"
-
-    async def test_email_with_spaces_rejected(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        """Email with spaces must be rejected."""
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="juan @example.com",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "email" in reply.lower() or "correo" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "email"
-
-    async def test_email_normalized(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        """Valid email with mixed case is normalized to lowercase."""
-        await self._start_and_set_name(console_service, session_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="Juan.Perez@Example.COM",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.temp_data["email"] == "Juan.Perez@example.com"
-
-    async def test_email_invalid_then_correction_advances(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-    ) -> None:
-        """Invalid email stays on step with prior fields preserved;
-        corrected email advances to phone step."""
-        await self._start_and_set_name(console_service, session_service)
-
-        # Send invalid email
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="not-an-email",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "email" in reply.lower() or "correo" in reply.lower()
-
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "email"
-        assert "email" not in session.temp_data
-        # Prior full_name preserved
-        assert session.temp_data.get("full_name") == "Juan Pérez"
-
-        # Send corrected email
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="juan.corrected@example.com",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
-
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "phone"
-        assert session.temp_data["email"] == "juan.corrected@example.com"
-        # full_name still preserved
-        assert session.temp_data.get("full_name") == "Juan Pérez"
 
 
 # ===========================================================================
@@ -714,7 +507,7 @@ class TestEmailStep:
 class TestPhoneStep:
     """Optional phone collection with skip semantics."""
 
-    async def _start_through_email(
+    async def _start_through_name(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
@@ -731,19 +524,13 @@ class TestPhoneStep:
             is_master=True,
             session_service=session_service,
         )
-        await console_service.process_message(
-            phone="+10000000000",
-            message="juan@example.com",
-            is_master=True,
-            session_service=session_service,
-        )
 
     async def test_phone_transitions_to_username(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        await self._start_through_email(console_service, session_service)
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -763,7 +550,7 @@ class TestPhoneStep:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        await self._start_through_email(console_service, session_service)
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -781,7 +568,7 @@ class TestPhoneStep:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        await self._start_through_email(console_service, session_service)
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -799,9 +586,8 @@ class TestPhoneStep:
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
     ) -> None:
-        """Non-numeric phone must be rejected, stay on phone step,
-        preserve previously collected email."""
-        await self._start_through_email(console_service, session_service)
+        """Non-numeric phone must be rejected and stay on the phone step."""
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -814,8 +600,6 @@ class TestPhoneStep:
         assert session is not None
         assert session.step == "phone"
         assert "phone" not in session.temp_data
-        # Previously collected email must be preserved
-        assert session.temp_data.get("email") == "juan@example.com"
 
     async def test_phone_no_country_code_rejected(
         self,
@@ -823,7 +607,7 @@ class TestPhoneStep:
         session_service: WhatsAppSessionService,
     ) -> None:
         """Phone without international country code must be rejected."""
-        await self._start_through_email(console_service, session_service)
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -842,7 +626,7 @@ class TestPhoneStep:
         session_service: WhatsAppSessionService,
     ) -> None:
         """Valid phone with + is stored as digits-only."""
-        await self._start_through_email(console_service, session_service)
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -862,7 +646,7 @@ class TestPhoneStep:
         session_service: WhatsAppSessionService,
     ) -> None:
         """Valid phone without + prefix is stored as digits-only."""
-        await self._start_through_email(console_service, session_service)
+        await self._start_through_name(console_service, session_service)
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -964,7 +748,6 @@ class TestUsernameStep:
         assert "username" not in session.temp_data
         # Prior collected fields must be preserved
         assert session.temp_data.get("full_name") == "Juan Pérez"
-        assert session.temp_data.get("email") == "juan@example.com"
         assert session.temp_data.get("phone") == "525512345678"
 
     async def test_username_duplicate_then_valid(
@@ -1275,7 +1058,6 @@ class TestUsernameStep:
         assert "username" not in session.temp_data
         # Prior fields must remain intact
         assert session.temp_data.get("full_name") == "Test User"
-        assert session.temp_data.get("email") == "test@example.com"
 
     async def test_invalid_username_does_not_call_duplicate_check(
         self,
@@ -1714,7 +1496,6 @@ class TestConfirmationStep:
         assert session is not None
         assert session.step == "confirm"
         assert session.temp_data["full_name"] == "Juan Pérez"
-        assert session.temp_data["email"] == "juan@example.com"
         # Phone stored canonical digits-only (no + prefix)
         assert session.temp_data["phone"] == "525512345678"
         assert session.temp_data["username"] == "juanperez"
@@ -1841,17 +1622,8 @@ class TestFullCreateFlow:
             is_master=True,
             session_service=session_service,
         )
-        assert "email" in reply.lower()
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
         assert "TrackPal Master Console" not in reply  # REGRESSION CHECK
-
-        # Step 3: Email (optional, skip)
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="—",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
 
         # Step 4: Phone (optional, provide)
         reply = await console_service.process_message(
@@ -1928,17 +1700,8 @@ class TestFullCreateFlow:
             is_master=True,
             session_service=session_service,
         )
-        assert "email" in reply.lower()
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
         assert "TrackPal Master Console" not in reply  # REGRESSION CHECK
-
-        # Step 3: Email
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="carlos@example.com",
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
 
         # Step 4: Phone (skip)
         reply = await console_service.process_message(
@@ -2364,7 +2127,7 @@ class TestFullCreateFlow:
             session_service=session_service,
         )
 
-        # Cancel during email step
+        # Cancel during phone step
         reply = await console_service.process_message(
             phone="+10000000000",
             message="cancelar",
@@ -2382,8 +2145,7 @@ class TestFullCreateFlow:
         session_service: WhatsAppSessionService,
         tenant_service: FakeTenantService,
     ) -> None:
-        """Full create flow normalizes mixed-case email, phone without +,
-        and full name with multiple internal spaces.
+        """Full create flow normalizes phone without + and full name with multiple internal spaces.
 
         The created FakeTenant must store canonical forms.
         """
@@ -2403,16 +2165,7 @@ class TestFullCreateFlow:
             is_master=True,
             session_service=session_service,
         )
-        assert "email" in reply.lower()
-
-        # Step 3: Email with mixed case
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="Maria.Garcia@Example.COM",  # mixed case
-            is_master=True,
-            session_service=session_service,
-        )
-        assert "teléfono" in reply.lower()
+        assert "teléfono" in reply.lower() or "telefono" in reply.lower()
 
         # Step 4: Phone without + prefix
         reply = await console_service.process_message(
@@ -2469,7 +2222,6 @@ class TestFullCreateFlow:
 
         # Canonical assertions
         assert tenant.full_name == "María García Ana"  # spaces collapsed
-        assert tenant.email == "Maria.Garcia@example.com"  # domain lowercased
         assert tenant.phone == "525511112233"  # digits-only, no +
 
 

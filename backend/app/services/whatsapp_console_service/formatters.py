@@ -72,7 +72,6 @@ def _format_tenant_detail(tenant: Any) -> str:
         f"👤 *Detalle de la empresa*\n\n"
         f"*Nombre:* {tenant.full_name}\n"
         f"*Usuario:* {tenant.username}\n"
-        f"*Email:* {tenant.email or '—'}\n"
         f"*Teléfono:* {tenant.phone or '—'}\n"
         f"*Instancia Evolution:* {tenant.evolution_instance_name or '—'}\n"
         f"*Estado:* {status_emoji}\n"

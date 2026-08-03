@@ -25,7 +25,6 @@ async def _handle_create_confirm(
     data = session.temp_data
     payload = {
         "full_name": data.get("full_name", ""),
-        "email": data.get("email"),
         "phone": data.get("phone"),
         "username": data.get("username", ""),
         "evolution_instance_name": data.get("evolution_instance_name", ""),
@@ -47,7 +46,6 @@ async def _handle_create_confirm(
                 "✅ *Empresa creada exitosamente*\n\n"
                 f"*Nombre:* {tenant.full_name}\n"
                 f"*Usuario:* {tenant.username}\n"
-                f"*Email:* {tenant.email or '—'}\n"
                 f"*Teléfono:* {tenant.phone or '—'}\n"
             )
             if auto_password:

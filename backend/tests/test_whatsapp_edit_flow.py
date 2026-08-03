@@ -1,7 +1,6 @@
 """Tests for the WhatsApp Master Console edit Tenant flow.
 
-Verifies the Master can edit full name, email, phone, and Evolution
-Instance from the Tenant detail screen. Covers valid updates, invalid
+Verifies the Master can edit full name, phone, and Evolution Instance from the Tenant detail screen. Covers valid updates, invalid
 input, duplicate phone detection, and cancel/reset from edit steps.
 """
 
@@ -30,7 +29,6 @@ class FakeTenant:
         id: str,
         full_name: str,
         is_active: bool = True,
-        email: str | None = None,
         phone: str | None = None,
         username: str | None = None,
         evolution_instance_name: str | None = None,
@@ -39,7 +37,6 @@ class FakeTenant:
         self.id = id
         self.full_name = full_name
         self.is_active = is_active
-        self.email = email
         self.phone = phone
         self.username = username
         self.evolution_instance_name = evolution_instance_name
@@ -193,7 +190,6 @@ def sample_tenants() -> list[FakeTenant]:
             id=TENANT_1_ID,
             full_name="Alpha Corp",
             is_active=True,
-            email="alpha@example.com",
             phone="525512345678",
             username="alpha",
             evolution_instance_name="inst-alpha",
@@ -203,7 +199,6 @@ def sample_tenants() -> list[FakeTenant]:
             id=TENANT_2_ID,
             full_name="Beta Inc",
             is_active=True,
-            email="beta@example.com",
             phone="525598765432",
             username="beta",
             evolution_instance_name="inst-beta",
@@ -279,7 +274,7 @@ class TestEditFlowStart:
         assert "campo" in reply.lower() or "editar" in reply.lower()
         # Should list editable fields
         assert "nombre completo" in reply.lower()
-        assert "email" in reply.lower()
+        assert "email" not in reply.lower()
         assert "teléfono" in reply.lower() or "telefono" in reply.lower()
         assert "evolution" in reply.lower() or "instancia" in reply.lower()
 
@@ -392,29 +387,6 @@ class TestEditFieldSelection:
         assert session.step == "new_value"
         assert session.temp_data.get("edit_field") == "full_name"
 
-    async def test_select_email_prompts_for_new_value(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-        tenant_service: FakeTenantService,
-    ) -> None:
-        await self._start_edit(console_service, session_service, tenant_service)
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="2",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-
-        assert "nuevo email" in reply.lower() or "nuevo correo" in reply.lower()
-
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "new_value"
-        assert session.temp_data.get("edit_field") == "email"
-
     async def test_select_phone_prompts_for_new_value(
         self,
         console_service: WhatsAppConsoleService,
@@ -425,7 +397,7 @@ class TestEditFieldSelection:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="3",
+            message="2",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -448,7 +420,7 @@ class TestEditFieldSelection:
 
         reply = await console_service.process_message(
             phone="+10000000000",
-            message="4",
+            message="3",
             is_master=True,
             session_service=session_service,
             tenant_service=tenant_service,
@@ -581,41 +553,13 @@ class TestEditNewValue:
         session = await session_service.get_session("+10000000000")
         assert session is None
 
-    async def test_valid_email_update(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-        tenant_service: FakeTenantService,
-    ) -> None:
-        await self._select_field(console_service, session_service, tenant_service, "2")
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="newalpha@example.com",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-
-        assert "Empresa actualizada exitosamente" in reply
-        assert "Alpha Corp" in reply
-        assert "TrackPal Master Console" in reply
-
-        tenant = await tenant_service.get_tenant(TENANT_1_ID)
-        assert tenant is not None
-        assert tenant.email == "newalpha@example.com"
-
-        # Session should be cleared
-        session = await session_service.get_session("+10000000000")
-        assert session is None
-
     async def test_valid_phone_update(
         self,
         console_service: WhatsAppConsoleService,
         session_service: WhatsAppSessionService,
         tenant_service: FakeTenantService,
     ) -> None:
-        await self._select_field(console_service, session_service, tenant_service, "3")
+        await self._select_field(console_service, session_service, tenant_service, "2")
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -643,7 +587,7 @@ class TestEditNewValue:
         session_service: WhatsAppSessionService,
         tenant_service: FakeTenantService,
     ) -> None:
-        await self._select_field(console_service, session_service, tenant_service, "4")
+        await self._select_field(console_service, session_service, tenant_service, "3")
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -752,33 +696,6 @@ class TestEditNewValue:
         assert tenant is not None
         assert tenant.full_name == "Alpha Corp"
 
-    async def test_invalid_email_reprompts(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-        tenant_service: FakeTenantService,
-    ) -> None:
-        """Invalid email in edit is rejected, stays on step, preserves context."""
-        await self._select_field(console_service, session_service, tenant_service, "2")
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="not-an-email",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-
-        # Should show validation error
-        assert "email" in reply.lower() or "correo" in reply.lower()
-
-        session = await session_service.get_session("+10000000000")
-        assert session is not None
-        assert session.step == "new_value"
-        assert session.temp_data.get("edit_field") == "email"
-        # Preserve selected tenant context
-        assert session.selected_tenant_id == TENANT_1_ID
-
     async def test_invalid_phone_reprompts(
         self,
         console_service: WhatsAppConsoleService,
@@ -786,7 +703,7 @@ class TestEditNewValue:
         tenant_service: FakeTenantService,
     ) -> None:
         """Invalid phone in edit is rejected, stays on step, preserves context."""
-        await self._select_field(console_service, session_service, tenant_service, "3")
+        await self._select_field(console_service, session_service, tenant_service, "2")
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -806,30 +723,6 @@ class TestEditNewValue:
         # Preserve selected tenant context
         assert session.selected_tenant_id == TENANT_1_ID
 
-    async def test_edit_valid_email_normalized(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-        tenant_service: FakeTenantService,
-    ) -> None:
-        """Valid email with mixed case is normalized in edit."""
-        await self._select_field(console_service, session_service, tenant_service, "2")
-
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="NewAlpha@Example.COM",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-
-        assert "Empresa actualizada exitosamente" in reply
-        assert "TrackPal Master Console" in reply
-        tenant = await tenant_service.get_tenant(TENANT_1_ID)
-        assert tenant is not None
-        # Email normalized (domain lowercase, local part preserved)
-        assert tenant.email == "NewAlpha@example.com"
-
     async def test_edit_valid_phone_normalized(
         self,
         console_service: WhatsAppConsoleService,
@@ -837,7 +730,7 @@ class TestEditNewValue:
         tenant_service: FakeTenantService,
     ) -> None:
         """Valid phone with + is stored digits-only in edit."""
-        await self._select_field(console_service, session_service, tenant_service, "3")
+        await self._select_field(console_service, session_service, tenant_service, "2")
 
         reply = await console_service.process_message(
             phone="+10000000000",
@@ -861,7 +754,7 @@ class TestEditNewValue:
         tenant_service: FakeTenantService,
     ) -> None:
         """Duplicate phone error keeps user in edit flow without losing context."""
-        await self._select_field(console_service, session_service, tenant_service, "3")
+        await self._select_field(console_service, session_service, tenant_service, "2")
 
         # Try to update to a phone already in use by Beta Inc
         reply = await console_service.process_message(
@@ -898,7 +791,7 @@ class TestEditNewValue:
         tenant_service: FakeTenantService,
     ) -> None:
         """After duplicate error, user can provide a valid phone."""
-        await self._select_field(console_service, session_service, tenant_service, "3")
+        await self._select_field(console_service, session_service, tenant_service, "2")
 
         # Send duplicate phone
         await console_service.process_message(
@@ -1021,98 +914,6 @@ class TestEditFlowWithoutSessionService:
 @pytest.mark.asyncio
 class TestEditFlowFullScenario:
     """End-to-end edit scenarios."""
-
-    async def test_edit_full_name_then_email(
-        self,
-        console_service: WhatsAppConsoleService,
-        session_service: WhatsAppSessionService,
-        tenant_service: FakeTenantService,
-    ) -> None:
-        """Edit two fields sequentially: full name then email."""
-        await _select_tenant(console_service, session_service, tenant_service)
-
-        # Edit full name
-        await console_service.process_message(
-            phone="+10000000000",
-            message="1",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        await console_service.process_message(
-            phone="+10000000000",
-            message="1",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="New Alpha Name",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        assert "Empresa actualizada exitosamente" in reply
-        assert "New Alpha Name" in reply
-        assert "TrackPal Master Console" in reply
-
-        # Session cleared after first edit — re-navigate from main menu
-        await console_service.process_message(
-            phone="+10000000000",
-            message="1",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        await console_service.process_message(
-            phone="+10000000000",
-            message="1",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        await console_service.process_message(
-            phone="+10000000000",
-            message="1",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        await console_service.process_message(
-            phone="+10000000000",
-            message="2",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        reply = await console_service.process_message(
-            phone="+10000000000",
-            message="newalpha@newdomain.com",
-            is_master=True,
-            session_service=session_service,
-            tenant_service=tenant_service,
-        )
-        assert "Empresa actualizada exitosamente" in reply
-        assert "New Alpha Name" in reply  # Previous edit preserved in DB
-        assert "TrackPal Master Console" in reply
-
-        # Verify persisted changes
-        tenant = await tenant_service.get_tenant(TENANT_1_ID)
-        assert tenant is not None
-        assert tenant.full_name == "New Alpha Name"
-        assert tenant.email == "newalpha@newdomain.com"
-        assert tenant.phone == "525512345678"  # Unchanged
-
-        # Session should be cleared after second edit too
-        session = await session_service.get_session("+10000000000")
-        assert session is None
-        # Verify persisted changes
-        tenant = await tenant_service.get_tenant(TENANT_1_ID)
-        assert tenant is not None
-        assert tenant.full_name == "New Alpha Name"
-        assert tenant.email == "newalpha@newdomain.com"
-        assert tenant.phone == "525512345678"  # Unchanged
 
     async def test_edit_invalid_input_does_not_lose_selected_tenant(
         self,

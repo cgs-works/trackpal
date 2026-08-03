@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from app.core.input_validation import (
     InputValidationError,
-    validate_email,
     validate_full_name,
     validate_phone,
     validate_username,
@@ -22,38 +21,13 @@ async def _handle_create_full_name(
     session,
     session_service,
 ) -> str:
-    """Validate full name, store normalized, transition to email."""
+    """Validate full name, store normalized, transition to phone."""
     try:
         normalized = validate_full_name(msg_text)
     except InputValidationError as exc:
         return fmt._validation_error_reply(exc, msg.CREATE_PROMPT_FULL_NAME)
 
     session.temp_data["full_name"] = normalized
-    session.step = self.CREATE_STEP_EMAIL
-    if session_service is not None:
-        await session_service.save_session(session)
-
-    return msg.CREATE_PROMPT_EMAIL
-
-
-async def _handle_create_email(
-    self,
-    phone: str,
-    msg_text: str,
-    session,
-    session_service,
-) -> str:
-    """Validate email, store normalized (or None if skipped), transition to phone."""
-    stripped = msg_text.strip()
-    if not stripped or stripped.lower() in self.SKIP_WORDS:
-        session.temp_data["email"] = None
-    else:
-        try:
-            normalized = validate_email(stripped, required=False)
-        except InputValidationError as exc:
-            return fmt._validation_error_reply(exc, msg.CREATE_PROMPT_EMAIL)
-        session.temp_data["email"] = normalized
-
     session.step = self.CREATE_STEP_PHONE
     if session_service is not None:
         await session_service.save_session(session)
@@ -204,7 +178,6 @@ async def _build_create_summary(
     return (
         "📋 *Resumen de Creación*\n\n"
         f"*Nombre completo:* {data.get('full_name', '—')}\n"
-        f"*Email:* {data.get('email', '—') or '—'}\n"
         f"*Teléfono:* {data.get('phone', '—') or '—'}\n"
         f"*Usuario:* {data.get('username', '—')}\n"
         f"*Instancia Evolution:* {data.get('evolution_instance_name', '—')}\n"

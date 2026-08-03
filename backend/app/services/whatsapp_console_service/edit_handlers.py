@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from app.core.input_validation import (
     InputValidationError,
-    validate_email,
     validate_full_name,
     validate_phone,
 )
@@ -56,9 +55,8 @@ def _get_edit_field_selection_prompt() -> str:
         "✏️ *Editar empresa*\n\n"
         "¿Qué campo deseas editar?\n\n"
         "1️⃣ Nombre completo\n"
-        "2️⃣ Email\n"
-        "3️⃣ Teléfono\n"
-        "4️⃣ Instancia Evolution\n"
+        "2️⃣ Teléfono\n"
+        "3️⃣ Instancia Evolution\n"
         "9️⃣ Volver al menú"
     )
 
@@ -105,16 +103,6 @@ async def _handle_edit_new_value(
             return fmt._validation_error_reply(
                 exc, self.EDIT_FIELD_PROMPTS["full_name"]
             )
-    elif field == "email":
-        if not new_value:
-            new_value = None
-        else:
-            try:
-                new_value = validate_email(new_value, required=False)
-            except InputValidationError as exc:
-                return fmt._validation_error_reply(
-                    exc, self.EDIT_FIELD_PROMPTS["email"]
-                )
     elif field == "phone":
         if not new_value:
             new_value = None

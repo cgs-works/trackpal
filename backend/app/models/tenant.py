@@ -87,7 +87,6 @@ class Tenant(Base, TimestampMixin):
         String(5), unique=True, nullable=False, default=_default_client_prefix
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     whatsapp_phone: Mapped[str | None] = mapped_column(
         String(50), unique=True, nullable=True
     )

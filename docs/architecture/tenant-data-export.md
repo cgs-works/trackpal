@@ -63,7 +63,7 @@ One ZIP named `<slugged-account-name>-data-<account-local-timestamp>.zip` contai
 
 | File | Format | Contents |
 |------|--------|----------|
-| `account-profile.csv` | CSV | account_name, contact_email, whatsapp_phone, login_username, current_plan, preferred_language, time_zone, currency |
+| `account-profile.csv` | CSV | account_name, whatsapp_phone, login_username, current_plan, preferred_language, time_zone, currency |
 | `client-data.csv` | CSV | client_name, login_username, whatsapp_phone, account_status, registered_on, last_updated_on |
 | `service-catalog.csv` | CSV | service_name, service_icon, service_created_on, service_updated_on, plan_name, plan_price, plan_created_on, plan_updated_on |
 | `subscription-snapshot.csv` | CSV | client_name, client_login_username, service_name, plan_name, service_account_email, service_profile_name, subscription_duration, started_on, expires_on, cancelled_on, subscription_status, recorded_on, last_updated_on |

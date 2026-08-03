@@ -322,8 +322,7 @@ async def test_update_profile_invalid_name_leading_space(client, master_user):
     assert response.status_code == 422
 
 
-async def test_update_profile_email_normalized(client, active_tenant_user):
-    """Email domain lowercased when updating tenant profile."""
+async def test_update_tenant_profile_rejects_removed_email(client, active_tenant_user):
     headers = await _login(client, "tenant", "tenant-password")
 
     response = await client.put(
@@ -332,8 +331,8 @@ async def test_update_profile_email_normalized(client, active_tenant_user):
         headers=headers,
     )
 
-    assert response.status_code == 200
-    assert response.json()["email"] == "User@example.com"
+    assert response.status_code == 409
+    assert "mailbox" in response.json()["detail"].lower()
 
 
 async def test_update_profile_full_name_collapsed(client, active_tenant_user):
@@ -420,7 +419,7 @@ async def test_dashboard_tenant(client, active_tenant_user):
     data = response.json()
     assert data["message"] == "Dashboard en construccion"
     assert data["full_name"] == "Active Tenant"
-    assert data["email"] is None
+    assert "email" not in data
     assert "tenant_plan" in data
     assert "mailbox_status" in data
 

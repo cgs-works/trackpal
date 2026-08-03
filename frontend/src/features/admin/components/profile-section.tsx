@@ -19,13 +19,11 @@ interface ProfileSectionProps {
 
 export function ProfileSection({ profile, onProfileUpdate, onSave }: ProfileSectionProps) {
   const [fullName, setFullName] = useState(profile.full_name || "");
-  const [email, setEmail] = useState(profile.email || "");
   const [phone, setPhone] = useState(profile.phone || "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setFullName(profile.full_name || "");
-    setEmail(profile.email || "");
     setPhone(profile.phone || "");
   }, [profile]);
 
@@ -35,7 +33,6 @@ export function ProfileSection({ profile, onProfileUpdate, onSave }: ProfileSect
     try {
       const payload: ProfileUpdate = {
         full_name: fullName || undefined,
-        email: email || undefined,
         phone: phone || undefined,
       };
       const updated = onSave ? await onSave(payload) : await updateProfile(payload);
@@ -56,24 +53,13 @@ export function ProfileSection({ profile, onProfileUpdate, onSave }: ProfileSect
       className="space-y-4"
       data-help-id={HELP_TARGETS.profile}
     >
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="full_name">{t("frontend.profile.full_name")}</Label>
-          <Input
-            id="full_name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">{t("frontend.profile.email")}</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="full_name">{t("frontend.profile.full_name")}</Label>
+        <Input
+          id="full_name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
       </div>
 
       <div className="space-y-2">

@@ -263,7 +263,6 @@ async def test_cross_tenant_client_access_blocked(
         "/api/v1/tenants/",
         json={
             "full_name": "Tenant Two",
-            "email": "tenant2@example.com",
             "phone": "+12015550040",
             "username": "tenant_two",
             "password": "tenant-password",

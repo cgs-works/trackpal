@@ -61,7 +61,6 @@ class DashboardService:
         access_count = await self._access_control_count(db, tenant_id)
         payload = TenantDashboardResponse(
             full_name=profile.full_name,
-            email=profile.email,
             tenant_plan=profile.plan,
             mailbox_status=mailbox_status,
             enabled_code_services=enabled,

@@ -49,7 +49,7 @@ You can download a point-in-time snapshot of your TrackPal account data. The exp
 
 | File | Contents |
 |------|----------|
-| `account-profile.csv` | Your account name, contact email, WhatsApp phone, login username, current plan, language, and time zone |
+| `account-profile.csv` | Your account name, WhatsApp phone, login username, current plan, language, and time zone |
 | `client-data.csv` | Client name, login username, phone, account status, registration and last update dates |
 | `service-catalog.csv` | Service name, creation and update dates, plan name and plan dates. Services without plans appear with empty plan fields |
 | `subscription-snapshot.csv` | Client name and login, service, plan, streaming email and profile name, duration, start, expiry, cancellation dates, status, record timestamps |

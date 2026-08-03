@@ -36,7 +36,6 @@ const productionTenant: Tenant = {
   id: "production-id",
   full_name: "Production Tenant",
   client_prefix: "prod",
-  email: "production@example.com",
   phone: "12015550001",
   evolution_instance_name: "tenant-production",
   is_active: true,
@@ -70,7 +69,7 @@ describe("DashboardPage production tab", () => {
     await waitFor(() => expect(screen.getAllByText("Production Tenant").length).toBeGreaterThan(0));
     await userEvent.click(screen.getByRole("button", { name: "Create Business" }));
     await userEvent.type(screen.getByLabelText("Full Name"), "Spanish Business");
-    await userEvent.type(screen.getByLabelText("Email"), "spanish@example.com");
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Phone"), "+12015550009");
     await userEvent.type(screen.getByLabelText("Username"), "spanish_business");
     await userEvent.type(screen.getByLabelText("Evolution Instance"), "spanish-instance");

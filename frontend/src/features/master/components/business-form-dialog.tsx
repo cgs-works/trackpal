@@ -21,7 +21,6 @@ import type { TenantPlan } from "@/features/auth/services/auth-api";
 export interface BusinessForm {
   id: string | null
   full_name: string
-  email: string
   phone: string
   client_prefix: string
   username: string
@@ -35,7 +34,6 @@ export function getEmptyForm(): BusinessForm {
   return {
     id: null,
     full_name: "",
-    email: "",
     phone: "",
     client_prefix: "",
     username: "",
@@ -131,17 +129,6 @@ export function BusinessFormDialog({
             <p className="text-xs text-muted-foreground">
               Starter enables code lookup only. Pro enables clients, catalog, subscriptions, and reminders.
             </p>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => onFormChange("email", e.target.value)}
-            />
           </div>
 
           <div className="flex flex-col gap-2">

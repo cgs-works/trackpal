@@ -74,13 +74,8 @@ export function BusinessTable({
                     {tenant.client_prefix || "—"}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <div>{tenant.email}</div>
-                    {tenant.phone && (
-                      <div className="text-muted-foreground">{tenant.phone}</div>
-                    )}
-                  </div>
+                <TableCell className="text-sm text-muted-foreground">
+                  {tenant.phone || "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {tenant.evolution_instance_name || "—"}
@@ -130,10 +125,7 @@ export function BusinessTable({
         {tenants.map((tenant) => (
           <div key={tenant.id} className="p-4 flex flex-col gap-2">
             <div className="flex items-start justify-between">
-              <div>
-                <p className="font-medium">{tenant.full_name}</p>
-                <p className="text-sm text-muted-foreground">{tenant.email}</p>
-              </div>
+              <p className="font-medium">{tenant.full_name}</p>
               <div className="flex items-center gap-2">
                 <PlanBadge plan={tenant.plan} />
                 <StatusBadge active={tenant.is_active} />

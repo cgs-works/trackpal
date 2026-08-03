@@ -5,7 +5,6 @@ export interface Tenant {
   id: string
   full_name: string
   client_prefix: string
-  email: string | null
   phone: string | null
   evolution_instance_name: string | null
   is_active: boolean

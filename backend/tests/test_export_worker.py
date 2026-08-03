@@ -108,7 +108,7 @@ class TestHelpers:
 
 
 async def test_account_profile_csv_has_approved_fields(db_session, active_tenant_user):
-    """account-profile.csv contains only the approved 7 fields."""
+    """account-profile.csv contains only the approved tenant fields."""
     tenant = await _tenant_for_user(db_session, active_tenant_user.id)
     assert tenant is not None
 
@@ -119,7 +119,6 @@ async def test_account_profile_csv_has_approved_fields(db_session, active_tenant
     headers = [h.strip() for h in lines[0].split(",")]
     assert headers == [
         "account_name",
-        "contact_email",
         "whatsapp_phone",
         "login_username",
         "current_plan",
@@ -127,7 +126,7 @@ async def test_account_profile_csv_has_approved_fields(db_session, active_tenant
         "time_zone",
         "currency",
     ]
-    assert len(headers) == 8
+    assert len(headers) == 7
 
 
 # ── Client Data CSV tests ──────────────────────────────────────

@@ -41,7 +41,6 @@ Canonical tenant business account. Tenant login remains owned by a `users` row t
 | owner_user_id | UUID | Unique FK → users.id CASCADE |
 | client_prefix | VARCHAR(5) | Unique, not null, lowercase technical prefix for client logins |
 | name | VARCHAR(200) | Display name |
-| email | VARCHAR(255) | Nullable |
 | whatsapp_phone | VARCHAR(50) | Unique, nullable, canonical digits-only |
 | whatsapp_lid | VARCHAR(100) | Unique, nullable, `@lid` fallback identity |
 | evolution_instance_name | VARCHAR(200) | Unique, nullable |
@@ -412,6 +411,7 @@ Alembic migrations:
 30. `e023fe74cac3` — Add the Master-only external `lookup_executors` registry, executor assignment metadata, and remove persisted lookup result values
 31. `e024fe74cac4` — Add executor verification timestamp
 32. `e025fe74cac5` — Add validated initial locale metadata for Demo Workspaces
+33. `e026fe74cac6` — Remove obsolete `tenants.email`; tenant mailbox identity remains in `tenant_mailboxes.mailbox_email`
 
 ## Key Constraints
 

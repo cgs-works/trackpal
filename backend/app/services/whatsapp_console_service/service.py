@@ -54,7 +54,6 @@ class WhatsAppConsoleService:
     CONFIRM_DEACTIVATE_STEP = msg.CONFIRM_DEACTIVATE_STEP
     CONFIRM_DELETE_STEP = msg.CONFIRM_DELETE_STEP
     CREATE_STEP_FULL_NAME = msg.CREATE_STEP_FULL_NAME
-    CREATE_STEP_EMAIL = msg.CREATE_STEP_EMAIL
     CREATE_STEP_PHONE = msg.CREATE_STEP_PHONE
     CREATE_STEP_USERNAME = msg.CREATE_STEP_USERNAME
     CREATE_STEP_EVOLUTION_INSTANCE = msg.CREATE_STEP_EVOLUTION_INSTANCE
@@ -88,7 +87,6 @@ class WhatsAppConsoleService:
     _handle_create_step = list_f._handle_create_step
 
     _handle_create_full_name = ch._handle_create_full_name
-    _handle_create_email = ch._handle_create_email
     _handle_create_phone = ch._handle_create_phone
     _handle_create_username = ch._handle_create_username
     _handle_create_evolution_instance = ch._handle_create_evolution_instance

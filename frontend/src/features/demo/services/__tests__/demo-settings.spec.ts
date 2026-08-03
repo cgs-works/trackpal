@@ -111,12 +111,11 @@ describe("Pro Demo settings adapter", () => {
 
       const updated = await source.settings.updateProfile({
         full_name: `${plan} Business`,
-        email: `${plan}@example.test`,
         phone: "12025550199",
       });
 
       expect(updated.full_name).toBe(`${plan} Business`);
-      expect((await source.settings.loadProfile()).email).toBe(`${plan}@example.test`);
+      expect((await source.settings.loadProfile()).email).toBeNull();
       await source.settings.updateTenantSettings({ locale: "es" });
       await source.settings.updateCodeServices(["netflix"]);
       const created = await source.settings.createAccessBlock("12025550199");

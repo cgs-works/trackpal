@@ -66,7 +66,6 @@ CONFIRM_DEACTIVATE_STEP = "confirm_deactivate"
 CONFIRM_DELETE_STEP = "confirm_delete"
 
 CREATE_STEP_FULL_NAME = "full_name"
-CREATE_STEP_EMAIL = "email"
 CREATE_STEP_PHONE = "phone"
 CREATE_STEP_USERNAME = "username"
 CREATE_STEP_EVOLUTION_INSTANCE = "evolution_instance"
@@ -105,12 +104,6 @@ CREATE_PROMPT_FULL_NAME = (
     "✏️ *Crear empresa*\n\n"
     "Vamos a crear una nueva empresa.\n\n"
     "¿Cuál es el *nombre completo* de la empresa?"
-)
-
-CREATE_PROMPT_EMAIL = (
-    "✏️ *Crear empresa*\n\n"
-    "¿Cuál es el *email* de la empresa?\n\n"
-    "(Opcional — escribe *—* para omitir)"
 )
 
 CREATE_PROMPT_PHONE = (
