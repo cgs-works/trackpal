@@ -132,6 +132,45 @@ challenge, and re-verify before activation.
 
 ## 5. Health, rotation, upgrade, and rollback
 
+### Simple in-place rebuild
+
+For a straightforward upgrade where brief downtime is acceptable, update the
+repository, remove the current container, rebuild the existing image tag, and
+recreate the container with the same executor ID and active secret:
+
+```bash
+cd /path/to/trackpal
+git pull --ff-only
+
+docker stop trackpal-lookup-executor
+docker rm trackpal-lookup-executor
+docker build -t trackpal-lookup-executor ./worker
+
+docker run -d \
+  --name trackpal-lookup-executor \
+  --restart unless-stopped \
+  --env-file /root/trackpal-executor.env \
+  -p 127.0.0.1:8000:8000 \
+  trackpal-lookup-executor
+```
+
+Confirm that the recreated container is running before using the Master
+challenge:
+
+```bash
+curl -fsS http://127.0.0.1:8000/healthz
+docker logs --tail 100 trackpal-lookup-executor
+```
+
+The health endpoint should return `{"status":"ok"}`. Then run **Test** and
+**Verify** from TrackPal Master. Preserve `TRACKPAL_EXECUTOR_ID` and
+`TRACKPAL_EXECUTOR_SECRET`; do not enroll a new executor for a normal upgrade.
+
+This approach is valid, but stopping and removing the container before the
+build creates downtime. Reusing the unversioned image tag also removes the
+simple image-based rollback path. Prefer the versioned-image procedure below
+when uninterrupted service or fast rollback is required.
+
 - The Master **Test** action is the signed manual health check. A local
   `curl` to the root is not a protocol health test and may return `404`.
 - To rotate, choose **Rotate** in TrackPal, replace the container secret with
