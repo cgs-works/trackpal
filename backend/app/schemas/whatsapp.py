@@ -60,7 +60,9 @@ class WhatsAppConsoleResponse(BaseModel):
         lookup_job_id: Optional job id for code lookup polling.
             When present, n8n must send ``reply`` immediately then
             poll ``GET /api/v1/integrations/n8n/mail/lookups/{id}``
-            every 4s up to 20s to get the final result.
+            every 4s up to 60s to get the final result. The executor
+            normally completes the lookup within 55s to leave delivery
+            margin for the final poll and Evolution response.
         tenant_id: Optional tenant UUID for scoped poll requests.
             Included alongside ``lookup_job_id`` so n8n can pass
             ``tenant_id`` as a query parameter when polling.

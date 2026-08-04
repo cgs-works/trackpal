@@ -22,6 +22,8 @@ class LookupCommand(BaseModel):
     service_key: str
     target_email: str
     window_minutes: int = Field(default=5, gt=0)
+    # Keep below n8n's 60-second polling window for callback delivery margin.
+    timeout_seconds: int = Field(default=55, gt=0)
     job_id: UUID | None = None
     lease_id: UUID | None = None
     callback_url: str | None = None

@@ -56,7 +56,8 @@ class Settings(BaseSettings):
         )
 
     # Mailbox lookup defaults
-    mailbox_lookup_timeout_seconds: int = 20
+    # Leave a small handoff/polling margin below n8n's 60-second window.
+    mailbox_lookup_timeout_seconds: int = 55
     mailbox_lookup_window_minutes: int = 5
     mailbox_lookup_job_ttl_minutes: int = 5
     mailbox_delivery_log_retention_days: int = 7

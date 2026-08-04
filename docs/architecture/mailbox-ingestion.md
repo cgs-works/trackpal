@@ -37,6 +37,10 @@ backend never runs Gmail IMAP or extraction work locally.
 - `executor_id`, `execution_attempts`, and `last_dispatch_error_safe` retain
   safe assignment metadata.
 - Default TTL is five minutes via `settings.mailbox_lookup_job_ttl_minutes`.
+- The executor keeps polling Gmail after an empty result instead of returning
+  `not_found` immediately. Its default search budget is 55 seconds via
+  `settings.mailbox_lookup_timeout_seconds`; n8n polls the job every 4 seconds
+  for up to 60 seconds, leaving margin for callback and message delivery.
 
 ### `mail_code_delivery_log`
 

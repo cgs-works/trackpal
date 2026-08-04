@@ -371,7 +371,8 @@ The workflow communicates with backend services:
 2. **TrackPal Backend Mail Lookup**:
    - `POST /api/v1/integrations/n8n/mail/lookups`
    - `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
-   - Polling cadence: every 4s, max 20s.
+   - Polling cadence: every 4s, max 60s. The external executor normally
+     finishes its repeated mailbox search within 55s, leaving delivery margin.
 
 3. **Evolution Go** (`POST /send/text`, `POST /webhook/change-status`):
    - Authenticated via per-instance `apikey` header (from trusted webhook payload or decrypted stored token)

@@ -1,9 +1,11 @@
 """Behavior tests for the standalone lookup pipeline."""
 
+import asyncio
 from datetime import UTC, datetime
 
 import pytest
 
+from app.pipeline import runner as runner_module
 from app.pipeline.email_message import EmailMessage
 from app.pipeline.fingerprint import compute_fingerprint
 from app.pipeline.models import LookupCommand
@@ -20,6 +22,7 @@ def _command(**overrides: object) -> LookupCommand:
         "service_key": "spotify",
         "target_email": "client@example.com",
         "window_minutes": 5,
+        "timeout_seconds": 5,
     }
     values.update(overrides)
     return LookupCommand(**values)
@@ -81,7 +84,7 @@ async def test_execute_lookup_returns_normalized_found_outcome() -> None:
 @pytest.mark.asyncio
 async def test_execute_lookup_filters_by_target_email_before_extraction() -> None:
     outcome = await execute_lookup(
-        _command(),
+        _command(timeout_seconds=1),
         FakeProvider([_email(to_recipients=("someone-else@example.com",))]),
         FakeNetflix(),
         now=NOW,
@@ -91,9 +94,94 @@ async def test_execute_lookup_filters_by_target_email_before_extraction() -> Non
 
 
 @pytest.mark.asyncio
+async def test_execute_lookup_waits_for_code_that_arrives_during_timeout() -> None:
+    class DelayedProvider:
+        attempts = 0
+
+        async def fetch(self, command: LookupCommand) -> list[EmailMessage]:
+            self.attempts += 1
+            return [] if self.attempts == 1 else [_email()]
+
+    class Clock:
+        elapsed = 0.0
+
+        def monotonic(self) -> float:
+            return self.elapsed
+
+        async def sleep(self, seconds: float) -> None:
+            self.elapsed += seconds
+
+    clock = Clock()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(runner_module, "monotonic", clock.monotonic, raising=False)
+    monkeypatch.setattr(runner_module.asyncio, "sleep", clock.sleep)
+    try:
+        provider = DelayedProvider()
+        outcome = await execute_lookup(
+            _command(timeout_seconds=8), provider, FakeNetflix(), now=NOW
+        )
+    finally:
+        monkeypatch.undo()
+
+    assert provider.attempts == 2
+    assert outcome.kind == "found"
+    assert outcome.result_value == "654321"
+
+
+@pytest.mark.asyncio
+async def test_execute_lookup_returns_fetch_timeout_when_provider_hangs() -> None:
+    class HangingProvider:
+        async def fetch(self, command: LookupCommand) -> list[EmailMessage]:
+            await asyncio.Event().wait()
+            return []
+
+    outcome = await execute_lookup(
+        _command(timeout_seconds=1), HangingProvider(), FakeNetflix(), now=NOW
+    )
+
+    assert outcome.kind == "retryable_failure"
+    assert outcome.error_code == "fetch_timeout"
+
+
+@pytest.mark.asyncio
+async def test_execute_lookup_returns_not_found_after_timeout_window() -> None:
+    class EmptyProvider:
+        attempts = 0
+
+        async def fetch(self, command: LookupCommand) -> list[EmailMessage]:
+            self.attempts += 1
+            return []
+
+    class Clock:
+        elapsed = 0.0
+
+        def monotonic(self) -> float:
+            return self.elapsed
+
+        async def sleep(self, seconds: float) -> None:
+            self.elapsed += seconds
+
+    clock = Clock()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(runner_module, "monotonic", clock.monotonic)
+    monkeypatch.setattr(runner_module.asyncio, "sleep", clock.sleep)
+    try:
+        provider = EmptyProvider()
+        outcome = await execute_lookup(
+            _command(timeout_seconds=8), provider, FakeNetflix(), now=NOW
+        )
+    finally:
+        monkeypatch.undo()
+
+    assert provider.attempts == 2
+    assert clock.elapsed == 8
+    assert outcome.kind == "not_found"
+
+
+@pytest.mark.asyncio
 async def test_execute_lookup_returns_not_found_without_matching_email() -> None:
     outcome = await execute_lookup(
-        _command(),
+        _command(timeout_seconds=1),
         FakeProvider([]),
         FakeNetflix(),
         now=NOW,

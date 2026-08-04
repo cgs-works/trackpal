@@ -29,6 +29,9 @@ deployment choices, not domain types.
 - Capacity is enforced locally; a full executor returns signed `429`.
 - The worker sends callbacks with the job ID and Execution Lease ID. Duplicate
   handoffs for the same lease are acknowledged without starting a second task.
+- A lookup repeats mailbox searches after empty results until its bounded
+  `timeout_seconds` budget (55 seconds by default) expires; a found result is
+  returned immediately.
 - HTTP redirects are disabled for callbacks. Errors are safe, stable messages;
   secrets, raw email, and extracted values are never logged.
 

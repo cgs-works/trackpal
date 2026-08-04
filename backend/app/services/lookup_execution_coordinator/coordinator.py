@@ -377,6 +377,7 @@ class LookupExecutionCoordinator:
             "service_key": job.service_key,
             "target_email": job.target_email,
             "window_minutes": settings.mailbox_lookup_window_minutes,
+            "timeout_seconds": settings.mailbox_lookup_timeout_seconds,
         }
 
     async def _handle_handoff(
