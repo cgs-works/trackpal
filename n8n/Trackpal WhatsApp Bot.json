@@ -26,26 +26,26 @@
         },
         "options": {}
       },
-      "id": "dd77ff07-e1f0-4bde-b173-abf87f2baeb2",
+      "id": "aa40b88d-27a2-4ca5-ad09-12b3f53b859d",
       "name": "IF skip console call",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -6800,
-        -512
+        -2160,
+        576
       ]
     },
     {
       "parameters": {
         "jsCode": "const input = $json;\n\nconst canonicalJid = (value) => {\n  const raw = String(value || '').trim();\n  if (!raw) return '';\n  if (!raw.includes('@')) return raw;\n  const [local, domain] = raw.split('@', 2);\n  return `${local.split(':', 1)[0]}@${domain}`;\n};\n\nconst normalizePhone = (value) => String(value || '').replace(/\\D/g, '');\n\nconst message = String(input.message || '').trim().toLowerCase();\nconst fromMe = input.fromMe === true;\nconst targetJid = canonicalJid(input.targetJid);\nconst adminJid = canonicalJid(input.adminJid);\nconst remoteJid = canonicalJid(input.remoteJid);\nconst targetPhone = normalizePhone(input.targetPhone);\nconst inputPhone = normalizePhone(input.phone);\nconst adminPhone = normalizePhone(adminJid);\nconst remotePhone = normalizePhone(remoteJid);\n\nconst isMenuCommand = message === '/menu' || message === 'menu';\nconst isRemoteCancel = message === '0';\nconst isSelfTarget = Boolean(\n  (targetJid && ((adminJid && targetJid === adminJid) || (remoteJid && targetJid === remoteJid && adminJid === remoteJid))) ||\n  (targetPhone && (targetPhone === inputPhone || targetPhone === adminPhone || targetPhone === remotePhone))\n);\n\nconst shouldSkipBackend = Boolean(\n  fromMe &&\n  targetJid &&\n  !isSelfTarget &&\n  !isMenuCommand &&\n  !isRemoteCancel\n);\n\nif (shouldSkipBackend) {\n  return [{\n    json: {\n      ...input,\n      reply: '',\n      no_reply: true,\n      skip_console_call: true,\n      guard_reason: 'from_me_external_non_menu',\n    },\n  }];\n}\n\nreturn [{ json: { ...input, skip_console_call: false } }];"
       },
-      "id": "9927ca71-e7f0-4401-aba8-bc4d8241b85b",
+      "id": "890c6263-91d9-49e2-8627-7610e5995433",
       "name": "Guard fromMe external non-menu",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7040,
-        -512
+        -2400,
+        576
       ]
     },
     {
@@ -72,19 +72,24 @@
         },
         "options": {}
       },
-      "id": "a44e03b7-9f0c-465b-aa1c-f21f15573614",
+      "id": "2635433a-bcbb-410c-b1a1-cb802c481281",
       "name": "IF no reply",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -6080,
-        -656
+        -1440,
+        432
       ]
     },
     {
       "parameters": {
         "conditions": {
-          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
             {
               "leftValue": "={{ $json._shouldContinue }}",
@@ -97,36 +102,31 @@
               "id": "condition-1779942290644-xw52uyk91"
             }
           ],
-          "options": {
-            "version": 2,
-            "leftValue": "",
-            "caseSensitive": true,
-            "typeValidation": "strict"
-          }
+          "combinator": "and"
         },
         "options": {}
       },
-      "id": "b22c8345-1710-48ca-ae62-9c1881d7f9d3",
+      "id": "6c298aa4-8e09-4d0b-85c2-0490e55181de",
       "name": "IF retry needed",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -4400,
-        -896
+        240,
+        192
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const count = parseInt($json._pollAttempts || '0', 10);\nconst maxAttempts = 5;\nconst newCount = count + 1;\n\nif ($json.status === 'completed') {\n  return { json: { ...$json, _pollAttempts: newCount, _shouldContinue: false } };\n}\n\nif (newCount >= maxAttempts) {\n  return { json: { ...$json, _pollAttempts: newCount, _shouldContinue: false, status: 'timeout' } };\n}\n\nreturn { json: { ...$json, _pollAttempts: newCount, _shouldContinue: true } };"
+        "jsCode": "const startedAt = Number($('Merge & lookup data').first().json.poll_started_at || Date.now());\nconst maxElapsedMs = 60000;\nconst elapsedMs = Date.now() - startedAt;\n\nif ($json.status === 'completed') {\n  return { json: { ...$json, _shouldContinue: false } };\n}\n\nif (elapsedMs >= maxElapsedMs) {\n  return { json: { ...$json, _shouldContinue: false, status: 'timeout' } };\n}\n\nreturn { json: { ...$json, _shouldContinue: true } };"
       },
-      "id": "46f971ac-253a-40d6-a268-2cacd9263cb8",
+      "id": "18ba0285-ab64-482b-ac9f-4f0a10838688",
       "name": "Check retry",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4640,
-        -896
+        0,
+        192
       ]
     },
     {
@@ -153,13 +153,13 @@
           }
         }
       },
-      "id": "37e88f94-a89b-4ef3-810d-d382d0ce8698",
+      "id": "921b7929-c635-4e13-a627-9656ecdfcdc7",
       "name": "Send result",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -4400,
-        -1088
+        240,
+        0
       ]
     },
     {
@@ -167,19 +167,24 @@
         "mode": "runOnceForEachItem",
         "jsCode": "const poll = $json;\nconst base = $('Merge & lookup data').first().json;\nconst seedReply = String(base.reply || '');\n\nconst looksEnglish = /searching code|you'll receive|code found|open link|error/i.test(seedReply);\n\nconst t = looksEnglish\n  ? {\n      codeFound: (v) => `✅ *Code found*\\n\\n📋 *${v}*\\n\\nThis code is time-sensitive. Use it soon.`,\n      urlFound: (v) => `✅ *Link found*\\n\\n🔗 ${v}\\n\\nOpen link to continue.`,\n      notFound: '❌ *Code not found*\\n\\nNo access-code emails found in last 5 minutes.\\n\\nRequest a new code and wait 15 seconds before trying again.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n      failed: '❌ *Could not complete code search*\\n\\nAn error occurred or the search timed out.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n    }\n  : {\n      codeFound: (v) => `✅ *Código encontrado*\\n\\n📋 *${v}*\\n\\nEste código es válido por tiempo limitado. Úsalo pronto.`,\n      urlFound: (v) => `✅ *Enlace encontrado*\\n\\n🔗 ${v}\\n\\nAbre enlace para continuar.`,\n      notFound: '❌ *No se encontró código*\\n\\nNo hay correos con códigos de acceso en últimos 5 minutos.\\n\\nSolicita nuevo código y espera 15 segundos antes de intentar de nuevo.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n      failed: '❌ *No se pudo completar la búsqueda*\\n\\nOcurrió un error o se agotó el tiempo al buscar el código.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n    };\n\nlet finalMessage;\nlet closeAfterSend = false;\n\nif (poll.result_type === 'code') {\n  finalMessage = t.codeFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'url') {\n  finalMessage = t.urlFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'not_found' || poll.result_type === 'duplicate_suppressed') {\n  finalMessage = t.notFound;\n} else if (poll.status === 'failed' || poll.status === 'timeout' || poll.error_code) {\n  finalMessage = t.failed;\n} else {\n  finalMessage = t.notFound;\n}\n\nreturn {\n  json: {\n    ...base,\n    ...poll,\n    reply: finalMessage,\n    close_after_send: closeAfterSend,\n  },\n};"
       },
-      "id": "9cd91cf5-c5b5-484b-947f-b2e5a9e3a6c1",
+      "id": "dbf8531e-e770-4a52-9112-b53b24f211be",
       "name": "Build result message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4640,
-        -1088
+        0,
+        0
       ]
     },
     {
       "parameters": {
         "conditions": {
-          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
             {
               "leftValue": "={{ $json.status }}",
@@ -191,22 +196,17 @@
               "id": "condition-1779942290644-w57qfjuee"
             }
           ],
-          "options": {
-            "version": 2,
-            "leftValue": "",
-            "caseSensitive": true,
-            "typeValidation": "strict"
-          }
+          "combinator": "and"
         },
         "options": {}
       },
-      "id": "ef2eb4d0-3086-4b60-90c3-e9adcecff729",
+      "id": "533161bf-e1dc-47f9-bf0d-9cef8e6a454c",
       "name": "Check poll result",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -4880,
-        -896
+        -240,
+        192
       ]
     },
     {
@@ -229,26 +229,26 @@
           }
         }
       },
-      "id": "df4e53a5-eeeb-4bb0-a33f-b23437ec400a",
+      "id": "f4e089c6-8b27-4852-9609-a51e28f95504",
       "name": "Poll status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -5120,
-        -896
+        -480,
+        192
       ]
     },
     {
       "parameters": {
         "amount": 4
       },
-      "id": "49c71329-084f-45d4-a8e6-62c792c2a9bb",
+      "id": "278ec929-7ba0-4b09-8442-75634989a600",
       "name": "Wait 4s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        -5360,
-        -896
+        -720,
+        192
       ],
       "webhookId": "f9d94d50-f576-426f-9a73-c4d7ab166e35"
     },
@@ -276,13 +276,13 @@
           }
         }
       },
-      "id": "d2a316ca-3ecf-4d93-9c4b-8831156e562e",
+      "id": "d443023a-2b30-48f8-9f85-768c1a9a1863",
       "name": "Send buscando",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -5600,
-        -896
+        -960,
+        192
       ]
     },
     {
@@ -309,26 +309,26 @@
           }
         }
       },
-      "id": "715f7219-74b7-4fa5-a4b4-85c098277eae",
+      "id": "84e6ef5a-8e8e-40fa-af7f-9a2a96366deb",
       "name": "Close session",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -3920,
-        -512
+        720,
+        576
       ]
     },
     {
       "parameters": {
         "jsCode": "let fallback = {};\ntry {\n  fallback = $('Merge & lookup data').first().json;\n} catch (e) {\n  fallback = {};\n}\n\nlet resultData = {};\ntry {\n  resultData = $('Build result message').first().json;\n} catch (e) {\n  resultData = {};\n}\n\nconst data = { ...fallback, ...resultData, ...$json };\nconst msg = String(data.message || fallback.message || '').trim().toLowerCase();\nconst reply = String(data.reply || fallback.reply || '').toLowerCase();\n\nconst hasLookupResult = Boolean(data.lookup_job_id);\nconst shouldCloseAfterSend = data.close_after_send === true;\nif (hasLookupResult && !shouldCloseAfterSend) {\n  return [];\n}\n\nconst isLogoutReply =\n  reply.includes('sesión cerrada') ||\n  reply.includes('sesion cerrada') ||\n  reply.includes('has cerrado sesión') ||\n  reply.includes('has cerrado sesion') ||\n  reply.includes('goodbye') ||\n  reply.includes('cerrado');\nconst isClosedStatus = String(data.status || '').toLowerCase() === 'closed';\nconst isLogoutCommand = msg === '0' || msg === 'salir';\nconst isLogout = shouldCloseAfterSend || isClosedStatus || (isLogoutCommand && isLogoutReply);\n\nif (!isLogout) {\n  return [];\n}\n\nconst closeJids = Array.isArray(data.close_jids) && data.close_jids.length\n  ? data.close_jids\n  : [data.close_jid || data.reply_to || data.remoteJid];\nconst uniqueCloseJids = [...new Set(closeJids.filter(Boolean).map(String))];\n\nreturn uniqueCloseJids.map((remoteJid) => ({ json: { ...data, close_jid: remoteJid } }));"
       },
-      "id": "3de375e5-346f-4941-8392-6e5c26862098",
+      "id": "ecbde242-ff97-469b-b12a-2fbcb45a6643",
       "name": "Check close session",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4160,
-        -512
+        480,
+        576
       ]
     },
     {
@@ -355,13 +355,13 @@
           }
         }
       },
-      "id": "d04d825f-5b01-47c8-b685-4ce2abf399bc",
+      "id": "d176dcf9-db77-4f6e-b17e-460387b9e67e",
       "name": "Evolution API Send",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -5600,
-        -656
+        -960,
+        432
       ]
     },
     {
@@ -388,26 +388,26 @@
         },
         "options": {}
       },
-      "id": "34582b1d-94f1-4e1a-af1e-967ec9baef44",
+      "id": "048a2cb7-1ff1-459e-bad6-5a4acfe50ede",
       "name": "IF has lookup",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -5840,
-        -656
+        -1200,
+        432
       ]
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\nconst outboundMessages = Array.isArray(responseData.outbound_messages) ? responseData.outbound_messages : [];\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids, outbound_messages: outboundMessages } }];"
+        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\nconst outboundMessages = Array.isArray(responseData.outbound_messages) ? responseData.outbound_messages : [];\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids, outbound_messages: outboundMessages, poll_started_at: Date.now() } }];"
       },
-      "id": "df4dcaf9-c561-4c7a-9157-df526b50598e",
+      "id": "edbff45a-1e77-4b4a-ad29-7c09c893dc55",
       "name": "Merge & lookup data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -6320,
-        -656
+        -1680,
+        432
       ]
     },
     {
@@ -423,7 +423,7 @@
             {
               "name": "trackpal_n8n_api_key",
               "type": "string",
-              "value": "=",
+              "value": "",
               "id": "be563e0a-1c0d-44ce-b859-c4f94c0d6363"
             },
             {
@@ -443,13 +443,13 @@
         "includeOtherFields": true,
         "options": {}
       },
-      "id": "9e252802-df40-4b28-8121-bf93f8b0fb7a",
+      "id": "b22b8147-49f6-48a7-98e1-b49a99fbea0d",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -7280,
-        -512
+        -2640,
+        576
       ]
     },
     {
@@ -480,26 +480,26 @@
           }
         }
       },
-      "id": "3a4844da-a2bc-4016-9d21-452b3dda2990",
+      "id": "60bd6299-e671-4dd4-a4ce-71c07d56ce37",
       "name": "Console call",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -6560,
-        -656
+        -1920,
+        432
       ]
     },
     {
       "parameters": {
         "jsCode": "const payload = $json;\n\nconst normalizePhone = (value) => {\n  let raw = String(value || '').trim();\n  if (raw.includes('@')) raw = raw.split('@')[0];\n  if (raw.includes(':')) raw = raw.split(':')[0];\n  return raw.replace(/\\D/g, '');\n};\n\nconst isLidJid = (value) => String(value || '').includes('@lid');\nconst isPhoneJid = (value) => String(value || '').includes('@s.whatsapp.net');\nconst firstTruthy = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== '') || '';\nconst asBool = (value) => value === true || value === 'true' || value === 1 || value === '1';\n\nconst body = payload.body || {};\nconst bodyData = body.data || {};\nconst data = payload.data || bodyData || {};\nconst msg = data.message || body.message || {};\nconst key = firstTruthy(body.key, bodyData.key, data.key, msg.key) || {};\n\nconst chatInput = firstTruthy(body.chatInput, body.message?.conversation, bodyData.message?.conversation, msg.body, msg.message?.conversation);\nconst remoteJid = firstTruthy(body.remoteJid, key.remoteJid, bodyData.key?.remoteJid, data.key?.remoteJid, msg.from);\nconst instanceName = firstTruthy(body.instanceName, bodyData.instance, data.instance, payload.instance);\nconst apiKey = firstTruthy(body.apiKey, payload.apiKey);\n\nconst senderPn = firstTruthy(body.senderPn, bodyData.senderPn, data.senderPn, key.participantPn, key.senderPn);\nconst senderLid = firstTruthy(body.senderLid, bodyData.senderLid, data.senderLid, key.participantLid, key.senderLid);\nconst fromMe = asBool(firstTruthy(body.fromMe, bodyData.fromMe, data.fromMe, key.fromMe, bodyData.key?.fromMe, data.key?.fromMe, msg.key?.fromMe));\n\nlet adminJid = firstTruthy(body.adminJid, bodyData.adminJid, data.adminJid);\nlet targetJid = firstTruthy(body.targetJid, bodyData.targetJid, data.targetJid);\nlet targetPhone = firstTruthy(body.targetPhone, bodyData.targetPhone, data.targetPhone);\nlet targetLid = firstTruthy(body.targetLid, bodyData.targetLid, data.targetLid);\n\nif (fromMe) {\n  targetJid = targetJid || remoteJid;\n  if (!targetPhone && isPhoneJid(targetJid)) targetPhone = normalizePhone(targetJid);\n  if (!targetPhone && isLidJid(targetJid) && senderPn) targetPhone = normalizePhone(senderPn);\n  if (!targetLid && isLidJid(targetJid)) targetLid = targetJid;\n  adminJid = adminJid || firstTruthy(senderPn, key.participant, body.sender, data.sender);\n}\n\nlet phone;\nlet senderLidOut = senderLid;\n\nif (fromMe && adminJid && !isLidJid(adminJid)) {\n  phone = normalizePhone(adminJid);\n} else if (senderPn) {\n  phone = normalizePhone(senderPn);\n} else {\n  const rawJid = remoteJid || msg.from;\n  if (rawJid && isLidJid(rawJid)) {\n    phone = '';\n    senderLidOut = senderLid || rawJid;\n  } else {\n    phone = normalizePhone(rawJid);\n  }\n}\n\nconst message = String(chatInput || '').trim();\nconst instance = instanceName || 'default';\n\nconst lowerMessage = message.toLowerCase();\nconst looksLikeTrackPalGeneratedReply =\n  lowerMessage.includes('no tienes acceso a la consola') ||\n  lowerMessage.includes('access denied, you do not have an active account') ||\n  lowerMessage.includes('servicio temporalmente no disponible') ||\n  lowerMessage.includes('temporarily unavailable') ||\n  lowerMessage.includes('no tienes una cuenta registrada') ||\n  lowerMessage.includes('you do not have a registered account') ||\n  lowerMessage.includes('buscar codigo de acceso') ||\n  lowerMessage.includes('buscar código de acceso') ||\n  lowerMessage.includes('para que servicio necesitas el codigo') ||\n  lowerMessage.includes('para qué servicio necesitas el código') ||\n  lowerMessage.includes('responde con el numero del servicio') ||\n  lowerMessage.includes('responde con el número del servicio') ||\n  lowerMessage.includes('client console') ||\n  lowerMessage.includes('view active subscriptions') ||\n  lowerMessage.includes('find access code') ||\n  lowerMessage.includes('choose an option') ||\n  lowerMessage.includes('operacion cancelada') ||\n  lowerMessage.includes('operación cancelada') ||\n  lowerMessage.includes('operation cancelled') ||\n  lowerMessage.includes('operation canceled');\n\nif (!fromMe && looksLikeTrackPalGeneratedReply) {\n  return [];\n}\n\nreturn [{ json: { phone, message, instance, remoteJid, apiKey, sender_lid: senderLidOut, fromMe, adminJid, targetJid, targetPhone, targetLid, raw: payload } }];"
       },
-      "id": "6fbd3692-596d-4839-bd25-b993f97beb66",
+      "id": "6bc5e69b-d280-46bd-ae88-b883c293e70c",
       "name": "Parse input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7520,
-        -512
+        -2880,
+        576
       ]
     },
     {
@@ -509,13 +509,13 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "babd1c28-a7a3-4ad8-b790-e41e908634e1",
+      "id": "22df9711-72ff-4669-a42d-a51c1c72a1c1",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -7760,
-        -512
+        -3120,
+        576
       ],
       "webhookId": "1a9978bf7-c6b1-4abb-9e40-b375cb55eb60"
     },
@@ -523,13 +523,13 @@
       "parameters": {
         "jsCode": "const data = $json;\nconst outboundMessages = Array.isArray(data.outbound_messages)\n  ? data.outbound_messages\n  : [];\n\nconst results = [];\nconst adminTarget = data.reply_to || data.phone || data.remoteJid || '';\nconst adminText = String(data.reply || '');\n\nif (adminTarget && adminText) {\n  results.push({\n    json: {\n      ...data,\n      send_target: String(adminTarget),\n      send_text: adminText,\n      send_role: 'primary',\n    },\n  });\n}\n\nfor (const message of outboundMessages) {\n  if (!message || !message.target || !message.text) continue;\n  results.push({\n    json: {\n      ...data,\n      send_target: String(message.target),\n      send_text: String(message.text),\n      send_role: 'outbound_message',\n      target: message.target,\n      text: message.text,\n    },\n  });\n}\n\nreturn results;"
       },
-      "id": "b6543e3d-0f8f-4b0a-a6f8-4f7b3ad3c9e1",
+      "id": "28f89e30-d1f6-4a88-b104-22b9342cc27a",
       "name": "Prepare Evolution sends",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -5600,
-        -512
+        -960,
+        576
       ]
     }
   ],
@@ -789,13 +789,13 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "6f38bf3d-33f5-4ed1-9540-4ecbe88d2278",
+  "versionId": "84e1e277-6b78-4531-aa42-ae0a95921e6e",
   "meta": {
     "instanceId": "3a9ddc93932fcd7821c6e13a050d0af56c3c9456de8be4d2e7e266d4e0cdbf67"
   },
-  "id": "mN3k0vVO9kgBYQtV",
+  "id": "bDk9h7KVhE8t1uov",
   "tags": []
 }
