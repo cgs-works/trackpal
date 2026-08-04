@@ -12,6 +12,15 @@ OutcomeKind = Literal["found", "not_found", "retryable_failure", "terminal_failu
 ResultType = Literal["code", "url"]
 
 
+class LookupExclusion(BaseModel):
+    """One previously delivered result that must not end a new lookup."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    message_id: str | None = None
+    fingerprint: str
+
+
 class LookupCommand(BaseModel):
     """Decrypted, in-memory inputs for one mailbox lookup."""
 
@@ -24,6 +33,7 @@ class LookupCommand(BaseModel):
     window_minutes: int = Field(default=5, gt=0)
     # Keep below n8n's 60-second polling window for callback delivery margin.
     timeout_seconds: int = Field(default=55, gt=0)
+    excluded_deliveries: list[LookupExclusion] = Field(default_factory=list)
     job_id: UUID | None = None
     lease_id: UUID | None = None
     callback_url: str | None = None
@@ -84,4 +94,10 @@ class LookupOutcome(BaseModel):
         )
 
 
-__all__ = ["LookupCommand", "LookupOutcome", "OutcomeKind", "ResultType"]
+__all__ = [
+    "LookupCommand",
+    "LookupExclusion",
+    "LookupOutcome",
+    "OutcomeKind",
+    "ResultType",
+]

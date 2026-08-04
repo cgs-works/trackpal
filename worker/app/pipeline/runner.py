@@ -52,6 +52,9 @@ async def execute_lookup(
     """Fetch, extract, resolve, and fingerprint one lookup."""
     deadline = monotonic() + command.timeout_seconds
     extraction_now = now or datetime.now(UTC)
+    excluded_deliveries = {
+        (entry.message_id, entry.fingerprint) for entry in command.excluded_deliveries
+    }
 
     while True:
         remaining = deadline - monotonic()
@@ -79,30 +82,34 @@ async def execute_lookup(
                 "Email fetch failed after retries",
             )
 
-        filtered = _filter_target_emails(emails, command.target_email)
-        extracted = extract_newest_with_source(
-            [
-                {
-                    "subject": message.subject,
-                    "body": message.body,
-                    "received_at": message.received_at,
-                }
-                for message in filtered
-            ],
-            command.service_key,
-            max_age_minutes=command.window_minutes,
-            now=extraction_now,
-        )
-        if extracted is not None:
+        candidates = _filter_target_emails(emails, command.target_email)
+        while candidates:
+            extracted = extract_newest_with_source(
+                [
+                    {
+                        "subject": message.subject,
+                        "body": message.body,
+                        "received_at": message.received_at,
+                    }
+                    for message in candidates
+                ],
+                command.service_key,
+                max_age_minutes=command.window_minutes,
+                now=extraction_now,
+            )
+            if extracted is None:
+                break
+
             result_value = extracted.result.value
             result_type = extracted.result.result_type
+            match = candidates[extracted.source_index]
             if command.service_key == "netflix" and result_type == "url":
                 result_value = await netflix.resolve(result_value) or ""
                 if not result_value:
-                    return LookupOutcome.not_found()
+                    candidates.pop(extracted.source_index)
+                    continue
                 result_type = "code"
 
-            match = filtered[extracted.source_index]
             fingerprint = compute_fingerprint(
                 service_key=command.service_key,
                 message_id=match.message_id,
@@ -111,6 +118,10 @@ async def execute_lookup(
                 subject=match.subject,
                 payload_normalized=result_value,
             )
+            if (match.message_id, fingerprint) in excluded_deliveries:
+                candidates.pop(extracted.source_index)
+                continue
+
             return LookupOutcome.found(
                 result_type=result_type,
                 result_value=result_value,
