@@ -367,6 +367,16 @@ class LookupExecutionCoordinator:
             f"{self._callback_base_url}/api/v1/integrations/executors/"
             f"{executor.id}/jobs/{job.id}/complete"
         )
+        delivered_since = datetime.now(timezone.utc) - timedelta(
+            minutes=settings.mailbox_lookup_window_minutes
+        )
+        delivered_keys = await mailbox_dedupe_repository.list_delivery_keys_since(
+            db,
+            tenant_id=job.tenant_id,
+            mailbox_id=job.mailbox_id,
+            service_key=job.service_key,
+            since=delivered_since,
+        )
         return {
             "job_id": job.id,
             "lease_id": lease_id,
@@ -378,6 +388,10 @@ class LookupExecutionCoordinator:
             "target_email": job.target_email,
             "window_minutes": settings.mailbox_lookup_window_minutes,
             "timeout_seconds": settings.mailbox_lookup_timeout_seconds,
+            "excluded_deliveries": [
+                {"message_id": message_id, "fingerprint": fingerprint}
+                for message_id, fingerprint in delivered_keys
+            ],
         }
 
     async def _handle_handoff(

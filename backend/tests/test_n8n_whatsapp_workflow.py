@@ -19,6 +19,17 @@ def _workflow_connections() -> dict[str, dict]:
     return _workflow_payload()["connections"]
 
 
+def test_poll_timeout_uses_persisted_start_time_instead_of_response_counter() -> None:
+    nodes = _workflow_nodes()
+    merge_js = nodes["Merge & lookup data"]["parameters"]["jsCode"]
+    retry_js = nodes["Check retry"]["parameters"]["jsCode"]
+
+    assert "poll_started_at: Date.now()" in merge_js
+    assert "$('Merge & lookup data').first().json.poll_started_at" in retry_js
+    assert "const maxElapsedMs = 60000;" in retry_js
+    assert "_pollAttempts" not in retry_js
+
+
 def test_build_result_message_sets_close_after_send_contract() -> None:
     js = _workflow_nodes()["Build result message"]["parameters"]["jsCode"]
 

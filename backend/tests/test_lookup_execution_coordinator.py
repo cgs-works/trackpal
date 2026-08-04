@@ -260,6 +260,32 @@ async def test_accepted_handoff_transitions_processing_and_counts_attempt(
 
 
 @pytest.mark.asyncio
+async def test_dispatch_includes_recent_delivery_exclusions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.repositories import mailbox_dedupe_repository
+
+    job, executor = _job_and_executor()
+    store = _Store()
+    coordinator, _ = _configured_coordinator(monkeypatch, job, executor, store)
+    monkeypatch.setattr(
+        mailbox_dedupe_repository,
+        "list_delivery_keys_since",
+        lambda *args, **kwargs: _value(
+            [("msg-1", "fingerprint-1"), (None, "fingerprint-2")]
+        ),
+    )
+
+    await coordinator.schedule(job.id)
+    await store.pump_task
+
+    assert store.envelopes[0]["excluded_deliveries"] == [
+        {"message_id": "msg-1", "fingerprint": "fingerprint-1"},
+        {"message_id": None, "fingerprint": "fingerprint-2"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_duplicate_same_lease_handoff_transitions_processing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -333,8 +359,8 @@ def _configured_coordinator(
     *,
     executors=None,
 ):
-    from app.repositories import mailbox_config_repository, mailbox_lookup_repository
-    from app.repositories import lookup_executors_repository
+    from app.repositories import mailbox_config_repository, mailbox_dedupe_repository
+    from app.repositories import mailbox_lookup_repository, lookup_executors_repository
     from app.services.lookup_execution_coordinator.coordinator import (
         LookupExecutionCoordinator,
     )
@@ -352,6 +378,11 @@ def _configured_coordinator(
         mailbox_config_repository,
         "get_by_id",
         lambda db, mailbox_id: _value(mailbox),
+    )
+    monkeypatch.setattr(
+        mailbox_dedupe_repository,
+        "list_delivery_keys_since",
+        lambda *args, **kwargs: _value([]),
     )
     monkeypatch.setattr(
         lookup_executors_repository,
@@ -387,6 +418,7 @@ def _job_and_executor():
     job = SimpleNamespace(
         id=uuid4(),
         status="pending",
+        tenant_id=uuid4(),
         mailbox_id=uuid4(),
         service_key="spotify",
         target_email="target@example.com",
@@ -461,6 +493,7 @@ class _Store:
         self.cooldown_ids: set[UUID] = set()
         self.outcome = HandoffStatus.ACCEPTED
         self.raise_transport = False
+        self.envelopes: list[dict[str, object]] = []
         self.pump_task: asyncio.Task[None] | None = None
 
     def spawn(self, coro):
@@ -537,6 +570,7 @@ class _Transport:
         self.store = store
 
     async def handoff(self, executor, envelope):
+        self.store.envelopes.append(envelope)
         if self.store.raise_transport:
             raise OSError("offline")
         return HandoffResult(self.store.outcome, envelope["lease_id"])

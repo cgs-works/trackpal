@@ -41,6 +41,10 @@ backend never runs Gmail IMAP or extraction work locally.
   `not_found` immediately. Its default search budget is 55 seconds via
   `settings.mailbox_lookup_timeout_seconds`; n8n polls the job every 4 seconds
   for up to 60 seconds, leaving margin for callback and message delivery.
+- Each encrypted executor handoff includes delivery keys recorded for the same
+  tenant, mailbox, and service inside the active lookup window. The executor
+  ignores those already-delivered results and continues polling for a genuinely
+  new code instead of completing immediately as `duplicate_suppressed`.
 
 ### `mail_code_delivery_log`
 
@@ -179,6 +183,13 @@ processing jobs past their TTL, hard-delete expired jobs, and remove old
 - Tenant ownership is enforced at the repository/API boundary.
 
 ## Runbook
+
+### Deployment order for delivered-code exclusions
+
+Deploy the Lookup Executor before the backend. The updated executor accepts
+`excluded_deliveries` while remaining compatible with older backend handoffs;
+an older executor rejects the new field because lookup commands use strict
+Pydantic validation.
 
 ### Lookup jobs stuck in `pending`
 

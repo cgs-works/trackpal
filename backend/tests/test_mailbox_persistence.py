@@ -474,6 +474,58 @@ class TestMailboxDedupeRepository:
         )
         assert not_dup is False
 
+    async def test_list_delivery_keys_since_filters_scope_and_time(self, db_session):
+        tenant = await _seed_tenant(db_session)
+        other_tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        other_mb = await _seed_mailbox(db_session, other_tenant.id)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+
+        recent = await mailbox_dedupe_repository.record_delivery(
+            db_session,
+            tenant_id=tenant.id,
+            mailbox_id=mb.id,
+            service_key="prime_video",
+            message_id="recent-msg",
+            fingerprint="recent-fp",
+        )
+        old = await mailbox_dedupe_repository.record_delivery(
+            db_session,
+            tenant_id=tenant.id,
+            mailbox_id=mb.id,
+            service_key="prime_video",
+            message_id=None,
+            fingerprint="old-fp",
+        )
+        old.delivered_at = cutoff - timedelta(seconds=1)
+        await mailbox_dedupe_repository.record_delivery(
+            db_session,
+            tenant_id=tenant.id,
+            mailbox_id=mb.id,
+            service_key="spotify",
+            message_id="other-service",
+            fingerprint="other-service-fp",
+        )
+        await mailbox_dedupe_repository.record_delivery(
+            db_session,
+            tenant_id=other_tenant.id,
+            mailbox_id=other_mb.id,
+            service_key="prime_video",
+            message_id="other-tenant",
+            fingerprint="other-tenant-fp",
+        )
+        await db_session.flush()
+
+        keys = await mailbox_dedupe_repository.list_delivery_keys_since(
+            db_session,
+            tenant_id=tenant.id,
+            mailbox_id=mb.id,
+            service_key="prime_video",
+            since=cutoff,
+        )
+
+        assert keys == [(recent.message_id, recent.fingerprint)]
+
     async def test_delete_older_than(self, db_session):
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)

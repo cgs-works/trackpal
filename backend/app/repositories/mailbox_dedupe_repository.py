@@ -64,6 +64,30 @@ async def record_delivery(
     return entry
 
 
+async def list_delivery_keys_since(
+    db: AsyncSession,
+    tenant_id: UUID,
+    mailbox_id: UUID,
+    service_key: str,
+    since: datetime,
+) -> list[tuple[str | None, str]]:
+    """Return delivered message/fingerprint pairs still inside a lookup window."""
+    result = await db.execute(
+        select(
+            MailCodeDeliveryLog.message_id,
+            MailCodeDeliveryLog.fingerprint,
+        )
+        .where(
+            MailCodeDeliveryLog.tenant_id == tenant_id,
+            MailCodeDeliveryLog.mailbox_id == mailbox_id,
+            MailCodeDeliveryLog.service_key == service_key,
+            MailCodeDeliveryLog.delivered_at >= since,
+        )
+        .order_by(MailCodeDeliveryLog.delivered_at.desc())
+    )
+    return [(row.message_id, row.fingerprint) for row in result.all()]
+
+
 async def delete_older_than(db: AsyncSession, before: datetime | None = None) -> int:
     """Delete delivery log entries older than cutoff.
 
@@ -141,6 +165,7 @@ async def record_delivery_atomic(
 
 __all__ = [
     "is_duplicate",
+    "list_delivery_keys_since",
     "record_delivery",
     "record_delivery_atomic",
     "delete_older_than",
