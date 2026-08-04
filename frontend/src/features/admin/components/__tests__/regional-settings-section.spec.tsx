@@ -34,7 +34,9 @@ vi.mock("@/components/ui/select", () => ({
   SelectItem: ({ value, children }: { value: string; children: ReactNode }) => (
     <option value={value}>{children}</option>
   ),
-  SelectTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+  SelectTrigger: ({ children }: { children: ReactNode }) => (
+    <span data-testid="locale-trigger">{children}</span>
+  ),
   SelectValue: () => null,
 }));
 
@@ -98,6 +100,7 @@ describe("RegionalSettingsSection", () => {
       expect(screen.getByText("frontend.my_account.regional.country")).toBeInTheDocument();
     });
     expect(screen.getByText("frontend.profile.language")).toBeInTheDocument();
+    expect(screen.getByTestId("locale-trigger")).toHaveTextContent("English");
     expect(screen.getByText("frontend.subscriptions.timezone")).toBeInTheDocument();
     expect(screen.getByText("frontend.my_account.regional.currency")).toBeInTheDocument();
   });

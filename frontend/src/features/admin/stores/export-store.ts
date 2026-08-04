@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "@/i18n";
 import {
   requestExport as apiRequestExport,
   getExportStatus as apiGetExportStatus,
@@ -48,6 +49,14 @@ function isPollable(status: ExportJobStatus): boolean {
   return status === "pending" || status === "processing";
 }
 
+function getExportError(error: any, fallbackKey: string): string {
+  const detail = error?.response?.data?.detail;
+  if (detail === "No ready export available") {
+    return t("frontend.my_account.data_error_no_ready");
+  }
+  return detail || t(fallbackKey);
+}
+
 export const useExportStore = create<ExportState>((set, get) => ({
   job: null,
   _pollTimer: null,
@@ -75,7 +84,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
         get().stopPolling();
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || "Could not check export status.";
+      const msg = getExportError(err, "frontend.my_account.data_error_status");
       set({ error: msg, statusLoading: false });
     }
   },
@@ -89,7 +98,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
         get().startPolling();
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || "Could not request export.";
+      const msg = getExportError(err, "frontend.my_account.data_error_request");
       set({ error: msg, requesting: false });
     }
   },
@@ -102,7 +111,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
       await get().refreshStatus();
       set({ cancelling: false, error: null });
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || "Could not cancel export.";
+      const msg = getExportError(err, "frontend.my_account.data_error_cancel");
       set({ error: msg, cancelling: false });
     }
   },
@@ -114,7 +123,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
       set({ downloadUrl: result.download_url, downloadLoading: false });
       return result.download_url;
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || "Could not get download URL.";
+      const msg = getExportError(err, "frontend.my_account.data_error_download");
       set({ error: msg, downloadLoading: false, downloadUrl: null });
       return null;
     }

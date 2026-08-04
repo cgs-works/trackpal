@@ -189,3 +189,59 @@ async def test_download_returns_404_when_no_ready_job(
     headers = await _tenant_headers(client)
     resp = await client.get("/api/v1/me/export/download", headers=headers)
     assert resp.status_code == 404
+
+
+async def test_status_hides_ready_job_when_r2_artifact_is_missing(
+    client,
+    db_session,
+    active_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+):
+    """A ready DB row is not user-visible after its R2 object is deleted."""
+    headers = await _tenant_headers(client)
+    create = await client.post("/api/v1/me/export", headers=headers)
+    job_id = uuid.UUID(create.json()["id"])
+    await export_jobs_repository.update_status(
+        db_session,
+        job_id,
+        "ready",
+        r2_key="deleted-from-r2",
+        artifact_size_bytes=1024,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=72),
+        clear_lease=True,
+    )
+
+    response = await client.get("/api/v1/me/export", headers=headers)
+
+    assert response.status_code == 204
+    job = await export_jobs_repository.get_by_id(db_session, job_id)
+    assert job is not None
+    assert job.r2_key is None
+    assert job.artifact_size_bytes is None
+
+
+async def test_download_returns_404_when_r2_artifact_is_missing(
+    client,
+    db_session,
+    active_tenant_user,
+    fake_export_storage,
+    fake_step_up_limiter,
+):
+    """Download treats a missing R2 object as an unavailable export."""
+    headers = await _tenant_headers(client)
+    create = await client.post("/api/v1/me/export", headers=headers)
+    job_id = uuid.UUID(create.json()["id"])
+    await export_jobs_repository.update_status(
+        db_session,
+        job_id,
+        "ready",
+        r2_key="deleted-from-r2",
+        artifact_size_bytes=1024,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=72),
+        clear_lease=True,
+    )
+
+    response = await client.get("/api/v1/me/export/download", headers=headers)
+
+    assert response.status_code == 404

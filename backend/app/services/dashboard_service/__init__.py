@@ -15,6 +15,7 @@ from app.models import (
 )
 from app.models.user import User
 from app.repositories import code_services_repository, tenants_repository
+from app.schemas.code_services import SUPPORTED_CODE_SERVICES
 from app.schemas.dashboard import (
     ClientActiveSubscription,
     ClientDashboardResponse,
@@ -55,9 +56,10 @@ class DashboardService:
     async def _tenant_dashboard(self, db, profile) -> TenantDashboardResponse:
         tenant_id = profile.id
         mailbox_status = await self._mailbox_status(db, tenant_id)
-        enabled = await code_services_repository.get_effective_service_keys(
+        enabled_keys = await code_services_repository.get_effective_service_keys(
             db, tenant_id
         )
+        enabled = [SUPPORTED_CODE_SERVICES.get(key, key) for key in enabled_keys]
         access_count = await self._access_control_count(db, tenant_id)
         payload = TenantDashboardResponse(
             full_name=profile.full_name,

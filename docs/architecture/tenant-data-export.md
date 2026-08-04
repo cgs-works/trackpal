@@ -53,7 +53,7 @@ Export generation requires password re-entry using a shared three-attempt/fiftee
 2. **24-hour cooldown**: One new generation per Tenant every 24 hours, shared across Tenant Admin and Master.
 3. **Replacement**: The previous ready artifact remains downloadable while a replacement is pending. After upload confirmation, the new artifact is exposed and the previous object is purged.
 4. **Cancellation**: Authorized actors can cancel pending/processing jobs. Workers observe cancellation checkpoints and purge partial uploads. Tenant Deletion uses the same mechanism.
-5. **72-hour availability**: Ready objects are available for 72 hours from `ready_at`. At expiry, TrackPal stops signing URLs, deletes the object, and removes user-visible metadata. R2 lifecycle rules are a safety net.
+5. **72-hour availability**: Ready objects are available for 72 hours from `ready_at`. At expiry, TrackPal stops signing URLs, deletes the object, and removes user-visible metadata. Status and download requests also reconcile ready jobs against R2, clearing stale metadata when an object was removed externally. R2 lifecycle rules are a safety net.
 6. **Presigned URLs**: 15-minute lifetime, capped to remaining object lifetime. URL reuse is allowed within its lifetime. URLs are never logged or persisted.
 7. **Actor attribution**: UI labels are localized "You" / "Support" style without exposing usernames or IDs.
 

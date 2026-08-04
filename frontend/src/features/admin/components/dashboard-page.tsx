@@ -72,6 +72,14 @@ export function DashboardPage() {
 
   const isPro = dashboard.tenant_plan === "pro";
   const planLabel = isPro ? "Pro" : "Starter";
+  const mailboxStatusLabel =
+    dashboard.mailbox_status === "connected"
+      ? t("frontend.mailbox.status_connected")
+      : dashboard.mailbox_status === "disconnected"
+        ? t("frontend.mailbox.status_disconnected")
+        : dashboard.mailbox_status === "error"
+          ? t("frontend.mailbox.status_error")
+          : t("frontend.mailbox.not_configured");
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8" data-help-id="admin.dashboard">
@@ -94,7 +102,7 @@ export function DashboardPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard title={t("frontend.dashboard.plan")} value={planLabel} icon={CheckCircle2} />
-          <MetricCard title={t("frontend.mailbox.section_title")} value={dashboard.mailbox_status} icon={Mail} />
+          <MetricCard title={t("frontend.mailbox.section_title")} value={mailboxStatusLabel} icon={Mail} />
           <MetricCard title={t("frontend.code_services.tenant_section_title")} value={dashboard.enabled_code_services.length} icon={Package} />
           <MetricCard title={t("frontend.access_control.section_title")} value={dashboard.access_control_count} icon={Ban} />
         </div>

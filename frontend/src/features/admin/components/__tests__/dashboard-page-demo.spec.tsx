@@ -47,7 +47,48 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("DashboardPage Demo rendering", () => {
+describe("DashboardPage rendering", () => {
+  it("localizes the mailbox status in the dashboard metric", async () => {
+    useAuthStore.setState({
+      dataSource: {
+        mode: "production",
+        dashboard: {
+          load: async () => ({
+            message: "Dashboard",
+            full_name: "Production Tenant",
+            tenant_plan: "starter",
+            mailbox_status: "connected",
+            enabled_code_services: [],
+            access_control_count: 0,
+            active_clients: null,
+            catalog_services: null,
+            active_subscriptions: null,
+            subscriptions_expiring_soon: null,
+          }),
+        },
+      } as never,
+    });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("frontend.mailbox.status_connected")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("connected")).not.toBeInTheDocument();
+  });
+
+  it("renders business labels for enabled platforms", async () => {
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Disney+")).toBeInTheDocument();
+    });
+    expect(screen.getByText("HBO Max")).toBeInTheDocument();
+    expect(screen.getByText("Prime Video")).toBeInTheDocument();
+    expect(screen.getByText("Universal+")).toBeInTheDocument();
+    expect(screen.queryByText("hbo_max")).not.toBeInTheDocument();
+  });
+
   it("renders live workspace metrics without calling the dashboard API", async () => {
     const getSpy = vi.spyOn(api, "get");
     render(<DashboardPage />);

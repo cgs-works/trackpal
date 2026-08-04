@@ -87,6 +87,32 @@ def _cap_signed_url_expiry(remaining_lifetime: timedelta | None) -> int:
     return min(SIGNED_URL_TTL_SECONDS, max(remaining_seconds, 60))
 
 
+async def _reconcile_ready_artifact(db: AsyncSession, job: ExportJob) -> bool:
+    """Return whether a ready job still has a backing storage object."""
+    if job.status != "ready":
+        return True
+    if not job.r2_key:
+        return False
+
+    try:
+        await get_storage().get_metadata(job.r2_key)
+    except StorageObjectNotFoundError:
+        logger.info("Export artifact missing for job %s; clearing metadata", job.id)
+        await export_jobs_repository.update_status(
+            db,
+            job.id,
+            job.status,
+            r2_key=None,
+            artifact_size_bytes=None,
+            expires_at=job.expires_at,
+        )
+        return False
+    except (RuntimeError, StorageOperationError):
+        # A temporary storage outage must not make a valid DB state disappear.
+        logger.warning("Could not verify export artifact for job %s", job.id)
+    return True
+
+
 # ── Core operations ───────────────────────────────────────────
 
 
@@ -161,12 +187,21 @@ async def get_current_export(
     if job is None:
         return None
 
+    if job.status == "ready" and not await _reconcile_ready_artifact(db, job):
+        return None
+
     # Check if there's a previous ready available for download
     previous_ready = None
     if job.replaced_job_id and job.status in ("pending", "processing"):
         prev = await export_jobs_repository.get_by_id(db, job.replaced_job_id)
         prev_expires = _ensure_tz(prev.expires_at) if prev else None
-        if prev and prev.status == "ready" and prev_expires and prev_expires > _now():
+        if (
+            prev
+            and prev.status == "ready"
+            and prev_expires
+            and prev_expires > _now()
+            and await _reconcile_ready_artifact(db, prev)
+        ):
             previous_ready = {
                 "id": str(prev.id),
                 "ready_at": prev.ready_at.isoformat() if prev.ready_at else None,
@@ -236,10 +271,22 @@ async def get_download_url(
             return None  # expired
 
     url_ttl = _cap_signed_url_expiry(remaining)
-    url = await storage.generate_presigned_get(
-        key=job.r2_key,
-        expires_in_seconds=url_ttl,
-    )
+    try:
+        url = await storage.generate_presigned_get(
+            key=job.r2_key,
+            expires_in_seconds=url_ttl,
+        )
+    except StorageObjectNotFoundError:
+        logger.info("Export artifact missing for job %s; clearing metadata", job.id)
+        await export_jobs_repository.update_status(
+            db,
+            job.id,
+            job.status,
+            r2_key=None,
+            artifact_size_bytes=None,
+            expires_at=job.expires_at,
+        )
+        return None
 
     return {
         "download_url": url,

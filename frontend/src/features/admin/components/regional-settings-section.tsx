@@ -6,7 +6,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { t, loadCatalog } from "@/i18n";
@@ -93,6 +92,8 @@ export function RegionalSettingsSection() {
     }
   }
 
+  const localeLabel = LOCALE_OPTIONS.find((option) => option.value === locale)?.label ?? locale;
+
   return (
     <div className="space-y-6" data-help-id="admin.settings.regional">
       {/* Country */}
@@ -110,7 +111,7 @@ export function RegionalSettingsSection() {
         <Label>{t("frontend.profile.language")}</Label>
         <Select value={locale} onValueChange={(v) => setLocale(v ?? "en")}>
           <SelectTrigger className="w-48">
-            <SelectValue />
+            <span data-slot="select-value">{localeLabel}</span>
           </SelectTrigger>
           <SelectContent>
             {LOCALE_OPTIONS.map((opt) => (

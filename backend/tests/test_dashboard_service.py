@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 
 
 pytestmark = pytest.mark.asyncio
@@ -23,6 +24,53 @@ async def _login(client: AsyncClient, username: str, password: str) -> str:
         json={"username": username, "password": password},
     )
     return resp.json()["access_token"]
+
+
+# ===================================================================
+# Client dashboard includes plan_price and currency
+# ===================================================================
+
+
+async def test_tenant_dashboard_returns_capitalized_code_service_labels(
+    client, db_session, active_tenant_user
+):
+    """Tenant dashboard exposes business labels instead of storage keys."""
+    from app.models import CodeServiceGlobalStatus, TenantCodeServiceSelection, Tenant
+
+    tenant = (
+        await db_session.execute(
+            select(Tenant).where(Tenant.owner_user_id == active_tenant_user.id)
+        )
+    ).scalar_one()
+    for service_key in (
+        "disney",
+        "hbo_max",
+        "netflix",
+        "prime_video",
+        "spotify",
+        "universal_plus",
+    ):
+        db_session.add(CodeServiceGlobalStatus(service_key=service_key, is_active=True))
+        db_session.add(
+            TenantCodeServiceSelection(tenant_id=tenant.id, service_key=service_key)
+        )
+    await db_session.commit()
+
+    token = await _login(client, "tenant", "tenant-password")
+    response = await client.get(
+        "/api/v1/dashboard",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["enabled_code_services"] == [
+        "Disney+",
+        "HBO Max",
+        "Netflix",
+        "Prime Video",
+        "Spotify",
+        "Universal+",
+    ]
 
 
 # ===================================================================

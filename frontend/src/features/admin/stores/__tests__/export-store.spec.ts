@@ -181,6 +181,20 @@ describe("useExportStore", () => {
     expect(useExportStore.getState().downloadLoading).toBe(false);
   });
 
+  it("download translates the unavailable ready export error", async () => {
+    const apiError = {
+      response: { data: { detail: "No ready export available" } },
+    };
+    vi.mocked(api.getExportDownloadUrl).mockRejectedValueOnce(apiError);
+
+    const url = await useExportStore.getState().download();
+
+    expect(url).toBeNull();
+    expect(useExportStore.getState().error).toBe(
+      "frontend.my_account.data_error_no_ready",
+    );
+  });
+
   it("download handles error", async () => {
     const apiError = { response: { data: { detail: "Not ready" } } };
     vi.mocked(api.getExportDownloadUrl).mockRejectedValueOnce(apiError);
