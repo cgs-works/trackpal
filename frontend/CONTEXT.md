@@ -17,6 +17,8 @@
 |---------|------------|
 | **Tenant Admin** | The person who operates a Tenant through the plan-aware administrative Web and WhatsApp interfaces. Use **Tenant** for the business entity, not the person. |
 | **Master Layout** | Sidebar layout for the Master operator, with summary cards and separate production-business and Demo Tenant management tabs. |
+| **TrackPal Broadcast Channel** | Official editorial Telegram channel for TrackPal, public or private, and the sole destination for Master-created Broadcasts. _Avoid_: support chat, tenant channel. |
+| **Broadcast Composer** | Master-only surface for reviewing formatted text and an ordered sequence of attachments before manually confirming immediate publication to the TrackPal Broadcast Channel. _Avoid_: scheduler, autonomous publisher. |
 | **Lookup Executor Management** | Master-only surface for enrolling, verifying, enabling, disabling, and monitoring external Lookup Executors without tying the UI to a hosting provider. It may retain an optional Executor Hosting Account reference whose password requires Master step-up before reveal. _Avoid_: Cloudflare Workers panel, Render Workers panel. |
 | **Lookup Executor Protocol** | Signed and AES-GCM encrypted HTTP contract between the backend and the independently deployed `worker/` runtime. The frontend never handles mailbox credentials, callbacks, or extracted values. |
 | **Demo Management Tab** | Master-only lifecycle view for creating Starter or Pro Demo Tenants, credentialing, monitoring, and deleting them without entering their Demo Workspaces. It excludes prospect activity, workspace telemetry, summary cards, and Demo Tenants from production metrics. |
