@@ -102,7 +102,7 @@ _CATALOG_EN_GENERAL: Final[dict[str, str]] = {
     "console.auth.login_failed": "Contraseña incorrecta. Intento {attempt} de {max_attempts}.",
     "console.auth.login_locked": "Demasiados intentos fallidos. Intenta de nuevo más tarde.",
     "console.auth.logout_success": "Sesión cerrada correctamente.",
-    "console.general.help_text": "TrackPal — sistema de gestión de suscripciones.\nComandos disponibles:\n- Menú interactivo: responde con el número de la opción\n- Para volver al menú principal: envía 0\n- Para ayuda: escribe 'ayuda'\nPara más información, contacta a soporte@trackpal.app",
+    "console.general.help_text": "TrackPal — sistema de gestión de suscripciones.\nComandos disponibles:\n- Menú interactivo: responde con el número de la opción\n- Para volver al menú principal: envía 0\n- Para ayuda: escribe 'ayuda'\nPara más información, contacta a soporte@wilfredocamacho.dev",
     "console.general.error": "Ha ocurrido un error. Intenta de nuevo.",
     "dashboard.tenant.title": "Dashboard en construcción",
     "profile.updated.success": "Perfil actualizado correctamente.",
