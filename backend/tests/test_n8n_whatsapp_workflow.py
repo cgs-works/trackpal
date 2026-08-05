@@ -19,15 +19,77 @@ def _workflow_connections() -> dict[str, dict]:
     return _workflow_payload()["connections"]
 
 
-def test_poll_timeout_uses_persisted_start_time_instead_of_response_counter() -> None:
+def test_lookup_delivery_uses_event_driven_wait_with_absolute_deadline() -> None:
     nodes = _workflow_nodes()
+    connections = _workflow_connections()
     merge_js = nodes["Merge & lookup data"]["parameters"]["jsCode"]
-    retry_js = nodes["Check retry"]["parameters"]["jsCode"]
+    register = nodes["Register lookup resume"]
+    wait = nodes["Wait for lookup callback"]
 
-    assert "poll_started_at: Date.now()" in merge_js
-    assert "$('Merge & lookup data').first().json.poll_started_at" in retry_js
-    assert "const maxElapsedMs = 60000;" in retry_js
-    assert "_pollAttempts" not in retry_js
+    assert "wait_deadline_at" in merge_js
+    assert "$execution.resumeUrl" in register["parameters"]["jsonBody"]
+    assert wait["parameters"]["resume"] == "webhook"
+    assert wait["parameters"]["incomingAuthentication"] == "headerAuth"
+    assert wait["credentials"]["httpHeaderAuth"]["name"] == (
+        "TrackPal Backend Resume Auth"
+    )
+    assert wait["parameters"]["httpMethod"] == "POST"
+    assert wait["parameters"]["limitWaitTime"] is True
+    assert wait["parameters"]["limitType"] == "atSpecifiedTime"
+    assert "wait_deadline_at" in wait["parameters"]["maxDateAndTime"]
+    assert "onlyRunIf" not in wait["parameters"].get("options", {})
+    assert connections["Send buscando"]["main"][0][0]["node"] == (
+        "Register lookup resume"
+    )
+
+
+def test_lookup_delivery_removes_repeated_polling_loop() -> None:
+    nodes = _workflow_nodes()
+    connections = _workflow_connections()
+
+    for removed in (
+        "Wait 4s",
+        "Poll status",
+        "Check poll result",
+        "Check retry",
+        "IF retry needed",
+    ):
+        assert removed not in nodes
+    assert connections["Final lookup status"]["main"][0][0]["node"] == (
+        "Build result message"
+    )
+
+
+def test_wait_callback_uses_one_final_status_fallback() -> None:
+    nodes = _workflow_nodes()
+    connections = _workflow_connections()
+    normalize_js = nodes["Normalize lookup resume"]["parameters"]["jsCode"]
+
+    assert "callback_received" in normalize_js
+    assert connections["IF callback received"]["main"][0][0]["node"] == (
+        "Build result message"
+    )
+    assert connections["IF callback received"]["main"][1][0]["node"] == (
+        "Final lookup status"
+    )
+
+
+def test_superseded_lookup_execution_ends_without_sending_result() -> None:
+    nodes = _workflow_nodes()
+    connections = _workflow_connections()
+    suppress_if = nodes["IF suppress lookup result"]
+
+    condition = suppress_if["parameters"]["conditions"]["conditions"][0]["leftValue"]
+    assert "user_cancelled" in condition
+    assert connections["Build result message"]["main"][0][0]["node"] == (
+        "IF suppress lookup result"
+    )
+    assert connections["IF suppress lookup result"]["main"][0][0]["node"] == (
+        "Check close session"
+    )
+    assert connections["IF suppress lookup result"]["main"][1][0]["node"] == (
+        "Send result"
+    )
 
 
 def test_build_result_message_sets_close_after_send_contract() -> None:
@@ -50,6 +112,10 @@ def test_build_result_message_keeps_retry_options_for_failed_timeout() -> None:
     assert "1️⃣ Reintentar" in js
     assert "2️⃣ Volver a servicios" in js
     assert "0️⃣ Cancelar" in js
+    assert "recent access-code emails" in js
+    assert "correos recientes con códigos de acceso" in js
+    assert "last 5 minutes" not in js
+    assert "últimos 5 minutos" not in js
 
 
 def test_check_close_session_reads_close_after_send_from_upstream_result() -> None:

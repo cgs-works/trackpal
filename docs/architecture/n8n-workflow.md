@@ -29,8 +29,12 @@ IF skip_console_call?
            ├─ Yes → Check Close Session (skip all Evolution sends)
            └─ No  → IF has lookup_job_id?
                      ├─ No  → Prepare Evolution sends → Evolution Go Send → Check Close Session
-                     └─ Yes → Send "buscando..." → Wait 4s loop → Poll status
-                                → Build result message → Send result → Check Close Session
+                     └─ Yes → Send "buscando..." → Register lookup resume
+                                → terminal now? build result immediately
+                                → otherwise Wait for lookup callback (absolute 130s)
+                                  ├─ callback → Build result message
+                                  └─ limit reached → one Final lookup status GET
+                                → Send result → Check Close Session
 ```
 
 ## Workflow File
@@ -145,9 +149,9 @@ All new contextual fields are sent conditionally (only when present in the parse
 
 JavaScript that takes backend response from `Console call` and merges it with parsed input.
 
-**Logic**: Preserve `reply_to`, `no_reply`, and `outbound_messages` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`, `close_jids`, and `outbound_messages`.
+**Logic**: Preserve `reply_to`, `no_reply`, and `outbound_messages` fields from the backend response. If `reply` is empty and `no_reply` is NOT true, use fallback Spanish message. If `no_reply=true`, do NOT apply the fallback reply — keep the empty reply so downstream nodes can detect the silent signal. Preserve control fields: `status`, `lookup_job_id`, `tenant_id`, `reply_to`, `no_reply`, `close_jids`, and `outbound_messages`. For lookup jobs, capture `lookup_started_at` and one absolute `wait_deadline_at` 130 seconds later; downstream nodes never extend that deadline.
 
-**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id, reply_to, no_reply, outbound_messages }`.
+**Output**: Spread of original `{ phone, message, instance, remoteJid, apiKey }` plus `{ reply, status, lookup_job_id, tenant_id, reply_to, no_reply, outbound_messages, lookup_started_at, wait_deadline_at }`.
 
 ### 5a. IF no reply (IF Node)
 
@@ -161,7 +165,7 @@ Routes incoming data based on the ``no_reply`` flag from the backend response. P
 | Condition | ``Equal`` |
 | Output | ``true`` branch → skip all Evolution sends, go directly to Check Close Session |
 
-When ``no_reply=true``, the workflow bypasses the ``Evolution Go Send`` and ``lookup_job_id`` poll branches entirely. This is used for:
+When ``no_reply=true``, the workflow bypasses the ``Evolution Go Send`` and lookup-resume branches entirely. This is used for:
 - Blocked unregistered identities (silent treatment)
 - Context collision rejection (private to admin chat via ``reply_to``)
 - Internal administrative responses that need no user-facing message
@@ -186,11 +190,15 @@ Sends prepared reply text back through Evolution Go.
 | Never Error | `true` |
 
 Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. `Prepare Evolution sends` sets `send_target` and `send_text`. When ``reply_to`` is present in the response, the primary send target uses the ``reply_to`` JID instead of the original sender's phone JID. Extra `outbound_messages` targets are sent as separate Evolution API calls.
-### 6c. Build Result Message (Code Node)
+### 6c. Event-driven Lookup Resume
 
-Code node that constructs the final lookup result message after polling completes.
+After the progress message, `Register lookup resume` sends `$execution.resumeUrl` and the tenant ID to the backend. If registration returns a terminal snapshot, n8n builds the result immediately. Otherwise, `Wait for lookup callback` suspends the execution without backend polling until either the authenticated backend POST arrives or the absolute `wait_deadline_at` is reached. The Wait node uses the native Header Auth credential `TrackPal Backend Resume Auth`, configured with header `X-API-Key` and the same value as `N8N_API_KEY`; expression filters are not used as an authentication substitute. `Normalize lookup resume` distinguishes a callback body from a time-limit resume; only the latter performs `Final lookup status`, so a normal lookup uses no polling loop. `IF suppress lookup result` silently ends an older execution whose job was marked `user_cancelled` when the same WhatsApp session started a replacement lookup.
 
-**Logic**: `Build result message` emits `close_after_send=true` for terminal `code`/`url` results and `false` for recoverable outcomes (`not_found`, `duplicate_suppressed`, `failed`, `timeout`, unknown fallback non-success). `failed` and `timeout` messages now include `1 Retry / 2 Back to services / 0 Cancel`.
+### 6d. Build Result Message (Code Node)
+
+Code node that constructs the final lookup result message from the registration snapshot, webhook callback, or one final fallback GET.
+
+**Logic**: `Build result message` emits `close_after_send=true` for terminal `code`/`url` results and `false` for recoverable outcomes (`not_found`, `duplicate_suppressed`, `failed`, `timeout`, unknown fallback non-success). `failed` and `timeout` messages include `1 Retry / 2 Back to services / 0 Cancel`. Empty-result copy refers to recent access-code emails instead of a rolling five-minute window.
 
 ### 7. Check Close Session (Code Node)
 
@@ -370,11 +378,13 @@ The workflow communicates with backend services:
 
 2. **TrackPal Backend Mail Lookup**:
    - `POST /api/v1/integrations/n8n/mail/lookups`
-   - `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>`
-   - Polling cadence: every 4s, approximately 60s measured from the lookup start timestamp.
-     The external executor normally finishes its repeated mailbox search within
-     55s, leaving delivery margin. The timeout does not depend on response fields
-     surviving the HTTP Request node.
+   - `POST /api/v1/integrations/n8n/mail/lookups/{job_id}/resume`
+   - `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` only after the Wait limit expires
+   - n8n registers `$execution.resumeUrl`, waits until the absolute 130-second
+     deadline, and resumes immediately when the backend reconciles a terminal
+     executor callback or detects deadline expiry. The backend has a 120-second
+     interactive deadline; each worker handoff carries the remaining budget
+     and absolute deadline so cold-start time is included.
 
 3. **Evolution Go** (`POST /send/text`, `POST /webhook/change-status`):
    - Authenticated via per-instance `apikey` header (from trusted webhook payload or decrypted stored token)
@@ -384,7 +394,8 @@ The workflow communicates with backend services:
 
 ## Error Handling
 
-- **Backend unavailable**: The Console Call node has `neverError: true`, so the workflow continues even on non-2xx responses
+- **Backend unavailable**: The Console Call and resume-registration nodes use `neverError: true`, so a safe response can continue through the workflow
+- **Missed resume callback**: The Wait node reaches its fixed limit and performs exactly one tenant-scoped final status GET; encrypted found results are retained for 180 seconds so they outlive the 130-second Wait limit
 - **Empty reply**: Merge Reply falls back to a static Spanish unavailability message
 - **I18n scope**: n8n is pure transport — it never generates, owns, or translates strings. All user-facing messages in both WhatsApp Bot and Reminder workflows are rendered by the backend using `t()`, with tenant locale resolved server-side. n8n passes reply text verbatim to Evolution Go.
 - **Evolution Go errors**: Both Send and Close Session nodes have `neverError: true` to prevent workflow failures from propagating

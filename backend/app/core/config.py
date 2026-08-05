@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     n8n_api_key: str
+    n8n_resume_allowed_origin: str = ""
     cors_origins: str = "http://localhost:5173"
     evolution_api_url: str = ""
     evolution_api_key: str = ""
@@ -56,9 +57,11 @@ class Settings(BaseSettings):
         )
 
     # Mailbox lookup defaults
-    # Leave a small handoff/polling margin below n8n's 60-second window.
+    # Backend deadline remains below n8n's absolute Wait limit for delivery margin.
     mailbox_lookup_timeout_seconds: int = 55
-    mailbox_lookup_window_minutes: int = 5
+    mailbox_lookup_window_minutes: int = 15
+    mailbox_lookup_response_budget_seconds: int = 120
+    mailbox_lookup_resume_url_ttl_seconds: int = 180
     mailbox_lookup_job_ttl_minutes: int = 5
     mailbox_delivery_log_retention_days: int = 7
 
@@ -66,7 +69,7 @@ class Settings(BaseSettings):
     lookup_executor_handoff_timeout_seconds: int = 90
     lookup_execution_lease_seconds: int = 180
     lookup_signature_skew_seconds: int = 60
-    lookup_result_ttl_seconds: int = 120
+    lookup_result_ttl_seconds: int = 180
     lookup_executor_failure_cooldown_seconds: int = 300
     lookup_dispatch_batch_size: int = 10
 

@@ -386,6 +386,24 @@ async def _handle_tenant_console(
                         db, tenant.id
                     )
                     if mailbox is not None and mailbox.status == "connected":
+                        coordinator = get_lookup_execution_coordinator()
+                        previous_job_id = session.temp_data.get("lookup_job_id")
+                        previous_uuid = None
+                        cancelled_previous = False
+                        if previous_job_id:
+                            try:
+                                previous_uuid = UUID(previous_job_id)
+                                cancelled_previous = await mailbox_lookup_repository.cancel_active_job_if_present(
+                                    db,
+                                    previous_uuid,
+                                    tenant_id=tenant.id,
+                                )
+                            except ValueError:
+                                logger.warning(
+                                    "Ignoring invalid previous lookup job id for phone=%s",
+                                    phone,
+                                )
+
                         job = await mailbox_lookup_repository.create_job(
                             db,
                             tenant_id=tenant.id,
@@ -396,8 +414,24 @@ async def _handle_tenant_console(
                         await db.flush()
                         await db.commit()
 
+                        if cancelled_previous and previous_uuid is not None:
+                            try:
+                                await coordinator.release_job_lease(previous_uuid)
+                            except Exception:
+                                logger.exception(
+                                    "Could not release superseded lookup job %s",
+                                    previous_uuid,
+                                )
+                            try:
+                                await coordinator.delete_resume_url(previous_uuid)
+                            except Exception:
+                                logger.exception(
+                                    "Could not delete resume URL for superseded job %s",
+                                    previous_uuid,
+                                )
+
                         try:
-                            await get_lookup_execution_coordinator().schedule(job.id)
+                            await coordinator.schedule(job.id)
                         except Exception:
                             logger.exception(
                                 "Could not schedule lookup job %s for tenant %s",
@@ -1036,6 +1070,24 @@ async def _handle_unauth_codigo_result(
                     reply=_i18n_t(locale, "wa.tenant.codigo.no_mailbox")
                 )
             try:
+                previous_job_id = None
+                cancelled_previous = False
+                raw_previous_job_id = session.temp_data.get("lookup_job_id")
+                if raw_previous_job_id:
+                    try:
+                        previous_job_id = UUID(str(raw_previous_job_id))
+                    except ValueError:
+                        logger.warning(
+                            "Ignoring invalid lookup job id during retry: %s",
+                            raw_previous_job_id,
+                        )
+                    else:
+                        cancelled_previous = await mailbox_lookup_repository.cancel_active_job_if_present(
+                            db,
+                            previous_job_id,
+                            tenant_id=tenant.id,
+                        )
+
                 job2 = await mailbox_lookup_repository.create_job(
                     db,
                     tenant_id=tenant.id,
@@ -1045,10 +1097,35 @@ async def _handle_unauth_codigo_result(
                 )
                 await db.flush()
                 await db.commit()
+
                 try:
-                    await get_lookup_execution_coordinator().schedule(job2.id)
+                    coordinator = get_lookup_execution_coordinator()
                 except Exception:
-                    logger.exception("Could not reschedule lookup job %s", job2.id)
+                    coordinator = None
+                    logger.exception(
+                        "Lookup coordinator unavailable for job %s", job2.id
+                    )
+                if coordinator is not None:
+                    if cancelled_previous and previous_job_id is not None:
+                        try:
+                            await coordinator.release_job_lease(previous_job_id)
+                        except Exception:
+                            logger.exception(
+                                "Could not release superseded lookup job %s",
+                                previous_job_id,
+                            )
+                        try:
+                            await coordinator.delete_resume_url(previous_job_id)
+                        except Exception:
+                            logger.exception(
+                                "Could not delete resume URL for superseded job %s",
+                                previous_job_id,
+                            )
+                    try:
+                        await coordinator.schedule(job2.id)
+                    except Exception:
+                        logger.exception("Could not reschedule lookup job %s", job2.id)
+
                 session.temp_data["lookup_job_id"] = str(job2.id)
                 await session_service.save_session(session)
                 return WhatsAppConsoleResponse(
@@ -1057,6 +1134,7 @@ async def _handle_unauth_codigo_result(
                     tenant_id=str(tenant.id),
                 )
             except Exception:
+                await db.rollback()
                 logger.exception("Failed to create retry lookup job")
 
         # Fallback: restart from service selection

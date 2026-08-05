@@ -52,7 +52,7 @@ async def get_job(
     if tenant_id is not None:
         stmt = stmt.where(MailLookupJob.tenant_id == tenant_id)
     if with_for_update:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -71,10 +71,16 @@ async def cancel_active_job_if_present(
     The helper does not commit; callers keep transaction control.
     """
     job = await get_job(db, job_id, tenant_id=tenant_id)
-    if job is None:
+    if job is None or job.status not in {"pending", "processing"}:
         return False
 
-    if job.status not in {"pending", "processing"}:
+    job = await get_job(
+        db,
+        job_id,
+        tenant_id=tenant_id,
+        with_for_update=True,
+    )
+    if job is None or job.status not in {"pending", "processing"}:
         return False
 
     job.status = "failed"
@@ -119,12 +125,17 @@ async def transition_status(
 
     if new_status == "processing":
         job.processing_started_at = datetime.now(timezone.utc)
+        job.error_code = None
+        job.error_detail_safe = None
     elif new_status == "pending":
         job.executor_id = None
         job.processing_started_at = None
         job.completed_at = None
     elif new_status in ("completed", "failed", "timeout"):
         job.completed_at = datetime.now(timezone.utc)
+        if new_status == "completed":
+            job.error_code = None
+            job.error_detail_safe = None
 
     if result_type is not None:
         job.result_type = result_type

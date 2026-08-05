@@ -96,6 +96,11 @@ class LookupCreateResponse(BaseModel):
     status: str = "pending"
 
 
+class LookupResumeRequest(BaseModel):
+    tenant_id: UUID
+    resume_url: str = Field(min_length=1, max_length=2048)
+
+
 class LookupStatusResponse(BaseModel):
     job_id: UUID
     status: str

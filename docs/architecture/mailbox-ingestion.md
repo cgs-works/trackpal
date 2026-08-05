@@ -12,7 +12,7 @@ backend never runs Gmail IMAP or extraction work locally.
 | Component | Responsibility |
 |-----------|---------------|
 | **Tenant Dashboard (frontend)** | Mailbox config, Gmail Setup Assistant, connection tests |
-| **Backend API (FastAPI)** | Mailbox config CRUD, job creation, dispatch coordination, callback completion, and status polling |
+| **Backend API (FastAPI)** | Mailbox config CRUD, job creation, dispatch coordination, callback completion, n8n resume notification, and fallback status reads |
 | **Lookup Executor** | External runtime that fetches emails, extracts codes, and sends signed results back |
 | **Mailbox Cleanup** | Periodic task that expires stale jobs and removes expired data |
 | **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log`, and executor registry |
@@ -37,10 +37,16 @@ backend never runs Gmail IMAP or extraction work locally.
 - `executor_id`, `execution_attempts`, and `last_dispatch_error_safe` retain
   safe assignment metadata.
 - Default TTL is five minutes via `settings.mailbox_lookup_job_ttl_minutes`.
-- The executor keeps polling Gmail after an empty result instead of returning
-  `not_found` immediately. Its default search budget is 55 seconds via
-  `settings.mailbox_lookup_timeout_seconds`; n8n polls the job every 4 seconds
-  for up to 60 seconds, leaving margin for callback and message delivery.
+- Candidate selection uses one fixed cutoff: `job.requested_at - 15 minutes`.
+  Every retry receives the same `search_after`, so executor startup time does
+  not make an otherwise eligible email age out.
+- The interactive response budget is 120 seconds from `job.requested_at`.
+  Every handoff carries the remaining seconds plus the same absolute
+  `deadline_at`; the worker applies the smaller value after startup, so a
+  60-second cold start leaves about 60 seconds of search time. The HTTP handoff
+  timeout is 90 seconds. n8n suspends on a Wait webhook with an absolute
+  130-second limit, leaving delivery margin without repeatedly polling the
+  backend.
 - Each encrypted executor handoff includes delivery keys recorded for the same
   tenant, mailbox, and service inside the active lookup window. The executor
   ignores those already-delivered results and continues polling for a genuinely
@@ -66,7 +72,10 @@ requeued job. The pump:
 3. Creates a Redis execution lease and capacity marker.
 4. Decrypts the mailbox app password only while constructing the encrypted
    execution envelope.
-5. Sends the signed handoff and returns immediately; the executor performs the
+5. Sends the signed handoff, then re-reads and row-locks the job before
+   accepting the response. The coordinator rechecks both active status and the
+   remaining interactive deadline, so a concurrent cancel, timeout, or slow
+   handoff cannot be overwritten as `processing`. The executor performs the
    lookup and calls the backend asynchronously.
 
 No permanent lookup worker loop runs inside FastAPI. If Redis, capacity, or an
@@ -82,7 +91,7 @@ Accepted `202` handoffs and same-lease `409` duplicates move a job to
 `processing`, assign its executor, increment `execution_attempts`, and mark the
 executor healthy. The lease remains until callback completion or expiry.
 
-Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope, and consumes a one-use Redis nonce retained for three times the signature-skew window so future-dated signatures cannot outlive replay protection. It then delegates to a row-locked coordinator transaction. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry. Retryable outcomes clear the assignment, release the lease, and requeue only before the job deadline.
+Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope, and consumes a one-use Redis nonce retained for three times the signature-skew window so future-dated signatures cannot outlive replay protection. It then delegates to a row-locked coordinator transaction that rechecks the interactive deadline before accepting any outcome; late callbacks become `timeout` and never expose their extracted value. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry or include the extracted value in the n8n resume payload. Retryable outcomes clear the assignment, release the lease, and requeue only before the interactive response deadline. Terminal callbacks and dispatcher-detected deadline expiry trigger a bounded, best-effort POST to the encrypted n8n resume URL. The notifier retries 404/server/transport failures across the short Wait-webhook activation window; notification failure never rolls back durable completion, and n8n performs one final status read when its Wait limit expires. If an ephemeral found value is no longer available, the fallback response fails safely with `result_unavailable` instead of emitting an empty success.
 
 ## Redis Coordination
 
@@ -93,12 +102,13 @@ The coordinator uses these keys:
 - `lookup:lease:{job_id}` — execution lease metadata.
 - `lookup:executor-leases:{executor_id}` — expiring capacity markers.
 - `lookup:callback-nonce:{executor_id}:{nonce}` — callback replay protection.
-- `lookup:result:{job_id}` — Fernet-encrypted result cache.
+- `lookup:result:{job_id}` — Fernet-encrypted result cache (180-second default, capped by job retention).
+- `lookup:resume:{job_id}` — Fernet-encrypted n8n Wait resume URL.
 - `lookup:executor-cooldown:{executor_id}` — failure cooldown marker.
 
 PostgreSQL remains the durable source of truth. Duplicate scheduling is safe,
-and polling or another job creation can re-schedule a pending durable row after
-Redis recovery. A reconciliation pass treats PostgreSQL `pending` rows as the
+and a fallback status read or another job creation can re-schedule a pending
+durable row after Redis recovery. A reconciliation pass treats PostgreSQL `pending` rows as the
 recovery input, removes stale assignment metadata when an Execution Lease has
 expired, and never invokes a local Gmail or extraction pipeline. Redis result
 entries are encrypted and short-lived; the database stores only safe result
@@ -131,7 +141,8 @@ configurable.
 | Method | Path | Purpose |
 |--------|------|---------|
 | POST | `/api/v1/integrations/n8n/mail/lookups` | Create a lookup job |
-| GET | `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` | Poll a tenant-scoped job |
+| POST | `/api/v1/integrations/n8n/mail/lookups/{job_id}/resume` | Register the tenant-scoped n8n Wait resume URL |
+| GET | `/api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` | Perform the final/fallback tenant-scoped status read |
 
 ### Master Lookup Executor Registry
 
@@ -153,24 +164,26 @@ never sent to executors.
 
 `pending` → `processing` → `completed` | `failed`
 
-`processing` → `pending` (recoverable lease or dispatch failure)
+`processing` → `pending` (recoverable lease or dispatch failure before the response deadline)
 
-`pending` → `timeout` (when the job TTL expires)
+`pending` or `processing` → `timeout` (interactive response deadline expires; the final GET rechecks this transition under a row lock)
 
 Result types are `code`, `url`, `not_found`, and `duplicate_suppressed`.
 
 ## Observability
 
-`GET /metrics` exposes lookup creation/poll outcomes, job latency, mailbox
-connection tests, and cleanup status. Logs contain IDs and safe operational
+`GET /metrics` exposes lookup creation, resume registration/notification,
+final-status recovery, job latency, mailbox connection tests, and cleanup
+status. Logs contain IDs and safe operational
 errors only; credentials, tokens, raw email, and extracted values are not
 logged.
 
 ## Retention and Cleanup
 
 `mailbox_cleanup.cleanup_loop` runs periodically to expire pending or
-processing jobs past their TTL, hard-delete expired jobs, and remove old
- dedupe records. Configure retention with
+processing jobs past their retention TTL, hard-delete expired jobs, and remove
+old dedupe records. Interactive status reads independently enforce the shorter
+response deadline. Configure retention with
 `settings.mailbox_lookup_job_ttl_minutes` and
 `settings.mailbox_delivery_log_retention_days`.
 
@@ -179,17 +192,22 @@ processing jobs past their TTL, hard-delete expired jobs, and remove old
 - Credentials are encrypted at rest with Fernet.
 - Sensitive executor bodies use application encryption and signed transport.
 - Executor URL validation rejects unsafe destinations and redirects.
+- Resume URLs must use HTTPS on the configured n8n origin, are encrypted in
+  Redis, expire automatically, and are called without following redirects.
 - Result values are ephemeral and encrypted in Redis.
 - Tenant ownership is enforced at the repository/API boundary.
 
 ## Runbook
 
-### Deployment order for delivered-code exclusions
+### Deployment order for lookup protocol changes
 
-Deploy the Lookup Executor before the backend. The updated executor accepts
+Deploy the Lookup Executor before the backend, then publish the n8n workflow.
+The updated executor accepts `search_after`, `deadline_at`, and
 `excluded_deliveries` while remaining compatible with older backend handoffs;
-an older executor rejects the new field because lookup commands use strict
-Pydantic validation.
+an older executor rejects new fields because lookup commands use strict
+Pydantic validation. Configure
+`N8N_RESUME_ALLOWED_ORIGIN` to the HTTPS n8n origin before enabling webhook
+resume registration.
 
 ### Lookup jobs stuck in `pending`
 

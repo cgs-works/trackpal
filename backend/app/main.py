@@ -30,6 +30,7 @@ from app.services.lookup_executor_registry import (
     configure_active_lease_reader,
 )
 from app.services.lookup_executor_transport import HttpLookupExecutorTransport
+from app.services.lookup_resume_notifier import HttpLookupResumeNotifier
 from app.services.mailbox_cleanup import cleanup_loop
 from app.services.step_up_limiter import StepUpRateLimiter
 
@@ -78,7 +79,10 @@ async def lifespan(app: FastAPI):
             LookupExecutionCoordinator(
                 AsyncSessionLocal,
                 coordination_store,
-                HttpLookupExecutorTransport(),
+                HttpLookupExecutorTransport(
+                    timeout=settings.lookup_executor_handoff_timeout_seconds
+                ),
+                resume_notifier=HttpLookupResumeNotifier(settings.n8n_api_key),
             )
         )
     _configure_export_runtime()

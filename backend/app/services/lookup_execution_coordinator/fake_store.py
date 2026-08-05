@@ -30,6 +30,7 @@ class FakeLookupCoordinationStore:
         self._leases: dict[UUID, LookupLease] = {}
         self._nonces: dict[tuple[UUID, str], float] = {}
         self._results: dict[UUID, tuple[float, str]] = {}
+        self._resume_urls: dict[UUID, tuple[float, str]] = {}
         self._cooldowns: dict[UUID, float] = {}
 
     async def enqueue(self, job_id: UUID) -> bool:
@@ -145,6 +146,31 @@ class FakeLookupCoordinationStore:
             return None
         payload = json.loads(get_fernet().decrypt(token.encode()).decode())
         return str(payload["result_type"]), str(payload["result_value"])
+
+    async def put_resume_url(
+        self, job_id: UUID, resume_url: str, ttl_seconds: int
+    ) -> None:
+        """Encrypt and store an n8n resume URL until its TTL expires."""
+        token = get_fernet().encrypt(resume_url.encode()).decode()
+        self._resume_urls[job_id] = (
+            time.monotonic() + max(1, ttl_seconds),
+            token,
+        )
+
+    async def get_resume_url(self, job_id: UUID) -> str | None:
+        """Decrypt and return an n8n resume URL that has not expired."""
+        item = self._resume_urls.get(job_id)
+        if item is None:
+            return None
+        expires_at, token = item
+        if expires_at <= time.monotonic():
+            self._resume_urls.pop(job_id, None)
+            return None
+        return get_fernet().decrypt(token.encode()).decode()
+
+    async def delete_resume_url(self, job_id: UUID) -> None:
+        """Delete a job's n8n resume URL."""
+        self._resume_urls.pop(job_id, None)
 
     async def set_failure_cooldown(self, executor_id: UUID, ttl_seconds: int) -> None:
         """Start an executor failure cooldown."""

@@ -66,6 +66,20 @@ class LookupCoordinationStore(Protocol):
         """Return a decrypted result, if it has not expired."""
         ...
 
+    async def put_resume_url(
+        self, job_id: UUID, resume_url: str, ttl_seconds: int
+    ) -> None:
+        """Store an encrypted, expiring n8n execution resume URL."""
+        ...
+
+    async def get_resume_url(self, job_id: UUID) -> str | None:
+        """Return a decrypted n8n resume URL, if it has not expired."""
+        ...
+
+    async def delete_resume_url(self, job_id: UUID) -> None:
+        """Remove a job's n8n resume URL."""
+        ...
+
     async def set_failure_cooldown(self, executor_id: UUID, ttl_seconds: int) -> None:
         """Start or replace an executor failure cooldown."""
         ...

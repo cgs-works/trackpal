@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -25,6 +26,8 @@ from app.services.lookup_executor_transport import LookupExecutorTransport
 
 from .selector import ExecutorCapacity, select_executor
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class VerifiedCallback:
@@ -42,6 +45,12 @@ class CompletionAck:
     """Whether a callback was valid for the current execution lease."""
 
     accepted: bool
+
+
+class ResumeNotifier(Protocol):
+    """Adapter that resumes one suspended n8n execution."""
+
+    async def notify(self, resume_url: str, payload: Mapping[str, Any]) -> bool: ...
 
 
 class CoordinationStore(Protocol):
@@ -70,6 +79,11 @@ class CoordinationStore(Protocol):
         self, job_id: UUID, result_type: str, result_value: str, ttl_seconds: int
     ) -> None: ...
     async def get_result(self, job_id: UUID) -> tuple[str, str] | None: ...
+    async def put_resume_url(
+        self, job_id: UUID, resume_url: str, ttl_seconds: int
+    ) -> None: ...
+    async def get_resume_url(self, job_id: UUID) -> str | None: ...
+    async def delete_resume_url(self, job_id: UUID) -> None: ...
     async def active_count(self, executor_id: UUID) -> int: ...
     async def is_failure_cooldown_active(self, executor_id: UUID) -> bool: ...
     async def clear_failure_cooldown(self, executor_id: UUID) -> None: ...
@@ -92,6 +106,7 @@ class LookupExecutionCoordinator:
         *,
         callback_base_url: str | None = None,
         task_spawner: TaskSpawner = asyncio.create_task,
+        resume_notifier: ResumeNotifier | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._store = coordination_store
@@ -101,6 +116,7 @@ class LookupExecutionCoordinator:
             or os.getenv("TRACKPAL_PUBLIC_URL", "http://localhost:8000")
         ).rstrip("/")
         self._task_spawner = task_spawner
+        self._resume_notifier = resume_notifier
         self._pump_guard = asyncio.Lock()
         self._pump_task: Any = None
         self._last_selected_at: dict[UUID, datetime] = {}
@@ -147,6 +163,22 @@ class LookupExecutionCoordinator:
                 await db.rollback()
                 return CompletionAck(accepted=False)
 
+            if _remaining_lookup_budget(job) <= 0:
+                await mailbox_lookup_repository.transition_status(
+                    db,
+                    job,
+                    "timeout",
+                    error_code=callback.outcome.error_code or "lookup_timeout",
+                    error_detail_safe=(
+                        callback.outcome.error_detail
+                        or "Interactive lookup deadline expired"
+                    ),
+                )
+                await db.commit()
+                await self._store.release_lease(job_id)
+                await self._notify_resume(job, result_value=None)
+                return CompletionAck(accepted=True)
+
             if job.status == "pending":
                 job.executor_id = callback.executor_id
                 await mailbox_lookup_repository.transition_status(db, job, "processing")
@@ -191,10 +223,13 @@ class LookupExecutionCoordinator:
                     db, job, "completed", result_type="not_found"
                 )
             elif outcome.kind == "retryable_failure":
+                next_status = (
+                    "pending" if _remaining_lookup_budget(job) > 0 else "timeout"
+                )
                 await mailbox_lookup_repository.transition_status(
                     db,
                     job,
-                    "pending",
+                    next_status,
                     error_code=outcome.error_code,
                     error_detail_safe=outcome.error_detail,
                 )
@@ -210,9 +245,47 @@ class LookupExecutionCoordinator:
             await db.commit()
 
         await self._store.release_lease(job_id)
-        if outcome.kind == "retryable_failure" and _job_unexpired(job.expires_at):
+        if job.status == "pending" and _job_unexpired(job.expires_at):
             await self._store.enqueue(job_id)
+        elif job.status in {"completed", "failed", "timeout"}:
+            await self._notify_resume(
+                job,
+                result_value=(
+                    outcome.result_value if job.result_type in {"code", "url"} else None
+                ),
+            )
         return CompletionAck(accepted=True)
+
+    async def _notify_resume(self, job: Any, *, result_value: str | None) -> None:
+        """Best-effort resume of the n8n execution registered for a job."""
+        if self._resume_notifier is None:
+            return
+        try:
+            resume_url = await self._store.get_resume_url(job.id)
+            if resume_url is None:
+                return
+            payload = _terminal_payload(job, result_value=result_value)
+            delivered = await self._resume_notifier.notify(resume_url, payload)
+            if delivered:
+                await self._store.delete_resume_url(job.id)
+        except Exception:
+            logger.exception("Could not notify n8n resume for lookup job %s", job.id)
+
+    async def register_resume_url(self, job_id: UUID, resume_url: str) -> None:
+        """Store an encrypted, expiring n8n resume URL for one job."""
+        await self._store.put_resume_url(
+            job_id,
+            resume_url,
+            settings.mailbox_lookup_resume_url_ttl_seconds,
+        )
+
+    async def delete_resume_url(self, job_id: UUID) -> None:
+        """Remove the n8n resume URL associated with a job."""
+        await self._store.delete_resume_url(job_id)
+
+    async def release_job_lease(self, job_id: UUID) -> None:
+        """Release executor capacity for a terminally expired job."""
+        await self._store.release_lease(job_id)
 
     async def get_result(self, job_id: UUID) -> tuple[str, str] | None:
         """Return the decrypted ephemeral result from the coordination store."""
@@ -276,6 +349,17 @@ class LookupExecutionCoordinator:
                 job = await mailbox_lookup_repository.get_job(db, job_id)
                 if job is None or job.status != "pending":
                     return True
+                if _remaining_lookup_budget(job) <= 0:
+                    await mailbox_lookup_repository.transition_status(
+                        db,
+                        job,
+                        "timeout",
+                        error_code="lookup_timeout",
+                        error_detail_safe="Interactive lookup deadline expired",
+                    )
+                    await db.commit()
+                    await self._notify_resume(job, result_value=None)
+                    return True
 
                 executor = await self._select_executor(db)
                 if executor is None:
@@ -314,8 +398,29 @@ class LookupExecutionCoordinator:
                         await self._store.release_lease(job_id)
                         await db.commit()
                         return False
+
+                    current_job = await mailbox_lookup_repository.get_job(
+                        db,
+                        job_id,
+                        with_for_update=True,
+                    )
+                    if current_job is None or current_job.status != "pending":
+                        await self._store.release_lease(job_id)
+                        return True
+                    if _remaining_lookup_budget(current_job) <= 0:
+                        await mailbox_lookup_repository.transition_status(
+                            db,
+                            current_job,
+                            "timeout",
+                            error_code="lookup_timeout",
+                            error_detail_safe="Interactive lookup deadline expired",
+                        )
+                        await db.commit()
+                        await self._store.release_lease(job_id)
+                        await self._notify_resume(current_job, result_value=None)
+                        return True
                     return await self._handle_handoff(
-                        db, job, executor, lease_id, outcome
+                        db, current_job, executor, lease_id, outcome
                     )
                 except Exception:
                     await self._store.release_lease(job_id)
@@ -367,15 +472,17 @@ class LookupExecutionCoordinator:
             f"{self._callback_base_url}/api/v1/integrations/executors/"
             f"{executor.id}/jobs/{job.id}/complete"
         )
-        delivered_since = datetime.now(timezone.utc) - timedelta(
-            minutes=settings.mailbox_lookup_window_minutes
-        )
+        search_after = _lookup_search_after(job)
+        deadline_at = _lookup_deadline(job)
+        timeout_seconds = _remaining_lookup_budget(job)
+        if timeout_seconds <= 0:
+            raise RuntimeError("interactive lookup deadline expired")
         delivered_keys = await mailbox_dedupe_repository.list_delivery_keys_since(
             db,
             tenant_id=job.tenant_id,
             mailbox_id=job.mailbox_id,
             service_key=job.service_key,
-            since=delivered_since,
+            since=search_after,
         )
         return {
             "job_id": job.id,
@@ -387,7 +494,9 @@ class LookupExecutionCoordinator:
             "service_key": job.service_key,
             "target_email": job.target_email,
             "window_minutes": settings.mailbox_lookup_window_minutes,
-            "timeout_seconds": settings.mailbox_lookup_timeout_seconds,
+            "search_after": search_after,
+            "timeout_seconds": timeout_seconds,
+            "deadline_at": deadline_at,
             "excluded_deliveries": [
                 {"message_id": message_id, "fingerprint": fingerprint}
                 for message_id, fingerprint in delivered_keys
@@ -484,6 +593,55 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
+def _terminal_payload(
+    job: Any, *, result_value: str | None = None
+) -> dict[str, object]:
+    """Build the safe terminal payload consumed by the n8n Wait webhook."""
+    completed_at = getattr(job, "completed_at", None)
+    return {
+        "job_id": str(job.id),
+        "status": str(job.status),
+        "result_type": getattr(job, "result_type", None),
+        "result_value": result_value,
+        "error_code": getattr(job, "error_code", None),
+        "error_detail": getattr(job, "error_detail_safe", None),
+        "completed_at": (
+            _utc(completed_at).isoformat() if completed_at is not None else None
+        ),
+    }
+
+
+def _lookup_requested_at(job: Any) -> datetime:
+    """Return the durable timestamp that anchors one interactive lookup."""
+    value = getattr(job, "requested_at", None) or getattr(job, "created_at", None)
+    return datetime.now(timezone.utc) if value is None else _utc(value)
+
+
+def _lookup_search_after(job: Any) -> datetime:
+    """Return the fixed Gmail candidate cutoff for every job attempt."""
+    return _lookup_requested_at(job) - timedelta(
+        minutes=settings.mailbox_lookup_window_minutes
+    )
+
+
+def _lookup_deadline(job: Any) -> datetime:
+    """Return the absolute end-to-end interactive deadline."""
+    return _lookup_requested_at(job) + timedelta(
+        seconds=settings.mailbox_lookup_response_budget_seconds
+    )
+
+
+def _remaining_lookup_budget(job: Any, *, now: datetime | None = None) -> int:
+    """Return whole seconds left in the end-to-end interactive budget."""
+    current = now or datetime.now(timezone.utc)
+    return max(0, int((_lookup_deadline(job) - _utc(current)).total_seconds()))
+
+
+def lookup_response_deadline_expired(job: Any, *, now: datetime | None = None) -> bool:
+    """Return whether the interactive response budget has been exhausted."""
+    return _remaining_lookup_budget(job, now=now) <= 0
+
+
 def _lease_expired(expires_at: datetime) -> bool:
     """Return whether a callback lease is no longer usable."""
     return _utc(expires_at) <= datetime.now(timezone.utc)
@@ -502,4 +660,9 @@ def _result_ttl(expires_at: datetime | None) -> int:
     return min(settings.lookup_result_ttl_seconds, remaining)
 
 
-__all__ = ["CompletionAck", "LookupExecutionCoordinator", "VerifiedCallback"]
+__all__ = [
+    "CompletionAck",
+    "LookupExecutionCoordinator",
+    "VerifiedCallback",
+    "lookup_response_deadline_expired",
+]

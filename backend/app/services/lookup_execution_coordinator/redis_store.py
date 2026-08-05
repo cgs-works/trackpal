@@ -21,6 +21,7 @@ LEASE_PREFIX = "lookup:lease:"
 EXECUTOR_LEASES_PREFIX = "lookup:executor-leases:"
 CALLBACK_NONCE_PREFIX = "lookup:callback-nonce:"
 RESULT_PREFIX = "lookup:result:"
+RESUME_URL_PREFIX = "lookup:resume:"
 EXECUTOR_COOLDOWN_PREFIX = "lookup:executor-cooldown:"
 
 _ENQUEUE_SCRIPT = """
@@ -310,6 +311,36 @@ class RedisLookupCoordinationStore:
 
         return await self._manager.execute("lookup_get_result", _get)
 
+    async def put_resume_url(
+        self, job_id: UUID, resume_url: str, ttl_seconds: int
+    ) -> None:
+        """Encrypt and store an expiring n8n resume URL."""
+        token = get_fernet().encrypt(resume_url.encode()).decode()
+        key = f"{RESUME_URL_PREFIX}{job_id}"
+        await self._manager.execute(
+            "lookup_put_resume_url",
+            lambda redis: redis.set(key, token, ex=max(1, ttl_seconds)),
+        )
+
+    async def get_resume_url(self, job_id: UUID) -> str | None:
+        """Decrypt and return an unexpired n8n resume URL."""
+        key = f"{RESUME_URL_PREFIX}{job_id}"
+
+        async def _get(redis: Any) -> str | None:
+            token = await redis.get(key)
+            if token is None:
+                return None
+            return get_fernet().decrypt(token.encode()).decode()
+
+        return await self._manager.execute("lookup_get_resume_url", _get)
+
+    async def delete_resume_url(self, job_id: UUID) -> None:
+        """Delete a job's n8n resume URL."""
+        key = f"{RESUME_URL_PREFIX}{job_id}"
+        await self._manager.execute(
+            "lookup_delete_resume_url", lambda redis: redis.delete(key)
+        )
+
     async def set_failure_cooldown(self, executor_id: UUID, ttl_seconds: int) -> None:
         """Start an executor failure cooldown."""
         key = f"{EXECUTOR_COOLDOWN_PREFIX}{executor_id}"
@@ -344,5 +375,6 @@ __all__ = [
     "QUEUE_KEY",
     "QUEUE_SEEN_KEY",
     "RESULT_PREFIX",
+    "RESUME_URL_PREFIX",
     "RedisLookupCoordinationStore",
 ]

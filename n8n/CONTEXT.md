@@ -22,7 +22,11 @@
 | **Console Call** | HTTP Request node que llama al backend `POST /api/v1/integrations/n8n/console` con el mensaje parseado. |
 | **Evolution Send** | HTTP Request node que envía respuesta via `POST /send/text` de Evolution API. |
 | **Config Set** | Node que contiene todos los valores de entorno (backend URL, API key, Evolution base URL). Referenciados via `$('Config').first().json.<field>`. |
-| **Merge Reply** | Code node que proporciona fallback en español cuando el backend no retorna respuesta. |
+| **Merge Reply** | Code node que proporciona fallback en español y fija `wait_deadline_at` 130 segundos después de iniciar un lookup. |
+| **Register lookup resume** | HTTP node que registra `$execution.resumeUrl` en el backend para reanudar el workflow sin polling. |
+| **Wait for lookup callback** | Wait node en modo webhook; reanuda inmediatamente con el callback terminal o al alcanzar el deadline absoluto. |
+| **Final lookup status** | Único GET de fallback, ejecutado solo si el Wait vence sin callback. |
+| **IF suppress lookup result** | Finaliza en silencio una ejecución anterior cuando su job fue cancelado por un retry de la misma sesión. |
 | **reply_to** | Campo del backend que indica JID alternativo para envío (respuestas contextuales privadas al admin). |
 | **no_reply** | Campo del backend que indica silencio — se salta el envío por Evolution. |
 | **client_notification_target** | JID original del contacto remoto que debe recibir notificaciones terminales de bloqueo/desbloqueo. |
@@ -42,9 +46,13 @@ $('Config').first().json.N8N_API_KEY
 $('Config').first().json.EVOLUTION_BASE_URL
 ```
 
+### Event-driven lookup delivery
+
+Los lookups no hacen polling periódico. Después de enviar “buscando...”, n8n registra `$execution.resumeUrl`, suspende la ejecución hasta `wait_deadline_at` y procesa el callback terminal inmediatamente. El Wait usa la credencial Header Auth nativa `TrackPal Backend Resume Auth` (`X-API-Key` = `N8N_API_KEY`). Si el webhook no llega, hace exactamente un `Final lookup status` GET.
+
 ### neverError
 
-Ambos HTTP Request nodes (Console Call y Evolution Send) tienen `neverError: true`. Esto previene que el workflow falle cuando backend o Evolution retornan non-2xx.
+Los HTTP Request nodes de Console Call, registro de resume y Evolution Send usan `neverError: true`. Esto previene que el workflow falle cuando backend o Evolution retornan non-2xx.
 
 ### Input normalization (Parse Input)
 
@@ -72,6 +80,6 @@ Siempre setear `close_jid` al JID canónico del teléfono (ej. `584243106642@s.w
 
 ## Secrets
 
-Ambos archivos JSON contienen valores de configuración en texto plano. Tratar como secrets-bearing:
+Ambos archivos JSON contienen valores de configuración en texto plano. El resume URL también es secreto transitorio y solo debe enviarse al backend HTTPS configurado. Tratar como secrets-bearing:
 - `n8n/TrackPal WhatsApp Bot.json`
 - `n8n/TrackPal Subscription Reminders.json`

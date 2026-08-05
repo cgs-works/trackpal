@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -55,6 +56,8 @@ class FakeStore:
         self.released: list[object] = []
         self.enqueued: list[object] = []
         self.results: list[tuple[object, str, str, int]] = []
+        self.resume_url: str | None = None
+        self.deleted_resume_jobs: list[object] = []
 
     async def get_lease(self, job_id: object) -> object | None:
         return self.lease
@@ -77,6 +80,23 @@ class FakeStore:
                 return result_type, result_value
         return None
 
+    async def get_resume_url(self, job_id: object) -> str | None:
+        return self.resume_url
+
+    async def delete_resume_url(self, job_id: object) -> None:
+        self.deleted_resume_jobs.append(job_id)
+        self.resume_url = None
+
+
+class FakeNotifier:
+    def __init__(self, delivered: bool = True) -> None:
+        self.delivered = delivered
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    async def notify(self, resume_url: str, payload: dict[str, object]) -> bool:
+        self.calls.append((resume_url, payload))
+        return self.delivered
+
 
 class Outcome(BaseModel):
     kind: str
@@ -95,6 +115,7 @@ def _job(*, status: str = "processing", expires_in: int = 300) -> SimpleNamespac
         mailbox_id=uuid4(),
         service_key="netflix",
         status=status,
+        requested_at=datetime.now(timezone.utc),
         executor_id=None,
         result_type=None,
         error_code=None,
@@ -167,6 +188,136 @@ async def test_found_callback_completes_job_and_stores_encrypted_result(
 
 
 @pytest.mark.asyncio
+async def test_late_found_callback_becomes_timeout_without_exposing_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.repositories import mailbox_dedupe_repository, mailbox_lookup_repository
+
+    job = _job()
+    job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=121)
+    executor_id, lease_id = uuid4(), uuid4()
+    store = FakeStore(
+        SimpleNamespace(
+            job_id=job.id,
+            executor_id=executor_id,
+            lease_id=lease_id,
+            expires_at=job.expires_at,
+        )
+    )
+    store.resume_url = "https://n8n.example.com/waiting-webhook/late"
+    notifier = FakeNotifier()
+    record_delivery = AsyncMock(return_value=True)
+    monkeypatch.setattr(settings, "mailbox_lookup_response_budget_seconds", 120)
+    monkeypatch.setattr(
+        mailbox_lookup_repository, "get_job", lambda *args, **kwargs: _async_value(job)
+    )
+    monkeypatch.setattr(
+        mailbox_lookup_repository,
+        "transition_status",
+        lambda db, item, status, **kwargs: _transition(item, status, **kwargs),
+    )
+    monkeypatch.setattr(
+        mailbox_dedupe_repository,
+        "record_delivery_atomic",
+        record_delivery,
+    )
+
+    coordinator = LookupExecutionCoordinator(
+        lambda: FakeSession(),
+        store,
+        object(),
+        resume_notifier=notifier,
+    )
+    outcome = Outcome(
+        kind="found",
+        result_type="code",
+        result_value="654321",
+        fingerprint="late-result",
+    )
+
+    ack = await coordinator.complete(
+        job.id, _callback(job, executor_id, lease_id, outcome)
+    )
+
+    assert ack.accepted is True
+    assert job.status == "timeout"
+    assert job.result_type is None
+    assert job.error_code == "lookup_timeout"
+    assert store.results == []
+    record_delivery.assert_not_awaited()
+    assert notifier.calls[0][1]["result_value"] is None
+    assert "654321" not in str(notifier.calls)
+
+
+@pytest.mark.asyncio
+async def test_found_callback_resumes_registered_n8n_execution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.repositories import mailbox_dedupe_repository, mailbox_lookup_repository
+
+    job = _job()
+    executor_id, lease_id = uuid4(), uuid4()
+    store = FakeStore(
+        SimpleNamespace(
+            job_id=job.id,
+            executor_id=executor_id,
+            lease_id=lease_id,
+            expires_at=job.expires_at,
+        )
+    )
+    store.resume_url = "https://n8n.example.com/waiting-webhook/secret"
+    notifier = FakeNotifier()
+    monkeypatch.setattr(
+        mailbox_lookup_repository, "get_job", lambda *args, **kwargs: _async_value(job)
+    )
+    monkeypatch.setattr(
+        mailbox_lookup_repository,
+        "transition_status",
+        lambda db, item, status, **kwargs: _transition(item, status, **kwargs),
+    )
+    monkeypatch.setattr(
+        mailbox_dedupe_repository,
+        "record_delivery_atomic",
+        lambda *args, **kwargs: _async_value(True),
+    )
+
+    coordinator = LookupExecutionCoordinator(
+        lambda: FakeSession(),
+        store,
+        object(),
+        resume_notifier=notifier,
+    )
+    outcome = Outcome(
+        kind="found",
+        result_type="code",
+        result_value="654321",
+        fingerprint="fingerprint",
+    )
+
+    ack = await coordinator.complete(
+        job.id, _callback(job, executor_id, lease_id, outcome)
+    )
+
+    assert ack.accepted is True
+    assert notifier.calls == [
+        (
+            "https://n8n.example.com/waiting-webhook/secret",
+            {
+                "job_id": str(job.id),
+                "status": "completed",
+                "result_type": "code",
+                "result_value": "654321",
+                "error_code": None,
+                "error_detail": None,
+                "completed_at": None,
+            },
+        )
+    ]
+    assert store.deleted_resume_jobs == [job.id]
+
+
+@pytest.mark.asyncio
 async def test_duplicate_found_callback_is_suppressed_without_result(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -182,6 +333,8 @@ async def test_duplicate_found_callback_is_suppressed_without_result(
             expires_at=job.expires_at,
         )
     )
+    store.resume_url = "https://n8n.example.com/waiting-webhook/duplicate"
+    notifier = FakeNotifier()
     monkeypatch.setattr(
         mailbox_lookup_repository, "get_job", lambda *args, **kwargs: _async_value(job)
     )
@@ -196,7 +349,12 @@ async def test_duplicate_found_callback_is_suppressed_without_result(
         lambda *args, **kwargs: _async_value(False),
     )
 
-    coordinator = LookupExecutionCoordinator(lambda: FakeSession(), store, object())
+    coordinator = LookupExecutionCoordinator(
+        lambda: FakeSession(),
+        store,
+        object(),
+        resume_notifier=notifier,
+    )
     outcome = Outcome(
         kind="found", result_type="code", result_value="654321", fingerprint="same"
     )
@@ -209,6 +367,9 @@ async def test_duplicate_found_callback_is_suppressed_without_result(
     assert job.status == "completed"
     assert job.result_type == "duplicate_suppressed"
     assert store.results == []
+    assert notifier.calls[0][1]["result_type"] == "duplicate_suppressed"
+    assert notifier.calls[0][1]["result_value"] is None
+    assert "654321" not in str(notifier.calls)
 
 
 @pytest.mark.asyncio
@@ -302,6 +463,50 @@ async def test_retryable_callback_returns_processing_job_to_pending_and_requeues
     assert job.executor_id is None
     assert store.released == [job.id]
     assert store.enqueued == [job.id]
+
+
+@pytest.mark.asyncio
+async def test_retryable_callback_times_out_after_interactive_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.repositories import mailbox_lookup_repository
+
+    job = _job()
+    job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=121)
+    executor_id, lease_id = uuid4(), uuid4()
+    store = FakeStore(
+        SimpleNamespace(
+            job_id=job.id,
+            executor_id=executor_id,
+            lease_id=lease_id,
+            expires_at=job.expires_at,
+        )
+    )
+    monkeypatch.setattr(settings, "mailbox_lookup_response_budget_seconds", 120)
+    monkeypatch.setattr(
+        mailbox_lookup_repository, "get_job", lambda *args, **kwargs: _async_value(job)
+    )
+    monkeypatch.setattr(
+        mailbox_lookup_repository,
+        "transition_status",
+        lambda db, item, status, **kwargs: _transition(item, status, **kwargs),
+    )
+
+    coordinator = LookupExecutionCoordinator(lambda: FakeSession(), store, object())
+    outcome = Outcome(
+        kind="retryable_failure", error_code="fetch_timeout", error_detail="timed out"
+    )
+
+    ack = await coordinator.complete(
+        job.id, _callback(job, executor_id, lease_id, outcome)
+    )
+
+    assert ack.accepted is True
+    assert job.status == "timeout"
+    assert job.error_code == "fetch_timeout"
+    assert store.released == [job.id]
+    assert store.enqueued == []
 
 
 @pytest.mark.asyncio
@@ -539,6 +744,9 @@ class _CiphertextRedis:
     async def get(self, key: str) -> str | None:
         return self.values.get(key)
 
+    async def delete(self, key: str) -> int:
+        return int(self.values.pop(key, None) is not None)
+
 
 class _CiphertextRedisManager:
     def __init__(self) -> None:
@@ -564,6 +772,23 @@ async def test_redis_result_is_encrypted_and_round_trips() -> None:
     raw = manager.redis.values[f"lookup:result:{job_id}"]
     assert "654321" not in raw
     assert await store.get_result(job_id) == ("code", "654321")
+
+
+@pytest.mark.asyncio
+async def test_redis_resume_url_is_encrypted_and_can_be_deleted() -> None:
+    job_id = uuid4()
+    manager = _CiphertextRedisManager()
+    store = RedisLookupCoordinationStore(manager)
+    resume_url = "https://n8n.example.com/waiting-webhook/secret"
+
+    await store.put_resume_url(job_id, resume_url, 180)
+
+    raw = manager.redis.values[f"lookup:resume:{job_id}"]
+    assert resume_url not in raw
+    assert await store.get_resume_url(job_id) == resume_url
+
+    await store.delete_resume_url(job_id)
+    assert await store.get_resume_url(job_id) is None
 
 
 @pytest.mark.asyncio

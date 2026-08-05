@@ -1,7 +1,7 @@
 """Integration tests for n8n mailbox lookup endpoints (create + status poll)."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -248,6 +248,33 @@ class TestLookupCoordinatorContract:
         assert response.status_code == 200
         coordinator.schedule.assert_awaited_once_with(job.id)
 
+    async def test_poll_marks_pending_job_timeout_after_interactive_deadline(
+        self, client: AsyncClient, db_session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "spotify"
+        )
+        job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=121)
+        await db_session.commit()
+        coordinator = AsyncMock()
+        monkeypatch.setattr(settings, "mailbox_lookup_response_budget_seconds", 120)
+
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.get(
+                f"/api/v1/integrations/n8n/mail/lookups/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "timeout"
+        coordinator.schedule.assert_not_awaited()
+
     async def test_expired_pending_poll_does_not_reschedule(
         self, client: AsyncClient, db_session
     ) -> None:
@@ -297,6 +324,106 @@ class TestLookupCoordinatorContract:
         assert response.json()["result_value"] == "987654"
         coordinator.get_result.assert_awaited_once_with(job.id)
 
+    async def test_completed_poll_fails_safely_when_ephemeral_result_is_missing(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "spotify"
+        )
+        job.status = "completed"
+        job.result_type = "code"
+        await db_session.commit()
+        coordinator = AsyncMock()
+        coordinator.get_result.return_value = None
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.get(
+                f"/api/v1/integrations/n8n/mail/lookups/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "failed"
+        assert response.json()["result_type"] is None
+        assert response.json()["result_value"] is None
+        assert response.json()["error_code"] == "result_unavailable"
+
+
+class TestRegisterLookupResumeEndpoint:
+    """POST /api/v1/integrations/n8n/mail/lookups/{job_id}/resume"""
+
+    pytestmark = pytest.mark.asyncio
+
+    async def test_registers_resume_url_for_active_tenant_job(
+        self, client: AsyncClient, db_session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "netflix"
+        )
+        await db_session.commit()
+        coordinator = AsyncMock()
+        monkeypatch.setattr(
+            settings,
+            "n8n_resume_allowed_origin",
+            "https://n8n.example.com",
+            raising=False,
+        )
+
+        with patch(
+            "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ):
+            response = await client.post(
+                f"/api/v1/integrations/n8n/mail/lookups/{job.id}/resume",
+                json={
+                    "tenant_id": str(tenant.id),
+                    "resume_url": "https://n8n.example.com/waiting-webhook/secret",
+                },
+                headers=_n8n_headers(),
+            )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["status"] == "pending"
+        coordinator.register_resume_url.assert_awaited_once_with(
+            job.id,
+            "https://n8n.example.com/waiting-webhook/secret",
+        )
+
+    async def test_rejects_resume_url_outside_configured_n8n_origin(
+        self, client: AsyncClient, db_session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "netflix"
+        )
+        await db_session.commit()
+        monkeypatch.setattr(
+            settings,
+            "n8n_resume_allowed_origin",
+            "https://n8n.example.com",
+            raising=False,
+        )
+
+        response = await client.post(
+            f"/api/v1/integrations/n8n/mail/lookups/{job.id}/resume",
+            json={
+                "tenant_id": str(tenant.id),
+                "resume_url": "https://attacker.example/waiting-webhook/secret",
+            },
+            headers=_n8n_headers(),
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "invalid resume URL"}
+
 
 class TestGetLookupStatusEndpoint:
     """GET /api/v1/integrations/n8n/mail/lookups/{job_id}"""
@@ -318,6 +445,53 @@ class TestGetLookupStatusEndpoint:
         )
         assert response.status_code == 200
         assert response.json()["status"] == "pending"
+
+    async def test_expired_get_rechecks_locked_job_before_marking_timeout(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        tenant, _ = await _seed_tenant(db_session)
+        mailbox = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mailbox.id, "spotify"
+        )
+        job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=121)
+        await db_session.commit()
+        get_job = AsyncMock()
+
+        async def load_job(*args, **kwargs):
+            if kwargs.get("with_for_update"):
+                job.status = "completed"
+                job.result_type = "not_found"
+            return job
+
+        get_job.side_effect = load_job
+        transition = AsyncMock()
+        coordinator = AsyncMock()
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.mail_lookups.mailbox_lookup_repository.get_job",
+                get_job,
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.mail_lookups.mailbox_lookup_repository.transition_status",
+                transition,
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.mail_lookups.get_lookup_execution_coordinator",
+                return_value=coordinator,
+            ),
+        ):
+            response = await client.get(
+                f"{self.BASE_URL}/{job.id}",
+                headers=_n8n_headers(),
+                params={"tenant_id": str(tenant.id)},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "completed"
+        assert response.json()["result_type"] == "not_found"
+        transition.assert_not_awaited()
+        assert get_job.await_args_list[-1].kwargs["with_for_update"] is True
 
     async def test_get_completed_status_with_value(
         self, client: AsyncClient, db_session

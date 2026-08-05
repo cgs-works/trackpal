@@ -137,7 +137,8 @@ Tenant prefix edits update client technical usernames transactionally.
 - `GET /api/v1/integrations/n8n/identify?phone=` — Identify user by phone (X-API-Key)
 - `POST /api/v1/integrations/n8n/console` — WhatsApp Master + Tenant + Client Console message processing (X-API-Key). Routes by instance first (`MASTER_WHATSAPP_INSTANCE`), resolves tenant by instance name, then identity within tenant. Client exit returns `status="closed"` for n8n/Evolution Go. For tenant `codigo` flow, `lookup_job_id` + `tenant_id` are returned only after durable job commit and successful enqueue.
 - `POST /api/v1/integrations/n8n/mail/lookups` — Create mailbox lookup job (`service_key`, `target_email`, `tenant_instance|tenant_id`) with `status=pending`.
-- `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` — Poll mailbox lookup status; tenant scope required.
+- `POST /api/v1/integrations/n8n/mail/lookups/{job_id}/resume` — Register the tenant-scoped, origin-validated n8n Wait resume URL.
+- `GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=<uuid>` — Read tenant-scoped lookup status; n8n uses it once as a fallback when its Wait limit expires.
 
 ### Tenant Mailbox Endpoints (tenant-scoped)
 

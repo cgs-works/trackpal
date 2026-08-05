@@ -128,7 +128,12 @@ schemas  core       models
 
 FastAPI creates durable Mail Lookup Jobs and coordinates them through Redis and
 PostgreSQL. It does not execute Gmail retrieval, MIME parsing, Code Service
-extraction, Netflix resolution, or a local result-cache fallback. The separate
-`worker/` context receives a signed, AES-GCM encrypted handoff and returns a
-signed encrypted callback. Redis result entries are ephemeral and encrypted;
+extraction, Netflix resolution, or a local result-cache fallback. Each job has
+one fixed candidate cutoff (`requested_at - 15 minutes`) and a 120-second
+interactive deadline; handoffs carry both the remaining timeout and absolute
+`deadline_at`, so a cold start cannot extend the end-to-end budget. The
+separate `worker/` context receives a signed, AES-GCM encrypted handoff and
+returns a signed encrypted callback. n8n registers a tenant-scoped Wait resume
+URL, which is origin-validated, encrypted in Redis, and notified after terminal
+callback reconciliation. Redis result entries are ephemeral and encrypted;
 PostgreSQL reconciliation makes pending jobs recoverable after Redis loss.

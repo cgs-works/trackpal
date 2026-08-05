@@ -160,8 +160,8 @@ The response schema now includes fields for private routing and silent replies.
 |-------|------|----------------|-------------|
 | `reply` | string | yes | Plain text reply that n8n relays to the user |
 | `status` | string | no | Optional status signal (e.g. ``"closed"`` on exit). Only serialised when non-``None`` |
-| `lookup_job_id` | string | no | Job id for code lookup polling. When present, n8n sends ``reply``, then polls |
-| `tenant_id` | string | no | Tenant UUID for scoped poll requests |
+| `lookup_job_id` | string | no | Job id for event-driven code lookup delivery. When present, n8n sends ``reply`` and registers its Wait resume URL |
+| `tenant_id` | string | no | Tenant UUID for resume registration and the final fallback status request |
 | `reply_to` | string | no | JID used as the message destination. When present, n8n sends to this JID instead of ``phone`` |
 | `close_jid` | string | no | Exact JID n8n must close when ``status="closed"``. Context shortcut close uses the Tenant admin private JID to avoid closing the target/client chat |
 | `close_jids` | list[str] | no | When present, list of ALL Evolution sessions to close (admin JID + target JID + target phone JID). Supersedes ``close_jid`` for multi-session closure |
@@ -205,8 +205,8 @@ Unregistered WhatsApp identities in a known tenant instance can access a limited
 5. Registered clients with an active unauthenticated codigo session resume that session before the read-only Client Console, so ``0`` cancels codigo rather than exiting the Client Console.
 6. Service list uses ``[N]`` bracket format (``[1] Service``, ``[2] Service``...) with emoji pagination (``8️⃣`` next, ``9️⃣`` previous, ``0️⃣`` cancel). Up to 7 services per page.
 7. Steps: service selection → email input → email confirmation → create ``MailLookupJob`` → schedule through the execution coordinator → return ``lookup_job_id`` + ``tenant_id``. Session transitions to ``awaiting_result`` step after job creation.
-8. n8n polls the job and sends the final result. On ``not_found``, the message includes options: ``1 Retry / 2 Back to services / 0 Cancel`` (localised in ES/EN).
-9. When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
+8. n8n registers its Wait resume URL and sends the terminal callback result immediately. If the absolute Wait limit expires, it performs one final status GET. On ``not_found``, the message includes options: ``1 Retry / 2 Back to services / 0 Cancel`` (localised in ES/EN).
+9. After a timeout or recoverable result, reply ``1`` supersedes the session-linked active job and starts a fresh lookup with the saved ``service_key`` and ``target_email``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
 10. Post-result options handled by ``_handle_unauth_codigo_result``: ``1`` creates new job, ``2`` shows service list, ``0`` closes session.
 11. ``0``/cancel at any step clears the Redis session and returns ``status="closed"`` with phone-based ``reply_to``/``close_jid`` when the phone is known, so Evolution Go closes the correct chat session.
 12. Non-codigo messages from unregistered identities return the ``not_registered`` message (``"No tienes una cuenta registrada. Envia 'code' o 'codigo' para buscar codigos de acceso."``) with ``status="closed"`` and ``close_jid``, telling them how to access codes and closing their session.
@@ -332,7 +332,7 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 
 > **Strict confirmation mode:** When ``session.step == "email_confirm"``, only the numeric inputs ``1``, ``2``, ``9``, and ``0`` are accepted. Textual cancel aliases such as ``cancelar``, ``salir``, or ``menu`` are treated as **invalid options** — they do not trigger the global cancel/reset/help handlers. This is deliberate: the ``email_confirm`` step bypasses global interception so that text aliases cannot accidentally cancel the flow. Session keys used in this step: ``target_email`` (stored after validation), ``pending_lookup_intent`` (set on confirm ``1``), ``flow=codigo``, and later ``lookup_job_id`` (set after the integration handler commits and schedules the job).
 
-6. Integration handler (``_handle_tenant_console``) creates the job and commits it durably before calling the execution coordinator. It then pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data. A scheduling failure does not remove the committed job; polling can recover dispatch.
+6. Integration handler (``_handle_tenant_console``) creates the job and commits it durably before calling the execution coordinator. It then pops ``pending_lookup_intent``, **keeps** ``service_key`` and ``target_email`` for potential retry, and stores ``lookup_job_id`` in session temp_data. A scheduling failure does not remove the committed job; PostgreSQL reconciliation and a later status read can recover dispatch.
 7. Session remains in ``awaiting_result`` step. When n8n delivers the result notification (e.g. "Code not found"), the user's reply routes back to the awaiting_result handler.
 
 #### Post-result response (``awaiting_result`` step)
@@ -345,7 +345,7 @@ Tenant console has a dedicated code-retrieval dialog. Two independent code paths
 | ``code`` / ``codigo`` / ``código`` | **Restart** — best-effort cancel the active lookup job referenced by the current Redis session, clear the session, and start codigo again from service selection. |
 | Other | **Still checking** — keep session alive, return "Still searching..." with retry/back/cancel options. |
 
-When n8n reaches its local poll timeout and shows retry options, reply ``1`` starts a fresh lookup with the saved ``service_key`` and ``target_email`` even if the previous mailbox job is still ``pending`` or ``processing``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
+When n8n reaches its absolute Wait limit and shows retry options, reply ``1`` supersedes the session-linked active job and starts a fresh lookup with the saved ``service_key`` and ``target_email``. Reply ``2`` returns to the service list. Reply ``0`` clears the session and closes Evolution Go.
 
 #### Client-sent code flow (unauth codigo)
 
@@ -359,17 +359,19 @@ When n8n reaches its local poll timeout and shows retry options, reply ``1`` sta
 #### n8n behavior for this path
 
 - Sends immediate "buscando..."
-- Polls every 4s up to 20s on ``GET /api/v1/integrations/n8n/mail/lookups/{job_id}?tenant_id=...``
+- Registers `$execution.resumeUrl` with the tenant-scoped backend endpoint
+- Waits for the terminal backend callback until the fixed 130-second limit
+- Performs one final status GET only if the callback was not received
 - Sends final result with options appended on ``not_found``:
   - English: ``1️⃣ Retry / 2️⃣ Back to services / 0️⃣ Cancel``
   - Spanish: ``1️⃣ Reintentar / 2️⃣ Volver a servicios / 0️⃣ Cancelar``
-- If user picks ``1`` (Retry), backend creates a new job and the poll cycle repeats.
+- If user picks ``1`` (Retry), backend row-locks and cancels the prior session-linked active job, releases its lease, removes its resume URL, and creates a new job. The older n8n execution suppresses the resulting `user_cancelled` fallback instead of sending a duplicate message.
 
 #### Failure contract for orchestration
 
 - Durable job creation is authoritative. After the PostgreSQL commit, the backend calls the execution coordinator but does not delete the job when immediate scheduling is unavailable.
-- n8n polling opportunistically calls ``schedule`` for non-expired pending jobs, so a later poll can recover a missed dispatch.
-- Result polling reads ephemeral found values through the coordinator's Redis-backed ``get_result`` contract.
+- Terminal executor callbacks persist the job result before attempting the bounded n8n resume notification.
+- The final status read can opportunistically schedule an eligible pending job and reads ephemeral found values through the coordinator's encrypted Redis result contract.
 
 
 ### Orchestration — `WhatsAppTenantConsoleFacade`

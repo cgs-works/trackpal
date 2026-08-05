@@ -6,7 +6,7 @@ Verifies API-key auth, Master/non-Master handling, and response shape.
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -1784,6 +1784,70 @@ async def test_unregistered_codigo_result_retry_returns_job_when_schedule_fails(
     body = response.json()
     assert body["lookup_job_id"] == str(retry_job.id)
     assert body["tenant_id"] == str(tenant.id)
+    coordinator.schedule.assert_awaited_once_with(retry_job.id)
+
+
+async def test_unregistered_codigo_retry_supersedes_active_job(
+    client, db_session, active_tenant_user
+):
+    from types import SimpleNamespace
+
+    tenant = await _setup_tenant_for_codigo(db_session, active_tenant_user)
+    fake_mgr = _FakeManager(used_backup=False)
+    active_job_id = uuid4()
+    retry_job = SimpleNamespace(id=uuid4())
+    coordinator = AsyncMock()
+    cancel_job = AsyncMock(return_value=True)
+    await _seed_unauth_codigo_awaiting_result(
+        fake_mgr,
+        tenant.id,
+        lookup_job_id=str(active_job_id),
+    )
+
+    with (
+        patch(
+            "app.api.v1.endpoints.integrations.console.get_redis_manager",
+            return_value=fake_mgr,
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.get_job",
+            AsyncMock(return_value=SimpleNamespace(status="pending")),
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.cancel_active_job_if_present",
+            cancel_job,
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+            AsyncMock(return_value=SimpleNamespace(id=uuid4(), status="connected")),
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+            AsyncMock(return_value=retry_job),
+        ),
+        patch(
+            "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+            return_value=coordinator,
+        ),
+    ):
+        response = await client.post(
+            ENDPOINT,
+            json={
+                "phone": "+12015559999",
+                "message": "1",
+                "instance": TEST_INSTANCE,
+            },
+            headers={"X-API-Key": settings.n8n_api_key},
+        )
+
+    assert response.status_code == 200
+    cancel_job.assert_awaited_once_with(
+        ANY,
+        active_job_id,
+        tenant_id=tenant.id,
+    )
+    coordinator.release_job_lease.assert_awaited_once_with(active_job_id)
+    coordinator.delete_resume_url.assert_awaited_once_with(active_job_id)
     coordinator.schedule.assert_awaited_once_with(retry_job.id)
 
 

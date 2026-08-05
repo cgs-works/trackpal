@@ -83,54 +83,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json._shouldContinue }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              },
-              "id": "condition-1779942290644-xw52uyk91"
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "6c298aa4-8e09-4d0b-85c2-0490e55181de",
-      "name": "IF retry needed",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        240,
-        192
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const startedAt = Number($('Merge & lookup data').first().json.poll_started_at || Date.now());\nconst maxElapsedMs = 60000;\nconst elapsedMs = Date.now() - startedAt;\n\nif ($json.status === 'completed') {\n  return { json: { ...$json, _shouldContinue: false } };\n}\n\nif (elapsedMs >= maxElapsedMs) {\n  return { json: { ...$json, _shouldContinue: false, status: 'timeout' } };\n}\n\nreturn { json: { ...$json, _shouldContinue: true } };"
-      },
-      "id": "18ba0285-ab64-482b-ac9f-4f0a10838688",
-      "name": "Check retry",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        0,
-        192
-      ]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "={{ $('Config').first().json.evolution_api_url }}/send/text",
         "sendHeaders": true,
@@ -165,7 +117,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const poll = $json;\nconst base = $('Merge & lookup data').first().json;\nconst seedReply = String(base.reply || '');\n\nconst looksEnglish = /searching code|you'll receive|code found|open link|error/i.test(seedReply);\n\nconst t = looksEnglish\n  ? {\n      codeFound: (v) => `✅ *Code found*\\n\\n📋 *${v}*\\n\\nThis code is time-sensitive. Use it soon.`,\n      urlFound: (v) => `✅ *Link found*\\n\\n🔗 ${v}\\n\\nOpen link to continue.`,\n      notFound: '❌ *Code not found*\\n\\nNo access-code emails found in last 5 minutes.\\n\\nRequest a new code and wait 15 seconds before trying again.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n      failed: '❌ *Could not complete code search*\\n\\nAn error occurred or the search timed out.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n    }\n  : {\n      codeFound: (v) => `✅ *Código encontrado*\\n\\n📋 *${v}*\\n\\nEste código es válido por tiempo limitado. Úsalo pronto.`,\n      urlFound: (v) => `✅ *Enlace encontrado*\\n\\n🔗 ${v}\\n\\nAbre enlace para continuar.`,\n      notFound: '❌ *No se encontró código*\\n\\nNo hay correos con códigos de acceso en últimos 5 minutos.\\n\\nSolicita nuevo código y espera 15 segundos antes de intentar de nuevo.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n      failed: '❌ *No se pudo completar la búsqueda*\\n\\nOcurrió un error o se agotó el tiempo al buscar el código.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n    };\n\nlet finalMessage;\nlet closeAfterSend = false;\n\nif (poll.result_type === 'code') {\n  finalMessage = t.codeFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'url') {\n  finalMessage = t.urlFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'not_found' || poll.result_type === 'duplicate_suppressed') {\n  finalMessage = t.notFound;\n} else if (poll.status === 'failed' || poll.status === 'timeout' || poll.error_code) {\n  finalMessage = t.failed;\n} else {\n  finalMessage = t.notFound;\n}\n\nreturn {\n  json: {\n    ...base,\n    ...poll,\n    reply: finalMessage,\n    close_after_send: closeAfterSend,\n  },\n};"
+        "jsCode": "const poll = $json;\nconst base = $('Merge & lookup data').first().json;\nconst seedReply = String(base.reply || '');\n\nconst looksEnglish = /searching code|you'll receive|code found|open link|error/i.test(seedReply);\n\nconst t = looksEnglish\n  ? {\n      codeFound: (v) => `✅ *Code found*\\n\\n📋 *${v}*\\n\\nThis code is time-sensitive. Use it soon.`,\n      urlFound: (v) => `✅ *Link found*\\n\\n🔗 ${v}\\n\\nOpen link to continue.`,\n      notFound: '❌ *Code not found*\\n\\nNo recent access-code emails were found.\\n\\nRequest a new code and wait 15 seconds before trying again.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n      failed: '❌ *Could not complete code search*\\n\\nAn error occurred or the search timed out.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n    }\n  : {\n      codeFound: (v) => `✅ *Código encontrado*\\n\\n📋 *${v}*\\n\\nEste código es válido por tiempo limitado. Úsalo pronto.`,\n      urlFound: (v) => `✅ *Enlace encontrado*\\n\\n🔗 ${v}\\n\\nAbre enlace para continuar.`,\n      notFound: '❌ *No se encontró código*\\n\\nNo se encontraron correos recientes con códigos de acceso.\\n\\nSolicita nuevo código y espera 15 segundos antes de intentar de nuevo.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n      failed: '❌ *No se pudo completar la búsqueda*\\n\\nOcurrió un error o se agotó el tiempo al buscar el código.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n    };\n\nlet finalMessage;\nlet closeAfterSend = false;\n\nif (poll.result_type === 'code') {\n  finalMessage = t.codeFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'url') {\n  finalMessage = t.urlFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'not_found' || poll.result_type === 'duplicate_suppressed') {\n  finalMessage = t.notFound;\n} else if (poll.status === 'failed' || poll.status === 'timeout' || poll.error_code) {\n  finalMessage = t.failed;\n} else {\n  finalMessage = t.notFound;\n}\n\nreturn {\n  json: {\n    ...base,\n    ...poll,\n    reply: finalMessage,\n    close_after_send: closeAfterSend,\n  },\n};"
       },
       "id": "dbf8531e-e770-4a52-9112-b53b24f211be",
       "name": "Build result message",
@@ -174,39 +126,6 @@
       "position": [
         0,
         0
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.status }}",
-              "rightValue": "completed",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              },
-              "id": "condition-1779942290644-w57qfjuee"
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "533161bf-e1dc-47f9-bf0d-9cef8e6a454c",
-      "name": "Check poll result",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -240,
-        192
       ]
     },
     {
@@ -230,27 +149,13 @@
         }
       },
       "id": "f4e089c6-8b27-4852-9609-a51e28f95504",
-      "name": "Poll status",
+      "name": "Final lookup status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -480,
+        480,
         192
       ]
-    },
-    {
-      "parameters": {
-        "amount": 4
-      },
-      "id": "278ec929-7ba0-4b09-8442-75634989a600",
-      "name": "Wait 4s",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        -720,
-        192
-      ],
-      "webhookId": "f9d94d50-f576-426f-9a73-c4d7ab166e35"
     },
     {
       "parameters": {
@@ -399,7 +304,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\nconst outboundMessages = Array.isArray(responseData.outbound_messages) ? responseData.outbound_messages : [];\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids, outbound_messages: outboundMessages, poll_started_at: Date.now() } }];"
+        "jsCode": "const input = $('Parse input').first().json;\nconst responseData = $('Console call').first().json;\nconst noReply = responseData.no_reply || false;\nconst reply = noReply ? '' : (\n  (typeof responseData.reply === 'string' && responseData.reply.trim())\n    ? responseData.reply\n    : 'Servicio temporalmente no disponible. Intenta nuevamente.'\n);\nconst status = responseData.status || null;\nconst lookupJobId = responseData.lookup_job_id || null;\nconst tenantId = responseData.tenant_id || null;\nconst replyTo = responseData.reply_to || null;\nconst closeJid = responseData.close_jid || null;\nconst closeJids = Array.isArray(responseData.close_jids) ? responseData.close_jids : (closeJid ? [closeJid] : []);\nconst outboundMessages = Array.isArray(responseData.outbound_messages) ? responseData.outbound_messages : [];\nconst lookupStartedAt = Date.now();\nconst waitDeadlineAt = new Date(lookupStartedAt + 130000).toISOString();\n\nreturn [{ json: { ...input, reply, status, lookup_job_id: lookupJobId, tenant_id: tenantId, reply_to: replyTo, no_reply: noReply, close_jid: closeJid, close_jids: closeJids, outbound_messages: outboundMessages, lookup_started_at: lookupStartedAt, wait_deadline_at: waitDeadlineAt } }];"
       },
       "id": "edbff45a-1e77-4b4a-ad29-7c09c893dc55",
       "name": "Merge & lookup data",
@@ -531,6 +436,185 @@
         -960,
         576
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/integrations/n8n/mail/lookups/{{ $('Merge & lookup data').first().json.lookup_job_id }}/resume",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Config').first().json.trackpal_n8n_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenant_id: String($('Merge & lookup data').first().json.tenant_id || ''), resume_url: String($execution.resumeUrl || '') }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3c39aa7c-7e15-42fd-8c57-936272cfa069",
+      "name": "Register lookup resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -720,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ['completed', 'failed', 'timeout'].includes(String($json.status || '')) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "776b98f0-925e-4500-b5b0-5ec373e91d6a"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "87915f5a-9ced-4527-aef8-761d3c7e2434",
+      "name": "IF registration terminal",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -480,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "incomingAuthentication": "headerAuth",
+        "httpMethod": "POST",
+        "responseCode": 202,
+        "responseMode": "onReceived",
+        "limitWaitTime": true,
+        "limitType": "atSpecifiedTime",
+        "maxDateAndTime": "={{ $('Merge & lookup data').first().json.wait_deadline_at }}",
+        "options": {
+          "noResponseBody": true
+        }
+      },
+      "id": "3d16e629-5bbb-4fa2-98e4-792644221503",
+      "name": "Wait for lookup callback",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -240,
+        192
+      ],
+      "webhookId": "554bf2de-d35f-4464-9688-ac2ea0c200bd",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "trackpal-backend-resume-auth",
+          "name": "TrackPal Backend Resume Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const incoming = $input.item.json || {};\nconst body = incoming.body && typeof incoming.body === 'object' ? incoming.body : null;\nconst callbackReceived = Boolean(body && body.job_id);\n\nreturn {\n  json: callbackReceived\n    ? { ...body, callback_received: true }\n    : { callback_received: false },\n};"
+      },
+      "id": "93684743-5126-461e-8996-f1dca73b7b5e",
+      "name": "Normalize lookup resume",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.callback_received }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "b7f806fb-fcdf-4413-8b0a-8357a9f2bf50"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9305bc38-e258-448c-99ee-f9e53c28b988",
+      "name": "IF callback received",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.error_code || '') === 'user_cancelled' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "a8b936b3-26e9-4ecc-b827-22cead2cadde"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "80a13372-0fb1-4343-82b0-28047050f5cf",
+      "name": "IF suppress lookup result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        0
+      ]
     }
   ],
   "pinData": {},
@@ -558,17 +642,6 @@
         ]
       ]
     },
-    "Check retry": {
-      "main": [
-        [
-          {
-            "node": "IF retry needed",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "IF no reply": {
       "main": [
         [
@@ -587,80 +660,11 @@
         ]
       ]
     },
-    "IF retry needed": {
-      "main": [
-        [
-          {
-            "node": "Wait 4s",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Build result message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Build result message": {
       "main": [
         [
           {
-            "node": "Send result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check poll result": {
-      "main": [
-        [
-          {
-            "node": "Build result message",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Check retry",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Poll status": {
-      "main": [
-        [
-          {
-            "node": "Check poll result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait 4s": {
-      "main": [
-        [
-          {
-            "node": "Poll status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send buscando": {
-      "main": [
-        [
-          {
-            "node": "Wait 4s",
+            "node": "IF suppress lookup result",
             "type": "main",
             "index": 0
           }
@@ -778,6 +782,115 @@
         [
           {
             "node": "Evolution API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send buscando": {
+      "main": [
+        [
+          {
+            "node": "Register lookup resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register lookup resume": {
+      "main": [
+        [
+          {
+            "node": "IF registration terminal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF registration terminal": {
+      "main": [
+        [
+          {
+            "node": "Build result message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for lookup callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for lookup callback": {
+      "main": [
+        [
+          {
+            "node": "Normalize lookup resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize lookup resume": {
+      "main": [
+        [
+          {
+            "node": "IF callback received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF callback received": {
+      "main": [
+        [
+          {
+            "node": "Build result message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final lookup status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final lookup status": {
+      "main": [
+        [
+          {
+            "node": "Build result message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF suppress lookup result": {
+      "main": [
+        [
+          {
+            "node": "Check close session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send result",
             "type": "main",
             "index": 0
           }

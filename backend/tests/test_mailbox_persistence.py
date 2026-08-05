@@ -299,6 +299,26 @@ class TestMailboxLookupRepository:
         assert job.result_type == "code"
         assert job.completed_at is not None
 
+    async def test_completed_transition_clears_stale_active_error(self, db_session):
+        tenant = await _seed_tenant(db_session)
+        mb = await _seed_mailbox(db_session, tenant.id)
+        job = await mailbox_lookup_repository.create_job(
+            db_session, tenant.id, mb.id, "netflix"
+        )
+        await mailbox_lookup_repository.transition_status(db_session, job, "processing")
+        job.error_code = "fetch_timeout"
+        job.error_detail_safe = "Email fetch timed out before the lookup deadline"
+
+        await mailbox_lookup_repository.transition_status(
+            db_session,
+            job,
+            "completed",
+            result_type="not_found",
+        )
+
+        assert job.error_code is None
+        assert job.error_detail_safe is None
+
     async def test_transition_status_invalid(self, db_session):
         tenant = await _seed_tenant(db_session)
         mb = await _seed_mailbox(db_session, tenant.id)

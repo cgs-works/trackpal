@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
+from unittest.mock import AsyncMock
 
 from app.schemas.lookup_executor_protocol import HandoffResult, HandoffStatus
 from app.services.lookup_execution_coordinator.selector import (
@@ -36,6 +37,43 @@ def test_select_executor_uses_executor_id_for_final_tie_breaking() -> None:
 
 def test_select_executor_excludes_full_capacity() -> None:
     assert select_executor([ExecutorCapacity(uuid4(), 1, 1)]) is None
+
+
+def test_lookup_search_after_is_anchored_to_job_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.services.lookup_execution_coordinator.coordinator import (
+        _lookup_search_after,
+    )
+
+    requested_at = datetime(2026, 8, 5, 18, 59, tzinfo=timezone.utc)
+    monkeypatch.setattr(settings, "mailbox_lookup_window_minutes", 15)
+
+    assert _lookup_search_after(SimpleNamespace(requested_at=requested_at)) == (
+        requested_at - timedelta(minutes=15)
+    )
+
+
+def test_remaining_lookup_budget_uses_end_to_end_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+    from app.services.lookup_execution_coordinator.coordinator import (
+        _remaining_lookup_budget,
+    )
+
+    requested_at = datetime(2026, 8, 5, 18, 59, tzinfo=timezone.utc)
+    job = SimpleNamespace(requested_at=requested_at)
+    monkeypatch.setattr(
+        settings, "mailbox_lookup_response_budget_seconds", 120, raising=False
+    )
+
+    assert _remaining_lookup_budget(job, now=requested_at) == 120  # warm executor
+    assert (
+        _remaining_lookup_budget(job, now=requested_at + timedelta(seconds=60)) == 60
+    )  # simulated cold start
+    assert _remaining_lookup_budget(job, now=requested_at + timedelta(seconds=121)) == 0
 
 
 @pytest.mark.asyncio
@@ -260,6 +298,115 @@ async def test_accepted_handoff_transitions_processing_and_counts_attempt(
 
 
 @pytest.mark.asyncio
+async def test_dispatch_does_not_resurrect_job_cancelled_during_handoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    job, executor = _job_and_executor()
+    store = _Store()
+
+    async def cancel_during_handoff() -> None:
+        job.status = "failed"
+        job.error_code = "user_cancelled"
+
+    store.handoff_hook = cancel_during_handoff
+
+    _, session = await _run_dispatch(monkeypatch, job, executor, store)
+
+    assert job.status == "failed"
+    assert job.execution_attempts == 0
+    assert store.released == [job.id]
+    assert session.commits == 0
+
+
+@pytest.mark.asyncio
+async def test_dispatch_rechecks_deadline_after_slow_handoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+
+    job, executor = _job_and_executor()
+    store = _Store()
+    store.resume_urls[job.id] = "https://n8n.example.com/resume/slow-handoff"
+    notifier = SimpleNamespace(notify=AsyncMock(return_value=True))
+
+    async def exhaust_budget_during_handoff() -> None:
+        job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=121)
+
+    store.handoff_hook = exhaust_budget_during_handoff
+    coordinator, session = _configured_coordinator(
+        monkeypatch,
+        job,
+        executor,
+        store,
+        resume_notifier=notifier,
+    )
+    monkeypatch.setattr(settings, "mailbox_lookup_response_budget_seconds", 120)
+
+    await coordinator.schedule(job.id)
+    await store.pump_task
+
+    assert job.status == "timeout"
+    assert job.execution_attempts == 0
+    assert store.released == [job.id]
+    assert session.commits == 1
+    notifier.notify.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_uses_fixed_cutoff_and_remaining_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+
+    job, executor = _job_and_executor()
+    requested_at = datetime.now(timezone.utc) - timedelta(seconds=60)
+    job.requested_at = requested_at
+    store = _Store()
+    coordinator, _ = _configured_coordinator(monkeypatch, job, executor, store)
+    monkeypatch.setattr(settings, "mailbox_lookup_window_minutes", 15)
+    monkeypatch.setattr(settings, "mailbox_lookup_response_budget_seconds", 120)
+
+    await coordinator.schedule(job.id)
+    await store.pump_task
+
+    envelope = store.envelopes[0]
+    assert envelope["search_after"] == requested_at - timedelta(minutes=15)
+    assert envelope["deadline_at"] == requested_at + timedelta(seconds=120)
+    assert 58 <= envelope["timeout_seconds"] <= 60
+
+
+@pytest.mark.asyncio
+async def test_dispatch_marks_job_timeout_when_interactive_budget_is_exhausted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config import settings
+
+    job, executor = _job_and_executor()
+    job.requested_at = datetime.now(timezone.utc) - timedelta(seconds=121)
+    store = _Store()
+    store.resume_urls[job.id] = "https://n8n.example.com/resume/timeout"
+    notifier = SimpleNamespace(notify=AsyncMock(return_value=True))
+    coordinator, session = _configured_coordinator(
+        monkeypatch,
+        job,
+        executor,
+        store,
+        resume_notifier=notifier,
+    )
+    monkeypatch.setattr(settings, "mailbox_lookup_response_budget_seconds", 120)
+
+    await coordinator.schedule(job.id)
+    await store.pump_task
+
+    assert job.status == "timeout"
+    assert store.envelopes == []
+    assert store.queue == []
+    assert session.commits == 1
+    notifier.notify.assert_awaited_once()
+    assert job.id not in store.resume_urls
+
+
+@pytest.mark.asyncio
 async def test_dispatch_includes_recent_delivery_exclusions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -358,6 +505,7 @@ def _configured_coordinator(
     store,
     *,
     executors=None,
+    resume_notifier=None,
 ):
     from app.repositories import mailbox_config_repository, mailbox_dedupe_repository
     from app.repositories import mailbox_lookup_repository, lookup_executors_repository
@@ -372,7 +520,7 @@ def _configured_coordinator(
     monkeypatch.setattr(
         mailbox_lookup_repository,
         "get_job",
-        lambda db, job_id: _return(job, job_id),
+        lambda db, job_id, **kwargs: _return(job, job_id),
     )
     monkeypatch.setattr(
         mailbox_config_repository,
@@ -397,7 +545,7 @@ def _configured_coordinator(
     monkeypatch.setattr(
         mailbox_lookup_repository,
         "transition_status",
-        lambda db, item, new_status: _transition(item, new_status),
+        lambda db, item, new_status, **kwargs: _transition(item, new_status, **kwargs),
     )
     monkeypatch.setattr(
         "app.services.lookup_execution_coordinator.coordinator.decrypt_value",
@@ -409,6 +557,7 @@ def _configured_coordinator(
             coordination_store=store,
             transport=_Transport(store),
             task_spawner=store.spawn,
+            resume_notifier=resume_notifier,
         ),
         session,
     )
@@ -418,6 +567,7 @@ def _job_and_executor():
     job = SimpleNamespace(
         id=uuid4(),
         status="pending",
+        requested_at=datetime.now(timezone.utc),
         tenant_id=uuid4(),
         mailbox_id=uuid4(),
         service_key="spotify",
@@ -463,8 +613,10 @@ async def _health(item, health, error=None):
     return item
 
 
-async def _transition(item, status):
+async def _transition(item, status, **kwargs):
     item.status = status
+    item.error_code = kwargs.get("error_code")
+    item.error_detail_safe = kwargs.get("error_detail_safe")
     return item
 
 
@@ -493,7 +645,9 @@ class _Store:
         self.cooldown_ids: set[UUID] = set()
         self.outcome = HandoffStatus.ACCEPTED
         self.raise_transport = False
+        self.handoff_hook = None
         self.envelopes: list[dict[str, object]] = []
+        self.resume_urls: dict[UUID, str] = {}
         self.pump_task: asyncio.Task[None] | None = None
 
     def spawn(self, coro):
@@ -522,6 +676,12 @@ class _Store:
 
     async def release_lease(self, job_id):
         self.released.append(job_id)
+
+    async def get_resume_url(self, job_id):
+        return self.resume_urls.get(job_id)
+
+    async def delete_resume_url(self, job_id):
+        self.resume_urls.pop(job_id, None)
 
     async def active_count(self, executor_id):
         return 0
@@ -571,6 +731,8 @@ class _Transport:
 
     async def handoff(self, executor, envelope):
         self.store.envelopes.append(envelope)
+        if self.store.handoff_hook is not None:
+            await self.store.handoff_hook()
         if self.store.raise_transport:
             raise OSError("offline")
         return HandoffResult(self.store.outcome, envelope["lease_id"])

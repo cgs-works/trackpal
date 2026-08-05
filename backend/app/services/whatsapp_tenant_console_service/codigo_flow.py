@@ -354,10 +354,10 @@ async def _handle_codigo_awaiting_result(
 ) -> str:
     """Handle user response after the lookup result notification.
 
-    The session is kept alive (step=awaiting_result) while n8n polls
-    the job and sends the result directly to the user.  When the user
-    replies to the result message the backend receives it through
-    the normal console endpoint and routes here.
+    The session is kept alive (step=awaiting_result) while n8n waits for
+    the terminal lookup callback and sends the result directly to the user.
+    When the user replies to the result message the backend receives it
+    through the normal console endpoint and routes here.
     """
     loc = ctx.get_locale()
 
@@ -365,28 +365,7 @@ async def _handle_codigo_awaiting_result(
         await session_service.clear_session(f"admin:{phone}")
         return _i18n_t(loc, "wa.tenant.cancelled")
 
-    # Check lookup job status from DB
-    job_done = False
     lookup_job_id = session.temp_data.get("lookup_job_id")
-    if lookup_job_id:
-        try:
-            job = await mailbox_lookup_repository.get_job(
-                db,
-                UUID(lookup_job_id),
-                tenant_id=tenant_id,
-            )
-            job_done = job is not None and job.status in (
-                "completed",
-                "failed",
-                "timeout",
-            )
-        except Exception:
-            logger.exception(
-                "Failed to check lookup job %s",
-                lookup_job_id,
-            )
-            job_done = True  # treat error as done so we don't loop  # noqa: F841
-
     restart_trigger = msg.strip().lower() in ("codigo", "código", "code")
     if restart_trigger:
         if lookup_job_id and db is not None:

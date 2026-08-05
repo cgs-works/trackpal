@@ -1,5 +1,7 @@
 import pytest
 
+from app.core.i18n import t
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -9,6 +11,20 @@ async def _login(client, username: str, password: str) -> dict[str, str]:
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+async def test_lookup_copy_describes_recent_messages_without_rolling_window():
+    english = t("en", "wa.tenant.codigo.buscando") + t(
+        "en", "wa.tenant.codigo.not_found", service="Netflix"
+    )
+    spanish = t("es", "wa.tenant.codigo.buscando") + t(
+        "es", "wa.tenant.codigo.not_found", service="Netflix"
+    )
+
+    assert "recent" in english.lower()
+    assert "5 minutes" not in english
+    assert "recientes" in spanish.lower()
+    assert "5 minutos" not in spanish
 
 
 # ── Profile: locale exposure via /me ────────────────────────────────────────

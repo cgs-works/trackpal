@@ -2198,6 +2198,87 @@ class TestConsoleHandlersCodigoScope:
         assert serialized.get("tenant_id") == str(tenant_uuid)
         assert serialized.get("reply") == "\U0001f50d Buscando c\u00f3digo\u2026"
 
+    async def test_tenant_handler_supersedes_previous_active_lookup_on_retry(
+        self,
+    ) -> None:
+        from app.api.v1.endpoints.integrations.console_handlers import (
+            _handle_tenant_console,
+        )
+
+        mock_db = AsyncMock()
+        fake_redis = FakeRedis()
+        tenant_uuid = uuid4()
+        previous_job_id = uuid4()
+        await self._seed_codigo_intent_session(
+            fake_redis,
+            tenant_uuid,
+            {
+                "pending_lookup_intent": "true",
+                "service_key": "netflix",
+                "target_email": "user@example.com",
+                "lookup_job_id": str(previous_job_id),
+            },
+        )
+        manager = cast(RedisConnectionManager, FakeManager(fake_redis=fake_redis))
+        fake_tenant = SimpleNamespace(id=tenant_uuid, is_active=True)
+        fake_mailbox = SimpleNamespace(id=uuid4(), status="connected")
+        fake_job = SimpleNamespace(id=uuid4())
+        coordinator = AsyncMock()
+
+        with (
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.auth_service.identify_by_phone",
+                AsyncMock(
+                    return_value={
+                        "user_id": str(uuid4()),
+                        "role": "tenant",
+                        "username": "testadmin",
+                    }
+                ),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.tenants_repository.get_by_owner",
+                AsyncMock(return_value=fake_tenant),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_config_repository.get_by_tenant",
+                AsyncMock(return_value=fake_mailbox),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.cancel_active_job_if_present",
+                AsyncMock(return_value=True),
+            ) as cancel_job,
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.mailbox_lookup_repository.create_job",
+                AsyncMock(return_value=fake_job),
+            ),
+            patch(
+                "app.api.v1.endpoints.integrations.console_handlers.get_lookup_execution_coordinator",
+                return_value=coordinator,
+            ),
+            patch.object(
+                WhatsAppTenantConsoleFacade,
+                "process_message",
+                AsyncMock(return_value="\U0001f50d Buscando c\u00f3digo\u2026"),
+            ),
+        ):
+            result = await _handle_tenant_console(
+                phone="+12015550002",
+                message="1",
+                instance=None,
+                manager=manager,
+                db=mock_db,
+            )
+
+        assert result.lookup_job_id == str(fake_job.id)
+        cancel_job.assert_awaited_once_with(
+            mock_db,
+            previous_job_id,
+            tenant_id=tenant_uuid,
+        )
+        coordinator.release_job_lease.assert_awaited_once_with(previous_job_id)
+        coordinator.delete_resume_url.assert_awaited_once_with(previous_job_id)
+
     async def test_tenant_handler_no_scope_when_no_intent(
         self,
     ) -> None:

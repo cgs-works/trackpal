@@ -237,7 +237,7 @@ Asynchronous mailbox lookup jobs created by n8n.
 | result_type | VARCHAR(50) | Nullable: `code`, `url`, `not_found`, `duplicate_suppressed` |
 | execution_attempts | INTEGER | Number of accepted external execution attempts |
 | last_dispatch_error_safe | VARCHAR(1000) | Latest safe executor coordination error |
-| error_code / error_detail_safe | VARCHAR/TEXT | Safe failure payload for polling |
+| error_code / error_detail_safe | VARCHAR/TEXT | Safe terminal/fallback status payload |
 | expires_at | TIMESTAMPTZ | TTL boundary |
 
 Extracted values are not persisted in `mail_lookup_jobs`; successful results are delivered through the external execution result path.
