@@ -40,7 +40,7 @@ WhatsApp → n8n → Backend creates job
                     ↓
 n8n registers $execution.resumeUrl
                     ↓
-n8n Wait: On Webhook Call, limit 130 seconds
+n8n Wait: On Webhook Call, absolute limit at lookup start + 130 seconds
                     ↓
 Lookup Executor searches Gmail
                     ↓
@@ -73,9 +73,10 @@ Every handoff and retry for that job uses the same cutoff. The worker Gmail quer
 
 ### End-to-end response deadline
 
-- n8n Wait limit: 130 seconds from workflow lookup start.
+- n8n records `wait_deadline_at` as the workflow lookup start plus 130 seconds.
+- The Wait node uses that absolute timestamp as its maximum resume time, so registration latency does not extend the user-visible limit.
 - Backend interactive deadline: 120 seconds from `job.requested_at`.
-- Reserved delivery margin: 10 seconds for callback reconciliation, n8n resume, and WhatsApp send.
+- Reserved delivery margin: approximately 10 seconds for callback reconciliation, n8n resume, and WhatsApp send.
 
 For every dispatch attempt, the backend computes:
 
@@ -99,7 +100,8 @@ The current `Wait 4s → Poll status → Check retry` loop is replaced with:
    - HTTP method: `POST`
    - Header authentication
    - Limit wait time: enabled
-   - Limit: 130 seconds
+   - Limit type: `At Specified Time`
+   - Maximum time: the previously calculated `wait_deadline_at`
 5. If resumed by callback, build and send the terminal result immediately.
 6. If resumed by the time limit, perform one final status GET. Deliver a terminal result if present; otherwise send the safe timeout message.
 
@@ -217,8 +219,8 @@ A fourth status request occurs only when the Wait node reaches its 130-second li
 
 ### n8n
 
-- Callback before 130 seconds resumes immediately.
-- Time limit causes exactly one final status GET.
+- Callback before the absolute 130-second deadline resumes immediately.
+- Reaching the absolute time limit causes exactly one final status GET.
 - A terminal result found by the final GET is still delivered.
 - Missing callback and nonterminal final status produce the safe timeout message.
 - The repeated polling loop is absent.
