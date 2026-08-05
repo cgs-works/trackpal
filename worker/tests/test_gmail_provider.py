@@ -80,6 +80,23 @@ async def test_fetch_uses_exact_timestamp_and_newest_bounded_messages() -> None:
 
 
 @pytest.mark.asyncio
+async def test_fetch_uses_fixed_search_after_when_provided() -> None:
+    FakeImap.search_args = None
+    search_after = datetime(2026, 8, 1, 0, 0, tzinfo=UTC)
+
+    await fetch_gmail_messages(
+        mailbox_email="codes@example.com",
+        app_password="app-password",
+        window_minutes=5,
+        search_after=search_after,
+        imap_factory=FakeImap,
+        now=datetime(2026, 8, 1, 1, 0, tzinfo=UTC),
+    )
+
+    assert FakeImap.search_args == (None, "X-GM-RAW", '"after:1785542400"')
+
+
+@pytest.mark.asyncio
 async def test_fetch_only_reads_twenty_newest_ids() -> None:
     class BoundedImap(FakeImap):
         def search(self, *args: object) -> tuple[str, list[bytes]]:

@@ -29,9 +29,16 @@ deployment choices, not domain types.
 - Capacity is enforced locally; a full executor returns signed `429`.
 - The worker sends callbacks with the job ID and Execution Lease ID. Duplicate
   handoffs for the same lease are acknowledged without starting a second task.
-- A lookup repeats mailbox searches after empty results until its bounded
-  `timeout_seconds` budget (55 seconds by default) expires; a found result is
-  returned immediately.
+- A lookup repeats mailbox searches after empty results until the smaller of
+  the command's `timeout_seconds` and optional absolute `deadline_at`; a found
+  result is returned immediately. This preserves the backend's end-to-end
+  budget across executor cold starts. The optional absolute `search_after`
+  cutoff is reused for every provider fetch so startup and retries do not
+  shrink the candidate email window. Older commands without these optional
+  fields retain the legacy relative-window and local-timeout fallbacks.
+- Gmail fetches and Netflix URL resolution are both bounded by the remaining
+  absolute deadline. Diagnostic HTML upload is disabled on the interactive
+  pipeline so best-effort diagnostics cannot outlive the user-facing budget.
 - HTTP redirects are disabled for callbacks. Errors are safe, stable messages;
   secrets, raw email, and extracted values are never logged.
 
@@ -54,7 +61,9 @@ variables, images, or logs.
 ## Deployment and tests
 
 - Render Free is a request-driven Web Service with capacity `1` and an
-  expected cold start of approximately one minute.
+  expected cold start of approximately one minute. The backend handoff timeout
+  permits that startup, while the worker caps execution at the absolute
+  `deadline_at` and preserves the original `search_after` cutoff.
 - Docker/VPS uses the same environment variables and protocol. Prefer HTTPS;
   public-IP HTTP requires the explicitly enabled `http_encrypted` transport,
   Master step-up, and `ALLOW HTTP` confirmation.

@@ -33,6 +33,7 @@ class GmailImapProvider:
             command.mailbox_email,
             command.app_password,
             command.window_minutes,
+            search_after=command.search_after,
         )
 
 

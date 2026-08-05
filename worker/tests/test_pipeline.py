@@ -51,7 +51,9 @@ class FakeProvider:
 
 
 class FakeNetflix:
-    async def resolve(self, url: str) -> str | None:
+    async def resolve(
+        self, url: str, *, upload_diagnostics: bool = False
+    ) -> str | None:
         return None
 
 
@@ -79,6 +81,53 @@ async def test_execute_lookup_returns_normalized_found_outcome() -> None:
     assert outcome.fingerprint == expected_fingerprint
     assert "app-password" not in outcome.model_dump_json()
     assert "Enter this code" not in outcome.model_dump_json()
+
+
+@pytest.mark.asyncio
+async def test_execute_lookup_uses_fixed_search_after_after_worker_delay() -> None:
+    requested_at = NOW
+    email = _email(received_at=requested_at - timedelta(minutes=10))
+
+    outcome = await execute_lookup(
+        _command(search_after=requested_at - timedelta(minutes=15)),
+        FakeProvider([email]),
+        FakeNetflix(),
+        now=requested_at + timedelta(minutes=10),
+    )
+
+    assert outcome.kind == "found"
+    assert outcome.result_value == "654321"
+
+
+@pytest.mark.asyncio
+async def test_execute_lookup_caps_budget_after_sixty_second_cold_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Clock:
+        elapsed = 0.0
+
+        def monotonic(self) -> float:
+            return self.elapsed
+
+        async def sleep(self, seconds: float) -> None:
+            self.elapsed += seconds
+
+    clock = Clock()
+    monkeypatch.setattr(runner_module, "monotonic", clock.monotonic)
+    monkeypatch.setattr(runner_module.asyncio, "sleep", clock.sleep)
+
+    outcome = await execute_lookup(
+        _command(
+            timeout_seconds=120,
+            deadline_at=NOW + timedelta(seconds=120),
+        ),
+        FakeProvider([]),
+        FakeNetflix(),
+        now=NOW + timedelta(seconds=60),
+    )
+
+    assert outcome.kind == "not_found"
+    assert clock.elapsed == 60
 
 
 @pytest.mark.asyncio
@@ -369,7 +418,9 @@ async def test_execute_lookup_resolves_netflix_url_before_returning_result() -> 
     url = "https://www.netflix.com/account/travel/verify?nftoken=token"
 
     class Netflix:
-        async def resolve(self, value: str) -> str | None:
+        async def resolve(
+            self, value: str, *, upload_diagnostics: bool = False
+        ) -> str | None:
             assert value == url
             return "839201"
 
@@ -385,6 +436,39 @@ async def test_execute_lookup_resolves_netflix_url_before_returning_result() -> 
     assert outcome.kind == "found"
     assert outcome.result_type == "code"
     assert outcome.result_value == "839201"
+
+
+@pytest.mark.asyncio
+async def test_netflix_resolution_respects_absolute_deadline() -> None:
+    url = "https://www.netflix.com/account/travel/verify?nftoken=slow"
+
+    class SlowNetflix:
+        async def resolve(
+            self, value: str, *, upload_diagnostics: bool = True
+        ) -> str | None:
+            assert value == url
+            assert upload_diagnostics is False
+            await asyncio.sleep(1)
+            return "839201"
+
+    email = _email(
+        subject="Your Netflix temporary access code",
+        body=f"[{url}]({url})",
+        sender="noreply@netflix.com",
+    )
+    outcome = await execute_lookup(
+        _command(
+            service_key="netflix",
+            timeout_seconds=120,
+            deadline_at=NOW + timedelta(milliseconds=10),
+        ),
+        FakeProvider([email]),
+        SlowNetflix(),
+        now=NOW,
+    )
+
+    assert outcome.kind == "retryable_failure"
+    assert outcome.error_code == "resolve_timeout"
 
 
 @pytest.mark.asyncio
@@ -410,7 +494,9 @@ async def test_netflix_unresolved_old_link_does_not_stop_new_code_polling() -> N
             return [old_email] if self.attempts == 1 else [old_email, new_email]
 
     class Netflix:
-        async def resolve(self, value: str) -> str | None:
+        async def resolve(
+            self, value: str, *, upload_diagnostics: bool = False
+        ) -> str | None:
             assert value == url
             return None
 
@@ -449,7 +535,9 @@ async def test_netflix_resolution_failure_is_not_found() -> None:
     url = "https://www.netflix.com/account/travel/verify?nftoken=token"
 
     class Netflix:
-        async def resolve(self, value: str) -> str | None:
+        async def resolve(
+            self, value: str, *, upload_diagnostics: bool = False
+        ) -> str | None:
             return None
 
     outcome = await execute_lookup(

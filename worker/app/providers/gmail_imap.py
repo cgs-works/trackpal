@@ -24,13 +24,22 @@ MAX_MESSAGES = 20
 ImapFactory = Callable[[str, int], Any]
 
 
-def _after_query(window_minutes: int, now: datetime) -> str:
+def _after_query(
+    window_minutes: int,
+    now: datetime,
+    search_after: datetime | None = None,
+) -> str:
     """Build Gmail's exact-instant search query."""
-    current = now if now.tzinfo is not None else now.replace(tzinfo=UTC)
-    seconds = int(
-        (current.astimezone(UTC) - timedelta(minutes=window_minutes)).timestamp()
-    )
-    return f"after:{seconds}"
+    if search_after is not None:
+        cutoff = (
+            search_after
+            if search_after.tzinfo is not None
+            else search_after.replace(tzinfo=UTC)
+        )
+    else:
+        current = now if now.tzinfo is not None else now.replace(tzinfo=UTC)
+        cutoff = current - timedelta(minutes=window_minutes)
+    return f"after:{int(cutoff.astimezone(UTC).timestamp())}"
 
 
 async def fetch_gmail_messages(
@@ -38,6 +47,7 @@ async def fetch_gmail_messages(
     app_password: str,
     window_minutes: int,
     *,
+    search_after: datetime | None = None,
     imap_factory: ImapFactory | None = None,
     now: datetime | None = None,
 ) -> list[EmailMessage]:
@@ -59,6 +69,7 @@ async def fetch_gmail_messages(
                 window_minutes,
                 factory,
                 current,
+                search_after,
             ),
             timeout=IMAP_FETCH_TIMEOUT,
         )
@@ -72,6 +83,7 @@ def _fetch_sync(
     window_minutes: int,
     imap_factory: ImapFactory,
     now: datetime,
+    search_after: datetime | None = None,
 ) -> list[EmailMessage]:
     try:
         connection = imap_factory(GMAIL_IMAP_HOST, GMAIL_IMAP_PORT)
@@ -102,7 +114,9 @@ def _fetch_sync(
             if select_status != "OK":
                 raise RuntimeError("INBOX selection failed")
             search_status, search_data = connection.search(
-                None, "X-GM-RAW", f'"{_after_query(window_minutes, now)}"'
+                None,
+                "X-GM-RAW",
+                f'"{_after_query(window_minutes, now, search_after)}"',
             )
             if search_status != "OK":
                 raise RuntimeError("Gmail search failed")

@@ -140,6 +140,7 @@ def extract_newest_from_emails(
     *,
     max_age_minutes: int = MAX_CANDIDATE_AGE_MINUTES,
     now: datetime | None = None,
+    search_after: datetime | None = None,
 ) -> ExtractedCode | None:
     """Extract the newest valid code from a sorted list of emails."""
     extracted = extract_newest_with_source(
@@ -147,6 +148,7 @@ def extract_newest_from_emails(
         service_key,
         max_age_minutes=max_age_minutes,
         now=now,
+        search_after=search_after,
     )
     return extracted.result if extracted is not None else None
 
@@ -157,10 +159,15 @@ def extract_newest_with_source(
     *,
     max_age_minutes: int = MAX_CANDIDATE_AGE_MINUTES,
     now: datetime | None = None,
+    search_after: datetime | None = None,
 ) -> ExtractedEmail | None:
     """Extract the newest valid result and preserve its source index."""
     now = now or datetime.now(UTC)
-    cutoff = now - __import__("datetime").timedelta(minutes=max_age_minutes)
+    cutoff = (
+        _ensure_utc_aware(search_after)
+        if search_after is not None
+        else now - __import__("datetime").timedelta(minutes=max_age_minutes)
+    )
 
     candidates = [
         (index, email)

@@ -21,7 +21,9 @@ DESKTOP_CHROME_UA = (
 class NetflixResolverPort(Protocol):
     """Port used by the pipeline for Netflix URL resolution."""
 
-    async def resolve(self, full_url: str) -> str | None:
+    async def resolve(
+        self, full_url: str, *, upload_diagnostics: bool = True
+    ) -> str | None:
         """Resolve a Netflix travel verification URL to an OTP."""
 
 
@@ -36,7 +38,9 @@ class NetflixResolver:
         self._client = client
         self._diagnostics = diagnostics or R2Diagnostics()
 
-    async def resolve(self, full_url: str) -> str | None:
+    async def resolve(
+        self, full_url: str, *, upload_diagnostics: bool = True
+    ) -> str | None:
         """Fetch and parse a Netflix travel verification page."""
         if "netflix.com/account/travel/verify" not in full_url:
             return None
@@ -59,12 +63,17 @@ class NetflixResolver:
         if code is not None:
             return code
 
-        token_match = re.search(r"nftoken=([^&]+)", full_url)
-        token_prefix = token_match.group(1) if token_match else ""
-        try:
-            await asyncio.to_thread(self._diagnostics.upload, html_text, token_prefix)
-        except Exception:  # noqa: BLE001 - diagnostics are best effort
-            return None
+        if upload_diagnostics:
+            token_match = re.search(r"nftoken=([^&]+)", full_url)
+            token_prefix = token_match.group(1) if token_match else ""
+            try:
+                await asyncio.to_thread(
+                    self._diagnostics.upload,
+                    html_text,
+                    token_prefix,
+                )
+            except Exception:  # noqa: BLE001 - diagnostics are best effort
+                return None
         return None
 
     async def _fetch_html(

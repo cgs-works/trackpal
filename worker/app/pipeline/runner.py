@@ -29,7 +29,9 @@ class MailProviderPort(Protocol):
 class NetflixResolverPort(Protocol):
     """Netflix URL resolution port required by the runner."""
 
-    async def resolve(self, full_url: str) -> str | None:
+    async def resolve(
+        self, full_url: str, *, upload_diagnostics: bool = True
+    ) -> str | None:
         """Resolve a travel verification URL to an OTP."""
 
 
@@ -42,6 +44,19 @@ def safe_provider_detail(error_code: str) -> str:
     return details.get(error_code, "Provider error — check mailbox configuration")
 
 
+def _effective_timeout_seconds(command: LookupCommand, now: datetime) -> float:
+    """Cap local execution by the backend's absolute interactive deadline."""
+    if command.deadline_at is None:
+        return float(command.timeout_seconds)
+    deadline_at = command.deadline_at
+    if deadline_at.tzinfo is None:
+        deadline_at = deadline_at.replace(tzinfo=UTC)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    remaining = max(0.0, (deadline_at - now).total_seconds())
+    return min(float(command.timeout_seconds), remaining)
+
+
 async def execute_lookup(
     command: LookupCommand,
     provider: MailProviderPort,
@@ -50,8 +65,8 @@ async def execute_lookup(
     now: datetime | None = None,
 ) -> LookupOutcome:
     """Fetch, extract, resolve, and fingerprint one lookup."""
-    deadline = monotonic() + command.timeout_seconds
     extraction_now = now or datetime.now(UTC)
+    deadline = monotonic() + _effective_timeout_seconds(command, extraction_now)
     excluded_deliveries = {
         (entry.message_id, entry.fingerprint) for entry in command.excluded_deliveries
     }
@@ -96,6 +111,7 @@ async def execute_lookup(
                 command.service_key,
                 max_age_minutes=command.window_minutes,
                 now=extraction_now,
+                search_after=command.search_after,
             )
             if extracted is None:
                 break
@@ -104,7 +120,28 @@ async def execute_lookup(
             result_type = extracted.result.result_type
             match = candidates[extracted.source_index]
             if command.service_key == "netflix" and result_type == "url":
-                result_value = await netflix.resolve(result_value) or ""
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    return LookupOutcome.retryable(
+                        "resolve_timeout",
+                        "Netflix resolution timed out before the lookup deadline",
+                    )
+                try:
+                    result_value = (
+                        await asyncio.wait_for(
+                            netflix.resolve(
+                                result_value,
+                                upload_diagnostics=False,
+                            ),
+                            timeout=remaining,
+                        )
+                        or ""
+                    )
+                except TimeoutError:
+                    return LookupOutcome.retryable(
+                        "resolve_timeout",
+                        "Netflix resolution timed out before the lookup deadline",
+                    )
                 if not result_value:
                     candidates.pop(extracted.source_index)
                     continue
