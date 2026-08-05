@@ -80,7 +80,7 @@ Organized by prefix:
 | `wa.tenant.subscriptions.*` | WhatsApp tenant console — subscriptions | `wa.tenant.subscriptions.list.header`, `wa.tenant.subscriptions.status.active`, `wa.tenant.subscriptions.list.page_prev` |
 | `frontend.*` | Frontend web UI | `frontend.login.title`, `frontend.clients.password` |
 
-Total: ~890 string entries across both catalogs.
+Total: ~1500 string entries across both catalogs (merged per locale).
 
 ### Merged Catalog
 

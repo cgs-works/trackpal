@@ -65,7 +65,7 @@ export function ProfilePage() {
       setProfile(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to load profile"
+        err instanceof Error ? err.message : t("frontend.profile.load_error")
       );
     } finally {
       setIsLoading(false);
@@ -127,7 +127,9 @@ export function ProfilePage() {
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive flex items-start gap-3">
             <AlertCircle className="size-4 mt-0.5 shrink-0" />
             <div>
-              <p className="font-medium">Failed to load profile</p>
+              <p className="font-medium">
+                {t("frontend.profile.load_error")}
+              </p>
               <p className="mt-1">{error}</p>
               <Button
                 variant="outline"
@@ -135,7 +137,7 @@ export function ProfilePage() {
                 className="mt-3"
                 onClick={loadProfile}
               >
-                Retry
+                {t("frontend.common.retry")}
               </Button>
             </div>
           </div>

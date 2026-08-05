@@ -410,14 +410,14 @@ async def test_frontend_catalog_new_terminology():
     assert "tenant" not in es_mode_both.lower(), f"ES mode both: {es_mode_both}"
     assert "tenant" not in en_mode_both.lower(), f"EN mode both: {en_mode_both}"
 
-    # client.tenant label
-    es_client_tenant = t("es", "frontend.dashboard.client.tenant")
-    en_client_tenant = t("en", "frontend.dashboard.client.tenant")
-    assert es_client_tenant != "Tenant", (
-        f"ES client.tenant should not be 'Tenant', got: {es_client_tenant}"
+    # client.provider label (was client.tenant)
+    es_client_provider = t("es", "frontend.dashboard.client.provider")
+    en_client_provider = t("en", "frontend.dashboard.client.provider")
+    assert es_client_provider != "Tenant" and es_client_provider != "Provider", (
+        f"ES client.provider should be translated, got: {es_client_provider}"
     )
-    assert en_client_tenant != "Tenant", (
-        f"EN client.tenant should not be 'Tenant', got: {en_client_tenant}"
+    assert en_client_provider == "Provider", (
+        f"EN client.provider should be 'Provider', got: {en_client_provider}"
     )
 
 

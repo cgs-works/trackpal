@@ -27,6 +27,7 @@ vi.mock("@/features/catalog/components/service-icon", () => ({
 vi.mock("@/i18n", () => ({
   t: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
+  getLocale: () => "en",
 }));
 
 vi.mock("sonner", () => ({
@@ -81,6 +82,81 @@ describe("DashboardPage client service icons", () => {
     ).toHaveLength(2);
     // Service name appears in icon label + text node in both views
     expect(screen.getAllByText("Netflix").length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("DashboardPage client i18n", () => {
+  const baseDashboard = {
+    message: "ok",
+    id: "client-1",
+    full_name: "Client Demo",
+    username: "client_demo",
+    phone: null,
+    tenant_id: "tenant-1",
+    tenant_name: "Provider",
+    client_prefix: "demo",
+    is_active: true,
+  };
+
+  it("localizes subscription table headers", async () => {
+    fetchClientDashboard.mockResolvedValue({
+      ...baseDashboard,
+      subscriptions: [
+        {
+          id: "sub-1",
+          service_name: "Netflix",
+          service_icon: null,
+          plan_name: "Premium",
+          status: "active",
+          starts_at: "2026-07-01T00:00:00.000Z",
+          expires_at: "2026-08-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    render(<DashboardPage />);
+
+    for (const key of [
+      "frontend.dashboard.client.service",
+      "frontend.dashboard.client.plan",
+      "frontend.dashboard.client.status",
+      "frontend.dashboard.client.start",
+      "frontend.dashboard.client.expiry",
+    ]) {
+      expect(await screen.findAllByText(key)).not.toHaveLength(0);
+    }
+    // Summary cards + logout + section title all localized
+    expect(screen.getByText("frontend.dashboard.client.account")).toBeInTheDocument();
+    expect(screen.getByText("frontend.dashboard.client.provider")).toBeInTheDocument();
+    expect(screen.getAllByText("frontend.dashboard.client.subscriptions").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("frontend.dashboard.tenant.logout")).toBeInTheDocument();
+  });
+
+  it("localizes the empty state when there are no subscriptions", async () => {
+    fetchClientDashboard.mockResolvedValue({
+      ...baseDashboard,
+      subscriptions: [],
+    });
+
+    render(<DashboardPage />);
+
+    expect(
+      await screen.findByText("frontend.dashboard.client.no_subscriptions"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("frontend.dashboard.client.no_subscriptions_hint"),
+    ).toBeInTheDocument();
+  });
+
+  it("localizes the load error state", async () => {
+    fetchClientDashboard.mockRejectedValue(new Error("boom"));
+
+    render(<DashboardPage />);
+
+    expect(
+      await screen.findByText("frontend.dashboard.client.load_error"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("frontend.common.retry")).toBeInTheDocument();
   });
 });
 

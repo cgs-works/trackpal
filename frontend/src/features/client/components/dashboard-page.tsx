@@ -12,7 +12,7 @@ import {
   Building2,
   AlertCircle,
 } from "lucide-react";
-import { t } from "@/i18n";
+import { t, getLocale } from "@/i18n";
 import { HELP_TARGETS } from "@/features/help/help-targets";
 import {
   fetchClientDashboard,
@@ -25,7 +25,7 @@ import { formatPrice } from "@/features/admin/services/catalog-api";
 /* ── Helpers ────────────────────────────────────────────────── */
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+  return new Date(iso).toLocaleDateString(getLocale(), {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -51,10 +51,10 @@ function SubscriptionTable({
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <CreditCard className="size-10 text-muted-foreground/50 mb-3" />
         <p className="text-sm font-medium text-muted-foreground">
-          No active subscriptions
+          {t("frontend.dashboard.client.no_subscriptions")}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Your subscriptions will appear here once assigned.
+          {t("frontend.dashboard.client.no_subscriptions_hint")}
         </p>
       </div>
     );
@@ -67,11 +67,21 @@ function SubscriptionTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
-              <th className="text-left p-3 font-medium">Service</th>
-              <th className="text-left p-3 font-medium">Plan</th>
-              <th className="text-left p-3 font-medium">Status</th>
-              <th className="text-left p-3 font-medium">Start</th>
-              <th className="text-left p-3 font-medium">Expires</th>
+              <th className="text-left p-3 font-medium">
+                {t("frontend.dashboard.client.service")}
+              </th>
+              <th className="text-left p-3 font-medium">
+                {t("frontend.dashboard.client.plan")}
+              </th>
+              <th className="text-left p-3 font-medium">
+                {t("frontend.dashboard.client.status")}
+              </th>
+              <th className="text-left p-3 font-medium">
+                {t("frontend.dashboard.client.start")}
+              </th>
+              <th className="text-left p-3 font-medium">
+                {t("frontend.dashboard.client.expiry")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -96,7 +106,7 @@ function SubscriptionTable({
                     <div>{sub.plan_name}</div>
                     {sub.plan_price && currency ? (
                       <div className="text-xs text-muted-foreground">
-                        {formatPrice(sub.plan_price, currency, "en-US")}
+                        {formatPrice(sub.plan_price, currency, getLocale())}
                       </div>
                     ) : (
                       <div className="text-xs text-muted-foreground">
@@ -116,12 +126,12 @@ function SubscriptionTable({
                     </span>
                     {sub.status === "active" && remaining <= 7 && remaining > 0 && (
                       <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
-                        ({remaining}d left)
+                        ({t("frontend.dashboard.client.days_left", { days: remaining })})
                       </span>
                     )}
                     {sub.status === "active" && remaining <= 0 && (
                       <span className="ml-2 text-xs text-destructive">
-                        (expired)
+                        ({t("frontend.dashboard.client.expired_short")})
                       </span>
                     )}
                   </td>
@@ -151,7 +161,7 @@ function SubscriptionTable({
                   <p className="text-sm text-muted-foreground">{sub.plan_name}</p>
                   {sub.plan_price && currency ? (
                     <p className="text-xs text-muted-foreground">
-                      {formatPrice(sub.plan_price, currency, "en-US")}
+                      {formatPrice(sub.plan_price, currency, getLocale())}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
@@ -166,7 +176,7 @@ function SubscriptionTable({
                   {formatDate(sub.starts_at)} → {formatDate(sub.expires_at)}
                   {sub.status === "active" && remaining <= 7 && remaining > 0 && (
                     <span className="ml-1 text-amber-600 dark:text-amber-400">
-                      ({remaining}d left)
+                      ({t("frontend.dashboard.client.days_left", { days: remaining })})
                     </span>
                   )}
                 </p>
@@ -196,7 +206,9 @@ export function DashboardPage() {
       setDashboard(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to load dashboard"
+        err instanceof Error
+          ? err.message
+          : t("frontend.dashboard.client.load_error")
       );
     } finally {
       setIsLoading(false);
@@ -238,7 +250,9 @@ export function DashboardPage() {
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive flex items-start gap-3">
             <AlertCircle className="size-4 mt-0.5 shrink-0" />
             <div>
-              <p className="font-medium">Failed to load dashboard</p>
+              <p className="font-medium">
+                {t("frontend.dashboard.client.load_error")}
+              </p>
               <p className="mt-1">{error}</p>
               <Button
                 variant="outline"
@@ -246,7 +260,7 @@ export function DashboardPage() {
                 className="mt-3"
                 onClick={loadDashboard}
               >
-                Retry
+                {t("frontend.common.retry")}
               </Button>
             </div>
           </div>
@@ -267,7 +281,7 @@ export function DashboardPage() {
               </div>
               <Button variant="outline" size="sm" onClick={() => logout()}>
                 <LogOut className="size-4 mr-2" />
-                Logout
+                {t("frontend.dashboard.tenant.logout")}
               </Button>
             </div>
 
@@ -279,7 +293,9 @@ export function DashboardPage() {
                     <User className="size-5 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">Account</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("frontend.dashboard.client.account")}
+                    </p>
                     <p className="text-lg font-bold tracking-tight truncate">
                       {dashboard.username}
                     </p>
@@ -293,7 +309,9 @@ export function DashboardPage() {
                     <Building2 className="size-5 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">Provider</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("frontend.dashboard.client.provider")}
+                    </p>
                     <p className="text-lg font-bold tracking-tight truncate">
                       {dashboard.tenant_name || "—"}
                     </p>
@@ -307,7 +325,9 @@ export function DashboardPage() {
                     <CreditCard className="size-5 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">Subscriptions</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("frontend.dashboard.client.subscriptions")}
+                    </p>
                     <p className="text-lg font-bold tracking-tight">
                       {dashboard.subscriptions.length}
                     </p>
@@ -321,7 +341,7 @@ export function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CreditCard className="size-5 text-muted-foreground" />
-                  Subscriptions
+                  {t("frontend.dashboard.client.subscriptions")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
