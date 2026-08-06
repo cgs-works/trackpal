@@ -7,7 +7,7 @@ Contract
   Output: ``{job_id, status: "pending"}``
 
 ``GET /n8n/mail/lookups/{job_id}``
-  Output: ``{job_id, status, result_type?, result_value?,
+  Output: ``{job_id, status, result_type?, result_value?, reply?,
             error_code?, error_detail?, created_at?, completed_at?}``
 
 The ``result_value`` is ephemeral (not persisted in DB) and available
@@ -39,6 +39,7 @@ from app.services.lookup_execution_coordinator import get_lookup_execution_coord
 from app.services.lookup_execution_coordinator.coordinator import (
     lookup_response_deadline_expired,
 )
+from app.services.lookup_execution_coordinator.replies import render_lookup_reply
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,9 @@ def _is_allowed_resume_url(value: str) -> bool:
     )
 
 
-async def _status_response(job, coordinator=None) -> LookupStatusResponse:
+async def _status_response(
+    job, coordinator=None, *, locale: str
+) -> LookupStatusResponse:
     """Build one job response, including an ephemeral result when available."""
     response = LookupStatusResponse(
         job_id=job.id,
@@ -87,6 +90,14 @@ async def _status_response(job, coordinator=None) -> LookupStatusResponse:
             response.result_type = None
             response.error_code = "result_unavailable"
             response.error_detail = "Lookup result is no longer available"
+    response.reply = render_lookup_reply(
+        locale,
+        status=response.status,
+        result_type=response.result_type,
+        result_value=response.result_value,
+        error_code=response.error_code,
+        service_key=job.service_key,
+    )
     return response
 
 
@@ -224,7 +235,8 @@ async def register_lookup_resume(
     if job.status in {"pending", "processing"}:
         await coordinator.register_resume_url(job.id, payload.resume_url)
         await db.refresh(job)
-    return await _status_response(job, coordinator)
+    locale = await tenants_repository.resolve_locale(db, job.tenant_id)
+    return await _status_response(job, coordinator, locale=locale)
 
 
 @router.get(
@@ -313,8 +325,9 @@ async def get_lookup_status(
             except Exception:
                 logger.exception("Could not reschedule pending lookup job %s", job.id)
 
+    locale = await tenants_repository.resolve_locale(db, job.tenant_id)
     try:
-        response = await _status_response(job, coordinator)
+        response = await _status_response(job, coordinator, locale=locale)
     except Exception:
         logger.exception("Could not read lookup result for job %s", job.id)
         response = LookupStatusResponse(
@@ -323,6 +336,14 @@ async def get_lookup_status(
             result_type=job.result_type,
             error_code=job.error_code,
             error_detail=job.error_detail_safe,
+            reply=render_lookup_reply(
+                locale,
+                status=job.status,
+                result_type=job.result_type,
+                result_value=None,
+                error_code=job.error_code,
+                service_key=job.service_key,
+            ),
             created_at=job.created_at,
             completed_at=job.completed_at,
         )

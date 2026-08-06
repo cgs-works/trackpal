@@ -219,6 +219,7 @@ _CATALOG_ES_WA: Final[dict[str, str]] = {
     "wa.tenant.codigo.menu": "🔑 *Buscar código de acceso*",
     "wa.tenant.codigo.remote_cancelled_by_admin": "Operación cancelada por el administrador.",
     "wa.tenant.codigo.still_checking": "🔍 *Todavía buscando...*\n\nLa búsqueda del código aún está en progreso. Espera un momento.\n\nResponde *1* para reintentar, *2* para volver a servicios, o *0* para cancelar.\n\n⏳ Los resultados suelen llegar en unos segundos.",
+    "wa.tenant.codigo.result_actions": "\n\n1️⃣ Reintentar\n2️⃣ Volver a servicios\n0️⃣ Cancelar",
     "wa.tenant.codigo.cancel": "Volver al menú principal",
     "wa.tenant.codigo.cancel_direct": "Cancelar",
     "wa.tenant.codigo.prev_page": "Página anterior",

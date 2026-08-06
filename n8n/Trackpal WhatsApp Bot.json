@@ -117,7 +117,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const poll = $json;\nconst base = $('Merge & lookup data').first().json;\nconst seedReply = String(base.reply || '');\n\nconst looksEnglish = /searching code|you'll receive|code found|open link|error/i.test(seedReply);\n\nconst t = looksEnglish\n  ? {\n      codeFound: (v) => `✅ *Code found*\\n\\n📋 *${v}*\\n\\nThis code is time-sensitive. Use it soon.`,\n      urlFound: (v) => `✅ *Link found*\\n\\n🔗 ${v}\\n\\nOpen link to continue.`,\n      notFound: '❌ *Code not found*\\n\\nNo recent access-code emails were found.\\n\\nRequest a new code and wait 15 seconds before trying again.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n      failed: '❌ *Could not complete code search*\\n\\nAn error occurred or the search timed out.\\n\\n1️⃣ Retry\\n2️⃣ Back to services\\n0️⃣ Cancel',\n    }\n  : {\n      codeFound: (v) => `✅ *Código encontrado*\\n\\n📋 *${v}*\\n\\nEste código es válido por tiempo limitado. Úsalo pronto.`,\n      urlFound: (v) => `✅ *Enlace encontrado*\\n\\n🔗 ${v}\\n\\nAbre enlace para continuar.`,\n      notFound: '❌ *No se encontró código*\\n\\nNo se encontraron correos recientes con códigos de acceso.\\n\\nSolicita nuevo código y espera 15 segundos antes de intentar de nuevo.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n      failed: '❌ *No se pudo completar la búsqueda*\\n\\nOcurrió un error o se agotó el tiempo al buscar el código.\\n\\n1️⃣ Reintentar\\n2️⃣ Volver a servicios\\n0️⃣ Cancelar',\n    };\n\nlet finalMessage;\nlet closeAfterSend = false;\n\nif (poll.result_type === 'code') {\n  finalMessage = t.codeFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'url') {\n  finalMessage = t.urlFound(String(poll.result_value || ''));\n  closeAfterSend = true;\n} else if (poll.result_type === 'not_found' || poll.result_type === 'duplicate_suppressed') {\n  finalMessage = t.notFound;\n} else if (poll.status === 'failed' || poll.status === 'timeout' || poll.error_code) {\n  finalMessage = t.failed;\n} else {\n  finalMessage = t.notFound;\n}\n\nreturn {\n  json: {\n    ...base,\n    ...poll,\n    reply: finalMessage,\n    close_after_send: closeAfterSend,\n  },\n};"
+        "jsCode": "const poll = $json;\nconst base = $('Merge & lookup data').first().json;\nconst reply = String(poll.reply || '').trim();\n\nif (!reply && poll.error_code !== 'user_cancelled') {\n  throw new Error('lookup result is missing backend reply');\n}\n\nconst closeAfterSend = poll.result_type === 'code' || poll.result_type === 'url';\n\nreturn {\n  json: {\n    ...base,\n    ...poll,\n    reply,\n    close_after_send: closeAfterSend,\n  },\n};"
       },
       "id": "dbf8531e-e770-4a52-9112-b53b24f211be",
       "name": "Build result message",
@@ -126,35 +126,6 @@
       "position": [
         0,
         0
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $('Config').first().json.trackpal_backend_url }}/api/v1/integrations/n8n/mail/lookups/{{ $('Merge & lookup data').first().json.lookup_job_id }}?tenant_id={{ $('Merge & lookup data').first().json.tenant_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Key",
-              "value": "={{ $('Config').first().json.trackpal_n8n_api_key }}"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "f4e089c6-8b27-4852-9609-a51e28f95504",
-      "name": "Final lookup status",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        480,
-        192
       ]
     },
     {
@@ -859,24 +830,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Final lookup status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Final lookup status": {
-      "main": [
-        [
-          {
-            "node": "Build result message",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "IF suppress lookup result": {

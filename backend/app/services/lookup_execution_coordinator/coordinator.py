@@ -20,10 +20,11 @@ from app.core.encryption import decrypt_value
 from app.models import LookupExecutor
 from app.repositories import mailbox_config_repository, mailbox_dedupe_repository
 from app.repositories import mailbox_lookup_repository
-from app.repositories import lookup_executors_repository
+from app.repositories import lookup_executors_repository, tenant_settings_repository
 from app.schemas.lookup_executor_protocol import HandoffStatus, LookupCallbackOutcome
 from app.services.lookup_executor_transport import LookupExecutorTransport
 
+from .replies import render_lookup_reply
 from .selector import ExecutorCapacity, select_executor
 
 logger = logging.getLogger(__name__)
@@ -174,9 +175,10 @@ class LookupExecutionCoordinator:
                         or "Interactive lookup deadline expired"
                     ),
                 )
+                reply = await self._render_terminal_reply(db, job, result_value=None)
                 await db.commit()
                 await self._store.release_lease(job_id)
-                await self._notify_resume(job, result_value=None)
+                await self._notify_resume(job, result_value=None, reply=reply)
                 return CompletionAck(accepted=True)
 
             if job.status == "pending":
@@ -242,6 +244,14 @@ class LookupExecutionCoordinator:
                     error_detail_safe=outcome.error_detail,
                 )
 
+            result_value = (
+                outcome.result_value if job.result_type in {"code", "url"} else None
+            )
+            reply = None
+            if job.status in {"completed", "failed", "timeout"}:
+                reply = await self._render_terminal_reply(
+                    db, job, result_value=result_value
+                )
             await db.commit()
 
         await self._store.release_lease(job_id)
@@ -250,13 +260,29 @@ class LookupExecutionCoordinator:
         elif job.status in {"completed", "failed", "timeout"}:
             await self._notify_resume(
                 job,
-                result_value=(
-                    outcome.result_value if job.result_type in {"code", "url"} else None
-                ),
+                result_value=result_value,
+                reply=reply,
             )
         return CompletionAck(accepted=True)
 
-    async def _notify_resume(self, job: Any, *, result_value: str | None) -> None:
+    async def _render_terminal_reply(
+        self, db: Any, job: Any, *, result_value: str | None
+    ) -> str | None:
+        if self._resume_notifier is None:
+            return None
+        locale = await tenant_settings_repository.resolve_locale(db, job.tenant_id)
+        return render_lookup_reply(
+            locale,
+            status=str(job.status),
+            result_type=getattr(job, "result_type", None),
+            result_value=result_value,
+            error_code=getattr(job, "error_code", None),
+            service_key=str(job.service_key),
+        )
+
+    async def _notify_resume(
+        self, job: Any, *, result_value: str | None, reply: str | None
+    ) -> None:
         """Best-effort resume of the n8n execution registered for a job."""
         if self._resume_notifier is None:
             return
@@ -264,7 +290,7 @@ class LookupExecutionCoordinator:
             resume_url = await self._store.get_resume_url(job.id)
             if resume_url is None:
                 return
-            payload = _terminal_payload(job, result_value=result_value)
+            payload = _terminal_payload(job, result_value=result_value, reply=reply)
             delivered = await self._resume_notifier.notify(resume_url, payload)
             if delivered:
                 await self._store.delete_resume_url(job.id)
@@ -357,8 +383,11 @@ class LookupExecutionCoordinator:
                         error_code="lookup_timeout",
                         error_detail_safe="Interactive lookup deadline expired",
                     )
+                    reply = await self._render_terminal_reply(
+                        db, job, result_value=None
+                    )
                     await db.commit()
-                    await self._notify_resume(job, result_value=None)
+                    await self._notify_resume(job, result_value=None, reply=reply)
                     return True
 
                 executor = await self._select_executor(db)
@@ -415,9 +444,14 @@ class LookupExecutionCoordinator:
                             error_code="lookup_timeout",
                             error_detail_safe="Interactive lookup deadline expired",
                         )
+                        reply = await self._render_terminal_reply(
+                            db, current_job, result_value=None
+                        )
                         await db.commit()
                         await self._store.release_lease(job_id)
-                        await self._notify_resume(current_job, result_value=None)
+                        await self._notify_resume(
+                            current_job, result_value=None, reply=reply
+                        )
                         return True
                     return await self._handle_handoff(
                         db, current_job, executor, lease_id, outcome
@@ -594,7 +628,10 @@ def _utc(value: datetime) -> datetime:
 
 
 def _terminal_payload(
-    job: Any, *, result_value: str | None = None
+    job: Any,
+    *,
+    result_value: str | None = None,
+    reply: str | None = None,
 ) -> dict[str, object]:
     """Build the safe terminal payload consumed by the n8n Wait webhook."""
     completed_at = getattr(job, "completed_at", None)
@@ -605,6 +642,7 @@ def _terminal_payload(
         "result_value": result_value,
         "error_code": getattr(job, "error_code", None),
         "error_detail": getattr(job, "error_detail_safe", None),
+        "reply": reply,
         "completed_at": (
             _utc(completed_at).isoformat() if completed_at is not None else None
         ),

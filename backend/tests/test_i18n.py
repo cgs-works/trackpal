@@ -25,6 +25,8 @@ async def test_lookup_copy_describes_recent_messages_without_rolling_window():
     assert "5 minutes" not in english
     assert "recientes" in spanish.lower()
     assert "5 minutos" not in spanish
+    assert "1️⃣ Retry" in t("en", "wa.tenant.codigo.result_actions")
+    assert "1️⃣ Reintentar" in t("es", "wa.tenant.codigo.result_actions")
 
 
 # ── Profile: locale exposure via /me ────────────────────────────────────────

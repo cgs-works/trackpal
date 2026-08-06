@@ -108,5 +108,6 @@ class LookupStatusResponse(BaseModel):
     result_value: str | None = None
     error_code: str | None = None
     error_detail: str | None = None
+    reply: str | None = None
     created_at: datetime | None = None
     completed_at: datetime | None = None

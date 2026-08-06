@@ -12,7 +12,7 @@ backend never runs Gmail IMAP or extraction work locally.
 | Component | Responsibility |
 |-----------|---------------|
 | **Tenant Dashboard (frontend)** | Mailbox config, Gmail Setup Assistant, connection tests |
-| **Backend API (FastAPI)** | Mailbox config CRUD, job creation, dispatch coordination, callback completion, n8n resume notification, and fallback status reads |
+| **Backend API (FastAPI)** | Mailbox config CRUD, job creation, dispatch coordination, callback completion, localized n8n resume notification, and status reads for API consumers |
 | **Lookup Executor** | External runtime that fetches emails, extracts codes, and sends signed results back |
 | **Mailbox Cleanup** | Periodic task that expires stale jobs and removes expired data |
 | **PostgreSQL** | `tenant_mailboxes`, `mail_lookup_jobs`, `mail_code_delivery_log`, and executor registry |
@@ -91,7 +91,7 @@ Accepted `202` handoffs and same-lease `409` duplicates move a job to
 `processing`, assign its executor, increment `execution_attempts`, and mark the
 executor healthy. The lease remains until callback completion or expiry.
 
-Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope, and consumes a one-use Redis nonce retained for three times the signature-skew window so future-dated signatures cannot outlive replay protection. It then delegates to a row-locked coordinator transaction that rechecks the interactive deadline before accepting any outcome; late callbacks become `timeout` and never expose their extracted value. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry or include the extracted value in the n8n resume payload. Retryable outcomes clear the assignment, release the lease, and requeue only before the interactive response deadline. Terminal callbacks and dispatcher-detected deadline expiry trigger a bounded, best-effort POST to the encrypted n8n resume URL. The notifier retries 404/server/transport failures across the short Wait-webhook activation window; notification failure never rolls back durable completion, and n8n performs one final status read when its Wait limit expires. If an ephemeral found value is no longer available, the fallback response fails safely with `result_unavailable` instead of emitting an empty success.
+Executor callbacks use `POST /api/v1/integrations/executors/{executor_id}/jobs/{job_id}/complete` (with the compact `/executor-callback` compatibility route). The endpoint establishes internal RLS context before loading the executor, verifies the signed AES-GCM envelope, and consumes a one-use Redis nonce retained for three times the signature-skew window so future-dated signatures cannot outlive replay protection. It then delegates to a row-locked coordinator transaction that rechecks the interactive deadline before accepting any outcome; late callbacks become `timeout` and never expose their extracted value. Found values are atomically deduplicated in PostgreSQL and cached only as Fernet-encrypted Redis results; duplicate-suppressed and `not_found` outcomes never create a result cache entry or include the extracted value in the n8n resume payload. Retryable outcomes clear the assignment, release the lease, and requeue only before the interactive response deadline. Terminal callbacks and dispatcher-detected deadline expiry render the tenant-localized `reply` through backend i18n and trigger a bounded, best-effort POST to the encrypted n8n resume URL. Recoverable outcomes append `wa.tenant.codigo.result_actions`; deadline-driven `lookup_timeout` outcomes use the user-facing `not_found` copy. The notifier retries 404/server/transport failures across the short Wait-webhook activation window. Notification failure never rolls back durable completion, but n8n intentionally performs no final status fallback and therefore sends no terminal message when the callback is missed.
 
 ## Redis Coordination
 
@@ -107,8 +107,8 @@ The coordinator uses these keys:
 - `lookup:executor-cooldown:{executor_id}` — failure cooldown marker.
 
 PostgreSQL remains the durable source of truth. Duplicate scheduling is safe,
-and a fallback status read or another job creation can re-schedule a pending
-durable row after Redis recovery. A reconciliation pass treats PostgreSQL `pending` rows as the
+and another job creation can re-schedule a pending durable row after Redis
+recovery. A reconciliation pass treats PostgreSQL `pending` rows as the
 recovery input, removes stale assignment metadata when an Execution Lease has
 expired, and never invokes a local Gmail or extraction pipeline. Redis result
 entries are encrypted and short-lived; the database stores only safe result
@@ -166,7 +166,7 @@ never sent to executors.
 
 `processing` → `pending` (recoverable lease or dispatch failure before the response deadline)
 
-`pending` or `processing` → `timeout` (interactive response deadline expires; the final GET rechecks this transition under a row lock)
+`pending` or `processing` → `timeout` (interactive response deadline expires; API status reads may recheck this transition under a row lock)
 
 Result types are `code`, `url`, `not_found`, and `duplicate_suppressed`.
 

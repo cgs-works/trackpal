@@ -45,7 +45,6 @@ def test_lookup_delivery_uses_event_driven_wait_with_absolute_deadline() -> None
 
 def test_lookup_delivery_removes_repeated_polling_loop() -> None:
     nodes = _workflow_nodes()
-    connections = _workflow_connections()
 
     for removed in (
         "Wait 4s",
@@ -55,12 +54,10 @@ def test_lookup_delivery_removes_repeated_polling_loop() -> None:
         "IF retry needed",
     ):
         assert removed not in nodes
-    assert connections["Final lookup status"]["main"][0][0]["node"] == (
-        "Build result message"
-    )
+    assert "Final lookup status" not in nodes
 
 
-def test_wait_callback_uses_one_final_status_fallback() -> None:
+def test_wait_callback_has_no_status_fallback() -> None:
     nodes = _workflow_nodes()
     connections = _workflow_connections()
     normalize_js = nodes["Normalize lookup resume"]["parameters"]["jsCode"]
@@ -69,9 +66,7 @@ def test_wait_callback_uses_one_final_status_fallback() -> None:
     assert connections["IF callback received"]["main"][0][0]["node"] == (
         "Build result message"
     )
-    assert connections["IF callback received"]["main"][1][0]["node"] == (
-        "Final lookup status"
-    )
+    assert connections["IF callback received"]["main"][1] == []
 
 
 def test_superseded_lookup_execution_ends_without_sending_result() -> None:
@@ -98,24 +93,26 @@ def test_build_result_message_sets_close_after_send_contract() -> None:
     assert "close_after_send" in js
     assert "poll.result_type === 'code'" in js
     assert "poll.result_type === 'url'" in js
-    assert "closeAfterSend = true" in js or "close_after_send: true" in js
+    assert (
+        "const closeAfterSend = poll.result_type === 'code' || "
+        "poll.result_type === 'url';"
+    ) in js
 
 
-def test_build_result_message_keeps_retry_options_for_failed_timeout() -> None:
+def test_build_result_message_uses_backend_i18n_without_copy_fallback() -> None:
     js = _workflow_nodes()["Build result message"]["parameters"]["jsCode"]
 
-    assert "Could not complete code search" in js
-    assert "No se pudo completar la búsqueda" in js
-    assert "1️⃣ Retry" in js
-    assert "2️⃣ Back to services" in js
-    assert "0️⃣ Cancel" in js
-    assert "1️⃣ Reintentar" in js
-    assert "2️⃣ Volver a servicios" in js
-    assert "0️⃣ Cancelar" in js
-    assert "recent access-code emails" in js
-    assert "correos recientes con códigos de acceso" in js
-    assert "last 5 minutes" not in js
-    assert "últimos 5 minutos" not in js
+    assert "poll.reply" in js
+    assert "lookup result is missing backend reply" in js
+    assert "looksEnglish" not in js
+    assert "Code found" not in js
+    assert "Código encontrado" not in js
+    assert "Code not found" not in js
+    assert "No se encontró código" not in js
+    assert "Could not complete code search" not in js
+    assert "No se pudo completar la búsqueda" not in js
+    assert "1️⃣ Retry" not in js
+    assert "1️⃣ Reintentar" not in js
 
 
 def test_check_close_session_reads_close_after_send_from_upstream_result() -> None:

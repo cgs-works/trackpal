@@ -636,6 +636,10 @@ class _Session:
     async def flush(self):
         return None
 
+    async def execute(self, *args, **kwargs):
+        del args, kwargs
+        return SimpleNamespace(scalar_one_or_none=lambda: "es")
+
 
 class _Store:
     def __init__(self):

@@ -49,6 +49,10 @@ class FakeSession:
     async def flush(self) -> None:
         return None
 
+    async def execute(self, *args: object, **kwargs: object) -> object:
+        del args, kwargs
+        return SimpleNamespace(scalar_one_or_none=lambda: "es")
+
 
 class FakeStore:
     def __init__(self, lease: object | None) -> None:
@@ -247,6 +251,12 @@ async def test_late_found_callback_becomes_timeout_without_exposing_result(
     assert store.results == []
     record_delivery.assert_not_awaited()
     assert notifier.calls[0][1]["result_value"] is None
+    assert notifier.calls[0][1]["reply"] == (
+        "❌ *No se encontró código*\n\n"
+        "No se encontraron correos recientes con códigos de acceso para *Netflix*.\n\n"
+        "Solicita un nuevo código en tu servicio y espera unos minutos antes de intentar de nuevo.\n\n"
+        "1️⃣ Reintentar\n2️⃣ Volver a servicios\n0️⃣ Cancelar"
+    )
     assert "654321" not in str(notifier.calls)
 
 
@@ -310,6 +320,7 @@ async def test_found_callback_resumes_registered_n8n_execution(
                 "result_value": "654321",
                 "error_code": None,
                 "error_detail": None,
+                "reply": "✅ *Código encontrado*\n\nServicio: *Netflix*\n\n📋 *654321*\n\nEste código es válido por tiempo limitado. Úsalo pronto.",
                 "completed_at": None,
             },
         )

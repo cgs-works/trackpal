@@ -33,7 +33,7 @@ IF skip_console_call?
                                 → terminal now? build result immediately
                                 → otherwise Wait for lookup callback (absolute 130s)
                                   ├─ callback → Build result message
-                                  └─ limit reached → one Final lookup status GET
+                                  └─ limit reached → end without a terminal send
                                 → Send result → Check Close Session
 ```
 
@@ -192,13 +192,13 @@ Sends prepared reply text back through Evolution Go.
 Uses the per-message instance `apiKey` from the Evolution Go trusted webhook payload, **not** a global API key. `Prepare Evolution sends` sets `send_target` and `send_text`. When ``reply_to`` is present in the response, the primary send target uses the ``reply_to`` JID instead of the original sender's phone JID. Extra `outbound_messages` targets are sent as separate Evolution API calls.
 ### 6c. Event-driven Lookup Resume
 
-After the progress message, `Register lookup resume` sends `$execution.resumeUrl` and the tenant ID to the backend. If registration returns a terminal snapshot, n8n builds the result immediately. Otherwise, `Wait for lookup callback` suspends the execution without backend polling until either the authenticated backend POST arrives or the absolute `wait_deadline_at` is reached. The Wait node uses the native Header Auth credential `TrackPal Backend Resume Auth`, configured with header `X-API-Key` and the same value as `N8N_API_KEY`; expression filters are not used as an authentication substitute. `Normalize lookup resume` distinguishes a callback body from a time-limit resume; only the latter performs `Final lookup status`, so a normal lookup uses no polling loop. `IF suppress lookup result` silently ends an older execution whose job was marked `user_cancelled` when the same WhatsApp session started a replacement lookup.
+After the progress message, `Register lookup resume` sends `$execution.resumeUrl` and the tenant ID to the backend. If registration returns a terminal snapshot, n8n builds the result immediately. Otherwise, `Wait for lookup callback` suspends the execution without backend polling until either the authenticated backend POST arrives or the absolute `wait_deadline_at` is reached. The Wait node uses the native Header Auth credential `TrackPal Backend Resume Auth`, configured with header `X-API-Key` and the same value as `N8N_API_KEY`; expression filters are not used as an authentication substitute. `Normalize lookup resume` distinguishes a callback body from a time-limit resume. A time-limit resume ends without a final status request or terminal send. `IF suppress lookup result` silently ends an older execution whose job was marked `user_cancelled` when the same WhatsApp session started a replacement lookup.
 
 ### 6d. Build Result Message (Code Node)
 
-Code node that constructs the final lookup result message from the registration snapshot, webhook callback, or one final fallback GET.
+Code node that forwards the backend-rendered terminal lookup message from the registration snapshot or webhook callback.
 
-**Logic**: `Build result message` emits `close_after_send=true` for terminal `code`/`url` results and `false` for recoverable outcomes (`not_found`, `duplicate_suppressed`, `failed`, `timeout`, unknown fallback non-success). `failed` and `timeout` messages include `1 Retry / 2 Back to services / 0 Cancel`. Empty-result copy refers to recent access-code emails instead of a rolling five-minute window.
+**Logic**: `Build result message` requires the backend `reply` field and emits `close_after_send=true` only for terminal `code`/`url` results. It contains no translated result copy and throws when a non-cancelled terminal payload omits `reply`. Recoverable messages receive their localized `1 Retry / 2 Back to services / 0 Cancel` actions from the backend `wa.tenant.codigo.result_actions` key.
 
 ### 7. Check Close Session (Code Node)
 
@@ -395,7 +395,7 @@ The workflow communicates with backend services:
 ## Error Handling
 
 - **Backend unavailable**: The Console Call and resume-registration nodes use `neverError: true`, so a safe response can continue through the workflow
-- **Missed resume callback**: The Wait node reaches its fixed limit and performs exactly one tenant-scoped final status GET; encrypted found results are retained for 180 seconds so they outlive the 130-second Wait limit
+- **Missed resume callback**: The Wait node reaches its fixed limit and ends without a terminal send; there is no n8n status-read fallback
 - **Empty reply**: Merge Reply falls back to a static Spanish unavailability message
 - **I18n scope**: n8n is pure transport — it never generates, owns, or translates strings. All user-facing messages in both WhatsApp Bot and Reminder workflows are rendered by the backend using `t()`, with tenant locale resolved server-side. n8n passes reply text verbatim to Evolution Go.
 - **Evolution Go errors**: Both Send and Close Session nodes have `neverError: true` to prevent workflow failures from propagating

@@ -264,10 +264,11 @@ Boundary:
 
 n8n workflows do not own or generate translation strings. All user-facing messages are rendered by the backend before returning to n8n. n8n acts as pure transport:
 
-- **WhatsApp Bot**: Backend `WhatsappTenantConsoleFacade` returns fully localized reply text. The Client Context Shortcut renders all menus server-side through `wa.tenant.client_context.*` keys, including contextual menus for unregistered, blocked, active, and inactive client targets.
+- **WhatsApp Bot**: Backend `WhatsappTenantConsoleFacade` returns fully localized console replies. Terminal mailbox lookup callbacks are also rendered server-side from `wa.tenant.codigo.*`; recoverable results append `wa.tenant.codigo.result_actions` before n8n forwards the `reply` verbatim.
+- **Client Context Shortcut**: All menus are rendered server-side through `wa.tenant.client_context.*` keys, including contextual menus for unregistered, blocked, active, and inactive client targets.
 - **Context Shortcut close flow**: Option `0` inside a context session returns `status="closed"` and `close_jid`; the close message uses `wa.tenant.client_context.closed`.
 - **Reminders**: `SubscriptionJobService._render_reminder_message()` uses `t()` with tenant locale
-- n8n never calls `t()`, never resolves locale, never manipulates message content beyond phone normalization
+- n8n never calls `t()`, never resolves locale, and never reconstructs terminal lookup result copy; it only sets control fields such as `close_after_send`
 
 ## Migration Strategy
 

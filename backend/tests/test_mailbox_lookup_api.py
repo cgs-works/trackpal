@@ -272,7 +272,14 @@ class TestLookupCoordinatorContract:
             )
 
         assert response.status_code == 200
-        assert response.json()["status"] == "timeout"
+        data = response.json()
+        assert data["status"] == "timeout"
+        assert data["reply"] == (
+            "❌ *Code not found*\n\n"
+            "No recent emails with access codes for *Spotify* were found.\n\n"
+            "Request a new code from the service and wait a few minutes before trying again.\n\n"
+            "1️⃣ Retry\n2️⃣ Back to services\n0️⃣ Cancel"
+        )
         coordinator.schedule.assert_not_awaited()
 
     async def test_expired_pending_poll_does_not_reschedule(
